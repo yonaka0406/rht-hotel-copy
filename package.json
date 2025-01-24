@@ -1,10 +1,11 @@
 {
-    "name": "auth-sys",
+    "name": "rht-hotel",
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "start": "npm run build && npm run start:backend",
+        "start": "npm run build && npm run start:backend",        
         "serve": "npm run build && npm run start:backend",
+        "restart": "pm2 restart backend",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "build": "npm run build:frontend",
         "build:frontend": "npm --prefix frontend run build",
