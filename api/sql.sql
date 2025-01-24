@@ -11,7 +11,7 @@ CREATE TABLE users (
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     INSERT INTO users (email, password_hash, role_id, created_by)
-    VALUES ('test@test.com', crypt('password123', gen_salt('bf')), 1, 1);
+    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1, 1);
 
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,                
@@ -22,8 +22,8 @@ CREATE TABLE user_status (
 
     INSERT INTO user_status (status_name, description)
     VALUES 
-        ('Active', 'The account is active.'),        
-        ('Deactivated', 'The account is deactivated.');
+        ('Active', '有効アカウント'),
+        ('Deactivated', '無効アカウント');
 
 CREATE TABLE user_roles (
     id SERIAL PRIMARY KEY,
