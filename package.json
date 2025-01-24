@@ -1,0 +1,26 @@
+{
+    "name": "auth-sys",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "start": "npm run build && npm run start:backend",
+        "serve": "npm run build && npm run start:backend",
+        "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+        "build": "npm run build:frontend",
+        "build:frontend": "npm --prefix frontend run build",
+        "dev:frontend": "npm --prefix frontend run dev",        
+        "start:backend": "pm2 start api/index.js --name backend",
+        "dev:backend": "nodemon api/index.js",
+        "redis": "wsl -e bash -ic \"sudo service redis-server start\"",
+        "redis:stop": "wsl -e bash -ic \"sudo service redis-server stop\"",
+        "redis:status": "wsl -e bash -ic \"sudo service redis-server status\""
+    },
+    "devDependencies": {
+        "concurrently": "^9.1.0"
+    },
+    "dependencies": {
+        "ioredis": "^5.4.2",
+        "nodemon": "^3.1.9",
+        "pm2": "^5.4.3"
+    }
+}

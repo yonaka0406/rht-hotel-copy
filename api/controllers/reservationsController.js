@@ -1,0 +1,421 @@
+const pool = require('../config/database');
+const { 
+  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
+  addReservationHold, addReservationDetail, addReservationAddon, updateReservationDetail,
+  deleteReservationAddonsByDetailId
+} = require('../models/reservations');
+const { addClientByName } = require('../models/clients');
+const { getPriceForReservation } = require('../models/planRate');
+
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// GET
+const getAvailableRooms = async (req, res) => {
+  const { hotel_id, start_date, end_date } = req.query;
+
+  if (!hotel_id || !start_date || !end_date) {
+    return res.status(400).json({ error: 'Missing required query parameters: hotel_id, start_date, and end_date.' });
+  }
+
+  try {
+    const availableRooms = await selectAvailableRooms(hotel_id, start_date, end_date);
+
+    if (availableRooms.length === 0) {
+      return res.status(201).json({ message: 'No available rooms for the specified period.' });
+    }
+
+    return res.status(200).json({ availableRooms });
+  } catch (error) {
+    console.error('Error fetching available rooms:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching available rooms.' });
+  }
+};
+
+const getReservedRooms = async (req, res) => {
+  const { hotel_id, start_date, end_date } = req.query;
+
+  if (!hotel_id || !start_date || !end_date) {
+    return res.status(400).json({ error: 'Missing required query parameters: hotel_id, start_date, and end_date.' });
+  }
+
+  try {
+    const reservedRooms = await selectReservedRooms(hotel_id, start_date, end_date);
+
+    if (reservedRooms.length === 0) {
+      return res.status(201).json({ message: 'No reserved rooms for the specified period.' });
+    }
+
+    return res.status(200).json({ reservedRooms });
+  } catch (error) {
+    console.error('Error fetching reserved rooms:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching reserved rooms.' });
+  }
+};
+
+const getReservation = async (req, res) => {
+  const { id } = req.query;
+
+  try {    
+    const reservation = await selectReservation(id);    
+    
+    if (reservation.length === 0) {
+      return res.status(404).json({ message: 'No reservation for the provided id.' });
+    }
+
+    return res.status(200).json({ reservation });
+  } catch (error) {
+    console.error('Error fetching reservation:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching reservation.' });
+  }
+};
+
+const getMyHoldReservations = async (req, res) => {
+  const user_id = req.user.id;
+  
+  try {
+    const reservations = await selectMyHoldReservations(user_id);
+
+    if (reservations.length === 0) {
+      return res.status(404).json({ message: 'No hold reservations found for the specified user.' });
+    }
+
+    return res.status(200).json({ reservations });
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
+  }
+};
+
+// POST
+const createReservationHold = async (req, res) => {
+  const {
+    hotel_id,
+    room_type_id,
+    client_id,
+    check_in,
+    check_out,
+    number_of_people,
+    name,
+    legal_or_natural_person,
+    gender,
+    email,
+    phone,      
+  } = req.body;
+  const created_by = req.user.id;
+  const updated_by = req.user.id;
+
+  const dateRange = [];
+  let currentDate = new Date(check_in);
+  while (currentDate < new Date(check_out)) {
+    dateRange.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  try {
+    let finalClientId = client_id;
+
+    // Check if client_id is null
+    if (!client_id) {
+      // Create the client if no client_id is provided
+      const clientData = {
+        name: name,
+        legal_or_natural_person,
+        gender,
+        email,
+        phone,
+        created_by,
+        updated_by,
+      };
+
+      // Add new client and get the created client's id
+      const newClient = await addClientByName(clientData);
+      finalClientId = newClient.id; // Use the newly created client's id
+    }
+
+    // Add the reservation with the final client_id
+    const reservationData = {
+      hotel_id,
+      room_type_id,
+      reservation_client_id: finalClientId,
+      check_in,
+      check_out,
+      number_of_people,
+      created_by,
+      updated_by
+    };
+
+    // Add the reservation to the database
+    const newReservation = await addReservationHold(reservationData);
+    // Get available rooms for the reservation period
+    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
+    // Filter available rooms by room_type_id
+    const availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
+
+    if (availableRoomsFiltered.length === 0) {
+      return res.status(400).json({ error: 'No available rooms for the specified period.' });
+    }
+
+    let remainingPeople = number_of_people;
+    const reservationDetails = [];
+
+    // Distribute people into rooms
+    while (remainingPeople > 0) {
+      let bestRoom = null;
+
+      // Find the best-fit room
+      for (const room of availableRoomsFiltered) {
+        if (room.capacity === remainingPeople) {
+          bestRoom = room;
+          break; // Perfect fit, stop searching
+        }
+        if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
+          bestRoom = room; // Choose the smallest room that can accommodate the remaining people
+        }
+      }
+
+      // If no perfect or near-perfect room found, pick the largest available room
+      if (!bestRoom) {         
+        bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev));
+      }
+
+      // Assign people to the best room and remove it from the list of available rooms
+      const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
+      remainingPeople -= peopleAssigned;
+
+      dateRange.forEach((date) => {
+        reservationDetails.push({
+          reservation_id: newReservation.id,
+          hotel_id,
+          room_id: bestRoom.room_id,
+          date: formatDate(date),
+          plans_global_id: null,
+          plans_hotel_id: null,
+          number_of_people: peopleAssigned,
+          price: 0,
+          created_by,
+          updated_by,
+        });
+      });
+
+      // Remove the room from availableRooms
+      const roomIndex = availableRoomsFiltered.indexOf(bestRoom);
+      availableRoomsFiltered.splice(roomIndex, 1);
+    } 
+
+    // Add reservation details to the database
+    for (const detail of reservationDetails) {
+      await addReservationDetail(detail);
+    }
+
+    res.status(201).json({
+      reservation: newReservation,
+      reservationDetails,
+    });
+    
+  } catch (err) {
+    console.error('Error creating reservation:', err);
+    res.status(500).json({ error: 'Failed to create reservation' });
+  }
+
+};
+
+const createReservationDetails = async (req, res) => {
+  const {
+    ogm_id,
+    hotel_id,
+    reservation_id,
+    payer_client_id,
+    date,
+    room_id,
+    plans_global_id,
+    plans_hotel_id,
+    number_of_people,
+    price,
+    addons,
+  } = req.body;
+  const created_by = req.user.id;
+  const updated_by = req.user.id;
+
+  try {
+    // Add the reservation
+    const reservationData = {
+      hotel_id,
+      reservation_id,
+      payer_client_id,
+      date,
+      room_id,
+      plans_global_id,
+      plans_hotel_id,
+      number_of_people,
+      price,
+      created_by,
+      updated_by
+    };
+
+    // Add the reservation to the database
+    const newReservationAddon = await addReservationDetail(reservationData);
+    const ogmReservationAddons = await selectReservationAddons(ogm_id);
+
+    console.log('newReservationAddon:', newReservationAddon);
+    console.log('ogm_id:', ogm_id);
+    console.log('ogmReservationAddons:', ogmReservationAddons);
+
+    if (ogmReservationAddons && ogmReservationAddons.length > 0) {
+      const addOnPromises = ogmReservationAddons.map(addon =>
+          addReservationAddon({
+              hotel_id: addon.hotel_id,
+              reservation_detail_id: newReservationAddon.id,
+              addons_global_id: addon.addons_global_id,
+              addons_hotel_id: addon.addons_hotel_id,
+              quantity: addon.quantity,
+              price: addon.price,
+              created_by: updated_by, 
+              updated_by, 
+          })
+      );
+
+      // Wait for all add-ons to be added
+      await Promise.all(addOnPromises);
+    }
+
+    // Send success response
+    res.status(201).json({
+      message: 'Reservation details and addons created successfully',
+      reservation_detail: newReservationAddon,
+    });
+    
+  } catch (err) {
+    console.error('Error creating reservation detail:', err);
+    res.status(500).json({ error: 'Failed to create reservation detail' });
+  }
+};
+
+const createReservationAddons = async (req, res) => {
+  const {
+    hotel_id,
+    reservation_detail_id,
+    addons_global_id,
+    addons_hotel_id,
+    quantity,
+    price,    
+  } = req.body;
+  const created_by = req.user.id;
+  const updated_by = req.user.id;
+
+  try {
+    // Add the reservation with the final client_id
+    const reservationData = {
+      hotel_id,
+      reservation_detail_id,
+      addons_global_id,
+      addons_hotel_id,
+      quantity,
+      price,
+      created_by,
+      updated_by
+    };
+
+    // Add the reservation to the database
+    const newReservationAddon = await addReservationAddon(reservationData);
+
+    res.status(201).json({
+      addons: newReservationAddon,      
+    });
+    
+  } catch (err) {
+    console.error('Error creating reservation addon:', err);
+    res.status(500).json({ error: 'Failed to create reservation addon' });
+  }
+};
+
+// PUT
+const editReservationDetail = async (req, res) => {  
+  const { id } = req.params;
+  const { hotel_id, room_id, plans_global_id, plans_hotel_id, number_of_people, price, addons } = req.body;
+  const updated_by = req.user.id; 
+
+  const { validate: uuidValidate } = require('uuid');
+  let calcPrice = { value: price };
+
+  //console.log('Body parameters:', req.body);
+  if (!uuidValidate(id)) {
+    return res.status(400).json({ error: 'Invalid UUID format' });
+  }
+
+  try {
+    // Fetch the existing reservation detail from the database to compare with the new data
+    const existingReservation = await selectReservationDetail(id);    
+
+    // Check if the plans_global_id and plans_hotel_id has changed
+    if (
+        existingReservation[0].plans_global_id !== plans_global_id ||
+        existingReservation[0].plans_hotel_id !== plans_hotel_id
+    ) {
+      const newPrice = await getPriceForReservation(
+        plans_global_id, 
+        plans_hotel_id, 
+        hotel_id, 
+        formatDate(existingReservation[0].date)
+      );
+
+      if (newPrice !== undefined) {
+          calcPrice.value = newPrice;
+          //console.log('Calculated newPrice:', newPrice);  
+      } else {
+          // Handle the case where newPrice is undefined (fallback value)
+          console.log('Error: newPrice is undefined. Falling back to default value.');
+          calcPrice.value = 0;  // You can set a default fallback value if needed
+      }      
+    }
+    
+    // Call the function to update reservation detail in the database
+    const updatedReservation = await updateReservationDetail({
+        id,
+        hotel_id,
+        room_id,
+        plans_global_id,
+        plans_hotel_id,
+        number_of_people,
+        price: calcPrice.value,
+        updated_by,          
+    });
+      
+    // Add the reservation add-ons if any
+    if (addons && addons.length > 0) {      
+        const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id);
+        //console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
+
+        const addOnPromises = addons.map(addon =>
+            addReservationAddon({
+                hotel_id,
+                reservation_detail_id: updatedReservation.id,
+                addons_global_id: addon.addons_global_id,
+                addons_hotel_id: addon.addons_hotel_id,
+                quantity: addon.quantity,
+                price: addon.price,
+                created_by: updated_by, 
+                updated_by, 
+            })
+        );
+
+        // Wait for all add-ons to be added
+        await Promise.all(addOnPromises);
+    }
+      
+    // Respond with the updated reservation details
+    res.json(updatedReservation);
+  } catch (err) {
+      console.error('Error updating reservation detail:', err);
+      res.status(500).json({ error: 'Failed to update reservation detail' });
+  }
+};
+
+
+
+module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
+  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail };

@@ -1,0 +1,226 @@
+    import { ref, watch } from 'vue';
+
+    // Define shared state outside the function
+    const availableRooms = ref([]);
+    const reservedRooms = ref([]);
+    const holdReservations = ref([]);
+    const reservationId = ref(null);
+    const reservationDetails = ref({});
+
+    export function useReservationStore() {
+        // Helper
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
+
+        // Set reservationId in the store
+        const setReservationId = (id) => {
+            reservationId.value = id;
+        };
+
+        // Get reservationId from the store
+        const getReservationId = () => {
+            return reservationId.value;
+        };
+
+        const getReservationHotelId = async (reservation_id) => {
+            await fetchReservation(reservation_id);
+
+            return reservationDetails.value.reservation[0].hotel_id;
+        };
+    
+        // Fetch 
+        
+        const fetchReservation = async (reservation_id) => {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/info?id=${reservation_id}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+    
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch reservation details');
+                }
+
+                // Handle if no reservation was found
+                if (data.message) {
+                    console.error(data.message); // Log message for debugging
+                    reservationDetails.value = {}; // Reset reservationDetails
+                    return; // Exit the function early since no reservation was found
+                }
+
+                // Format the date fields for each reservation in the array
+                if (Array.isArray(data.reservation)) {
+                    data.reservation.forEach((reservation) => {
+                        reservation.check_in = formatDate(new Date(reservation.check_in));
+                        reservation.check_out = formatDate(new Date(reservation.check_out));
+                        reservation.date = formatDate(new Date(reservation.date));
+                    });
+                }
+                
+                reservationDetails.value = data;
+                reservationId.value = reservation_id;
+                    
+            } catch (error) {
+                console.error('Error fetching reservation:', error);
+                reservationDetails.value = {};
+                return null;
+            }
+        };
+        
+        const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
+            try {
+                const authToken = localStorage.getItem('authToken');            
+                const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("fetchAvailableRooms API Error:", response.status, response.statusText, errorText);
+                    throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                if (data && data.availableRooms && Array.isArray(data.availableRooms)) {
+                    availableRooms.value = data.availableRooms;
+                } else if (data && data.message === 'No available rooms for the specified period.') {
+                    availableRooms.value = []; // Correctly handle the "no rooms" message
+                } else if (data && Object.keys(data).length === 0) {
+                    availableRooms.value = [];
+                }
+                else {
+                    console.error("Invalid API response format:", data);
+                    availableRooms.value = [];
+                }
+                return response;
+
+            } catch (error) {
+                console.error('Failed to fetch available rooms', error);
+                availableRooms.value = [];
+            }
+        };
+
+        const fetchReservedRooms = async (hotelId, startDate, endDate) => {
+            try {
+                const authToken = localStorage.getItem('authToken');            
+                const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("fetchReservedRooms API Error:", response.status, response.statusText, errorText);
+                    throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+                }
+
+                const data = await response.json();
+
+                if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {
+                    reservedRooms.value = data.reservedRooms;
+                } else if (data && data.message === 'No reserved rooms for the specified period.') {
+                    reservedRooms.value = []; // Correctly handle the "no rooms" message
+                } else if (data && Object.keys(data).length === 0) {
+                    reservedRooms.value = [];
+                }
+                else {
+                    console.error("Invalid API response format:", data);
+                    reservedRooms.value = [];
+                }
+                return response;
+
+            } catch (error) {
+                console.error('Failed to fetch reserved rooms', error);
+                reservedRooms.value = [];
+            }
+        };
+
+        const fetchMyHoldReservations = async () => {
+            try{
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/hold-list`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("fetchMyHoldReservations API Error:", response.status, response.statusText, errorText);
+                    throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+                }
+
+                const data = await response.json();
+                if (data.reservations) {
+                    // Group by unique combinations of the fields
+                    const groupedReservations = {};
+
+                    data.reservations.forEach(reservation => {
+                        const key = `${reservation.hotel_id}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
+                        
+                        if (!groupedReservations[key]) {
+                            // Store the first occurrence of each unique combination
+                            groupedReservations[key] = {
+                                hotel_id: reservation.hotel_id,
+                                reservation_id: reservation.reservation_id,
+                                client_name: reservation.client_name,
+                                check_in: formatDate(new Date(reservation.check_in)),
+                                check_out: formatDate(new Date(reservation.check_out)),
+                                number_of_people: reservation.number_of_people,
+                            };
+                        }
+                    });
+
+                    // Convert groupedReservations object to an array
+                    holdReservations.value = Object.values(groupedReservations);
+                }
+
+                return data;
+
+            } catch (error) {
+                console.error("Error fetching hold reservations:", error);
+            }
+        };
+
+    return {
+        availableRooms,
+        reservedRooms,
+        holdReservations,
+        reservationId,
+        reservationDetails,
+        setReservationId,
+        getReservationId,
+        getReservationHotelId,
+        fetchReservation,
+        fetchAvailableRooms,
+        fetchReservedRooms,
+        fetchMyHoldReservations,        
+    };
+}

@@ -1,0 +1,239 @@
+const pool = require('../config/database');
+
+// Helper function to validate conditions
+const isValidCondition = (row, date) => {
+    const { condition_type, condition_value } = row;
+
+    // Custom parser for TEXT format condition_value
+    const parseConditionValue = (value) => {
+        if (!value) return [];
+        return value
+            .replace(/[{}"]/g, '') // Remove curly braces and quotes
+            .split(',')           // Split by comma
+            .map((v) => v.trim().toLowerCase()); // Normalize values
+    };
+
+    const parsedCondition = parseConditionValue(condition_value);
+    const targetDate = new Date(date);
+    
+    switch (condition_type) {
+        case 'month': {
+            const targetMonth = targetDate.toLocaleString('en-US', { month: 'long' }).toLowerCase(); // Get month name
+            return parsedCondition.includes(targetMonth); // Check if month is in the condition
+        }
+
+        case 'day_of_week': {
+            const targetDay = targetDate.toLocaleString('en-US', { weekday: 'long' }).toLowerCase(); // Get day of the week
+            return parsedCondition.includes(targetDay); // Check if day is in the condition
+        }
+
+        default:
+            return true; // For 'no_restriction' or unrecognized types, assume valid
+    }
+};
+
+// Return all plans_rates
+const getAllPlansRates = async (plans_global_id, plans_hotel_id, hotel_id) => {
+
+    const query = `
+        SELECT * FROM plans_rates
+        WHERE 
+            (plans_global_id = $1 AND plans_hotel_id IS NULL) OR 
+            (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
+        ORDER BY adjustment_type ASC, condition_type DESC, date_start ASC, plans_global_id, hotel_id, plans_hotel_id
+    `;
+
+    try {
+        const result = await pool.query(query, [
+            plans_global_id || null,
+            plans_hotel_id || null,
+            hotel_id || null,
+        ]);
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving plans rates:', err);
+        throw new Error('Database error');
+    }
+};
+
+// Get plans_rates by ID
+const getPlansRateById = async (id) => {
+    const query = 'SELECT * FROM plans_rates WHERE id = $1';
+
+    try {
+        const result = await pool.query(query, [id]);
+        if (result.rows.length === 0) {
+            throw new Error('Plan rate not found');
+        }
+        return result.rows[0];
+    } catch (err) {
+        console.error(`Error retrieving plan rate with ID ${id}:`, err);
+        throw err;
+    }
+};
+
+const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id, date) => {
+    const query = `        
+        SELECT 
+            adjustment_type,
+            condition_type,
+            condition_value,
+            SUM(adjustment_value) AS total_value
+        FROM plans_rates
+        WHERE 
+            (
+                $4 BETWEEN date_start AND COALESCE(date_end, $4)  -- Date is within the range
+                OR ($4 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
+            )
+            AND (plans_global_id = $1 AND plans_hotel_id IS NULL) 
+            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
+        GROUP BY condition_type, adjustment_type, condition_value
+    `;
+    const values = [
+        plans_global_id || null,
+        plans_hotel_id || null,
+        hotel_id,
+        date,
+    ];
+
+    try {
+        const result = await pool.query(query, values);
+
+        //console.log('Query:', query);
+        //console.log('Values:', values);
+
+        let baseRate = 0, percentage = 0, flatFee = 0;
+        
+        // Loop through the result rows and sum up valid adjustments for each adjustment_type
+        result.rows.forEach(row => {
+            if (isValidCondition(row, date)) {
+                if (row.adjustment_type === 'base_rate') baseRate += parseFloat(row.total_value);
+                if (row.adjustment_type === 'percentage') percentage += parseFloat(row.total_value);
+                if (row.adjustment_type === 'flat_fee') flatFee += parseFloat(row.total_value);
+            }
+        });
+        
+        // Apply percentage to base rate
+        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
+
+        // Add flat fee
+        const finalPrice = priceWithPercentage + flatFee;
+
+        return finalPrice;
+    } catch (err) {
+        console.error('Error calculating price:', err);
+        throw new Error('Database error');
+    }
+};
+
+// Create a new plans_rate
+const createPlansRate = async (plansRate) => {
+    const query = `
+        INSERT INTO plans_rates (
+            hotel_id, 
+            plans_global_id, 
+            plans_hotel_id, 
+            adjustment_type, 
+            adjustment_value, 
+            condition_type, 
+            condition_value, 
+            date_start, 
+            date_end, 
+            created_by,
+            updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+    `;
+
+    const values = [
+        plansRate.hotel_id,
+        plansRate.plans_global_id,
+        plansRate.plans_hotel_id,
+        plansRate.adjustment_type,
+        plansRate.adjustment_value,
+        plansRate.condition_type,
+        plansRate.condition_value,
+        plansRate.date_start,
+        plansRate.date_end,
+        plansRate.created_by,
+        plansRate.updated_by
+    ];
+
+    try {
+        const result = await pool.query(query, values);
+        return result.rows[0];
+    } catch (err) {
+        console.error('Error creating plan rate:', err);
+        throw new Error('Database error');
+    }
+};
+
+// Update an existing plans_rate
+const updatePlansRate = async (id, plansRate) => {
+    const query = `
+        UPDATE plans_rates
+        SET 
+            hotel_id = $1,
+            plans_global_id = $2,
+            plans_hotel_id = $3,
+            adjustment_type = $4,
+            adjustment_value = $5,
+            condition_type = $6,
+            condition_value = $7,
+            date_start = $8,
+            date_end = $9,
+            updated_by = $10
+        WHERE id = $11
+        RETURNING *
+    `;
+
+    const values = [
+        plansRate.hotel_id,
+        plansRate.plans_global_id,
+        plansRate.plans_hotel_id,
+        plansRate.adjustment_type,
+        plansRate.adjustment_value,
+        plansRate.condition_type,
+        plansRate.condition_value,
+        plansRate.date_start,
+        plansRate.date_end,
+        plansRate.updated_by,
+        id
+    ];
+
+    try {
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) {
+            throw new Error('Plan rate not found');
+        }
+        return result.rows[0];
+    } catch (err) {
+        console.error(`Error updating plan rate with ID ${id}:`, err);
+        throw err;
+    }
+};
+
+// Delete a plans_rate by ID
+const deletePlansRate = async (id) => {
+    const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
+
+    try {
+        const result = await pool.query(query, [id]);
+        if (result.rows.length === 0) {
+            throw new Error('Plan rate not found');
+        }
+        return result.rows[0];
+    } catch (err) {
+        console.error(`Error deleting plan rate with ID ${id}:`, err);
+        throw err;
+    }
+};
+
+module.exports = {
+    getAllPlansRates,
+    getPlansRateById,
+    getPriceForReservation,
+    createPlansRate,
+    updatePlansRate,
+    deletePlansRate    
+};

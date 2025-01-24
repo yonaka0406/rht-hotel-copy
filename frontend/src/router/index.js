@@ -1,0 +1,144 @@
+import { createRouter, createWebHistory } from 'vue-router';
+
+const WorkInProgress = () => import('@/components/WorkInProgress.vue');
+
+const Login = () => import('@/pages/Login.vue');
+const ForgotPassword = () => import('@/pages/ForgotPassword.vue');
+const ResetPassword = () => import('@/pages/ResetPassword.vue');
+const NotFound = () => import('@/pages/NotFound.vue');
+
+const AdminPanel = () => import('@/pages/Admin/AdminPanel.vue');
+const ManageUsers = () => import('@/pages/Admin/ManageUsers.vue');
+const ManageRoles = () => import('@/pages/Admin/ManageRoles.vue');
+const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
+const ManageHotel = () => import('@/pages/Admin/ManageHotel.vue');
+const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
+const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
+const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
+
+const MainPage = () => import('@/pages/MainPage/MainPage.vue');
+const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
+const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
+
+const routes = [
+  {
+    path: '/',
+    name: 'MainPage',
+    component: MainPage,
+    children: [
+      { path: '/reservations/new/', name: 'ReservationsNew', component: ReservationsNew },
+      { path: '/reservations/calendar', name: 'ReservationsCalendar', component: ReservationsCalendar },
+    ],
+    meta: { requiresAuth: true },
+  },  
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: ForgotPassword,
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',    
+    component: ResetPassword,
+  },
+  {
+    path: '/admin',
+    component: AdminPanel,
+    children: [
+      { path: 'users', component: ManageUsers },
+      { path: 'roles', component: ManageRoles },
+      { path: 'hotel-create', component: ManageHotels },
+      { path: 'hotel-edit', component: ManageHotel },
+      { path: 'hotel-plans', component: ManagePlans },
+      { path: 'hotel-addons', component: ManageAddons },
+      { path: 'ota', component: ManageOTA }
+    ],
+    meta: { requiresAuth: true },
+  },
+  // Work in Progress
+  {
+    path: "/wip",
+    name: "WorkInProgress",
+    component: WorkInProgress
+  },
+  // Catch-all 404 route
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',    
+    component: NotFound,
+  },
+];
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});
+
+// Navigation guard for authentication
+router.beforeEach((to, from, next) => {
+  const authToken = localStorage.getItem('authToken');
+  const isAuthenticated = !!authToken;
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    return next({ name: 'Login' });
+  }
+
+  if (isAuthenticated && to.name === 'Login') {
+    return next({ name: 'MainPage' });
+  }
+
+  const verifyToken = async (url) => {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+
+        // Specific handling for insufficient permissions
+        if (data.error && data.error.includes('Insufficient permissions')) {
+          next({ name: 'MainPage' });
+          return false;          
+        }
+
+        // Other errors
+        localStorage.removeItem('authToken');        
+        next({ name: 'Login' });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Authentication verification failed:', error);
+      localStorage.removeItem('authToken');
+      next({ name: 'Login' });
+      return false;
+    }
+  };
+
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    const isAdminRoute = to.path.startsWith('/admin');
+    const apiUrl = isAdminRoute ? '/api/adminProtected' : '/api/protected';
+
+    verifyToken(apiUrl).then((isValid) => {
+      if (isValid) {
+        next();
+      }
+    });
+
+    return;
+  }
+
+  next();
+});
+
+export default router;

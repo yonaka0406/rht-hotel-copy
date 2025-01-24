@@ -1,0 +1,1003 @@
+<template>
+    <div v-if="plan">
+        <div class="flex space-x-4 mb-4">
+            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
+                <h3 class="text-xl font-semibold">Select Date:</h3>
+                <DatePicker v-model="selectedDate" 
+                    class="w-full" 
+                    placeholder="Select Date"
+                    dateFormat="yy-mm-dd" 
+                />
+            </div>
+            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
+                <h3 class="text-xl font-semibold">Current Base Rate:</h3>
+                <div>
+                    <p v-if="filteredBaseRateSum !== null">
+                    Total Base Rate: {{ formatNumber(filteredBaseRateSum, 'currency') }}
+                    </p>
+                    <p v-else>No base rate found for the selected date.</p>
+                </div>
+            </div>
+            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+                <h3 class="text-xl font-semibold">Current Flat Fee Adjustments:</h3>
+                <div>
+                    <p v-if="filteredFlatFeeSum !== null">
+                    Total Flat Fee: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
+                    </p>
+                    <p v-else>No flat fee adjustment found for the selected date.</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex space-x-4">
+            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+                <h3 class="text-xl font-semibold">Current Percentage Adjustments:</h3>
+                <div>
+                    <p v-if="filteredPercentageSum !== null">
+                    Total Percentage: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
+                    </p>
+                    <p v-else>No percentage adjustment found for the selected date.</p>
+                </div>
+            </div>
+            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+                <h3 class="text-xl font-semibold">Current Addons:</h3>
+                <div>                    
+                    <p>Count: {{ filteredAddonCount }}</p>
+                    <p>Total Price: {{ formatNumber(filteredAddonSum, 'currency') }}</p>                    
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="grid xs:grid-cols-1 grid-cols-3 gap-2 mt-6">
+                <div class="flex justify-start">
+                    <span class="font-bold text-lg">Conditions</span>
+                </div>                  
+                <div class="flex justify-start">
+                    <Button @click="openAdjustmentDialog" label="Add New Adjustment" icon="pi pi-plus" />
+                </div>
+            </div>
+            <Accordion value="0">
+                <AccordionPanel value="0">
+                    <AccordionHeader>Current Conditions</AccordionHeader>
+                    <AccordionContent>                        
+                        <DataTable :value="filteredCurrentConditions">
+                            <Column field="date_start" header="Start"></Column>
+                            <Column field="date_end" header="End"></Column>    
+                            <Column header="Rate">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
+                                    </div>
+                                    <div v-else>
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
+                                        <Badge value="Base Rate"
+                                            severity="secondary">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
+                                        <Badge value="Flat Fee"
+                                            severity="info">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="Percentage"
+                                            severity="warn">
+                                        </Badge>
+                                    </div>
+                                    
+                                </template>
+                            </Column>
+                            <Column header="Condition">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
+                                        <Badge 
+                                            v-for="(day, index) in daysOfWeek"
+                                            :key="index"
+                                            :value="day.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
+                                        <Badge 
+                                            v-for="(month, index) in months" 
+                                            :key="index"
+                                            :value="month.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="Actions">
+                                <template #body="slotProps">
+                                    <Button 
+                                        icon="pi pi-pencil"
+                                        class="p-button-text p-button-sm"
+                                        @click="openEditAdjustmentDialog(slotProps.data)"
+                                    />                                  
+                                </template>
+                            </Column>
+                        </DataTable>
+                    </AccordionContent>
+                </AccordionPanel>
+                <AccordionPanel value="1">
+                    <AccordionHeader>Future Conditions</AccordionHeader>
+                    <AccordionContent>
+                        <DataTable :value="filteredFutureConditions">
+                            <Column field="date_start" header="Start"></Column>
+                            <Column field="date_end" header="End"></Column>    
+                            <Column header="Rate">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
+                                    </div>
+                                    <div v-else>
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
+                                        <Badge value="Base Rate"
+                                            severity="secondary">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
+                                        <Badge value="Flat Fee"
+                                            severity="info">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="Percentage"
+                                            severity="warn">
+                                        </Badge>
+                                    </div>
+                                    
+                                </template>
+                            </Column>
+                            <Column header="Condition">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
+                                        <Badge 
+                                            v-for="(day, index) in daysOfWeek"
+                                            :key="index"
+                                            :value="day.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
+                                        <Badge 
+                                            v-for="(month, index) in months" 
+                                            :key="index"
+                                            :value="month.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column header="Actions">
+                                <template #body="slotProps">
+                                    <Button 
+                                        icon="pi pi-pencil"
+                                        class="p-button-text p-button-sm"
+                                        @click="openEditAdjustmentDialog(slotProps.data)"
+                                    />                                  
+                                </template>
+                            </Column>    
+                        </DataTable>
+                    </AccordionContent>
+                </AccordionPanel>
+                <AccordionPanel value="2">
+                    <AccordionHeader>Past Conditions</AccordionHeader>
+                    <AccordionContent>                        
+                        <DataTable :value="filteredPastConditions">
+                            <Column field="date_start" header="Start"></Column>
+                            <Column field="date_end" header="End"></Column>    
+                            <Column header="Rate">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.adjustment_type !== 'percentage'">
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
+                                    </div>
+                                    <div v-else>
+                                        {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'base_rate'">
+                                        <Badge value="Base Rate"
+                                            severity="secondary">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
+                                        <Badge value="Flat Fee"
+                                            severity="info">
+                                        </Badge>
+                                    </div>
+                                    <div v-if="slotProps.data.adjustment_type === 'percentage'">
+                                        <Badge value="Percentage"
+                                            severity="warn">
+                                        </Badge>
+                                    </div>
+                                    
+                                </template>
+                            </Column>
+                            <Column header="Condition">
+                                <template #body="slotProps">
+                                    <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
+                                        <Badge 
+                                            v-for="(day, index) in daysOfWeek"
+                                            :key="index"
+                                            :value="day.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                    <div v-else-if="slotProps.data.condition_type === 'month'">                                        
+                                        <Badge 
+                                            v-for="(month, index) in months" 
+                                            :key="index"
+                                            :value="month.label.slice(0, 3)"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            class="p-m-1"
+                                        />
+                                    </div>
+                                </template>
+                            </Column>   
+                            <Column header="Actions">
+                                <template #body="slotProps">
+                                    <Button 
+                                        icon="pi pi-pencil"
+                                        class="p-button-text p-button-sm"
+                                        @click="openEditAdjustmentDialog(slotProps.data)"
+                                    />                                  
+                                </template>
+                            </Column>                     
+                        </DataTable>
+                    </AccordionContent>
+                </AccordionPanel>
+            </Accordion>
+        </div>
+
+        <div>
+            <ManagePlansAddons :plan="planId" @update-filtered-conditions="handleFilteredAddons" />
+        </div>
+        
+        <Dialog header="Add New Adjustment" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="adjustmentType">Adjustment Type *</label>
+                        <Select v-model="newAdjustment.adjustment_type" 
+                            :options="adjustmentTypes" 
+                            optionLabel="label" 
+                            optionValue="value" 
+                            fluid 
+                            required />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="conditionType">Condition Type *</label>
+                        <Select v-model="newAdjustment.condition_type" 
+                            :options="conditionTypes" 
+                            optionLabel="label" 
+                            optionValue="value" 
+                            class="w-full"
+                            @change="updateConditionValues" 
+                            required 
+                        />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="adjustmentValue">Adjustment Value *</label>
+                        <div v-if="newAdjustment.adjustment_type !== 'percentage'">
+                            <InputNumber v-model="newAdjustment.adjustment_value" 
+                                mode="currency" 
+                                currency="JPY" 
+                                locale="ja-JP" 
+                                class="w-full"
+                                required 
+                            />
+
+                        </div>
+                        <div v-else>
+                            <InputNumber v-model="newAdjustment.adjustment_value" 
+                                :minFractionDigits="2"
+                                :maxFractionDigits="2"
+                                suffix="%"
+                                class="w-full"
+                                required 
+                            />
+                        </div>                        
+                    </FloatLabel>                
+                </div>
+                <div class="col-6">                    
+                    <FloatLabel>
+                        <label for="conditionValue">Condition Value</label>
+                        <MultiSelect v-model="newAdjustment.condition_value" 
+                            placeholder="Condition Value"
+                            :options="conditionValues" 
+                            optionLabel="label" 
+                            optionValue="value"
+                            :maxSelectedLabels="3"
+                            class="w-full"
+                        />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="dateStart">Start Date</label>                
+                        <DatePicker v-model="newAdjustment.date_start" 
+                            dateFormat="yy-mm-dd"
+                            class="w-full"
+                            required 
+                        />
+                    </FloatLabel>                
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="dateEnd">End Date</label>
+                        <DatePicker v-model="newAdjustment.date_end"
+                            dateFormat="yy-mm-dd"
+                            class="w-full"  
+                        />
+                    </FloatLabel>                
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Save" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
+                <Button label="Cancel" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
+            </template>
+        </Dialog>
+
+        <Dialog header="Edit Adjustment" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="adjustmentType">Adjustment Type *</label>
+                        <Select v-model="editAdjustment.adjustment_type" 
+                            :options="adjustmentTypes" 
+                            optionLabel="label" 
+                            optionValue="value" 
+                            fluid 
+                            required />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="conditionType">Condition Type *</label>
+                        <Select v-model="editAdjustment.condition_type" 
+                            :options="conditionTypes" 
+                            optionLabel="label" 
+                            optionValue="value" 
+                            class="w-full"
+                            @change="updateEditConditionValues" 
+                            required 
+                        />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="adjustmentValue">Adjustment Value *</label>
+                        <div v-if="editAdjustment.adjustment_type !== 'percentage'">
+                            <InputNumber v-model="editAdjustment.adjustment_value" 
+                                mode="currency" 
+                                currency="JPY" 
+                                locale="ja-JP" 
+                                class="w-full"
+                                required 
+                            />
+                        </div>
+                        <div v-else>
+                            <InputNumber v-model="editAdjustment.adjustment_value" 
+                                :minFractionDigits="2"
+                                :maxFractionDigits="2"
+                                suffix="%"
+                                class="w-full"
+                                required 
+                            />
+                        </div>                        
+                    </FloatLabel>                
+                </div>                
+                <div class="col-6">                    
+                    <FloatLabel>
+                        <label for="conditionValue">Condition Value</label>
+                        <MultiSelect  
+                            v-model="selectedEditConditions"
+                            placeholder="Condition Value"
+                            :options="conditionValues" 
+                            optionLabel="label" 
+                            optionValue="value"
+                            :maxSelectedLabels="3"
+                            class="w-full"
+                        />
+                    </FloatLabel>
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="dateStart">Start Date</label>                
+                        <DatePicker v-model="editAdjustment.date_start" 
+                            dateFormat="yy-mm-dd"
+                            class="w-full"
+                            required 
+                        />
+                    </FloatLabel>                
+                </div>
+                <div class="col-6">
+                    <FloatLabel>
+                        <label for="dateEnd">End Date</label>
+                        <DatePicker v-model="editAdjustment.date_end"
+                            dateFormat="yy-mm-dd"
+                            class="w-full"  
+                        />
+                    </FloatLabel>                
+                </div>
+            </div>
+            <template #footer>
+                <Button label="Update" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
+                <Button label="Cancel" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
+            </template>
+        </Dialog>
+
+    </div>
+</template>
+  
+<script>
+    import { ref, watch, computed, onMounted } from 'vue';
+    import { useToast } from 'primevue/usetoast';
+
+    import ManagePlansAddons from './ManagePlansAddons.vue';
+
+    import Button from 'primevue/button';
+    import Dialog from 'primevue/dialog';
+    import InputNumber from 'primevue/inputnumber';
+    import InputText from 'primevue/inputtext';
+    import Select from 'primevue/select';
+    import MultiSelect from 'primevue/multiselect'
+    import DatePicker from 'primevue/datepicker';
+    import FloatLabel from 'primevue/floatlabel';
+    import Accordion from 'primevue/accordion';
+    import AccordionPanel from 'primevue/accordionpanel';
+    import AccordionHeader from 'primevue/accordionheader';
+    import AccordionContent from 'primevue/accordioncontent';
+    import DataTable from 'primevue/datatable';
+    import Column from 'primevue/column';
+    import Badge from 'primevue/badge';
+
+    export default {
+        name: 'ManagePlanRate',
+        props: {
+        plan: {
+                type: Object,
+                required: true,
+            },
+        },
+        data() {
+            return {
+                addons: []
+            };
+        },
+        components: {
+            ManagePlansAddons,
+            Button,
+            Dialog,
+            InputNumber,
+            InputText,
+            Select,
+            MultiSelect,
+            DatePicker,
+            FloatLabel,
+            Accordion,
+            AccordionPanel,
+            AccordionHeader,
+            AccordionContent,
+            DataTable,
+            Column,
+            Badge,
+        },
+        setup(props) {
+            const toast = useToast();
+            const selectedDate = ref(new Date().toISOString().split('T')[0]);
+            const planId = ref({                
+                plans_global_id: props.plan.context === 'global' ? props.plan.id : 0,
+                plans_hotel_id: props.plan.context === 'hotel' ? props.plan.id : 0,
+                hotel_id: props.plan.context === 'hotel' ? props.plan.hotel_id : 0, 
+                date: selectedDate,
+            });            
+            const allRates = ref([]);            
+            const showAdjustmentDialog = ref(false);
+            const showEditAdjustmentDialog = ref(false);
+            const selectedEditConditions = ref([]);            
+            const newAdjustment = ref({
+                hotel_id: null,
+                plans_global_id: null,
+                plans_hotel_id: null,
+                adjustment_type: 'base_rate',
+                adjustment_value: 0,
+                condition_type: 'no_restriction',
+                condition_value: [],
+                date_start: new Date().toISOString().split('T')[0],
+                date_end: null,
+            });
+            const editAdjustment = ref({
+                hotel_id: null,
+                plans_global_id: null,
+                plans_hotel_id: null,
+                adjustment_type: 'base_rate',
+                adjustment_value: 0,
+                condition_type: 'no_restriction',
+                condition_value: [],
+                date_start: new Date().toISOString().split('T')[0],
+                date_end: null,
+            });            
+            const adjustmentTypes = [
+                { label: 'Base Rate', value: 'base_rate' },
+                { label: 'Percentage', value: 'percentage' },
+                { label: 'Flat Fee', value: 'flat_fee' },
+            ];
+            const conditionTypes = [
+                { label: 'No Restriction', value: 'no_restriction' },
+                { label: 'Day of Week', value: 'day_of_week' },
+                { label: 'Month', value: 'month' },
+            ];
+            const conditionValues = ref([]);
+            const filteredCurrentAddons = ref([]);
+
+            const daysOfWeek = [
+                { label: 'Monday', value: 'monday' },
+                { label: 'Tuesday', value: 'tuesday' },
+                { label: 'Wednesday', value: 'wednesday' },
+                { label: 'Thursday', value: 'thursday' },
+                { label: 'Friday', value: 'friday' },
+                { label: 'Saturday', value: 'saturday' },
+                { label: 'Sunday', value: 'sunday' }
+            ];
+
+            const months = [
+                { label: 'January', value: 'january' },
+                { label: 'February', value: 'february' },
+                { label: 'March', value: 'march' },
+                { label: 'April', value: 'april' },
+                { label: 'May', value: 'may' },
+                { label: 'June', value: 'june' },
+                { label: 'July', value: 'july' },
+                { label: 'August', value: 'august' },
+                { label: 'September', value: 'september' },
+                { label: 'October', value: 'october' },
+                { label: 'November', value: 'november' },
+                { label: 'December', value: 'december' }
+            ];            
+
+            const fetchRates = async () => {
+                // Helper function to format the date
+                const formatDate = (date) => {
+                    if (!date) return null; // Handle null values
+                    const d = new Date(date);
+                    const yy = String(d.getFullYear()); 
+                    const mm = String(d.getMonth() + 1).padStart(2, '0'); // Month (01-12)
+                    const dd = String(d.getDate()).padStart(2, '0'); // Day (01-31)
+                    return `${yy}-${mm}-${dd}`;
+                };
+
+                try {
+                    const authToken = localStorage.getItem('authToken');
+                    const response = await fetch(`/api/plans/${planId.value.plans_global_id}/${planId.value.plans_hotel_id}/${planId.value.hotel_id}/rates`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json',
+                        }                        
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch rates');
+                    }
+
+                    const data = await response.json();
+                    allRates.value = data.map(rate => ({
+                        ...rate,
+                        date_start: formatDate(rate.date_start),
+                        date_end: formatDate(rate.date_end)
+                    }));
+                } catch (error) {
+                    console.error('Error fetching rates:', error);
+                }
+            };
+
+            const openAdjustmentDialog = () => {
+                if (props.plan.context === 'global') {
+                    newAdjustment.value.plans_global_id = props.plan.id;
+                    newAdjustment.value.plans_hotel_id = null;
+                } else if (props.plan.context === 'hotel') {
+                    newAdjustment.value.plans_global_id = null;
+                    newAdjustment.value.plans_hotel_id = props.plan.id;
+                    newAdjustment.value.hotel_id = props.plan.hotel_id;
+                }
+                showAdjustmentDialog.value = true;
+            };
+
+            const openEditAdjustmentDialog = (adjustmentData) => {
+                // Populate the editAdjustment with the selected row data
+                editAdjustment.value = { ...adjustmentData };
+
+                updateEditConditionValues();
+                showEditAdjustmentDialog.value = true; // Open the dialog
+            };
+
+            const updateConditionValues = () => {
+                if (newAdjustment.value.condition_type === 'day_of_week') {
+                    conditionValues.value = daysOfWeek;
+                } else if (newAdjustment.value.condition_type === 'month') {
+                    conditionValues.value = months;
+                } else if (newAdjustment.value.condition_type === 'no_restriction') {
+                    newAdjustment.value.condition_value = [];
+                    conditionValues.value = [];
+                } else {
+                    conditionValues.value = [];
+                }
+            };
+            const updateEditConditionValues = () => {
+                if (editAdjustment.value.condition_type === 'day_of_week') {
+                    conditionValues.value = daysOfWeek;
+                } else if (editAdjustment.value.condition_type === 'month') {
+                    conditionValues.value = months;
+                } else if (editAdjustment.value.condition_type === 'no_restriction') {
+                    editAdjustment.value.condition_value = [];
+                    conditionValues.value = [];
+                } else {
+                    conditionValues.value = [];
+                }
+            };
+
+            const saveAdjustment = async () => {
+                // Validation
+                    if (newAdjustment.value.date_end && new Date(newAdjustment.value.date_end) < new Date(newAdjustment.value.date_start)) {                    
+                        toast.add({ 
+                            severity: 'error', 
+                            summary: 'Error', 
+                            detail: 'End date must be equal to or greater than start date.', life: 3000 
+                        });
+                        return;
+                    }
+                    if (newAdjustment.value.adjustment_value === 0) {
+                        toast.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: 'Adjustment value must be different than 0.',
+                            life: 3000
+                        });
+                        return;
+                    }
+
+                // Conversion from Datetime to Date
+                    const formatDate = (date) => {
+                        if (!date) return null;
+                        const d = new Date(date);
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+                    const formattedAdjustment = {
+                        ...newAdjustment.value,
+                        date_start: formatDate(newAdjustment.value.date_start),
+                        date_end: formatDate(newAdjustment.value.date_end),
+                    };
+
+                try {
+                    const authToken = localStorage.getItem('authToken');
+                    const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formattedAdjustment),
+                    });
+                    if (!response.ok) {
+                        throw new Error('Failed to save adjustment');
+                    } 
+
+                    fetchRates();
+                    showAdjustmentDialog.value = false;
+                    newAdjustment.value = {
+                        hotel_id: null,
+                        plans_global_id: null,
+                        plans_hotel_id: null,
+                        adjustment_type: 'base_rate',
+                        adjustment_value: 0,
+                        condition_type: 'no_restriction',
+                        condition_value: [],
+                        date_start: null,
+                        date_end: null,
+                    };
+
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Rate created successfully',
+                        life: 3000
+                    });
+                } catch (error) {
+                    console.error('Error saving adjustment:', error);
+                }
+            };
+
+            const updateAdjustment = async () => {
+                // Validation
+                if (editAdjustment.value.date_end && new Date(editAdjustment.value.date_end) < new Date(editAdjustment.value.date_start)) {
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'End date must be equal to or greater than start date.',
+                        life: 3000
+                    });
+                    return;
+                }
+                if (editAdjustment.value.adjustment_value === 0) {
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Adjustment value must be different than 0.',
+                        life: 3000
+                    });
+                    return;
+                }
+
+                // Conversion from Datetime to Date
+                const formatDate = (date) => {
+                    if (!date) return null;
+                    const d = new Date(date);
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                };
+
+                const formattedAdjustment = {
+                    ...editAdjustment.value,
+                    date_start: formatDate(editAdjustment.value.date_start),
+                    date_end: formatDate(editAdjustment.value.date_end),
+                };
+
+                try {
+                    const authToken = localStorage.getItem('authToken');
+                    const response = await fetch(`/api/plans/rates/${editAdjustment.value.id}`, {  // Use adjustment ID for PUT request
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formattedAdjustment),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to update adjustment');
+                    }
+
+                    fetchRates(); // Refresh the rates
+                    showEditAdjustmentDialog.value = false; // Close the dialog
+                    editAdjustment.value = {
+                        hotel_id: null,
+                        plans_global_id: null,
+                        plans_hotel_id: null,
+                        adjustment_type: 'base_rate',
+                        adjustment_value: 0,
+                        condition_type: 'no_restriction',
+                        condition_value: [],
+                        date_start: null,
+                        date_end: null,
+                        id: null // Reset the ID after updating
+                    };
+
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Rate updated successfully',
+                        life: 3000
+                    });
+                } catch (error) {
+                    console.error('Error updating adjustment:', error);
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'An error occurred while updating the rate.',
+                        life: 3000
+                    });
+                }
+            };
+
+
+            // Computed             
+            const filteredBaseRateSum = computed(() => {
+                const filteredRates = filteredCurrentConditions.value.filter(rate => rate.adjustment_type === 'base_rate');
+                const sum = filteredRates.reduce((total, rate) => total + rate.adjustment_value, 0);
+                return sum > 0 ? sum : null;
+            });
+
+            const filteredFlatFeeSum = computed(() => {
+                const filteredRates = filteredCurrentConditions.value.filter(rate => rate.adjustment_type === 'flat_fee');
+                const sum = filteredRates.reduce((total, rate) => total + rate.adjustment_value, 0);
+                return sum > 0 ? sum : null;
+            });
+
+            const filteredPercentageSum = computed(() => {
+                const filteredRates = filteredCurrentConditions.value.filter(rate => rate.adjustment_type === 'percentage');
+                const sum = filteredRates.reduce((total, rate) => total + rate.adjustment_value, 0);
+                return sum > 0 ? sum : null;
+            });
+
+            const filteredCurrentConditions = computed(() => {
+                if (!selectedDate.value) return null;
+
+                // Normalized date
+                const selectedDateObj = new Date(selectedDate.value);
+                selectedDateObj.setHours(0, 0, 0, 0);
+
+                return allRates.value
+                    .filter(condition => {                    
+                        const startDate = new Date(condition.date_start);
+                        startDate.setHours(0, 0, 0, 0);                        
+                        const endDate = condition.date_end ? new Date(condition.date_end) : null;
+                        if (endDate) endDate.setHours(0, 0, 0, 0);                        
+                        return selectedDateObj >= startDate && (endDate ? selectedDateObj <= endDate : true);
+                    });
+            });
+
+            const filteredFutureConditions = computed(() => {
+                if (!selectedDate.value) return null;
+                
+                // Normalized date
+                const selectedDateObj = new Date(selectedDate.value);
+                selectedDateObj.setHours(0, 0, 0, 0);
+
+                return allRates.value
+                    .filter(condition => {
+                        const startDate = new Date(condition.date_start);
+                        startDate.setHours(0, 0, 0, 0);                        
+                        return startDate > selectedDateObj;
+                });
+
+                
+            });
+
+            const filteredPastConditions = computed(() => {
+                if (!selectedDate.value) return null;
+
+                // Normalized date
+                const selectedDateObj = new Date(selectedDate.value);
+                selectedDateObj.setHours(0, 0, 0, 0);
+
+                return allRates.value
+                    .filter(condition => {
+                        const startDate = new Date(condition.date_start);
+                        startDate.setHours(0, 0, 0, 0);
+                        const endDate = condition.date_end ? new Date(condition.date_end) : null;
+                        if (endDate) endDate.setHours(0, 0, 0, 0);
+                        return startDate < selectedDateObj && endDate != null;
+                    });
+            });
+
+            
+/*
+            const filteredAddonSum = computed(() => {
+                if (filteredCurrentAddons.length === 0) return null;
+                const filteredAddons = filteredCurrentAddons;
+                const sum = filteredAddons.reduce((total, addon) => {                    
+                    return total + (addon.price || 0); 
+                }, 0);
+                return sum > 0 ? sum : null;
+            });
+            const filteredAddonCount = computed(() => {
+                const filteredAddons = filteredCurrentAddons;
+                return filteredAddons.length;
+            });
+*/
+            onMounted(fetchRates);
+
+            // Watcher
+            watch(() => editAdjustment.value.condition_value, (newValue) => {
+                
+                if (typeof newValue === 'string') {                    
+                    try {                        
+                        // Ensure the string is correctly formatted as a JSON array
+                        // Fix the string format to make it valid JSON
+                        let correctedValue = editAdjustment.value.condition_value
+                            .replace(/{/g, '[')  // Replace '{' with '['
+                            .replace(/}/g, ']')  // Replace '}' with ']'                            
+
+                        // Now attempt to parse the corrected string into an array
+                        const parsedValue = JSON.parse(correctedValue);                        
+
+                        selectedEditConditions.value = Array.isArray(parsedValue) ? parsedValue : [];
+                    } catch (error) {
+                        console.error('Error parsing condition_value:', error);
+                        selectedEditConditions.value = [];
+                    }
+                } else {
+                    // If condition_value is already an array, assign it directly
+                    selectedEditConditions.value = newValue || [];
+                }
+            }, { immediate: true });
+/*
+            watch(editAdjustment, (newVal, oldVal) => {                
+                console.log('editAdjustment changed:', newVal);                
+            }, { deep: true });
+            watch(newAdjustment, (newVal, oldVal) => {                
+                console.log('newAdjustment changed:', newVal);                
+            }, { deep: true });
+            watch(allRates, (newVal, oldVal) => {                
+                console.log('allRates changed:', newVal);                
+            }, { deep: true });
+*/
+            
+            return {
+                planId,
+                selectedDate,
+                allRates,                
+                showAdjustmentDialog,
+                showEditAdjustmentDialog,
+                selectedEditConditions,
+                newAdjustment,
+                editAdjustment,
+                adjustmentTypes,
+                conditionTypes,
+                conditionValues, 
+                daysOfWeek,
+                months, 
+                openAdjustmentDialog,    
+                openEditAdjustmentDialog,      
+                updateConditionValues,
+                updateEditConditionValues,
+                saveAdjustment, 
+                updateAdjustment,               
+                filteredBaseRateSum,
+                filteredFlatFeeSum,
+                filteredPercentageSum,
+                filteredCurrentConditions,
+                filteredFutureConditions,
+                filteredPastConditions,  
+                //filteredAddonSum,   
+                //filteredAddonCount,                       
+            };
+        },
+        methods: {
+            formatNumber(value, style) {
+                if(style === 'currency'){
+                    return new Intl.NumberFormat('ja-JP', {
+                        style: 'currency',
+                        currency: 'JPY',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(value);
+                }
+                if(style === 'decimal'){
+                    return new Intl.NumberFormat('ja-JP', {
+                        style: 'decimal',
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2
+                    }).format(value);
+                }                
+            },
+            handleFilteredAddons(addons) {
+                this.addons = addons;
+                console.log("Received filtered conditions in parent:", addons);
+            }
+        },
+        computed: {
+            filteredAddonCount() {
+                // Count the number of addons
+                return this.addons.length;
+            },
+            filteredAddonSum() {
+                // Calculate the sum of the `price` field for all addons
+                return this.addons.reduce((sum, addon) => sum + (addon.price || 0), 0);
+            }
+        },
+    };
+</script>
+  
+<style scoped>
+
+</style>

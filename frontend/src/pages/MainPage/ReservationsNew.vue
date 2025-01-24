@@ -1,0 +1,1064 @@
+<template>
+  <div class="p-2">
+    <Panel 
+      v-if="reservation_id"
+      header="Edit reservation"
+    >
+      <ReservationEdit 
+        :reservation_id="reservation_id"
+      />
+    </Panel>
+    <Panel v-else header="New reservation">
+      <!-- Select Dates and Number of People -->
+      <div class="grid grid-cols-3 mb-4 mr-4 gap-2">
+        <div class="col-span-3">
+          <p class="text-lg text-left mb-2">Available Rooms per day</p>
+        </div>
+        <div class="col-span-2 mt-6">
+          <FloatLabel>
+            <DatePicker 
+              v-model="selectedDates"
+              selection-mode="range"
+              dateFormat="yy-mm-dd"
+              fluid           
+              @update:model-value="onDateChange"
+            />
+            <label>Check-in & Check-out</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mt-6">
+          <FloatLabel>
+            <InputNumber
+              v-model="numberOfPeople"
+              :min="1"
+            />
+            <label>Number of People</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mt-6">
+          <FloatLabel>
+            <InputNumber
+              v-model="numberOfNights"
+              variant="filled" 
+              fluid             
+              disabled 
+            />
+            <label>Number of Nights</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mt-6">
+          <FloatLabel>
+            <InputText
+              v-if="selectedCell"  
+              type="text"
+              v-model="roomTypeInput"              
+              variant="filled"              
+              fluid
+              disabled 
+            />
+            <label v-if="selectedCell">Room Type</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mt-6">                
+          <Button 
+            v-if="selectedCell" 
+            label="Add Reservation" 
+            icon="pi pi-calendar"             
+            :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
+            @click="openDialog" 
+          />
+        </div>
+      </div>
+      
+      <!-- Calendar-->
+      <div class="table-container" ref="tableContainer" @scroll="onScroll">
+        <table class="table-auto w-full mb-2">          
+          <thead>
+            <tr>
+              <th class="bg-white sticky left-0 z-20 border-l-2 border-gray-300" >Room Type</th>
+              <th 
+                v-for="(date, index) in dateRange" 
+                :key="index" 
+                class="px-4 py-2 text-center sticky top-0 bg-white z-10"
+              >                
+                {{ date }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+                v-for="(roomTypeId, roomIndex) in extractRoomTypes(generateDateRangeArray)"
+                :key="roomIndex"
+            >
+              <td class="px-4 py-2 text-center font-bold bg-white sticky left-0 z-10">
+                  {{ getRoomTypeName(roomTypeId, generateDateRangeArray) }}
+              </td>
+              <td
+                  v-for="(dateData, dateIndex) in generateDateRangeArray"
+                  :key="dateIndex"
+                  class="px-4 py-2 text-center"
+                  @click="selectCell(roomTypeId, dateIndex)"                  
+                  :class="{
+                  'bg-blue-100': isSelectedCell(roomTypeId, dateIndex),
+                  'cursor-pointer': true,                  
+                  'bg-red-100': isCapacityExceeded(roomTypeId, dateIndex)
+                }"
+              >
+                  <div v-if="dateData.rooms && dateData.rooms[roomTypeId]">
+                    <p>{{ dateData.rooms[roomTypeId].count }} <i class="pi pi-box" />Rooms </p>
+                    <!---->
+                    <p>{{ dateData.rooms[roomTypeId].total_capacity }} <i class="pi pi-users" /> People</p>
+                  </div>
+                  <div v-else>
+                      <p>N/A</p>
+                  </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Dialog -->
+      <Dialog 
+        v-model:visible="dialogVisible" 
+        :header="'Reservation'" 
+        :closable="true"
+        :modal="true"
+        :style="{ width: '600px' }"
+      >
+        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+          <!-- Name of the person making the reservation -->
+          <div class="col-span-2">
+            <FloatLabel>              
+              <AutoComplete
+                v-model="reservationDetails.name"
+                :suggestions="filteredClients"
+                @complete="filterClients"
+                field="id"                
+                @option-select="onClientSelect"                
+                fluid
+                required
+              >
+                <template #option="slotProps">
+                  <div>
+                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                  </div>
+                </template>
+              </AutoComplete>
+              <label>Name of the person</label>
+            </FloatLabel>
+          </div>
+
+          <!-- Type of person (Legal or Natural) -->
+          <div class="col-6">
+              <SelectButton 
+                v-model="reservationDetails.legal_or_natural_person" 
+                :options="personTypeOptions" 
+                option-label="label" 
+                option-value="value"
+                fluid                  
+                :disabled="isClientSelected"
+              />
+          </div>
+
+          <!-- Gender input if person is natural -->
+          <div class="col-6">          
+              <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
+                <RadioButton
+                  v-model="reservationDetails.gender"
+                  :inputId="'male'"
+                  :value="'male'"
+                  :disabled="isClientSelected"
+                />
+                <label for="male">Male</label>
+                <RadioButton
+                  v-model="reservationDetails.gender"
+                  :inputId="'female'"
+                  :value="'female'"
+                  :disabled="isClientSelected"
+                />
+                <label for="female">Female</label>
+                <RadioButton
+                  v-model="reservationDetails.gender"
+                  :inputId="'other'"
+                  :value="'other'"
+                  :disabled="isClientSelected"
+                />
+                <label for="other">Other</label>
+              </div>
+          </div>
+
+          <!-- Email input -->
+          <div class="col-6">
+            <FloatLabel>
+              <InputText 
+                v-model="reservationDetails.email"
+                :pattern="emailPattern"
+                :class="{'p-invalid': !isValidEmail}"
+                @input="validateEmail"
+                fluid 
+                :disabled="isClientSelected"
+              />
+              <label>Email</label>
+              <small v-if="!isValidEmail" class="p-error">Please enter a valid email address.</small>
+            </FloatLabel>
+          </div>
+
+          <!-- Phone number input -->
+          <div class="col-6">
+            <FloatLabel>
+              <InputText
+                v-model="reservationDetails.phone"
+                :pattern="phonePattern"
+                :class="{'p-invalid': !isValidPhone}"
+                @input="validatePhone"
+                fluid
+                :disabled="isClientSelected"
+
+              />
+              <label>Phone Number</label>
+              <small v-if="!isValidPhone" class="p-error">Please enter a valid phone number.</small>
+            </FloatLabel>
+          </div>
+
+          <!-- Additional fields for check-in, check-out, number of people -->
+          <div class="col-6">
+            <FloatLabel>
+              <InputText 
+                v-model="reservationDetails.check_in" 
+                type="date" 
+                variant="filled" 
+                fluid 
+                disabled
+              />
+              <label>Check-in</label>
+            </FloatLabel>
+          </div>
+
+          <div class="col-6">
+            <FloatLabel>
+              <InputText 
+                v-model="reservationDetails.check_out" 
+                type="date" 
+                variant="filled" 
+                fluid 
+                disabled
+              />
+              <label>Check-out</label>
+            </FloatLabel>
+          </div>
+          <div class="col-6">
+            <FloatLabel>
+              <InputNumber 
+                v-model="reservationDetails.number_of_nights" 
+                variant="filled" 
+                fluid                
+                disabled
+              />
+              <label>Number of Nights</label>
+            </FloatLabel>
+          </div>
+          <div class="col-6">
+            <FloatLabel>
+              <InputNumber 
+                v-model="reservationDetails.number_of_people" 
+                variant="filled" 
+                fluid                
+                disabled
+              />
+              <label>Number of People</label>
+            </FloatLabel>
+          </div>
+        </div>
+        <template #footer>
+          <Button label="Close" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
+          <Button label="Save" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
+        </template>        
+      </Dialog>
+      
+    </Panel>
+    
+  </div>
+</template>
+
+
+<script>
+  import { ref, computed, watch, onMounted, nextTick } from 'vue';
+  import ReservationEdit from './components/ReservationEdit.vue';
+
+  import { useToast } from 'primevue/usetoast';
+  import { useHotelStore } from '@/composables/useHotelStore';
+  import { useClientStore } from '@/composables/useClientStore';
+  import { useReservationStore } from '@/composables/useReservationStore';
+  import Panel from 'primevue/panel';
+  import FloatLabel from 'primevue/floatlabel'
+  import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton } from 'primevue';
+  import { DataTable, Column } from 'primevue';
+  import Dialog from 'primevue/dialog';
+  import Button from 'primevue/button'
+  
+
+  export default {  
+    name: "ReservationsNew",
+    components: {   
+        ReservationEdit,   
+        Panel,
+        FloatLabel,
+        DatePicker,
+        InputNumber,
+        InputText,
+        AutoComplete,
+        Select,
+        SelectButton,
+        RadioButton,
+        DataTable,
+        Column,
+        Dialog,   
+        Button,     
+    },
+    data() {
+      return {
+        
+      };
+    },
+    setup() {
+      const toast = useToast();
+      const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+      const { clients, fetchClients } = useClientStore();
+      const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
+      const filteredClients = ref([]);
+      
+      const today = new Date();
+      const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+      const selectedDates = ref([today, tomorrow]);
+      const centralDate = ref(new Date());
+      const roomDataCache = ref(new Map());
+      const generateDateRangeArray = ref([]);
+      const dateColumns = ref([]);      
+      const numberOfPeople = ref(1); 
+      const selectedCell = ref(null);
+      const roomTypeInput = ref('');       
+      const loading = ref(false);
+      const dialogVisible = ref(false);
+      const reservationDetails = ref({
+        hotel_id: null,
+        room_type_id: null,
+        client_id: null,
+        check_in: '',
+        check_out: '',
+        number_of_nights: 1,
+        number_of_people: 1,
+        name: '',        
+        legal_or_natural_person: 'legal',
+        gender: 'other',
+        email: null,
+        phone: null,
+      });
+      const personTypeOptions = [
+        { label: 'Legal', value: 'legal' },
+        { label: 'Natural', value: 'natural' },
+      ];
+      const genderOptions = [
+        { label: 'Male', value: 'male' },
+        { label: 'Female', value: 'female' },
+        { label: 'Other', value: 'other' },
+      ];
+      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      const isValidEmail = ref(true);
+      const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
+      const isValidPhone = ref(true);
+      const isClientSelected = ref(false);
+      const selectedClient = ref(null);
+
+      const dateRange = ref([]); 
+      const minDate = ref(null);
+      const maxDate = ref(null);
+            
+      const reservation_id = computed(() => reservationId.value);
+      
+      // Helper function
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+      const normalizeKana = (str) => {
+        if (!str) return '';
+        let normalizedStr = str.normalize('NFKC');
+        
+        // Convert Hiragana to Katakana
+        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
+          String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        );
+        // Convert half-width Katakana to full-width Katakana
+        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
+          String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        );
+        
+        return normalizedStr;
+      };
+      const validateEmail = () => {
+        isValidEmail.value = emailPattern.test(reservationDetails.value.email);
+      };
+      const validatePhone = () => {
+        isValidPhone.value = phonePattern.test(reservationDetails.value.phone);
+      };
+      // Generate dates
+      const generateDateRange = (start, end) => {
+        const dates = [];
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          dates.push(formatDate(new Date(d)));
+        }
+        return dates;
+      };
+      const appendDaysToRange = async (direction) => {
+        if (direction === "left") {
+          const newMinDate = new Date(minDate.value);
+          const newMaxDate = new Date(minDate.value);
+          newMinDate.setDate(newMinDate.getDate() - 3);
+          newMaxDate.setDate(newMaxDate.getDate() - 1);
+          const newDates = generateDateRange(newMinDate, newMaxDate);
+          dateRange.value = [...newDates, ...dateRange.value];
+          minDate.value = formatDate(newMinDate);
+          await fetchRooms();
+        } else if (direction === "right") {
+          const newMinDate = new Date(maxDate.value);
+          const newMaxDate = new Date(maxDate.value);
+          newMinDate.setDate(newMinDate.getDate() + 1);
+          newMaxDate.setDate(newMaxDate.getDate() + 3);
+          const newDates = generateDateRange(newMinDate, newMaxDate);
+          dateRange.value = [...dateRange.value, ...newDates];
+          maxDate.value = formatDate(newMaxDate);
+          await fetchRooms();
+        }
+      };
+      const fetchRooms = async () => {        
+        const fetchPromises = dateRange.value
+          .filter(date => !roomDataCache.value.has(date)) // Filter dates not yet fetched
+          .map(date => {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setDate(startDate.getDate() + numberOfNights.value);
+
+            const formattedStartDate = formatDate(startDate);
+            const formattedEndDate = formatDate(endDate);
+
+            return fetchAvailableRooms(selectedHotelId.value, formattedStartDate, formattedEndDate)
+              .then(() => {                
+                const roomTypesData = availableRooms.value.reduce((acc, room) => {
+                  const { room_type_id, capacity } = room;
+
+                  if (!acc[room_type_id]) {
+                    acc[room_type_id] = {
+                      room_type_name: room.room_type_name,
+                      count: 0,
+                      total_capacity: 0,
+                    };
+                  }
+
+                  acc[room_type_id].count += 1;
+                  acc[room_type_id].total_capacity += capacity;
+
+                  return acc;
+                }, {});
+
+                roomDataCache.value.set(date, { date: formattedStartDate, rooms: roomTypesData }); // Cache result
+                return { date: formattedStartDate, rooms: roomTypesData };
+              })
+              .catch(error => {
+                console.error(`Error fetching data for date ${formattedStartDate}:`, error);
+                return { date: formattedStartDate, rooms: {} };
+              });
+          });
+
+        try {
+          const results = await Promise.all(fetchPromises);
+          generateDateRangeArray.value = [...generateDateRangeArray.value, ...results];
+        } catch (error) {
+          console.error("Error fetching room data:", error);
+        }
+      };
+
+      const onDateChange = async () => {
+        
+        // Ensure the selectedDates contains valid date objects before calculating the min value
+        if (selectedDates.value && selectedDates.value.length === 2 && selectedDates.value[0] && selectedDates.value[1]) {
+          // Set centralDate to the minimum value of the selectedDates array (check-in date)
+          centralDate.value = new Date(Math.min(...selectedDates.value.map(date => date.getTime())));
+          //console.log('New centralDate set to: ', centralDate.value);
+        } else {
+          //console.error('Invalid dates in selectedDates:', selectedDates.value);
+        }
+
+        // Reset date-related data
+        roomDataCache.value = new Map();
+        generateDateRangeArray.value = [];
+        const today = new Date(centralDate.value);
+        const initialMinDate = new Date(today);
+        initialMinDate.setDate(initialMinDate.getDate() - 5);
+        const initialMaxDate = new Date(today);
+        initialMaxDate.setDate(initialMaxDate.getDate() + 30);
+        minDate.value = initialMinDate;
+        maxDate.value = initialMaxDate;        
+        dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+        await fetchRooms();
+
+        // Generate the new array based on the selected date range                
+        const tableContainer = document.querySelector(".table-container");
+        if (tableContainer) {
+          const totalScrollWidth = tableContainer.scrollWidth;
+          const scrollPosition = totalScrollWidth / 8;
+          tableContainer.scrollTo({
+            left: scrollPosition,
+            behavior: "smooth",
+          });            
+        }
+
+        // Logging after the async call completes to confirm data is updated
+        //console.log("Array from async onDateChange", generateDateRangeArray.value);
+      };
+
+      let timeoutId = null;
+      const debounce = (func, delay) => {
+        return (...args) => {
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+      };
+      const onScroll = async (event) => {
+        const container = event.target;
+        const threshold = 1;
+        const minScrollLeft = 1;
+
+        if (container.scrollLeft < minScrollLeft) {
+            debounce(appendDaysToRange('left'), 200);
+
+            container.scrollLeft = minScrollLeft + 10;
+        }
+
+        // Check if user is scrolling to the right (positive scroll direction)
+        if (container.scrollLeft + container.clientWidth >= container.scrollWidth - threshold) {          
+          debounce(appendDaysToRange('right'), 200);       
+        }
+
+      };
+
+      const extractRoomTypes = (data) => {
+        return data.reduce((acc, dateData) => {
+          for (const roomTypeId in dateData.rooms) {
+            if (!acc.includes(roomTypeId)) acc.push(roomTypeId);
+          }
+          return acc;
+        }, []);
+      };
+      const getRoomTypeName = (roomTypeId, array) => {
+        if (!Array.isArray(array)) {
+          console.error('Expected array but got:', typeof array);
+          return 'Unknown'; // Return default value if not an array
+        }
+        for (const dateData of array) {
+          if (dateData.rooms && dateData.rooms[roomTypeId]) {
+            return dateData.rooms[roomTypeId].room_type_name;
+          }
+        }
+         
+        return "Unknown";
+      };
+
+      const isCapacityExceeded = (roomTypeId, dateIndex) => {        
+        if (!selectedCell.value || !generateDateRangeArray.value[dateIndex] || !generateDateRangeArray.value[dateIndex].rooms || !generateDateRangeArray.value[dateIndex].rooms[roomTypeId]) {
+          return false; // No data available for this cell
+        }
+        const availableCapacity = generateDateRangeArray.value[dateIndex].rooms[roomTypeId].total_capacity;
+        return numberOfPeople.value > availableCapacity;
+      };
+
+      // Select cell
+      const selectCell = (roomTypeId, dateIndex) => {
+        
+        const roomTypeName = getRoomTypeName(roomTypeId, generateDateRangeArray.value);
+        selectedCell.value = { roomTypeId, dateIndex, roomTypeName };
+        roomTypeInput.value = roomTypeName;
+        
+        const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
+        
+        const endDate = new Date(selectedDate);
+        endDate.setDate(selectedDate.getDate() + numberOfNights.value);
+        selectedDates.value = [selectedDate, endDate];        
+        
+      };
+      const isSelectedCell = (roomTypeId, dateIndex) => {
+        return selectedCell.value && selectedCell.value.roomTypeId === roomTypeId && selectedCell.value.dateIndex === dateIndex;
+      };
+
+      // Dialog
+      const openDialog = () => {
+        reservationDetails.value.hotel_id = selectedHotelId.value;
+        reservationDetails.value.room_type_id = selectedCell.value.roomTypeId;
+        dialogVisible.value = true;
+      };
+      const filterClients = (event) => {
+        const query = event.query.toLowerCase();
+        filteredClients.value = clients.value.filter((client) =>
+          (client.name && client.name.toLowerCase().includes(query)) ||
+          (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
+          (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
+        );
+      };      
+      const onClientSelect = (event) => {
+        // Get selected client object from the event
+        selectedClient.value = event.value;
+        isClientSelected.value = true;
+        //console.log('Selected Client:', selectedClient.value);        
+
+        // Update reservationDetails with the selected client's information
+        reservationDetails.value.client_id = selectedClient.value.id;
+        reservationDetails.value.legal_or_natural_person = selectedClient.value.legal_or_natural_person;
+        reservationDetails.value.gender = selectedClient.value.gender;
+        reservationDetails.value.email = selectedClient.value.email;
+        reservationDetails.value.phone = selectedClient.value.phone;        
+
+        // Update the name field (optional, as it's already handled by v-model)
+        reservationDetails.value.name = selectedClient.value.name_kanji || selectedClient.value.name;
+      };
+      const submitReservation = async () => {
+        // Validate email and phone
+        validateEmail();
+        validatePhone();
+        
+        // Check if either email or phone is filled
+        if (!reservationDetails.value.email && !reservationDetails.value.phone) {
+          toast.add({
+            severity: 'warn',
+            summary: 'Validation Error',
+            detail: 'At least one of Email or Phone must be filled.',
+            life: 3000,
+          });
+          return; // Stop further execution if validation fails
+        }
+
+        // Check for valid email format
+        if (reservationDetails.value.email && !isValidEmail.value) {
+          toast.add({
+            severity: 'warn',
+            summary: 'Invalid Email',
+            detail: 'Please provide a valid email address.',
+            life: 3000,
+          });
+          return;
+        }
+
+        // Check for valid phone format
+        if (reservationDetails.value.phone && !isValidPhone.value) {
+          toast.add({
+            severity: 'warn',
+            summary: 'Invalid Phone',
+            detail: 'Please provide a valid phone number.',
+            life: 3000,
+          });
+          return;
+        }
+
+        const authToken = localStorage.getItem('authToken');
+        try {
+          const response = await fetch('/api/reservation/hold', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`, // Authorization header with token
+              'Content-Type': 'application/json', // Content-Type for JSON data
+            },
+            body: JSON.stringify(reservationDetails.value), // Send the reservation details as JSON
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const { reservation, reservationDetails } = data;
+            toast.add({ severity: 'success', summary: 'Success', detail: 'Reservation hold added successfully.', life: 3000 });
+            
+            setReservationId(reservation.id);
+            await fetchReservation(reservation.id);
+            await fetchMyHoldReservations();
+            dialogVisible.value = false;
+/*
+            // Fetch available rooms
+            const availableRoomsResponse = await fetchAvailableRooms(reservationDetails.value.hotel_id, reservationDetails.value.check_in, reservationDetails.value.check_out);
+
+            if (availableRoomsResponse.status === 201) {
+                // Update generateDateRangeArray to 0 for the specific date
+                generateDateRangeArray.value = generateDateRangeArray.value.map(dateData => {
+                    if (dateData.date === reservationDetails.value.check_in && dateData.rooms) {
+                        const updatedRooms = {};
+                        for (const roomTypeId in dateData.rooms) {
+                            updatedRooms[roomTypeId] = {
+                                ...dateData.rooms[roomTypeId],
+                                count: 0,
+                                total_capacity: 0,
+                            };
+                        }
+                        return { ...dateData, rooms: updatedRooms };
+                    }
+                    return dateData;
+                });
+            } else if(availableRoomsResponse.status === 200){
+              const availableRoomsData = availableRooms.value;
+              //console.log("availableRoomsResponse.data:", availableRoomsData);
+
+              const roomTypesData = availableRoomsData.reduce((acc, room) => {
+                const { room_type_id, room_type_name, capacity } = room;
+
+                if (!acc[room_type_id]) {
+                  acc[room_type_id] = {
+                    room_type_name,
+                    count: 0,
+                    total_capacity: 0,
+                  };
+                }
+
+                acc[room_type_id].count += 1; // Increment count for this room type
+                acc[room_type_id].total_capacity += capacity; // Add capacity
+
+                return acc;
+              }, {});
+
+              // Update generateDateRangeArray for the specific check-in date
+              generateDateRangeArray.value = generateDateRangeArray.value.map(dateData => {
+                if (dateData.date === reservationDetails.value.check_in) {
+                  return {
+                    ...dateData,
+                    rooms: roomTypesData, // Replace with updated room data
+                  };
+                }
+                return dateData;
+              });
+
+              //console.log("Updated room data for check-in date:", generateDateRangeArray.value);                  
+                
+            } else {
+                const errorText = await availableRoomsResponse.text();
+                console.error("fetchAvailableRooms API Error:", availableRoomsResponse.status, availableRoomsResponse.statusText, errorText);
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to fetch available rooms.', life: 3000 });
+            }
+*/
+          } else {
+              console.warn("No data returned from fetchAvailableRooms. Not updating room availability.");
+              toast.add({ severity: 'warn', summary: 'Warning', detail: 'No data returned for available rooms.', life: 3000 });
+          }
+
+            //dialogVisible.value = false;
+          
+        } catch (error) {
+          console.error('Network error:', error); // Handle any network errors
+        }
+      };
+
+      // Compute
+      const numberOfNights = computed(() => {
+        if (selectedDates.value.length === 2) {
+          const checkInDate = selectedDates.value[0];
+          const checkOutDate = selectedDates.value[1];
+          const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+          if(dayDiff < 0){
+            return 0;  
+          } 
+
+          return dayDiff;
+        }
+        return 0;
+      });
+ 
+      // Watcher
+      watch(() => selectedHotel.value,
+        async (newVal, oldVal) => {
+          //console.log('Watcher triggered:', { newVal, oldVal });
+          if (newVal !== oldVal && oldVal !== null) {
+            //console.log('New hotel selected.');
+
+            // Reset and fetch new data
+            roomDataCache.value = new Map();
+            generateDateRangeArray.value = [];
+            // Update date-related properties            
+            const today = new Date();
+            const initialMinDate = new Date(today);
+            initialMinDate.setDate(initialMinDate.getDate() - 5);
+            const initialMaxDate = new Date(today);
+            initialMaxDate.setDate(initialMaxDate.getDate() + 30);
+            minDate.value = initialMinDate;
+            maxDate.value = initialMaxDate;
+            dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+
+            try {
+              //console.log("Date range for new hotel:", dateRange.value);
+              await fetchRooms(); // Fetch new data
+              //console.log("Updated generateDateRangeArray:", generateDateRangeArray.value);
+              
+
+              if (!generateDateRangeArray.value.length) {
+                console.warn("No data fetched for the new hotel.");
+              }
+
+              // Scroll to a specific position after fetching and rendering
+              nextTick(() => {
+                const tableContainer = document.querySelector(".table-container");
+                if (tableContainer) {
+                  const totalScrollWidth = tableContainer.scrollWidth;
+                  const scrollPosition = totalScrollWidth / 8;
+                  tableContainer.scrollTo({
+                    left: scrollPosition,
+                    behavior: "smooth",
+                  });
+                }
+              });
+            } catch (error) {
+              console.error("Error fetching data for new hotel:", error);
+            }
+          }
+        }
+      );
+
+      watch(selectedHotelId, (newVal) => {
+          nextTick(() => {
+              if (newVal) {                  
+                  // Handle updated hotel ID
+                  //console.log('Hotel ID in ReservationsNew:', newVal);                  
+              }
+          });
+      });      
+      watch(() => selectedDates.value,
+          (newDates) => {
+            if (newDates.length === 2) {
+              const [checkInDate, checkOutDate] = newDates;
+              if (checkInDate && checkOutDate) {
+                reservationDetails.value.check_in = formatDate(checkInDate);
+                reservationDetails.value.check_out = formatDate(checkOutDate);
+                reservationDetails.value.number_of_nights = numberOfNights.value;
+                reservationDetails.value.number_of_people = numberOfPeople.value;
+              }
+            }
+        },
+        { immediate: true } // Run immediately on initial setup
+      );  
+      watch(() => numberOfPeople.value,
+        (newNumber) => {
+          reservationDetails.value.number_of_people = numberOfPeople.value;
+        }
+      );
+      watch(() => reservationDetails.value.legal_or_natural_person,
+        (newValue) => {
+          if (newValue === 'legal') {
+            //console.log('Changed to other');
+            reservationDetails.value.gender = 'other';
+          } 
+          if (newValue === 'natural' && reservationDetails.value.client_id == null){
+            reservationDetails.value.gender = 'male';
+          }
+        },
+      ); 
+      watch(() => reservationDetails.value.name,
+        (newValue, oldValue) => {
+          //console.log('Changed name:', newValue); 
+          if(selectedClient.value){   
+            const selectedName = selectedClient.value.name_kanji || selectedClient.value.name;
+            //console.log('Selected name:', selectedName); 
+            if (newValue && newValue !== oldValue && newValue !== selectedName) {            
+              // Reset fields if name changes and a client was previously selected
+              reservationDetails.value.client_id = null;
+              reservationDetails.value.legal_or_natural_person = 'legal';
+              reservationDetails.value.gender = 'other';
+              reservationDetails.value.email = '';
+              reservationDetails.value.phone = '';
+
+              isClientSelected.value = false;
+            }
+          }
+        },
+        { immediate: true }
+      );
+      watch(reservationDetails, (newVal, oldVal) => {
+        //console.log('reservationDetails changed:', newVal);        
+      }, { deep: true }); 
+      watch(dateRange, (newVal, oldVal) => {
+        console.log('dateRange changed:', newVal);        
+      }, { deep: true }); 
+      watch(() => generateDateRangeArray.value,
+        (newVal, oldVal) => {
+          //console.log('generateDateRangeArray updated:', newVal);          
+        },
+        { deep: true } // Use deep to watch for nested object changes
+      );
+      watch(reservation_id, async (newId) => {
+        console.log('Updated reservation_id:', newId);
+        if(!newId){
+          console.log('No new reservation ID found.');
+          // Reset and fetch new data
+          roomDataCache.value = new Map();
+          generateDateRangeArray.value = [];
+          // Update date-related properties            
+          const today = new Date();
+          const initialMinDate = new Date(today);
+          initialMinDate.setDate(initialMinDate.getDate() - 5);
+          const initialMaxDate = new Date(today);
+          initialMaxDate.setDate(initialMaxDate.getDate() + 30);
+          minDate.value = initialMinDate;
+          maxDate.value = initialMaxDate;
+          dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+
+          try {
+              //console.log("Date range for new hotel:", dateRange.value);
+              await fetchRooms(); // Fetch new data
+              //console.log("Updated generateDateRangeArray:", generateDateRangeArray.value);
+              
+
+              if (!generateDateRangeArray.value.length) {
+                console.warn("No data fetched for the new hotel.");
+              }
+
+              // Scroll to a specific position after fetching and rendering
+              nextTick(() => {
+                const tableContainer = document.querySelector(".table-container");
+                if (tableContainer) {
+                  const totalScrollWidth = tableContainer.scrollWidth;
+                  const scrollPosition = totalScrollWidth / 8;
+                  tableContainer.scrollTo({
+                    left: scrollPosition,
+                    behavior: "smooth",
+                  });
+                }
+              });
+            } catch (error) {
+              console.error("Error fetching data for new hotel:", error);
+            }
+        }
+      });      
+/*
+      watch(filteredClients, (newVal, oldVal) => {
+        console.log('filteredClients changed:', newVal);        
+      }, { deep: true });
+*/
+      // Mount
+      onMounted(async () => {  
+        //console.log('onMounted triggered');      
+        await fetchHotels();
+        await fetchHotel();
+
+        const today = new Date();
+        const initialMinDate = new Date(today);
+        initialMinDate.setDate(initialMinDate.getDate() - 5);
+        const initialMaxDate = new Date(today);
+        initialMaxDate.setDate(initialMaxDate.getDate() + 30);
+        minDate.value = initialMinDate;
+        maxDate.value = initialMaxDate;        
+        dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+        
+        nextTick(() => {
+          fetchRooms();
+          // Scroll to 1/5 of the total scroll height
+          const tableContainer = document.querySelector(".table-container");
+          if (tableContainer) {
+            const totalScrollWidth = tableContainer.scrollWidth;
+            const scrollPosition = totalScrollWidth / 8;
+            tableContainer.scrollTo({
+              left: scrollPosition,
+              behavior: "smooth",
+            });            
+          }
+        });
+        nextTick(() => {
+          fetchClients();          
+        })      
+      });      
+
+      return {    
+        clients,    
+        filteredClients,
+        selectedDates,
+        generateDateRangeArray,
+        dateColumns,        
+        selectedCell,
+        roomTypeInput,        
+        loading,
+        dialogVisible,
+        reservationDetails,
+        personTypeOptions,
+        genderOptions,
+        dateRange,
+        reservation_id,
+        emailPattern,
+        isValidEmail,
+        phonePattern,
+        isValidPhone,
+        validateEmail,
+        validatePhone,
+        isClientSelected,
+        onDateChange,
+        onScroll,
+        extractRoomTypes,
+        getRoomTypeName,
+        isCapacityExceeded,
+        selectCell,
+        isSelectedCell,
+        openDialog,
+        filterClients,        
+        onClientSelect,        
+        submitReservation,
+        numberOfNights,
+        numberOfPeople,        
+      };
+    },
+    methods: {      
+      closeDialog() {
+        this.dialogVisible = false; // Hide the dialog
+      },
+    },
+  };
+</script>
+
+<style scoped>
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px; /* Increased padding for readability */
+    text-align: center;
+  }
+
+  .overflow-x-auto {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .table-container {
+    width: 100%;
+    overflow-x: scroll;    
+    max-width: 100%;
+    position: relative;    
+  }
+
+  .table-container::-webkit-scrollbar-button:single-button {
+    background-color: rgba(0, 0, 0, 0.3); /* Make buttons always visible */
+  }
+
+  .table-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.3); /* Scrollbar thumb color */
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+  }
+
+  .table-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1); /* Track color */
+  }
+
+  .table-container::-webkit-scrollbar-button {
+    background-color: rgba(0, 0, 0, 0.1); /* Button color */
+  }
+  
+  .table-container:active::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+  .table-container:focus {
+    outline: none;
+    border: 2px solid #4CAF50; /* Visual cue for focus */
+  }
+</style>
+
