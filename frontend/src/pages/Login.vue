@@ -42,7 +42,7 @@
 
           <div class="mb-4">
             <Button
-              label="Login"
+              label="ログイン"
               icon="pi pi-sign-in"
               class="w-full"
               :loading="isLoading"
