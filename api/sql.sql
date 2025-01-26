@@ -1,37 +1,52 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
+
+
+CREATE TABLE user_status (
+    id SERIAL PRIMARY KEY,                
+    status_name VARCHAR(50) NOT NULL UNIQUE, 
+    description TEXT    
+);
+
+CREATE TABLE user_roles (
+    id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE, -- Role name (e.g., 'Admin', 'User')
+    permissions JSONB DEFAULT '{}', -- Permissions in JSON format for flexibility
+    description TEXT    
+);
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,    
     status_id INT REFERENCES user_status(id) DEFAULT 1,        -- Status ID (default to 1, representing 'active')
     role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    INSERT INTO users (email, password_hash, role_id, created_by)
-    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1, 1);
+    INSERT INTO users (email, password_hash, role_id)
+    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
-CREATE TABLE user_status (
-    id SERIAL PRIMARY KEY,                
-    status_name VARCHAR(50) NOT NULL UNIQUE, 
-    description TEXT,
-    updated_by INT DEFAULT NULL REFERENCES users(id)                      
-);
+    ALTER TABLE users
+    ADD COLUMN created_by INT REFERENCES users(id),
+    ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
+    ALTER TABLE user_status
+    ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
+    ALTER TABLE user_roles
+    ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
+
 
     INSERT INTO user_status (status_name, description)
     VALUES 
         ('Active', '有効アカウント'),
         ('Deactivated', '無効アカウント');
 
-CREATE TABLE user_roles (
-    id SERIAL PRIMARY KEY,
-    role_name VARCHAR(50) NOT NULL UNIQUE, -- Role name (e.g., 'Admin', 'User')
-    permissions JSONB DEFAULT '{}', -- Permissions in JSON format for flexibility
-    description TEXT,
-    updated_by INT DEFAULT NULL REFERENCES users(id)
-);
+
 
     INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
