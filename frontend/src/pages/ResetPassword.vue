@@ -2,7 +2,7 @@
     <div class="reset-password-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
       <Card class="w-full max-w-md">
         <template #title>
-          <h2 class="text-2xl font-bold mb-6 text-center">Reset Password</h2>
+          <h2 class="text-2xl font-bold mb-6 text-center">パスワードリセット</h2>
         </template>
         <template #content>
           <form @submit.prevent="handleResetPassword">
@@ -13,10 +13,10 @@
                   v-model="password"
                   toggleMask
                   feedback
-                  promptLabel="Choose a password"
-                  weakLabel="Too simple"
-                  mediumLabel="Average complexity"
-                  strongLabel="Complex password"
+                  promptLabel="パスワードを決めて下さい"
+                  weakLabel="単純すぎる"
+                  mediumLabel="平均的な複雑さ"
+                  strongLabel="複雑なパスワード"
                   class="w-full"
                   :class="{'p-invalid': passwordError}"
                   type="password"
@@ -25,19 +25,19 @@
                   @blur="validatePassword()"
                 >
                     <template #header>
-                        <div class="font-semibold text-xm mb-4">Pick a password</div>
+                        <div class="font-semibold text-xm mb-4">パスワードを選択してください。</div>
                     </template>
                     <template #footer>
                         <Divider />
                         <ul class="pl-2 ml-2 my-0 leading-normal">
-                            <li>At least one lowercase</li>
-                            <li>At least one uppercase</li>
-                            <li>At least one numeric</li>
-                            <li>Minimum 8 characters</li>
+                            <li>少なくとも1つの小文字</li>
+                            <li>少なくとも1つの大文字</li>
+                            <li>少なくとも1つの数値</li>
+                            <li>最低8文字</li>
                         </ul>
                     </template>
                 </Password>
-                <label for="password">New Password</label>
+                <label for="password">新しいパスワード</label>
               </FloatLabel>
               <small v-if="passwordError" class="p-error">{{ passwordError }}</small>
             </div>
@@ -56,14 +56,14 @@
                     @blur="validatePassword()"
                 >
                 </Password>
-                <label for="confirmPassword">Confirm Password</label>
+                <label for="confirmPassword">パスワードを再入力</label>
               </FloatLabel>
               <small v-if="confirmPasswordError" class="p-error">{{ confirmPasswordError }}</small>
             </div>
   
             <div class="mb-4">
               <Button
-                label="Reset Password"
+                label="パスワードリセット"
                 icon="pi pi-check"
                 class="w-full"
                 :loading="isLoading"
@@ -125,16 +125,16 @@
                 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
                 if (!this.password) {
-                    this.passwordError = "Password is required.";
+                    this.passwordError = "パスワードが必要です。";
                 } else if (!passwordRegex.test(this.password)) {
                     this.passwordError =
-                        "Password must have at least 8 characters, one uppercase letter, one lowercase letter, and one number.";
+                        "パスワードには少なくとも 8 文字、大文字 1 文字、小文字 1 文字、数字 1 文字を含める必要があります。";
                 } else {
                     this.passwordError = "";
                 }
 
                 this.confirmPasswordError = this.confirmPassword !== this.password
-                    ? 'Passwords do not match'
+                    ? 'パスワードが一致しません。'
                     : null;
             },
             async handleResetPassword() {
@@ -150,7 +150,7 @@
                     const response = await this.$http.post('/api/auth/reset-password', { token, password: this.password });
                     this.successMessage = response.data.message;
                 } catch (error) {
-                this.errorMessage = 'Error resetting password. Please try again.';
+                this.errorMessage = 'パスワードのリセット中にエラーが発生しました。もう一度お試しください。';
                 } finally {
                 this.isLoading = false;
                 }

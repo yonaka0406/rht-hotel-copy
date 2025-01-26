@@ -6,7 +6,7 @@
       </template>
       <template #content>
         <div class="card-body p-4">
-          <p class="text-lg text-gray-600 mb-4">The page you are looking for does not exist.</p>
+          <p class="text-lg text-gray-600 mb-4">探しているページは存在しません。</p>
           <Button label="Go back to Home" icon="pi pi-home" class="p-button-outlined" @click="goHome" />
         </div>
       </template>      

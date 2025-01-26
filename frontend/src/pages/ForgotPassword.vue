@@ -2,7 +2,7 @@
     <div class="forgot-password-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
       <Card class="w-full max-w-md">
         <template #title>
-          <h2 class="text-2xl font-bold mb-6 text-center">Forgot Password</h2>
+          <h2 class="text-2xl font-bold mb-6 text-center">パスワード忘れた場合</h2>
         </template>
         <template #content>
           <form @submit.prevent="handleResetRequest">
@@ -16,14 +16,14 @@
                   required
                   @blur="validateEmail"
                 />
-                <label for="email">Email</label>
+                <label for="email">メールアドレス</label>
               </FloatLabel>
               <small v-if="emailError" class="p-error">{{ emailError }}</small>
             </div>
   
             <div class="mb-4">
               <Button
-                label="Reset Password"
+                label="パスワードリセット"
                 icon="pi pi-refresh"
                 class="w-full"
                 :loading="isLoading"
@@ -69,9 +69,9 @@
         validateEmail() {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           this.emailError = !this.email
-            ? 'Email is required'
+            ? 'メールアドレス必須'
             : !emailRegex.test(this.email)
-            ? 'Invalid email format'
+            ? '無効なメールアドレス'
             : null;
         },
         async handleResetRequest() {
