@@ -2,7 +2,7 @@
   <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
     <Card class="w-full max-w-md">
       <template #title>
-        <h2 class="text-2xl font-bold mb-6 text-center">Login</h2>
+        <h2 class="text-2xl font-bold mb-6 text-center">ログイン</h2>
       </template>
       <template #content>
         <form @submit.prevent="handleLogin">
@@ -16,7 +16,7 @@
                 required
                 @blur="validateEmail"
               />
-              <label for="email">Email</label>
+              <label for="email">メールアドレス</label>
             </FloatLabel>
             <small v-if="emailError" class="p-error">{{ emailError }}</small>
           </div>
@@ -35,7 +35,7 @@
                 fuild
                 @blur="validatePassword"
               />
-              <label for="password">Password</label>
+              <label for="password">パスワード</label>
             </FloatLabel>
             <small v-if="passwordError" class="p-error">{{ passwordError }}</small>
           </div>
@@ -51,7 +51,7 @@
           </div>
 
           <div class="text-center">
-            <router-link to="/forgot-password" class="text-sm text-blue-600">Forgot password?</router-link>
+            <router-link to="/forgot-password" class="text-sm text-blue-600">パスワードを忘れましたか？</router-link>
           </div>
         </form>
       </template>
@@ -134,7 +134,7 @@ export default {
           this.error = 'Network error. Please check your connection.';
         } else if (err.response.status === 401) {
           // Authentication errors
-          this.error = err.response.data?.error || 'Invalid credentials.';
+          this.error = err.response.data?.error || '認証が無効です。';
         } else {
           // General error message
           this.error = 'An unexpected error occurred. Please try again.';
@@ -153,9 +153,9 @@ export default {
         }
         
         // Set specific field errors based on backend response
-        if (this.error.includes('User not found')) {
+        if (this.error.includes('ユーザー見つかりません。')) {
           this.emailError = this.error;
-        } else if (this.error.includes('Incorrect password')) {
+        } else if (this.error.includes('パスワードの誤差があります。')) {
           this.passwordError = this.error;
         }
       } finally {
