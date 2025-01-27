@@ -30,7 +30,7 @@ const sendResetEmail = async (email, resetToken) => {
 };
 
 // Function to send an admin password reset notification
-const sendAdminResetEmail = async (email, resetToken, adminEmail) => {
+const sendAdminResetEmail = async (email, resetToken) => {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -43,7 +43,7 @@ const sendAdminResetEmail = async (email, resetToken, adminEmail) => {
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: adminEmail,
+    to: email,
     subject: '管理者がパスワードのリセットをリクエストしました。',
     text: `管理者が次のメールアドレスを使用してユーザーのパスワードのリセットをリクエストしました: ${email}。パスワードをリセットするには、次のリンクをクリックしてください。 ${resetLink}`,
     html: `<p>管理者が次のメールアドレスを使用してユーザーのパスワードのリセットをリクエストしました: ${email}。パスワードをリセットするには、次のリンクをクリックしてください。</p><a href="${resetLink}">${resetLink}</a>`,
