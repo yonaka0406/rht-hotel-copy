@@ -202,14 +202,19 @@
 
 <script>
 import { ref, watch, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';  
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from "primevue/useconfirm";
+
+import { useHotelStore } from '../../../composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
+
 import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
 import { DataTable, Column } from 'primevue';
 import { FloatLabel, InputNumber, Select, MultiSelect, Button } from 'primevue';
+
 
 export default {
     props: {
@@ -241,8 +246,10 @@ export default {
         Button,
     },
     setup(props) {
+        const router = useRouter();
         const toast = useToast();
-        const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms } = useReservationStore();
+        const { selectedHotelId } = useHotelStore();
+        const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms, setReservationId } = useReservationStore();
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
@@ -540,6 +547,11 @@ export default {
             );
         };
 
+        const goToNewReservation = () => {                
+            setReservationId(null);                
+            router.push({ name: 'ReservationsNew' });
+        };
+
         // Group rooms by room_id and room_type
         const groupedRooms = computed(() => {
             if (!editReservationDetails.value) return [];
@@ -637,6 +649,15 @@ export default {
         watch(numberOfPeopleToMove, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 console.log('numberOfPeopleToMove changed:', newValue);
+            }
+        }, { deep: true });
+        watch(selectedHotelId, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('selectedHotelId changed:', newValue);
+                if (newValue !== editReservationDetails.value[0]?.hotel_id) {
+                    goToNewReservation();
+                }
+                
             }
         }, { deep: true });
 
