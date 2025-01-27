@@ -640,7 +640,38 @@
                     apiResponse = { type: 'error', message: 'An error occurred. Please try again.' };                    
                 }
                 
-            }
+            };
+
+            const sendResetPasswordEmail = async () => { 
+                const authToken = localStorage.getItem('authToken');
+                try {
+                    const response = await fetch('/api/auth/forgot-password-admin', {
+                        method: 'POST',
+                        headers: {                            
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            email: currentUser.value.email,                            
+                        }),
+                    });                    
+                    
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'リセットメール送信されました。',
+                        life: 3000,
+                    });
+                    cancelEditDialog();
+                } catch (error) {                    
+                    toast.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'An error occurred. Please try again.',
+                        life: 3000,
+                    });
+                }
+            };
 
             // Dialog
                 const createUser = () => {
@@ -732,6 +763,7 @@
                 fetchUsers,
                 submitNewUser,
                 submitEditUser,
+                sendResetPasswordEmail,
                 createUser,
                 cancelCreateDialog,
                 editUser,
@@ -742,14 +774,7 @@
             }
         },
         methods: {
-            async sendResetPasswordEmail() {
-                try {
-                    const response = await this.$http.post('/api/auth/forgot-password-admin', { email: this.currentUser.email });
-                    this.successMessage = response.data.message;
-                } catch (error) {
-                    this.errorMessage = 'Error occurred. Please try again.';
-                }
-            }
+            
         }
     };
 </script>
