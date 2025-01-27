@@ -15,9 +15,9 @@ const sendResetEmail = async (email, resetToken) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: 'Password Reset Request',
-    text: `You have requested a password reset. Click the following link to reset your password: ${resetLink}`,
-    html: `<p>You have requested a password reset. Click the following link to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
+    subject: 'パスワードのリセットがリクエストされました。',
+    text: `パスワードのリセットをリクエストしました。パスワードをリセットするには、次のリンクをクリックしてください。 ${resetLink}`,
+    html: `<p>パスワードのリセットをリクエストしました。パスワードをリセットするには、次のリンクをクリックしてください。</p><a href="${resetLink}">${resetLink}</a>`,
   };
 
   try {
@@ -44,9 +44,9 @@ const sendAdminResetEmail = async (email, resetToken, adminEmail) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: adminEmail,
-    subject: 'Admin Password Reset Request',
-    text: `An admin has requested a password reset for the user with email: ${email}. Click the following link to reset the password: ${resetLink}`,
-    html: `<p>An admin has requested a password reset for the user with email: ${email}. Click the following link to reset the password:</p><a href="${resetLink}">${resetLink}</a>`,
+    subject: '管理者がパスワードのリセットをリクエストしました。',
+    text: `管理者が次のメールアドレスを使用してユーザーのパスワードのリセットをリクエストしました: ${email}。パスワードをリセットするには、次のリンクをクリックしてください。 ${resetLink}`,
+    html: `<p>管理者が次のメールアドレスを使用してユーザーのパスワードのリセットをリクエストしました: ${email}。パスワードをリセットするには、次のリンクをクリックしてください。</p><a href="${resetLink}">${resetLink}</a>`,
   };
 
   try {
