@@ -30,7 +30,7 @@
                     to="/admin"
                     class="text-white p-2 block rounded"
                 >
-                    <h2 class="text-xl font-semibold">アドミンダッシュボード</h2>
+                    <h2 class="text-xl font-semibold">管理者パネル</h2>
                 </router-link>
                 <Button
                     type="button"
@@ -79,7 +79,7 @@
 
         <!-- Main Content -->
         <div class="flex-1 overflow-x-hidden overflow-y-auto">
-            <p class="text-2xl font-bold text-gray-700 mb-2">アドミンダッシュボードへようこそ！</p>
+            <p class="text-2xl font-bold text-gray-700 mb-2">管理者パネルへようこそ！</p>
             <div v-if="isRootAdminPath" class="p-4">
                 <!-- Dashboard Content -->
                 <div class="bg-white rounded-lg shadow-lg p-8">
