@@ -25,6 +25,13 @@
                     <div class="field w-1/3">
                         ステータス： {{ editReservationDetails[0].status }}
                     </div>
+                    <div class="field w-full">
+                        <Button 
+                            label="Confirm Reservation" 
+                            :disabled="!allRoomsHavePlan"  
+                        /> 
+                    </div>
+                    
                 </div>
                 <div v-else>Loading reservation information...</div>
             </template>
@@ -287,7 +294,12 @@ export default {
         const formatCurrency = (value) => {
             if (value == null) return '';
             return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
-          }
+        };
+
+        // Computed
+        const allRoomsHavePlan = computed(() => {
+            return groupedRooms.value.every(group => allHavePlan(group));
+        });
 
         // Map group details with formatted date
         const formattedGroupDetails = (details) => {
@@ -579,7 +591,7 @@ export default {
             if (newReservationId !== oldReservationId) {
                 //console.log("reservation_id changed:", newReservationId);
                 await fetchReservation(newReservationId);
-                console.id('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
+                console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
                 await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
             }
         });            
@@ -674,6 +686,7 @@ export default {
             targetRoom,
             numberOfPeopleToMove,
             filteredRooms,
+            allRoomsHavePlan,
             plans,
             daysOfWeek,
             availableRooms,
