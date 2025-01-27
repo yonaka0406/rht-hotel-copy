@@ -201,7 +201,7 @@
                 :disabled="isClientSelected"
               />
               <label>メールアドレス</label>
-              <small v-if="!isValidEmail" class="p-error">Please enter a valid email address.</small>
+              <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
             </FloatLabel>
           </div>
 

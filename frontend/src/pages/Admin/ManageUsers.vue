@@ -670,7 +670,7 @@
                 // Email Validation
                 const validateEmail = (email) => {
                     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-                        emailError.value = 'Please enter a valid email address.';
+                        emailError.value = '有効なメールアドレスを入力してください。';
                     } else {
                         emailError.value = null;
                     }
@@ -680,7 +680,7 @@
                     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
                     if (!password) {
-                        passwordError.value = "Password is required.";
+                        passwordError.value = "パスワードが必要です。";
                     } else if (!passwordRegex.test(password)) {
                         passwordError.value =
                             "Password must have at least 8 characters, one uppercase letter, one lowercase letter, and one number.";
@@ -691,7 +691,7 @@
                 // Role Validation
                 const validateRole = (role) => {
                     if (!role) {
-                        roleError.value = 'Please select a role.';
+                        roleError.value = 'ロールを選択してください。';
                     } else {
                         roleError.value = null;
                     }
