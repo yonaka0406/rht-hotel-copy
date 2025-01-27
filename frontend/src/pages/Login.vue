@@ -60,108 +60,119 @@
 </template>
 
 <script>
-import InputText from 'primevue/inputtext';
-import Password from 'primevue/password';
-import FloatLabel from 'primevue/floatlabel';
-import Card from 'primevue/card';
-import Button from 'primevue/button';
-import Fluid from 'primevue/fluid';
+  import { useToast } from 'primevue/usetoast';
+  import InputText from 'primevue/inputtext';
+  import Password from 'primevue/password';
+  import FloatLabel from 'primevue/floatlabel';
+  import Card from 'primevue/card';
+  import Button from 'primevue/button';
+  import Fluid from 'primevue/fluid';
 
-export default {
-  components: {
-    InputText,
-    Password,
-    FloatLabel,
-    Card,
-    Button,
-    Fluid,
-  },
-  data() {
-    return {
-      email: '',
-      password: '',
-      error: null,
-      isLoading: false,
-      emailError: null,
-      passwordError: null,
-    };
-  },
-  methods: {
-    validateEmail() {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      this.emailError = !this.email 
-        ? 'Email is required' 
-        : !emailRegex.test(this.email) 
-        ? 'Invalid email format' 
-        : null;
+  export default {
+    components: {
+      InputText,
+      Password,
+      FloatLabel,
+      Card,
+      Button,
+      Fluid,
     },
-    validatePassword() {
-      this.passwordError = !this.password 
-        ? 'Password is required' 
-        : null;
+    data() {
+      return {
+        email: '',
+        password: '',
+        error: null,
+        isLoading: false,
+        emailError: null,
+        passwordError: null,
+      };
     },
-    async handleLogin() {
-      try {
-        // Validate email and password fields
-        this.validateEmail();
-        this.validatePassword();
-
-        // Stop if there are validation errors
-        if (this.emailError || this.passwordError) {
-          return;
-        }
-
-        // Reset errors and start loading
-        this.error = null;
-        this.isLoading = true;
-        
-        // Make the login request
-        const response = await this.$http.post('/api/auth/login', {
-          email: this.email,
-          password: this.password,
-        });
-        
-        // Extract and store the authentication token
-        const authToken = response.data.token;
-        localStorage.setItem('authToken', authToken);
-
-        // Redirect the user to the home page
-        this.$router.push('/');        
-      } catch (err) {
-        // Handle different kinds of errors
-        if (!err.response) {
-          // Network or server error
-          this.error = 'Network error. Please check your connection.';
-        } else if (err.response.status === 401) {
-          // Authentication errors
-          this.error = err.response.data?.error || '認証が無効です。';
-        } else {
-          // General error message
-          this.error = 'An unexpected error occurred. Please try again.';
-        }
-        
-        // Handle different kinds of errors
-        if (!err.response) {
-          // Network or server error
-          this.error = 'Network error. Please check your connection.';
-        } else if (err.response.status === 401) {
-          // Authentication errors
-          this.error = err.response.data?.error || 'Invalid credentials.';
-        } else {
-          // General error message
-          this.error = 'An unexpected error occurred. Please try again.';
-        }
-        
-        // Set specific field errors based on backend response
-        if (this.error.includes('ユーザー見つかりません。')) {
-          this.emailError = this.error;
-        } else if (this.error.includes('パスワードの誤差があります。')) {
-          this.passwordError = this.error;
-        }
-      } finally {
-        this.isLoading = false;
-      }
+    setup () {
+      const toast = useToast();
+      return { toast };
     },
-  },
-};
+    methods: {
+      validateEmail() {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        this.emailError = !this.email 
+          ? 'Email is required' 
+          : !emailRegex.test(this.email) 
+          ? 'Invalid email format' 
+          : null;
+      },
+      validatePassword() {
+        this.passwordError = !this.password 
+          ? 'Password is required' 
+          : null;
+      },
+      async handleLogin() {
+        try {
+          // Validate email and password fields
+          this.validateEmail();
+          this.validatePassword();
+
+          // Stop if there are validation errors
+          if (this.emailError || this.passwordError) {
+            return;
+          }
+
+          // Reset errors and start loading
+          this.error = null;
+          this.isLoading = true;
+          
+          // Make the login request
+          const response = await this.$http.post('/api/auth/login', {
+            email: this.email,
+            password: this.password,
+          });
+          
+          // Extract and store the authentication token
+          const authToken = response.data.token;
+          localStorage.setItem('authToken', authToken);
+
+          // Redirect the user to the home page
+          this.$router.push('/');        
+        } catch (err) {          
+          // Handle different kinds of errors
+          if (!err.response) {
+            // Network or server error
+            this.error = 'Network error. Please check your connection.';
+          } else if (err.response.status === 401) {
+            // Authentication errors
+            this.error = err.response.data?.error || '認証が無効です。';
+            this.toast.add({
+              severity: 'error',
+              summary: 'ログイン失敗',
+              detail: err.response ? err.response.data?.error : 'エラーが起きました。',
+              life: 3000
+            });
+          } else {
+            // General error message
+            this.error = 'An unexpected error occurred. Please try again.';
+          }
+          
+          // Handle different kinds of errors
+          if (!err.response) {
+            // Network or server error
+            this.error = 'Network error. Please check your connection.';
+          } else if (err.response.status === 401) {
+            // Authentication errors
+            this.error = err.response.data?.error || 'Invalid credentials.';
+          } else {
+            // General error message
+            this.error = 'An unexpected error occurred. Please try again.';
+          }
+          
+          // Set specific field errors based on backend response
+          if (this.error.includes('ユーザー見つかりません。')) {
+            this.emailError = this.error;
+          } else if (this.error.includes('パスワードの誤差があります。')) {
+            this.passwordError = this.error;
+          }
+        } finally {
+          this.isLoading = false;
+        }
+      },
+    },
+  };
 </script>

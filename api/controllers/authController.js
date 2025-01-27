@@ -20,7 +20,7 @@ const login = async (req, res) => {
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Incorrect password' });
+      return res.status(401).json({ error: 'パスワードの誤差がありました。' });
     }
 
     const token = generateToken(user);
