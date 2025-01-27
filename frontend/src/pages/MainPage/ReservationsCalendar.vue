@@ -1,11 +1,11 @@
 <template>
   <div class="p-2">
-    <Panel header="Reservations Calendar">
+    <Panel header="予約カレンダー">
       <div class="table-container" ref="tableContainer" @scroll="onScroll">
         <table class="table-auto w-full mb-2">
           <thead>
             <tr>              
-              <th class="px-4 py-2 text-center font-bold bg-white sticky top-0 left-0 z-20">Date</th>
+              <th class="px-4 py-2 text-center font-bold bg-white sticky top-0 left-0 z-20">日付</th>
 
               <th
                 v-for="(room, roomIndex) in selectedHotelRooms"
@@ -60,7 +60,7 @@
                   </template>
                 </div>
                 <div v-else>
-                  <i class="pi pi-check"></i> Available
+                  <i class="pi pi-check"></i> 空室
                 </div>
               </td>
             </tr>

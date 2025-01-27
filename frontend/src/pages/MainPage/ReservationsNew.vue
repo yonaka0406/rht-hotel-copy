@@ -2,17 +2,17 @@
   <div class="p-2">
     <Panel 
       v-if="reservation_id"
-      header="Edit reservation"
+      header="予約編集"
     >
       <ReservationEdit 
         :reservation_id="reservation_id"
       />
     </Panel>
-    <Panel v-else header="New reservation">
+    <Panel v-else header="新規予約">
       <!-- Select Dates and Number of People -->
       <div class="grid grid-cols-3 mb-4 mr-4 gap-2">
         <div class="col-span-3">
-          <p class="text-lg text-left mb-2">Available Rooms per day</p>
+          <p class="text-lg text-left mb-2">期間ごと空室</p>
         </div>
         <div class="col-span-2 mt-6">
           <FloatLabel>
@@ -23,7 +23,7 @@
               fluid           
               @update:model-value="onDateChange"
             />
-            <label>Check-in & Check-out</label>
+            <label>チェックイン & チェックアウト</label>
           </FloatLabel>
         </div>
         <div class="col-span-1 mt-6">
@@ -32,7 +32,7 @@
               v-model="numberOfPeople"
               :min="1"
             />
-            <label>Number of People</label>
+            <label>人数</label>
           </FloatLabel>
         </div>
         <div class="col-span-1 mt-6">
@@ -43,7 +43,7 @@
               fluid             
               disabled 
             />
-            <label>Number of Nights</label>
+            <label>宿泊数</label>
           </FloatLabel>
         </div>
         <div class="col-span-1 mt-6">
@@ -56,13 +56,13 @@
               fluid
               disabled 
             />
-            <label v-if="selectedCell">Room Type</label>
+            <label v-if="selectedCell">部屋タイプ</label>
           </FloatLabel>
         </div>
         <div class="col-span-1 mt-6">                
           <Button 
             v-if="selectedCell" 
-            label="Add Reservation" 
+            label="新規予約" 
             icon="pi pi-calendar"             
             :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
             @click="openDialog" 
@@ -75,7 +75,7 @@
         <table class="table-auto w-full mb-2">          
           <thead>
             <tr>
-              <th class="bg-white sticky left-0 z-20 border-l-2 border-gray-300" >Room Type</th>
+              <th class="bg-white sticky left-0 z-20 border-l-2 border-gray-300" >部屋タイプ</th>
               <th 
                 v-for="(date, index) in dateRange" 
                 :key="index" 
@@ -105,12 +105,12 @@
                 }"
               >
                   <div v-if="dateData.rooms && dateData.rooms[roomTypeId]">
-                    <p>{{ dateData.rooms[roomTypeId].count }} <i class="pi pi-box" />Rooms </p>
+                    <p>{{ dateData.rooms[roomTypeId].count }}室 <i class="pi pi-box" /></p>
                     <!---->
-                    <p>{{ dateData.rooms[roomTypeId].total_capacity }} <i class="pi pi-users" /> People</p>
+                    <p>{{ dateData.rooms[roomTypeId].total_capacity }}人 <i class="pi pi-users" /></p>
                   </div>
                   <div v-else>
-                      <p>N/A</p>
+                      <p>不可</p>
                   </div>
               </td>
             </tr>
@@ -146,7 +146,7 @@
                   </div>
                 </template>
               </AutoComplete>
-              <label>Name of the person</label>
+              <label>個人氏名　||　法人名称</label>
             </FloatLabel>
           </div>
 
@@ -171,21 +171,21 @@
                   :value="'male'"
                   :disabled="isClientSelected"
                 />
-                <label for="male">Male</label>
+                <label for="male">男性</label>
                 <RadioButton
                   v-model="reservationDetails.gender"
                   :inputId="'female'"
                   :value="'female'"
                   :disabled="isClientSelected"
                 />
-                <label for="female">Female</label>
+                <label for="female">女性</label>
                 <RadioButton
                   v-model="reservationDetails.gender"
                   :inputId="'other'"
                   :value="'other'"
                   :disabled="isClientSelected"
                 />
-                <label for="other">Other</label>
+                <label for="other">その他</label>
               </div>
           </div>
 
@@ -217,8 +217,8 @@
                 :disabled="isClientSelected"
 
               />
-              <label>Phone Number</label>
-              <small v-if="!isValidPhone" class="p-error">Please enter a valid phone number.</small>
+              <label>電話番号</label>
+              <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
             </FloatLabel>
           </div>
 
@@ -232,7 +232,7 @@
                 fluid 
                 disabled
               />
-              <label>Check-in</label>
+              <label>チェックイン</label>
             </FloatLabel>
           </div>
 
@@ -245,7 +245,7 @@
                 fluid 
                 disabled
               />
-              <label>Check-out</label>
+              <label>チェックアウト</label>
             </FloatLabel>
           </div>
           <div class="col-6">
@@ -256,7 +256,7 @@
                 fluid                
                 disabled
               />
-              <label>Number of Nights</label>
+              <label>宿泊数</label>
             </FloatLabel>
           </div>
           <div class="col-6">
@@ -267,7 +267,7 @@
                 fluid                
                 disabled
               />
-              <label>Number of People</label>
+              <label>人数</label>
             </FloatLabel>
           </div>
         </div>
@@ -357,8 +357,8 @@
         phone: null,
       });
       const personTypeOptions = [
-        { label: 'Legal', value: 'legal' },
-        { label: 'Natural', value: 'natural' },
+        { label: '法人', value: 'legal' },
+        { label: '個人', value: 'natural' },
       ];
       const genderOptions = [
         { label: 'Male', value: 'male' },

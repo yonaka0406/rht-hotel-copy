@@ -9,21 +9,21 @@
                     v-if="editReservationDetails && editReservationDetails.length > 0"
                     class="p-fluid flex flex-wrap"
                 >
-                    <div class="field w-full mb-2 mt-2">Reservation Name: {{ editReservationDetails[0].client_name }}</div>
+                    <div class="field w-full mb-2 mt-2">予約者： {{ editReservationDetails[0].client_name }}</div>
                     <div class="field w-1/3" >
-                        Number of People: <br/> {{ editReservationDetails[0].reservation_number_of_people }}
+                        人数： <br/> {{ editReservationDetails[0].reservation_number_of_people }}
                         <i class="pi pi-user ml-1"></i>
                     </div>
                     <div class="field w-1/3">
-                        Check-in: <br/> {{ editReservationDetails[0].check_in }} 
+                        チェックイン： <br/> {{ editReservationDetails[0].check_in }} 
                         <i class="pi pi-arrow-down-right ml-1"></i>
                     </div>
                     <div class="field w-1/3">
-                        Check-out: <br/> {{ editReservationDetails[0].check_out }} 
+                        チェックアウト： <br/> {{ editReservationDetails[0].check_out }} 
                         <i class="pi pi-arrow-up-right ml-1"></i>
                     </div>
                     <div class="field w-1/3">
-                        Status: {{ editReservationDetails[0].status }}
+                        ステータス： {{ editReservationDetails[0].status }}
                     </div>
                 </div>
                 <div v-else>Loading reservation information...</div>
@@ -44,7 +44,7 @@
                         <AccordionHeader>
                             <div class="grid grid-cols-6 gap-4 w-full">
                                 <div class="col-span-3 text-left">
-                                    Room: {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity}) ${group.details[0]?.smoking ? ' 🚬' : ''}` }}
+                                    部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity}) ${group.details[0]?.smoking ? ' 🚬' : ''}` }}
                                 </div>
                                 <div class="flex items-center justify-center">
 
@@ -55,14 +55,14 @@
                                         class="pi"
                                         :class="allHavePlan(group) ? 'pi-check' : 'pi-exclamation-triangle'"
                                         style="margin-left: 0.5rem; color: var(--primary-color);"
-                                        :title="allHavePlan(group) ? 'All rows have plans' : 'Some rows are missing plans'"
+                                        :title="allHavePlan(group) ? 'プラン設定済み' : 'プラン未設定'"
                                     ></i>
 
                                 </div>
                                 <div class="col-span-2 text-right">
                                     <Button
                                         icon="pi pi-pencil"
-                                        label="Bulk Edit"
+                                        label="一括編集"
                                         class="p-button-sm"
                                         @click="openBulkEditDialog(group)"
                                     />
@@ -85,7 +85,7 @@
         <!-- Bulk Edit Dialog -->
         <Dialog
             v-model:visible="bulkEditDialogVisible"
-            header="Bulk Edit Room Data"
+            header="部屋一括編集"
             :modal="true"
             :breakpoints="{ '960px': '75vw', '640px': '100vw' }"
             style="width: 50vw"
@@ -96,14 +96,14 @@
                     @update:value="handleTabChange"
                 >
                     <TabList>
-                        <Tab value="0">Apply Plan</Tab>
-                        <Tab value="1">Move Rooms</Tab>                        
+                        <Tab value="0">プラン適用</Tab>
+                        <Tab value="1">部屋移動</Tab>                        
                     </TabList>
                      
                     <TabPanels>
                         <!-- Tab 1: Apply Plan -->
                         <TabPanel value="0">
-                            <h4 class="mb-3 font-bold">Apply Plan</h4>
+                            <h4 class="mb-3 font-bold">プラン適用</h4>
                             <div class="field mt-8">
                                 <FloatLabel>
                                     <Select
@@ -115,7 +115,7 @@
                                         fluid                           
                                         @change="updatePlanAddOns"
                                     />
-                                    <label for="bulk-plan">Select Plan</label>
+                                    <label for="bulk-plan">プラン選択</label>
                                 </FloatLabel>
                             </div>
                             <div class="field mt-6">
@@ -127,18 +127,18 @@
                                         fluid                            
                                         :maxSelectedLabels="3"
                                     />
-                                    <label>Days of the Week</label>
+                                    <label>曜日</label>
                                 </FloatLabel>
                             </div>                
                             <div class="field mt-6">
                                 <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                    <Column field="name" header="Add-On Name" />                        
-                                    <Column field="quantity" header="Quantity">
+                                    <Column field="name" header="アドオン名" />                        
+                                    <Column field="quantity" header="数量">
                                         <template #body="slotProps">
                                             <InputNumber 
                                                 v-model="slotProps.data.quantity" 
                                                 :min="0" 
-                                                placeholder="Enter quantity" 
+                                                placeholder="数量を記入" 
                                                 class="w-full" 
                                             />
                                         </template>
@@ -148,7 +148,7 @@
                                             <InputNumber 
                                                 v-model="slotProps.data.price" 
                                                 :min="0" 
-                                                placeholder="Enter price" 
+                                                placeholder="価格を記入" 
                                                 class="w-full" 
                                             />
                                         </template>
@@ -158,7 +158,7 @@
                         </TabPanel>
                         <!-- Tab 2: Move Rooms Content -->
                         <TabPanel value="1">
-                            <h4 class="mt-4 mb-3 font-bold">Move People</h4>
+                            <h4 class="mt-4 mb-3 font-bold">部屋移動</h4>
 
                             <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
                                 <div class="field mt-6 col-6">
@@ -169,7 +169,7 @@
                                             :min="0"
                                             :max="Math.max(...(selectedGroup?.details.map(item => item.number_of_people) || [0]))"
                                         />
-                                        <label for="move-people">Number of People</label>
+                                        <label for="move-people">人数</label>
                                     </FloatLabel>
                                 </div>
                                 <div class="field mt-6 col-6">
@@ -182,7 +182,7 @@
                                             showClear 
                                             fluid
                                         />
-                                        <label for="move-room">Move to Room</label>
+                                        <label for="move-room">部屋へ移動</label>
                                     </FloatLabel>
                                 </div>
                             </div>
@@ -265,7 +265,7 @@ export default {
             return availableRooms.value
                 .filter(room => room.capacity >= numberOfPeopleToMove.value) // Ensure room can fit the people count
                 .map(room => ({
-                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (Floor: ${room.floor})`,
+                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
                     value: room.room_id, // Value for selection
                 }));
         });
@@ -567,6 +567,7 @@ export default {
             if (newReservationId !== oldReservationId) {
                 //console.log("reservation_id changed:", newReservationId);
                 await fetchReservation(newReservationId);
+                console.id('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
                 await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
             }
         });            
@@ -591,6 +592,11 @@ export default {
 
                     fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
                 }                
+            }
+        }, { deep: true });
+        watch(plans, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('plans changed:', newValue);
             }
         }, { deep: true });
         watch(selectedPlan, (newValue, oldValue) => {
@@ -620,7 +626,7 @@ export default {
         }, { deep: true });        
         watch(availableRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('availableRooms changed:', newValue);
+                //console.log('availableRooms changed:', newValue);
             }
         }, { deep: true });
         watch(targetRoom, (newValue, oldValue) => {
