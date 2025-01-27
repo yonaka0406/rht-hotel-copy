@@ -50,8 +50,6 @@ CREATE TABLE users (
     ALTER TABLE user_roles
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
 
-
-
     INSERT INTO user_status (status_name, description)
     VALUES 
         ('有効', '有効アカウント'),
