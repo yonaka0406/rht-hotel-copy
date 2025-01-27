@@ -1,7 +1,18 @@
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
+GRANT CREATE ON SCHEMA public TO rhtsys_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
+GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
+
+/*
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
-
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE logs_user TO rhtsys_user;
+*/
 
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,                
@@ -43,19 +54,16 @@ CREATE TABLE users (
 
     INSERT INTO user_status (status_name, description)
     VALUES 
-        ('Active', '有効アカウント'),
-        ('Deactivated', '無効アカウント');
-
-
+        ('有効', '有効アカウント'),
+        ('無効', '無効アカウント');
 
     INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "view_reports": true}', 'Full access to system, including managing the database and all hotels.'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "view_reports": true}', 'Can manage users, but cannot manage the database.'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "view_reports": true}', 'Can edit data and view reports.'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "view_reports": true}', 'Can only view reports.'),
-        ('User', '{"manage_db": false, "manage_users": false, "view_reports": false}', 'Default role with no special permissions.');
-
+        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true}', 'レポートを閲覧できます。'),
+        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": false}', '特別な権限のないデフォルトのロール。');
 
 -- Main Hotels Table
 CREATE TABLE hotels (
@@ -96,7 +104,7 @@ CREATE TABLE rooms (
     room_number TEXT NOT NULL, -- Room identifier
     capacity INT NOT NULL DEFAULT 1, -- Max number of guests
     smoking BOOLEAN NOT NULL DEFAULT FALSE,
-    for_sale BOOLEAN NOT NULL DEFAULT TRUE;
+    for_sale BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -227,74 +235,6 @@ CREATE TABLE addresses (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
-CREATE TABLE reservations (
-    id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
-    room_type_id INT NOT NULL,
-    reservation_client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- Reference to the client representing the company    
-    check_in DATE NOT NULL,
-    check_out DATE NOT NULL,  
-    number_of_people INT NOT NULL,  
-    status TEXT CHECK (status IN ('hold', 'provisory' 'confirmed', 'checked_in', 'checked_out', 'cancelled')) NOT NULL DEFAULT 'hold',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
-) PARTITION BY LIST (hotel_id);
-
-CREATE TABLE reservation_details (
-    id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
-    reservation_id UUID NOT NULL,
-    payer_client_id UUID REFERENCES clients(id) ON DELETE CASCADE, -- Link to the client responsible for paying (payer)    
-    date DATE NOT NULL,
-    room_id INT,
-    plans_global_id INT REFERENCES plans_global(id),
-    plans_hotel_id INT;
-    number_of_people INT NOT NULL,
-    price DECIMAL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    UNIQUE (hotel_id, reservation_id, room_id, date),
-    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
-    FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
-    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
-) PARTITION BY LIST (hotel_id);
-
-CREATE TABLE reservation_addons (
-    id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
-    reservation_detail_id UUID NOT NULL,
-    addons_global_id INT REFERENCES addons_global(id),
-    addons_hotel_id INT,
-    quantity INT NOT NULL DEFAULT 1, 
-    price DECIMAL NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_detail_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
-	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
-) PARTITION BY LIST (hotel_id);
-
-CREATE TABLE reservation_addons_7 PARTITION OF reservation_addons
-FOR VALUES IN (7);
-
-CREATE TABLE reservation_clients (
-    id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
-    reservation_details_id UUID NOT NULL, -- Reference to reservation_details table
-    client_id UUID NOT NULL REFERENCES clients(id),              -- Reference to clients table    
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id)    
-) PARTITION BY LIST (hotel_id);
-
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    
     name TEXT NOT NULL,
@@ -341,31 +281,6 @@ CREATE TABLE plans_rates (
     )
 );
 
-CREATE TABLE plan_addons (
-    id SERIAL PRIMARY KEY,
-    hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-    plans_global_id INT REFERENCES plans_global(id) ON DELETE CASCADE,
-    plans_hotel_id INT,
-    addons_global_id INT REFERENCES addons_global(id) ON DELETE CASCADE,
-    addons_hotel_id INT,
-    price DECIMAL(10, 2) NOT NULL, -- Add the price column, ensuring non-null values
-    date_start DATE NOT NULL, -- Start of the applicable rate
-    date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),    
-    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id) ON DELETE CASCADE,
-    FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id) ON DELETE CASCADE,
-    CHECK (
-        (plans_global_id IS NOT NULL AND plans_hotel_id IS NULL) OR 
-        (plans_global_id IS NULL AND plans_hotel_id IS NOT NULL)
-    ),
-    CHECK (
-        (addons_global_id IS NOT NULL AND addons_hotel_id IS NULL) OR 
-        (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
-    )
-);
-
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL, -- Name of the add-on (e.g., Breakfast, Dinner, etc.)
@@ -391,6 +306,99 @@ CREATE TABLE addons_hotel (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
+) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE plan_addons (
+    id SERIAL PRIMARY KEY,
+    hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+    plans_global_id INT REFERENCES plans_global(id) ON DELETE CASCADE,
+    plans_hotel_id INT,
+    addons_global_id INT REFERENCES addons_global(id) ON DELETE CASCADE,
+    addons_hotel_id INT,
+    price DECIMAL(10, 2) NOT NULL, -- Add the price column, ensuring non-null values
+    date_start DATE NOT NULL, -- Start of the applicable rate
+    date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),    
+    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id) ON DELETE CASCADE,
+    FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id) ON DELETE CASCADE,
+    CHECK (
+        (plans_global_id IS NOT NULL AND plans_hotel_id IS NULL) OR 
+        (plans_global_id IS NULL AND plans_hotel_id IS NOT NULL)
+    ),
+    CHECK (
+        (addons_global_id IS NOT NULL AND addons_hotel_id IS NULL) OR 
+        (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
+    )
+);
+
+CREATE TABLE reservations (
+    id UUID DEFAULT gen_random_uuid(),
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
+    room_type_id INT NOT NULL,
+    reservation_client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- Reference to the client representing the company    
+    check_in DATE NOT NULL,
+    check_out DATE NOT NULL,  
+    number_of_people INT NOT NULL,  
+    status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled')) NOT NULL DEFAULT 'hold',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    PRIMARY KEY (hotel_id, id),
+    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
+) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE reservation_details (
+    id UUID DEFAULT gen_random_uuid(),
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
+    reservation_id UUID NOT NULL,
+    payer_client_id UUID REFERENCES clients(id) ON DELETE CASCADE, -- Link to the client responsible for paying (payer)    
+    date DATE NOT NULL,
+    room_id INT,
+    plans_global_id INT REFERENCES plans_global(id),
+    plans_hotel_id INT,
+    number_of_people INT NOT NULL,
+    price DECIMAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    PRIMARY KEY (hotel_id, id),
+    UNIQUE (hotel_id, reservation_id, room_id, date),
+    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
+    FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
+    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
+) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE reservation_addons (
+    id UUID DEFAULT gen_random_uuid(),
+    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    reservation_detail_id UUID NOT NULL,
+    addons_global_id INT REFERENCES addons_global(id),
+    addons_hotel_id INT,
+    quantity INT NOT NULL DEFAULT 1, 
+    price DECIMAL NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    PRIMARY KEY (hotel_id, id),
+    FOREIGN KEY (reservation_detail_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
+	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
+) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE reservation_addons_7 PARTITION OF reservation_addons
+FOR VALUES IN (7);
+
+CREATE TABLE reservation_clients (
+    id UUID DEFAULT gen_random_uuid(),
+    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    reservation_details_id UUID NOT NULL, -- Reference to reservation_details table
+    client_id UUID NOT NULL REFERENCES clients(id),              -- Reference to clients table    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    PRIMARY KEY (hotel_id, id),
+    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id)    
 ) PARTITION BY LIST (hotel_id);
 
 --Ainda nao esta certo que vai ser usada
