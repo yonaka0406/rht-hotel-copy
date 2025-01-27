@@ -253,7 +253,7 @@
                 <Dialog
                     v-model="editUserDialog"
                     v-if="editUserDialog"
-                    header="新規ユーザー登録"
+                    header="ユーザー編集"
                     :visible="editUserDialog"
                     :style="{ width: '450px' }"
                     modal
@@ -262,7 +262,7 @@
                     <form @submit.prevent="submitEditUser">
                     
                         <!-- User Email Field -->
-                        <div class="field mb-5 mt-5">                        
+                        <div class="field mb-6 mt-6">                        
                             <FloatLabel>
                                 <InputText
                                     id="eu_email"                                    
@@ -275,7 +275,7 @@
                         </div>
 
                         <!-- Role Selection -->
-                        <div class="field mt-5">
+                        <div class="field mt-6">
                             <FloatLabel>
                                 <Select
                                     id="role"
@@ -295,7 +295,7 @@
                         <small v-if="roleError" class="p-error text-red-500">{{ roleError }}</small>
 
                         <!-- Status Selection -->
-                        <div class="field mt-5 text-center">
+                        <div class="field mt-6 text-center">
                             <ToggleButton 
                                 v-model="statusToggle" 
                                 onLabel="有効"                                  
@@ -306,6 +306,13 @@
                                 aria-label="User Status Toggle"
                             />
                         </div>
+
+                        <!-- Reset Password -->
+                        <Button
+                            label="パスワードリセット依頼"
+                            class="p-button-success"
+                            @click="sendResetPasswordEmail"
+                        />
 
                         <!-- Error Message Section -->
                         <div v-if="dialogErrorMessage" class="p-error mt-2 text-red-500 text-sm text-center">
@@ -731,7 +738,17 @@
                 validatePassword,
                 validateRole
             }
-        }        
+        },
+        methods: {
+            async sendResetPasswordEmail() {
+                try {
+                    const response = await this.$http.post('/api/auth/forgot-password-admin', { email: this.currentUser.email });
+                    this.successMessage = response.data.message;
+                } catch (error) {
+                    this.errorMessage = 'Error occurred. Please try again.';
+                }
+            }
+        }
     };
 </script>
   

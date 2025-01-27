@@ -52,6 +52,27 @@ const forgot = async (req, res) => {
   }
 }
 
+const forgotAdmin = async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(400).json({ error: 'ユーザー見つかりません。' });
+    }
+
+    // Generate a reset token    
+    const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+        
+    // Send the email with the reset link
+    await sendAdminResetEmail(user.email, resetToken);
+
+    // Respond to the client
+    res.json({ message: 'パスワードのリセットリンクが送られました。' });
+  } catch (err) {
+    res.status(500).json({ error: 'Error occurred while sending the email.' });
+  }
+}
+
 const reset = async (req, res) => {
   const { token, password } = req.body;  
 
@@ -93,4 +114,9 @@ const getActiveUsers = async (req, res) => {
   }
 };
 
-module.exports = { login, forgot, reset, getActiveUsers };
+module.exports = { 
+  login, 
+  forgot, 
+  forgotAdmin,
+  reset, 
+  getActiveUsers };
