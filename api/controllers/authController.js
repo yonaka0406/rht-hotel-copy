@@ -36,7 +36,7 @@ const forgot = async (req, res) => {
   try {
     const user = await findUserByEmail(email);
     if (!user) {
-      return res.status(400).json({ error: 'User not found' });
+      return res.status(400).json({ error: 'ユーザー見つかりません。' });
     }
 
     // Generate a reset token    
@@ -46,7 +46,7 @@ const forgot = async (req, res) => {
     await sendResetEmail(user.email, resetToken);
 
     // Respond to the client
-    res.json({ message: 'Reset password link sent to your email.' });
+    res.json({ message: 'パスワードのリセットリンクが送られました。' });
   } catch (err) {
     res.status(500).json({ error: 'Error occurred while sending the email.' });
   }
@@ -54,7 +54,7 @@ const forgot = async (req, res) => {
 
 const reset = async (req, res) => {
   const { token, password } = req.body;
-  const updated_by = req.user.id;
+  const updated_by = 1;
 
   try {
     // Verify the token
