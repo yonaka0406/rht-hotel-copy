@@ -57,7 +57,7 @@ const forgotAdmin = async (req, res) => {
   try {
 
     // Generate a reset token    
-    const resetToken = jwt.sign(email, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+    const resetToken = jwt.sign({ email: email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
     console.log('email:', email);    
     console.log('resetToken:', resetToken);  
     // Send the email with the reset link
@@ -66,6 +66,7 @@ const forgotAdmin = async (req, res) => {
     // Respond to the client
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
   } catch (err) {
+    console.error('Error occurred while sending the email:', err);
     res.status(500).json({ error: 'Error occurred while sending the email.' });
   }
 }
