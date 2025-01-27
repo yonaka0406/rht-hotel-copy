@@ -49,7 +49,7 @@ const getAllPlansByHotel = async (hotel_id) => {
         FROM 
             plans_global AS pg 
                 FULL JOIN 
-            plans_hotel AS ph on pg.id = ph.plans_global_id AND ph.hotel_id = $1
+            (SELECT * FROM plans_hotel WHERE hotel_id = $1) AS ph on pg.id = ph.plans_global_id
         ORDER BY
             COALESCE(ph.plan_type, pg.plan_type)
             ,COALESCE(ph.name, pg.name)
