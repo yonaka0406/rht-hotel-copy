@@ -308,11 +308,13 @@
                         </div>
 
                         <!-- Reset Password -->
-                        <Button
-                            label="パスワードリセット依頼"
-                            class="p-button-success"
-                            @click="sendResetPasswordEmail"
-                        />
+                        <div class="field mt-6 text-center">
+                            <Button
+                                label="パスワードリセット依頼"
+                                class="p-button-info"
+                                @click="sendResetPasswordEmail"
+                            />
+                        </div>
 
                         <!-- Error Message Section -->
                         <div v-if="dialogErrorMessage" class="p-error mt-2 text-red-500 text-sm text-center">
