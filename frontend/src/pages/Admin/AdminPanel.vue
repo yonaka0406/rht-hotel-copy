@@ -30,11 +30,11 @@
                     to="/admin"
                     class="text-white p-2 block rounded"
                 >
-                    <h2 class="text-xl font-semibold">Admin Dashboard</h2>
+                    <h2 class="text-xl font-semibold">アドミンダッシュボード</h2>
                 </router-link>
                 <Button
                     type="button"
-                    label="Toggle All"
+                    label="すべて切り替え"
                     severity="secondary"
                     text
                     @click="toggleAll"
@@ -65,13 +65,13 @@
                     to="/"
                     class="text-white hover:bg-yellow-100 p-2 block rounded mt-4"
                 >
-                <i class="pi pi-home mr-2"></i>Back to Home                    
+                <i class="pi pi-home mr-2"></i>ホームへ戻る                    
                 </router-link>
                 <button
                     @click="handleLogout"
                     class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded mt-4"
                 >
-                    <i class="pi pi-sign-out mr-2"></i>Logout
+                    <i class="pi pi-sign-out mr-2"></i>ログアウト
                 </button>
             </div>
         </div>
@@ -79,16 +79,16 @@
 
         <!-- Main Content -->
         <div class="flex-1 overflow-x-hidden overflow-y-auto">
-            <p class="text-2xl font-bold text-gray-700 mb-2">Welcome to the Admin Dashboard</p>
+            <p class="text-2xl font-bold text-gray-700 mb-2">アドミンダッシュボードへようこそ！</p>
             <div v-if="isRootAdminPath" class="p-4">
                 <!-- Dashboard Content -->
                 <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Admin Dashboard</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <!-- Quick Stats Cards -->
                         <div class="bg-blue-50 p-6 rounded-lg flex flex-col">
                             <div class="flex-grow h-16">
-                                <h3 class="text-lg font-semibold text-blue-800">Active Users</h3>
+                                <h3 class="text-lg font-semibold text-blue-800">ログイン中ユーザー</h3>
                             </div>
                             <div class="mt-auto h-12">
                                 <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
@@ -97,7 +97,7 @@
 
                         <div class="bg-green-50 p-6 rounded-lg flex flex-col">
                             <div class="flex-grow h-16">
-                                <h3 class="text-lg font-semibold text-green-800">Hotels</h3>
+                                <h3 class="text-lg font-semibold text-green-800">ホテル</h3>
                             </div>
                             <div class="mt-auto h-12">
                                 <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
@@ -106,7 +106,7 @@
 
                         <div class="bg-purple-50 p-6 rounded-lg flex flex-col">
                             <div class="flex-grow h-16">
-                                <h3 class="text-lg font-semibold text-purple-800">Total Bookings</h3>
+                                <h3 class="text-lg font-semibold text-purple-800">予約数</h3>
                             </div>
                             <div class="mt-auto h-12">
                                 <p class="text-3xl font-bold text-purple-600">0</p>
@@ -153,7 +153,7 @@
             const items = ref([
                 {
                     key: 'dashboard',
-                    label: 'Dashboard',
+                    label: 'ダッシュボード',
                     icon: 'pi pi-tablet',
                     command: () => {
                         router.push('/admin');
@@ -161,12 +161,12 @@
                 },
                 {                    
                     key: 'manage-users',
-                    label: 'Manage Users',
+                    label: 'ユーザー管理',
                     icon: 'pi pi-users',
                     items: [
                         {                 
                             key: 'mu-create-edit',
-                            label: 'Create & Edit',
+                            label: '新規 & 編集',
                             icon: 'pi pi-user',
                             command: () => {
                                 router.push('/admin/users');
@@ -174,7 +174,7 @@
                         },
                         {
                             key: 'mu-roles',
-                            label: 'Roles',
+                            label: 'ロール',
                             icon: 'pi pi-key',
                             command: () => {
                                 router.push('/admin/roles');
@@ -184,12 +184,12 @@
                 },
                 {
                     key: 'manage-hotels',
-                    label: 'Manage Hotels',
+                    label: 'ホテル管理',
                     icon: 'pi pi-building',
                     items: [
                         {                 
                             key: 'mh-create',
-                            label: 'Create',
+                            label: '新規',
                             icon: 'pi pi-plus',
                             command: () => {
                                 router.push('/admin/hotel-create');
@@ -197,7 +197,7 @@
                         },
                         {                 
                             key: 'mh-edit',
-                            label: 'Edit',
+                            label: '編集',
                             icon: 'pi pi-pen-to-square',
                             command: () => {
                                 router.push('/admin/hotel-edit');
@@ -205,7 +205,7 @@
                         },
                         {                 
                             key: 'mh-plan',
-                            label: 'Plans',
+                            label: 'プラン',
                             icon: 'pi pi-box',
                             command: () => {
                                 router.push('/admin/hotel-plans');
@@ -213,7 +213,7 @@
                         },
                         {                 
                             key: 'mh-addon',
-                            label: 'Add-ons',
+                            label: 'アドオン',
                             icon: 'pi pi-cart-plus',
                             command: () => {
                                 router.push('/admin/hotel-addons');
