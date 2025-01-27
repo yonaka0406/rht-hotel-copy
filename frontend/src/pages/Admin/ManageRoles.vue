@@ -204,10 +204,10 @@
             const newRole = ref({ name: "", permissions: [] });
             const dialogErrorMessage = ref('');
             const permissionsList = ref([
-                { name: "Manage Database", code: "manage_db" },
-                { name: "Manage Users", code: "manage_users" },
-                { name: "Manage Clients", code: "manage_clients" },
-                { name: "View Reports", code: "view_reports" }
+                { name: "データベース管理", code: "manage_db" },
+                { name: "ユーザー管理", code: "manage_users" },
+                { name: "顧客管理", code: "manage_clients" },
+                { name: "レポート閲覧", code: "view_reports" }
             ]);
 
 
