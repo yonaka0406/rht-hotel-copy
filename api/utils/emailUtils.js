@@ -50,8 +50,7 @@ const sendAdminResetEmail = async (email, resetToken) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log('Admin reset email sent to:', adminEmail);
+    await transporter.sendMail(mailOptions);    
   } catch (error) {
     console.error('Error sending admin reset email:', error);
     throw new Error('Failed to send admin reset email');
