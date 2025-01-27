@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
-  addReservationHold, addReservationDetail, addReservationAddon, updateReservationDetail,
+  addReservationHold, addReservationDetail, addReservationAddon, updateReservationDetail, updateReservationStatus,
   deleteReservationAddonsByDetailId
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -415,7 +415,28 @@ const editReservationDetail = async (req, res) => {
   }
 };
 
+const editReservationStatus = async (req, res) => {
+  const { id } = req.params;
+  const { hotel_id, status } = req.body;
+  const updated_by = req.user.id;
+
+  try {
+    // Call the function to update reservation status in the database
+    const updatedReservation = await updateReservationStatus({
+      id,
+      hotel_id,
+      status,      
+      updated_by,
+    });
+
+    // Respond with the updated reservation details
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating reservation status:', err);
+    res.status(500).json({ error: 'Failed to update reservation status' });
+  }
+};
 
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail };
+  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail, editReservationStatus };

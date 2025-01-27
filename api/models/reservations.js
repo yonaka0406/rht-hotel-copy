@@ -403,6 +403,33 @@ const updateReservationDetail = async (reservationData) => {
   }
 };
 
+const updateReservationStatus = async (reservationData) => {
+  const { id, hotel_id, status, updated_by } = reservationData;
+
+  const query = `
+      UPDATE reservations
+      SET
+        status = $1,          
+        updated_by = $2          
+      WHERE id = $3::UUID AND hotel_id = $4
+      RETURNING *;
+  `;
+  const values = [
+    status,    
+    updated_by,
+    id,
+    hotel_id,
+  ];  
+
+  try {
+      const result = await pool.query(query, values);
+      return result.rows[0];
+  } catch (err) {
+      console.error('Error updating reservation detail:', err);
+      throw new Error('Database error');
+  }
+};
+
 // Delete
 
 const deleteReservationAddonsByDetailId = async (reservation_detail_id) => {  
@@ -435,6 +462,7 @@ module.exports = {
     addReservationAddon,
     addReservationClient,
     updateReservationDetail,
+    updateReservationStatus,
     deleteReservationAddonsByDetailId,
 };
 

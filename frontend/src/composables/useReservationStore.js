@@ -21,6 +21,34 @@
             reservationId.value = id;
         };
 
+        // Set reservation status in the store
+        const setReservationStatus = async (status) => {            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Get the hotel_id for the current reservation
+                const hotel_id = await getReservationHotelId(reservationId.value);
+
+                // Assuming you have an API endpoint to update the reservation status
+                const response = await fetch(`/api/reservation/update/status/${reservationId.value}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hotel_id, status })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation status');
+                }
+
+                // Update the local reservationDetails state
+                reservationDetails.value.status = status;
+            } catch (error) {
+                console.error('Error updating reservation status:', error);
+            }
+        };
+
         // Get reservationId from the store
         const getReservationId = () => {
             return reservationId.value;
@@ -216,6 +244,7 @@
         reservationId,
         reservationDetails,
         setReservationId,
+        setReservationStatus,
         getReservationId,
         getReservationHotelId,
         fetchReservation,

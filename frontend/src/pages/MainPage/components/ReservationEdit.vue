@@ -4,31 +4,40 @@
         <Card class="m-2">
             <template #title>予約編集</template>
             <template #content>
-                <p>ID: {{ reservation_id }}</p>
+                <!--<p>ID: {{ reservation_id }}</p>-->
                 <div 
                     v-if="editReservationDetails && editReservationDetails.length > 0"
-                    class="p-fluid flex flex-wrap"
+                    class="grid grid-cols-2 gap-2 gap-y-4"
                 >
-                    <div class="field w-full mb-2 mt-2">予約者： {{ editReservationDetails[0].client_name }}</div>
-                    <div class="field w-1/3" >
+                    <div class="field flex flex-col">予約者：<br/>{{ editReservationDetails[0].client_name }}</div>
+                    <div class="field flex flex-col" >
                         人数： <br/> {{ editReservationDetails[0].reservation_number_of_people }}
                         <i class="pi pi-user ml-1"></i>
                     </div>
-                    <div class="field w-1/3">
+                    <div class="field flex flex-col">
                         チェックイン： <br/> {{ editReservationDetails[0].check_in }} 
                         <i class="pi pi-arrow-down-right ml-1"></i>
                     </div>
-                    <div class="field w-1/3">
+                    <div class="field flex flex-col">
                         チェックアウト： <br/> {{ editReservationDetails[0].check_out }} 
                         <i class="pi pi-arrow-up-right ml-1"></i>
                     </div>
-                    <div class="field w-1/3">
-                        ステータス： {{ editReservationDetails[0].status }}
+                    <div class="field flex flex-col col-span-2">
+                        ステータス： {{ reservationStatus }}
                     </div>
-                    <div class="field w-full">
+                    <div class="field flex flex-col">
                         <Button 
-                            label="Confirm Reservation" 
-                            :disabled="!allRoomsHavePlan"  
+                            label="仮予約として保存" 
+                            class="p-button-info" 
+                            :disabled="!allRoomsHavePlan"
+                            @click="updateReservationStatus('provisory')"
+                        /> 
+                    </div>
+                    <div class="field flex flex-col">
+                        <Button 
+                            label="確定予約として保存" 
+                            :disabled="!allRoomsHavePlan"
+                            @click="updateReservationStatus('confirmed')"
                         /> 
                     </div>
                     
@@ -256,7 +265,7 @@ export default {
         const router = useRouter();
         const toast = useToast();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms, setReservationId } = useReservationStore();
+        const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms, setReservationId, setReservationStatus } = useReservationStore();
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
@@ -301,6 +310,25 @@ export default {
             return groupedRooms.value.every(group => allHavePlan(group));
         });
 
+        const reservationStatus = computed(() => {
+            switch (editReservationDetails.value[0]?.status) {
+                case 'hold':
+                return '保留中';
+                case 'provisory':
+                return '仮予約';
+                case 'confirmed':
+                return '確定';
+                case 'checked_in':
+                return 'チェックイン';
+                case 'checked_out':
+                return 'チェックアウト';
+                case 'cancelled':
+                return 'キャンセル';
+                default:
+                return '不明'; // Or any default value you prefer
+            }
+        });
+
         // Map group details with formatted date
         const formattedGroupDetails = (details) => {
             return details.map((item) => ({
@@ -324,6 +352,16 @@ export default {
                     console.error('Failed to fetch plan add-ons:', error);
                     addons.value = [];                    
                 }
+            }
+        };
+
+        const updateReservationStatus = async (status) => {
+            try {
+                await setReservationStatus(status); // Call the setReservationStatus from your store
+                await fetchReservation(props.reservation_id); // Fetch the updated reservation details
+            } catch (error) {
+                console.error('Error updating and fetching reservation:', error);
+                // Handle the error, e.g., show a toast message
             }
         };
 
@@ -687,10 +725,12 @@ export default {
             numberOfPeopleToMove,
             filteredRooms,
             allRoomsHavePlan,
+            reservationStatus,
             plans,
             daysOfWeek,
             availableRooms,
             updatePlanAddOns,
+            updateReservationStatus,
             handleTabChange,
             openBulkEditDialog,
             closeBulkEditDialog,
