@@ -2,7 +2,7 @@
     <div>        
         <!-- Form or fields to edit the reservation details -->
         <Card class="m-2">
-            <template #title>Reservation</template>
+            <template #title>予約編集</template>
             <template #content>
                 <p>ID: {{ reservation_id }}</p>
                 <div 

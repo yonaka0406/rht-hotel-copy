@@ -7,7 +7,7 @@
         >
           <TabList>
             <Tab value="0">
-              <i class="pi pi-globe"></i> Global
+              <i class="pi pi-globe"></i> グローバル
             </Tab>
             <Tab value="1">
               <i class="pi pi-building"></i> Hotels
@@ -176,7 +176,7 @@
           <div class="col-6">
             <FloatLabel>
               <InputText v-model="newGlobalPlan.name" fluid />
-              <label>Name</label>
+              <label>名称</label>
             </FloatLabel>
           </div>
           <div class="col-6">            
@@ -194,13 +194,13 @@
         <div class="pt-6">        
           <FloatLabel>
             <Textarea v-model="newGlobalPlan.description" fluid />
-            <label>Description</label>
+            <label>詳細</label>
           </FloatLabel>
         </div>
         
         <template #footer>
-          <Button label="Save" icon="pi pi-check" @click="saveGlobalPlan" class="p-button-success p-button-text p-button-sm" />
-          <Button label="Close" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
+          <Button label="保存" icon="pi pi-check" @click="saveGlobalPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="閉じる" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
         </template>
       </Dialog>
 
@@ -209,7 +209,7 @@
           <div class="col-6">
             <FloatLabel>
               <InputText v-model="editGlobalPlan.name" />
-              <label>Name</label>
+              <label>名称</label>
             </FloatLabel>
           </div>
           <div class="col-6">            
@@ -227,12 +227,12 @@
         <div class="pt-6">
           <FloatLabel>
             <Textarea v-model="editGlobalPlan.description" fluid />
-            <label>Description</label>
+            <label>詳細</label>
           </FloatLabel>
         </div>
         <template #footer>
-          <Button label="Save" icon="pi pi-check" @click="updateGlobalPlan" class="p-button-success p-button-text p-button-sm" />
-          <Button label="Close" icon="pi pi-times" @click="showEditGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" />
+          <Button label="保存" icon="pi pi-check" @click="updateGlobalPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="閉じる" icon="pi pi-times" @click="showEditGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" />
         </template>
       </Dialog>
 
@@ -241,7 +241,7 @@
           <div class="col-6">
             <FloatLabel>
               <InputText v-model="newHotelPlan.name" fluid />
-              <label>Name</label>
+              <label>名称</label>
             </FloatLabel>
           </div>
           <div class="col-6">
@@ -259,7 +259,7 @@
         <div class="pt-6">        
           <FloatLabel>
             <Textarea v-model="newHotelPlan.description" fluid />
-            <label>Description</label>
+            <label>詳細</label>
           </FloatLabel>
         </div>
         <div class="pt-2">
@@ -278,8 +278,8 @@
           
         </div>
         <template #footer>
-          <Button label="Save" icon="pi pi-check" @click="saveHotelPlan" class="p-button-success p-button-text p-button-sm" />
-          <Button label="Close" icon="pi pi-times" @click="showHotelDialog = false" class="p-button-danger p-button-text p-button-sm" text />
+          <Button label="保存" icon="pi pi-check" @click="saveHotelPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="閉じる" icon="pi pi-times" @click="showHotelDialog = false" class="p-button-danger p-button-text p-button-sm" text />
         </template>
       </Dialog>
 
@@ -288,7 +288,7 @@
           <div class="col-6">
             <FloatLabel>
               <InputText v-model="editHotelPlan.name" />
-              <label>Name</label>
+              <label>名称</label>
             </FloatLabel>
           </div>
           <div class="col-6">
@@ -306,7 +306,7 @@
         <div class="pt-6">
           <FloatLabel>
             <Textarea v-model="editHotelPlan.description" fluid />
-            <label>Description</label>
+            <label>詳細</label>
           </FloatLabel>
         </div>      
         <div class="pt-2">
@@ -324,8 +324,8 @@
           /> 
         </div>
         <template #footer>
-          <Button label="Save" icon="pi pi-check" @click="updateHotelPlan" class="p-button-success p-button-text p-button-sm" />
-          <Button label="Close" icon="pi pi-times" @click="showEditHotelDialog = false" class="p-button-danger p-button-text p-button-sm" />
+          <Button label="保存" icon="pi pi-check" @click="updateHotelPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="閉じる" icon="pi pi-times" @click="showEditHotelDialog = false" class="p-button-danger p-button-text p-button-sm" />
         </template>
       </Dialog>
     </div>

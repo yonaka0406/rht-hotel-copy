@@ -42,7 +42,7 @@
               <Column field="description" header="Description"></Column>
               <Column field="visible">
                 <template #header>
-                  <span class="font-bold items-center">Status</span>
+                  <span class="font-bold items-center">ステータス</span>
                 </template>
                 <template #body="slotProps">
                   <div class="flex items-center justify-center">  
@@ -106,19 +106,19 @@
               ></Button>
             </div>  
             <DataTable :value="filteredHotelAddons">
-              <Column field="name" header="Name"></Column>
+              <Column field="name" header="名称"></Column>
               <Column field="price">
                 <template #header>
-                  <span class="font-bold items-center">Price</span>
+                  <span class="font-bold items-center">価格</span>
                 </template>
                 <template #body="slotProps">
                   <span class="items-end">{{formatCurrency(slotProps.data.price)}}</span>
                 </template>
               </Column>
-              <Column field="description" header="Description"></Column>
+              <Column field="description" header="詳細"></Column>
               <Column field="visible">
                 <template #header>
-                  <span class="font-bold items-center">Status</span>
+                  <span class="font-bold items-center">ステータス</span>
                 </template>
                 <template #body="slotProps">
                   <div class="flex flex-col items-center gap-2 justify-center">  
@@ -130,7 +130,7 @@
               </Column>
               <Column>
                 <template #header>
-                  <span class="font-bold items-center">Actions</span>
+                  <span class="font-bold items-center">操作</span>
                 </template>
                 <template #body="slotProps">
                   <div class="flex items-center justify-center"> 
@@ -154,7 +154,7 @@
         <div class="col-6">
           <FloatLabel>
             <InputText v-model="newGlobalAddon.name" fluid />
-            <label>Name</label>
+            <label>名称</label>
           </FloatLabel>
         </div>
         <div class="col-6">
@@ -166,29 +166,29 @@
               locale="ja-JP" 
               fluid
             />            
-            <label>Price</label>
+            <label>価格</label>
           </FloatLabel>
         </div>
       </div>
       <div class="pt-6">        
         <FloatLabel>
           <Textarea v-model="newGlobalAddon.description" fluid />
-          <label>Description</label>
+          <label>詳細</label>
         </FloatLabel>
       </div>
       
       <template #footer>
-        <Button label="Save" icon="pi pi-check" @click="saveGlobalAddon" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
+        <Button label="保存" icon="pi pi-check" @click="saveGlobalAddon" class="p-button-success p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
       </template>
     </Dialog>
 
-    <Dialog header="Edit Global Addon" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+    <Dialog header="グローバルアドン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
       <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
         <div class="col-6">
           <FloatLabel>
             <InputText v-model="editGlobalAddon.name" />
-            <label>Name</label>
+            <label>名称</label>
           </FloatLabel>
         </div>
         <div class="col-6">
@@ -199,39 +199,39 @@
               currency="JPY" 
               locale="ja-JP" 
             />
-            <label>Price</label>
+            <label>価格</label>
           </FloatLabel>
         </div>
       </div>
       <div class="pt-6">
         <FloatLabel>
           <Textarea v-model="editGlobalAddon.description" fluid />
-          <label>Description</label>
+          <label>詳細</label>
         </FloatLabel>
       </div>
       <div class="pt-2 flex items-center justify-center">
         <ToggleButton 
           id="visibleToggleEditGlobal"
           v-model="editGlobalAddon.visible" 
-          onLabel="Visible" 
-          offLabel="Hidden" 
+          onLabel="表示" 
+          offLabel="非表示" 
           onIcon="pi pi-eye"                                 
           offIcon="pi pi-eye-slash" 
           aria-label="Status Toggle"
         />
       </div>
       <template #footer>
-        <Button label="Save" icon="pi pi-check" @click="updateGlobalAddon" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="showEditGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" />
+        <Button label="保存" icon="pi pi-check" @click="updateGlobalAddon" class="p-button-success p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="showEditGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
 
-    <Dialog header="Add New Hotel Addon" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+    <Dialog header="新規ホテルアドオン" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
       <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
         <div class="col-6">
           <FloatLabel>
             <InputText v-model="newHotelAddon.name" fluid />
-            <label>Name</label>
+            <label>名称</label>
           </FloatLabel>
         </div>  
         <div class="col-6">
@@ -243,14 +243,14 @@
               locale="ja-JP" 
               fluid
             />
-            <label>Price</label>
+            <label>価格</label>
           </FloatLabel>
         </div> 
       </div>
       <div class="pt-6">        
         <FloatLabel>
           <Textarea v-model="newHotelAddon.description" fluid />
-          <label>Description</label>
+          <label>詳細</label>
         </FloatLabel>
       </div>
       <div class="pt-2">
@@ -268,17 +268,17 @@
         /> 
       </div>
       <template #footer>
-        <Button label="Save" icon="pi pi-check" @click="saveHotelAddon" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="showHotelDialog = false" class="p-button-danger p-button-text p-button-sm" text />
+        <Button label="保存" icon="pi pi-check" @click="saveHotelAddon" class="p-button-success p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="showHotelDialog = false" class="p-button-danger p-button-text p-button-sm" text />
       </template>
     </Dialog>
 
-    <Dialog header="Edit Hotel Addon" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+    <Dialog header="ホテルアドオン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
       <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
         <div class="col-6">
           <FloatLabel>
             <InputText v-model="editHotelAddon.name" />
-            <label>Name</label>
+            <label>名称</label>
           </FloatLabel>
         </div>
         <div class="col-6">
@@ -289,18 +289,18 @@
               currency="JPY" 
               locale="ja-JP" 
             />
-            <label>Price</label>
+            <label>価格</label>
           </FloatLabel>
         </div>
       </div>
       <div class="pt-6">
         <FloatLabel>
           <Textarea v-model="editHotelAddon.description" fluid />
-          <label>Description</label>
+          <label>詳細</label>
         </FloatLabel>
       </div>      
       <div class="pt-2">
-        <label for="globalAddonSelectEdit" class="block mb-2">Link to Global Addon (optional)</label>
+        <label for="globalAddonSelectEdit" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
         <Select 
           id="globalAddonSelectEdit"
           v-model="editHotelAddon.addons_global_id" 
@@ -317,16 +317,16 @@
         <ToggleButton 
           id="visibleToggleEditHotel"
           v-model="editHotelAddon.visible" 
-          onLabel="Visible" 
-          offLabel="Hidden" 
+          onLabel="表示" 
+          offLabel="非表示" 
           onIcon="pi pi-eye"                                 
           offIcon="pi pi-eye-slash" 
           aria-label="Status Toggle"
         />
       </div>
       <template #footer>
-        <Button label="Save" icon="pi pi-check" @click="updateHotelAddon" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="showEditHotelDialog = false" class="p-button-danger p-button-text p-button-sm" />
+        <Button label="保存" icon="pi pi-check" @click="updateHotelAddon" class="p-button-success p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="showEditHotelDialog = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
   </div>
@@ -540,7 +540,7 @@
                 description: '', 
                 price: 0 
               };
-              toast.add({ severity: 'success', summary: 'Success', detail: 'Global Addon added successfully', life: 3000 });
+              toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルアドオン追加されました。', life: 3000 });
             } catch (err) {
               console.error('Error saving global addon:', err);
               toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global addon', life: 3000 });
@@ -565,7 +565,7 @@
                 toast.add({ 
                   severity: 'error', 
                   summary: 'Error', 
-                  detail: 'Addon name must be unique', life: 3000 
+                  detail: '唯一アドオン名称が必要', life: 3000 
                 });
                 return;
               }
@@ -597,7 +597,7 @@
                 price: 0,
                 visible: true 
               };
-              toast.add({ severity: 'success', summary: 'Success', detail: 'Global Addon updated successfully', life: 3000 });
+              toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルアドオン追加されました。', life: 3000 });
             } catch (err) {
               console.error('Error updating global addon:', err);
               toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global addon', life: 3000 });
@@ -617,7 +617,7 @@
                 toast.add({ 
                   severity: 'error', 
                   summary: 'Error', 
-                  detail: 'Addon name must be unique for the selected hotel', life: 3000 
+                  detail: '唯一アドオン名称が必要', life: 3000 
                 });
                 return;
               }
@@ -645,7 +645,7 @@
                 price: 0, 
                 addons_global_id: null 
               };
-              toast.add({ severity: 'success', summary: 'Success', detail: 'Hotel Addon added successfully', life: 3000 });
+              toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルアドオン追加されました。', life: 3000 });
             } catch (err) {
               console.error('Error saving hotel addon:', err);
               toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel addon', life: 3000 });
@@ -673,7 +673,7 @@
                 toast.add({ 
                   severity: 'error', 
                   summary: 'Error', 
-                  detail: 'Addon name must be unique for the selected hotel', life: 3000 
+                  detail: '唯一アドオン名称が必要', life: 3000 
                 });
                 return;
               }
@@ -707,7 +707,7 @@
                 price: 0, 
                 visible: true
               };
-              toast.add({ severity: 'success', summary: 'Success', detail: 'Hotel Addon updated successfully', life: 3000 });
+              toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルアドオン追加されました。', life: 3000 });
             } catch (err) {
               console.error('Error updating hotel addon:', err);
               toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel addon', life: 3000 });

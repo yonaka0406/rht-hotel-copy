@@ -109,7 +109,7 @@
                             currency="JPY" 
                             locale="ja-JP" 
                             />
-                            <label>Price</label>
+                            <label>価格</label>
                         </FloatLabel>
                     </div>
                 </div>
@@ -137,7 +137,7 @@
 
                 <template #footer>                    
                     <Button label="Add" icon="pi pi-plus" @click="addAddon" class="p-button-success p-button-text p-button-sm" />
-                    <Button label="Close" icon="pi pi-times" @click="showAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
+                    <Button label="閉じる" icon="pi pi-times" @click="showAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
             </Dialog>
 
@@ -159,7 +159,7 @@
                             currency="JPY" 
                             locale="ja-JP" 
                             />
-                            <label>Price</label>
+                            <label>価格</label>
                         </FloatLabel>
                     </div>
                 </div>
@@ -187,7 +187,7 @@
 
                 <template #footer>                    
                     <Button label="Update" icon="pi pi-check" @click="updateAddon" class="p-button-success p-button-text p-button-sm" />
-                    <Button label="Close" icon="pi pi-times" @click="showEditAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
+                    <Button label="閉じる" icon="pi pi-times" @click="showEditAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
             </Dialog>
         </div>

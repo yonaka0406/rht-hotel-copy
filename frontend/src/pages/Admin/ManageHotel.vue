@@ -60,7 +60,7 @@
         </div>
       </div>
       <template #footer>
-        <Button label="Save" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
+        <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
         <Button label="Cancel" icon="pi pi-times" @click="dialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />        
       </template>
     </Dialog>
@@ -98,7 +98,7 @@
       </DataTable>
       <template #footer>
         <Button label="Save Changes" icon="pi pi-check" @click="saveRoomTypes" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="roomTypesDialogVisible = false" class="p-button-danger p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="roomTypesDialogVisible = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
 
@@ -130,7 +130,7 @@
 
       <template #footer>        
         <Button label="Add" icon="pi pi-plus" @click="saveRoomType" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="roomTypeDialog = false" class="p-button-danger p-button-text p-button-sm" />
+        <Button label="閉じる" icon="pi pi-times" @click="roomTypeDialog = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
 
@@ -219,7 +219,7 @@
 
       <template #footer>
         <Button label="Save Changes" icon="pi pi-check" @click="saveRoomChanges" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Close" icon="pi pi-times" @click="roomsDialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />
+        <Button label="閉じる" icon="pi pi-times" @click="roomsDialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />
       </template>      
     </Dialog>
     

@@ -346,7 +346,7 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="Save" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
+                <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
                 <Button label="Cancel" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
             </template>
         </Dialog>

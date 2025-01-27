@@ -272,8 +272,8 @@
           </div>
         </div>
         <template #footer>
-          <Button label="Close" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
-          <Button label="Save" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
+          <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
+          <Button label="保存" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
         </template>        
       </Dialog>
       

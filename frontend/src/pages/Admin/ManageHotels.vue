@@ -352,7 +352,7 @@
         text 
       />
       <Button 
-        label="Save" 
+        label="保存" 
         icon="pi pi-check" 
         @click="saveRoomType" 
         :loading="saving"
