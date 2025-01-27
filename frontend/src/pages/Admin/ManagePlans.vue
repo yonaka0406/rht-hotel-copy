@@ -10,7 +10,7 @@
               <i class="pi pi-globe"></i> グローバル
             </Tab>
             <Tab value="1">
-              <i class="pi pi-building"></i> Hotels
+              <i class="pi pi-building"></i> ホテル
             </Tab>
             <Tab 
               v-if="selectedHotel" 
@@ -25,7 +25,7 @@
                 <div class="flex justify-end mb-2">
                   <Button @click="showGlobalDialog = true"
                     icon="pi pi-plus"
-                    label="Add Plan"
+                    label="プラン追加"
                     class="p-button-right"
                   ></Button>
                 </div>
@@ -33,7 +33,7 @@
                   <Column field="name" header="名称"></Column>
                   <Column field="plan_type">
                     <template #header>
-                      <span class="font-bold items-center">Plan Type</span>
+                      <span class="font-bold items-center">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center">  
@@ -45,7 +45,7 @@
                   <Column field="description" header="詳細"></Column>
                   <Column>
                     <template #header>
-                      <span class="font-bold items-center">Actions</span>
+                      <span class="font-bold items-center">操作</span>
                     </template>
                     <template #body="slotProps">   
                       <div class="flex items-center justify-center">                 
@@ -53,13 +53,13 @@
                           icon="pi pi-pencil" 
                           class="p-button-text p-button-sm" 
                           @click="openEditGlobalPlan(slotProps.data)"
-                          v-tooltip="'Edit Plan'"
+                          v-tooltip="'プラン編集'"
                         />
                         <Button 
                           icon="pi pi-dollar" 
                           class="p-button-text p-button-sm" 
                           @click="switchEditGlobalPlanRate(slotProps.data)"
-                          v-tooltip="'Edit Rate'"
+                          v-tooltip="'料金編集'"
                         />
                       </div>
                     </template>
@@ -84,7 +84,7 @@
                 <Column field="name" header="名称"></Column>
                 <Column>
                   <template #header>
-                    <span class="font-bold">Plans Count</span>
+                    <span class="font-bold">プランカウント</span>
                   </template>
                   <template #body="slotProps">
                     <Badge 
@@ -99,7 +99,7 @@
                       @click="selectHotel(slotProps.data)"
                       severity="info"
                       rounded 
-                    >Select</Button>
+                    >選択する</Button>
                   </template>
                 </Column>
               </DataTable>
@@ -113,7 +113,7 @@
                   <Button                
                     @click="showHotelDialog = true"
                     icon="pi pi-plus"
-                    label="Add Plan"
+                    label="プラン追加"
                     class="p-button-right"
                   ></Button>
                 </div> 
@@ -121,7 +121,7 @@
                   <Column field="name" header="名称"></Column>
                   <Column field="plan_type">
                     <template #header>
-                      <span class="font-bold items-center">Plan Type</span>
+                      <span class="font-bold items-center">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center">  
@@ -133,7 +133,7 @@
                   <Column field="description" header="詳細"></Column>
                   <Column>
                     <template #header>
-                      <span class="font-bold items-center">Actions</span>
+                      <span class="font-bold items-center">操作</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center"> 
@@ -141,13 +141,13 @@
                           icon="pi pi-pencil" 
                           class="p-button-text p-button-sm" 
                           @click="openEditHotelDialog(slotProps.data)"
-                          v-tooltip="'Edit Plan'"
+                          v-tooltip="'プラン編集'"
                         />
                         <Button 
                           icon="pi pi-dollar" 
                           class="p-button-text p-button-sm" 
                           @click="switchEditHotelPlanRate(slotProps.data)"
-                          v-tooltip="'Edit Rate'"
+                          v-tooltip="'料金編集'"
                         />
                       </div>
                     </template>
@@ -171,7 +171,7 @@
         </Tabs>
       </Panel>
 
-      <Dialog header="Add New Global Plan" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+      <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
           <div class="col-6">
             <FloatLabel>
@@ -181,7 +181,7 @@
           </div>
           <div class="col-6">            
             <div class="p-float-label flex align-items-center gap-2">
-              <span class="inline-block align-middle font-bold">Billing by:</span>
+              <span class="inline-block align-middle font-bold">請求種類：</span>
               <SelectButton 
                 v-model="newGlobalPlan.plan_type" 
                 :options="sb_options"
@@ -204,7 +204,7 @@
         </template>
       </Dialog>
 
-      <Dialog header="Edit Global Plan" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+      <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
           <div class="col-6">
             <FloatLabel>
@@ -214,7 +214,7 @@
           </div>
           <div class="col-6">            
             <div class="p-float-label flex align-items-center gap-2">
-              <span class="inline-block align-middle font-bold">Billing by:</span>
+              <span class="inline-block align-middle font-bold">請求種類：</span>
               <SelectButton 
                 v-model="editGlobalPlan.plan_type" 
                 :options="sb_options"
@@ -236,7 +236,7 @@
         </template>
       </Dialog>
 
-      <Dialog header="Add New Hotel Plan" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+      <Dialog header="ホテルプラン追加" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
           <div class="col-6">
             <FloatLabel>
@@ -246,7 +246,7 @@
           </div>
           <div class="col-6">
             <div class="p-float-label flex align-items-center gap-2">
-              <span class="inline-block align-middle font-bold">Billing by:</span>
+              <span class="inline-block align-middle font-bold">請求種類：</span>
               <SelectButton 
                 v-model="newHotelPlan.plan_type" 
                 :options="sb_options"
@@ -263,7 +263,7 @@
           </FloatLabel>
         </div>
         <div class="pt-2">
-          <label for="globalPlanSelect" class="block mb-2">Link to Global Plan (optional)</label>
+          <label for="globalPlanSelect" class="block mb-2">グローバルプランにリンクする（任意）</label>
           <Select 
             id="globalPlanSelect"
             v-model="newHotelPlan.plans_global_id" 
@@ -283,7 +283,7 @@
         </template>
       </Dialog>
 
-      <Dialog header="Edit Hotel Plan" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+      <Dialog header="ホテルプラン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
           <div class="col-6">
             <FloatLabel>
@@ -293,7 +293,7 @@
           </div>
           <div class="col-6">
             <div class="p-float-label flex align-items-center gap-2">
-              <span class="inline-block align-middle font-bold">Billing by:</span>
+              <span class="inline-block align-middle font-bold">請求種類：</span>
               <SelectButton 
                 v-model="editHotelPlan.plan_type" 
                 :options="sb_options"
@@ -310,14 +310,14 @@
           </FloatLabel>
         </div>      
         <div class="pt-2">
-          <label for="globalPlanSelectEdit" class="block mb-2">Link to Global Plan (optional)</label>
+          <label for="globalPlanSelectEdit" class="block mb-2">グローバルプランにリンクする（任意）</label>
           <Select 
             id="globalPlanSelectEdit"
             v-model="editHotelPlan.plans_global_id" 
             :options="globalPlans"
             optionLabel="name"
             optionValue="id"
-            placeholder="Select a Global Plan" 
+            placeholder="グローバルプランを選択する" 
             class="w-full"  
             showClear
             filter    
@@ -546,7 +546,7 @@
             description: '', 
             plan_type: 'per_room' 
           };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Global Plan added successfully', life: 3000 });
+          toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン追加されました。', life: 3000 });
         } catch (err) {
           console.error('Error saving global plan:', err);
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global plan', life: 3000 });
@@ -600,7 +600,7 @@
             name: '', 
             description: ''            
           };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Global Plan updated successfully', life: 3000 });
+          toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン更新されました。', life: 3000 });
         } catch (err) {
           console.error('Error updating global plan:', err);
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global plan', life: 3000 });
@@ -648,7 +648,7 @@
             plan_type: 'per_room', 
             plans_global_id: null 
           };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Hotel Plan added successfully', life: 3000 });
+          toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン追加されました。', life: 3000 });
         } catch (err) {
           console.error('Error saving hotel plan:', err);
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel plan', life: 3000 });
@@ -708,7 +708,7 @@
             name: '', 
             description: ''
           };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Hotel Plan updated successfully', life: 3000 });
+          toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン更新されました。', life: 3000 });
         } catch (err) {
           console.error('Error updating hotel plan:', err);
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel plan', life: 3000 });

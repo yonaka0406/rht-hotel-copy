@@ -143,7 +143,7 @@
                                             />
                                         </template>
                                     </Column>
-                                    <Column field="price" header="Price">
+                                    <Column field="price" header="価格">
                                         <template #body="slotProps">
                                             <InputNumber 
                                                 v-model="slotProps.data.price" 

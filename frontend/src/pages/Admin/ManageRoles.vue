@@ -4,7 +4,7 @@
             <div>
                 <div class="text-left">
                     <Button
-                        label="Create Role"
+                        label="ロール作成"
                         icon="pi pi-plus"
                         class="p-button-success mb-4"
                         @click="createRole"
@@ -23,14 +23,14 @@
                         responsive                    
                     >
                         <Column field="id" header="ID" />
-                        <Column field="role_name" header="Role Name" />
-                        <Column header="Permissions">
+                        <Column field="role_name" header="ロール名" />
+                        <Column header="権限">
                             <template #body="slotProps">
                                 <MultiSelect
                                     v-model="slotProps.data.permissions"
                                     :options="permissionsList"
                                     optionLabel="name"                                        
-                                    placeholder="Select Permissions"   
+                                    placeholder="権限を選択する"   
                                     class="w-full md:w-80"
                                     :disabled="slotProps.data.id === 1 || slotProps.data.id === 5"
                                     @change="submitPermissionsChange(slotProps.data)"
@@ -43,7 +43,7 @@
                                 v-model="slotProps.data.description"
                                 rows="4" 
                                 cols="30" 
-                                placeholder="Enter description"
+                                placeholder="詳細を入力する"
                                 class="w-full"
                                 @change="submitPermissionsChange(slotProps.data)"
                             />
@@ -77,7 +77,7 @@
                 <!-- Create Role Dialog -->
                 <Dialog
                     v-model="createRoleDialog"
-                    header="Create New Role"
+                    header="新規ロール"
                     :visible="createRoleDialog"
                     :style="{ width: '450px' }"
                     modal
@@ -94,7 +94,7 @@
                                 class="w-full"
                                 required
                             />
-                            <label for="roleName">Role 名称</label>
+                            <label for="roleName">ロール名</label>
                         </FloatLabel>
                     </div>
 
@@ -109,7 +109,7 @@
                                 display="chip"
                                 class="w-full"
                             />
-                            <label for="roleName">Permissions</label>
+                            <label for="roleName">権限</label>
                         </FloatLabel>
                     </div>
 
@@ -121,7 +121,7 @@
                                 v-model="newRole.description"
                                 class="w-full"
                             />
-                            <label for="description">Description</label>
+                            <label for="description">詳細</label>
                         </FloatLabel>
                     </div>
 
@@ -134,7 +134,7 @@
                         <!-- Submit Button -->
                         <Button
                             type="submit"
-                            label="Create Role"
+                            label="新規"
                             class="p-button-success"
                             icon="pi pi-check"
                             severity="success"                                    
@@ -291,7 +291,7 @@
                         toast.add({
                             severity: 'success',
                             summary: 'Role Updated',
-                            detail: 'Permissions have been updated successfully.',
+                            detail: '権限が更新されました。',
                             life: 3000,
                         });
                     } else {
@@ -418,7 +418,7 @@
 
             const confirmDelete = (role) => {
                 confirm.require({
-                    message: `Are you sure you want to delete the role "${role.role_name}"?`,
+                    message: `「"${role.role_name}」"ロールを削除してもよろしいですか?`,
                     header: 'Delete Confirmation',                    
                     icon: 'pi pi-info-circle',
                     acceptClass: 'p-button-danger',
@@ -426,16 +426,16 @@
                         deleteRole(role);
                         toast.add({
                             severity: 'success',
-                            summary: 'Role Deleted',
-                            detail: `Role "${role.role_name}" will be deleted.`,
+                            summary: 'ロール削除',
+                            detail: `「"${role.role_name}"」を削除します。`,
                             life: 3000
                         });
                     },
                     reject: () => {
                         toast.add({
                             severity: 'info',
-                            summary: 'Delete Cancelled',
-                            detail: 'Role deletion was cancelled.',
+                            summary: '削除キャンセル',
+                            detail: 'ロール削除するのをキャンセルしました。',
                             life: 3000
                         });
                     }

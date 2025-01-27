@@ -61,8 +61,8 @@
                     <AccordionHeader>Current Conditions</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredCurrentConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
                             <Column header="Rate">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.adjustment_type !== 'percentage'">
@@ -127,8 +127,8 @@
                     <AccordionHeader>Future Conditions</AccordionHeader>
                     <AccordionContent>
                         <DataTable :value="filteredFutureConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
                             <Column header="Rate">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.adjustment_type !== 'percentage'">
@@ -193,8 +193,8 @@
                     <AccordionHeader>Past Conditions</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredPastConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
                             <Column header="Rate">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.adjustment_type !== 'percentage'">
@@ -327,7 +327,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="dateStart">Start Date</label>                
+                        <label for="dateStart">開始日</label>                
                         <DatePicker v-model="newAdjustment.date_start" 
                             dateFormat="yy-mm-dd"
                             class="w-full"
@@ -337,7 +337,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="dateEnd">End Date</label>
+                        <label for="dateEnd">終了日</label>
                         <DatePicker v-model="newAdjustment.date_end"
                             dateFormat="yy-mm-dd"
                             class="w-full"  
@@ -416,7 +416,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="dateStart">Start Date</label>                
+                        <label for="dateStart">開始日</label>                
                         <DatePicker v-model="editAdjustment.date_start" 
                             dateFormat="yy-mm-dd"
                             class="w-full"
@@ -426,7 +426,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="dateEnd">End Date</label>
+                        <label for="dateEnd">終了日</label>
                         <DatePicker v-model="editAdjustment.date_end"
                             dateFormat="yy-mm-dd"
                             class="w-full"  
@@ -435,7 +435,7 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="Update" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
+                <Button label="更新" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
                 <Button label="キャンセル" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
             </template>
         </Dialog>

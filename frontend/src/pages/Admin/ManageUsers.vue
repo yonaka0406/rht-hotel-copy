@@ -1,10 +1,10 @@
 <template>
     <div class="p-4">
-        <Panel header="Create & Edit Users">
+        <Panel header="ユーザー　新規 & 編集">
             <div>
                 <div class="text-left">
                     <Button
-                        label="Create User"
+                        label="新規ユーザー"
                         icon="pi pi-user-plus"
                         class="p-button-success mb-4"
                         @click="createUser"
@@ -15,7 +15,7 @@
                 <Dialog
                     v-model="createUserDialog"
                     v-if="createUserDialog"                    
-                    header="Create New User"
+                    header="新規ユーザー登録"
                     :visible="createUserDialog"
                     :style="{ width: '450px' }"
                     modal
@@ -48,29 +48,29 @@
                                     v-model="newUser.password"
                                     toggleMask
                                     feedback
-                                    promptLabel="Choose a password"
-                                    weakLabel="Too simple"
-                                    mediumLabel="Average complexity"
-                                    strongLabel="Complex password"
+                                    promptLabel="パスワードを決めて下さい"
+                                    weakLabel="単純すぎる"
+                                    mediumLabel="平均的な複雑さ"
+                                    strongLabel="複雑なパスワード"
                                     class="w-full"
                                     :class="{'p-invalid': passwordError}"
                                     required      
                                     @blur="validatePassword(newUser.password)"                              
                                 >
                                     <template #header>
-                                        <div class="font-semibold text-xm mb-4">Pick a password</div>
+                                        <div class="font-semibold text-xm mb-4">パスワードを選択してください</div>
                                     </template>
                                     <template #footer>
                                         <Divider />
                                         <ul class="pl-2 ml-2 my-0 leading-normal">
-                                            <li>At least one lowercase</li>
-                                            <li>At least one uppercase</li>
-                                            <li>At least one numeric</li>
-                                            <li>Minimum 8 characters</li>
+                                            <li>少なくとも1つの小文字</li>
+                                            <li>少なくとも1つの大文字</li>
+                                            <li>少なくとも1つの数字</li>
+                                            <li>最低8文字</li>
                                         </ul>
                                     </template>
                                 </Password>
-                                <label for="password">Password</label>
+                                <label for="password">パスワード</label>
                             </FloatLabel> 
                         </div>
 
@@ -90,7 +90,7 @@
                                     required                                    
                                     @blur="validateRole(newUser.role)"
                                 />
-                                <label for="role">Role</label>
+                                <label for="role">ロール</label>
                             </FloatLabel>                                
                         </div>
 
@@ -106,7 +106,7 @@
                             <!-- Submit Button -->
                             <Button
                                 type="submit"
-                                label="Create User"
+                                label="新規ユーザー"
                                 class="p-button-success"
                                 icon="pi pi-check"
                                 severity="success"                                    
@@ -130,7 +130,7 @@
                         <AccordionPanel value="1">
                             <AccordionHeader>                               
                                 <div class="flex space-x-4">
-                                    <span class="inline">Active Users</span>
+                                    <span class="inline">ユーザー一覧</span>
                                     <div class="flex items-center">
                                         <Badge
                                             v-if="activeUsersCount > 0"
@@ -166,11 +166,11 @@
                                             </IconField>
                                         </div>
                                     </template>
-                                    <Column field="status_id" header="Status ID" sortable style="display: none"></Column>
-                                    <Column field="id" header="User ID" sortable style="display: none"></Column>
+                                    <Column field="status_id" header="ステータス" sortable style="display: none"></Column>
+                                    <Column field="id" header="ユーザーID" sortable style="display: none"></Column>
                                     <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
-                                    <Column field="role_id" header="Role ID" sortable style="display: none"></Column>
-                                    <Column field="role_name" header="Role" sortable style="width: 20%"></Column>
+                                    <Column field="role_id" header="ロールID" sortable style="display: none"></Column>
+                                    <Column field="role_name" header="ロール" sortable style="width: 20%"></Column>
                                     <Column header="操作" style="width: 10%">
                                         <template #body="slotProps" >
                                             <div class="text-center">
@@ -191,7 +191,7 @@
                         <AccordionPanel value="2">
                             <AccordionHeader>                                
                                 <div class="flex space-x-4">
-                                    <span class="inline">Deactivated Users</span>
+                                    <span class="inline">無効ユーザー一覧</span>
                                     <div class="flex items-center">
                                         <Badge
                                             v-if="deactivatedUsersCount > 0"
@@ -228,8 +228,8 @@
                                         </div>
                                     </template> 
                                     <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
-                                    <Column field="role_id" header="Role ID" sortable style="display: none"></Column>
-                                    <Column field="role_name" header="Role" sortable style="width: 20%"></Column>
+                                    <Column field="role_id" header="ロールID" sortable style="display: none"></Column>
+                                    <Column field="role_name" header="ロール" sortable style="width: 20%"></Column>
                                     <Column header="操作" style="width: 10%">
                                         <template #body="slotProps" >
                                             <div class="text-center">
@@ -253,7 +253,7 @@
                 <Dialog
                     v-model="editUserDialog"
                     v-if="editUserDialog"
-                    header="Create New User"
+                    header="新規ユーザー登録"
                     :visible="editUserDialog"
                     :style="{ width: '450px' }"
                     modal
@@ -288,7 +288,7 @@
                                     required
                                     @blur="validateRole(currentUser.role)"
                                 />
-                                <label for="role">Role</label>
+                                <label for="role">ロール</label>
                             </FloatLabel>                                
                         </div>
 
@@ -298,8 +298,8 @@
                         <div class="field mt-5 text-center">
                             <ToggleButton 
                                 v-model="statusToggle" 
-                                onLabel="Active"                                  
-                                offLabel="Deactivated"
+                                onLabel="有効"                                  
+                                offLabel="無効"
                                 onIcon="pi pi-lock-open"                                 
                                 offIcon="pi pi-lock" 
                                 class="w-36" 
@@ -317,7 +317,7 @@
                             <!-- Edit Button -->
                             <Button
                                 type="submit"
-                                label="Edit User"
+                                label="更新"
                                 class="p-button-warning"
                                 icon="pi pi-pencil"
                                 severity="warning"                                    
@@ -541,7 +541,7 @@
                         toast.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'User registered successfully!',
+                            detail: 'ユーザー登録されました。',
                             life: 3000,
                         });
 
@@ -603,7 +603,7 @@
                         toast.add({
                             severity: 'success',
                             summary: 'Success',
-                            detail: 'User updated successfully!',
+                            detail: 'ユーザー更新されました。',
                             life: 3000,
                         });
 

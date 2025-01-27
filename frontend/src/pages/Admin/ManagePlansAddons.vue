@@ -3,7 +3,7 @@
         <div>
             <div class="grid xs:grid-cols-1 grid-cols-3 gap-2 mt-6">
                 <div class="flex justify-start">
-                    <span class="font-bold text-lg">Add-ons</span>
+                    <span class="font-bold text-lg">アドオン</span>
                 </div>
                 <div class="flex justify-start">
                     <Button @click="openAddonDialog" label="Add New Addon" icon="pi pi-plus" />
@@ -11,13 +11,13 @@
             </div>
             <Accordion value="0">
                 <AccordionPanel value="0">
-                    <AccordionHeader>Current Add-ons</AccordionHeader>
+                    <AccordionHeader>現在アドオン</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredCurrentConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
-                            <Column field="name" header="Addon"></Column>
-                            <Column field="price" header="Price">
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
+                            <Column field="name" header="アドオン"></Column>
+                            <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
@@ -35,13 +35,13 @@
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="1">
-                    <AccordionHeader>Future Add-ons</AccordionHeader>
+                    <AccordionHeader>将来アドオン</AccordionHeader>
                     <AccordionContent>
                         <DataTable :value="filteredFutureConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
-                            <Column field="name" header="Addon"></Column>
-                            <Column field="price" header="Price">
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
+                            <Column field="name" header="アドオン"></Column>
+                            <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
@@ -59,13 +59,13 @@
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="2">
-                    <AccordionHeader>Past Add-ons</AccordionHeader>
+                    <AccordionHeader>過去アドオン</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredPastConditions">
-                            <Column field="date_start" header="Start"></Column>
-                            <Column field="date_end" header="End"></Column>    
-                            <Column field="name" header="Addon"></Column>
-                            <Column field="price" header="Price">
+                            <Column field="date_start" header="開始"></Column>
+                            <Column field="date_end" header="終了"></Column>    
+                            <Column field="name" header="アドオン"></Column>
+                            <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
@@ -84,17 +84,17 @@
                 </AccordionPanel>
             </Accordion>
 
-            <Dialog header="New Addon" v-model:visible="showAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+            <Dialog header="新規アドオン" v-model:visible="showAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
                 <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                     <div class="col-6">
                         <FloatLabel>
-                            <label for="AddonSelectEdit" class="block mb-2">Addon List</label>
+                            <label for="AddonSelectEdit" class="block mb-2">アドオン一覧</label>
                             <Select v-model="newAddon.addons_id" 
                                 id="AddonSelectEdit"                                
                                 :options="allAddons"
                                 optionLabel="name"
                                 optionValue="id"
-                                placeholder="Select a Global Addon" 
+                                placeholder="グローバルアドオンを選択する" 
                                 class="w-full"                            
                                 filter 
                                 required
@@ -116,7 +116,7 @@
                 <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                         <div class="col-6">
                             <FloatLabel>
-                                <label for="dateStart">Start Date</label>                
+                                <label for="dateStart">開始日</label>                
                                 <DatePicker v-model="newAddon.date_start" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"
@@ -126,7 +126,7 @@
                         </div>
                         <div class="col-6">
                             <FloatLabel>
-                                <label for="dateEnd">End Date</label>
+                                <label for="dateEnd">終了日</label>
                                 <DatePicker v-model="newAddon.date_end"
                                     dateFormat="yy-mm-dd"
                                     class="w-full"  
@@ -141,14 +141,14 @@
                 </template>
             </Dialog>
 
-            <Dialog header="Edit Addon" v-model:visible="showEditAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+            <Dialog header="アドオン編集" v-model:visible="showEditAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
                 <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                     <div class="col-6">
                         <FloatLabel>
                             <InputText v-model="editAddon.name"
                                 disabled
                             />
-                            <label>Addon</label>
+                            <label>アドレス</label>
                         </FloatLabel>
                         
                     </div>
@@ -166,7 +166,7 @@
                 <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                         <div class="col-6">
                             <FloatLabel>
-                                <label for="dateStart">Start Date</label>                
+                                <label for="dateStart">開始日</label>                
                                 <DatePicker v-model="editAddon.date_start" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"
@@ -176,7 +176,7 @@
                         </div>
                         <div class="col-6">
                             <FloatLabel>
-                                <label for="dateEnd">End Date</label>
+                                <label for="dateEnd">終了日</label>
                                 <DatePicker v-model="editAddon.date_end"
                                     dateFormat="yy-mm-dd"
                                     class="w-full"  
@@ -186,7 +186,7 @@
                     </div>
 
                 <template #footer>                    
-                    <Button label="Update" icon="pi pi-check" @click="updateAddon" class="p-button-success p-button-text p-button-sm" />
+                    <Button label="更新" icon="pi pi-check" @click="updateAddon" class="p-button-success p-button-text p-button-sm" />
                     <Button label="閉じる" icon="pi pi-times" @click="showEditAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
             </Dialog>
@@ -395,7 +395,7 @@
                     toast.add({
                         severity: 'success',
                         summary: 'Success',
-                        detail: 'Addon created successfully',
+                        detail: 'アドオン作成されました。',
                         life: 3000
                     });
                 } catch (error) {
@@ -458,7 +458,7 @@
                     toast.add({
                         severity: 'success',
                         summary: 'Success',
-                        detail: 'Addon updated successfully',
+                        detail: 'アドオン更新されました。',
                         life: 3000
                     });
                 } catch (error) {
