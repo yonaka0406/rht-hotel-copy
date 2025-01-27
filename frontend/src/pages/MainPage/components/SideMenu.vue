@@ -59,13 +59,13 @@
                         to="/admin"
                         class="text-white hover:bg-yellow-100 p-2 block rounded mt-4"
                     >
-                        <i class="pi pi-cog mr-2"></i>Admin Panel
+                        <i class="pi pi-cog mr-2"></i>管理者パネル
                     </router-link>                 
                     <button
                         @click="handleLogout"
                         class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded mt-4"
                     >
-                        <i class="pi pi-sign-out mr-2"></i>Logout
+                        <i class="pi pi-sign-out mr-2"></i>ログアウト
                     </button>
                 </div>
             </div>
@@ -81,7 +81,7 @@
                     <div class="flex items-center gap-2">
                         <!-- Notifications Icon -->                        
                         <OverlayBadge :value="holdReservations.length" class="mr-2">
-                            <button class="p-button p-button-text" aria-label="Notifications" @click="showDrawer = true">
+                            <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
                                 <i class="pi pi-bell" style="font-size:larger" />
                             </button>
                         </OverlayBadge>
@@ -94,7 +94,7 @@
                             optionValue="id"
                             :virtualScrollerOptions="{ itemSize: 38 }"
                             class="w-48"
-                            placeholder="Hotel Selector"
+                            placeholder="ホテル選択"
                             filter
                         />
                         <!-- Home Router Link with Icon in the Menubar -->
@@ -115,17 +115,17 @@
             </Menubar>
 
             <!-- Drawer for Notifications -->
-            <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="Notifications">
+            <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
                 <ul v-if="holdReservations.length">
                     <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
                         <button @click="goToNewReservationPage(reservation.reservation_id)">
-                            <p>Hold Reservation needs attention: </p>
+                            <p>保留中予約には注意が必要です：</p>
                             {{ reservation.client_name }} @ {{ reservation.check_in }}
                         </button>
                         <Divider />
                     </li>
                 </ul>
-                <p v-else class="text-center text-gray-500">No notifications available.</p>
+                <p v-else class="text-center text-gray-500">通知はありません。</p>
             </Drawer>
         </div>    
 </template>
@@ -162,18 +162,18 @@
             const items = ref([
                     {
                         key: 'dashboard',
-                        label: 'Dashboard',
+                        label: 'ダッシュボード',
                         icon: 'pi pi-fw pi-chart-bar',
                         route: '/dashboard',
                     },
                     {
                         key: 'reservations',
-                        label: 'Reservations',
+                        label: '予約',
                         icon: 'pi pi-fw pi-calendar',
                         items: [
                             { 
                                 key: 'reservationsNew',
-                                label: 'New Reservation', 
+                                label: '新規予約', 
                                 icon: 'pi pi-fw pi-plus',                                 
                                 command: () => {
                                     //router.push('/reservations/new');
@@ -182,7 +182,7 @@
                             },
                             { 
                                 key: 'reservationsView',
-                                label: 'View Reservations', 
+                                label: '予約参照', 
                                 icon: 'pi pi-fw pi-eye', 
                                 command: () => {
                                     router.push('/reservations/calendar');
@@ -192,18 +192,18 @@
                     },
                     {
                         key: 'reports',
-                        label: 'Reports',
+                        label: 'レポート',
                         icon: 'pi pi-fw pi-file',
                         items: [
                             { 
-                                label: 'Daily Report', 
+                                label: '日次レポート', 
                                 icon: 'pi pi-fw pi-calendar',
                                 command: () => {
                                     router.push('/reports/daily');
                                 },                                 
                             },
                             { 
-                                label: 'Monthly Report', 
+                                label: '月次レポート', 
                                 icon: 'pi pi-fw pi-calendar-plus', 
                                 command: () => {
                                     router.push('/reports/monthly');

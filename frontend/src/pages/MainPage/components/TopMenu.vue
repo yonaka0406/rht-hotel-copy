@@ -6,7 +6,7 @@
                 <!-- Logo -->
                 <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />
                 <!-- Title -->
-                <h1 class="text-lg font-semibold text-gray-700">Hotel PMS</h1>
+                <h1 class="text-lg font-semibold text-gray-700">RHT Hotel PMS</h1>
             </div>
         </template>
         <!-- Right Section -->
@@ -14,7 +14,7 @@
             <div class="flex items-center space-x-4">
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2">
-                    <button class="p-button p-button-text" aria-label="Notifications" @click="showDrawer = true">
+                    <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
                         <i class="pi pi-bell" style="font-size:larger" />
                     </button>
                 </OverlayBadge>
@@ -27,7 +27,7 @@
                     optionValue="id"
                     :virtualScrollerOptions="{ itemSize: 38 }"
                     class="w-48"
-                    placeholder="Hotel Selector"
+                    placeholder="ホテル選択"
                     filter
                 />
             </div>
@@ -45,7 +45,7 @@
                 <Divider />
             </li>
         </ul>
-        <p v-else class="text-center text-gray-500">No notifications available.</p>
+        <p v-else class="text-center text-gray-500">通知はありません。</p>
     </Drawer>
 </template>
 

@@ -77,7 +77,7 @@ const reset = async (req, res) => {
     // Update user password and reset the token
     await updatePasswordHash(email, hashedPassword, updated_by);    
     
-    res.json({ message: 'Password has been successfully reset.' });
+    res.json({ message: 'パスワードが正常にリセットされました。' });
   } catch (error) {
     console.error('Error resetting password:', error);
     res.status(500).json({ error: 'Error occurred while resetting password' });
