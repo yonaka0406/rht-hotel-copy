@@ -69,8 +69,7 @@ const reset = async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
-    const updated_by = user.id;
-    console.log('Updated by:', updated_by);
+    const updated_by = user.id;    
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(password, 10);
