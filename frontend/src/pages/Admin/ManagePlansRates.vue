@@ -111,7 +111,7 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -177,7 +177,7 @@
                                     </div>
                                 </template>
                             </Column>
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -243,7 +243,7 @@
                                     </div>
                                 </template>
                             </Column>   
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -347,7 +347,7 @@
             </div>
             <template #footer>
                 <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
-                <Button label="Cancel" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
+                <Button label="キャンセル" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
             </template>
         </Dialog>
 
@@ -436,7 +436,7 @@
             </div>
             <template #footer>
                 <Button label="Update" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
-                <Button label="Cancel" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
+                <Button label="キャンセル" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
             </template>
         </Dialog>
 

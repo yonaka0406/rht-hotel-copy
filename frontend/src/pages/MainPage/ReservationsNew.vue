@@ -200,7 +200,7 @@
                 fluid 
                 :disabled="isClientSelected"
               />
-              <label>Email</label>
+              <label>メールアドレス</label>
               <small v-if="!isValidEmail" class="p-error">Please enter a valid email address.</small>
             </FloatLabel>
           </div>

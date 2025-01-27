@@ -7,10 +7,10 @@
       >
         <TabList>
           <Tab value="0">
-            <i class="pi pi-globe"></i> Global
+            <i class="pi pi-globe"></i> グローバル
           </Tab>
           <Tab value="1">
-            <i class="pi pi-building"></i> Hotels
+            <i class="pi pi-building"></i> ホテル
           </Tab>
           <Tab 
             v-if="selectedHotel" 
@@ -25,21 +25,21 @@
               <Button                
                 @click="showGlobalDialog = true"
                 icon="pi pi-plus"
-                label="Add Addon"
+                label="アドオン追加"
                 class="p-button-right"
               ></Button>
             </div>            
             <DataTable :value="globalAddons">
-              <Column field="name" header="Name"></Column>              
+              <Column field="name" header="名称"></Column>              
               <Column field="price">
                 <template #header>
-                  <span class="font-bold items-center">Price</span>
+                  <span class="font-bold items-center">価格</span>
                 </template>
                 <template #body="slotProps">
                   <span class="items-end">{{formatCurrency(slotProps.data.price)}}</span>
                 </template>
               </Column>
-              <Column field="description" header="Description"></Column>
+              <Column field="description" header="詳細"></Column>
               <Column field="visible">
                 <template #header>
                   <span class="font-bold items-center">ステータス</span>
@@ -53,7 +53,7 @@
               </Column>
               <Column>
                 <template #header>
-                  <span class="font-bold items-center">Actions</span>
+                  <span class="font-bold items-center">操作</span>
                 </template>
                 <template #body="slotProps">   
                   <div class="flex items-center justify-center">                 
@@ -61,7 +61,7 @@
                       icon="pi pi-pencil" 
                       class="p-button-text p-button-sm" 
                       @click="openEditGlobalAddon(slotProps.data)"
-                      v-tooltip="'Edit Addon'"
+                      v-tooltip="'アドオン編集'"
                     />
                   </div>
                 </template>
@@ -70,10 +70,10 @@
           </TabPanel>
           <TabPanel value="1">
             <DataTable :value="hotels">
-              <Column field="name" header="Name"></Column>
+              <Column field="name" header="名称"></Column>
               <Column>
                 <template #header>
-                  <span class="font-bold">Addons Count</span>                  
+                  <span class="font-bold">アドオンカウント</span>                  
                 </template>
                 <template #body="slotProps">
                   <Badge 
@@ -82,13 +82,13 @@
                   ></Badge>
                 </template>
               </Column>
-              <Column header="Actions">
+              <Column header="操作">
                 <template #body="slotProps">
                   <Button 
                     @click="selectHotel(slotProps.data)"
                     severity="info"
                     rounded 
-                  >Select</Button>
+                  >選択する</Button>
                 </template>
               </Column>       
             </DataTable>        
@@ -254,14 +254,14 @@
         </FloatLabel>
       </div>
       <div class="pt-2">
-        <label for="globalAddonSelect" class="block mb-2">Link to Global Addon (optional)</label>
+        <label for="globalAddonSelect" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
         <Select 
           id="globalAddonSelect"
           v-model="newHotelAddon.addons_global_id" 
           :options="globalAddons"
           optionLabel="name" 
           optionValue="id" 
-          placeholder="Select a Global Addon" 
+          placeholder="グローバルアドオンを選択する" 
           class="w-full"
           showClear
           filter 
@@ -307,7 +307,7 @@
           :options="globalAddons"
           optionLabel="name"
           optionValue="id"
-          placeholder="Select a Global Addon" 
+          placeholder="グローバルアドオンを選択する" 
           class="w-full"  
           showClear
           filter    
@@ -321,7 +321,7 @@
           offLabel="非表示" 
           onIcon="pi pi-eye"                                 
           offIcon="pi pi-eye-slash" 
-          aria-label="Status Toggle"
+          aria-label="ステータス切り替え"
         />
       </div>
       <template #footer>

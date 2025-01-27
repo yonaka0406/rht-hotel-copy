@@ -34,7 +34,7 @@
                                     required 
                                     @blur="validateEmail(newUser.email)"                                                                       
                                 />
-                                <label for="email">Email</label>
+                                <label for="email">メールアドレス</label>
                             </FloatLabel> 
                         </div>
 
@@ -114,7 +114,7 @@
                             <!-- Cancel Button -->
                             <Button
                                 type="button"
-                                label="Cancel"
+                                label="キャンセル"
                                 class="p-button-text p-button-secondary"
                                 icon="pi pi-times"
                                 severity="danger"
@@ -168,10 +168,10 @@
                                     </template>
                                     <Column field="status_id" header="Status ID" sortable style="display: none"></Column>
                                     <Column field="id" header="User ID" sortable style="display: none"></Column>
-                                    <Column field="email" header="Email" sortable style="width: 70%"></Column>    
+                                    <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
                                     <Column field="role_id" header="Role ID" sortable style="display: none"></Column>
                                     <Column field="role_name" header="Role" sortable style="width: 20%"></Column>
-                                    <Column header="Actions" style="width: 10%">
+                                    <Column header="操作" style="width: 10%">
                                         <template #body="slotProps" >
                                             <div class="text-center">
                                                 <Button
@@ -227,10 +227,10 @@
                                             </IconField>
                                         </div>
                                     </template> 
-                                    <Column field="email" header="Email" sortable style="width: 70%"></Column>    
+                                    <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
                                     <Column field="role_id" header="Role ID" sortable style="display: none"></Column>
                                     <Column field="role_name" header="Role" sortable style="width: 20%"></Column>
-                                    <Column header="Actions" style="width: 10%">
+                                    <Column header="操作" style="width: 10%">
                                         <template #body="slotProps" >
                                             <div class="text-center">
                                                 <Button
@@ -270,7 +270,7 @@
                                     class="w-full"                                    
                                     disabled                                     
                                 />
-                                <label for="email">Email</label>
+                                <label for="email">メールアドレス</label>
                             </FloatLabel> 
                         </div>
 
@@ -325,7 +325,7 @@
                             <!-- Cancel Button -->
                             <Button
                                 type="button"
-                                label="Cancel"
+                                label="キャンセル"
                                 class="p-button-text p-button-secondary"
                                 icon="pi pi-times"
                                 severity="danger"

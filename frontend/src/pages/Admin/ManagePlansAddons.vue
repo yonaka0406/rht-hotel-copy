@@ -22,7 +22,7 @@
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
                             </Column>
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -46,7 +46,7 @@
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
                             </Column>
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -70,7 +70,7 @@
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
                                 </template>                                    
                             </Column>
-                            <Column header="Actions">
+                            <Column header="操作">
                                 <template #body="slotProps">
                                     <Button 
                                         icon="pi pi-pencil"
@@ -136,7 +136,7 @@
                     </div>
 
                 <template #footer>                    
-                    <Button label="Add" icon="pi pi-plus" @click="addAddon" class="p-button-success p-button-text p-button-sm" />
+                    <Button label="追加" icon="pi pi-plus" @click="addAddon" class="p-button-success p-button-text p-button-sm" />
                     <Button label="閉じる" icon="pi pi-times" @click="showAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
             </Dialog>

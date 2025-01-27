@@ -193,7 +193,7 @@
             </div>
             <template #footer>
                 <Button label="Apply" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
-                <Button label="Cancel" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
         </Dialog>
 

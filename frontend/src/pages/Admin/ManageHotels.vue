@@ -2,21 +2,21 @@
   <div class="p-4 max-w-7xl mx-auto">
     <Stepper value="1">
       <StepList>
-          <Step value="1">Hotel Info</Step>
-          <Step value="2">Room Type</Step>
-          <Step value="3">Rooms</Step>
+          <Step value="1">ホテル情報</Step>
+          <Step value="2">部屋タイプ</Step>
+          <Step value="3">部屋</Step>
       </StepList>
       <StepPanels>
         <StepPanel v-slot="{ activateCallback }" value="1">
           <div class="flex flex-col">
               <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 <Card class="m-2">
-                  <template #title>Basic Hotel Information</template>
+                  <template #title>ホテル基本情報</template>
                   <template #content>
                     
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Formal Name *</label>
+                          <label class="mb-2 font-medium">正式名称 *</label>
                           <InputText 
                             v-model="hotel.formal_name"
                             class="p-inputtext-sm" 
@@ -24,7 +24,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Display Name *</label>
+                          <label class="mb-2 font-medium">表示名称 *</label>
                           <InputText 
                             v-model="hotel.name"
                             class="p-inputtext-sm"
@@ -32,7 +32,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Facility Type *</label>
+                          <label class="mb-2 font-medium">施設区分 *</label>
                           <Select
                             v-model="hotel.facility_type"
                             :options="facilityTypes"
@@ -42,7 +42,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Opening Date *</label>
+                          <label class="mb-2 font-medium">開業日 *</label>
                           <DatePicker 
                             v-model="hotel.open_date"
                             dateFormat="yy-mm-dd"
@@ -51,7 +51,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Email *</label>
+                          <label class="mb-2 font-medium">メールアドレス *</label>
                           <InputText 
                             v-model="hotel.email"
                             type="email"
@@ -60,7 +60,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Phone Number *</label>
+                          <label class="mb-2 font-medium">電話番号 *</label>
                           <InputMask
                             v-model="hotel.phone_number"
                             mask="(999) 999-9999"
@@ -69,7 +69,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Postal Code *</label>
+                          <label class="mb-2 font-medium">郵便番号 *</label>
                           <InputMask
                             v-model="hotel.postal_code"
                             mask="999-9999"
@@ -78,7 +78,7 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">Address *</label>
+                          <label class="mb-2 font-medium">住所 *</label>
                           <InputText 
                             v-model="hotel.address"
                             class="p-inputtext-sm"
@@ -92,7 +92,7 @@
               </div>
           </div>
           <div class="flex p-3 justify-end">
-              <Button label="Next" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
+              <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('2')" />
           </div>
         </StepPanel>
 
@@ -102,9 +102,9 @@
                 <Card class="m-2">
                   <template #title>
                     <div class="flex justify-between items-center">
-                      <span>Room Types</span>
+                      <span>部屋タイプ</span>
                       <Button 
-                        label="Add Room Type"
+                        label="部屋タイプ追加"
                         icon="pi pi-plus"
                         @click="openRoomTypeDialog"
                         class="p-button-sm m-2"
@@ -117,9 +117,9 @@
                       responsiveLayout="scroll"
                       class="p-datatable-sm"
                     >
-                      <Column field="name" header="Name"></Column>
+                      <Column field="name" header="名称"></Column>
 
-                      <Column header="Actions">
+                      <Column header="操作">
                         <template #body="slotProps">
                           <Button 
                             icon="pi pi-pencil"
@@ -140,8 +140,8 @@
                 </Card>
               </div>
               <div class="flex p-3 justify-between">
-                  <Button label="Back" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
-                  <Button label="Next" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
+                  <Button label="前へ" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('1')" />
+                  <Button label="次へ" icon="pi pi-arrow-right" iconPos="right" @click="activateCallback('3')" />
               </div>
           </div>
         </StepPanel>
@@ -152,54 +152,54 @@
                 
                 <div class="flex flex-col">
                   <Card class="m-2">
-                    <template #title>Rooms</template>
+                    <template #title>部屋</template>
                     <template #content>
                       <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Floor Number</label>
+                            <label class="mb-2 font-medium">階数</label>
                             <InputNumber v-model="roomGenerator.floor" :min="1" />
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Rooms per Floor</label>
+                            <label class="mb-2 font-medium">階ごとの部屋数</label>
                             <InputNumber v-model="roomGenerator.roomsPerFloor" :min="1" />
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Start Room Number</label>
+                            <label class="mb-2 font-medium">開始番号（部屋）</label>
                             <InputNumber v-model="roomGenerator.startNumber" :min="1" />
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Room Number Step</label>
+                            <label class="mb-2 font-medium">番号歩調（部屋）</label>
                             <InputNumber v-model="roomGenerator.step" :min="1" />
                           </div>
                           <div class="flex flex-col">
-                            <label for="roomTypeSelect">Select Room Type:</label>
+                            <label for="roomTypeSelect">部屋タイプ選択：</label>
                             <Select 
                               id="roomTypeSelect" 
                               v-model="roomGenerator.room_type" 
                               :options="roomTypes" 
                               optionLabel="name" 
-                              placeholder="Select a Room Type"
+                              placeholder="部屋タイプを選択する"
                             />
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Capacity</label>
+                            <label class="mb-2 font-medium">人数</label>
                             <InputNumber v-model="roomGenerator.capacity" :min="1" />
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">Smoking</label>
+                            <label class="mb-2 font-medium">喫煙</label>
                             <div class="flex items-center justify-center">
                               <Checkbox v-model="roomGenerator.smoking" binary />
                             </div>                            
                           </div>
                           <div class="flex flex-col">
-                            <label class="mb-2 font-medium">For Sale</label>
+                            <label class="mb-2 font-medium">販売用</label>
                             <div class="flex items-center justify-center">
                               <Checkbox v-model="roomGenerator.for_sale" binary />
                             </div>                            
                           </div>
                       </div>
                       <div class="flex justify-end mt-4">
-                        <Button label="Add Rooms" @click="generateRoomPreview" />
+                        <Button label="部屋追加" @click="generateRoomPreview" />
                       </div>
                     </template>
                   </Card>
@@ -207,7 +207,7 @@
                   <Card v-if="generatedRooms.length">
                     <template #title>
                       <div class="flex justify-between items-center">
-                        <span>Generated Rooms Preview</span>
+                        <span>部屋プレビュー</span>
                         <Button label="Clear Preview" icon="pi pi-times" @click="clearRoomPreview" class="p-button-danger" />
                       </div>
                     </template>
@@ -220,7 +220,7 @@
                             :value="floor"
                           >
                             <AccordionHeader> 
-                              Floor {{ floor }} 
+                              {{ floor }} 階
                               <Badge                                  
                                   class="ml-2"
                                   :value="rooms.length"
@@ -234,12 +234,12 @@
                                 class="p-datatable-sm"
                                 @cell-edit-complete="onCellEditComplete"
                               >
-                                <Column field="room_number" header="Room Number">
+                                <Column field="room_number" header="部屋番号">
                                   <template #editor="slotProps">
                                     <InputText v-model="slotProps.data.room_number" />
                                   </template>
                                 </Column>
-                                <Column field="room_type" header="Room Type">
+                                <Column field="room_type" header="部屋タイプ">
                                   <template #editor="slotProps">
                                     <Select 
                                       id="roomTypeSelect" 
@@ -247,16 +247,16 @@
                                       :options="roomTypes" 
                                       optionLabel="name" 
                                       optionValue="name"
-                                      placeholder="Select a Room Type"
+                                      placeholder="部屋タイプを選択する。"
                                     />
                                   </template>
                                 </Column>
-                                <Column field="capacity" header="Capacity">
+                                <Column field="capacity" header="人数">
                                   <template #editor="slotProps">
                                     <InputNumber v-model="slotProps.data.capacity" :min="1" />
                                   </template>
                                 </Column>
-                                <Column field="smoking" header="Smoking">
+                                <Column field="smoking" header="喫煙">
                                   <template #body="slotProps">
                                     <div class="flex items-center justify-center">
                                       <Checkbox v-model="slotProps.data.smoking" binary />
@@ -268,7 +268,7 @@
                                     </div>                                    
                                   </template>
                                 </Column>
-                                <Column field="for_sale" header="For Sale">
+                                <Column field="for_sale" header="販売用">
                                   <template #body="slotProps">
                                     <div class="flex items-center justify-center">
                                       <Checkbox v-model="slotProps.data.for_sale" binary />
@@ -280,7 +280,7 @@
                                     </div>
                                   </template>
                                 </Column>
-                                <Column header="Actions">
+                                <Column header="操作">
                                   <template #body="slotProps">
                                     <Button                                       
                                       icon="pi pi-trash"
@@ -302,8 +302,8 @@
           </div>
 
           <div class="p-3 flex justify-between">
-            <Button label="Back" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
-            <Button label="Create Hotel" severity="primary" icon="pi pi-check" @click="saveHotelData" />
+            <Button label="前へ" severity="secondary" icon="pi pi-arrow-left" @click="activateCallback('2')" />
+            <Button label="ホテル作成" severity="primary" icon="pi pi-check" @click="saveHotelData" />
           </div>
         </StepPanel>
 
@@ -314,14 +314,14 @@
   <Dialog 
     v-model:visible="roomTypeDialog" 
     :modal="true"
-    header="Add Room Type"
+    header="部屋タイプ追加"
     :style="{ width: '450px' }"
     class="p-fluid"
     @hide="closeRoomTypeDialog"
   >
     <div class="flex flex-col gap-4">
       <div class="flex flex-col">
-        <label for="name" class="font-medium mb-2 block">Room Type Name *</label>
+        <label for="name" class="font-medium mb-2 block">部屋タイプ名 *</label>
         <InputText 
           id="name"
           v-model="newRoomType.name" 
@@ -332,7 +332,7 @@
       </div>
 
       <div class="flex flex-col">
-        <label for="description" class="font-medium mb-2 block">Description</label>
+        <label for="description" class="font-medium mb-2 block">詳細</label>
         <Textarea 
           id="description"
           v-model="newRoomType.description" 
@@ -346,7 +346,7 @@
 
     <template #footer>
       <Button 
-        label="Cancel" 
+        label="キャンセル" 
         icon="pi pi-times" 
         @click="closeRoomTypeDialog"
         text 
@@ -489,7 +489,7 @@
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Room type added successfully',
+        detail: '部屋タイプ追加されました。',
         life: 3000
       });
     } catch (error) {
@@ -530,7 +530,7 @@
             toast.add({
               severity: 'success',
               summary: 'Success',
-              detail: 'Room type deleted successfully',
+              detail: '部屋タイプ削除されました。',
               life: 3000
             });
           }
@@ -555,7 +555,7 @@
       toast.add({
         severity: 'warn',
         summary: 'Warning',
-        detail: 'Please select a room type before generating the preview.',
+        detail: 'プレビューを生成する前に部屋タイプを選択してください。',
         life: 3000
       });
       return;
@@ -582,7 +582,7 @@
         toast.add({
           severity: 'error',
           summary: 'Validation Error',
-          detail: 'Room number ' + newRoomNumber + ' already exists and will not be added again.',
+          detail: '部屋番号「' + newRoomNumber + '」既に存在されます。',
           life: 3000
         });        
       }
@@ -611,7 +611,7 @@
       toast.add({
         severity: 'warn',
         summary: 'Warning',
-        detail: 'Please fill in all hotel fields.',
+        detail: 'ホテルに関するすべてのフィールドを記入してください。',
         life: 3000
       });
       return false;
@@ -623,7 +623,7 @@
       toast.add({
         severity: 'warn',
         summary: 'Warning',
-        detail: 'Please add at least one room type.',
+        detail: '少なくとも1つの部屋タイプを追加してください。',
         life: 3000
       });
       return false;
@@ -635,7 +635,7 @@
       toast.add({
         severity: 'warn',
         summary: 'Warning',
-        detail: 'Please generate at least one room.',
+        detail: '少なくとも1つの部屋を作成してください。',
         life: 3000
       });
       return false;
@@ -727,7 +727,7 @@
       toast.add({
         severity: 'success',
         summary: 'Success',
-        detail: 'Hotel created successfully',
+        detail: 'ホテル作成されました。',
         life: 3000
       });
 

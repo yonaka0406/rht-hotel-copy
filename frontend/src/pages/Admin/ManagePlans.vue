@@ -30,7 +30,7 @@
                   ></Button>
                 </div>
                 <DataTable :value="globalPlans">
-                  <Column field="name" header="Name"></Column>
+                  <Column field="name" header="名称"></Column>
                   <Column field="plan_type">
                     <template #header>
                       <span class="font-bold items-center">Plan Type</span>
@@ -42,7 +42,7 @@
                       </div>
                     </template>
                   </Column>
-                  <Column field="description" header="Description"></Column>
+                  <Column field="description" header="詳細"></Column>
                   <Column>
                     <template #header>
                       <span class="font-bold items-center">Actions</span>
@@ -69,7 +69,7 @@
               <div id="globalTabPanelRate" v-show="showGlobalRatePanel">
                 <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
                   <div class="flex justify-start mb-2">
-                    <Button @click="switchEditGlobalPlanRate({})" icon="pi pi-arrow-left" label="Back" class="p-button-secondary mb-2" />
+                    <Button @click="switchEditGlobalPlanRate({})" icon="pi pi-arrow-left" label="前へ" class="p-button-secondary mb-2" />
                   </div>
                   <div class="flex justify-start mb-2">
                     <span class="font-bold text-lg">{{ selectedPlan.name }}</span>
@@ -81,7 +81,7 @@
             </TabPanel>
             <TabPanel value="1">
               <DataTable :value="hotels">
-                <Column field="name" header="Name"></Column>
+                <Column field="name" header="名称"></Column>
                 <Column>
                   <template #header>
                     <span class="font-bold">Plans Count</span>
@@ -93,7 +93,7 @@
                     ></Badge>
                   </template>
                 </Column>
-                <Column header="Actions">
+                <Column header="操作">
                   <template #body="slotProps">
                     <Button 
                       @click="selectHotel(slotProps.data)"
@@ -118,7 +118,7 @@
                   ></Button>
                 </div> 
                 <DataTable :value="filteredHotelPlans">
-                  <Column field="name" header="Name"></Column>
+                  <Column field="name" header="名称"></Column>
                   <Column field="plan_type">
                     <template #header>
                       <span class="font-bold items-center">Plan Type</span>
@@ -130,7 +130,7 @@
                       </div>
                     </template>
                   </Column>
-                  <Column field="description" header="Description"></Column>
+                  <Column field="description" header="詳細"></Column>
                   <Column>
                     <template #header>
                       <span class="font-bold items-center">Actions</span>
@@ -157,7 +157,7 @@
               <div id="hotelTabPanelRate" v-show="showHotelRatePanel">
                 <div class="grid xs:grid-cols-1 grid-cols-3 gap-2">
                   <div class="flex justify-start mb-2">
-                    <Button @click="switchEditHotelPlanRate({})" icon="pi pi-arrow-left" label="Back" class="p-button-secondary mb-2" />
+                    <Button @click="switchEditHotelPlanRate({})" icon="pi pi-arrow-left" label="前へ" class="p-button-secondary mb-2" />
                   </div>
                   <div class="flex justify-start mb-2">
                     <span class="font-bold text-lg">{{ selectedPlan.name }}</span>

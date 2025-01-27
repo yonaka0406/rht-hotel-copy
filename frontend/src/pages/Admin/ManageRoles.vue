@@ -37,7 +37,7 @@
                                 />
                             </template>
                         </Column>                            
-                        <Column header="Description">
+                        <Column header="詳細">
                             <template #body="slotProps">
                             <Textarea
                                 v-model="slotProps.data.description"
@@ -49,7 +49,7 @@
                             />
                             </template>
                         </Column>
-                        <Column header="Actions">
+                        <Column header="操作">
                             <template #body="slotProps">
                                 <Button
                                     v-if="slotProps.data.id !== 1 && slotProps.data.id !== 5"
@@ -94,7 +94,7 @@
                                 class="w-full"
                                 required
                             />
-                            <label for="roleName">Role Name</label>
+                            <label for="roleName">Role 名称</label>
                         </FloatLabel>
                     </div>
 
@@ -142,7 +142,7 @@
                         <!-- Cancel Button -->
                         <Button
                             type="button"
-                            label="Cancel"
+                            label="キャンセル"
                             class="p-button-text p-button-secondary"
                             icon="pi pi-times"
                             severity="danger"

@@ -1,12 +1,12 @@
 <template>
   <div class="p-4">
-    <Panel header="Edit Hotels">
+    <Panel header="ホテル編集">
       <DataTable :value="hotels" class="p-datatable-sm" responsiveLayout="scroll">
-        <Column field="formal_name" header="Formal Name"></Column>
-        <Column field="name" header="Name"></Column>
-        <Column field="email" header="Email"></Column>
-        <Column field="phone_number" header="Phone Number"></Column>
-        <Column header="Actions">
+        <Column field="formal_name" header="正式名称"></Column>
+        <Column field="name" header="名称"></Column>
+        <Column field="email" header="メールアドレス"></Column>
+        <Column field="phone_number" header="電話番号"></Column>
+        <Column header="操作">
           <template #body="slotProps">
             <Button 
               icon="pi pi-pencil" 
@@ -32,50 +32,50 @@
     </Panel>
   </div>
   <div class="p-4 max-w-7xl mx-auto">
-    <Dialog v-model:visible="dialogVisible" :modal="true" header="Edit Hotel" :style="{ width: '450px' }" class="p-fluid">
+    <Dialog v-model:visible="dialogVisible" :modal="true" header="ホテル編集" :style="{ width: '450px' }" class="p-fluid">
       <div class="flex flex-col gap-4">
         <div class="flex flex-col">
-          <label for="email" class="font-medium mb-2 block">Formal Name</label>
+          <label for="email" class="font-medium mb-2 block">正式名称</label>
           <InputText id="formal_name" v-model="selectedHotel.formal_name" required />
         </div>
         <div class="flex flex-col">
-          <label for="email" class="font-medium mb-2 block">Name</label>
+          <label for="email" class="font-medium mb-2 block">名称</label>
           <InputText id="name" v-model="selectedHotel.name" required />
         </div>
         <div class="flex flex-col">
-          <label for="email" class="font-medium mb-2 block">Email</label>
+          <label for="email" class="font-medium mb-2 block">メールアドレス</label>
           <InputText id="email" v-model="selectedHotel.email" required />
         </div>
         <div class="flex flex-col">
-          <label for="phone_number" class="font-medium mb-2 block">Phone Number</label>
+          <label for="phone_number" class="font-medium mb-2 block">電話番号</label>
           <InputMask id="phone_number" v-model="selectedHotel.phone_number" mask="(999) 999-9999" required />
         </div>
         <div class="flex flex-col">
-          <label for="latitude" class="font-medium mb-2 block">Latitude</label>
+          <label for="latitude" class="font-medium mb-2 block">緯度</label>
           <InputNumber id="latitude" v-model="selectedHotel.latitude" :minFractionDigits="6" />
         </div>
         <div class="flex flex-col">
-          <label for="longitude" class="font-medium mb-2 block">Longitude</label>
+          <label for="longitude" class="font-medium mb-2 block">経度</label>
           <InputNumber id="longitude" v-model="selectedHotel.longitude" :minFractionDigits="6" />
         </div>
       </div>
       <template #footer>
         <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Cancel" icon="pi pi-times" @click="dialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />        
+        <Button label="キャンセル" icon="pi pi-times" @click="dialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />        
       </template>
     </Dialog>
 
     <Dialog v-model:visible="roomTypesDialogVisible" :modal="true" header="Edit Room Types" :style="{ width: '600px' }" class="p-fluid">
       <template #header>
-        <h2 class="text-lg font-bold ">Edit Room Types</h2>
+        <h2 class="text-lg font-bold ">部屋タイプ編集</h2>
         <Button 
-          label="Add Room Type"
+          label="部屋タイプ追加"
           icon="pi pi-plus"
           @click="openRoomTypeDialog"
           class="p-button-sm m-2"
         />
       </template>
-      <p>Make sure to press ENTER or TAB to confirm the changes before saving.</p><br/>
+      <p>保存する前に必ず ENTER キーまたは TAB キーを押して変更を確認してください。</p><br/>
       <DataTable 
         ref="roomTypesDataTable"
         :value="roomTypes"
@@ -85,12 +85,12 @@
         responsiveLayout="scroll"
         @cell-edit-complete="onCellEditComplete"
       >
-        <Column field="name" header="Name">
+        <Column field="name" header="名称">
           <template #editor="slotProps">
             <InputText v-model="slotProps.data.name" />
           </template>
         </Column>
-        <Column field="description" header="Description">
+        <Column field="description" header="詳細">
           <template #editor="slotProps">
             <Textarea v-model="slotProps.data.description" autoResize />
           </template>
@@ -105,7 +105,7 @@
     <Dialog v-model:visible="roomTypeDialog" :modal="true" header="Add Room Type" :style="{ width: '450px' }" class="p-fluid">
       <div class="flex flex-col gap-4">
         <div class="flex flex-col">
-          <label for="name" class="font-medium mb-2 block">Room Type Name *</label>
+          <label for="name" class="font-medium mb-2 block">部屋タイプ名 *</label>
           <InputText 
             id="name"
             v-model="newRoomType.name" 
@@ -116,7 +116,7 @@
         </div>
 
         <div class="flex flex-col">
-          <label for="description" class="font-medium mb-2 block">Description</label>
+          <label for="description" class="font-medium mb-2 block">詳細</label>
           <Textarea 
             id="description"
             v-model="newRoomType.description" 
@@ -129,14 +129,14 @@
       </div>
 
       <template #footer>        
-        <Button label="Add" icon="pi pi-plus" @click="saveRoomType" class="p-button-success p-button-text p-button-sm" />
+        <Button label="追加" icon="pi pi-plus" @click="saveRoomType" class="p-button-success p-button-text p-button-sm" />
         <Button label="閉じる" icon="pi pi-times" @click="roomTypeDialog = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="roomsDialogVisible" :modal="true" header="Edit Rooms" :style="{ width: '600px' }" class="p-fluid">
+    <Dialog v-model:visible="roomsDialogVisible" :modal="true" header="部屋編集" :style="{ width: '600px' }" class="p-fluid">
       <template #header>
-        <h2 class="text-lg font-bold ">Edit Rooms</h2>
+        <h2 class="text-lg font-bold ">部屋編集</h2>
         <Button 
           label="Add Room"
           icon="pi pi-plus"
@@ -146,7 +146,7 @@
       </template>
       <Accordion :activeIndex="0">
         
-        <p>Make sure to press ENTER or TAB to confirm the changes before saving.</p><br/>
+        <p>保存する前に必ず ENTER キーまたは TAB キーを押して変更を確認してください。</p><br/>
         <AccordionPanel
           ref="roomsPanel"
           v-for="roomType in roomTypes"
@@ -154,7 +154,7 @@
           :value="roomType.id"
         >          
           <AccordionHeader> 
-            Room Type:  {{ roomType.name }}                       
+            部屋タイプ：  {{ roomType.name }}                       
           </AccordionHeader>
           <AccordionContent>
             <DataTable
@@ -164,12 +164,12 @@
               responsiveLayout="scroll"
               @cell-edit-complete="onCellEditComplete"
             >
-              <Column field="room_number" header="Room Number">
+              <Column field="room_number" header="部屋番号">
                 <template #editor="slotProps">
                   <InputText v-model="slotProps.data.room_number" />
                 </template>
               </Column>
-              <Column field="room_type_id" header="Room Type">
+              <Column field="room_type_id" header="部屋タイプ">
                 <template #body="slotProps">
                   <span>{{ roomTypes.find(rt => rt.id === slotProps.data.room_type_id)?.name }}</span>
                 </template>
@@ -179,16 +179,16 @@
                     :options="roomTypes" 
                     optionLabel="name" 
                     optionValue="id"
-                    placeholder="Select a Room Type"
+                    placeholder="部屋タイプを選択する"
                   />
                 </template>
               </Column>
-              <Column field="capacity" header="Capacity">
+              <Column field="capacity" header="人数">
                 <template #editor="slotProps">
                   <InputNumber v-model="slotProps.data.capacity" :min="1" />
                 </template>
               </Column>
-              <Column field="smoking" header="Smoking">
+              <Column field="smoking" header="喫煙">
                 <template #body="slotProps">
                   <div class="flex items-center justify-center">
                     <Checkbox v-model="slotProps.data.smoking" binary />
@@ -200,7 +200,7 @@
                   </div>
                 </template>
               </Column>
-              <Column field="for_sale" header="For Sale">
+              <Column field="for_sale" header="販売用">
                 <template #body="slotProps">
                   <div class="flex items-center justify-center">
                     <Checkbox v-model="slotProps.data.for_sale" binary />
@@ -223,36 +223,36 @@
       </template>      
     </Dialog>
     
-    <Dialog v-model:visible="roomDialog" :modal="true" header="Add Room" :style="{ width: '450px' }" class="p-fluid">
+    <Dialog v-model:visible="roomDialog" :modal="true" header="部屋追加" :style="{ width: '450px' }" class="p-fluid">
       <div class="grid xs:grid-cols-1 grid-cols-2 gap-4">
         <div class="col-6">
-          <label for="floor" class="font-medium mb-2 block">Floor *</label>
+          <label for="floor" class="font-medium mb-2 block">階 *</label>
           <InputNumber id="floor" v-model="newRoom.floor" :min="1" required />
         </div>
         <div class="col-6">
-          <label for="room_number" class="font-medium mb-2 block">Room Number *</label>
+          <label for="room_number" class="font-medium mb-2 block">部屋番号 *</label>
           <InputText id="room_number" v-model="newRoom.room_number" required />
         </div>
         <div class="col-6">
-          <label for="room_type_id" class="font-medium mb-2 block">Room Type *</label>
+          <label for="room_type_id" class="font-medium mb-2 block">部屋タイプ *</label>
           <Select id="room_type_id" v-model="newRoom.room_type_id" :options="roomTypes" optionLabel="name" optionValue="id" placeholder="Select a Room Type" required />
         </div>
         <div class="col-6">
-          <label for="capacity" class="font-medium mb-2 block">Capacity *</label>
+          <label for="capacity" class="font-medium mb-2 block">人数 *</label>
           <InputNumber id="capacity" v-model="newRoom.capacity" :min="1" required />
         </div>
         <div class="col-6">
-          <label for="smoking" class="font-medium mb-2 block">Smoking</label>
+          <label for="smoking" class="font-medium mb-2 block">喫煙</label>
           <Checkbox id="smoking" v-model="newRoom.smoking" binary />
         </div>
         <div class="col-6">
-          <label for="for_sale" class="font-medium mb-2 block">For Sale</label>
+          <label for="for_sale" class="font-medium mb-2 block">販売用</label>
           <Checkbox id="for_sale" v-model="newRoom.for_sale" binary />
         </div>
       </div>
       <template #footer>
-        <Button label="Add" icon="pi pi-plus" @click="saveRoom" class="p-button-success p-button-text p-button-sm" />
-        <Button label="Cancel" icon="pi pi-times" @click="roomDialog = false" class="p-button-danger p-button-text p-button-sm" />
+        <Button label="追加" icon="pi pi-plus" @click="saveRoom" class="p-button-success p-button-text p-button-sm" />
+        <Button label="キャンセル" icon="pi pi-times" @click="roomDialog = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
   </div>
@@ -417,7 +417,7 @@
           if (!response.ok) throw new Error('Failed to save hotel');
           await fetchHotels();
           dialogVisible.value = false;
-          toast.add({ severity: 'success', summary: 'Success', detail: 'Hotel updated successfully', life: 3000 });
+          toast.add({ severity: 'success', summary: 'Success', detail: 'ホテル更新されました。', life: 3000 });
         } catch (error) {
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel', life: 3000 });
         }
@@ -447,7 +447,7 @@
               toast.add({ 
                 severity: 'error', 
                 summary: 'Error', 
-                detail: 'Room numbers must be unique', life: 3000 
+                detail: '唯一の部屋番号が必要です。', life: 3000 
               });
               return;
             }
@@ -485,7 +485,7 @@
           toast.add({ 
             severity: 'success', 
             summary: 'Success', 
-            detail: 'Rooms updated successfully', 
+            detail: '部屋更新されました。', 
             life: 3000 
           });
           roomTypesDialogVisible.value = false;
@@ -551,7 +551,7 @@
           toast.add({ 
             severity: 'success', 
             summary: 'Success', 
-            detail: 'Room types updated successfully', 
+            detail: '部屋タイプ更新されました。', 
             life: 3000 
           });
           roomTypesDialogVisible.value = false;
@@ -600,7 +600,7 @@
             toast.add({ 
               severity: 'success', 
               summary: 'Success', 
-              detail: 'Room type created successfully', 
+              detail: '部屋タイプ作成されました。', 
               life: 3000 
             });
             roomTypeDialog.value = false;
@@ -638,7 +638,7 @@
             toast.add({ 
               severity: 'error', 
               summary: 'Error', 
-              detail: 'Room numbers must be unique', life: 3000 
+              detail: '唯一の部屋番号が必要です。', life: 3000 
             });
             return;
           }          
@@ -669,7 +669,7 @@
             toast.add({ 
               severity: 'success', 
               summary: 'Success', 
-              detail: 'Room type created successfully', 
+              detail: '部屋タイプ作成されました。', 
               life: 3000 
             });
             roomDialog.value = false;
