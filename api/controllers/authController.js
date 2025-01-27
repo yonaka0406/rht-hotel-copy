@@ -55,16 +55,13 @@ const forgot = async (req, res) => {
 const forgotAdmin = async (req, res) => {
   const { email } = req.body;
   try {
-    const user = await findUserByEmail(email);
-    if (!user) {
-      return res.status(400).json({ error: 'ユーザー見つかりません。' });
-    }
 
     // Generate a reset token    
-    const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-        
+    const resetToken = jwt.sign(email, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+    console.log('email:', email);    
+    console.log('resetToken:', resetToken);  
     // Send the email with the reset link
-    await sendAdminResetEmail(user.email, resetToken);
+    await sendAdminResetEmail(email, resetToken);
 
     // Respond to the client
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
