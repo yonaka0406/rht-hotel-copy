@@ -11,6 +11,7 @@
         "build:frontend": "npm --prefix frontend run build",
         "dev:frontend": "npm --prefix frontend run dev",        
         "start:backend": "pm2 start api/index.js --name backend",
+        "stop:backend": "pm2 stop backend",
         "dev:backend": "nodemon api/index.js",
         "redis": "wsl -e bash -ic \"sudo service redis-server start\"",
         "redis:stop": "wsl -e bash -ic \"sudo service redis-server stop\"",
