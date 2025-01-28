@@ -185,7 +185,7 @@
             startDate,
             endDate
           );
-          //console.log(reservedRooms.value);
+          console.log('reservedRooms:', reservedRooms.value);
         } catch (error) {
           console.error('Error fetching reservations:', error);
         }
@@ -338,8 +338,8 @@
         maxDate.value = initialMaxDate;        
         dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
 
-        nextTick(() => {
-          fetchReservations();
+        nextTick(async () => {
+          await fetchReservations();
 
           // Scroll to 1/5 of the total scroll height
           const tableContainer = document.querySelector(".table-container");
@@ -371,6 +371,12 @@
           await fetchReservation(newReservationId);
         } 
       }, { immediate: true });
+
+      watch(selectedHotelId, async (newVal, oldVal) => {
+        if (oldVal !== null) {          
+          await fetchReservations();
+        }
+      });
 
 
       return {
