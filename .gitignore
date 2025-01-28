@@ -2,3 +2,4 @@ node_modules
 .env
 api/.env
 /api/public/assets
+api/package-lock.json
