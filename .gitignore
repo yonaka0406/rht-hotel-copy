@@ -3,3 +3,4 @@ node_modules
 api/.env
 /api/public/assets
 api/package-lock.json
+/api/public
