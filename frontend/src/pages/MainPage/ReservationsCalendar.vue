@@ -25,9 +25,15 @@
               <td
                 v-for="(room, roomIndex) in selectedHotelRooms"
                 :key="roomIndex"
-                :class="{
-                  'bg-red-100': isRoomReserved(room.room_id, date),
-                  'cursor-pointer': true,
+                @dblclick="openDrawer(room.room_id, date)"
+                :class="{                    
+                    'bg-yellow-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'hold',
+                    'bg-blue-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'provisory',
+                    'bg-green-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'confirmed',
+                    'bg-green-700': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_in',
+                    'bg-gray-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_out',
+                    'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
+                    'cursor-pointer': true,
                 }"
                 class="px-4 py-2 text-center text-xs"                
               >
@@ -67,23 +73,34 @@
           </tbody>
         </table>
       </div>
-
-    </Panel>
+    </Panel>    
+    <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":header="drawerHeader":closable="true">
+      <ReservationEdit
+        v-if="reservationId"
+        :reservation_id="reservationId"
+        :room_id="selectedRoom.room_id"        
+      />
+    </Drawer>
   </div>
 </template>
 
 <script>
   import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
+  import io from 'socket.io-client';
   import { useToast } from 'primevue/usetoast';
   import { useHotelStore } from '@/composables/useHotelStore';
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
+  import ReservationEdit from './components/ReservationEdit.vue';
   import Panel from 'primevue/panel';
+  import { Drawer } from 'primevue';
 
   export default {  
     name: "ReservationsCalendar",
-    components: {      
+    components: {  
+        ReservationEdit,
         Panel,
+        Drawer,
     },
     data() {
       return {
@@ -91,16 +108,18 @@
       };
     },
     setup() {
-      let socket;
+      const socket = ref(null);
       const toast = useToast();
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
-      const { reservedRooms, fetchReservedRooms, updateReservations } = useReservationStore();
+      const { reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId } = useReservationStore();
       const dateRange = ref([]); 
       const minDate = ref(null);
       const maxDate = ref(null);
       const reservedRoomsMap = ref([]);
-      
+      const drawerVisible = ref(false);
+      const selectedRoom = ref(null);
+      const selectedDate = ref(null);
       
       // Helper function
       const formatDate = (date) => {
@@ -217,6 +236,28 @@
         
         
       };
+      
+      const openDrawer = (roomId, date) => {
+        selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === roomId);
+        selectedDate.value = date;
+
+        if (selectedRoom.value) { // Check if selectedRoom.value is defined
+          console.log('Open drawer for room:', selectedRoom.value.room_id, 'on date:', selectedDate.value);
+          console.log(fillRoomInfo(roomId, date));
+          setReservationId(fillRoomInfo(roomId, date).reservation_id);
+          drawerVisible.value = true;
+        } else {
+          console.error('Room not found:', roomId);
+          // Handle the case where the room is not found
+        }
+      };
+
+      const drawerHeader = computed(() => {
+        if (selectedRoom.value) {
+          return `Edit Reservation - ${selectedRoom.value.room_type_name} ${selectedRoom.value.room_number} - ${selectedDate.value}`;
+        }
+        return 'Edit Reservation';
+      });
 /*
       // Method to calculate rowspan based on reservation_id
       const getRowspan = (room_id, date, dateIndex) => {
@@ -271,14 +312,20 @@
 
       // Mount
       onMounted(async () => {   
-        /*
-        socket = new WebSocket('wss://your-backend-websocket-url');
-        socket.onmessage = (event) => {
-          const updatedReservations = JSON.parse(event.data);
-          updateReservations(updatedReservations);
-        };
-        */
+        // Establish Socket.IO connection
+        socket.value = io('http://localhost:5000');
 
+        socket.value.on('connect', () => {
+          console.log('Connected to server');
+        });
+
+        socket.value.on('tableUpdate', (data) => {
+          // Update the reservations data in your component
+          console.log('Received updated data:', data);
+          await fetchReservations();
+          //... your logic to update reservedRooms or other relevant data
+        });
+        
         await fetchHotels();
         await fetchHotel();
 
@@ -310,14 +357,33 @@
       });
 
       onUnmounted(() => {
-        if (socket) socket.close();
+        // Close the Socket.IO connection when the component is unmounted
+        if (socket.value) {
+          socket.value.disconnect();
+        }
       });
 
+      // Watch
+
+      watch(reservationId, async (newReservationId, oldReservationId) => {
+        if (newReservationId) {
+          console.log('Reservation ID:', newReservationId);
+          await fetchReservation(newReservationId);
+        } 
+      }, { immediate: true });
+
+
       return {
+        reservationId,
         dateRange,        
         selectedHotelRooms,
         isRoomReserved,
-        fillRoomInfo,        
+        fillRoomInfo, 
+        drawerVisible,
+        openDrawer,
+        drawerHeader,
+        selectedRoom,
+        selectedDate,      
         onScroll,
       };
     },

@@ -238,6 +238,11 @@ export default {
             type: String,
             required: true,
         },
+        room_id: { // Add room_id prop
+            type: [String, Number], // Allow both string and number types
+            required: false,     // Make it not required
+            default: null,       // Provide a default value
+        },
     },
     name: "ReservationEdit",
     components: { 

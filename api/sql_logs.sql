@@ -212,7 +212,7 @@
         user_id INT REFERENCES users(id), -- The user who made the change
         table_name TEXT NOT NULL, -- Table where the change occurred
         action TEXT NOT NULL, -- 'INSERT', 'UPDATE', or 'DELETE'
-        record_id INT NOT NULL, -- ID of the affected record
+        record_id UUID NOT NULL, -- ID of the affected record
         changes JSONB, -- Changes made to the record    
         ip_address INET -- IP address of the user who made the change
     ); 
