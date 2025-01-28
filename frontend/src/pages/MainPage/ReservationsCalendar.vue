@@ -322,7 +322,7 @@
         socket.value.on('tableUpdate', (data) => {
           // Update the reservations data in your component
           console.log('Received updated data:', data);
-          await fetchReservations();
+          fetchReservations();
           //... your logic to update reservedRooms or other relevant data
         });
         
