@@ -1,6 +1,7 @@
 node_modules
 .env
 api/.env
-/api/public
+/api/public/assets
 api/package-lock.json
 frontend/package-lock.json
+api/public/index.html
