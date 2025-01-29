@@ -415,8 +415,8 @@
     phone_number: ''    
   });
   const facilityTypes = [
-    { name: 'New Building', code: 'New' },
-    { name: 'Used Building', code: 'Used' }
+    { name: '新築', code: 'New' },
+    { name: '中古', code: 'Used' }
   ];
 
   const roomTypes = ref([]);
