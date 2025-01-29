@@ -124,8 +124,8 @@
       const drawerVisible = ref(false);
       const selectedRoom = ref(null);
       const selectedDate = ref(null);
-      const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, check_in: null, check_out: null, days: null });
-      const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, check_in: null, check_out: null });
+      const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
+      const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null });
       
       // Helper function
       const formatDate = (date) => {
@@ -280,8 +280,9 @@
           const room_id = fillRoomInfo(roomId, date).room_id;
           const room_number = fillRoomInfo(roomId, date).room_number;
           const room_type_name = fillRoomInfo(roomId, date).room_type_name;
+          const number_of_people = fillRoomInfo(roomId, date).number_of_people;
           const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
-          dragFrom.value = { reservation_id, room_id, room_number, room_type_name, check_in, check_out, days };
+          dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
           console.log(fillRoomInfo(roomId, date));
           await fetchReservation(reservation_id);          
@@ -292,14 +293,26 @@
       const onDrop = (event, roomId, date) => {
         console.log('Drop');
         const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
+        console.log('Selected room:', selectedRoom);
         const check_in = formatDate(new Date(date));
         const check_out = formatDate(new Date(new Date(date).setDate(new Date(date).getDate() + dragFrom.value.days)));        
         const room_id = selectedRoom.room_id;
         const room_number = selectedRoom.room_number;
         const room_type_name = selectedRoom.room_type_name;
-        dragTo.value = { room_id, room_number, room_type_name, check_in, check_out };
-
-        showConfirmationPrompt();
+        const capacity = selectedRoom.room_capacity;
+        dragTo.value = { room_id, room_number, room_type_name, capacity, check_in, check_out };
+        
+        const from = dragFrom.value;
+        const to = dragTo.value;
+        
+        if(from.number_of_people > to.capacity){
+          toast.add({ severity: 'error', summary: 'エラー', detail: '人数が収容人数を超えています。' , life: 3000 });
+        } else if(!checkForConflicts(from, to)){
+          showConfirmationPrompt();
+        } else {
+          console.log('Conflict found');
+          toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
+        }        
       };
 
       const showConfirmationPrompt = async () => {
@@ -313,14 +326,14 @@
         } else {
           confirmation = confirm(`${from.room_number}号室の宿泊期間を「IN：${from.check_in} OUT：${from.check_out}」から「IN：${to.check_in} OUT：${to.check_out}」に変更し、${to.room_number}号室に移動しますか?`);
         }
-        
+                
         if (confirmation) {
           console.log('Confirmed');
           
           if(!checkForConflicts(from, to)){
             console.log('No conflicts found');
-            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id);
-
+            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people);
+            await setReservationId(null);
           } else {
             console.log('Conflict found');
             toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });

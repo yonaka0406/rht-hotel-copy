@@ -139,8 +139,7 @@ const createReservationHold = async (req, res) => {
 
     // Add the reservation with the final client_id
     const reservationData = {
-      hotel_id,
-      room_type_id,
+      hotel_id,      
       reservation_client_id: finalClientId,
       check_in,
       check_out,
@@ -153,12 +152,15 @@ const createReservationHold = async (req, res) => {
     const newReservation = await addReservationHold(reservationData);
     // Get available rooms for the reservation period
     const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
+    const availableRoomsFiltered = availableRooms;
+    /*
     // Filter available rooms by room_type_id
     const availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
 
     if (availableRoomsFiltered.length === 0) {
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
     }
+    */
 
     let remainingPeople = number_of_people;
     const reservationDetails = [];
@@ -439,14 +441,14 @@ const editReservationStatus = async (req, res) => {
 
 const editRoomFromCalendar = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id } = req.body;
+  const { hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people } = req.body;
   const updated_by = req.user.id;
 
   try {
     // Call the function to update reservation status in the database
     const updatedReservation = await updateRoomByCalendar({
       id,
-      hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id,
+      hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people,
       updated_by
     });
 

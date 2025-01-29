@@ -255,14 +255,13 @@ const addReservationHold = async (reservation) => {
 
   const query = `
     INSERT INTO reservations (
-      hotel_id, room_type_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *;
   `;
 
   const values = [
-    reservation.hotel_id,
-    reservation.room_type_id,
+    reservation.hotel_id,    
     reservation.reservation_client_id,
     reservation.check_in,
     reservation.check_out,
@@ -431,7 +430,7 @@ const updateReservationStatus = async (reservationData) => {
 };
 
 const updateRoomByCalendar = async (roomData) => {
-  const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, updated_by } = roomData;
+  const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, updated_by } = roomData;
 
   // Calculate the shift direction in JavaScript
   const shiftDirection = new_check_in >= old_check_in? 'DESC': 'ASC'; 
@@ -463,16 +462,33 @@ const updateRoomByCalendar = async (roomData) => {
         console.log('Check-in or check-out dates have changed. Creating new reservation_id...');
         const insertReservationQuery = `
           INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_at, created_by, updated_by)
-          SELECT hotel_id, room_type_id, reservation_client_id, $1, $2, number_of_people, status, created_at, created_by, $3
+          SELECT hotel_id, reservation_client_id, $1, $2, $6, status, created_at, created_by, $3
           FROM reservations
           WHERE id = $4 AND hotel_id = $5
           RETURNING id
         `;
-        const insertReservationValues = [new_check_out, new_check_out, updated_by, id, hotel_id];
+        const insertReservationValues = [new_check_out, new_check_out, updated_by, id, hotel_id, number_of_people];
         const insertResult = await client.query(insertReservationQuery, insertReservationValues);
         newReservationId = insertResult.rows[0].id;
         console.log('New reservation_id:', newReservationId);
+
+        // Update the number_of_people field in the reservations table
+        const updateQuery = `
+          UPDATE reservations
+          SET number_of_people = number_of_people - $1
+          WHERE id = $2 AND hotel_id = $3
+        `;
+        const updateValues = [number_of_people, id, hotel_id];
+        await client.query(updateQuery, updateValues);
+        console.log('Updated number_of_people in reservations table.');
+
+        // Commit the first transaction
+        await client.query('COMMIT');
+        
+        // Start a new transaction for updating reservation details
+        await client.query('BEGIN');
       }
+
     }
 
     const query = `

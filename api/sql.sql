@@ -333,8 +333,7 @@ CREATE TABLE plan_addons (
 
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),
-    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
-    room_type_id INT NOT NULL,
+    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel    
     reservation_client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- Reference to the client representing the company    
     check_in DATE NOT NULL,
     check_out DATE NOT NULL,  
@@ -346,6 +345,8 @@ CREATE TABLE reservations (
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservations DROP COLUMN room_type_id;
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
