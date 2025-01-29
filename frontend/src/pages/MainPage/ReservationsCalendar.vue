@@ -26,6 +26,10 @@
                 v-for="(room, roomIndex) in selectedHotelRooms"
                 :key="roomIndex"
                 @dblclick="openDrawer(room.room_id, date)"
+                @dragstart="onDragStart($event, room.room_id, date)"
+                @dragover.prevent
+                @drop="onDrop($event, room.room_id, date)"
+                draggable="true"
                 :class="{                    
                     'bg-yellow-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'hold',
                     'bg-blue-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'provisory',
@@ -112,7 +116,7 @@
       const toast = useToast();
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
-      const { reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId } = useReservationStore();
+      const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
       const dateRange = ref([]); 
       const minDate = ref(null);
       const maxDate = ref(null);
@@ -120,6 +124,8 @@
       const drawerVisible = ref(false);
       const selectedRoom = ref(null);
       const selectedDate = ref(null);
+      const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, check_in: null, check_out: null, days: null });
+      const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, check_in: null, check_out: null });
       
       // Helper function
       const formatDate = (date) => {
@@ -241,23 +247,140 @@
         selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === roomId);
         selectedDate.value = date;
 
-        if (selectedRoom.value) { // Check if selectedRoom.value is defined
-          console.log('Open drawer for room:', selectedRoom.value.room_id, 'on date:', selectedDate.value);
-          console.log(fillRoomInfo(roomId, date));
-          setReservationId(fillRoomInfo(roomId, date).reservation_id);
-          drawerVisible.value = true;
+        if (selectedRoom.value) {
+          if(!fillRoomInfo(roomId, date).reservation_id) {
+            setReservationId(null);
+            drawerVisible.value = true;
+          } else {            
+            setReservationId(fillRoomInfo(roomId, date).reservation_id);
+            drawerVisible.value = true;
+          }
         } else {
-          console.error('Room not found:', roomId);
-          // Handle the case where the room is not found
+          
         }
       };
 
       const drawerHeader = computed(() => {
+        /*
         if (selectedRoom.value) {
-          return `Edit Reservation - ${selectedRoom.value.room_type_name} ${selectedRoom.value.room_number} - ${selectedDate.value}`;
+          return `予約編集 - ${selectedRoom.value.room_type_name} ${selectedRoom.value.room_number} - ${selectedDate.value}`;
         }
-        return 'Edit Reservation';
+        return '予約編集';
+        */
       });
+
+      const onDragStart = async (event, roomId, date) => {
+        console.log('Drag start, room:', roomId, 'date:', date);  
+        console.log('Fill room info:', fillRoomInfo(roomId, date));      
+        
+        const reservation_id = fillRoomInfo(roomId, date).reservation_id;
+        if(reservation_id){
+          const check_in = formatDate(new Date(fillRoomInfo(roomId, date).check_in));
+          const check_out = formatDate(new Date(fillRoomInfo(roomId, date).check_out));
+          const room_id = fillRoomInfo(roomId, date).room_id;
+          const room_number = fillRoomInfo(roomId, date).room_number;
+          const room_type_name = fillRoomInfo(roomId, date).room_type_name;
+          const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
+          dragFrom.value = { reservation_id, room_id, room_number, room_type_name, check_in, check_out, days };
+
+          console.log(fillRoomInfo(roomId, date));
+          await fetchReservation(reservation_id);          
+        }
+        
+      };
+
+      const onDrop = (event, roomId, date) => {
+        console.log('Drop');
+        const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
+        const check_in = formatDate(new Date(date));
+        const check_out = formatDate(new Date(new Date(date).setDate(new Date(date).getDate() + dragFrom.value.days)));        
+        const room_id = selectedRoom.room_id;
+        const room_number = selectedRoom.room_number;
+        const room_type_name = selectedRoom.room_type_name;
+        dragTo.value = { room_id, room_number, room_type_name, check_in, check_out };
+
+        showConfirmationPrompt();
+      };
+
+      const showConfirmationPrompt = async () => {
+        const from = dragFrom.value;
+        const to = dragTo.value;
+        let confirmation = false;
+        if (from.room_number === to.room_number) {
+          confirmation = confirm(`${from.room_number}号室の宿泊期間を「IN：${from.check_in} OUT：${from.check_out}」から「IN：${to.check_in} OUT：${to.check_out}」にしますか?`);  
+        } else if (from.check_in === to.check_in && from.check_out === to.check_out) {
+          confirmation = confirm(`${from.room_number}号室の予約を${to.room_number}号室に移動しますか?`);
+        } else {
+          confirmation = confirm(`${from.room_number}号室の宿泊期間を「IN：${from.check_in} OUT：${from.check_out}」から「IN：${to.check_in} OUT：${to.check_out}」に変更し、${to.room_number}号室に移動しますか?`);
+        }
+        
+        if (confirmation) {
+          console.log('Confirmed');
+          
+          if(!checkForConflicts(from, to)){
+            console.log('No conflicts found');
+            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id);
+
+          } else {
+            console.log('Conflict found');
+            toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
+          }
+          
+        }
+      };
+
+      const checkForConflicts = (from, to) => {
+        //console.log('Checking for conflicts...');
+
+        for (const reservation of reservationDetails.value.reservation) {
+          //console.log('Checking reservation:', reservation);
+
+          if (from.room_number === to.room_number) {
+            //console.log('Same room number');
+            const dateDiff = new Date(to.check_in) - new Date(from.check_in);
+            const newDate = new Date(reservation.date);
+            newDate.setDate(newDate.getDate() + dateDiff / (1000 * 60 * 60 * 24));            
+
+            if (reservedRooms.value.some(
+              r => 
+                r.room_id === to.room_id 
+                && formatDate(new Date(r.date)) === formatDate(new Date(newDate)) 
+                && r.reservation_id !== reservation.reservation_id
+              )) {
+              //console.log('Conflict found'); 
+              return true;
+            }
+          } else if (from.check_in === to.check_in && from.check_out === to.check_out) {
+            //console.log('Same check-in and check-out dates');
+            if (reservedRooms.value.some(
+                r => 
+                  r.room_id === to.room_id
+                  && formatDate(new Date(r.date)) === reservation.date
+                )) {
+              //console.log('Conflict found'); 
+              return true;
+            }            
+          } else {
+            //console.log('Different room number and dates');
+            const dateDiff = new Date(to.check_in) - new Date(from.check_in);
+            const newDate = new Date(reservation.date);
+            newDate.setDate(newDate.getDate() + dateDiff / (1000 * 60 * 60 * 24));            
+
+            if (reservedRooms.value.some(
+              r => 
+                r.room_id === to.room_id 
+                && formatDate(new Date(r.date)) === formatDate(new Date(newDate)) 
+                && r.reservation_id !== reservation.reservation_id
+              )) {
+              //console.log('Conflict found'); 
+              return true;
+            }
+          }
+        }
+
+        console.log('No conflicts found');
+        return false;
+      };
 /*
       // Method to calculate rowspan based on reservation_id
       const getRowspan = (room_id, date, dateIndex) => {
@@ -387,6 +510,8 @@
         fillRoomInfo, 
         drawerVisible,
         openDrawer,
+        onDragStart,
+        onDrop,
         drawerHeader,
         selectedRoom,
         selectedDate,      

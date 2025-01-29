@@ -384,9 +384,6 @@ CREATE TABLE reservation_addons (
 	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-CREATE TABLE reservation_addons_7 PARTITION OF reservation_addons
-FOR VALUES IN (7);
-
 CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel

@@ -16,12 +16,11 @@
             return `${year}-${month}-${day}`;
         };
 
-        // Set reservationId in the store
+        // Set
         const setReservationId = (id) => {
             reservationId.value = id;
         };
-
-        // Set reservation status in the store
+        
         const setReservationStatus = async (status) => {            
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -46,6 +45,31 @@
                 reservationDetails.value.status = status;
             } catch (error) {
                 console.error('Error updating reservation status:', error);
+            }
+        };
+
+        const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id) => {            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Get the hotel_id for the current reservation
+                const hotel_id = await getReservationHotelId(id);
+
+                // Assuming you have an API endpoint to update the reservation status
+                const response = await fetch(`/api/reservation/update/calendar/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation');
+                }
+                
+            } catch (error) {
+                console.error('Error updating reservation:', error);
             }
         };
 
@@ -237,6 +261,7 @@
             }
         };
 
+
     return {
         availableRooms,
         reservedRooms,
@@ -245,6 +270,7 @@
         reservationDetails,
         setReservationId,
         setReservationStatus,
+        setCalendarChange,
         getReservationId,
         getReservationHotelId,
         fetchReservation,
