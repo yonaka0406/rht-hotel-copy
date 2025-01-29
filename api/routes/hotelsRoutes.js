@@ -3,7 +3,7 @@ const router = express.Router();
 const { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, getHotelRooms } = require('../controllers/hotelsController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
-router.get('/hotel-list', authMiddlewareAdmin, getHotels);
+router.get('/hotel-list', authMiddleware, getHotels);
 router.get('/hotel-rooms/:id', authMiddlewareAdmin, getHotelRooms);
 router.post('/hotels', authMiddleware_manageDB, hotels);
 router.post('/room-types', authMiddleware_manageDB, roomTypeCreate);
