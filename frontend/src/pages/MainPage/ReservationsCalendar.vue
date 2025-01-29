@@ -449,7 +449,7 @@
       // Mount
       onMounted(async () => {   
         // Establish Socket.IO connection
-        socket.value = io('http://localhost:5000');
+        socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
         socket.value.on('connect', () => {
           console.log('Connected to server');
