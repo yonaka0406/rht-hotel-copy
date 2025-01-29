@@ -4,7 +4,7 @@ const { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, 
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 router.get('/hotel-list', authMiddleware, getHotels);
-router.get('/hotel-rooms/:id', authMiddlewareAdmin, getHotelRooms);
+router.get('/hotel-rooms/:id', authMiddleware, getHotelRooms);
 router.post('/hotels', authMiddleware_manageDB, hotels);
 router.post('/room-types', authMiddleware_manageDB, roomTypeCreate);
 router.post('/rooms', authMiddleware_manageDB, roomCreate);
