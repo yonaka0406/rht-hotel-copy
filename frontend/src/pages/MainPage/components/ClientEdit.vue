@@ -33,27 +33,38 @@
                     </FloatLabel>
                 </div>
                     <div class="field">
-                        <label for="name">Name</label>
-                        <InputText id="name" v-model="client.name" required />
+                        <FloatLabel>
+                            <InputText id="name" v-model="client.name" required />
+                            <label for="name">氏名・名称</label>
+                        </FloatLabel>
                     </div>
                     <div class="field">
-                        <label for="name_kana">Name Kana</label>
-                        <InputText id="name_kana" v-model="client.name_kana" />
+                        <FloatLabel>
+                            <label for="name_kana">カナ</label>
+                            <InputText id="name_kana" v-model="client.name_kana" />
+                        </FloatLabel>                        
                     </div>
                     <div class="field">
-                        <label for="name_kanji">Name Kanji</label>
-                        <InputText 
-                            id="name_kanji" 
-                            v-model="client.name_kanji"                             
-                        />
+                        <FloatLabel>
+                            <label for="name_kanji">漢字</label>
+                            <InputText 
+                                id="name_kanji" 
+                                v-model="client.name_kanji"                             
+                            />
+                        </FloatLabel>                        
                     </div>
                     <div class="field">
-                        <label for="date_of_birth">Date of Birth</label>
-                        <InputText 
-                            id="date_of_birth" 
-                            v-model="client.date_of_birth" 
-                            type="date" 
-                        />
+                        
+                        <FloatLabel>                            
+                            <label for="date_of_birth">{{ dateOfBirthLabel }}</label>
+                            <InputText 
+                                id="date_of_birth" 
+                                v-model="client.date_of_birth" 
+                                type="date" 
+                            />
+                        </FloatLabel>
+                        <div v-if="dateOfBirthLabel"></div>
+                        <div v-else class="text-xs m-o p-0">生年月日・設立日</div>
                     </div>
                 <!-- Type of person (Legal or Natural) -->
                 <div class="field col-6">
@@ -95,15 +106,15 @@
                 <!-- Email input -->
                 <div class="field col-6">
                     <FloatLabel>
-                    <InputText 
-                        v-model="client.email"
-                        :pattern="emailPattern"
-                        :class="{'p-invalid': !isValidEmail}"
-                        @input="validateEmail"
-                        fluid                         
-                    />
-                    <label>メールアドレス</label>
-                    <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
+                        <InputText 
+                            v-model="client.email"
+                            :pattern="emailPattern"
+                            :class="{'p-invalid': !isValidEmail}"
+                            @input="validateEmail"
+                            fluid                         
+                        />
+                        <label>メールアドレス</label>
+                        <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
                     </FloatLabel>
                 </div>
                 <!-- Phone number input -->
@@ -140,8 +151,7 @@
                 </div>
                 <div v-else class="field col-span-2 flex justify-center items-center">
                     <Button label="新規" severity="success" type="submit" />
-                </div>
-                
+                </div>                
             </div>
           </form>
         </template>
@@ -150,7 +160,7 @@
   </template>
   
   <script>
-  import { ref, watch, onMounted } from 'vue';
+  import { ref, watch, computed, onMounted } from 'vue';
   import { useRoute } from 'vue-router';
   import { useClientStore } from '@/composables/useClientStore';
   import { Card } from 'primevue';  
@@ -223,6 +233,12 @@
       const validatePhone = (phone) => {
         isValidPhone.value = phonePattern.test(phone);
       };
+
+      // Compute
+
+        const dateOfBirthLabel = computed(() => {
+            return client.value.date_of_birth ? '生年月日・設立日' : '';
+        });
   
       const filterClients = (event) => {
         const query = event.query.toLowerCase();
@@ -339,6 +355,7 @@
         isClientSelected,
         selectedClient,
         filteredClients,
+        dateOfBirthLabel,
         filterClients,
         onClientSelect,
         saveClient,
