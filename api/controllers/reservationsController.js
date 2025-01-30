@@ -151,16 +151,15 @@ const createReservationHold = async (req, res) => {
     // Add the reservation to the database
     const newReservation = await addReservationHold(reservationData);
     // Get available rooms for the reservation period
-    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
-    const availableRoomsFiltered = availableRooms;
-    /*
+    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);    
+    
     // Filter available rooms by room_type_id
     const availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
 
     if (availableRoomsFiltered.length === 0) {
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
     }
-    */
+    
 
     let remainingPeople = number_of_people;
     const reservationDetails = [];
