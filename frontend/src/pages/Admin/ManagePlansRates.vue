@@ -2,7 +2,7 @@
     <div v-if="plan">
         <div class="flex space-x-4 mb-4">
             <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
-                <h3 class="text-xl font-semibold">Select Date:</h3>
+                <h3 class="text-xl font-semibold">日付を選択:</h3>
                 <DatePicker v-model="selectedDate" 
                     class="w-full" 
                     placeholder="Select Date"
@@ -10,39 +10,39 @@
                 />
             </div>
             <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
-                <h3 class="text-xl font-semibold">Current Base Rate:</h3>
+                <h3 class="text-xl font-semibold">現在の基本料金:</h3>
                 <div>
                     <p v-if="filteredBaseRateSum !== null">
-                    Total Base Rate: {{ formatNumber(filteredBaseRateSum, 'currency') }}
+                        基本料金合計: {{ formatNumber(filteredBaseRateSum, 'currency') }}
                     </p>
-                    <p v-else>No base rate found for the selected date.</p>
+                    <p v-else>選択した日付の基本料金が見つかりません。</p>
                 </div>
             </div>
             <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">Current Flat Fee Adjustments:</h3>
+                <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
                 <div>
                     <p v-if="filteredFlatFeeSum !== null">
-                    Total Flat Fee: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
+                        定額料金合計: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
                     </p>
-                    <p v-else>No flat fee adjustment found for the selected date.</p>
+                    <p v-else>選択した日付の定額料金調整が見つかりません。</p>
                 </div>
             </div>
         </div>
         <div class="flex space-x-4">
             <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">Current Percentage Adjustments:</h3>
+                <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
                 <div>
                     <p v-if="filteredPercentageSum !== null">
-                    Total Percentage: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
+                    合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
                     </p>
-                    <p v-else>No percentage adjustment found for the selected date.</p>
+                    <p v-else>選択した日付のパーセント調整が見つかりません。</p>
                 </div>
             </div>
             <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">Current Addons:</h3>
+                <h3 class="text-xl font-semibold">現在のアドオン:</h3>
                 <div>                    
-                    <p>Count: {{ filteredAddonCount }}</p>
-                    <p>Total Price: {{ formatNumber(filteredAddonSum, 'currency') }}</p>                    
+                    <p>カウント: {{ filteredAddonCount }}</p>
+                    <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>                    
                 </div>
             </div>
         </div>
@@ -50,20 +50,20 @@
         <div>
             <div class="grid xs:grid-cols-1 grid-cols-3 gap-2 mt-6">
                 <div class="flex justify-start">
-                    <span class="font-bold text-lg">Conditions</span>
+                    <span class="font-bold text-lg">条件</span>
                 </div>                  
                 <div class="flex justify-start">
-                    <Button @click="openAdjustmentDialog" label="Add New Adjustment" icon="pi pi-plus" />
+                    <Button @click="openAdjustmentDialog" label="新規調整" icon="pi pi-plus" />
                 </div>
             </div>
             <Accordion value="0">
                 <AccordionPanel value="0">
-                    <AccordionHeader>Current Conditions</AccordionHeader>
+                    <AccordionHeader>現在の条件</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredCurrentConditions">
                             <Column field="date_start" header="開始"></Column>
                             <Column field="date_end" header="終了"></Column>    
-                            <Column header="Rate">
+                            <Column header="料金">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.adjustment_type !== 'percentage'">
                                         {{ formatNumber(slotProps.data.adjustment_value, 'currency') }}
@@ -72,24 +72,24 @@
                                         {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="Base Rate"
+                                        <Badge value="基本料金"
                                             severity="secondary">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="Flat Fee"
+                                        <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="Percentage"
+                                        <Badge value="パーセント"
                                             severity="warn">
                                         </Badge>
                                     </div>
                                     
                                 </template>
                             </Column>
-                            <Column header="Condition">
+                            <Column header="条件">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
                                         <Badge 
@@ -138,24 +138,24 @@
                                         {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="Base Rate"
+                                        <Badge value="基本料金"
                                             severity="secondary">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="Flat Fee"
+                                        <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="Percentage"
+                                        <Badge value="パーセント"
                                             severity="warn">
                                         </Badge>
                                     </div>
                                     
                                 </template>
                             </Column>
-                            <Column header="Condition">
+                            <Column header="条件">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
                                         <Badge 
@@ -190,7 +190,7 @@
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="2">
-                    <AccordionHeader>Past Conditions</AccordionHeader>
+                    <AccordionHeader>過去の条件</AccordionHeader>
                     <AccordionContent>                        
                         <DataTable :value="filteredPastConditions">
                             <Column field="date_start" header="開始"></Column>
@@ -204,24 +204,24 @@
                                         {{ formatNumber(slotProps.data.adjustment_value, 'decimal') }}%
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'base_rate'">
-                                        <Badge value="Base Rate"
+                                        <Badge value="基本料金"
                                             severity="secondary">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'flat_fee'">
-                                        <Badge value="Flat Fee"
+                                        <Badge value="定額料金"
                                             severity="info">
                                         </Badge>
                                     </div>
                                     <div v-if="slotProps.data.adjustment_type === 'percentage'">
-                                        <Badge value="Percentage"
+                                        <Badge value="パーセント"
                                             severity="warn">
                                         </Badge>
                                     </div>
                                     
                                 </template>
                             </Column>
-                            <Column header="Condition">
+                            <Column header="条件">
                                 <template #body="slotProps">
                                     <div v-if="slotProps.data.condition_type === 'day_of_week'">                                        
                                         <Badge 
@@ -262,11 +262,11 @@
             <ManagePlansAddons :plan="planId" @update-filtered-conditions="handleFilteredAddons" />
         </div>
         
-        <Dialog header="Add New Adjustment" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+        <Dialog header="新規調整" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
             <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="adjustmentType">Adjustment Type *</label>
+                        <label for="adjustmentType">調整種類 *</label>
                         <Select v-model="newAdjustment.adjustment_type" 
                             :options="adjustmentTypes" 
                             optionLabel="label" 
@@ -277,7 +277,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="conditionType">Condition Type *</label>
+                        <label for="conditionType">条件区分 *</label>
                         <Select v-model="newAdjustment.condition_type" 
                             :options="conditionTypes" 
                             optionLabel="label" 
@@ -290,7 +290,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="adjustmentValue">Adjustment Value *</label>
+                        <label for="adjustmentValue">調整値 *</label>
                         <div v-if="newAdjustment.adjustment_type !== 'percentage'">
                             <InputNumber v-model="newAdjustment.adjustment_value" 
                                 mode="currency" 
@@ -314,7 +314,7 @@
                 </div>
                 <div class="col-6">                    
                     <FloatLabel>
-                        <label for="conditionValue">Condition Value</label>
+                        <label for="conditionValue">条件</label>
                         <MultiSelect v-model="newAdjustment.condition_value" 
                             placeholder="Condition Value"
                             :options="conditionValues" 
@@ -351,11 +351,11 @@
             </template>
         </Dialog>
 
-        <Dialog header="Edit Adjustment" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
+        <Dialog header="調整編集" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
             <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="adjustmentType">Adjustment Type *</label>
+                        <label for="adjustmentType">調整種類 *</label>
                         <Select v-model="editAdjustment.adjustment_type" 
                             :options="adjustmentTypes" 
                             optionLabel="label" 
@@ -366,7 +366,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="conditionType">Condition Type *</label>
+                        <label for="conditionType">条件区分 *</label>
                         <Select v-model="editAdjustment.condition_type" 
                             :options="conditionTypes" 
                             optionLabel="label" 
@@ -379,7 +379,7 @@
                 </div>
                 <div class="col-6">
                     <FloatLabel>
-                        <label for="adjustmentValue">Adjustment Value *</label>
+                        <label for="adjustmentValue">調整値 *</label>
                         <div v-if="editAdjustment.adjustment_type !== 'percentage'">
                             <InputNumber v-model="editAdjustment.adjustment_value" 
                                 mode="currency" 
@@ -402,10 +402,9 @@
                 </div>                
                 <div class="col-6">                    
                     <FloatLabel>
-                        <label for="conditionValue">Condition Value</label>
+                        <label for="conditionValue">条件</label>
                         <MultiSelect  
-                            v-model="selectedEditConditions"
-                            placeholder="Condition Value"
+                            v-model="selectedEditConditions"                            
                             :options="conditionValues" 
                             optionLabel="label" 
                             optionValue="value"
@@ -532,9 +531,9 @@
                 date_end: null,
             });            
             const adjustmentTypes = [
-                { label: 'Base Rate', value: 'base_rate' },
-                { label: 'Percentage', value: 'percentage' },
-                { label: 'Flat Fee', value: 'flat_fee' },
+                { label: '基本料金', value: 'base_rate' },
+                { label: 'パーセント', value: 'パーセント' },
+                { label: '定額料金', value: 'flat_fee' },
             ];
             const conditionTypes = [
                 { label: 'No Restriction', value: 'no_restriction' },

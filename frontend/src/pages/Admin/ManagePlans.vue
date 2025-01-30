@@ -423,8 +423,8 @@
       });
       
       const sb_options = ref([
-        { label: 'Room', value: 'per_room' },
-        { label: 'Person', value: 'per_person' },
+        { label: '部屋', value: 'per_room' },
+        { label: '１人当たり', value: 'per_person' },
       ]);
 
       const loading = ref(false);

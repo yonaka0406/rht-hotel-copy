@@ -12,19 +12,19 @@
               icon="pi pi-pencil" 
               class="p-button-text p-button-sm" 
               @click="editHotel(slotProps.data)"
-              v-tooltip="'Edit Hotel'"
+              v-tooltip="'ホテル編集'"
             />
             <Button 
               icon="pi pi-tag" 
               class="p-button-text p-button-sm" 
               @click="editRoomTypes(slotProps.data)" 
-              v-tooltip="'Edit Room Types'"
+              v-tooltip="'部屋タイプ編集'"
             />
             <Button 
               icon="pi pi-eye" 
               class="p-button-text p-button-sm" 
               @click="editRooms(slotProps.data)" 
-              v-tooltip="'View Rooms'"
+              v-tooltip="'部屋表示'"
             />
           </template>
         </Column>
@@ -97,12 +97,12 @@
         </Column>
       </DataTable>
       <template #footer>
-        <Button label="Save Changes" icon="pi pi-check" @click="saveRoomTypes" class="p-button-success p-button-text p-button-sm" />
+        <Button label="保存" icon="pi pi-check" @click="saveRoomTypes" class="p-button-success p-button-text p-button-sm" />
         <Button label="閉じる" icon="pi pi-times" @click="roomTypesDialogVisible = false" class="p-button-danger p-button-text p-button-sm" />
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="roomTypeDialog" :modal="true" header="Add Room Type" :style="{ width: '450px' }" class="p-fluid">
+    <Dialog v-model:visible="roomTypeDialog" :modal="true" header="部屋タイプ追加" :style="{ width: '450px' }" class="p-fluid">
       <div class="flex flex-col gap-4">
         <div class="flex flex-col">
           <label for="name" class="font-medium mb-2 block">部屋タイプ名 *</label>
@@ -218,7 +218,7 @@
       </Accordion>
 
       <template #footer>
-        <Button label="Save Changes" icon="pi pi-check" @click="saveRoomChanges" class="p-button-success p-button-text p-button-sm" />
+        <Button label="保存" icon="pi pi-check" @click="saveRoomChanges" class="p-button-success p-button-text p-button-sm" />
         <Button label="閉じる" icon="pi pi-times" @click="roomsDialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />
       </template>      
     </Dialog>
