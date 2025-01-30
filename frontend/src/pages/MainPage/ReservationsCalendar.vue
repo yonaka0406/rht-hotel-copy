@@ -5,12 +5,12 @@
         <table class="table-auto w-full mb-2">
           <thead>
             <tr>              
-              <th class="px-4 py-2 text-center font-bold bg-white sticky top-0 left-0 z-20">日付</th>
+              <th class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky top-0 left-0 z-20">日付</th>
 
               <th
                 v-for="(room, roomIndex) in selectedHotelRooms"
                 :key="roomIndex"
-                class="px-4 py-2 text-center sticky top-0 bg-white z-10"
+                class="px-2 py-2 text-center bg-white aspect-square w-32 h-16 sticky top-0 z-10"
               > 
                   {{ room.room_type_name }} <br/>
                   {{ room.room_number }}
@@ -19,7 +19,7 @@
           </thead>
           <tbody>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
-              <td class="px-4 py-2 text-center font-bold bg-white sticky left-0 z-10">
+              <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">
                 {{ date }}
               </td>
               <td
@@ -39,7 +39,7 @@
                     'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
                     'cursor-pointer': true,
                 }"
-                class="px-4 py-2 text-center text-xs"                
+                class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis"
               >
                 <div 
                   v-if="isRoomReserved(room.room_id, date)"
