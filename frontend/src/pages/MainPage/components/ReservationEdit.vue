@@ -9,18 +9,25 @@
                     v-if="editReservationDetails && editReservationDetails.length > 0"
                     class="grid grid-cols-2 gap-2 gap-y-4"
                 >
-                    <div class="field flex flex-col">予約者：<br/>{{ editReservationDetails[0].client_name }}</div>
+                    <div class="field flex flex-col">                        
+                        <div class="flex items-center justify-between mr-10">                       
+                        <p>予約者：</p>
+                        <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
+                        </div>
+                        <span>{{ editReservationDetails[0].client_name }}</span>
+                    </div>
+
                     <div class="field flex flex-col" >
-                        人数： <br/> {{ editReservationDetails[0].reservation_number_of_people }}
-                        <i class="pi pi-user ml-1"></i>
+                        <p>人数：</p>
+                        <span>{{ editReservationDetails[0].reservation_number_of_people }} <i class="pi pi-user ml-1"></i></span>
                     </div>
                     <div class="field flex flex-col">
-                        チェックイン： <br/> {{ editReservationDetails[0].check_in }} 
-                        <i class="pi pi-arrow-down-right ml-1"></i>
+                        <p>チェックイン：</p>
+                        <span>{{ editReservationDetails[0].check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
                     </div>
                     <div class="field flex flex-col">
-                        チェックアウト： <br/> {{ editReservationDetails[0].check_out }} 
-                        <i class="pi pi-arrow-up-right ml-1"></i>
+                        <p>チェックアウト：</p>
+                        <span>{{ editReservationDetails[0].check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>
                     </div>
                     <div class="field flex flex-col col-span-2">
                         ステータス： {{ reservationStatus }}
@@ -208,9 +215,26 @@
          
             </div>
             <template #footer>
-                <Button label="Apply" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
+                <Button label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
+        </Dialog>
+
+        <!-- Change Client Dialog -->
+        <Dialog 
+            v-model:visible="changeClientDialogVisible" 
+            :header="'顧客変更'" 
+            :closable="true"
+            :modal="true"
+            :style="{ width: '600px' }"
+        >
+            <ClientEdit
+                v-if="selectedClient"
+                :client_id="selectedClient"                
+            />
+            <template #footer>                
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeClientDialog" />                
+            </template>  
         </Dialog>
 
     </div>
@@ -222,9 +246,10 @@ import { useRouter } from 'vue-router';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from "primevue/useconfirm";
 
-import { useHotelStore } from '../../../composables/useHotelStore';
+import { useHotelStore } from '@/composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
+import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
 
 import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
@@ -246,6 +271,7 @@ export default {
     },
     name: "ReservationEdit",
     components: { 
+        ClientEdit,
         Panel,  
         Card,
         Dialog,
@@ -283,6 +309,8 @@ export default {
             { label: 'Sunday', value: 'sun' },
         ];
         const bulkEditDialogVisible = ref(false);
+        const changeClientDialogVisible = ref(false);
+        const selectedClient = ref(null);        
         const selectedGroup = ref(null);
         const selectedPlan = ref(null);
         const selectedDays = ref(daysOfWeek);
@@ -414,7 +442,7 @@ export default {
             targetRoom.value = null;
             numberOfPeopleToMove.value = 0;
             
-        };
+        };        
 
         const applyChanges = async () => {
             // Map selectedDays to a set of day values for efficient comparison
@@ -596,6 +624,14 @@ export default {
             }
         };
 
+        const openChangeClientDialog = () => {
+            changeClientDialogVisible.value = true;
+        };
+
+        const closeChangeClientDialog = () => {
+            changeClientDialogVisible.value = false;
+        };
+
         const allHavePlan = (group) => {
             return group.details.every(
                 (detail) => detail.plans_global_id || detail.plans_hotel_id
@@ -625,23 +661,24 @@ export default {
 
         // Fetch reservation details on mount
         onMounted(async () => {
-            //await fetchReservation(props.reservation_id);
-            
+            //await fetchReservation(props.reservation_id);            
         });
 
         // Watch
-        watch(() => props.reservation_id, async (newReservationId, oldReservationId) => {
+        watch(() => props.reservation_id, async (newReservationId, oldReservationId) => {            
             if (newReservationId !== oldReservationId) {
                 //console.log("reservation_id changed:", newReservationId);
                 await fetchReservation(newReservationId);
                 console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
-                await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+                await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);                
             }
         });            
         watch(editReservationDetails, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 console.log('editReservationDetails changed:', newValue);
                 fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+                selectedClient.value = editReservationDetails.value[0].client_id;
+                console.log('selectedClient.value:', selectedClient.value);
             }
         }, { deep: true });
         watch(groupedRooms, (newValue, oldValue) => {
@@ -722,6 +759,8 @@ export default {
             groupedRooms,
             formattedGroupDetails,
             bulkEditDialogVisible,
+            changeClientDialogVisible,
+            selectedClient,
             selectedGroup,
             selectedPlan,
             selectedDays,
@@ -740,6 +779,8 @@ export default {
             openBulkEditDialog,
             closeBulkEditDialog,
             applyChanges,
+            openChangeClientDialog,
+            closeChangeClientDialog,
             allHavePlan,
         };
     },    

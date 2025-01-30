@@ -361,9 +361,9 @@
         { label: '個人', value: 'natural' },
       ];
       const genderOptions = [
-        { label: 'Male', value: 'male' },
-        { label: 'Female', value: 'female' },
-        { label: 'Other', value: 'other' },
+        { label: '男性', value: 'male' },
+        { label: '女性', value: 'female' },
+        { label: 'その他', value: 'other' },
       ];
       const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       const isValidEmail = ref(true);
