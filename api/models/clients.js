@@ -9,7 +9,7 @@ const transliterateKanaToRomaji = async (kanaString) => {
     .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)); //convert half width katakana to half width
 
   let romaji = toRomaji(halfWidthString);
-  console.log('Kana $1 became $2',[kanaString,romaji]);
+  //console.log('Kana $1 became $2',[kanaString,romaji]);
 
   // Capitalize the first letter and return the result  
   romaji = romaji
@@ -45,9 +45,9 @@ const processNameString = async (nameString) => {
   let nameKanji = null;
 
   if(halfKanaRegex.test(nameString)){ 
-    console.log('Half-width kana provided: ', nameString);
+    //console.log('Half-width kana provided: ', nameString);
     nameKana = toFullWidthKana(nameString);
-    console.log('Half-width kana converted: ', nameKana);
+    //console.log('Half-width kana converted: ', nameKana);
   };
 
   if (kanjiRegex.test(nameString)) {
@@ -77,7 +77,7 @@ const processNameString = async (nameString) => {
       .join(' ');
   }
 
-  console.log([name, nameKana, nameKanji]);
+  //console.log([name, nameKana, nameKanji]);
 
   return { name, nameKana, nameKanji };
 }
