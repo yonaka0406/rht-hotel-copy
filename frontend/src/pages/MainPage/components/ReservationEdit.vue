@@ -21,34 +21,81 @@
                         <p>人数：</p>
                         <span>{{ editReservationDetails[0].reservation_number_of_people }} <i class="pi pi-user ml-1"></i></span>
                     </div>
+
                     <div class="field flex flex-col">
                         <p>チェックイン：</p>
                         <span>{{ editReservationDetails[0].check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
                     </div>
+
                     <div class="field flex flex-col">
                         <p>チェックアウト：</p>
                         <span>{{ editReservationDetails[0].check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>
                     </div>
+
                     <div class="field flex flex-col">
                         ステータス： {{ reservationStatus }}
                     </div>
+
                     <div class="field flex flex-col">
                         更新日時： {{ formatDateTime(updatedDateTime) }}
-                    </div>                    
-                    <div class="field flex flex-col">
-                        <Button 
-                            label="仮予約として保存" 
-                            class="p-button-info" 
-                            :disabled="!allRoomsHavePlan"
-                            @click="updateReservationStatus('provisory')"
-                        /> 
                     </div>
-                    <div class="field flex flex-col">
-                        <Button 
-                            label="確定予約として保存" 
-                            :disabled="!allRoomsHavePlan"
-                            @click="updateReservationStatus('confirmed')"
-                        /> 
+
+                    <div class="field flex flex-col col-span-2">
+                        
+                        <div class="grid grid-cols-4 gap-x-6">
+                            <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
+                                <Button 
+                                    label="仮予約として保存"                                     
+                                    severity="info"
+                                    :disabled="!allRoomsHavePlan"
+                                    @click="updateReservationStatus('provisory')"
+                                /> 
+                            </div>
+                            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" class="field flex flex-col">
+                                <Button 
+                                    label="確定予約として保存" 
+                                    severity="success"
+                                    :disabled="!allRoomsHavePlan"
+                                    @click="updateReservationStatus('confirmed')"
+                                /> 
+                            </div>
+                            <div v-if="reservationStatus === '確定'" class="field flex flex-col">
+                                <Button 
+                                    label="チェックイン" 
+                                    severity="success"
+                                    icon="pi pi-sign-in"
+                                    fluid
+                                    @click="updateReservationStatus('checked_in')"
+                                />
+                            </div>
+                            <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
+                                <Button 
+                                    label="チェックアウト" 
+                                    severity="warn"
+                                    icon="pi pi-eject"
+                                    fluid
+                                    @click="updateReservationStatus('checked_out')"
+                                />
+                            </div> 
+                            <div v-if="reservationStatus === '仮予約' || reservationStatus === '確定'" class="field flex flex-col">
+                                <Button 
+                                    label="キャンセル" 
+                                    severity="contrast"
+                                    :disabled="!allRoomsHavePlan"
+                                    @click="updateReservationStatus('cancelled')"
+                                /> 
+                            </div>
+                            
+                            <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
+                                <Button 
+                                    label="保留中予約を削除" 
+                                    severity="danger"
+                                    fluid
+                                    @click="deleteReservation"
+                                />
+                                <ConfirmPopup />
+                            </div>                 
+                        </div>
                     </div>
                     
                 </div>
@@ -255,7 +302,7 @@ import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
 import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
 
-import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel } from 'primevue';
+import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
 import { DataTable, Column } from 'primevue';
 import { FloatLabel, InputNumber, Select, MultiSelect, Button } from 'primevue';
@@ -284,6 +331,7 @@ export default {
         Tab,
         TabPanels,
         TabPanel,
+        ConfirmPopup,
         Accordion,
         AccordionPanel,
         AccordionHeader,
@@ -300,8 +348,9 @@ export default {
         const router = useRouter();
         const socket = ref(null);
         const toast = useToast();
+        const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus } = useReservationStore();
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation } = useReservationStore();
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
@@ -412,6 +461,17 @@ export default {
         };
 
         const updateReservationStatus = async (status) => {
+            console.log('updateReservationStatus');
+            console.log('allRoomsHavePlan:',allRoomsHavePlan.value);
+            if (!allRoomsHavePlan.value) {                                
+                toast.add({ 
+                  severity: 'warn', 
+                  summary: 'Warn', 
+                  detail: '部屋の予約にプランを追加してください。', life: 3000 
+                });
+                return; 
+            }            
+
             try {
                 await setReservationStatus(status); // Call the setReservationStatus from your store
                 await fetchReservation(props.reservation_id); // Fetch the updated reservation details
@@ -419,6 +479,42 @@ export default {
                 console.error('Error updating and fetching reservation:', error);
                 // Handle the error, e.g., show a toast message
             }
+        };
+
+        const deleteReservation = () => {
+            const reservation_id = editReservationDetails.value[0].reservation_id;
+            confirm.require({
+                message: `保留中予約を削除してもよろしいですか?`,
+                header: 'Delete Confirmation',                    
+                icon: 'pi pi-info-circle',
+                acceptClass: 'p-button-danger',
+                acceptProps: {
+                    label: '削除'
+                },
+                accept: () => {
+                    deleteHoldReservation(reservation_id);                    
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: `保留中予約削除されました。`,
+                        life: 3000
+                    });
+                    goToNewReservation();
+                },
+                rejectProps: {
+                    label: 'キャンセル',
+                    severity: 'secondary',
+                    outlined: true
+                },
+                reject: () => {
+                    toast.add({
+                        severity: 'info',
+                        summary: '削除キャンセル',
+                        detail: '削除するのをキャンセルしました。',
+                        life: 3000
+                    });
+                }
+            });
         };
 
         function handleTabChange (newTabValue) {
@@ -639,7 +735,7 @@ export default {
                 closeBulkEditDialog();
 
                 // Provide feedback to the user (optional)                
-                toast.add({ severity: 'success', summary: 'Success', detail: 'Reservation details updated successfully!', life: 3000 });
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
                 
             } catch (error) {
                 console.error('Failed to apply changes:', error);                
@@ -812,6 +908,7 @@ export default {
             availableRooms,
             updatePlanAddOns,
             updateReservationStatus,
+            deleteReservation,
             handleTabChange,
             openBulkEditDialog,
             closeBulkEditDialog,

@@ -610,6 +610,23 @@ const updateRoomByCalendar = async (roomData) => {
 
 // Delete
 
+const deleteHoldReservationById = async (reservation_id) => {  
+  const query = `
+      DELETE FROM reservations
+      WHERE id = $1 AND status = 'hold'
+      RETURNING *;
+  `;
+  const values = [reservation_id];
+  
+  try{
+    const result = await pool.query(query, values);
+    return result.rowCount;
+  } catch (err) {
+    console.error('Error deleting reservation:', err);
+    throw new Error('Database error');
+  }   
+};
+
 const deleteReservationAddonsByDetailId = async (reservation_detail_id) => {  
   const query = `
       DELETE FROM reservation_addons
@@ -624,8 +641,7 @@ const deleteReservationAddonsByDetailId = async (reservation_detail_id) => {
   } catch (err) {
     console.error('Error deleting reservation addon:', err);
     throw new Error('Database error');
-  }
-   
+  }   
 };
 
 module.exports = {    
@@ -643,6 +659,7 @@ module.exports = {
     updateReservationStatus,
     updateReservationResponsible,
     updateRoomByCalendar,
+    deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
 };
 

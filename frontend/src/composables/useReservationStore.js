@@ -288,6 +288,32 @@
             }
         };
 
+        // Delete
+
+        const deleteHoldReservation = async (id) => {
+            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/delete/hold/${id}`;
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+        
+                if (!response.ok) {
+                    throw new Error('Failed to delete hold reservation');
+                }
+        
+                return await response.json();                
+            } catch (error) {
+                console.error('Error deleting hold reservation:', error);
+                throw error;
+            }
+        };
+
 
     return {
         availableRooms,
@@ -304,6 +330,7 @@
         fetchReservation,
         fetchAvailableRooms,
         fetchReservedRooms,
-        fetchMyHoldReservations,        
+        fetchMyHoldReservations, 
+        deleteHoldReservation,       
     };
 }

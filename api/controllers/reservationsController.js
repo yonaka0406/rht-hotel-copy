@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
   addReservationHold, addReservationDetail, addReservationAddon, updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar,
-  deleteReservationAddonsByDetailId
+  deleteHoldReservationById, deleteReservationAddonsByDetailId
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -473,6 +473,19 @@ const editRoomFromCalendar = async (req, res) => {
   }
 };
 
+// DELETE
+const deleteHoldReservation = async (req, res) => {
+  const { id } = req.params;
+  try{
+    const updatedReservation = await deleteHoldReservationById(id);
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error deletin hold reservation:', err);
+    res.status(500).json({ error: 'Failed to delete reservation' });
+  }
+}
+
+
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail, editReservationStatus, editReservationResponsible, editRoomFromCalendar };
+  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };
