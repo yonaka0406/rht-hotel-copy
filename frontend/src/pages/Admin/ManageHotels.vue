@@ -521,7 +521,7 @@
 
   const deleteRoomType = async (roomType) => {
     confirm.require({
-      message: 'Are you sure you want to delete this room type?',
+      message: 'この部屋タイプを削除してもよろしいですか?',
       header: 'Delete Confirmation',
       icon: 'pi pi-exclamation-triangle',
       accept: async () => {

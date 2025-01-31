@@ -513,7 +513,7 @@
                 toast.add({ 
                   severity: 'error', 
                   summary: 'Error', 
-                  detail: 'Addon name must be unique', life: 3000 
+                  detail: '雄一アドオン名はを使ってください。', life: 3000 
                 });
                 return;
               }

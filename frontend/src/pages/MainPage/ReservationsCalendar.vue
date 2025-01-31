@@ -33,8 +33,8 @@
                 :class="{                    
                     'bg-yellow-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'hold',
                     'bg-blue-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'provisory',
-                    'bg-green-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'confirmed',
-                    'bg-green-700': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_in',
+                    'bg-green-50': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'confirmed',
+                    'bg-lime-200': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_in',
                     'bg-gray-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_out',
                     'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
                     'cursor-pointer': true,
