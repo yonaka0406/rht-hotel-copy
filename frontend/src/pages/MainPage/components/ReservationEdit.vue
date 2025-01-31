@@ -29,9 +29,12 @@
                         <p>チェックアウト：</p>
                         <span>{{ editReservationDetails[0].check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>
                     </div>
-                    <div class="field flex flex-col col-span-2">
+                    <div class="field flex flex-col">
                         ステータス： {{ reservationStatus }}
                     </div>
+                    <div class="field flex flex-col">
+                        更新日時： {{ formatDateTime(updatedDateTime) }}
+                    </div>                    
                     <div class="field flex flex-col">
                         <Button 
                             label="仮予約として保存" 
@@ -329,12 +332,22 @@ export default {
         });
 
         // Helper
+        const formatDateTime = (dateString) => {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ja-JP', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
         const formatDateWithDay = (date) => {
             const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
             const parsedDate = new Date(date);
             return `${parsedDate.toLocaleDateString(undefined, options)}`;
         };
-
         const formatCurrency = (value) => {
             if (value == null) return '';
             return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
@@ -362,6 +375,14 @@ export default {
                 default:
                 return '不明'; // Or any default value you prefer
             }
+        });
+
+        const updatedDateTime = computed(() => {
+            return editReservationDetails.value.reduce((max, detail) => {
+                const maxLogTime = new Date(Math.max(new Date(detail.reservation_log_time), new Date(detail.reservation_detail_log_time)));
+                console.log('max:', max);
+                return maxLogTime > max ? maxLogTime : max;
+            }, new Date(0));            
         });
 
         // Map group details with formatted date
@@ -767,7 +788,8 @@ export default {
             }
         }, { deep: true });
 
-        return {    
+        return {  
+            formatDateTime,  
             formatCurrency,        
             editReservationDetails,
             groupedRooms,
@@ -784,6 +806,7 @@ export default {
             filteredRooms,
             allRoomsHavePlan,
             reservationStatus,
+            updatedDateTime,
             plans,
             daysOfWeek,
             availableRooms,
