@@ -191,7 +191,7 @@
     },
     setup(props) {
       const toast = useToast();
-      const { clients, fetchClients, createClient, updateClientInfo } = useClientStore();
+      const { clients, fetchClients, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
       const { setReservationClient } = useReservationStore();
 
       const client = ref({});
@@ -296,7 +296,7 @@
         client.value.full_name_key = '';
         client.value.legal_or_natural_person = 'legal';
         client.value.gender = 'other';
-        client.value.date_of_birth = '';
+        client.value.date_of_birth = null;
         client.value.email = '';
         client.value.phone = '';
         client.value.fax = '';
@@ -321,9 +321,9 @@
         
       });
 
-        watch(client, (newValue, oldValue) => {
-            console.log('Client changed:', newValue);
-        }, { deep: true });
+      watch(client, async (newValue, oldValue) => {
+          console.log('Client changed:', newValue);                   
+      }, { deep: true });
       watch(() => client.value.legal_or_natural_person,
         (newValue) => {
           if (newValue === 'legal') {
@@ -336,16 +336,26 @@
         },
       );
       watch(() => client.value.display_name,
-        (newValue, oldValue) => {
+        async (newValue, oldValue) => {
           //console.log('Changed name:', newValue); 
           //console.log('Selected client:', client.value);
           if(client.value && oldValue !== undefined){   
             const selectedName = client.value.name_kanji || client.value.name;
             //console.log('Selected name:', selectedName); 
+            const clientName = await fetchClientNameConversion(client.value.display_name);
+            
             if (newValue && newValue !== oldValue && newValue !== selectedName) {            
               // Reset fields if name changes and a client was previously selected
               console.log('Resetting client details'); 
               resetClient();
+              console.log('clientName:', clientName);
+              
+              client.value.name = clientName.name;
+              console.log('clientName name:', clientName.name);
+              client.value.name_kana = clientName.nameKana;
+              console.log('clientName nameKana:', clientName.nameKana);
+              client.value.name_kanji = clientName.nameKanji;
+              console.log('clientName nameKanji:', clientName.nameKanji);
             }
           }
         },

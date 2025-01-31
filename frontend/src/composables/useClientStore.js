@@ -42,6 +42,30 @@ export function useClientStore() {
         }
     };
 
+    // Fetch client by name conversion
+    const fetchClientNameConversion = async (nameString) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/name/${nameString}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch client by name');
+            }
+
+            const clientName = await response.json();            
+            return clientName;
+        } catch (error) {
+            console.error('Failed to fetch client by name', error);
+            throw error;
+        }
+    };
+
     const createClient = async (clientFields) => {        
         try {
           const authToken = localStorage.getItem('authToken');
@@ -95,6 +119,7 @@ export function useClientStore() {
         selectedClient,
         fetchClients,
         fetchClient,
+        fetchClientNameConversion,
         createClient,
         updateClientInfo,
     };

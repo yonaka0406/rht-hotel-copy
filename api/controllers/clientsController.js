@@ -1,11 +1,25 @@
 const pool = require('../config/database');
-const { getAllClients, addClientByName, addNewClient, editClient } = require('../models/clients');
+const { processNameString, getAllClients, addClientByName, addNewClient, editClient } = require('../models/clients');
 
 // GET
   const getClients = async (req, res) => {
     try {
       const clients = await getAllClients();
       res.json(clients);
+    } catch (error) {
+      console.error('Error getting clients:', error);
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+  const getConvertedName = async (req, res) => {
+    const { name } = req.params;
+    if (!name) {
+      return res.status(400).json({ error: 'getConvertedName: name is required' });
+    }
+    try {
+      const convertedName = await processNameString(name);
+      res.json(convertedName);
     } catch (error) {
       console.error('Error getting clients:', error);
       res.status(500).json({ error: error.message });
@@ -65,4 +79,4 @@ const updateClient = async (req, res) => {
   }
 };
 
-module.exports = { getClients, createClientBasic, createClient, updateClient };
+module.exports = { getClients, getConvertedName, createClientBasic, createClient, updateClient };

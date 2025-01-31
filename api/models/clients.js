@@ -20,6 +20,10 @@ const transliterateKanaToRomaji = async (kanaString) => {
 };
 
 const processNameString = async (nameString) => {
+  if (!nameString) {
+    throw new Error('processNameString: nameString is required');
+  }
+
   const kanjiRegex = /[\u4E00-\u9FAF]/; // Kanji
   const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Kana
   const halfKanaRegex = /[\uFF65-\uFF9F]/; // Half-width Kana
@@ -49,6 +53,7 @@ const processNameString = async (nameString) => {
   if (kanjiRegex.test(nameString)) {
     nameKanji = nameString;
     nameKana = await convertText(nameString);
+    nameKana = toKatakana(nameKana);
     name = await transliterateKanaToRomaji(nameKana);
   } else if (kanaRegex.test(nameString) || halfKanaRegex.test(nameString)) {
     const fullKana = halfKanaRegex.test(nameString)
@@ -198,6 +203,7 @@ const editClient = async (clientId, updatedFields, user_id) => {
 };
 
 module.exports = {
+  processNameString,
   getAllClients,
   addClientByName,
   addNewClient,
