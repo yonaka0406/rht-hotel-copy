@@ -95,14 +95,14 @@
       validateEmail() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         this.emailError = !this.email 
-          ? 'Email is required' 
+          ? 'メールアドレスは必須です。' 
           : !emailRegex.test(this.email) 
-          ? 'Invalid email format' 
+          ? '無効なメール形式' 
           : null;
       },
       validatePassword() {
         this.passwordError = !this.password 
-          ? 'Password is required' 
+          ? 'パスワードが必要です。' 
           : null;
       },
       async handleLogin() {
@@ -136,7 +136,7 @@
           // Handle different kinds of errors
           if (!err.response) {
             // Network or server error
-            this.error = 'Network error. Please check your connection.';
+            this.error = 'ネットワークエラーです。接続を確認してください。';
           } else if (err.response.status === 401) {
             // Authentication errors
             this.error = err.response.data?.error || '認証が無効です。';
@@ -148,19 +148,19 @@
             });
           } else {
             // General error message
-            this.error = 'An unexpected error occurred. Please try again.';
+            this.error = '予期しないエラーが発生しました。もう一度お試しください。';
           }
           
           // Handle different kinds of errors
           if (!err.response) {
             // Network or server error
-            this.error = 'Network error. Please check your connection.';
+            this.error = 'ネットワークエラーです。接続を確認してください。';
           } else if (err.response.status === 401) {
             // Authentication errors
-            this.error = err.response.data?.error || 'Invalid credentials.';
+            this.error = err.response.data?.error || '資格情報が無効です。';
           } else {
             // General error message
-            this.error = 'An unexpected error occurred. Please try again.';
+            this.error = '予期しないエラーが発生しました。もう一度お試しください。';
           }
           
           // Set specific field errors based on backend response
