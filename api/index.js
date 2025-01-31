@@ -59,11 +59,9 @@ const listenClient = new Pool({
 const listenForTableChanges = async () => {
   const client = await listenClient.connect();
   
-  client.on('notification', (msg) => {
-    //console.log('Notification received:', msg); // Log the notification
-    if (msg.channel === 'logs_reservation_changed') {
-      //console.log('Received logs_reservation_changed notification:', msg.payload);
-      io.emit('tableUpdate', msg.payload); // Emit to clients
+  client.on('notification', (msg) => {    
+    if (msg.channel === 'logs_reservation_changed') {      
+      io.emit('tableUpdate', 'Reservation update detected'); // Emit to clients
     }
   });
 

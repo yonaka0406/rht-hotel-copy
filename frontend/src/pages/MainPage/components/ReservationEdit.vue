@@ -298,7 +298,7 @@ export default {
         const socket = ref(null);
         const toast = useToast();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms, setReservationId, setReservationStatus } = useReservationStore();
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus } = useReservationStore();
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
@@ -667,14 +667,15 @@ export default {
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
             socket.value.on('connect', () => {
-            console.log('Connected to server');
+                console.log('Connected to server');
             });
 
-            socket.value.on('tableUpdate', (data) => {
-            // Update the reservations data in your component
-            console.log('Received updated data:', data);
-            // fetchReservations(); // Call your fetch function here
-            });         
+            socket.value.on('tableUpdate', async (data) => {
+                console.log('Reservation updated detected in ReservationEdit');
+                
+                fetchReservation(props.reservation_id);
+                
+            });
         });
 
         // Watch

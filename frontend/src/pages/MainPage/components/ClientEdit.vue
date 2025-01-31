@@ -162,6 +162,7 @@
   <script>
   import { ref, watch, computed, onMounted } from 'vue';
   import { useRoute } from 'vue-router';
+  import { useToast } from 'primevue/usetoast';
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
   import { Card } from 'primevue';  
@@ -189,6 +190,7 @@
       },
     },
     setup(props) {
+      const toast = useToast();
       const { clients, fetchClients, createClient, updateClientInfo } = useClientStore();
       const { setReservationClient } = useReservationStore();
 
@@ -275,15 +277,13 @@
         if (isClientSelected.value) {
           client.value.date_of_birth = formatDate(new Date(client.value.date_of_birth));
           await updateClientInfo(client.value.id, client.value);
-          await setReservationClient(client.value.id);
-          resetClient();
+          await setReservationClient(client.value.id);          
           toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
         } else {
           const newClient = await createClient(client.value);
           console.log(newClient);
           console.log('New client id:', newClient.id);
-          await setReservationClient(newClient.id);
-          resetClient();
+          await setReservationClient(newClient.id);          
           toast.add({ severity: 'success', summary: 'Success', detail: '新規予約者が登録されました。', life: 3000 });
         }
       };
