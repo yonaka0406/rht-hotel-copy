@@ -42,10 +42,60 @@ export function useClientStore() {
         }
     };
 
+    const createClient = async (clientFields) => {        
+        try {
+          const authToken = localStorage.getItem('authToken');
+          const response = await fetch('/api/client/new', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(clientFields),
+          });
+      
+          if (!response.ok) {
+            throw new Error('Failed to create client');
+          }
+      
+          const newClient = await response.json();
+          clients.value.push(newClient);
+          return newClient;
+        } catch (error) {
+          console.error('Failed to create client', error);
+          throw error;
+        }
+      };
+
+    const updateClientInfo = async (client_id, updatedFields) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/update/${client_id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updatedFields),
+            });
+        
+            if (!response.ok) {
+            throw new Error('Failed to update client');
+            }
+        
+            const updatedClient = await response.json();
+            selectedClient.value = updatedClient;
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
+    };
+
     return {
         clients,
         selectedClient,
         fetchClients,
         fetchClient,
+        createClient,
+        updateClientInfo,
     };
 }

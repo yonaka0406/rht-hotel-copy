@@ -429,6 +429,32 @@ const updateReservationStatus = async (reservationData) => {
   }
 };
 
+const updateReservationResponsible = async (id, updatedFields, user_id) => {  
+
+  const query = `
+      UPDATE reservations
+      SET
+        reservation_client_id = $1,          
+        updated_by = $2          
+      WHERE id = $3::UUID AND hotel_id = $4
+      RETURNING *;
+  `;
+  const values = [
+    updatedFields.client_id,    
+    user_id,
+    id,
+    updatedFields.hotel_id,
+  ];  
+
+  try {
+      const result = await pool.query(query, values);
+      return result.rows[0];
+  } catch (err) {
+      console.error('Error updating reservation:', err);
+      throw new Error('Database error');
+  }
+};
+
 const updateRoomByCalendar = async (roomData) => {
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, updated_by } = roomData;
 
@@ -593,6 +619,7 @@ module.exports = {
     addReservationClient,
     updateReservationDetail,
     updateReservationStatus,
+    updateReservationResponsible,
     updateRoomByCalendar,
     deleteReservationAddonsByDetailId,
 };

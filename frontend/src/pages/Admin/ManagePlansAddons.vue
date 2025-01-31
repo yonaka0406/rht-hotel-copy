@@ -118,6 +118,8 @@
                             <FloatLabel>
                                 <label for="dateStart">開始日</label>                
                                 <DatePicker v-model="newAddon.date_start" 
+                                    :showIcon="true" 
+                                    iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"
                                     required 
@@ -128,6 +130,8 @@
                             <FloatLabel>
                                 <label for="dateEnd">終了日</label>
                                 <DatePicker v-model="newAddon.date_end"
+                                    :showIcon="true" 
+                                    iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"  
                                 />
@@ -168,6 +172,8 @@
                             <FloatLabel>
                                 <label for="dateStart">開始日</label>                
                                 <DatePicker v-model="editAddon.date_start" 
+                                    :showIcon="true" 
+                                    iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"
                                     required 
@@ -178,6 +184,8 @@
                             <FloatLabel>
                                 <label for="dateEnd">終了日</label>
                                 <DatePicker v-model="editAddon.date_end"
+                                    :showIcon="true" 
+                                    iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
                                     class="w-full"  
                                 />

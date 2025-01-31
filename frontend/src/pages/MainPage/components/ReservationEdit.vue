@@ -243,6 +243,7 @@
 <script>
 import { ref, watch, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';  
+import { io } from 'socket.io-client';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from "primevue/useconfirm";
 
@@ -294,6 +295,7 @@ export default {
     },
     setup(props) {
         const router = useRouter();
+        const socket = ref(null);
         const toast = useToast();
         const { selectedHotelId } = useHotelStore();
         const { availableRooms, reservationDetails, fetchReservation, fetchAvailableRooms, setReservationId, setReservationStatus } = useReservationStore();
@@ -661,7 +663,18 @@ export default {
 
         // Fetch reservation details on mount
         onMounted(async () => {
-            //await fetchReservation(props.reservation_id);            
+            // Establish Socket.IO connection
+            socket.value = io(import.meta.env.VITE_BACKEND_URL);
+
+            socket.value.on('connect', () => {
+            console.log('Connected to server');
+            });
+
+            socket.value.on('tableUpdate', (data) => {
+            // Update the reservations data in your component
+            console.log('Received updated data:', data);
+            // fetchReservations(); // Call your fetch function here
+            });         
         });
 
         // Watch

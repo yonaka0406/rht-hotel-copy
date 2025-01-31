@@ -19,6 +19,8 @@
             <DatePicker 
               v-model="selectedDates"
               selection-mode="range"
+              :showIcon="true" 
+              iconDisplay="input" 
               dateFormat="yy-mm-dd"
               fluid           
               @update:model-value="onDateChange"

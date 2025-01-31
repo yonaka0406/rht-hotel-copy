@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { getAllClients, addClientByName } = require('../models/clients');
+const { getAllClients, addClientByName, addNewClient, editClient } = require('../models/clients');
 
 // GET
   const getClients = async (req, res) => {
@@ -37,4 +37,32 @@ const { getAllClients, addClientByName } = require('../models/clients');
     }
   };
 
-module.exports = { getClients, createClientBasic };
+  const createClient = async (req, res) => {
+    const clientFields = req.body;
+    const user_id = req.user.id;
+
+    try {
+      const newClient = await addNewClient(user_id, clientFields);
+      res.json(newClient); 
+    } catch (err) {
+      console.error('Error creating client:', err);
+      res.status(500).json({ error: 'Failed to create client' });
+    }
+  };
+
+// PUT
+const updateClient = async (req, res) => {
+  const clientId = req.params.id;
+  const updatedFields = req.body;
+  const user_id = req.user.id;
+
+  try {
+    await editClient(clientId, updatedFields, user_id);
+    res.json({ message: 'Client updated successfully' });
+  } catch (err) {
+    console.error('Error updating client:', err);
+    res.status(500).json({ error: 'Failed to update client' });
+  }
+};
+
+module.exports = { getClients, createClientBasic, createClient, updateClient };

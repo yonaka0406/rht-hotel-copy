@@ -48,6 +48,31 @@
             }
         };
 
+        const setReservationClient = async (client_id) => {
+            try {
+              const authToken = localStorage.getItem('authToken');
+              // Get the hotel_id for the current reservation
+              const hotel_id = await getReservationHotelId(reservationId.value);
+              const response = await fetch(`/api/reservation/update/client/${reservationId.value}`, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `Bearer ${authToken}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ client_id, hotel_id })
+              });
+        
+              if (!response.ok) {
+                throw new Error('Failed to update reservation client');
+              }
+        
+              const updatedReservation = await response.json();
+              reservationDetails.value = updatedReservation;
+            } catch (error) {
+              console.error('Error updating reservation client:', error);
+            }
+          };
+
         const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people) => {            
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -270,6 +295,7 @@
         reservationDetails,
         setReservationId,
         setReservationStatus,
+        setReservationClient,
         setCalendarChange,
         getReservationId,
         getReservationHotelId,

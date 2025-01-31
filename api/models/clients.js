@@ -122,7 +122,84 @@ const addClientByName = async (client) => {
   }
 };
 
+const addNewClient = async (user_id, client) => {  
+  if(!client.name && !client.name_kana && !client.name_kanji){
+    throw new Error('Client name is required');
+  }
+  // At least name or name_kanji must be filled
+  if (!client.name && !client.name_kanji) {
+    client.name = client.name_kana;
+  }
+
+  const query = `
+    INSERT INTO clients (
+      name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *;
+  `;
+
+  const values = [
+    client.name,
+    client.name_kana,
+    client.name_kanji,    
+    client.date_of_birth,
+    client.legal_or_natural_person,
+    client.gender,
+    client.email,
+    client.phone,
+    client.fax,
+    user_id,
+    user_id
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the inserted client
+  } catch (err) {
+    console.error('Error adding client:', err);
+    throw new Error('Database error');
+  }
+};
+
+
+const editClient = async (clientId, updatedFields, user_id) => {
+  const query = `
+    UPDATE clients SET
+      name = $1,
+      name_kana = $2,
+      name_kanji = $3,
+      date_of_birth = $4,
+      email = $5,
+      phone = $6,
+      fax = $7,      
+      updated_by = $8
+    WHERE id = $9
+  `;
+
+  const values = [
+    updatedFields.name,
+    updatedFields.name_kana,
+    updatedFields.name_kanji,
+    updatedFields.date_of_birth,
+    updatedFields.email,
+    updatedFields.phone,
+    updatedFields.fax,    
+    user_id,
+    clientId
+  ];
+
+  try {
+    await pool.query(query, values);
+    console.log('Client updated successfully');
+  } catch (err) {
+    console.error('Error updating client:', err);
+    throw err;
+  }
+};
+
 module.exports = {
   getAllClients,
   addClientByName,
+  addNewClient,
+  editClient,
 };

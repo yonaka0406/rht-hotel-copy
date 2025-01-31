@@ -45,6 +45,8 @@
                           <label class="mb-2 font-medium">開業日 *</label>
                           <DatePicker 
                             v-model="hotel.open_date"
+                            :showIcon="true" 
+                            iconDisplay="input" 
                             dateFormat="yy-mm-dd"
                             class="w-full"                            
                             required

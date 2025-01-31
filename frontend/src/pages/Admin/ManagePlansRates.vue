@@ -4,6 +4,8 @@
             <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
                 <h3 class="text-xl font-semibold">日付を選択:</h3>
                 <DatePicker v-model="selectedDate" 
+                    :showIcon="true" 
+                    iconDisplay="input" 
                     class="w-full" 
                     placeholder="Select Date"
                     dateFormat="yy-mm-dd" 
@@ -329,6 +331,8 @@
                     <FloatLabel>
                         <label for="dateStart">開始日</label>                
                         <DatePicker v-model="newAdjustment.date_start" 
+                            :showIcon="true" 
+                            iconDisplay="input" 
                             dateFormat="yy-mm-dd"
                             class="w-full"
                             required 
@@ -339,6 +343,8 @@
                     <FloatLabel>
                         <label for="dateEnd">終了日</label>
                         <DatePicker v-model="newAdjustment.date_end"
+                            :showIcon="true" 
+                            iconDisplay="input" 
                             dateFormat="yy-mm-dd"
                             class="w-full"  
                         />
@@ -417,6 +423,8 @@
                     <FloatLabel>
                         <label for="dateStart">開始日</label>                
                         <DatePicker v-model="editAdjustment.date_start" 
+                            :showIcon="true" 
+                            iconDisplay="input" 
                             dateFormat="yy-mm-dd"
                             class="w-full"
                             required 
@@ -427,6 +435,8 @@
                     <FloatLabel>
                         <label for="dateEnd">終了日</label>
                         <DatePicker v-model="editAdjustment.date_end"
+                            :showIcon="true" 
+                            iconDisplay="input"     
                             dateFormat="yy-mm-dd"
                             class="w-full"  
                         />

@@ -56,15 +56,15 @@
                     <div class="field">
                         
                         <FloatLabel>                            
-                            <label for="date_of_birth">{{ dateOfBirthLabel }}</label>
-                            <InputText 
-                                id="date_of_birth" 
-                                v-model="client.date_of_birth" 
-                                type="date" 
+                            <label for="date_of_birth">生年月日・設立日</label>
+                            
+                            <DatePicker v-model="client.date_of_birth" 
+                                class="w-full"      
+                                :showIcon="true" 
+                                iconDisplay="input"                      
+                                dateFormat="yy-mm-dd" 
                             />
-                        </FloatLabel>
-                        <div v-if="dateOfBirthLabel"></div>
-                        <div v-else class="text-xs m-o p-0">生年月日・設立日</div>
+                        </FloatLabel>                        
                     </div>
                 <!-- Type of person (Legal or Natural) -->
                 <div class="field col-6">
@@ -163,8 +163,9 @@
   import { ref, watch, computed, onMounted } from 'vue';
   import { useRoute } from 'vue-router';
   import { useClientStore } from '@/composables/useClientStore';
+  import { useReservationStore } from '@/composables/useReservationStore';
   import { Card } from 'primevue';  
-  import { FloatLabel, InputText, InputNumber, Select, SelectButton, MultiSelect, AutoComplete, RadioButton, Button } from 'primevue';  
+  import { FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, MultiSelect, AutoComplete, RadioButton, Button } from 'primevue';  
   
   export default {
     name: 'ClientEdit',
@@ -173,6 +174,7 @@
       FloatLabel,
       InputText,
       InputNumber,
+      DatePicker,
       Select,
       SelectButton,
       MultiSelect,
@@ -187,7 +189,8 @@
       },
     },
     setup(props) {
-      const { clients, fetchClients } = useClientStore();
+      const { clients, fetchClients, createClient, updateClientInfo } = useClientStore();
+      const { setReservationClient } = useReservationStore();
 
       const client = ref({});
   
@@ -233,12 +236,12 @@
       const validatePhone = (phone) => {
         isValidPhone.value = phonePattern.test(phone);
       };
-
-      // Compute
-
-        const dateOfBirthLabel = computed(() => {
-            return client.value.date_of_birth ? '生年月日・設立日' : '';
-        });
+      const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
   
       const filterClients = (event) => {
         const query = event.query.toLowerCase();
@@ -255,7 +258,7 @@
         console.log('Selected Client:', selectedClient.value);        
 
         // Update reservationDetails with the selected client's information
-        client.value.client_id = selectedClient.value.id;
+        client.value.id = selectedClient.value.id;
         client.value.display_name = selectedClient.value.name_kanji || selectedClient.value.name;
         client.value.name = selectedClient.value.name;
         client.value.name_kana = selectedClient.value.name_kana;
@@ -269,17 +272,36 @@
       };
   
       const saveClient = async () => {
-        try {
-          if (props.client_id) {
-            await axios.put(`/api/clients/${props.client_id}`, client.value);
-          } else {
-            await axios.post('/api/clients', client.value);
-          }
-          alert('Client saved successfully');
-        } catch (error) {
-          console.error('Error saving client:', error);
-          alert('Error saving client');
+        if (isClientSelected.value) {
+          client.value.date_of_birth = formatDate(new Date(client.value.date_of_birth));
+          await updateClientInfo(client.value.id, client.value);
+          await setReservationClient(client.value.id);
+          resetClient();
+          toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
+        } else {
+          const newClient = await createClient(client.value);
+          console.log(newClient);
+          console.log('New client id:', newClient.id);
+          await setReservationClient(newClient.id);
+          resetClient();
+          toast.add({ severity: 'success', summary: 'Success', detail: '新規予約者が登録されました。', life: 3000 });
         }
+      };
+
+      const resetClient = () => {
+        client.value.id = null;
+        client.value.name = '';
+        client.value.name_kana = '';
+        client.value.name_kanji = '';
+        client.value.full_name_key = '';
+        client.value.legal_or_natural_person = 'legal';
+        client.value.gender = 'other';
+        client.value.date_of_birth = '';
+        client.value.email = '';
+        client.value.phone = '';
+        client.value.fax = '';
+
+        isClientSelected.value = false;
       };
   
       onMounted(async () => { 
@@ -308,7 +330,7 @@
             //console.log('Changed to other');
             client.value.gender = 'other';
           } 
-          if (newValue === 'natural' && client.value.client_id == null){
+          if (newValue === 'natural' && client.value.id == null){
             client.value.gender = 'male';
           }
         },
@@ -323,19 +345,7 @@
             if (newValue && newValue !== oldValue && newValue !== selectedName) {            
               // Reset fields if name changes and a client was previously selected
               console.log('Resetting client details'); 
-              client.value.id = null;
-              client.value.name = '';
-              client.value.name_kana = '';
-              client.value.name_kanji = '';
-              client.value.full_name_key = '';
-              client.value.legal_or_natural_person = 'legal';
-              client.value.gender = 'other';
-              client.value.date_of_birth = '';
-              client.value.email = '';
-              client.value.phone = '';
-              client.value.fax = '';
-
-              isClientSelected.value = false;
+              resetClient();
             }
           }
         },
@@ -354,8 +364,7 @@
         validatePhone,
         isClientSelected,
         selectedClient,
-        filteredClients,
-        dateOfBirthLabel,
+        filteredClients,        
         filterClients,
         onClientSelect,
         saveClient,
