@@ -35,11 +35,11 @@
     </Toolbar>
     
     <!-- Drawer for Notifications -->
-    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="Notifications">
+    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
         <ul v-if="holdReservations.length">
             <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
                 <button @click="goToNewReservationPage(reservation.reservation_id)">
-                    {{ reservation.hotel_id }}<p>Hold Reservation needs attention: </p>
+                    {{ reservation.hotel_name }}<p>保留中予約を完成させてください: </p>
                     {{ reservation.client_name }} @ {{ reservation.check_in }}
                 </button>
                 <Divider />

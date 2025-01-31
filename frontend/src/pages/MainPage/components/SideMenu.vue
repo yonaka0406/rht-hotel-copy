@@ -119,7 +119,7 @@
                 <ul v-if="holdReservations.length">
                     <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
                         <button @click="goToNewReservationPage(reservation.reservation_id)">
-                            <p>保留中予約には注意が必要です：</p>
+                            <p>保留中予約を完成させてください:</p>
                             {{ reservation.client_name }} @ {{ reservation.check_in }}
                         </button>
                         <Divider />

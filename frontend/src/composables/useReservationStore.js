@@ -252,6 +252,7 @@
                     const errorText = await response.text();
                     //console.error("fetchMyHoldReservations API Error:", response.status, response.statusText, errorText);
                     //throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+                    holdReservations.value = [];
                 }
 
                 const data = await response.json();
@@ -260,12 +261,13 @@
                     const groupedReservations = {};
 
                     data.reservations.forEach(reservation => {
-                        const key = `${reservation.hotel_id}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
+                        const key = `${reservation.hotel_name}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
                         
                         if (!groupedReservations[key]) {
                             // Store the first occurrence of each unique combination
                             groupedReservations[key] = {
                                 hotel_id: reservation.hotel_id,
+                                hotel_name: reservation.name,
                                 reservation_id: reservation.reservation_id,
                                 client_name: reservation.client_name,
                                 check_in: formatDate(new Date(reservation.check_in)),

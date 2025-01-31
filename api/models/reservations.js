@@ -203,6 +203,7 @@ const selectMyHoldReservations = async (user_id) => {
   const query = `
     SELECT      
       reservation_details.hotel_id
+      ,hotels.name
       ,reservation_details.reservation_id
       ,COALESCE(clients.name_kanji, clients.name) as client_name
       ,reservations.check_in
@@ -210,14 +211,16 @@ const selectMyHoldReservations = async (user_id) => {
       ,reservations.number_of_people
       ,reservations.status      
     FROM
-      rooms
+      hotels
+      ,rooms
       ,room_types
       ,reservations
       ,reservation_details
       ,clients
     WHERE
       reservations.created_by = $1
-      AND reservations.status = 'hold'     
+      AND reservations.status = 'hold'
+      AND reservations.hotel_id = hotels.id
       AND reservation_details.room_id = rooms.id
       AND reservation_details.hotel_id = rooms.hotel_id
       AND room_types.id = rooms.room_type_id
@@ -226,7 +229,8 @@ const selectMyHoldReservations = async (user_id) => {
       AND reservations.hotel_id = reservation_details.hotel_id
       AND clients.id = reservations.reservation_client_id
     GROUP BY
-      reservation_details.hotel_id
+      hotels.name
+      ,reservation_details.hotel_id
       ,reservation_details.reservation_id
       ,COALESCE(clients.name_kanji, clients.name)
       ,reservations.check_in
