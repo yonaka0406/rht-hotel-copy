@@ -476,11 +476,12 @@ const editRoomFromCalendar = async (req, res) => {
 // DELETE
 const deleteHoldReservation = async (req, res) => {
   const { id } = req.params;
+  const user_id = req.user.id;
   try{
-    const updatedReservation = await deleteHoldReservationById(id);
+    const updatedReservation = await deleteHoldReservationById(id, user_id);
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error deletin hold reservation:', err);
+    console.error('Error deleting hold reservation:', err);
     res.status(500).json({ error: 'Failed to delete reservation' });
   }
 }

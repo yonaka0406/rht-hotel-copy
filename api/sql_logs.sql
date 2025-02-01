@@ -219,11 +219,16 @@
 
     CREATE OR REPLACE FUNCTION log_reservations_changes()
     RETURNS TRIGGER AS $$
+    
     BEGIN
+        DECLARE
+            _user_id INT;
+        -- Get the user ID from the temporary variable
+        _user_id:= current_setting('my_app.user_id');
         -- Insert a log entry with changes
         INSERT INTO logs_reservation (user_id, table_name, action, record_id, changes, ip_address)
         VALUES (
-            NEW.updated_by, -- Assuming each table has an `updated_by` column
+            COALESCE(NEW.updated_by, _user_id),
             TG_TABLE_NAME, -- Name of the table
             TG_OP, -- The operation: INSERT, UPDATE, or DELETE
             COALESCE(NEW.id, OLD.id), -- The affected record ID
@@ -259,7 +264,7 @@
     -- For the `reservation_clients` table
     CREATE TRIGGER log_reservation_clients_trigger
     AFTER INSERT OR UPDATE OR DELETE ON reservation_clients
-    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
+    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();       
 
 
 

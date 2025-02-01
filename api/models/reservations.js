@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const format = require('pg-format');
 
 // Function to Select
 
@@ -609,22 +610,23 @@ const updateRoomByCalendar = async (roomData) => {
 };
 
 // Delete
+const deleteHoldReservationById = async (reservation_id, updated_by) => {
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
 
-const deleteHoldReservationById = async (reservation_id) => {  
-  const query = `
-      DELETE FROM reservations
-      WHERE id = $1 AND status = 'hold'
-      RETURNING *;
-  `;
-  const values = [reservation_id];
-  
-  try{
-    const result = await pool.query(query, values);
+    DELETE FROM reservations
+    WHERE id = %L AND status = 'hold'
+    RETURNING *;
+  `, updated_by, reservation_id);
+
+  try {
+    const result = await pool.query(query);
     return result.rowCount;
   } catch (err) {
     console.error('Error deleting reservation:', err);
     throw new Error('Database error');
-  }   
+  }
 };
 
 const deleteReservationAddonsByDetailId = async (reservation_detail_id) => {  
