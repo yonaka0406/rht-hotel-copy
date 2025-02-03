@@ -24,7 +24,7 @@
                     <form @submit.prevent="submitNewUser">
                     
                         <!-- User Email Field -->
-                        <div class="field mb-5 mt-5">                        
+                        <div class="field mt-6">                        
                             <FloatLabel>
                                 <InputText
                                     id="email"                                    
@@ -38,10 +38,22 @@
                             </FloatLabel> 
                         </div>
 
+                        <!-- User Name Field -->
+                        <div class="field mt-6">                        
+                            <FloatLabel>
+                                <InputText
+                                    id="name"                                    
+                                    v-model="newUser.name"
+                                    class="w-full"                                
+                                />
+                                <label for="name">表示名</label>
+                            </FloatLabel> 
+                        </div>
+
                         <small v-if="emailError" class="p-error text-red-500">{{ emailError }}</small>
                         
                         <!-- Password Input -->
-                        <div class="field mb-5 mt-5">
+                        <div class="field mt-6">
                             <FloatLabel>
                                 <Password
                                     id="password"                                    
@@ -77,7 +89,7 @@
                         <small v-if="passwordError" class="p-error text-red-500">{{ passwordError }}</small>
 
                         <!-- Role Selection -->
-                        <div class="field mt-5">
+                        <div class="field mt-6">
                             <FloatLabel>
                                 <Select
                                     id="role"
@@ -102,7 +114,7 @@
                         </div>
 
                         <!-- Buttons -->
-                        <div class="mb-3 mt-5 text-center space-x-2">
+                        <div class="mb-3 mt-6 text-center space-x-2">
                             <!-- Submit Button -->
                             <Button
                                 type="submit"
@@ -168,7 +180,8 @@
                                     </template>
                                     <Column field="status_id" header="ステータス" sortable style="display: none"></Column>
                                     <Column field="id" header="ユーザーID" sortable style="display: none"></Column>
-                                    <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
+                                    <Column field="email" header="メールアドレス" sortable style="width: 40%"></Column>
+                                    <Column field="name" header="表示名" sortable style="width: 30%"></Column>
                                     <Column field="role_id" header="ロールID" sortable style="display: none"></Column>
                                     <Column field="role_name" header="ロール" sortable style="width: 20%"></Column>
                                     <Column header="操作" style="width: 10%">
@@ -227,7 +240,8 @@
                                             </IconField>
                                         </div>
                                     </template> 
-                                    <Column field="email" header="メールアドレス" sortable style="width: 70%"></Column>    
+                                    <Column field="email" header="メールアドレス" sortable style="width: 40%"></Column>
+                                    <Column field="name" header="表示名" sortable style="width: 30%"></Column>
                                     <Column field="role_id" header="ロールID" sortable style="display: none"></Column>
                                     <Column field="role_name" header="ロール" sortable style="width: 20%"></Column>
                                     <Column header="操作" style="width: 10%">
@@ -262,7 +276,7 @@
                     <form @submit.prevent="submitEditUser">
                     
                         <!-- User Email Field -->
-                        <div class="field mb-6 mt-6">                        
+                        <div class="field  mt-6">                        
                             <FloatLabel>
                                 <InputText
                                     id="eu_email"                                    
@@ -270,7 +284,19 @@
                                     class="w-full"                                    
                                     disabled                                     
                                 />
-                                <label for="email">メールアドレス</label>
+                                <label for="eu_email">メールアドレス</label>
+                            </FloatLabel> 
+                        </div>
+
+                        <!-- User Email Field -->
+                        <div class="field  mt-6">                        
+                            <FloatLabel>
+                                <InputText
+                                    id="eu_name"                                    
+                                    v-model="currentUser.name"
+                                    class="w-full"                                      
+                                />
+                                <label for="eu_name">表示名</label>
                             </FloatLabel> 
                         </div>
 
@@ -322,7 +348,7 @@
                         </div>
 
                         <!-- Buttons -->
-                        <div class="mb-3 mt-5 text-center space-x-2">
+                        <div class="mb-3 mt-6 text-center space-x-2">
                             <!-- Edit Button -->
                             <Button
                                 type="submit"
@@ -420,12 +446,14 @@
             // Refs            
             const newUser = ref({ 
                 email: '', 
+                name: '',
                 password: '',
                 role: null
             });
             const currentUser = ref({ 
                 id: null,
-                email: '',                 
+                email: '',
+                name: '',              
                 role: null,
                 status: true,
             });
@@ -516,6 +544,7 @@
                 const authToken = localStorage.getItem('authToken');
 
                 const bodyEmail = newUser.value.email;
+                const bodyName = newUser.value.name;
                 const bodyPassword = newUser.value.password;
                 const bodyRole = newUser.value.role;
 
@@ -539,6 +568,7 @@
                         },
                         body: JSON.stringify({
                             email: bodyEmail,
+                            name: bodyName,
                             password: bodyPassword,
                             role: bodyRole,                            
                         }),
@@ -584,6 +614,7 @@
                 const authToken = localStorage.getItem('authToken');
 
                 const bodyID = currentUser.value.id;
+                const bodyName = currentUser.value.name;
                 const bodyRole = currentUser.value.role;
                 const bodyStatus = typeof currentUser.value.status === 'number'
                     ? currentUser.value.status  // If it's an integer, keep it as is
@@ -601,6 +632,7 @@
                         },
                         body: JSON.stringify({
                             id: bodyID,
+                            name: bodyName,
                             status_id: bodyStatus,
                             role_id: bodyRole,
                         }),
@@ -679,6 +711,7 @@
                 };
                 const cancelCreateDialog = () => {
                     newUser.email = '';
+                    newUser.name = '';
                     newUser.password = '';
                     newUser.role = null;
                     emailError.value = null;
@@ -692,6 +725,7 @@
                 const editUser = (user) => {
                     currentUser.value = { 
                         id: user.id,
+                        name: user.name,
                         email: user.email, 
                         role: user.role_id,
                         status: user.status_id 
@@ -701,6 +735,7 @@
                 const cancelEditDialog = () => {                    
                     currentUser.id = null;
                     currentUser.email = '';
+                    currentUser.name = '';
                     currentUser.role = null;
                     currentUser.status = true;
                     roleError.value = null;

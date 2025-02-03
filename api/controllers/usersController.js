@@ -1,4 +1,4 @@
-const { getAllUsers, getUsersByID, createUser, updateStatusAndRole } = require('../models/user');
+const { getAllUsers, getUsersByID, createUser, updateUserInfo } = require('../models/user');
 
 const users = async (req, res) => {
   try {
@@ -24,8 +24,8 @@ const getUser = async (req, res) => {
   }
 };
 
-const register = async (req, res) => {
-  const { email, password, role } = req.body;
+const registerUser = async (req, res) => {
+  const { email, name, password, role } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
   
@@ -34,7 +34,7 @@ const register = async (req, res) => {
   }
 
   try {
-    const user = await createUser(email, password, role, created_by, updated_by);    
+    const user = await createUser(email, name, password, role, created_by, updated_by);    
     res.status(201).json({ 
       message: 'User registered successfully',
       user: {
@@ -52,8 +52,8 @@ const register = async (req, res) => {
   }
 };
 
-const update = async (req, res) => {
-  const { id, status_id, role_id } = req.body;
+const updateUser = async (req, res) => {
+  const { id, name, status_id, role_id } = req.body;
   const updated_by = req.user.id;
 
   // Validate that all required fields are provided
@@ -62,7 +62,7 @@ const update = async (req, res) => {
   }
 
   try {
-    const user = await updateStatusAndRole(id, status_id, role_id, updated_by);
+    const user = await updateUserInfo(id, name, status_id, role_id, updated_by);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -79,6 +79,6 @@ const update = async (req, res) => {
 module.exports = { 
   users, 
   getUser, 
-  register, 
-  update 
+  registerUser, 
+  updateUser 
 };
