@@ -427,6 +427,7 @@ export default {
         });
 
         const updatedDateTime = computed(() => {
+            console.log('updatedDateTime', editReservationDetails.value)
             return editReservationDetails.value.reduce((max, detail) => {
                 const maxLogTime = new Date(Math.max(new Date(detail.reservation_log_time), new Date(detail.reservation_detail_log_time)));
                 console.log('max:', max);

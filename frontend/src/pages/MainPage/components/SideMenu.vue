@@ -258,14 +258,14 @@
             });
             onMounted( async () => {
                 await fetchUser();
-                console.log('Logged user:',logged_user.value);
+                //console.log('Logged user:',logged_user.value);
                 if(!logged_user.value?.[0]?.permissions?.manage_db || !logged_user.value?.[0]?.permissions?.manage_users){
                     isAdmin.value = false;
                 }else{
                     isAdmin.value = true;
                 }
                 
-                console.log(isAdmin.value)
+                //console.log(isAdmin.value)
                 await fetchMyHoldReservations();
             });
 /*
