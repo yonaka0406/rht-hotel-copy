@@ -12,6 +12,7 @@
         <!-- Right Section -->
         <template #end>
             <div class="flex items-center space-x-4">
+                <span>{{ userGreeting }}</span>
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2">
                     <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
@@ -50,8 +51,9 @@
 </template>
 
 <script>
-    import { ref, onMounted, watch } from 'vue';
+    import { ref, computed, watch, onMounted } from 'vue';
     import { useRouter } from 'vue-router';
+    import { useUserStore } from '@/composables/useUserStore';
     import { useHotelStore } from '@/composables/useHotelStore';
     import { useReservationStore } from '@/composables/useReservationStore';
     import { Toolbar, OverlayBadge, Select, Drawer, Divider } from 'primevue';
@@ -65,9 +67,29 @@
         },
         setup() {     
             const router = useRouter();       
+            const { logged_user, fetchUser } = useUserStore();
             const { hotels, setHotelId, selectedHotelId } = useHotelStore();
             const { holdReservations, fetchMyHoldReservations, getReservationHotelId, setReservationId } = useReservationStore();
             const showDrawer = ref(false);
+            const userMessage = ref('');
+
+            const userGreeting = computed(() => {
+                const now = new Date();
+                const hour = now.getHours();
+
+                if (hour >= 5 && hour < 10) {
+                    userMessage.value = 'おはようございます、' + logged_user.value[0]?.name;
+                    // Good morning (5:00 AM - 9:59 AM)
+                } else if (hour >= 10 && hour < 17) {
+                    userMessage.value = 'こんにちは、' + logged_user.value[0]?.name;
+                    // Good afternoon (10:00 AM - 4:59 PM)
+                } else {
+                    userMessage.value = 'こんばんは、' + logged_user.value[0]?.name;
+                    // Good evening (5:00 PM - 4:59 AM)
+                }
+                
+                return userMessage;
+            });
 
             // Handle notification click (navigate to New Reservation page)            
             const goToNewReservationPage = async (reservation_id) => {                
@@ -81,10 +103,12 @@
             };
 
             onMounted( async () => {
-                await fetchMyHoldReservations();
+                await fetchMyHoldReservations();                
                 //console.log('holdReservations:',holdReservations.value);
                 // Already called in SideMenu
                 //fetchHotels(); 
+                await fetchUser();
+                //console.log('Logged user:',logged_user.value);                
             });
             
             watch(selectedHotelId,
@@ -96,11 +120,13 @@
                 { immediate: true } // This ensures the watcher runs on initialization
             );
 
-            return{                
+            return{   
+                logged_user,             
                 hotels,
                 selectedHotelId,
                 holdReservations,                
-                showDrawer,                
+                showDrawer,       
+                userGreeting,         
                 goToNewReservationPage,
             };
         },
@@ -114,4 +140,3 @@
         background-color: transparent;
     }
 </style>
-  

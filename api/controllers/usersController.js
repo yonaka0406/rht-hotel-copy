@@ -1,4 +1,4 @@
-const { getAllUsers, createUser, updateStatusAndRole } = require('../models/user');
+const { getAllUsers, getUsersByID, createUser, updateStatusAndRole } = require('../models/user');
 
 const users = async (req, res) => {
   try {
@@ -10,6 +10,17 @@ const users = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const getUser = async (req, res) => {
+  const user_id = req.user.id;
+  try {
+      const user = await getUsersByID(user_id);
+      res.json(user);
+  } catch (error) {
+      console.error('Error getting users:', error);
+      res.status(500).json({ error: error.message });
   }
 };
 
@@ -65,4 +76,9 @@ const update = async (req, res) => {
 };
 
 
-module.exports = { users, register, update };
+module.exports = { 
+  users, 
+  getUser, 
+  register, 
+  update 
+};

@@ -14,6 +14,37 @@ const getAllUsers = async () => {
   }
 };
 
+const getUsersByID = async (id) => {
+  const query = `
+      SELECT 
+          users.id, 
+          users.email, 
+          users.name,
+          users.status_id, 
+          users.role_id, 
+          user_roles.role_name,
+          user_roles.permissions,
+          user_status.status_name      
+      FROM 
+          users
+      INNER JOIN 
+          user_roles ON users.role_id = user_roles.id
+      INNER JOIN 
+          user_status ON users.status_id = user_status.id
+      WHERE users.id = $1
+      ORDER BY 
+          users.id ASC
+  `;
+  const values = [id];
+  try {      
+      const result = await pool.query(query, values);
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving user by id:', err);
+      throw new Error('Database error');
+  }
+};
+
 // Find a user by email
 const findUserByEmail = async (email) => {
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.email = $1 AND users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
@@ -75,6 +106,7 @@ const createUser = async (email, password, role_id, created_by, updated_by) => {
 
 module.exports = {
   getAllUsers,
+  getUsersByID,
   findUserByEmail,
   updatePasswordHash,
   updateStatusAndRole,

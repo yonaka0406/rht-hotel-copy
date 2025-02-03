@@ -30,11 +30,14 @@ CREATE TABLE user_roles (
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,    
+    name TEXT,
+    password_hash TEXT NOT NULL,
     status_id INT REFERENCES user_status(id) DEFAULT 1,        -- Status ID (default to 1, representing 'active')
     role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
+
+ALTER TABLE users ADD COLUMN name TEXT NOT NULL;
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     INSERT INTO users (email, password_hash, role_id)

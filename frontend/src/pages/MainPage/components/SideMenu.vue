@@ -78,7 +78,8 @@
                         <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />                                   
                 </template>
                 <template #end>                    
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2">     
+                        <span>{{ userGreeting }}</span>                   
                         <!-- Notifications Icon -->                        
                         <OverlayBadge :value="holdReservations.length" class="mr-2">
                             <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
@@ -131,7 +132,8 @@
 </template>
   
 <script>
-    import { ref, onMounted, watch } from 'vue';    
+    import { ref, computed, watch, onMounted } from 'vue';    
+    import { useUserStore } from '@/composables/useUserStore';
     import { useHotelStore } from '@/composables/useHotelStore';
     import { useReservationStore } from '@/composables/useReservationStore';
     import { useRouter } from 'vue-router';    
@@ -156,6 +158,7 @@
         },
         setup() {
             const router = useRouter();
+            const { logged_user, fetchUser } = useUserStore();
             const { hotels, selectedHotelId, setHotelId, fetchHotels } = useHotelStore();
             const { holdReservations, fetchMyHoldReservations, getReservationHotelId, setReservationId } = useReservationStore();
             const expandedKeys = ref({});
@@ -213,6 +216,25 @@
                     },
             ]);
             const showDrawer = ref(false);
+            const userMessage = ref(null);
+
+            const userGreeting = computed(() => {
+                const now = new Date();
+                const hour = now.getHours();
+
+                if (hour >= 5 && hour < 10) {
+                    userMessage.value = 'おはようございます、' + logged_user.value[0]?.name;
+                    // Good morning (5:00 AM - 9:59 AM)
+                } else if (hour >= 10 && hour < 17) {
+                    userMessage.value = 'こんにちは、' + logged_user.value[0]?.name;
+                    // Good afternoon (10:00 AM - 4:59 PM)
+                } else {
+                    userMessage.value = 'こんばんは、' + logged_user.value[0]?.name;
+                    // Good evening (5:00 PM - 4:59 AM)
+                }
+                
+                return userMessage;
+            });
 
             // Handle notification click (navigate to New Reservation page)
             const goToNewReservationPage = async (reservation_id) => {                
@@ -233,7 +255,9 @@
                 fetchHotels();
             });
             onMounted( async () => {
-                await fetchMyHoldReservations();                
+                await fetchUser();
+                //console.log('Logged user:',logged_user.value);
+                await fetchMyHoldReservations();
             });
 /*
             watch(hotels, (newVal, oldVal) => {
@@ -250,13 +274,14 @@
                 { immediate: true } 
             );
 
-            return{
+            return{                
                 expandedKeys,
-                items,
+                items,                
                 hotels,
                 selectedHotelId,
                 holdReservations,                
-                showDrawer,                
+                showDrawer,   
+                userGreeting,             
                 goToNewReservationPage,
                 goToNewReservation,
             };
