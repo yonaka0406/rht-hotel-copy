@@ -23,6 +23,10 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'パスワードの誤差がありました。' });
     }
 
+    if (user.status_id !== 1) {
+      return res.status(401).json({ error: 'ユーザーが無効になっています。' });
+    }
+
     const token = generateToken(user);
     res.json({ message: 'Login successful', token });
   } catch (err) {

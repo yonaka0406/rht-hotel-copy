@@ -54,8 +54,9 @@
                 </Menu>
 
                 <!-- Admin and Logout -->
-                <div v-if="!isCollapsed" class="mt-auto">   
-                    <router-link
+                <div v-if="!isCollapsed" class="mt-auto">
+
+                    <router-link v-if="isAdmin"
                         to="/admin"
                         class="text-white hover:bg-yellow-100 p-2 block rounded mt-4"
                     >
@@ -216,6 +217,7 @@
                     },
             ]);
             const showDrawer = ref(false);
+            const isAdmin = ref(false);
             const userMessage = ref(null);
 
             const userGreeting = computed(() => {
@@ -256,7 +258,14 @@
             });
             onMounted( async () => {
                 await fetchUser();
-                //console.log('Logged user:',logged_user.value);
+                console.log('Logged user:',logged_user.value);
+                if(!logged_user.value?.[0]?.permissions?.manage_db || !logged_user.value?.[0]?.permissions?.manage_users){
+                    isAdmin.value = false;
+                }else{
+                    isAdmin.value = true;
+                }
+                
+                console.log(isAdmin.value)
                 await fetchMyHoldReservations();
             });
 /*
@@ -281,6 +290,7 @@
                 selectedHotelId,
                 holdReservations,                
                 showDrawer,   
+                isAdmin,
                 userGreeting,             
                 goToNewReservationPage,
                 goToNewReservation,

@@ -79,7 +79,7 @@
 
         <!-- Main Content -->
         <div class="flex-1 overflow-x-hidden overflow-y-auto">
-            <p class="text-2xl font-bold text-gray-700 mb-2">管理者パネルへようこそ！</p>
+            <p class="text-2xl font-bold text-gray-700 mb-2">{{ userName }}管理者パネルへようこそ！</p>
             <div v-if="isRootAdminPath" class="p-4">
                 <!-- Dashboard Content -->
                 <div class="bg-white rounded-lg shadow-lg p-8">
@@ -126,6 +126,7 @@
 <script>
     import { ref, onMounted } from 'vue';
     import { useRouter } from 'vue-router';
+    import { useUserStore } from '@/composables/useUserStore';
     import Menubar from 'primevue/menubar';
     import PanelMenu from 'primevue/panelmenu';
     import Button from 'primevue/button';
@@ -147,7 +148,8 @@
             }
         },
         setup() {
-            const router = useRouter();            
+            const router = useRouter();
+            const { logged_user, fetchUser } = useUserStore();       
             const hotelCount = ref(0);
             const expandedKeys = ref({});            
             const items = ref([
@@ -230,6 +232,7 @@
                     }
                 },         
             ]);
+            const userName = ref('');
             
             const toggleAll = () => {
                 if (Object.keys(expandedKeys.value).length) collapseAll();
@@ -274,9 +277,14 @@
                 }
             };
 
-            onMounted(fetchHotels);
+            onMounted( async () => {
+                await fetchHotels();
+                await fetchUser();
+                userName.value = logged_user.value[0]?.name + '、';
+            });
 
             return {
+                userName,
                 hotelCount,
                 expandedKeys,
                 items,
