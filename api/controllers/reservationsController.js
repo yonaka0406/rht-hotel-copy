@@ -388,7 +388,7 @@ const editReservationDetail = async (req, res) => {
       
     // Add the reservation add-ons if any
     if (addons && addons.length > 0) {      
-        const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id);
+        const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
         //console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
         const addOnPromises = addons.map(addon =>

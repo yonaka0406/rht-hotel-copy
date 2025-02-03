@@ -629,16 +629,18 @@ const deleteHoldReservationById = async (reservation_id, updated_by) => {
   }
 };
 
-const deleteReservationAddonsByDetailId = async (reservation_detail_id) => {  
-  const query = `
-      DELETE FROM reservation_addons
-      WHERE reservation_detail_id = $1
-      RETURNING *;
-  `;
-  const values = [reservation_detail_id];
+const deleteReservationAddonsByDetailId = async (reservation_detail_id, updated_by) => {
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
+
+    DELETE FROM reservation_addons
+    WHERE reservation_detail_id = %L
+    RETURNING *;
+  `, updated_by, reservation_detail_id);
   
   try{
-    const result = await pool.query(query, values);
+    const result = await pool.query(query);
     return result.rowCount;
   } catch (err) {
     console.error('Error deleting reservation addon:', err);
