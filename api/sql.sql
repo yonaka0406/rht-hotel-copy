@@ -349,8 +349,6 @@ CREATE TABLE reservations (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservations DROP COLUMN room_type_id;
-
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
@@ -400,25 +398,15 @@ CREATE TABLE reservation_clients (
     FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE    
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_clients
-DROP CONSTRAINT reservation_clients_reservation_details_id_hotel_id_fkey;
-
-ALTER TABLE reservation_clients
-ADD CONSTRAINT reservation_clients_reservation_details_id_hotel_id_fkey
-FOREIGN KEY (reservation_details_id, hotel_id)
-REFERENCES reservation_details(id, hotel_id)
-ON DELETE CASCADE;
-
 --Ainda nao esta certo que vai ser usada
 
     CREATE TABLE user_hotels (
-        user_id INT REFERENCES users(id) ON DELETE CASCADE,  -- User's ID
-        hotel_id VARCHAR(6) NOT NULL,  -- Hotel ID (e.g., "0001", "0002", etc.)
-        PRIMARY KEY (user_id, hotel_id)  -- Composite key to prevent duplicates
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        hotel_id VARCHAR(6) NOT NULL,
+        PRIMARY KEY (user_id, hotel_id)
     );
 
 --Reservations Schema Candidate
-
 
 CREATE TABLE parking_spots (
     id SERIAL PRIMARY KEY,
@@ -426,7 +414,6 @@ CREATE TABLE parking_spots (
     reserved BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE xml_exchanges (
     id SERIAL PRIMARY KEY,
