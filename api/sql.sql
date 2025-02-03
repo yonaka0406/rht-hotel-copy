@@ -269,7 +269,7 @@ CREATE TABLE plans_rates (
     adjustment_type TEXT CHECK (adjustment_type IN ('base_rate', 'percentage', 'flat_fee')) NOT NULL,  -- Type of adjustment
     adjustment_value DECIMAL(10, 2) NOT NULL,  -- The value of the adjustment (e.g., 10% or $20)
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
-    condition_value TEXT NULL,  -- The specific condition (e.g., 'Saturday', '2024-12-25', etc.)
+    condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
     date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -397,8 +397,17 @@ CREATE TABLE reservation_clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id)    
+    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE    
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_clients
+DROP CONSTRAINT reservation_clients_reservation_details_id_hotel_id_fkey;
+
+ALTER TABLE reservation_clients
+ADD CONSTRAINT reservation_clients_reservation_details_id_hotel_id_fkey
+FOREIGN KEY (reservation_details_id, hotel_id)
+REFERENCES reservation_details(id, hotel_id)
+ON DELETE CASCADE;
 
 --Ainda nao esta certo que vai ser usada
 

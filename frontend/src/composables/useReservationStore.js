@@ -67,7 +67,8 @@
               }
         
               const updatedReservation = await response.json();
-              reservationDetails.value = updatedReservation;
+              await fetchReservation(reservationId.value);
+              
             } catch (error) {
               console.error('Error updating reservation client:', error);
             }

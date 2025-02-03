@@ -125,7 +125,9 @@ const selectReservation = async (id) => {
       ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type
       ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
       ,reservation_details.number_of_people
-      ,reservation_details.price
+      ,reservation_details.price AS plan_total_price
+	    ,COALESCE(ra.price, 0) AS addon_total_price
+      ,reservation_details.price + COALESCE(ra.price, 0) AS price
       ,logs_reservation_details.log_time as reservation_detail_log_time
 
     FROM
@@ -164,6 +166,16 @@ const selectReservation = async (id) => {
           ORDER BY logs_reservation.log_time DESC 
           LIMIT 1
       )
+        LEFT JOIN 
+      (
+      SELECT
+        reservation_detail_id,
+        SUM(price) AS price
+      FROM
+        reservation_addons		
+      GROUP BY
+        reservation_detail_id
+    ) ra ON reservation_details.id = ra.reservation_detail_id
 
     WHERE
       reservations.id = $1

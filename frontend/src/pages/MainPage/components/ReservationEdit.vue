@@ -10,11 +10,11 @@
                     class="grid grid-cols-2 gap-2 gap-y-4"
                 >
                     <div class="field flex flex-col">                        
-                        <div class="flex items-center justify-between mr-10">                       
+                        <div class="flex items-center justify-between mr-2 mb-2">                       
                         <p>予約者：</p>
                         <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
                         </div>
-                        <span>{{ editReservationDetails[0].client_name }}</span>
+                        <InputText type="text" v-model="editReservationDetails[0].client_name" disabled style="background-color: transparent;"/>                        
                     </div>
 
                     <div class="field flex flex-col" >
@@ -144,10 +144,10 @@
                         </AccordionHeader>
                         <AccordionContent>
                             <DataTable :value="formattedGroupDetails(group.details)">
-                                <Column field="display_date" header="Date" class="text-xs" />
-                                <Column field="plan_name" header="Plan" class="text-xs" />
-                                <Column field="number_of_people" header="People" class="text-xs" />
-                                <Column field="price" header="Rate" class="text-xs" />
+                                <Column field="display_date" header="日付" class="text-xs" />
+                                <Column field="plan_name" header="プラン" class="text-xs" />
+                                <Column field="number_of_people" header="人数" class="text-xs" />
+                                <Column field="price" header="料金" class="text-xs" />
                             </DataTable>
                         </AccordionContent>                        
                     </AccordionPanel>
@@ -170,7 +170,8 @@
                 >
                     <TabList>
                         <Tab value="0">プラン適用</Tab>
-                        <Tab value="1">部屋移動</Tab>                        
+                        <Tab value="1">部屋移動</Tab>
+                        <Tab value="2">宿泊者</Tab>
                     </TabList>
                      
                     <TabPanels>
@@ -260,12 +261,81 @@
                                 </div>
                             </div>
                         </TabPanel>
+                        <!-- Tab 3: Set clients -->
+                        <TabPanel value="2">                            
+                            <DataTable                                     
+                                :value="guests"
+                                class="p-datatable-sm"
+                                scrollable
+                                responsive                                
+                            >                                
+                                <Column field="name" header="宿泊者" style="width: 40%">                                    
+                                    <template #body="slotProps">
+                                        <AutoComplete
+                                            v-model="slotProps.data.name"
+                                            :placeholder="slotProps.data.guest_no"
+                                            :suggestions="filteredClients"
+                                            @complete="filterClients"
+                                            field="id"                
+                                            @option-select="onClientSelect($event, slotProps.data)"   
+                                            @change="onClientChange(slotProps.data)"                                         
+                                        >
+                                            <template #option="slotProps">
+                                                <div>
+                                                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                                                </div>
+                                            </template>
+                                        </AutoComplete>
+                                    </template>
+                                    
+                                </Column>
+                                <Column field="gender" header="性別" style="width: 10%">                                    
+                                    <template #body="slotProps">
+                                        <Select 
+                                            v-model="slotProps.data.gender" 
+                                            :options="genderOptions" 
+                                            optionLabel="label" 
+                                            optionValue="value" 
+                                            placeholder="性別を選択"
+                                            fluid
+                                            :disabled="slotProps.data.isClientSelected"
+                                        />
+                                    </template>
+                                    
+                                </Column>
+                                <Column field="email" header="メールアドレス" style="width: 25%">
+                                    <template #body="slotProps">
+                                        <InputText v-model="slotProps.data.email"                                            
+                                            :pattern="emailPattern"
+                                            :class="{'p-invalid': !isValidEmail}"
+                                            @input="validateEmail(slotProps.data.email)"                                            
+                                            :disabled="slotProps.data.isClientSelected"
+                                        />
+                                    </template>
+                                </Column>
+                                <Column field="phone" header="電話番号" style="width: 25%">
+                                    <template #body="slotProps">
+                                        <InputText v-model="slotProps.data.phone"
+                                            :pattern="phonePattern"
+                                            :class="{'p-invalid': !isValidPhone}"
+                                            @input="validatePhone(slotProps.data.phone)"                                            
+                                            :disabled="slotProps.data.isClientSelected"
+                                        />
+                                    </template>
+                                </Column>                                
+                            </DataTable>
+                            
+                        </TabPanel>
                     </TabPanels>                     
                 </Tabs>
          
             </div>
             <template #footer>
-                <Button label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
+                
+                <Button v-if="bulkEditDialogTab === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />                
+                <Button v-else label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
+                
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
         </Dialog>
@@ -300,12 +370,13 @@ import { useConfirm } from "primevue/useconfirm";
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
+import { useClientStore } from '@/composables/useClientStore';
 import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
 
 import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
 import { DataTable, Column } from 'primevue';
-import { FloatLabel, InputNumber, Select, MultiSelect, Button } from 'primevue';
+import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, RadioButton, Button } from 'primevue';
 
 
 export default {
@@ -339,9 +410,12 @@ export default {
         DataTable,
         Column,
         FloatLabel, 
+        InputText,
         InputNumber, 
+        AutoComplete,
         Select,
         MultiSelect,
+        RadioButton,
         Button,
     },
     setup(props) {
@@ -350,21 +424,23 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation } = useReservationStore();
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
+        const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
-            { label: 'Monday', value: 'mon' },
-            { label: 'Tuesday', value: 'tue' },
-            { label: 'Wednesday', value: 'wed' },
-            { label: 'Thursday', value: 'thu' },
-            { label: 'Friday', value: 'fri' },
-            { label: 'Saturday', value: 'sat' },
-            { label: 'Sunday', value: 'sun' },
+            { label: '月曜日', value: 'mon' },
+            { label: '火曜日', value: 'tue' },
+            { label: '水曜日', value: 'wed' },
+            { label: '木曜日', value: 'thu' },
+            { label: '金曜日', value: 'fri' },
+            { label: '土曜日', value: 'sat' },
+            { label: '日曜日', value: 'sun' },
         ];
         const bulkEditDialogVisible = ref(false);
+        const bulkEditDialogTab = ref(0);
         const changeClientDialogVisible = ref(false);
-        const selectedClient = ref(null);        
+        const selectedClient = ref(null);
         const selectedGroup = ref(null);
         const selectedPlan = ref(null);
         const selectedDays = ref(daysOfWeek);
@@ -379,6 +455,18 @@ export default {
                     value: room.room_id, // Value for selection
                 }));
         });
+        const guests = ref();        
+        const editingRows = ref([]);
+        const filteredClients = ref([]);
+        const genderOptions = [
+            { label: '男性', value: 'male' },
+            { label: '女性', value: 'female' },
+            { label: 'その他', value: 'other' },
+        ];
+        const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        const isValidEmail = ref(true);
+        const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
+        const isValidPhone = ref(true);
 
         // Helper
         const formatDateTime = (dateString) => {
@@ -400,6 +488,81 @@ export default {
         const formatCurrency = (value) => {
             if (value == null) return '';
             return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+        };
+        const normalizeKana = (str) => {
+            if (!str) return '';
+            let normalizedStr = str.normalize('NFKC');
+            
+            // Convert Hiragana to Katakana
+            normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
+            String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+            );
+            // Convert half-width Katakana to full-width Katakana
+            normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
+            String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+            );
+            
+            return normalizedStr;
+        };
+        const validateEmail = (email) => {
+            isValidEmail.value = emailPattern.test(email);
+            return emailPattern.test(email);            
+        };
+        const validatePhone = (phone) => {
+            isValidPhone.value = phonePattern.test(phone);
+            return phonePattern.test(phone);
+        };
+        const initializeGuests = () => {
+            const capacity = selectedGroup.value.details[0]?.capacity || 0;
+            console.log('Room capacity:', capacity);
+            guests.value = Array.from({ length: capacity }, (_, i) => ({
+                id: null,
+                guest_no: '宿泊者 ' + (i + 1),
+                name: '',
+                legal_or_natural_person: 'natural',
+                gender: 'male',
+                email: '',
+                phone: '',
+                isClientSelected: false
+            }));            
+        };
+        const filterClients = (event) => {
+            console.log('filterClients event');
+            const query = event.query.toLowerCase();
+            filteredClients.value = clients.value.filter((client) =>
+                client.legal_or_natural_person === 'natural' && 
+                (
+                    (client.name && client.name.toLowerCase().includes(query)) ||
+                    (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
+                    (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
+                )
+            );
+        };
+        const onClientSelect = (e, rowData) => {            
+            // Find the guest in the guests array that was just selected
+            const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
+
+            console.log('guestIndex',guestIndex);
+            console.log('event:', e.value);
+
+            // Update the guest's information
+            if (guestIndex > -1) {
+                guests.value[guestIndex] = {...guests.value[guestIndex],...e.value }; 
+                guests.value[guestIndex].isClientSelected = true;               
+            }
+
+            console.log('onClientSelect guests:', guests.value);
+        };
+        const onClientChange = (rowData) => {
+            // Find the guest in the guests array that was just selected
+            const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
+
+            if (guestIndex > -1) {
+                guests.value[guestIndex].id = '';
+                guests.value[guestIndex].isClientSelected = false;
+            }
+
+            console.log('onClientChange guests:', guests.value);
         };
 
         // Computed
@@ -430,7 +593,7 @@ export default {
             console.log('updatedDateTime', editReservationDetails.value)
             return editReservationDetails.value.reduce((max, detail) => {
                 const maxLogTime = new Date(Math.max(new Date(detail.reservation_log_time), new Date(detail.reservation_detail_log_time)));
-                console.log('max:', max);
+                //console.log('max:', max);
                 return maxLogTime > max ? maxLogTime : max;
             }, new Date(0));            
         });
@@ -519,27 +682,38 @@ export default {
         };
 
         function handleTabChange (newTabValue) {
-            //console.log(newTabValue);
+            
+            bulkEditDialogTab.value = newTabValue * 1;
+
             selectedPlan.value = null;
             
             selectedDays.value = [
-                { label: 'Monday', value: 'mon' },
-                { label: 'Tuesday', value: 'tue' },
-                { label: 'Wednesday', value: 'wed' },
-                { label: 'Thursday', value: 'thu' },
-                { label: 'Friday', value: 'fri' },
-                { label: 'Saturday', value: 'sat' },
-                { label: 'Sunday', value: 'sun' },
+                { label: '月曜日', value: 'mon' },
+                { label: '火曜日', value: 'tue' },
+                { label: '水曜日', value: 'wed' },
+                { label: '木曜日', value: 'thu' },
+                { label: '金曜日', value: 'fri' },
+                { label: '土曜日', value: 'sat' },
+                { label: '日曜日', value: 'sun' },
             ];
             
             addons.value = [];
             targetRoom.value = null;
-            numberOfPeopleToMove.value = 0;
+            numberOfPeopleToMove.value = 0;            
+            
+            if(bulkEditDialogTab.value  === 2){
+                initializeGuests();
+                console.log('Guest edit tab selected.');                
+            }
+
+            
         };
 
         const openBulkEditDialog = (group) => {
             selectedGroup.value = group;
             bulkEditDialogVisible.value = true;
+            initializeGuests();
+            fetchClients();
         };
 
         const closeBulkEditDialog = () => {
@@ -549,19 +723,18 @@ export default {
             selectedPlan.value = null;
             
             selectedDays.value = [
-                { label: 'Monday', value: 'mon' },
-                { label: 'Tuesday', value: 'tue' },
-                { label: 'Wednesday', value: 'wed' },
-                { label: 'Thursday', value: 'thu' },
-                { label: 'Friday', value: 'fri' },
-                { label: 'Saturday', value: 'sat' },
-                { label: 'Sunday', value: 'sun' },
+                { label: '月曜日', value: 'mon' },
+                { label: '火曜日', value: 'tue' },
+                { label: '水曜日', value: 'wed' },
+                { label: '木曜日', value: 'thu' },
+                { label: '金曜日', value: 'fri' },
+                { label: '土曜日', value: 'sat' },
+                { label: '日曜日', value: 'sun' },
             ];
             
             addons.value = [];
             targetRoom.value = null;
-            numberOfPeopleToMove.value = 0;
-            
+            numberOfPeopleToMove.value = 0;            
         };        
 
         const applyChanges = async () => {
@@ -744,6 +917,50 @@ export default {
             }
         };
 
+        const applyGuestChanges = async () => {
+            const guestsWithId = guests.value.filter(guest => guest.id !== null);
+            const idSet = new Set();
+            let hasDuplicates = false;
+
+            for (const guest of guestsWithId) {
+                if (idSet.has(guest.id)) {
+                    hasDuplicates = true;
+                    break;
+                }
+                idSet.add(guest.id);
+            }
+            for (const guest of guests.value) {
+                if (guest.name) {
+                    if(!guest.email && !guest.phone) {                        
+                        toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
+                        return;                        
+                    }
+                    if(guest.email){
+                        const emailValid = validateEmail(guest.email);                        
+                        if (!emailValid) {
+                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
+                            return;
+                        }
+                    }
+                    if(guest.phone){
+                        const phoneValid = validatePhone(guest.phone);
+                        if (!phoneValid) {
+                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (hasDuplicates) {
+                toast.add({ severity: 'warn', summary: 'Warning', detail: '重複宿泊者が選択されました。', life: 3000 });
+                return;
+            } else {
+                // Proceed with applying changes
+                console.log('No duplicates found, applying changes...');
+            }
+        };
+
         const openChangeClientDialog = () => {
             changeClientDialogVisible.value = true;
         };
@@ -807,20 +1024,20 @@ export default {
         });            
         watch(editReservationDetails, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('editReservationDetails changed:', newValue);
+                //console.log('editReservationDetails changed:', newValue);
                 fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
                 selectedClient.value = editReservationDetails.value[0].client_id;
-                console.log('selectedClient.value:', selectedClient.value);
+                //console.log('selectedClient.value:', selectedClient.value);
             }
         }, { deep: true });
         watch(groupedRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('groupedRooms changed:', newValue);
+                //console.log('groupedRooms changed:', newValue);
             }
         }, { deep: true });
         watch(selectedGroup, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('selectedGroup changed:', newValue);
+                //console.log('selectedGroup changed:', newValue);
                 if (newValue && newValue.details && newValue.details.length > 0) {
                     const details = newValue.details;
                     const startDate = details[0].check_in;
@@ -832,7 +1049,7 @@ export default {
         }, { deep: true });
         watch(plans, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('plans changed:', newValue);
+                //console.log('plans changed:', newValue);
             }
         }, { deep: true });
         watch(selectedPlan, (newValue, oldValue) => {
@@ -867,12 +1084,12 @@ export default {
         }, { deep: true });
         watch(targetRoom, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('targetRoom changed:', newValue);
+                //console.log('targetRoom changed:', newValue);
             }
         }, { deep: true });
         watch(numberOfPeopleToMove, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('numberOfPeopleToMove changed:', newValue);
+                //console.log('numberOfPeopleToMove changed:', newValue);
             }
         }, { deep: true });
         watch(selectedHotelId, (newValue, oldValue) => {
@@ -884,6 +1101,11 @@ export default {
                 
             }
         }, { deep: true });
+        watch(guests, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('guests changed:', guests.value);
+            }
+        }, { immediate: true });
 
         return {  
             formatDateTime,  
@@ -892,6 +1114,7 @@ export default {
             groupedRooms,
             formattedGroupDetails,
             bulkEditDialogVisible,
+            bulkEditDialogTab,
             changeClientDialogVisible,
             selectedClient,
             selectedGroup,
@@ -901,6 +1124,14 @@ export default {
             targetRoom,
             numberOfPeopleToMove,
             filteredRooms,
+            guests,
+            filteredClients,
+            editingRows,
+            genderOptions,
+            emailPattern,
+            isValidEmail,
+            phonePattern,
+            isValidPhone,
             allRoomsHavePlan,
             reservationStatus,
             updatedDateTime,
@@ -914,9 +1145,15 @@ export default {
             openBulkEditDialog,
             closeBulkEditDialog,
             applyChanges,
+            applyGuestChanges,
             openChangeClientDialog,
             closeChangeClientDialog,
             allHavePlan,
+            validateEmail,
+            validatePhone,
+            filterClients,
+            onClientSelect,     
+            onClientChange,       
         };
     },    
 };

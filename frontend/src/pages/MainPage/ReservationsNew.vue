@@ -882,7 +882,7 @@
         //console.log('reservationDetails changed:', newVal);        
       }, { deep: true }); 
       watch(dateRange, (newVal, oldVal) => {
-        console.log('dateRange changed:', newVal);        
+        //console.log('dateRange changed:', newVal);        
       }, { deep: true }); 
       watch(() => generateDateRangeArray.value,
         (newVal, oldVal) => {
