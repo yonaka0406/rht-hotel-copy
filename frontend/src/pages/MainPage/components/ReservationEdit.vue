@@ -59,7 +59,7 @@
                                     @click="updateReservationStatus('confirmed')"
                                 /> 
                             </div>
-                            <div v-if="reservationStatus === '確定'" class="field flex flex-col">
+                            <div v-if="reservationStatus === '確定' && allGroupsPeopleCountMatch" class="field flex flex-col">
                                 <Button 
                                     label="チェックイン" 
                                     severity="success"
@@ -130,6 +130,12 @@
                                         style="margin-left: 0.5rem; color: var(--primary-color);"
                                         :title="allHavePlan(group) ? 'プラン設定済み' : 'プラン未設定'"
                                     ></i>
+                                    <i
+                                        class="pi"
+                                        :class="allPeopleCountMatch(group) ? 'pi-check' : 'pi-exclamation-triangle'"
+                                        style="margin-left: 0.5rem; color: var(--primary-color);"
+                                        :title="allPeopleCountMatch(group) ? '宿泊者設定済み' : '宿泊者未設定'"
+                                    ></i>                                    
 
                                 </div>
                                 <div class="col-span-2 text-right">
@@ -920,44 +926,89 @@ export default {
         const applyGuestChanges = async () => {
             const guestsWithId = guests.value.filter(guest => guest.id !== null);
             const idSet = new Set();
+            const duplicatedGuest = [];
             let hasDuplicates = false;
 
+            // Validate if the same person was selected more than once
             for (const guest of guestsWithId) {
                 if (idSet.has(guest.id)) {
                     hasDuplicates = true;
+                    duplicatedGuest.value = guest;
                     break;
                 }
                 idSet.add(guest.id);
-            }
-            for (const guest of guests.value) {
-                if (guest.name) {
-                    if(!guest.email && !guest.phone) {                        
-                        toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
-                        return;                        
-                    }
-                    if(guest.email){
-                        const emailValid = validateEmail(guest.email);                        
-                        if (!emailValid) {
-                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
-                            return;
+            }            
+
+            if (hasDuplicates) {
+                toast.add({ severity: 'warn', summary: 'Warning', detail: `重複宿泊者:${duplicatedGuest.value.name}が選択されました。`, life: 3000 });
+                return;
+            } else {                
+                console.log('No duplicates found, checking fields...');
+                for (const guest of guests.value) {
+                    if (guest.name) {
+                        if(!guest.email && !guest.phone) {                        
+                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
+                            return;                        
                         }
-                    }
-                    if(guest.phone){
-                        const phoneValid = validatePhone(guest.phone);
-                        if (!phoneValid) {
-                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
-                            return;
+                        if(guest.email){
+                            const emailValid = validateEmail(guest.email);                        
+                            if (!emailValid) {
+                                toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
+                                return;
+                            }
+                        }
+                        if(guest.phone){
+                            const phoneValid = validatePhone(guest.phone);
+                            if (!phoneValid) {
+                                toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
+                                return;
+                            }
                         }
                     }
                 }
-            }
+                console.log('No entry problem found, applying changes...');
 
-            if (hasDuplicates) {
-                toast.add({ severity: 'warn', summary: 'Warning', detail: '重複宿泊者が選択されました。', life: 3000 });
-                return;
-            } else {
-                // Proceed with applying changes
-                console.log('No duplicates found, applying changes...');
+                const filteredGroup = selectedGroup.value.details;
+
+                const dataToUpdate = filteredGroup.map(group => {
+                    return {
+                        id: group.id,
+                        hotel_id: group.hotel_id,
+                        room_id: group.room_id,
+                        number_of_people: group.number_of_people,                        
+                        guestsToAdd: guests.value.filter(guest => guest.name) 
+                    };
+                });
+                console.log('dataToUpdate', dataToUpdate);
+
+                try {
+                    const authToken = localStorage.getItem('authToken');
+                    const response = await fetch(`/api/reservation/update/guest/${props.reservation_id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                            'Content-Type': 'application/json', // Ensure the body is JSON
+                        },
+                        body: JSON.stringify(dataToUpdate), 
+                    });
+
+                    const updatedReservation = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(`Error updating reservation guests: ${updatedReservation.error || 'Unknown error'}`);
+                    }
+
+                    await fetchReservation(props.reservation_id);
+
+                    closeBulkEditDialog();
+
+                    // Provide feedback to the user (optional)                
+                    toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                } catch (err) {
+                    console.error('Error during fetch:', err);
+                    console.error('Failed to apply changes:', error);                
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+                }
             }
         };
 
@@ -974,6 +1025,15 @@ export default {
                 (detail) => detail.plans_global_id || detail.plans_hotel_id
             );
         };
+
+        const allPeopleCountMatch = (group) => {
+            return group.details.every(
+                (detail) => detail.number_of_people === detail.reservation_clients.length
+            );
+        };
+        const allGroupsPeopleCountMatch = computed(() => {
+            return groupedRooms.value.every(group => allPeopleCountMatch(group));
+        });
 
         const goToNewReservation = () => {                
             setReservationId(null);                
@@ -1032,7 +1092,7 @@ export default {
         }, { deep: true });
         watch(groupedRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                //console.log('groupedRooms changed:', newValue);
+                console.log('groupedRooms changed:', newValue);
             }
         }, { deep: true });
         watch(selectedGroup, (newValue, oldValue) => {
@@ -1149,6 +1209,8 @@ export default {
             openChangeClientDialog,
             closeChangeClientDialog,
             allHavePlan,
+            allPeopleCountMatch,
+            allGroupsPeopleCountMatch,
             validateEmail,
             validatePhone,
             filterClients,

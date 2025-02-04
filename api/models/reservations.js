@@ -129,6 +129,7 @@ const selectReservation = async (id) => {
 	    ,COALESCE(ra.price, 0) AS addon_total_price
       ,reservation_details.price + COALESCE(ra.price, 0) AS price
       ,logs_reservation_details.log_time as reservation_detail_log_time
+      ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
 
     FROM
       rooms
@@ -168,14 +169,31 @@ const selectReservation = async (id) => {
       )
         LEFT JOIN 
       (
-      SELECT
-        reservation_detail_id,
-        SUM(price) AS price
-      FROM
-        reservation_addons		
-      GROUP BY
-        reservation_detail_id
-    ) ra ON reservation_details.id = ra.reservation_detail_id
+        SELECT
+          reservation_detail_id,
+          SUM(price) AS price
+        FROM
+          reservation_addons		
+        GROUP BY
+          reservation_detail_id
+      ) ra ON reservation_details.id = ra.reservation_detail_id
+        LEFT JOIN 
+      (
+        SELECT 
+          rc.reservation_details_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'client_id', rc.client_id,
+              'name', c.name,
+              'name_kana', c.name_kana,
+              'name_kanji', c.name_kanji
+            )
+          ) AS clients_json
+        FROM reservation_clients rc
+        JOIN clients c ON rc.client_id = c.id
+        GROUP BY rc.reservation_details_id
+      ) rc ON rc.reservation_details_id = reservation_details.id
+       
 
     WHERE
       reservations.id = $1
@@ -660,6 +678,25 @@ const deleteReservationAddonsByDetailId = async (reservation_detail_id, updated_
   }   
 };
 
+const deleteReservationClientsByDetailId = async (reservation_detail_id, updated_by) => {
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
+
+    DELETE FROM reservation_clients
+    WHERE reservation_details_id = %L
+    RETURNING *;
+  `, updated_by, reservation_detail_id);
+  
+  try{
+    const result = await pool.query(query);
+    return result.rowCount;
+  } catch (err) {
+    console.error('Error deleting reservation clients:', err);
+    throw new Error('Database error');
+  }   
+};
+
 module.exports = {    
     selectAvailableRooms,
     selectReservedRooms,
@@ -677,5 +714,6 @@ module.exports = {
     updateRoomByCalendar,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
+    deleteReservationClientsByDetailId,
 };
 

@@ -1,8 +1,9 @@
 const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
-  addReservationHold, addReservationDetail, addReservationAddon, updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar,
-  deleteHoldReservationById, deleteReservationAddonsByDetailId
+  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, 
+  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar,
+  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -334,6 +335,38 @@ const createReservationAddons = async (req, res) => {
   }
 };
 
+const createReservationClient = async (req, res) => {
+  const {
+    hotel_id,
+    reservation_detail_id,
+    client_id,    
+  } = req.body;
+  const created_by = req.user.id;
+  const updated_by = req.user.id;
+
+  try {
+    // Add the reservation with the final client_id
+    const reservationData = {
+      hotel_id,
+      reservation_detail_id,
+      client_id,      
+      created_by,
+      updated_by
+    };
+
+    // Add the reservation to the database
+    const newReservationClient = await addReservationClient(reservationData);
+
+    res.status(201).json({
+      clients: newReservationClient,      
+    });
+    
+  } catch (err) {
+    console.error('Error creating reservation client:', err);
+    res.status(500).json({ error: 'Failed to create reservation client' });
+  }  
+}
+
 // PUT
 const editReservationDetail = async (req, res) => {  
   const { id } = req.params;
@@ -416,6 +449,70 @@ const editReservationDetail = async (req, res) => {
   }
 };
 
+const editReservationGuests = async (req, res) => {
+  const { id } = req.params;
+  const guestDataArray = req.body;
+
+  try {
+      for (const guestData of guestDataArray) { // loop for each reservation details
+          const { id: reservation_detail_id, hotel_id, room_id, number_of_people, guestsToAdd } = guestData;
+          const created_by = req.user.id;
+          const updated_by = req.user.id;
+
+          const existingReservation = await selectReservation(id);
+          const filteredReservations = existingReservation.filter(reservation => reservation.room_id === room_id);
+
+          for (const reservationDetail of filteredReservations) {
+              // Delete existing clients for this reservation detail
+              await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
+
+              // Add the new clients
+              if (guestsToAdd && guestsToAdd.length > 0) {
+                  for (const guest of guestsToAdd) {
+                    let finalClientId = guest.id;
+                    //console.log('Add client with id:',finalClientId);
+                    if(finalClientId !== '' && finalClientId !== null && finalClientId !== undefined){
+                      //console.log('Client ID was provided');
+                    } else{
+                      //console.log('Client ID was empty');
+                      // Assuming clientData is available in the context
+                      const clientData = {
+                        name: guest.name,
+                        legal_or_natural_person: guest.legal_or_natural_person,
+                        gender: guest.gender,
+                        email: guest.email,
+                        phone: guest.phone,
+                        created_by,
+                        updated_by,
+                      };
+                      //console.log('New client to add to the database:',clientData);
+                      const newClient = await addClientByName(clientData);
+                      finalClientId = newClient.id; // Assuming the new client object has an id property
+                      //console.log('New client added to the database:',finalClientId);
+                    }
+                    
+                    const guestInfo = {
+                        hotel_id: reservationDetail.hotel_id,
+                        reservation_details_id: reservationDetail.id,
+                        client_id: finalClientId,
+                        created_by,
+                        updated_by
+                    };
+                    const addedGuest = await addReservationClient(guestInfo);
+                    //console.log('Guest Added:', addedGuest);
+                  }
+              }
+          }
+      }
+      res.status(200).json({ message: "Guests updated successfully" }); // Send a success response
+
+  } catch (err) {
+      console.error("Error updating guests:", err);
+      res.status(500).json({ error: "Failed to update guests" }); // Send an error response
+
+  }
+};
+
 const editReservationStatus = async (req, res) => {
   const { id } = req.params;
   const { hotel_id, status } = req.body;
@@ -486,7 +583,5 @@ const deleteHoldReservation = async (req, res) => {
   }
 }
 
-
-
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, editReservationDetail, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };
