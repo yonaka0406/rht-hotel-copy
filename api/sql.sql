@@ -37,8 +37,6 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
-ALTER TABLE users ADD COLUMN name TEXT NOT NULL;
-
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     INSERT INTO users (email, password_hash, role_id)
     VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
