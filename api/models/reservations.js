@@ -639,6 +639,31 @@ const updateRoomByCalendar = async (roomData) => {
   
 };
 
+const updateReservationGuest = async (oldValue, newValue) => {
+  const client = await pool.connect();
+  
+  const query = `
+    UPDATE reservation_clients
+    SET reservation_details_id = $1    
+    WHERE id IN 
+      (
+        SELECT id 
+        FROM reservation_clients 
+        WHERE reservation_details_id = $2 
+        LIMIT 1
+      );
+  `;
+
+  try {
+    await client.query(query, [newValue, oldValue]);
+    console.log('Reservation guest updated successfully');
+  } catch (err) {
+    console.error('Error updating reservation guest:', err);
+  } finally {
+    await client.end();
+  }
+};
+
 // Delete
 const deleteHoldReservationById = async (reservation_id, updated_by) => {
   const query = format(`
@@ -712,6 +737,7 @@ module.exports = {
     updateReservationStatus,
     updateReservationResponsible,
     updateRoomByCalendar,
+    updateReservationGuest,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,

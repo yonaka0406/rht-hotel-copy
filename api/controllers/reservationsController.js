@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, 
-  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar,
+  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationGuest,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -261,11 +261,16 @@ const createReservationDetails = async (req, res) => {
 
     // Add the reservation to the database
     const newReservationAddon = await addReservationDetail(reservationData);
-    const ogmReservationAddons = await selectReservationAddons(ogm_id);
-
     console.log('newReservationAddon:', newReservationAddon);
     console.log('ogm_id:', ogm_id);
+    const ogmReservationAddons = await selectReservationAddons(ogm_id);
     console.log('ogmReservationAddons:', ogmReservationAddons);
+    
+    // Update reservation guests
+    for (let i = 0; i < number_of_people; i++) {
+      await updateReservationGuest(ogm_id, newReservationAddon.id);
+      console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
+    }
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
       const addOnPromises = ogmReservationAddons.map(addon =>
