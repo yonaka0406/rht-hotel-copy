@@ -237,7 +237,7 @@ const createReservationDetails = async (req, res) => {
     plans_global_id,
     plans_hotel_id,
     number_of_people,
-    price,
+    price,    
     addons,
   } = req.body;
   const created_by = req.user.id;
@@ -270,7 +270,7 @@ const createReservationDetails = async (req, res) => {
     for (let i = 0; i < number_of_people; i++) {
       await updateReservationGuest(ogm_id, newReservationAddon.id);
       console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
-    }
+    }        
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
       const addOnPromises = ogmReservationAddons.map(addon =>

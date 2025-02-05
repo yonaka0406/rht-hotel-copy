@@ -177,7 +177,7 @@
                     <TabList>
                         <Tab value="0">プラン適用</Tab>
                         <Tab value="1">部屋移動</Tab>
-                        <Tab value="2">宿泊者</Tab>
+                        <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="2">宿泊者</Tab>
                     </TabList>
                      
                     <TabPanels>
@@ -338,9 +338,9 @@
          
             </div>
             <template #footer>
-                
+                <Button v-if="bulkEditDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+                <Button v-if="bulkEditDialogTab === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
                 <Button v-if="bulkEditDialogTab === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />                
-                <Button v-else label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyChanges" />
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
@@ -717,6 +717,7 @@ export default {
 
         const openBulkEditDialog = (group) => {
             selectedGroup.value = group;
+            bulkEditDialogTab.value = 0;
             bulkEditDialogVisible.value = true;
             initializeGuests();
             fetchClients();
@@ -743,7 +744,7 @@ export default {
             numberOfPeopleToMove.value = 0;            
         };        
 
-        const applyChanges = async () => {
+        const applyPlanChanges = async () => {
             // Map selectedDays to a set of day values for efficient comparison
             const selectedDayValues = new Set(selectedDays.value.map(day => day.value));
 
@@ -922,6 +923,144 @@ export default {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
             }
         };
+
+        const applyRoomChanges = async () => {
+            const filteredGroup = selectedGroup.value.details                
+                .map(detail => {                    
+                    return {
+                        ...detail,
+                        reservation_id: props.reservation_id,
+                    };
+                });
+            console.log('filteredGroup:',filteredGroup)
+
+            // Prepare the data to be sent in the PUT request
+            const dataToUpdate = filteredGroup.map(group => {
+                // Check if the number of people to move is 0 or equal to number of people in reservation
+                if (numberOfPeopleToMove.value === 0 || numberOfPeopleToMove.value === group.number_of_people) {
+                    return {
+                        id: group.id, // The reservation detail id
+                        hotel_id: group.hotel_id, // The hotel id
+                        room_id: targetRoom.value ? targetRoom.value.value : group.room_id,
+                        plans_global_id: group.plans_global_id, // Updated plans_global_id
+                        plans_hotel_id: group.plans_hotel_id,
+                        number_of_people: group.number_of_people, // Number of people
+                        price: group.price === null ? 0 : group.price, // Updated price (if applicable)
+                        addons: selectedAddon.value.map(addon => ({
+                            id: addon.id,
+                            addons_global_id: addon.addons_global_id,
+                            addons_hotel_id: addon.addons_hotel_id,
+                            plans_global_id: addon.plans_global_id,
+                            plans_hotel_id: addon.plans_hotel_id,
+                            price: addon.price,
+                            quantity: addon.quantity
+                        }))
+                    };
+                } else if (numberOfPeopleToMove.value < group.number_of_people) {
+                    // Create the first updated entry for the current room with the reduced number of people
+                    const updatedCurrentRoom = {
+                        reservation_id: group.reservation_id, // The reservation id
+                        id: group.id, // The reservation detail id
+                        hotel_id: group.hotel_id, // The hotel id
+                        date: group.date, // The date
+                        room_id: group.room_id, // Current room stays as it is
+                        plans_global_id: group.plans_global_id, // Updated plans_global_id
+                        plans_hotel_id: group.plans_hotel_id, // Updated plans_hotel_id
+                        number_of_people: group.number_of_people - numberOfPeopleToMove.value, // Reduce number of people in the current room
+                        price: group.price === null ? 0 : group.price, // Updated price (if applicable)
+                        addons: selectedAddon.value.map(addon => ({
+                            id: addon.id,
+                            addons_global_id: addon.addons_global_id,
+                            addons_hotel_id: addon.addons_hotel_id,
+                            plans_global_id: addon.plans_global_id,
+                            plans_hotel_id: addon.plans_hotel_id,
+                            price: addon.price,
+                            quantity: addon.quantity
+                        }))
+                    };
+
+                    // Create the second entry for the new room with numberOfPeopleToMove.value people
+                    const newRoomEntry = {
+                        reservation_id: group.reservation_id, // The reservation id
+                        id: null, // This is a new entry, so no existing id
+                        ogm_id: group.id,
+                        hotel_id: group.hotel_id, // The hotel id
+                        date: group.date, // The date
+                        room_id: targetRoom.value ? targetRoom.value.value : group.room_id, // New room with targetRoom if available
+                        plans_global_id: group.plans_global_id, // Use selected plan if available, else fallback to existing
+                        plans_hotel_id: group.plans_hotel_id, // Use selected plan if available, else fallback to existing
+                        number_of_people: numberOfPeopleToMove.value, // Number of people to move
+                        price: group.price === null ? 0 : group.price, // Updated price (if applicable)
+                        addons: selectedAddon.value.map(addon => ({
+                            id: addon.id,
+                            addons_global_id: addon.addons_global_id,
+                            addons_hotel_id: addon.addons_hotel_id,
+                            plans_global_id: addon.plans_global_id,
+                            plans_hotel_id: addon.plans_hotel_id,
+                            price: addon.price,
+                            quantity: addon.quantity
+                        }))
+                    };
+                    // Return both the updated current room and the new room
+                    return [updatedCurrentRoom, newRoomEntry];                   
+                }
+            }).flat();
+
+            console.log('dataToUpdate', dataToUpdate);
+
+            try {
+                for (const data of dataToUpdate) {
+                    const authToken = localStorage.getItem('authToken');
+
+                    if (data.id === null) {
+                        // When `id` is null, make a POST request instead
+                        const response = await fetch(`/api/reservation/update/details/`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                                'Content-Type': 'application/json', // Ensure the body is JSON
+                            },
+                            body: JSON.stringify(data), // Send the data to create a new reservation
+                        });
+
+                        const newReservation = await response.json(); // Parse the response as JSON
+
+                        if (!response.ok) {
+                            throw new Error(`Error creating new reservation detail: ${newReservation.error || 'Unknown error'}`);
+                        }
+                        //console.log('Created New Reservation:', newReservation);
+                    } else {
+                        // For existing reservations, make a PUT request
+                        const response = await fetch(`/api/reservation/update/details/${data.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                                'Content-Type': 'application/json', // Ensure the body is JSON
+                            },
+                            body: JSON.stringify(data), // Send the data to update
+                        });
+
+                        const updatedReservation = await response.json(); // Parse the response as JSON
+
+                        if (!response.ok) {
+                            throw new Error(`Error updating reservation detail: ${updatedReservation.error || 'Unknown error'}`);
+                        }
+                        //console.log('Updated Reservation:', updatedReservation);
+                    }
+                }
+
+                await fetchReservation(props.reservation_id);
+
+                closeBulkEditDialog();
+
+                // Provide feedback to the user (optional)                
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                
+            } catch (error) {
+                console.error('Failed to apply changes:', error);                
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+            }
+        }
 
         const applyGuestChanges = async () => {
             const guestsWithId = guests.value.filter(guest => guest.id !== null);
@@ -1204,7 +1343,8 @@ export default {
             handleTabChange,
             openBulkEditDialog,
             closeBulkEditDialog,
-            applyChanges,
+            applyPlanChanges,
+            applyRoomChanges,
             applyGuestChanges,
             openChangeClientDialog,
             closeChangeClientDialog,
