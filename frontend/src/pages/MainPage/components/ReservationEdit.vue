@@ -726,7 +726,7 @@ export default {
 
             try {
                 await setReservationStatus(status); // Call the setReservationStatus from your store
-                await fetchReservation(props.reservation_id); // Fetch the updated reservation details
+                // await fetchReservation(props.reservation_id); // Fetch the updated reservation details
             } catch (error) {
                 console.error('Error updating and fetching reservation:', error);
                 // Handle the error, e.g., show a toast message
@@ -993,7 +993,7 @@ export default {
                     }
                 }
 
-                await fetchReservation(props.reservation_id);
+                // await fetchReservation(props.reservation_id);
 
                 closeBulkEditDialog();
 
@@ -1131,7 +1131,7 @@ export default {
                     }
                 }
 
-                await fetchReservation(props.reservation_id);
+                // await fetchReservation(props.reservation_id);
 
                 closeBulkEditDialog();
 
@@ -1232,7 +1232,7 @@ export default {
                         throw new Error(`Error updating reservation guests: ${updatedReservation.error || 'Unknown error'}`);
                     }
 
-                    await fetchReservation(props.reservation_id);
+                    // await fetchReservation(props.reservation_id);
 
                     closeBulkEditDialog();
 
@@ -1282,8 +1282,8 @@ export default {
                 if (!response.ok) {
                     throw new Error(`Error creating new reservation detail: ${newReservation.error || 'Unknown error'}`);
                 }
-                //console.log('Created New Reservation:', newReservation);
-                await fetchReservation(props.reservation_id);
+                // console.log('Created New Reservation:', newReservation);
+                // await fetchReservation(props.reservation_id);
 
                 closeBulkEditRoomDialog();
                 
@@ -1356,9 +1356,8 @@ export default {
 
             socket.value.on('tableUpdate', async (data) => {
                 // console.log('Reservation updated detected in ReservationEdit');
-                
-                fetchReservation(props.reservation_id);
-                
+                // Web Socket fetchReservation
+                await fetchReservation(props.reservation_id);                
             });
         });
 
@@ -1366,7 +1365,7 @@ export default {
         watch(() => props.reservation_id, async (newReservationId, oldReservationId) => {            
             if (newReservationId !== oldReservationId) {
                 //console.log("reservation_id changed:", newReservationId);
-                await fetchReservation(newReservationId);
+                // await fetchReservation(newReservationId);
                 // console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
                 await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);                
             }

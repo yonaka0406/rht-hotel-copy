@@ -476,30 +476,62 @@ const editReservationDetail = async (req, res) => {
 const editReservationGuests = async (req, res) => {
   const { id } = req.params;
   const guestDataArray = req.body;
+  const created_by = req.user.id;
+  const updated_by = req.user.id;
 
   try {
+      if (guestDataArray.length > 0) {
+        const firstGuestDataArray = guestDataArray[0]; // Get the first row
+        const guestsToAddForDetail = [...firstGuestDataArray.guestsToAdd]; // Shallow copy
+        
+        // Handle addClientByName and update guestsToAdd *only for the first row*
+        for (let i = 0; i < guestsToAddForDetail.length; i++) {
+          let guest = guestsToAddForDetail[i];
+          let finalClientId = guest.id;
+
+          if (!finalClientId) {
+            const clientData = {
+              name: guest.name,
+              legal_or_natural_person: guest.legal_or_natural_person,
+              gender: guest.gender,
+              email: guest.email,
+              phone: guest.phone,
+              created_by,
+              updated_by,
+            };
+            const newClient = await addClientByName(clientData);
+            finalClientId = newClient.id;
+            guestsToAddForDetail[i] = {...guest, id: finalClientId }; // Update the copied array
+          }
+        }
+
+        // Now, update ALL guestsToAdd arrays in guestDataArray
+        for (let i = 0; i < guestDataArray.length; i++) {
+          guestDataArray[i].guestsToAdd = guestsToAddForDetail;  // Substitute with the updated array
+        }
+      }
+
       for (const guestData of guestDataArray) { // loop for each reservation details
           const { id: reservation_detail_id, hotel_id, room_id, number_of_people, guestsToAdd } = guestData;
-          const created_by = req.user.id;
-          const updated_by = req.user.id;
 
           const existingReservation = await selectReservation(id);
           const filteredReservations = existingReservation.filter(reservation => reservation.room_id === room_id);
-
+          
           for (const reservationDetail of filteredReservations) {
               // Delete existing clients for this reservation detail
               await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
 
               // Add the new clients
               if (guestsToAdd && guestsToAdd.length > 0) {
-                  for (const guest of guestsToAdd) {
+                  for (let i = 0; i < guestsToAdd.length; i++) {
+                    let guest = guestsToAdd[i];
                     let finalClientId = guest.id;
-                    //console.log('Add client with id:',finalClientId);
+          
                     if(finalClientId !== '' && finalClientId !== null && finalClientId !== undefined){
                       //console.log('Client ID was provided');
                     } else{
-                      //console.log('Client ID was empty');
-                      // Assuming clientData is available in the context
+                      console.log('Client ID was empty');                      
+                      /*
                       const clientData = {
                         name: guest.name,
                         legal_or_natural_person: guest.legal_or_natural_person,
@@ -509,10 +541,12 @@ const editReservationGuests = async (req, res) => {
                         created_by,
                         updated_by,
                       };
-                      //console.log('New client to add to the database:',clientData);
+                      
                       const newClient = await addClientByName(clientData);
-                      finalClientId = newClient.id; // Assuming the new client object has an id property
-                      //console.log('New client added to the database:',finalClientId);
+                      finalClientId = newClient.id;
+                      // Update the guest object in guestsToAdd to prevet multiple entries
+                      guestsToAdd[i].id = finalClientId;  // Update the ID directly in the array
+                      */
                     }
                     
                     const guestInfo = {
