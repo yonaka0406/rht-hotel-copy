@@ -10,15 +10,18 @@
                     class="grid grid-cols-2 gap-2 gap-y-4"
                 >
                     <div class="field flex flex-col">                        
-                        <div class="flex items-center justify-between mr-2 mb-2">                       
-                        <p>予約者：</p>
-                        <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
+                        <div class="flex items-center justify-between mr-2 mb-2">
+                            <p>予約者：</p>
+                            <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
                         </div>
                         <InputText type="text" v-model="editReservationDetails[0].client_name" disabled style="background-color: transparent;"/>                        
                     </div>
-
+                    
                     <div class="field flex flex-col" >
-                        <p>人数：</p>
+                        <div class="flex items-center justify-between mr-2 mb-2">
+                            <p>人数：</p>
+                            <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openBulkEditRoomDialog" />
+                        </div>                        
                         <span>{{ editReservationDetails[0].reservation_number_of_people }} <i class="pi pi-user ml-1"></i></span>
                     </div>
 
@@ -363,6 +366,65 @@
             </template>  
         </Dialog>
 
+        <!-- Change Rooms Dialog -->
+        <Dialog
+            v-model:visible="bulkEditRoomDialogVisible"
+            header="予約一括編集"
+            :modal="true"
+            :breakpoints="{ '960px': '75vw', '640px': '100vw' }"
+            style="width: 50vw"
+        >
+            <div class="p-fluid">
+                <Tabs 
+                    value ="0"
+                    @update:value="handleTabChange"
+                >
+                    <TabList>                        
+                        <Tab value="0">部屋追加</Tab>                        
+                    </TabList>
+                     
+                    <TabPanels>                        
+                        <!-- Tab 1: Rooms -->
+                        <TabPanel value="0">
+                            <h4 class="mt-4 mb-3 font-bold">部屋追加</h4>
+
+                            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
+                                <div class="field mt-6 col-6">
+                                    <FloatLabel>
+                                        <InputNumber
+                                            id="move-people"
+                                            v-model="numberOfPeopleToMove"
+                                            :min="0"                                            
+                                        />
+                                        <label for="move-people">人数</label>
+                                    </FloatLabel>
+                                </div>
+                                <div class="field mt-6 col-6">
+                                    <FloatLabel>
+                                        <Select
+                                            id="move-room"
+                                            v-model="targetRoom"
+                                            :options="filteredRooms"
+                                            optionLabel="label"
+                                            showClear 
+                                            fluid
+                                        />
+                                        <label for="move-room">部屋を追加</label>
+                                    </FloatLabel>
+                                </div>
+                            </div>
+                        </TabPanel>
+                    </TabPanels>                     
+                </Tabs>
+         
+            </div>
+            <template #footer>
+                <Button label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyReservationRoomChanges" />                
+                
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditRoomDialog" />                
+            </template>            
+        </Dialog>
+
     </div>
 </template>
 
@@ -446,6 +508,7 @@ export default {
         const bulkEditDialogVisible = ref(false);
         const bulkEditDialogTab = ref(0);
         const changeClientDialogVisible = ref(false);
+        const bulkEditRoomDialogVisible = ref(false);
         const selectedClient = ref(null);
         const selectedGroup = ref(null);
         const selectedPlan = ref(null);
@@ -659,7 +722,7 @@ export default {
                   detail: '部屋の予約にプランを追加してください。', life: 3000 
                 });
                 return; 
-            }            
+            }         
 
             try {
                 await setReservationStatus(status); // Call the setReservationStatus from your store
@@ -1183,12 +1246,53 @@ export default {
             }
         };
 
+        const applyReservationRoomChanges = async () => {
+            console.log('Number of people to add:', numberOfPeopleToMove.value);
+            console.log('Selected room:', targetRoom.value);
+            console.log('Reservation id to copy:', props.reservation_id);
+
+            return
+
+            try {
+                const response = await fetch(`/api/reservation/update/details/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                        'Content-Type': 'application/json', // Ensure the body is JSON
+                    },
+                    body: JSON.stringify(data), // Send the data to create a new reservation
+                });
+
+                const newReservation = await response.json(); // Parse the response as JSON
+
+                if (!response.ok) {
+                    throw new Error(`Error creating new reservation detail: ${newReservation.error || 'Unknown error'}`);
+                }
+                //console.log('Created New Reservation:', newReservation);
+                await fetchReservation(props.reservation_id);
+
+                //closeBulkEditRoomDialog();
+                
+                toast.add({ severity: 'success', summary: 'Success', detail: '部屋追加されました。', life: 3000 });   
+            } catch (error) {
+                
+            }
+        };
+
         const openChangeClientDialog = () => {
             changeClientDialogVisible.value = true;
         };
 
         const closeChangeClientDialog = () => {
             changeClientDialogVisible.value = false;
+        };
+
+        const openBulkEditRoomDialog = () => {
+            bulkEditRoomDialogVisible.value = true;
+        };
+
+        const closeBulkEditRoomDialog = () => {
+            bulkEditRoomDialogVisible.value = false;
         };
 
         const allHavePlan = (group) => {
@@ -1347,6 +1451,7 @@ export default {
             bulkEditDialogVisible,
             bulkEditDialogTab,
             changeClientDialogVisible,
+            bulkEditRoomDialogVisible,
             selectedClient,
             selectedGroup,
             selectedPlan,
@@ -1378,8 +1483,11 @@ export default {
             applyPlanChanges,
             applyRoomChanges,
             applyGuestChanges,
+            applyReservationRoomChanges,
             openChangeClientDialog,
             closeChangeClientDialog,
+            openBulkEditRoomDialog,
+            closeBulkEditRoomDialog,
             allHavePlan,
             allPeopleCountMatch,
             allGroupsPeopleCountMatch,

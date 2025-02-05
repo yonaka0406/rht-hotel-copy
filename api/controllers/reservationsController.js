@@ -1,7 +1,7 @@
 const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
-  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, 
+  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
   updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationGuest,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId
 } = require('../models/reservations');
@@ -372,6 +372,25 @@ const createReservationClient = async (req, res) => {
   }  
 }
 
+const addNewRoomToReservation = async (req, res) => {
+  const { reservationId, numberOfPeople, roomId } = req.body;
+  const userId = req.user.id; 
+
+  try {
+    const newRoom = await addRoomToReservation(reservationId, numberOfPeople, roomId, userId);
+    res.status(200).json({
+      message: 'Room added to reservation successfully',
+      data: newRoom
+    });
+  } catch (err) {
+    console.error('Error adding new room to reservation:', err);
+    res.status(500).json({
+      message: 'Database error',
+      error: err.message
+    });
+  }
+};
+
 // PUT
 const editReservationDetail = async (req, res) => {  
   const { id } = req.params;
@@ -589,4 +608,4 @@ const deleteHoldReservation = async (req, res) => {
 }
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };

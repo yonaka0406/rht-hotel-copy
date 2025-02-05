@@ -418,6 +418,47 @@ const addReservationClient = async (reservationClient) => {
   }
 };
 
+const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Update the number_of_people in the reservations table
+    const updateReservationQuery = `
+      UPDATE reservations
+      SET number_of_people = number_of_people + $1,
+          updated_by = $2
+      WHERE id = $3::UUID;
+    `;
+    await client.query(updateReservationQuery, [numberOfPeople, userId, reservationId]);
+
+    // Copy one existing room_id in the reservation_details table
+    const copyRoomQuery = `
+      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
+      SELECT hotel_id, reservation_id, date, $1, NULL, NULL, $2, 0, created_by, $3
+      FROM reservation_details
+      WHERE (hotel_id, reservation_id, room_id) IN (
+        SELECT hotel_id, reservation_id, room_id
+        FROM reservation_details
+        WHERE reservation_id = $4::UUID
+        LIMIT 1
+      )
+      RETURNING *;
+    `;
+    const result = await client.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId]);
+
+    await client.query('COMMIT');
+    return result.rows[0];
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding room to reservation:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+};
+
 // Update entry
 const updateReservationDetail = async (reservationData) => {
   
@@ -735,6 +776,7 @@ module.exports = {
     addReservationDetail,
     addReservationAddon,
     addReservationClient,
+    addRoomToReservation,
     updateReservationDetail,
     updateReservationStatus,
     updateReservationResponsible,
