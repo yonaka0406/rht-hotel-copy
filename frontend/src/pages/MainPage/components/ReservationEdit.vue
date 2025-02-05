@@ -19,10 +19,15 @@
                     
                     <div class="field flex flex-col" >
                         <div class="flex items-center justify-between mr-2 mb-2">
-                            <p>人数：</p>
+                            <p>宿泊者：</p>
                             <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openBulkEditRoomDialog" />
-                        </div>                        
-                        <span>{{ editReservationDetails[0].reservation_number_of_people }} <i class="pi pi-user ml-1"></i></span>
+                        </div> 
+                        
+                        <span>
+                            人数：{{ editReservationDetails[0].reservation_number_of_people }}
+                            <i class="pi pi-user ml-1 mr-1"></i> 
+                            部屋数：{{ groupedRooms.length }} <i class="pi pi-box ml-1"></i>
+                        </span>
                     </div>
 
                     <div class="field flex flex-col">
@@ -152,7 +157,10 @@
                             </div>
                         </AccordionHeader>
                         <AccordionContent>
-                            <DataTable :value="formattedGroupDetails(group.details)">
+                            <DataTable 
+                                :value="formattedGroupDetails(group.details)"
+                                :rowStyle="rowStyle"
+                            >
                                 <Column field="display_date" header="日付" class="text-xs" />
                                 <Column field="plan_name" header="プラン" class="text-xs" />
                                 <Column field="number_of_people" header="人数" class="text-xs" />
@@ -181,6 +189,7 @@
                         <Tab value="0">プラン適用</Tab>
                         <Tab value="1">部屋移動</Tab>
                         <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="2">宿泊者</Tab>
+                        <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="3">追加・削除</Tab>
                     </TabList>
                      
                     <TabPanels>
@@ -334,6 +343,46 @@
                                     </template>
                                 </Column>                                
                             </DataTable>
+                            
+                        </TabPanel>
+                        <!-- Tab 4: Modify room -->
+                        <TabPanel value="3">
+                            <div class="grid grid-cols-2 gap-4 items-start">
+                                <Card class="mb-3">
+                                    <template #title>予約</template>
+                                    <template #content>
+                                        <div class="grid grid-cols-1 gap-4 items-center">
+                                            <div>
+                                                <span>宿泊者：{{ editReservationDetails[0].reservation_number_of_people }}</span>
+                                            </div>                                            
+                                        </div>
+                                    </template>                                    
+                                </Card>
+                                <Card class="mb-3">
+                                    <template #title>部屋 {{ selectedGroup.details[0].room_number }}</template>
+                                    <template #content>
+                                        <div class="grid grid-cols-1 gap-4 items-center">
+                                            <div>
+                                                <span>宿泊者：{{ selectedGroup.details[0].number_of_people }}</span>
+                                            </div>
+                                            <div>
+                                                <span>定員：{{ selectedGroup.details[0].capacity }}</span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    
+                                </Card>
+                            </div>                            
+                            
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <p class="col-span-2">部屋を予約から削除して、宿泊者人数を減らします。</p>
+                                <Button label="部屋削除" severity="danger" icon="pi pi-trash" @click="deleteRoom(selectedGroup)" />
+                                <p class="col-span-2">予約の宿泊者人数を<span class="font-bold text-blue-700">増やします</span>。</p>
+                                <button class="bg-blue-500 text-white hover:bg-blue-600" @click="addPersonToRoom(selectedGroup)"><i class="pi pi-plus"></i> 人数増加</button>
+                                <p class="col-span-2">予約の宿泊者人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
+                                <button class="bg-yellow-500 text-white hover:bg-yellow-600" @click="removePersonFromRoom(selectedGroup)"><i class="pi pi-minus"></i> 人数削減</button>
+                                <!--IMPLEMENT: Se os numeros capacity e atual forem iguais, nao mostrar o botao de aumentar. Se o numero atual for 1, nao mostrar o botao de reduzir.-->
+                            </div>
                             
                         </TabPanel>
                     </TabPanels>                     
@@ -657,7 +706,6 @@ export default {
         const allRoomsHavePlan = computed(() => {
             return groupedRooms.value.every(group => allHavePlan(group));
         });
-
         const reservationStatus = computed(() => {
             switch (editReservationDetails.value[0]?.status) {
                 case 'hold':
@@ -676,7 +724,6 @@ export default {
                 return '不明'; // Or any default value you prefer
             }
         });
-
         const updatedDateTime = computed(() => {
             // console.log('updatedDateTime', editReservationDetails.value)
             return editReservationDetails.value.reduce((max, detail) => {
@@ -684,7 +731,20 @@ export default {
                 //console.log('max:', max);
                 return maxLogTime > max ? maxLogTime : max;
             }, new Date(0));            
-        });
+        });        
+
+        // Format
+        const rowStyle = (data) => {
+            const date = new Date(data.display_date);
+            const day = date.getDay();
+            if (day === 6) {
+                return { backgroundColor: '#fcfdfe' };
+            }
+            if (day === 0) {
+                return { backgroundColor: '#fcfcfe' };
+            }
+            
+        };
 
         // Map group details with formatted date
         const formattedGroupDetails = (details) => {
@@ -1393,7 +1453,7 @@ export default {
         }, { deep: true });
         watch(selectedGroup, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                //console.log('selectedGroup changed:', newValue);
+                // console.log('selectedGroup changed:', newValue);
                 if (newValue && newValue.details && newValue.details.length > 0) {
                     const details = newValue.details;
                     const startDate = details[0].check_in;
@@ -1486,10 +1546,11 @@ export default {
             isValidPhone,
             allRoomsHavePlan,
             reservationStatus,
-            updatedDateTime,
+            updatedDateTime,            
             plans,
             daysOfWeek,
             availableRooms,
+            rowStyle,
             updatePlanAddOns,
             updateReservationStatus,
             deleteReservation,
@@ -1518,5 +1579,7 @@ export default {
 </script>
 
 <style scoped>
-
+.saturday-row {
+  background-color: rgba(0, 0, 255, 0.1); /* Light Blue */
+}
 </style>
