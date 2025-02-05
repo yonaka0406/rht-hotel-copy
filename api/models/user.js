@@ -1,5 +1,6 @@
 const pool = require('../config/database');
-const bcrypt = require('bcrypt');
+//const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Return all users
 const getAllUsers = async () => {

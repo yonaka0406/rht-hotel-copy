@@ -1,4 +1,5 @@
-const bcrypt = require('bcrypt');
+//const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
 const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
