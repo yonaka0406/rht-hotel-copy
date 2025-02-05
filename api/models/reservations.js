@@ -559,7 +559,7 @@ const updateRoomByCalendar = async (roomData) => {
 
   const client = await pool.connect();
   try {
-    console.log('Starting transaction...');
+    // console.log('Starting transaction...');
     await client.query('BEGIN');
 
     // Check if the provided reservation_id has more than one distinct room_id
@@ -571,17 +571,17 @@ const updateRoomByCalendar = async (roomData) => {
     const checkValues = [id, hotel_id];
     const checkResult = await client.query(checkQuery, checkValues);
     const roomCount = checkResult.rows[0].room_count;
-    console.log('Room count:', roomCount);
+    // console.log('Room count:', roomCount);
 
     let newReservationId = id;
 
     // If room_count > 1 and check_in/check_out dates change, create a new reservation_id
     if (roomCount > 1) {
       
-      console.log('Old check-in:', old_check_in, 'Old check-out:', old_check_out);
+      // console.log('Old check-in:', old_check_in, 'Old check-out:', old_check_out);
 
       if (new_check_in !== old_check_in || new_check_out !== old_check_out) {
-        console.log('Check-in or check-out dates have changed. Creating new reservation_id...');
+        // console.log('Check-in or check-out dates have changed. Creating new reservation_id...');
         const insertReservationQuery = `
           INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_at, created_by, updated_by)
           SELECT hotel_id, reservation_client_id, $1, $2, $6, status, created_at, created_by, $3
@@ -592,7 +592,7 @@ const updateRoomByCalendar = async (roomData) => {
         const insertReservationValues = [new_check_out, new_check_out, updated_by, id, hotel_id, number_of_people];
         const insertResult = await client.query(insertReservationQuery, insertReservationValues);
         newReservationId = insertResult.rows[0].id;
-        console.log('New reservation_id:', newReservationId);
+        // console.log('New reservation_id:', newReservationId);
 
         // Update the number_of_people field in the reservations table
         const updateQuery = `
@@ -602,7 +602,7 @@ const updateRoomByCalendar = async (roomData) => {
         `;
         const updateValues = [number_of_people, id, hotel_id];
         await client.query(updateQuery, updateValues);
-        console.log('Updated number_of_people in reservations table.');
+        // console.log('Updated number_of_people in reservations table.');
 
         // Commit the first transaction
         await client.query('COMMIT');
@@ -655,7 +655,7 @@ const updateRoomByCalendar = async (roomData) => {
       updated_by,
       old_room_id
     ];
-    console.log('Executing update query with values:', values);
+    // console.log('Executing update query with values:', values);
     const result = await pool.query(query, values);
 
     // Update reservations table with new check_in and check_out
@@ -666,10 +666,10 @@ const updateRoomByCalendar = async (roomData) => {
     `;
     const updateReservationValues = [new_check_in, new_check_out, updated_by, newReservationId, hotel_id];
     await client.query(updateReservationQuery, updateReservationValues);
-    console.log('Updated reservations table with new check_in and check_out.');
+    // console.log('Updated reservations table with new check_in and check_out.');
 
     await client.query('COMMIT');
-    console.log('Transaction committed successfully.');
+    // console.log('Transaction committed successfully.');
     return result.rows;
   }catch (err) {
     await client.query('ROLLBACK');
@@ -677,7 +677,7 @@ const updateRoomByCalendar = async (roomData) => {
     throw new Error('Database error');
   } finally {
     client.release();
-    console.log('Client released.');
+    // console.log('Client released.');
   }
   
 };
@@ -699,7 +699,7 @@ const updateReservationGuest = async (oldValue, newValue) => {
 
   try {
     await client.query(query, [newValue, oldValue]);
-    console.log('Reservation guest updated successfully');
+    // console.log('Reservation guest updated successfully');
   } catch (err) {
     console.error('Error updating reservation guest:', err);
   } finally {

@@ -11,7 +11,7 @@ const getPlanRates = async (req, res) => {
         const rates = await getAllPlansRates(plans_global_id, plans_hotel_id, hotel_id);
         
         if (rates.length === 0) {
-            console.log('No rates found for planId:');
+            // console.log('No rates found for planId:');
         }
         res.json(rates);
     } catch (error) {

@@ -62,8 +62,8 @@ const forgotAdmin = async (req, res) => {
 
     // Generate a reset token    
     const resetToken = jwt.sign({ email: email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-    console.log('email:', email);    
-    console.log('resetToken:', resetToken);  
+    // console.log('email:', email);    
+    // console.log('resetToken:', resetToken);  
     // Send the email with the reset link
     await sendAdminResetEmail(email, resetToken);
 

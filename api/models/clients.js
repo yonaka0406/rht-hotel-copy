@@ -195,7 +195,7 @@ const editClient = async (clientId, updatedFields, user_id) => {
 
   try {
     await pool.query(query, values);
-    console.log('Client updated successfully');
+    // console.log('Client updated successfully');
   } catch (err) {
     console.error('Error updating client:', err);
     throw err;

@@ -261,15 +261,15 @@ const createReservationDetails = async (req, res) => {
 
     // Add the reservation to the database
     const newReservationAddon = await addReservationDetail(reservationData);
-    console.log('newReservationAddon:', newReservationAddon);
-    console.log('ogm_id:', ogm_id);
+    // console.log('newReservationAddon:', newReservationAddon);
+    // console.log('ogm_id:', ogm_id);
     const ogmReservationAddons = await selectReservationAddons(ogm_id);
-    console.log('ogmReservationAddons:', ogmReservationAddons);
+    // console.log('ogmReservationAddons:', ogmReservationAddons);
     
     // Update reservation guests
     for (let i = 0; i < number_of_people; i++) {
       await updateReservationGuest(ogm_id, newReservationAddon.id);
-      console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
+      // console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
     }        
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
@@ -400,7 +400,7 @@ const editReservationDetail = async (req, res) => {
   const { validate: uuidValidate } = require('uuid');
   let calcPrice = { value: price };
 
-  //console.log('Body parameters:', req.body);
+  // console.log('Body parameters:', req.body);
   if (!uuidValidate(id)) {
     return res.status(400).json({ error: 'Invalid UUID format' });
   }
@@ -426,7 +426,7 @@ const editReservationDetail = async (req, res) => {
           //console.log('Calculated newPrice:', newPrice);  
       } else {
           // Handle the case where newPrice is undefined (fallback value)
-          console.log('Error: newPrice is undefined. Falling back to default value.');
+          // console.log('Error: newPrice is undefined. Falling back to default value.');
           calcPrice.value = 0;  // You can set a default fallback value if needed
       }      
     }
