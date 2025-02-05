@@ -1250,11 +1250,21 @@ export default {
             // console.log('Number of people to add:', numberOfPeopleToMove.value);
             // console.log('Selected room:', targetRoom.value);
             // console.log('Reservation id to copy:', props.reservation_id);
+
+            if(numberOfPeopleToMove.value <= 0) {
+                toast.add({ severity: 'warn', summary: 'Warning', detail: `少なくとも一人入力してください。`, life: 3000 });
+                return;                        
+            }
+            if(targetRoom.value === null) {
+                toast.add({ severity: 'warn', summary: 'Warning', detail: `部屋を選択してください。`, life: 3000 });
+                return;                        
+            }
+            
             const data = {
                 reservationId: props.reservation_id, 
                 numberOfPeople: numberOfPeopleToMove.value, 
                 roomId: targetRoom.value.value,
-            }
+            }            
 
             try {
                 const authToken = localStorage.getItem('authToken');
