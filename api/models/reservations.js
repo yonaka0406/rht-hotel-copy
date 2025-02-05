@@ -186,7 +186,9 @@ const selectReservation = async (id) => {
               'client_id', rc.client_id,
               'name', c.name,
               'name_kana', c.name_kana,
-              'name_kanji', c.name_kanji
+              'name_kanji', c.name_kanji,
+              'email', c.email,
+			        'phone', c.phone
             )
           ) AS clients_json
         FROM reservation_clients rc

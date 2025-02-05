@@ -520,7 +520,9 @@ export default {
         };
         const initializeGuests = () => {
             const capacity = selectedGroup.value.details[0]?.capacity || 0;
+            const reservationClients = selectedGroup.value.details[0]?.reservation_clients || '';
             console.log('Room capacity:', capacity);
+            console.log('Existing guest in reservation:', reservationClients);
             guests.value = Array.from({ length: capacity }, (_, i) => ({
                 id: null,
                 guest_no: '宿泊者 ' + (i + 1),
@@ -530,7 +532,24 @@ export default {
                 email: '',
                 phone: '',
                 isClientSelected: false
-            }));            
+            }));
+            if (reservationClients.length > 0) {
+                // Fill the array with reservation_clients data
+                reservationClients.forEach((client, i) => {
+                if (i < capacity) { // Important check: Don't exceed capacity
+                    guests.value[i] = { // Update existing guest object
+                    id: client.client_id || null,
+                    guest_no: '宿泊者 ' + (i + 1),
+                    name: client.name || '',
+                    legal_or_natural_person: 'natural',
+                    gender: client.gender || 'male',
+                    email: client.email || '',
+                    phone: client.phone || '',
+                    isClientSelected: true
+                    };
+                }
+                });
+            }            
         };
         const filterClients = (event) => {
             console.log('filterClients event');
@@ -1067,6 +1086,19 @@ export default {
             const idSet = new Set();
             const duplicatedGuest = [];
             let hasDuplicates = false;
+            const number_of_people = selectedGroup.value.details[0]?.number_of_people;
+            const guestCount = guests.value.filter(guest => guest.name).length;
+
+            // Check if guest count exceeds number_of_people
+            if (guestCount > number_of_people) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `予約の宿泊人数を超えています。 (最大: ${number_of_people}人)`,
+                    life: 3000
+                });
+                return;
+            }
 
             // Validate if the same person was selected more than once
             for (const guest of guestsWithId) {
