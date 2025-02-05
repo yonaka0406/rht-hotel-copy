@@ -891,9 +891,9 @@
         { deep: true } // Use deep to watch for nested object changes
       );
       watch(reservation_id, async (newId) => {
-        console.log('Updated reservation_id:', newId);
+        // console.log('Updated reservation_id:', newId);
         if(!newId){
-          console.log('No new reservation ID found.');
+          // console.log('No new reservation ID found.');
           // Reset and fetch new data
           roomDataCache.value = new Map();
           generateDateRangeArray.value = [];
@@ -936,7 +936,7 @@
       });      
 /*
       watch(filteredClients, (newVal, oldVal) => {
-        console.log('filteredClients changed:', newVal);        
+        // console.log('filteredClients changed:', newVal);        
       }, { deep: true });
 */
       // Mount
