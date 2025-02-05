@@ -723,7 +723,7 @@
           };
 
           const selectHotel = (hotel) => {
-            //console.log('Selected Hotel:', hotel);
+            // console.log('Selected Hotel:', hotel);
             selectedHotel.value = hotel; 
             activeTab.value = 2;        
           };
@@ -733,12 +733,12 @@
           onMounted(fetchHotelsAddons);          
 /*
           watch(editHotelAddon, (newVal, oldVal) => {
-            console.log('editHotelAddon changed:', newVal);
+            // console.log('editHotelAddon changed:', newVal);
             // Add your custom logic here
           }, { deep: true });
 
           watch(activeTab, (newTabValue, oldTabValue) => {
-            console.log(`Tab changed from ${oldTabValue} to ${newTabValue}`);
+            // console.log(`Tab changed from ${oldTabValue} to ${newTabValue}`);
             // You can add more logic here if needed
             // For example, if you want to reset or perform any other action when the tab changes
           });

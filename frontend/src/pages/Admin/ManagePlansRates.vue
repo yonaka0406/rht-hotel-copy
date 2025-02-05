@@ -931,13 +931,13 @@
             }, { immediate: true });
 /*
             watch(editAdjustment, (newVal, oldVal) => {                
-                console.log('editAdjustment changed:', newVal);                
+                // console.log('editAdjustment changed:', newVal);                
             }, { deep: true });
             watch(newAdjustment, (newVal, oldVal) => {                
-                console.log('newAdjustment changed:', newVal);                
+                // console.log('newAdjustment changed:', newVal);                
             }, { deep: true });
             watch(allRates, (newVal, oldVal) => {                
-                console.log('allRates changed:', newVal);                
+                // console.log('allRates changed:', newVal);                
             }, { deep: true });
 */
             
@@ -991,7 +991,7 @@
             },
             handleFilteredAddons(addons) {
                 this.addons = addons;
-                console.log("Received filtered conditions in parent:", addons);
+                // console.log("Received filtered conditions in parent:", addons);
             }
         },
         computed: {

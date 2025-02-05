@@ -549,20 +549,20 @@
             });
 
             const sendFilteredConditions = () => {
-                console.log("Sending filtered conditions:", filteredCurrentConditions.value);
+                // console.log("Sending filtered conditions:", filteredCurrentConditions.value);
                 emit('update-filtered-conditions', filteredCurrentConditions.value);
             };
             
             // Watcher
             /*
             watch(newAddon, (newValue, oldValue) => {
-                console.log('newAddon changed:', newValue);            
+                // console.log('newAddon changed:', newValue);            
             }, { deep: true });            
             watch(planAddons, (newValue, oldValue) => {
-                console.log('planAddons changed:', newValue);            
+                // console.log('planAddons changed:', newValue);            
             }, { deep: true });            
             watch(filteredCurrentConditions, (newValue, oldValue) => {
-                console.log('filteredCurrentConditions changed:', newValue);            
+                // console.log('filteredCurrentConditions changed:', newValue);            
             }, { deep: true });
             */
             return {

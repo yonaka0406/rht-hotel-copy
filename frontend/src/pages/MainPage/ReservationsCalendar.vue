@@ -191,7 +191,7 @@
             startDate,
             endDate
           );
-          console.log('reservedRooms:', reservedRooms.value);
+          // console.log('reservedRooms:', reservedRooms.value);
         } catch (error) {
           console.error('Error fetching reservations:', error);
         }
@@ -270,8 +270,8 @@
       });
 
       const onDragStart = async (event, roomId, date) => {
-        console.log('Drag start, room:', roomId, 'date:', date);  
-        console.log('Fill room info:', fillRoomInfo(roomId, date));      
+        // console.log('Drag start, room:', roomId, 'date:', date);  
+        // console.log('Fill room info:', fillRoomInfo(roomId, date));      
         
         const reservation_id = fillRoomInfo(roomId, date).reservation_id;
         if(reservation_id){
@@ -284,16 +284,16 @@
           const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
           dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
-          console.log(fillRoomInfo(roomId, date));
+          // console.log(fillRoomInfo(roomId, date));
           await fetchReservation(reservation_id);          
         }
         
       };
 
       const onDrop = (event, roomId, date) => {
-        console.log('Drop');
+        // console.log('Drop');
         const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
-        console.log('Selected room:', selectedRoom);
+        // console.log('Selected room:', selectedRoom);
         const check_in = formatDate(new Date(date));
         const check_out = formatDate(new Date(new Date(date).setDate(new Date(date).getDate() + dragFrom.value.days)));        
         const room_id = selectedRoom.room_id;
@@ -310,7 +310,7 @@
         } else if(!checkForConflicts(from, to)){
           showConfirmationPrompt();
         } else {
-          console.log('Conflict found');
+          // console.log('Conflict found');
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
         }        
       };
@@ -328,14 +328,14 @@
         }
                 
         if (confirmation) {
-          console.log('Confirmed');
+          // console.log('Confirmed');
           
           if(!checkForConflicts(from, to)){
-            console.log('No conflicts found');
+            // console.log('No conflicts found');
             await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people);
             await setReservationId(null);
           } else {
-            console.log('Conflict found');
+            // console.log('Conflict found');
             toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
           }
           
@@ -391,7 +391,7 @@
           }
         }
 
-        console.log('No conflicts found');
+        // console.log('No conflicts found');
         return false;
       };
 /*
@@ -452,12 +452,12 @@
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
         socket.value.on('connect', () => {
-          console.log('Connected to server');
+          // console.log('Connected to server');
         });
 
         socket.value.on('tableUpdate', (data) => {
           // Update the reservations data in your component
-          console.log('Received updated data:', data);
+          // console.log('Received updated data:', data);
           fetchReservations();          
         });
         
@@ -502,7 +502,7 @@
 
       watch(reservationId, async (newReservationId, oldReservationId) => {
         if (newReservationId) {
-          console.log('Reservation ID:', newReservationId);
+          // console.log('Reservation ID:', newReservationId);
           await fetchReservation(newReservationId);
         } 
       }, { immediate: true });

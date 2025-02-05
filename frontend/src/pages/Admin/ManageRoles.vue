@@ -249,7 +249,7 @@
                     }
 
                     if (!success) {
-                        console.log("Retrying in 2 seconds...");
+                        // console.log("Retrying in 2 seconds...");
                         await delay(2000); // Wait 2 seconds before retrying
                     }
                 }
@@ -286,7 +286,7 @@
                     });
                     if (response.ok) {
                         const data = await response.json();
-                        console.log("Role updated successfully:", data);
+                        // console.log("Role updated successfully:", data);
                         // Show success toast after role update
                         toast.add({
                             severity: 'success',
@@ -387,7 +387,7 @@
 
                     if (response.ok) {
                         const result = await response.json();
-                        console.log("Role deleted successfully:", result);                        
+                        // console.log("Role deleted successfully:", result);                        
                     } else if (response.status === 403) {
                         console.error("Failed to delete role:", response.statusText);
                         toast.add({

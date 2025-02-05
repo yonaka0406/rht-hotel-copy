@@ -476,7 +476,7 @@
             });
             
             if (response.status === 200) {
-              console.log(`Room ${room.room_number} updated successfully`);
+              // console.log(`Room ${room.room_number} updated successfully`);
             } else {
               console.error(`Failed to update room ${room.room_number}`);
             }            
@@ -541,7 +541,7 @@
               });
               
               if (response.status === 200) {
-                console.log(`Room type ${roomType.name} updated successfully`);
+                // console.log(`Room type ${roomType.name} updated successfully`);
               } else {
                 console.error(`Failed to update room type ${roomType.name}`);
               }
@@ -596,7 +596,7 @@
 
           if (response.ok) {
             const result = await response.json();
-            console.log(`Room type ${newRoomType.name} created successfully with ID ${result.roomTypeId}`);
+            // console.log(`Room type ${newRoomType.name} created successfully with ID ${result.roomTypeId}`);
             toast.add({ 
               severity: 'success', 
               summary: 'Success', 
@@ -665,7 +665,7 @@
 
           if (response.ok) {
             const result = await response.json();
-            console.log(`Room ${newRoom.room_number} created successfully`);
+            // console.log(`Room ${newRoom.room_number} created successfully`);
             toast.add({ 
               severity: 'success', 
               summary: 'Success', 
@@ -686,15 +686,15 @@
       };
 /*
       watch(roomTypes, (newVal, oldVal) => {
-        console.log('room type changed:', newVal);
+        // console.log('room type changed:', newVal);
         // Implement any additional logic needed when roomTypes changes
       });
       watch(rooms, (newVal, oldVal) => {
-        console.log('room changed:', newVal);
+        // console.log('room changed:', newVal);
         // Implement any additional logic needed when roomTypes changes
       });
       watch(newRoom, (newVal, oldVal) => {
-        console.log('room changed:', newVal);
+        // console.log('room changed:', newVal);
         // Implement any additional logic needed when roomTypes changes
       });
 */          

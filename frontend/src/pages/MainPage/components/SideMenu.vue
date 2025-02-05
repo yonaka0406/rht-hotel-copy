@@ -270,7 +270,7 @@
             });
 /*
             watch(hotels, (newVal, oldVal) => {
-                console.log('hotels changed from', oldVal, 'to', newVal);
+                // console.log('hotels changed from', oldVal, 'to', newVal);
             });
 */
             watch(

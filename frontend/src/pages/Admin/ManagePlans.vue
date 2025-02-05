@@ -762,7 +762,7 @@
       onMounted(fetchHotelsPlans);
 /*
       watch(newGlobalPlan, (newVal, oldVal) => {
-        console.log('editHotelAddon changed:', newVal);
+        // console.log('editHotelAddon changed:', newVal);
         // Add your custom logic here
       }, { deep: true });      
 */    

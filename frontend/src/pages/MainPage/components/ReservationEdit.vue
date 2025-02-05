@@ -394,7 +394,7 @@
                                         <InputNumber
                                             id="move-people"
                                             v-model="numberOfPeopleToMove"
-                                            :min="0"                                            
+                                            :min="0"
                                         />
                                         <label for="move-people">人数</label>
                                     </FloatLabel>
@@ -584,8 +584,8 @@ export default {
         const initializeGuests = () => {
             const capacity = selectedGroup.value.details[0]?.capacity || 0;
             const reservationClients = selectedGroup.value.details[0]?.reservation_clients || '';
-            console.log('Room capacity:', capacity);
-            console.log('Existing guest in reservation:', reservationClients);
+            // console.log('Room capacity:', capacity);
+            // console.log('Existing guest in reservation:', reservationClients);
             guests.value = Array.from({ length: capacity }, (_, i) => ({
                 id: null,
                 guest_no: '宿泊者 ' + (i + 1),
@@ -615,7 +615,7 @@ export default {
             }            
         };
         const filterClients = (event) => {
-            console.log('filterClients event');
+            // console.log('filterClients event');
             const query = event.query.toLowerCase();
             filteredClients.value = clients.value.filter((client) =>
                 client.legal_or_natural_person === 'natural' && 
@@ -630,8 +630,8 @@ export default {
             // Find the guest in the guests array that was just selected
             const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
-            console.log('guestIndex',guestIndex);
-            console.log('event:', e.value);
+            // console.log('guestIndex',guestIndex);
+            // console.log('event:', e.value);
 
             // Update the guest's information
             if (guestIndex > -1) {
@@ -639,7 +639,7 @@ export default {
                 guests.value[guestIndex].isClientSelected = true;               
             }
 
-            console.log('onClientSelect guests:', guests.value);
+            // console.log('onClientSelect guests:', guests.value);
         };
         const onClientChange = (rowData) => {
             // Find the guest in the guests array that was just selected
@@ -650,7 +650,7 @@ export default {
                 guests.value[guestIndex].isClientSelected = false;
             }
 
-            console.log('onClientChange guests:', guests.value);
+            // console.log('onClientChange guests:', guests.value);
         };
 
         // Computed
@@ -678,7 +678,7 @@ export default {
         });
 
         const updatedDateTime = computed(() => {
-            console.log('updatedDateTime', editReservationDetails.value)
+            // console.log('updatedDateTime', editReservationDetails.value)
             return editReservationDetails.value.reduce((max, detail) => {
                 const maxLogTime = new Date(Math.max(new Date(detail.reservation_log_time), new Date(detail.reservation_detail_log_time)));
                 //console.log('max:', max);
@@ -713,8 +713,8 @@ export default {
         };
 
         const updateReservationStatus = async (status) => {
-            console.log('updateReservationStatus');
-            console.log('allRoomsHavePlan:',allRoomsHavePlan.value);
+            // console.log('updateReservationStatus');
+            // console.log('allRoomsHavePlan:',allRoomsHavePlan.value);
             if (!allRoomsHavePlan.value) {                                
                 toast.add({ 
                   severity: 'warn', 
@@ -791,7 +791,7 @@ export default {
             
             if(bulkEditDialogTab.value  === 2){
                 initializeGuests();
-                console.log('Guest edit tab selected.');                
+                // console.log('Guest edit tab selected.');                
             }
 
             
@@ -950,7 +950,7 @@ export default {
                 };
             }).flat();
 
-            console.log('dataToUpdate', dataToUpdate);
+            // console.log('dataToUpdate', dataToUpdate);
 
             try {
                 for (const data of dataToUpdate) {
@@ -1014,7 +1014,7 @@ export default {
                         reservation_id: props.reservation_id,
                     };
                 });
-            console.log('filteredGroup:',filteredGroup)
+            // console.log('filteredGroup:',filteredGroup)
 
             // Prepare the data to be sent in the PUT request
             const dataToUpdate = filteredGroup.map(group => {
@@ -1088,7 +1088,7 @@ export default {
                 }
             }).flat();
 
-            console.log('dataToUpdate', dataToUpdate);
+            // console.log('dataToUpdate', dataToUpdate);
 
             try {
                 for (const data of dataToUpdate) {
@@ -1177,7 +1177,7 @@ export default {
                 toast.add({ severity: 'warn', summary: 'Warning', detail: `重複宿泊者:${duplicatedGuest.value.name}が選択されました。`, life: 3000 });
                 return;
             } else {                
-                console.log('No duplicates found, checking fields...');
+                // console.log('No duplicates found, checking fields...');
                 for (const guest of guests.value) {
                     if (guest.name) {
                         if(!guest.email && !guest.phone) {                        
@@ -1200,7 +1200,7 @@ export default {
                         }
                     }
                 }
-                console.log('No entry problem found, applying changes...');
+                // console.log('No entry problem found, applying changes...');
 
                 const filteredGroup = selectedGroup.value.details;
 
@@ -1213,7 +1213,7 @@ export default {
                         guestsToAdd: guests.value.filter(guest => guest.name) 
                     };
                 });
-                console.log('dataToUpdate', dataToUpdate);
+                // console.log('dataToUpdate', dataToUpdate);
 
                 try {
                     const authToken = localStorage.getItem('authToken');
@@ -1247,14 +1247,18 @@ export default {
         };
 
         const applyReservationRoomChanges = async () => {
-            console.log('Number of people to add:', numberOfPeopleToMove.value);
-            console.log('Selected room:', targetRoom.value);
-            console.log('Reservation id to copy:', props.reservation_id);
-
-            return
+            // console.log('Number of people to add:', numberOfPeopleToMove.value);
+            // console.log('Selected room:', targetRoom.value);
+            // console.log('Reservation id to copy:', props.reservation_id);
+            const data = {
+                reservationId: props.reservation_id, 
+                numberOfPeople: numberOfPeopleToMove.value, 
+                roomId: targetRoom.value.value,
+            }
 
             try {
-                const response = await fetch(`/api/reservation/update/details/`, {
+                const authToken = localStorage.getItem('authToken');
+                const response = await fetch(`/api/reservation/add/room/`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`, // Pass token for authentication
@@ -1271,7 +1275,7 @@ export default {
                 //console.log('Created New Reservation:', newReservation);
                 await fetchReservation(props.reservation_id);
 
-                //closeBulkEditRoomDialog();
+                closeBulkEditRoomDialog();
                 
                 toast.add({ severity: 'success', summary: 'Success', detail: '部屋追加されました。', life: 3000 });   
             } catch (error) {
@@ -1337,11 +1341,11 @@ export default {
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
             socket.value.on('connect', () => {
-                console.log('Connected to server');
+                // console.log('Connected to server');
             });
 
             socket.value.on('tableUpdate', async (data) => {
-                console.log('Reservation updated detected in ReservationEdit');
+                // console.log('Reservation updated detected in ReservationEdit');
                 
                 fetchReservation(props.reservation_id);
                 
@@ -1353,13 +1357,13 @@ export default {
             if (newReservationId !== oldReservationId) {
                 //console.log("reservation_id changed:", newReservationId);
                 await fetchReservation(newReservationId);
-                console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
+                // console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
                 await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);                
             }
         });            
         watch(editReservationDetails, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                //console.log('editReservationDetails changed:', newValue);
+                // console.log('editReservationDetails changed:', newValue);
                 fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
                 selectedClient.value = editReservationDetails.value[0].client_id;
                 //console.log('selectedClient.value:', selectedClient.value);
@@ -1367,7 +1371,15 @@ export default {
         }, { deep: true });
         watch(groupedRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('groupedRooms changed:', newValue);
+                // console.log('groupedRooms changed:', newValue);
+
+                if (newValue && newValue.length > 0) {
+                    const details = newValue[0].details;
+                    const startDate = details[0].check_in;
+                    const endDate = details[0].check_out;        
+
+                    fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
+                }  
             }
         }, { deep: true });
         watch(selectedGroup, (newValue, oldValue) => {
@@ -1411,11 +1423,6 @@ export default {
             if (newValue !== oldValue) {
                 //console.log('selectedAddon changed:', newValue);
             }
-        }, { deep: true });        
-        watch(availableRooms, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                //console.log('availableRooms changed:', newValue);
-            }
         }, { deep: true });
         watch(targetRoom, (newValue, oldValue) => {
             if (newValue !== oldValue) {
@@ -1429,7 +1436,7 @@ export default {
         }, { deep: true });
         watch(selectedHotelId, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('selectedHotelId changed:', newValue);
+                // console.log('selectedHotelId changed:', newValue);
                 if (newValue !== editReservationDetails.value[0]?.hotel_id) {
                     goToNewReservation();
                 }
@@ -1438,7 +1445,7 @@ export default {
         }, { deep: true });
         watch(guests, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('guests changed:', guests.value);
+                // console.log('guests changed:', guests.value);
             }
         }, { immediate: true });
 

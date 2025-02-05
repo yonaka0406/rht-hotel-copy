@@ -771,7 +771,7 @@
   watch(
     () => hotel.open_date,
     (newVal, oldVal) => {
-      console.log('hotel changed from', oldVal, 'to', newVal);
+      // console.log('hotel changed from', oldVal, 'to', newVal);
 
       // If the date is already a Date object, format it to YYYY-MM-DD
       if (newVal instanceof Date) {
@@ -779,7 +779,7 @@
         hotel.open_date = selectedDate;
       }
 
-      console.log('Formatted hotel.open_date:', hotel.open_date); // Verify the correct format
+      // console.log('Formatted hotel.open_date:', hotel.open_date); // Verify the correct format
     }
   );
 // Watchers
@@ -787,11 +787,11 @@
   
 
   watch(roomTypes, (newVal, oldVal) => {
-    console.log('roomTypes changed from', oldVal, 'to', newVal);
+    // console.log('roomTypes changed from', oldVal, 'to', newVal);
   });
 
   watch(generatedRooms, (newVal, oldVal) => {
-    console.log('generatedRooms changed from', oldVal, 'to', newVal);
+    // console.log('generatedRooms changed from', oldVal, 'to', newVal);
   });
 */
 </script>

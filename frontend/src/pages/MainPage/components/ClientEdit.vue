@@ -257,7 +257,7 @@
         // Get selected client object from the event
         selectedClient.value = event.value;        
         isClientSelected.value = true;
-        console.log('Selected Client:', selectedClient.value);        
+        // console.log('Selected Client:', selectedClient.value);        
 
         // Update reservationDetails with the selected client's information
         client.value.id = selectedClient.value.id;
@@ -281,8 +281,8 @@
           toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
         } else {
           const newClient = await createClient(client.value);
-          console.log(newClient);
-          console.log('New client id:', newClient.id);
+          // console.log(newClient);
+          // console.log('New client id:', newClient.id);
           await setReservationClient(newClient.id);          
           toast.add({ severity: 'success', summary: 'Success', detail: '新規予約者が登録されました。', life: 3000 });
         }
@@ -305,7 +305,7 @@
       };
   
       onMounted(async () => { 
-        console.log('Client ID:', props.client_id);       
+        // console.log('Client ID:', props.client_id);       
         await fetchClients();
         if (props.client_id) {
           const selectedClient = clients.value.find((client) => client.id === props.client_id);
@@ -316,13 +316,13 @@
             };
           }
         }
-        console.log('Client:', client.value);
+        // console.log('Client:', client.value);
         isClientSelected.value = true;
         
       });
 
       watch(client, async (newValue, oldValue) => {
-          console.log('Client changed:', newValue);                   
+          // console.log('Client changed:', newValue);                   
       }, { deep: true });
       watch(() => client.value.legal_or_natural_person,
         (newValue) => {
@@ -346,16 +346,16 @@
             
             if (newValue && newValue !== oldValue && newValue !== selectedName) {            
               // Reset fields if name changes and a client was previously selected
-              console.log('Resetting client details'); 
+              // console.log('Resetting client details'); 
               resetClient();
-              console.log('clientName:', clientName);
+              // console.log('clientName:', clientName);
               
               client.value.name = clientName.name;
-              console.log('clientName name:', clientName.name);
+              // console.log('clientName name:', clientName.name);
               client.value.name_kana = clientName.nameKana;
-              console.log('clientName nameKana:', clientName.nameKana);
+              // console.log('clientName nameKana:', clientName.nameKana);
               client.value.name_kanji = clientName.nameKanji;
-              console.log('clientName nameKanji:', clientName.nameKanji);
+              // console.log('clientName nameKanji:', clientName.nameKanji);
             }
           }
         },
