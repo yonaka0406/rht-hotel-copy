@@ -315,6 +315,14 @@
             }
         };
 
+        // Watcher
+
+        watch(availableRooms, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('availableRooms changed in Store:', newValue);
+            }
+        }, { deep: true });
+
 
     return {
         availableRooms,
