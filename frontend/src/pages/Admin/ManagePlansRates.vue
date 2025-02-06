@@ -564,18 +564,18 @@
             ];
 
             const months = [
-                { label: 'January', value: 'january' },
-                { label: 'February', value: 'february' },
-                { label: 'March', value: 'march' },
-                { label: 'April', value: 'april' },
-                { label: 'May', value: 'may' },
-                { label: 'June', value: 'june' },
-                { label: 'July', value: 'july' },
-                { label: 'August', value: 'august' },
-                { label: 'September', value: 'september' },
-                { label: 'October', value: 'october' },
-                { label: 'November', value: 'november' },
-                { label: 'December', value: 'december' }
+                { label: '１月', value: 'january' },
+                { label: '２月', value: 'february' },
+                { label: '３月', value: 'march' },
+                { label: '４月', value: 'april' },
+                { label: '５月', value: 'may' },
+                { label: '６月', value: 'june' },
+                { label: '７月', value: 'july' },
+                { label: '８月', value: 'august' },
+                { label: '９月', value: 'september' },
+                { label: '１０月', value: 'october' },
+                { label: '１１月', value: 'november' },
+                { label: '１２月', value: 'december' }
             ];            
 
             const fetchRates = async () => {
