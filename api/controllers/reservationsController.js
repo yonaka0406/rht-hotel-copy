@@ -3,7 +3,7 @@ const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
   updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationGuest,
-  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId
+  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -641,5 +641,22 @@ const deleteHoldReservation = async (req, res) => {
   }
 }
 
+const deleteRoomFromReservation = async (req, res) => {  
+  const roomArray = req.body;
+  const user_id = req.user.id; 
+  
+  if (!Array.isArray(roomArray.details)) {
+    return res.status(400).json({ error: 'Invalid data format: detail should be an array' });
+  }
+
+  try {      
+      await deleteReservationRoom(roomArray.details, user_id);      
+      res.status(200).json({ message: "Room deleted successfully" });
+  } catch (err) {
+      console.error("Error deleting room:", err);
+      res.status(500).json({ error: "Failed to delete room" });
+  }
+};
+
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation, deleteRoomFromReservation };

@@ -765,6 +765,60 @@ const deleteReservationClientsByDetailId = async (reservation_detail_id, updated
   }   
 };
 
+const deleteReservationRoom = async (detailsArray, updated_by) => {
+
+  const client = await pool.connect();
+
+  try {
+    // console.log('Starting transaction...');
+    await client.query('BEGIN');
+
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
+    await client.query(setSessionQuery);
+
+    // Update the number_of_people field in the reservations table
+    const updateQuery = `
+      UPDATE reservations
+      SET number_of_people = number_of_people - $1
+      WHERE id = $2 and hotel_id = $3
+      RETURNING number_of_people;
+    `;
+    const updateResult = await client.query(updateQuery, [detailsArray[0].number_of_people, detailsArray[0].reservation_id, detailsArray[0].hotel_id]);
+
+    // Check if the number_of_people is now <= 0
+    if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
+      await client.query('ROLLBACK');
+      console.warn('Rollback: number_of_people is <= 0');
+      return { success: false, message: 'Invalid operation: number_of_people would be zero or negative' };
+    }
+
+    // Delete the reservation details with promise    
+    const deletePromises = detailsArray.map(({ id }) => {
+      const deleteQuery = `
+        DELETE FROM reservation_details
+        WHERE id = $1
+        RETURNING *;
+      `;
+      return client.query(deleteQuery, [id]);
+    });
+
+    const deleteResults = await Promise.all(deletePromises);
+
+    // Commit the transaction
+    await client.query('COMMIT');
+
+    return { success: true, rowCount: deleteResults.reduce((sum, res) => sum + res.rowCount, 0) };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting room:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {    
     selectAvailableRooms,
     selectReservedRooms,
@@ -785,5 +839,6 @@ module.exports = {
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,
+    deleteReservationRoom,
 };
 

@@ -374,15 +374,19 @@
                                 </Card>
                             </div>                            
                             
-                            <div class="grid grid-cols-3 gap-4 items-center">
-                                <p class="col-span-2">部屋を予約から削除して、宿泊者人数を減らします。</p>
+                            <div class="grid grid-cols-3 gap-4 items-center mb-4">                                
+                                <p class="col-span-2">部屋を予約から削除して、宿泊者の人数を減らします。</p>
                                 <Button label="部屋削除" severity="danger" icon="pi pi-trash" @click="deleteRoom(selectedGroup)" />
-                                <p class="col-span-2">予約の宿泊者人数を<span class="font-bold text-blue-700">増やします</span>。</p>
-                                <button class="bg-blue-500 text-white hover:bg-blue-600" @click="addPersonToRoom(selectedGroup)"><i class="pi pi-plus"></i> 人数増加</button>
-                                <p class="col-span-2">予約の宿泊者人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
-                                <button class="bg-yellow-500 text-white hover:bg-yellow-600" @click="removePersonFromRoom(selectedGroup)"><i class="pi pi-minus"></i> 人数削減</button>
-                                <!--IMPLEMENT: Se os numeros capacity e atual forem iguais, nao mostrar o botao de aumentar. Se o numero atual for 1, nao mostrar o botao de reduzir.-->
                             </div>
+                            <div v-if="selectedGroup.details[0].number_of_people < selectedGroup.details[0].capacity" class="grid grid-cols-3 gap-4 items-center mb-4">
+                                <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
+                                <button class="bg-blue-500 text-white hover:bg-blue-600" @click="changeGuestNumber(selectedGroup, 'add')"><i class="pi pi-plus"></i> 人数増加</button>
+                            </div>
+                            <div v-if="selectedGroup.details[0].number_of_people > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
+                                <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
+                                <button class="bg-yellow-500 text-white hover:bg-yellow-600" @click="changeGuestNumber(selectedGroup, 'subtract')"><i class="pi pi-minus"></i> 人数削減</button>
+                            </div>                                
+                            
                             
                         </TabPanel>
                     </TabPanels>                     
@@ -541,7 +545,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation } = useReservationStore();        
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -1057,7 +1061,7 @@ export default {
 
                 closeBulkEditDialog();
 
-                // Provide feedback to the user (optional)                
+                // Provide feedback to the user
                 toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
                 
             } catch (error) {
@@ -1353,6 +1357,18 @@ export default {
             }
         };
 
+        const deleteRoom = async (group) => {            
+            const response = await deleteReservationRoom(group.details[0].reservation_id, group);                        
+            closeBulkEditDialog();
+
+            // Provide feedback to the user
+            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+        };
+
+        const changeGuestNumber = async (group, mode) => {
+            
+        };
+
         const openChangeClientDialog = () => {
             changeClientDialogVisible.value = true;
         };
@@ -1561,6 +1577,8 @@ export default {
             applyRoomChanges,
             applyGuestChanges,
             applyReservationRoomChanges,
+            deleteRoom,
+            changeGuestNumber,
             openChangeClientDialog,
             closeChangeClientDialog,
             openBulkEditRoomDialog,

@@ -315,6 +315,31 @@
             }
         };
 
+        const deleteReservationRoom = async (id, room) => {
+            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/delete/room/${id}`;
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(room),
+                });
+        
+                if (!response.ok) {
+                    throw new Error('Failed to delete room from reservation.');
+                }
+        
+                return await response.json();                
+            } catch (error) {
+                console.error('Error deleting room from reservation:', error);
+                throw error;
+            }
+        };
+
         // Watcher
 
         watch(availableRooms, (newValue, oldValue) => {
@@ -340,6 +365,7 @@
         fetchAvailableRooms,
         fetchReservedRooms,
         fetchMyHoldReservations, 
-        deleteHoldReservation,       
+        deleteHoldReservation,
+        deleteReservationRoom,     
     };
 }

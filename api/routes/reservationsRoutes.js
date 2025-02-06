@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
     createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation,
-    editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation } = require('../controllers/reservationsController');
+    editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation, deleteRoomFromReservation } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/reservation/available-rooms', authMiddleware, getAvailableRooms);
@@ -20,5 +20,6 @@ router.put('/reservation/update/status/:id', authMiddleware, editReservationStat
 router.put('/reservation/update/client/:id', authMiddleware, editReservationResponsible);
 router.put('/reservation/update/calendar/:id', authMiddleware, editRoomFromCalendar);
 router.delete('/reservation/delete/hold/:id', authMiddleware, deleteHoldReservation);
+router.delete('/reservation/delete/room/:id', authMiddleware, deleteRoomFromReservation);
 
 module.exports = router;
