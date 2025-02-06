@@ -1,6 +1,15 @@
 const pool = require('../config/database');
 const format = require('pg-format');
 
+const { getPriceForReservation } = require('../models/planRate');
+
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 // Function to Select
 
 const selectAvailableRooms = async (hotelId, checkIn, checkOut) => {
@@ -682,6 +691,71 @@ const updateRoomByCalendar = async (roomData) => {
   
 };
 
+const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
+
+  const client = await pool.connect();
+
+  try {
+    // console.log('Starting transaction...');
+    await client.query('BEGIN');
+
+    // Update the number_of_people field in the reservations table
+    const updateQuery = `
+      UPDATE reservations
+      SET number_of_people = number_of_people + $1
+      WHERE id = $2 and hotel_id = $3
+      RETURNING number_of_people;
+    `;
+    const updateResult = await client.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id]);
+
+    // Check if the number_of_people is now <= 0
+    if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
+      await client.query('ROLLBACK');
+      console.warn('Rollback: number_of_people is <= 0');
+      return { success: false, message: 'Invalid operation: number_of_people would be zero or negative' };
+    }
+
+    // Update the reservation details with promise    
+    const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
+      let newPrice = 0;
+      newPrice = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+        console.log('newPrice calculated:',newPrice);
+      
+      
+      
+      const dtlUpdateQuery = `
+        UPDATE reservation_details
+        SET number_of_people = number_of_people + $1,
+            price = $2
+        WHERE id = $3
+        RETURNING *;
+      `;
+      return client.query(dtlUpdateQuery, [operation_mode, newPrice, id]);
+    });
+
+    const dtlUpdateResults = await Promise.all(dtlUpdatePromises);
+
+    // Check if any of the reservation_details updates resulted in number_of_people <= 0
+    for (const result of dtlUpdateResults) {
+      if (result.rows.length === 0 || result.rows[0].number_of_people <= 0) {
+        await client.query('ROLLBACK');
+        console.warn('Rollback: number_of_people in reservation_details is <= 0');
+        return { success: false, message: 'Invalid operation: number_of_people in reservation_details would be zero or negative' };
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true, message: 'Reservation details updated successfully' };
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error updating room:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+};
+
 const updateReservationGuest = async (oldValue, newValue) => {
   const client = await pool.connect();
   
@@ -835,6 +909,7 @@ module.exports = {
     updateReservationStatus,
     updateReservationResponsible,
     updateRoomByCalendar,
+    updateReservationRoomGuestNumber,
     updateReservationGuest,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,

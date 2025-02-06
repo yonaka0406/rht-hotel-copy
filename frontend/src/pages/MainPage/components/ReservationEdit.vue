@@ -374,9 +374,12 @@
                                 </Card>
                             </div>                            
                             
-                            <div class="grid grid-cols-3 gap-4 items-center mb-4">                                
+                            <div v-if="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">                                
                                 <p class="col-span-2">部屋を予約から削除して、宿泊者の人数を減らします。</p>
                                 <Button label="部屋削除" severity="danger" icon="pi pi-trash" @click="deleteRoom(selectedGroup)" />
+                            </div>
+                            <div v-else="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">                                
+                                <p class="col-span-3">部屋を予約から削除より、予約を削除・キャンセルしてください。</p>                                
                             </div>
                             <div v-if="selectedGroup.details[0].number_of_people < selectedGroup.details[0].capacity" class="grid grid-cols-3 gap-4 items-center mb-4">
                                 <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
@@ -545,7 +548,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -570,8 +573,11 @@ export default {
         const targetRoom = ref(null);
         const numberOfPeopleToMove = ref(0);
         const filteredRooms = computed(() => {
+            const reservedRoomIds = editReservationDetails.value.map(detail => detail.room_id);
+
             return availableRooms.value
                 .filter(room => room.capacity >= numberOfPeopleToMove.value) // Ensure room can fit the people count
+                .filter(room => !reservedRoomIds.includes(room.room_id))
                 .map(room => ({
                     label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
                     value: room.room_id, // Value for selection
@@ -1366,7 +1372,20 @@ export default {
         };
 
         const changeGuestNumber = async (group, mode) => {
-            
+            // Add operation_mode to each detail in the group
+            group.details.forEach(detail => {
+                detail.operation_mode = mode === 'add' ? 1 : -1;
+            });
+
+            try {
+                const response = await changeReservationRoomGuestNumber(group.details[0].reservation_id, group);
+
+                // Provide feedback to the user
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+            } catch (error) {
+                console.error('Error updating reservation details:', error);
+                toast.add({ severity: 'error', summary: 'Error', detail: '予約明細の更新に失敗しました。', life: 3000 });
+            }            
         };
 
         const openChangeClientDialog = () => {
@@ -1448,7 +1467,7 @@ export default {
         });            
         watch(editReservationDetails, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                // console.log('editReservationDetails changed:', newValue);
+                console.log('editReservationDetails changed:', newValue);
                 fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
                 selectedClient.value = editReservationDetails.value[0].client_id;
                 //console.log('selectedClient.value:', selectedClient.value);
@@ -1464,6 +1483,20 @@ export default {
                     const endDate = details[0].check_out;        
 
                     fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
+
+                    // Try to find the updated group in newValue
+                    const updatedGroup = newValue.find(group => 
+                        group.room_id === selectedGroup.value.room_id && 
+                        group.room_type === selectedGroup.value.room_type
+                    );
+
+                    if (updatedGroup) {
+                        // console.log('selectedGroup updated');
+                        selectedGroup.value = updatedGroup; // Update the selected group if found
+                    } else {
+                        // console.log('selectedGroup not selected or no longer exists');
+                        selectedGroup.value = null; // Reset if the group no longer exists
+                    }
                 }  
             }
         }, { deep: true });

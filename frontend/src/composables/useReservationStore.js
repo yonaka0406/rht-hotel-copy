@@ -99,6 +99,31 @@
             }
         };
 
+        const changeReservationRoomGuestNumber = async (id, room, mode) => {
+            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/update/room/guestnumber/${id}`;
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(room),
+                });
+        
+                if (!response.ok) {
+                    throw new Error('Failed to update room guest number.');
+                }
+        
+                return await response.json();                
+            } catch (error) {
+                console.error('Error updating room guest number:', error);
+                throw error;
+            }
+        };
+
         // Get reservationId from the store
         const getReservationId = () => {
             return reservationId.value;
@@ -359,6 +384,7 @@
         setReservationStatus,
         setReservationClient,
         setCalendarChange,
+        changeReservationRoomGuestNumber,
         getReservationId,
         getReservationHotelId,
         fetchReservation,

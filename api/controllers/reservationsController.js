@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
-  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationGuest,
+  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -628,6 +628,23 @@ const editRoomFromCalendar = async (req, res) => {
   }
 };
 
+const editRoomGuestNumber = async (req, res) => {
+  const roomArray = req.body;
+  const user_id = req.user.id; 
+
+  if (!Array.isArray(roomArray.details)) {
+    return res.status(400).json({ error: 'Invalid data format: detail should be an array' });
+  }
+
+  try {      
+    await updateReservationRoomGuestNumber(roomArray.details, user_id);      
+    res.status(200).json({ message: "Room updating successfully" });
+  } catch (err) {
+      console.error("Error updating room:", err);
+      res.status(500).json({ error: "Failed to delete room" });
+  }
+};
+
 // DELETE
 const deleteHoldReservation = async (req, res) => {
   const { id } = req.params;
@@ -659,4 +676,4 @@ const deleteRoomFromReservation = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, deleteHoldReservation, deleteRoomFromReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
