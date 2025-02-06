@@ -19,6 +19,7 @@
         // Set
         const setReservationId = (id) => {
             reservationId.value = id;
+            // console.log('From Reservation Store => New reservation ID is:',reservationId.value);
         };
         
         const setReservationStatus = async (status) => {            
@@ -49,6 +50,7 @@
         };
 
         const setReservationClient = async (client_id) => {
+            // console.log('From Reservation Store => Set reservation client:',client_id);
             try {
               const authToken = localStorage.getItem('authToken');
               // Get the hotel_id for the current reservation
@@ -138,6 +140,8 @@
         // Fetch 
         
         const fetchReservation = async (reservation_id) => {
+            reservationId.value = reservation_id;
+            // console.log('From Reservation Store => Fetch reservation ID ',reservation_id, ' with reservationId:',reservationId.value);
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/info?id=${reservation_id}`;
@@ -171,8 +175,7 @@
                     });
                 }
                 
-                reservationDetails.value = data;
-                reservationId.value = reservation_id;
+                reservationDetails.value = data;                
                     
             } catch (error) {
                 console.error('Error fetching reservation:', error);

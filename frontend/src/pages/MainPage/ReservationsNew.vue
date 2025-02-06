@@ -680,7 +680,7 @@
             const { reservation, reservationDetails } = data;
             toast.add({ severity: 'success', summary: 'Success', detail: 'Reservation hold added successfully.', life: 3000 });
             
-            setReservationId(reservation.id);
+            await setReservationId(reservation.id);
             await fetchReservation(reservation.id);
             await fetchMyHoldReservations();
             dialogVisible.value = false;

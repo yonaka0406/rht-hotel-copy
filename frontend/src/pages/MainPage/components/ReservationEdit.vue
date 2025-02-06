@@ -548,7 +548,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, getReservationId, setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -1452,7 +1452,8 @@ export default {
             socket.value.on('tableUpdate', async (data) => {
                 // console.log('Reservation updated detected in ReservationEdit');
                 // Web Socket fetchReservation
-                await fetchReservation(props.reservation_id);                
+                const thisReservationId = await getReservationId();
+                await fetchReservation(thisReservationId);
             });
         });
 
