@@ -699,14 +699,19 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
     // console.log('Starting transaction...');
     await client.query('BEGIN');
 
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
+    await client.query(setSessionQuery);
+
     // Update the number_of_people field in the reservations table
     const updateQuery = `
       UPDATE reservations
-      SET number_of_people = number_of_people + $1
+      SET number_of_people = number_of_people + $1,
+          updated_by = $4
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await client.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id]);
+    const updateResult = await client.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id, updated_by]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -720,8 +725,6 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
       let newPrice = 0;
       newPrice = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
         console.log('newPrice calculated:',newPrice);
-      
-      
       
       const dtlUpdateQuery = `
         UPDATE reservation_details
@@ -742,6 +745,32 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
         console.warn('Rollback: number_of_people in reservation_details is <= 0');
         return { success: false, message: 'Invalid operation: number_of_people in reservation_details would be zero or negative' };
       }
+
+      // Check if number_of_people is less than the count of corresponding id in reservation_clients
+      const { id, number_of_people } = result.rows[0];
+      const clientCountQuery = `
+        SELECT COUNT(*) as client_count
+        FROM reservation_clients
+        WHERE reservation_details_id = $1;
+      `;
+      const clientCountResult = await client.query(clientCountQuery, [id]);
+      const clientCount = parseInt(clientCountResult.rows[0].client_count, 10);
+
+      if (number_of_people < clientCount) {
+        const deleteClientQuery = `
+          WITH deleted AS (
+            SELECT id
+            FROM reservation_clients
+            WHERE reservation_details_id = $1
+            LIMIT 1
+          )
+          DELETE FROM reservation_clients
+          WHERE id IN (SELECT id FROM deleted);
+        `;
+        await client.query(deleteClientQuery, [id]);
+      }
+
+
     }
 
     await client.query('COMMIT');
