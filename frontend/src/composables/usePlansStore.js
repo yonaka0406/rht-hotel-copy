@@ -17,6 +17,7 @@ export function usePlansStore() {
             });
             
             plans.value = await response.json();
+            console.log('Fetch plans from Store:',plans.value);
             
         } catch (error) {
             console.error('Failed to fetch hotel plans', error);
