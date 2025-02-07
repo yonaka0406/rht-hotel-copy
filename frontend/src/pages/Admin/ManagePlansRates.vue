@@ -126,7 +126,7 @@
                     </AccordionContent>
                 </AccordionPanel>
                 <AccordionPanel value="1">
-                    <AccordionHeader>Future Conditions</AccordionHeader>
+                    <AccordionHeader>将来の条件</AccordionHeader>
                     <AccordionContent>
                         <DataTable :value="filteredFutureConditions">
                             <Column field="date_start" header="開始"></Column>
