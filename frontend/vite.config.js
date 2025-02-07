@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'), // Alias for cleaner imports
+      'vue': 'vue/dist/vue.esm-bundler.js', // Alias for Vue runtime compilation
     },
   },
   server: {
