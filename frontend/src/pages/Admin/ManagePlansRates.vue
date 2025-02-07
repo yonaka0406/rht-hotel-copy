@@ -97,8 +97,8 @@
                                         <Badge 
                                             v-for="(day, index) in daysOfWeek"
                                             :key="index"
-                                            :value="day.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            :value="day.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -106,8 +106,8 @@
                                         <Badge 
                                             v-for="(month, index) in months" 
                                             :key="index"
-                                            :value="month.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            :value="month.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -163,8 +163,8 @@
                                         <Badge 
                                             v-for="(day, index) in daysOfWeek"
                                             :key="index"
-                                            :value="day.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            :value="day.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -172,8 +172,8 @@
                                         <Badge 
                                             v-for="(month, index) in months" 
                                             :key="index"
-                                            :value="month.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            :value="month.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -229,8 +229,8 @@
                                         <Badge 
                                             v-for="(day, index) in daysOfWeek"
                                             :key="index"
-                                            :value="day.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.label.toLowerCase())}"
+                                            :value="day.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(day.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(day.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -238,8 +238,8 @@
                                         <Badge 
                                             v-for="(month, index) in months" 
                                             :key="index"
-                                            :value="month.label.slice(0, 3)"
-                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.label.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.label.toLowerCase())}"
+                                            :value="month.label"
+                                            :class="{'p-badge-success': slotProps.data.condition_value.includes(month.value.toLowerCase()), 'p-badge-secondary': !slotProps.data.condition_value.includes(month.value.toLowerCase())}"
                                             class="p-m-1"
                                         />
                                     </div>
@@ -554,17 +554,17 @@
             const filteredCurrentAddons = ref([]);
 
             const daysOfWeek = [
-                { label: '月曜日', value: '月曜日' },
-                { label: '火曜日', value: '火曜日' },
-                { label: '水曜日', value: '水曜日' },
-                { label: '木曜日', value: '木曜日' },
-                { label: '金曜日', value: '金曜日' },
-                { label: '土曜日', value: '土曜日' },
-                { label: '日曜日', value: '日曜日' }
+                { label: '月曜日', value: 'mon' },
+                { label: '火曜日', value: 'tue' },
+                { label: '水曜日', value: 'wed' },
+                { label: '木曜日', value: 'thu' },
+                { label: '金曜日', value: 'fri' },
+                { label: '土曜日', value: 'sat' },
+                { label: '日曜日', value: 'sun' }
             ];
 
             const months = [
-                { label: '１月', value: 'january' },
+                { label: '１月', value: 'jan' },
                 { label: '２月', value: 'february' },
                 { label: '３月', value: 'march' },
                 { label: '４月', value: 'april' },
