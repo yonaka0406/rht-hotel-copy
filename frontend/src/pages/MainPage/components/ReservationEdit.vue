@@ -286,6 +286,7 @@
                         <Tab value="1">部屋移動</Tab>
                         <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="2">宿泊者</Tab>
                         <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="3">追加・削除</Tab>
+                        <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="4">期間</Tab>
                     </TabList>
                      
                     <TabPanels>
@@ -488,6 +489,57 @@
                             
                             
                         </TabPanel>
+                        <!-- Tab 5: Modify period -->
+                        <TabPanel value="4">
+                            <Card class="mb-3">
+                                <template #title>予約</template>
+                                <template #content>
+                                    <div class="grid grid-cols-2 gap-4 items-center">
+                                        <div>
+                                            <span>チェックイン：{{ editReservationDetails[0].check_in }}</span>
+                                        </div>
+                                        <div>
+                                            <span>チェックアウト：{{ editReservationDetails[0].check_out }}</span>
+                                        </div>
+                                        <div>
+                                            <span>宿泊者：{{ editReservationDetails[0].reservation_number_of_people }}</span>
+                                        </div>
+                                        <div>
+                                            <span>部屋数：{{ groupedRooms.length }}</span>
+                                        </div>                                        
+                                    </div>
+                                </template>
+                            </Card>
+                            <p class="mt-2 mb-6"><span class="font-bold">注意：</span>部屋宿泊期間を変更すると、新規予約が作成されます。</p>
+                            <div class="grid grid-cols-2 gap-4 items-center">
+                                <div>
+                                    <FloatLabel>
+                                    <label for="checkin">チェックイン</label>
+                                    <DatePicker 
+                                        id="checkin" 
+                                        v-model="newCheckIn"
+                                        :showIcon="true" 
+                                        iconDisplay="input" 
+                                        dateFormat="yy-mm-dd"
+                                        class="w-full"
+                                    />
+                                    </FloatLabel>
+                                </div>
+                                <div>
+                                    <FloatLabel>
+                                        <label for="checkout">チェックアウト</label>
+                                        <DatePicker 
+                                            id="checkout" 
+                                            v-model="newCheckOut"
+                                            :showIcon="true" 
+                                            iconDisplay="input" 
+                                            dateFormat="yy-mm-dd"
+                                            class="w-full"
+                                        />
+                                    </FloatLabel>
+                                </div>
+                            </div>
+                        </TabPanel>
                     </TabPanels>                     
                 </Tabs>
          
@@ -495,7 +547,8 @@
             <template #footer>
                 <Button v-if="bulkEditDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
                 <Button v-if="bulkEditDialogTab === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
-                <Button v-if="bulkEditDialogTab === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />                
+                <Button v-if="bulkEditDialogTab === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
+                <Button v-if="bulkEditDialogTab === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />                
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
@@ -596,7 +649,7 @@ import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
 import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
 import { DataTable, Column } from 'primevue';
-import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, RadioButton, Button } from 'primevue';
+import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, RadioButton, Button, DatePicker } from 'primevue';
 
 
 export default {
@@ -638,6 +691,7 @@ export default {
         MultiSelect,
         RadioButton,
         Button,
+        DatePicker,
     },
     setup(props) {
         const router = useRouter();
@@ -645,7 +699,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, getReservationId, setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -671,6 +725,8 @@ export default {
         const selectedAddon = ref();
         const targetRoom = ref(null);
         const numberOfPeopleToMove = ref(0);
+        const newCheckIn = ref(null);
+        const newCheckOut = ref(null);
         const filteredRooms = computed(() => {
             const reservedRoomIds = editReservationDetails.value.map(detail => detail.room_id);
 
@@ -696,6 +752,12 @@ export default {
         const isValidPhone = ref(true);
 
         // Helper
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
         const formatDateTime = (dateString) => {
             const date = new Date(dateString);
             return date.toLocaleDateString('ja-JP', {
@@ -962,6 +1024,9 @@ export default {
             if(bulkEditDialogTab.value  === 2){
                 initializeGuests();
                 // console.log('Guest edit tab selected.');                
+            }
+            if(bulkEditDialogTab.value  === 4){
+                
             }
         };
 
@@ -1545,6 +1610,43 @@ export default {
             }
         };
 
+        const applyDateChanges = async () => {
+            console.log(newCheckIn.value, newCheckOut.value);
+            // Checks            
+            if (!newCheckIn.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックイン日を指定してください。`,
+                    life: 3000
+                });
+                return;
+            }
+            if (!newCheckOut.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックアウト日を指定してください。`,
+                    life: 3000
+                });
+                return;
+            }
+            if (newCheckOut.value <= newCheckIn.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックアウト日がチェックイン日以前になっています。`,
+                    life: 3000
+                });
+                return;
+            }
+            newCheckIn.value = formatDate(newCheckIn.value);
+            newCheckOut.value = formatDate(newCheckOut.value);
+            
+            console.log(editReservationDetails.value[0].hotel_id, selectedGroup.value.room_id)
+            console.log(newCheckIn.value, newCheckOut.value);
+        }
+
         const applyReservationRoomChanges = async () => {
             // console.log('Number of people to add:', numberOfPeopleToMove.value);
             // console.log('Selected room:', targetRoom.value);
@@ -1701,6 +1803,15 @@ export default {
                 console.log('editReservationDetails changed:', newValue);
                 fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
                 selectedClient.value = editReservationDetails.value[0].client_id;
+                newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
+                newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
+
+                /*
+                // IMPLEMENT:
+                I need to run getAvailableDatesForChange for each room_id in editReservationDetails.value array and log each result
+                getAvailableDatesForChange()
+                */
+
                 //console.log('selectedClient.value:', selectedClient.value);
             }
         }, { deep: true });
@@ -1819,6 +1930,8 @@ export default {
             selectedAddon,            
             targetRoom,
             numberOfPeopleToMove,
+            newCheckIn,
+            newCheckOut,
             filteredRooms,
             guests,
             filteredClients,
@@ -1847,6 +1960,7 @@ export default {
             applyPlanChangesToAll,
             applyRoomChanges,
             applyGuestChanges,
+            applyDateChanges,
             applyReservationRoomChanges,
             deleteRoom,
             changeGuestNumber,

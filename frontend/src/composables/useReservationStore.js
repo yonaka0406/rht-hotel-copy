@@ -136,6 +136,32 @@
 
             return reservationDetails.value.reservation[0].hotel_id;
         };
+
+        const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+    
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                return data;
+                    
+            } catch (error) {
+                console.error('Error fetching data:', error);                
+                return null;
+            }
+        }
     
         // Fetch 
         
@@ -390,6 +416,7 @@
         changeReservationRoomGuestNumber,
         getReservationId,
         getReservationHotelId,
+        getAvailableDatesForChange,
         fetchReservation,
         fetchAvailableRooms,
         fetchReservedRooms,

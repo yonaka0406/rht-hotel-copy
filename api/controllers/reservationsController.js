@@ -1,6 +1,6 @@
 const pool = require('../config/database');
 const { 
-  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations,
+  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectAvailableDatesForChange,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
   updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
@@ -90,6 +90,19 @@ const getMyHoldReservations = async (req, res) => {
     console.error('Error fetching reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
   }
+};
+
+const getAvailableDatesForChange = async (req, res) => {
+  const { hid, rid, ci, co } = req.params;
+
+  try {
+    const { maxDate, minDate } = await selectAvailableDatesForChange(hid, rid, ci, co);
+    res.status(200).json({ maxDate, minDate });
+  } catch (error) {    
+    console.error('Error getting available dates for change:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+  
 };
 
 // POST
@@ -680,5 +693,5 @@ const deleteRoomFromReservation = async (req, res) => {
   }
 };
 
-module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, 
+module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, getAvailableDatesForChange,
   createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };

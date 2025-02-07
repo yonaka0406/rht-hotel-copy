@@ -317,6 +317,34 @@ const selectMyHoldReservations = async (user_id) => {
   }
 };
 
+const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {
+  try {
+    const maxDateQuery = `
+      SELECT MAX(date) + 1 AS max_date
+      FROM reservation_details
+      WHERE hotel_id = $1 AND room_id = $2 AND date < $3
+    `;
+    const valuesMax = [hotelId, roomId, checkIn];
+    const minDateQuery = `
+      SELECT MIN(date) AS min_date
+      FROM reservation_details
+      WHERE hotel_id = $1 AND room_id = $2 AND date >= $3
+    `;
+    const valuesMin = [hotelId, roomId, checkOut];
+
+    const resultMax = await pool.query(maxDateQuery, valuesMax);
+    const resultMin = await pool.query(minDateQuery, valuesMin);
+
+    const maxDate = resultMax.rows[0]?.max_date || null;
+    const minDate = resultMin.rows[0]?.min_date || null;
+
+    return { maxDate, minDate };
+  } catch (error) {
+    console.error('Error getting min and max available dates:', error);
+    throw error;
+  }
+};
+
 // Function to Add
 
 const addReservationHold = async (reservation) => {
@@ -933,6 +961,7 @@ module.exports = {
     selectReservationDetail,
     selectReservationAddons,
     selectMyHoldReservations,
+    selectAvailableDatesForChange,
     addReservationHold,
     addReservationDetail,
     addReservationAddon,
