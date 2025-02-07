@@ -11,7 +11,7 @@
                 >
                     <div class="field flex flex-col">                        
                         <div class="flex items-center justify-between mr-2 mb-2">
-                            <p>予約者：</p>
+                            <p class="font-bold">予約者：</p>
                             <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
                         </div>
                         <InputText type="text" v-model="editReservationDetails[0].client_name" disabled style="background-color: transparent;"/>                        
@@ -19,7 +19,7 @@
                     
                     <div class="field flex flex-col" >
                         <div class="flex items-center justify-between mr-2 mb-2">
-                            <p>宿泊者：</p>
+                            <p class="font-bold">宿泊者：</p>
                             <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openBulkEditRoomDialog" />
                         </div> 
                         
@@ -31,21 +31,34 @@
                     </div>
 
                     <div class="field flex flex-col">
-                        <p>チェックイン：</p>
-                        <span>{{ editReservationDetails[0].check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
+                        <div class="flex items-start justify-between mr-2 mb-2">
+                            <p class="font-bold">チェックイン：</p>
+                            <span>{{ editReservationDetails[0].check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
+                            <span></span>
+                        </div>
+                        
                     </div>
 
                     <div class="field flex flex-col">
-                        <p>チェックアウト：</p>
-                        <span>{{ editReservationDetails[0].check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>
+                        <div class="flex items-start justify-between mr-2 mb-2">
+                            <p class="font-bold">チェックアウト：</p>
+                            <span>{{ editReservationDetails[0].check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>
+                            <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />
+                        </div> 
+                        
+                        
+                    </div>
+
+                    <div class="field flex flex-col col-span-2">
+                        <Divider />
+                    </div>             
+                    
+                    <div class="field flex flex-col">
+                        <span><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
                     </div>
 
                     <div class="field flex flex-col">
-                        ステータス： {{ reservationStatus }}
-                    </div>
-
-                    <div class="field flex flex-col">
-                        更新日時： {{ formatDateTime(updatedDateTime) }}
+                        <span><span class="font-bold">更新日時：</span> {{ formatDateTime(updatedDateTime) }}</span>
                     </div>
 
                     <div class="field flex flex-col col-span-2">
@@ -171,6 +184,89 @@
                 </Accordion>                
             </template>
         </Card>
+
+        <!-- Reservation Bulk Edit Dialog -->
+        <Dialog
+            v-model:visible="bulkEditReservationDialogVisible"
+            header="全部屋一括編集"
+            :modal="true"
+            :breakpoints="{ '960px': '75vw', '640px': '100vw' }"
+            style="width: 50vw"
+        >
+            <div class="p-fluid">
+                <Tabs 
+                    value ="0"
+                    @update:value="handleTabChange"
+                >
+                    <TabList>
+                        <Tab value="0">プラン適用</Tab>                        
+                    </TabList>
+                     
+                    <TabPanels>
+                        <!-- Tab 1: Apply Plan -->
+                        <TabPanel value="0">                            
+                            <div class="field mt-8">
+                                <FloatLabel>
+                                    <Select
+                                        id="bulk-plan"
+                                        v-model="selectedPlan"
+                                        :options="plans"
+                                        optionLabel="name"
+                                        showClear 
+                                        fluid                           
+                                        @change="updatePlanAddOns"
+                                    />
+                                    <label for="bulk-plan">プラン選択</label>
+                                </FloatLabel>
+                            </div>
+                            <div class="field mt-6">
+                                <FloatLabel>
+                                    <MultiSelect
+                                        v-model="selectedDays"
+                                        :options="daysOfWeek"
+                                        optionLabel="label"
+                                        fluid                            
+                                        :maxSelectedLabels="3"
+                                    />
+                                    <label>曜日</label>
+                                </FloatLabel>
+                            </div>                
+                            <div class="field mt-6">
+                                <DataTable :value="selectedAddon" class="p-datatable-sm">
+                                    <Column field="name" header="アドオン名" />                        
+                                    <Column field="quantity" header="数量">
+                                        <template #body="slotProps">
+                                            <InputNumber 
+                                                v-model="slotProps.data.quantity" 
+                                                :min="0" 
+                                                placeholder="数量を記入" 
+                                                class="w-full" 
+                                            />
+                                        </template>
+                                    </Column>
+                                    <Column field="price" header="価格">
+                                        <template #body="slotProps">
+                                            <InputNumber 
+                                                v-model="slotProps.data.price" 
+                                                :min="0" 
+                                                placeholder="価格を記入" 
+                                                class="w-full" 
+                                            />
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </div>
+                        </TabPanel>                        
+                    </TabPanels>                     
+                </Tabs>
+         
+            </div>
+            <template #footer>
+                <Button v-if="bulkEditReservationDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" />                               
+                
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeReservationBulkEditDialog" />                
+            </template>            
+        </Dialog>
 
         <!-- Bulk Edit Dialog -->
         <Dialog
@@ -479,7 +575,7 @@
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditRoomDialog" />                
             </template>            
-        </Dialog>
+        </Dialog>        
 
     </div>
 </template>
@@ -497,7 +593,7 @@ import { usePlansStore } from '@/composables/usePlansStore';
 import { useClientStore } from '@/composables/useClientStore';
 import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
 
-import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
+import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
 import { DataTable, Column } from 'primevue';
 import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, RadioButton, Button } from 'primevue';
@@ -520,6 +616,7 @@ export default {
         ClientEdit,
         Panel,  
         Card,
+        Divider,
         Dialog,
         Tabs,
         TabList,
@@ -563,8 +660,10 @@ export default {
         ];
         const bulkEditDialogVisible = ref(false);
         const bulkEditDialogTab = ref(0);
+        const bulkEditReservationDialogVisible = ref(false);
+        const bulkEditReservationDialogTab = ref(0);
         const changeClientDialogVisible = ref(false);
-        const bulkEditRoomDialogVisible = ref(false);
+        const bulkEditRoomDialogVisible = ref(false);        
         const selectedClient = ref(null);
         const selectedGroup = ref(null);
         const selectedPlan = ref(null);
@@ -842,6 +941,7 @@ export default {
         function handleTabChange (newTabValue) {
             
             bulkEditDialogTab.value = newTabValue * 1;
+            bulkEditReservationDialogTab.value = newTabValue * 1;
 
             selectedPlan.value = null;
             
@@ -863,9 +963,30 @@ export default {
                 initializeGuests();
                 // console.log('Guest edit tab selected.');                
             }
-
-            
         };
+
+        const openReservationBulkEditDialog = () => {
+            bulkEditReservationDialogTab.value = 0;
+            bulkEditReservationDialogVisible.value = true;
+        };
+
+        const closeReservationBulkEditDialog = () => {
+            bulkEditReservationDialogVisible.value = false;            
+            
+            selectedPlan.value = null;
+            
+            selectedDays.value = [
+                { label: '月曜日', value: 'mon' },
+                { label: '火曜日', value: 'tue' },
+                { label: '水曜日', value: 'wed' },
+                { label: '木曜日', value: 'thu' },
+                { label: '金曜日', value: 'fri' },
+                { label: '土曜日', value: 'sat' },
+                { label: '日曜日', value: 'sun' },
+            ];
+            
+            addons.value = [];
+        }; 
 
         const openBulkEditDialog = (group) => {
             selectedGroup.value = group;
@@ -1066,6 +1187,114 @@ export default {
                 // await fetchReservation(props.reservation_id);
 
                 closeBulkEditDialog();
+
+                // Provide feedback to the user
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                
+            } catch (error) {
+                console.error('Failed to apply changes:', error);                
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+            }
+        };
+
+        const applyPlanChangesToAll = async () => {
+            // Map selectedDays to a set of day values for efficient comparison
+            const selectedDayValues = new Set(selectedDays.value.map(day => day.value));
+
+            const filteredGroupedRooms = groupedRooms.value.map(group => {
+                return {
+                    ...group,
+                    details: group.details
+                        .filter(detail => {
+                            const dayOfWeek = new Date(detail.date)
+                                .toLocaleString('en-US', { weekday: 'short' })
+                                .toLowerCase();
+                            return selectedDayValues.has(dayOfWeek); // Match with selectedDays
+                        })
+                        .map(detail => ({
+                            ...detail,
+                            plans_global_id: selectedPlan.value ? selectedPlan.value.plans_global_id : detail.plans_global_id,
+                            plans_hotel_id: selectedPlan.value ? selectedPlan.value.plans_hotel_id : detail.plans_hotel_id,
+                            reservation_id: props.reservation_id,
+                        })),
+                }
+            });
+
+            // console.log('Filtered Group:',filteredGroupedRooms);
+
+            // Prepare the data to be sent in the PUT request
+            const dataToUpdate = filteredGroupedRooms.flatMap(
+                group => (group.details || []).map(
+                    detail => ({
+                    reservation_id: detail.reservation_id, // The reservation id
+                    id: detail.id, // The reservation detail id
+                    hotel_id: detail.hotel_id, // The hotel id
+                    room_id: detail.room_id, // The room id
+                    date: detail.date, // The date
+                    plans_global_id: detail.plans_global_id, // Updated plans_global_id
+                    plans_hotel_id: detail.plans_hotel_id, // Updated plans_hotel_id
+                    number_of_people: detail.number_of_people, // Number of people
+                    price: detail.price === null ? 0 : detail.price, // Updated price (if applicable)
+                    addons: selectedAddon.value.map(
+                            addon => ({
+                                id: addon.id,
+                                addons_global_id: addon.addons_global_id,
+                                addons_hotel_id: addon.addons_hotel_id,
+                                plans_global_id: addon.plans_global_id,
+                                plans_hotel_id: addon.plans_hotel_id,
+                                price: addon.price,
+                                quantity: addon.quantity
+                            })
+                        )
+                    })
+                )
+            );
+            console.log('Data to Update:', dataToUpdate);
+
+            try {
+                for (const data of dataToUpdate) {
+                    const authToken = localStorage.getItem('authToken');
+
+                    if (data.id === null) {
+                        // When `id` is null, make a POST request instead
+                        const response = await fetch(`/api/reservation/update/details/`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                                'Content-Type': 'application/json', // Ensure the body is JSON
+                            },
+                            body: JSON.stringify(data), // Send the data to create a new reservation
+                        });
+
+                        const newReservation = await response.json(); // Parse the response as JSON
+
+                        if (!response.ok) {
+                            throw new Error(`Error creating new reservation detail: ${newReservation.error || 'Unknown error'}`);
+                        }
+                        //console.log('Created New Reservation:', newReservation);
+                    } else {
+                        // For existing reservations, make a PUT request
+                        const response = await fetch(`/api/reservation/update/details/${data.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`, // Pass token for authentication
+                                'Content-Type': 'application/json', // Ensure the body is JSON
+                            },
+                            body: JSON.stringify(data), // Send the data to update
+                        });
+
+                        const updatedReservation = await response.json(); // Parse the response as JSON
+
+                        if (!response.ok) {
+                            throw new Error(`Error updating reservation detail: ${updatedReservation.error || 'Unknown error'}`);
+                        }
+                        //console.log('Updated Reservation:', updatedReservation);
+                    }
+                }
+
+                // await fetchReservation(props.reservation_id);
+
+                closeReservationBulkEditDialog();
 
                 // Provide feedback to the user
                 toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
@@ -1402,7 +1631,7 @@ export default {
 
         const closeBulkEditRoomDialog = () => {
             bulkEditRoomDialogVisible.value = false;
-        };
+        };        
 
         const allHavePlan = (group) => {
             return group.details.every(
@@ -1581,6 +1810,8 @@ export default {
             bulkEditDialogTab,
             changeClientDialogVisible,
             bulkEditRoomDialogVisible,
+            bulkEditReservationDialogVisible,
+            bulkEditReservationDialogTab,
             selectedClient,
             selectedGroup,
             selectedPlan,
@@ -1608,9 +1839,12 @@ export default {
             updateReservationStatus,
             deleteReservation,
             handleTabChange,
+            openReservationBulkEditDialog,
+            closeReservationBulkEditDialog,
             openBulkEditDialog,
             closeBulkEditDialog,
             applyPlanChanges,
+            applyPlanChangesToAll,
             applyRoomChanges,
             applyGuestChanges,
             applyReservationRoomChanges,
