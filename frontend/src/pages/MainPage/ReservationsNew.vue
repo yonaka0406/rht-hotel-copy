@@ -678,7 +678,7 @@
           if (response.ok) {
             const data = await response.json();
             const { reservation, reservationDetails } = data;
-            toast.add({ severity: 'success', summary: 'Success', detail: 'Reservation hold added successfully.', life: 3000 });
+            toast.add({ severity: 'success', summary: 'Success', detail: '保留中予約作成されました。', life: 3000 });
             
             await setReservationId(reservation.id);
             await fetchReservation(reservation.id);

@@ -135,8 +135,12 @@ const selectReservation = async (id) => {
       ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
       ,reservation_details.number_of_people
       ,reservation_details.price AS plan_total_price
-	    ,COALESCE(ra.price, 0) AS addon_total_price
-      ,reservation_details.price + COALESCE(ra.price, 0) AS price
+	    ,COALESCE(ra.price, 0) AS addon_total_price      
+      ,CASE 
+        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price 
+        ELSE reservation_details.price * reservation_details.number_of_people
+        END + COALESCE(ra.price, 0) 
+      AS price
       ,logs_reservation_details.log_time as reservation_detail_log_time
       ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
 
@@ -180,7 +184,7 @@ const selectReservation = async (id) => {
       (
         SELECT
           reservation_detail_id,
-          SUM(price) AS price
+          SUM(price * quantity) AS price
         FROM
           reservation_addons		
         GROUP BY

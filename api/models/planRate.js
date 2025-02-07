@@ -15,16 +15,27 @@ const isValidCondition = (row, date) => {
 
     const parsedCondition = parseConditionValue(condition_value);
     const targetDate = new Date(date);
+
+    // console.log('Row:', row);
+    // console.log('Parsed Date:', targetDate);
+    // console.log('Raw Condition Value:', condition_value);
+    // console.log('Parsed Condition Value:', parsedCondition);
     
     switch (condition_type) {
         case 'month': {
             const targetMonth = targetDate.toLocaleString('en-US', { month: 'long' }).toLowerCase(); // Get month name
-            return parsedCondition.includes(targetMonth); // Check if month is in the condition
+            // console.log('Target Month:', targetMonth);
+            const match = parsedCondition.includes(targetMonth);
+            // console.log('Condition Check (Month):', match);
+            return match;
         }
 
         case 'day_of_week': {
-            const targetDay = targetDate.toLocaleString('en-US', { weekday: 'long' }).toLowerCase(); // Get day of the week
-            return parsedCondition.includes(targetDay); // Check if day is in the condition
+            const targetDay = targetDate.toLocaleString('en-US', { weekday: 'short' }).toLowerCase(); // Get day of the week
+            // console.log('Target Day:', targetDay);
+            const match = parsedCondition.includes(targetDay);
+            // console.log('Condition Check (Day):', match);
+            return match;
         }
 
         default:
@@ -85,8 +96,8 @@ const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id,
                 $4 BETWEEN date_start AND COALESCE(date_end, $4)  -- Date is within the range
                 OR ($4 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
             )
-            AND (plans_global_id = $1 AND plans_hotel_id IS NULL) 
-            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL)
+            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
+            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
         GROUP BY condition_type, adjustment_type, condition_value
     `;
     const values = [
@@ -97,10 +108,11 @@ const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id,
     ];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await pool.query(query, values);        
 
-        //console.log('Query:', query);
-        //console.log('Values:', values);
+        // console.log('Query:', query);
+        // console.log('Values:', values);
+        // console.log('Result:', result);
 
         let baseRate = 0, percentage = 0, flatFee = 0;
         
@@ -110,6 +122,7 @@ const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id,
                 if (row.adjustment_type === 'base_rate') baseRate += parseFloat(row.total_value);
                 if (row.adjustment_type === 'percentage') percentage += parseFloat(row.total_value);
                 if (row.adjustment_type === 'flat_fee') flatFee += parseFloat(row.total_value);
+                //console.log('Row processed with Base Rate:',baseRate,' Percentage:',percentage,' and Flat Fee:',flatFee);
             }
         });
         
@@ -118,7 +131,7 @@ const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id,
 
         // Add flat fee
         const finalPrice = priceWithPercentage + flatFee;
-
+        // console.log('Calculated price:',finalPrice);
         return finalPrice;
     } catch (err) {
         console.error('Error calculating price:', err);

@@ -41,7 +41,7 @@ const getAllHotelPlans = async (hotel_id) => {
 const getAllPlansByHotel = async (hotel_id) => {
     const query = `
         SELECT
-            pg.id as plans_global_id
+            CASE WHEN ph.plans_global_id = pg.id THEN NULL ELSE pg.id END as plans_global_id
             ,ph.id as plans_hotel_id
             ,COALESCE(ph.name, pg.name) as name
             ,COALESCE(ph.description, pg.description) as description

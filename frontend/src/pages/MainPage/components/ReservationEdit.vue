@@ -1442,6 +1442,8 @@ export default {
 
         // Fetch reservation details on mount
         onMounted(async () => {
+            console.log('Reservation ID provided:', props.reservation_id);
+            await fetchReservation(props.reservation_id);
             // Establish Socket.IO connection
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
@@ -1451,9 +1453,8 @@ export default {
 
             socket.value.on('tableUpdate', async (data) => {
                 // console.log('Reservation updated detected in ReservationEdit');
-                // Web Socket fetchReservation
-                const thisReservationId = await getReservationId();
-                await fetchReservation(thisReservationId);
+                // Web Socket fetchReservation                
+                await fetchReservation(props.reservation_id);
             });
         });
 
@@ -1485,19 +1486,21 @@ export default {
 
                     fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
 
-                    // Try to find the updated group in newValue
-                    const updatedGroup = newValue.find(group => 
-                        group.room_id === selectedGroup.value.room_id && 
-                        group.room_type === selectedGroup.value.room_type
-                    );
+                    if(!selectedGroup){
+                        // Try to find the updated group in newValue
+                        const updatedGroup = newValue.find(group => 
+                            group.room_id === selectedGroup.value.room_id && 
+                            group.room_type === selectedGroup.value.room_type
+                        );
 
-                    if (updatedGroup) {
-                        // console.log('selectedGroup updated');
-                        selectedGroup.value = updatedGroup; // Update the selected group if found
-                    } else {
-                        // console.log('selectedGroup not selected or no longer exists');
-                        selectedGroup.value = null; // Reset if the group no longer exists
-                    }
+                        if (updatedGroup) {
+                            // console.log('selectedGroup updated');
+                            selectedGroup.value = updatedGroup; // Update the selected group if found
+                        } else {
+                            // console.log('selectedGroup not selected or no longer exists');
+                            selectedGroup.value = null; // Reset if the group no longer exists
+                        }
+                    }                    
                 }  
             }
         }, { deep: true });

@@ -399,6 +399,7 @@ const editReservationDetail = async (req, res) => {
 
   const { validate: uuidValidate } = require('uuid');
   let calcPrice = { value: price };
+  let planChange = false;
 
   // console.log('Body parameters:', req.body);
   if (!uuidValidate(id)) {
@@ -414,6 +415,7 @@ const editReservationDetail = async (req, res) => {
         existingReservation[0].plans_global_id !== plans_global_id ||
         existingReservation[0].plans_hotel_id !== plans_hotel_id
     ) {
+      planChange = true;
       const newPrice = await getPriceForReservation(
         plans_global_id, 
         plans_hotel_id, 
@@ -442,11 +444,14 @@ const editReservationDetail = async (req, res) => {
         price: calcPrice.value,
         updated_by,          
     });
+    if(planChange){
+      const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
+    }
       
     // Add the reservation add-ons if any
     if (addons && addons.length > 0) {      
-        const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
-        //console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
+        // const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
+        // console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
         const addOnPromises = addons.map(addon =>
             addReservationAddon({
