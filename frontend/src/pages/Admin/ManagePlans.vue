@@ -31,9 +31,9 @@
                 </div>
                 <DataTable :value="globalPlans">
                   <Column field="name" header="名称"></Column>
-                  <Column field="plan_type">
+                  <Column field="plan_type" headerClass="text-center">
                     <template #header>
-                      <span class="font-bold items-center">プランタイプ</span>
+                      <span class="font-bold text-center w-full block">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center">  
@@ -43,9 +43,9 @@
                     </template>
                   </Column>
                   <Column field="description" header="詳細"></Column>
-                  <Column>
+                  <Column headerClass="text-center">
                     <template #header>
-                      <span class="font-bold items-center">操作</span>
+                      <span class="font-bold text-center w-full block">操作</span>
                     </template>
                     <template #body="slotProps">   
                       <div class="flex items-center justify-center">                 
@@ -118,10 +118,10 @@
                   ></Button>
                 </div> 
                 <DataTable :value="filteredHotelPlans">
-                  <Column field="name" header="名称"></Column>
-                  <Column field="plan_type">
+                  <Column field="name" header="名称" style="width: 20%"></Column>
+                  <Column field="plan_type" headerClass="text-center" style="width: 10%">
                     <template #header>
-                      <span class="font-bold items-center">プランタイプ</span>
+                      <span class="font-bold text-center w-full block">プランタイプ</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center">  
@@ -130,10 +130,20 @@
                       </div>
                     </template>
                   </Column>
-                  <Column field="description" header="詳細"></Column>
-                  <Column>
+                  <Column field="description" header="詳細" style="width: 20%"></Column>
+                  <Column headerClass="text-center" style="width: 10%">
                     <template #header>
-                      <span class="font-bold items-center">操作</span>
+                      <span class="font-bold text-center w-full block">ステータス</span>
+                    </template>
+                    <template #body="slotProps">
+                      <div class="flex items-center justify-center">
+                        <i v-if="slotProps.data.plans_global_id" class="pi pi-link" style="color: blue;"></i>
+                      </div>                      
+                    </template>                    
+                  </Column>                  
+                  <Column headerClass="text-center" style="width: 10%">
+                    <template #header>
+                      <span class="font-bold text-center w-full block">操作</span>
                     </template>
                     <template #body="slotProps">
                       <div class="flex items-center justify-center"> 
@@ -433,7 +443,7 @@
       const filteredHotelPlans = computed(() => {
         if (selectedHotel.value) {
           const filtered = hotelPlans.value.filter(plan => plan.hotel_id === selectedHotel.value.id);
-          //console.log('Filtered Hotel:', filtered);
+          console.log('Filtered Hotel:', filtered);
           return filtered;
         }
         return [];
