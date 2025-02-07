@@ -845,6 +845,11 @@
                         }
                     }
 
+                    if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'base_rate') {                        
+                        return true;
+                        
+                    }
+
                     return false;
                 });
 
@@ -906,6 +911,11 @@
                         }
                     }
 
+                    if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'flat_fee') {                        
+                        return true;
+                        
+                    }
+
                     return false;
                 });
 
@@ -947,6 +957,11 @@
                         if (conditionMonths.includes(selectedMonth.toString())) {
                             return true;
                         }
+                    }
+
+                    if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {                        
+                        return true;
+                        
                     }
 
                     return false;
