@@ -1,7 +1,21 @@
 <template>
   <div class="p-2">
     <Panel header="予約カレンダー">
-      <div class="table-container" ref="tableContainer" @scroll="onScroll">
+      <div class="header flex justify-end items-center p-2 w-full">
+        <div class="mr-4">
+          <SelectButton 
+            optionLabel="label"
+            optionValue="value"  
+            :options="tableModeOptions" 
+            v-model="isCompactView"
+          />
+        </div>        
+      </div>
+      <div 
+        class="table-container" 
+        :class="{ 'compact-view': isCompactView }"
+        ref="tableContainer" 
+        @scroll="onScroll">
         <table class="table-auto w-full mb-2">
           <thead>
             <tr>              
@@ -38,6 +52,7 @@
                     'bg-gray-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_out',
                     'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
                     'cursor-pointer': true,
+                    'compact-cell': isCompactView,
                 }"
                 class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis"
               >
@@ -95,16 +110,17 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
-  import ReservationEdit from './components/ReservationEdit.vue';
-  import Panel from 'primevue/panel';
-  import { Drawer } from 'primevue';
-
+  import ReservationEdit from './components/ReservationEdit.vue';  
+  import { Panel, Drawer } from 'primevue';
+  import { SelectButton } from 'primevue';
+  
   export default {  
     name: "ReservationsCalendar",
     components: {  
         ReservationEdit,
         Panel,
         Drawer,
+        SelectButton,
     },
     data() {
       return {
@@ -125,7 +141,13 @@
       const selectedRoom = ref(null);
       const selectedDate = ref(null);
       const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
-      const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null });
+      const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null });      
+      const tableModeOptions = ref([
+        { label: '縮小', value: true },
+        { label: '拡大', value: false },
+        // Add more options as needed
+      ]);
+      const isCompactView = ref(true);
       
       // Helper function
       const formatDate = (date) => {
@@ -506,12 +528,17 @@
           await fetchReservation(newReservationId);
         } 
       }, { immediate: true });
-
       watch(selectedHotelId, async (newVal, oldVal) => {
         if (oldVal !== null) {          
           await fetchReservations();
         }
       });
+      watch(isCompactView, async (newVal, oldVal) => {
+        if (oldVal !== null) {          
+          console.log('Table in compact view mode:', isCompactView.value);
+        }
+      });
+
 
 
       return {
@@ -521,6 +548,8 @@
         isRoomReserved,
         fillRoomInfo, 
         drawerVisible,
+        tableModeOptions,
+        isCompactView,
         openDrawer,
         onDragStart,
         onDrop,
@@ -537,13 +566,7 @@
 
 </script>
 
-<style scoped>
-  th, td {
-    border: 0px solid #ddd;
-    padding: 8px 12px; /* Increased padding for readability */
-    text-align: center;
-  }
-
+<style scoped> 
   .overflow-x-auto {
     overflow-x: auto;
     max-width: 100%;
@@ -555,6 +578,17 @@
     overflow-y: scroll;
     max-width: 100%;    
     position: relative;    
+  }
+
+  th, td {
+    border: 0px solid #ddd;
+    padding: 8px 12px; /* Increased padding for readability */
+    text-align: center;
+    min-width: 120px;
+    max-width: 140px;
+  }
+  td {
+    text-align: left;
   }
 
   .table-container::-webkit-scrollbar-button:single-button {
@@ -582,5 +616,22 @@
   .table-container:focus {
     outline: none;
     border: 2px solid #4CAF50; /* Visual cue for focus */
+  }
+
+  /* Compact Mode */
+  .compact-view th, 
+  .compact-view td {
+    padding: 4px 6px;
+    min-width: 30px; /* Adjust as needed */
+    max-width: 100px;
+    font-size: 12px;
+  }
+  .compact-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;    
+    height: 30px; /* Adjust height */
+    width: 30px;  /* Adjust width */
+    font-size: 12px;
   }
 </style>
