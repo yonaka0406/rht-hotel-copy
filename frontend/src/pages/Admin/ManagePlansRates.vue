@@ -564,7 +564,7 @@
             ];
 
             const months = [
-                { label: '１月', value: 'jan' },
+                { label: '１月', value: 'january' },
                 { label: '２月', value: 'february' },
                 { label: '３月', value: 'march' },
                 { label: '４月', value: 'april' },
@@ -826,7 +826,7 @@
 
                 const selectedDateObj = new Date(selectedDate.value);
                 const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
-                const selectedMonth = selectedDateObj.getMonth() + 1;
+                const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
 
                 const filteredRates = filteredCurrentConditions.value.filter(rate => {
                     if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'base_rate') {
@@ -868,8 +868,8 @@
                 }
 
                 const selectedDateObj = new Date(selectedDate.value);
-                const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
-                const selectedMonth = selectedDateObj.getMonth() + 1;
+                const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();                
+                const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
 
                 // console.log('Selected Date:', selectedDate.value);
                 // console.log('Selected Day:', selectedDay);
@@ -939,8 +939,8 @@
                 }
 
                 const selectedDateObj = new Date(selectedDate.value);
-                const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
-                const selectedMonth = selectedDateObj.getMonth() + 1;
+                const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();                
+                const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
 
                 const filteredRates = filteredCurrentConditions.value.filter(rate => {
                     if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'percentage') {
