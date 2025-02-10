@@ -200,7 +200,9 @@
                 >
                     <TabList>
                         <Tab value="0">プラン適用</Tab>                        
+                        <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="4">期間</Tab>
                     </TabList>
+                    
                      
                     <TabPanels>
                         <!-- Tab 1: Apply Plan -->
@@ -256,13 +258,100 @@
                                     </Column>
                                 </DataTable>
                             </div>
-                        </TabPanel>                        
+                        </TabPanel>   
+                        <!-- Tab 5: Modify period -->
+                        <TabPanel value="4">
+                            <Card class="mb-3">
+                                <template #title>予約</template>
+                                <template #content>
+                                    <div class="grid grid-cols-2 gap-4 items-center">
+                                        <div>
+                                            <span>チェックイン：{{ editReservationDetails[0].check_in }}</span>
+                                        </div>
+                                        <div>
+                                            <span>チェックアウト：{{ editReservationDetails[0].check_out }}</span>
+                                        </div>
+                                        <div>
+                                            <span>宿泊者：{{ editReservationDetails[0].reservation_number_of_people }}</span>
+                                        </div>
+                                        <div>
+                                            <span>部屋数：{{ groupedRooms.length }}</span>
+                                        </div>                                        
+                                    </div>
+                                </template>
+                            </Card>
+                            <p class="mt-2 mb-6"><span class="font-bold">注意：</span>全ての部屋宿泊期間を変更できる日付が表示されています。</p>
+                            <div class="grid grid-cols-2 gap-4 items-center">
+                                <div>
+                                    <FloatLabel>
+                                    <label for="checkin">チェックイン</label>
+                                    <DatePicker 
+                                        id="checkin" 
+                                        v-model="newCheckIn"
+                                        :showIcon="true" 
+                                        :minDate="minCheckIn || undefined"
+                                        :maxDate="maxCheckOut || undefined"
+                                        iconDisplay="input" 
+                                        dateFormat="yy-mm-dd"
+                                        class="w-full"
+                                    />
+                                    </FloatLabel>
+                                </div>
+                                <div>
+                                    <FloatLabel>
+                                        <label for="checkout">チェックアウト</label>
+                                        <DatePicker 
+                                            id="checkout" 
+                                            v-model="newCheckOut"
+                                            :showIcon="true" 
+                                            :minDate="minCheckIn || undefined"
+                                            :maxDate="maxCheckOut || undefined"
+                                            iconDisplay="input" 
+                                            dateFormat="yy-mm-dd"
+                                            class="w-full"
+                                        />
+                                    </FloatLabel>
+                                </div>
+                            </div>
+                            <Card class="mt-3 mb-3">
+                                <template #title>部屋毎の状況</template>
+                                <template #content>                                    
+                                    <div class="grid grid-cols-3 gap-4 items-center text-center font-bold">
+                                        <p>部屋</p>
+                                        <p>最も早い日付</p>
+                                        <p>最も遅い日付</p>
+                                    </div>
+                                    <div v-for="(change, index) in roomsAvailableChanges" :key="index" class="room-status">
+                                        <div class="grid grid-cols-3 gap-4 items-center">
+                                            <p
+                                             class="text-center"
+                                            >{{ change.roomValues.details[0].room_type_name + ' ' + change.roomValues.details[0].room_number }}</p>
+                                            <p
+                                             class="text-center"              
+                                             :class="{'text-xs text-center': !change.results.earliestCheckIn}"
+                                            >
+                                                {{ change.results.earliestCheckIn ? change.results.earliestCheckIn : '制限なし' }}
+                                            </p>
+                                            <p
+                                             class="text-center"
+                                             :class="{'text-xs text-center': !change.results.latestCheckOut}"
+                                            >
+                                                {{ change.results.latestCheckOut ? change.results.latestCheckOut : '制限なし' }}
+                                            </p>
+                                        </div>
+                                        
+                                        
+                                    </div>
+                                </template>
+                            </Card>
+                        </TabPanel>                     
                     </TabPanels>                     
                 </Tabs>
          
             </div>
             <template #footer>
-                <Button v-if="bulkEditReservationDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" />                               
+                <Button v-if="bulkEditReservationDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChangesToAll" />
+                <Button v-if="bulkEditReservationDialogTab === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChangesToAll" />
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeReservationBulkEditDialog" />                
             </template>            
@@ -552,7 +641,7 @@
                 <Button v-if="bulkEditDialogTab === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
                 <Button v-if="bulkEditDialogTab === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
                 <Button v-if="bulkEditDialogTab === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
-                <Button v-if="bulkEditDialogTab === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />                
+                <Button v-if="bulkEditDialogTab === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditDialog" />                
             </template>            
@@ -732,7 +821,8 @@ export default {
         const newCheckIn = ref(null);
         const newCheckOut = ref(null);
         const minCheckIn = ref(null);
-        const maxCheckOut = ref(null);        
+        const maxCheckOut = ref(null);
+        const roomsAvailableChanges = ref([]);
         const filteredRooms = computed(() => {
             const reservedRoomIds = editReservationDetails.value.map(detail => detail.room_id);
 
@@ -1007,9 +1097,6 @@ export default {
         };
 
         const handleTabChange = async (newTabValue) => {
-            
-            bulkEditDialogTab.value = newTabValue * 1;
-            bulkEditReservationDialogTab.value = newTabValue * 1;
 
             selectedPlan.value = null;
             
@@ -1025,38 +1112,86 @@ export default {
             
             addons.value = [];
             targetRoom.value = null;
-            numberOfPeopleToMove.value = 0;            
+            numberOfPeopleToMove.value = 0;  
+            roomsAvailableChanges.value = [];
             
-            if(bulkEditDialogTab.value  === 2){
-                initializeGuests();
-                // console.log('Guest edit tab selected.');                
-            }
-            if(bulkEditDialogTab.value  === 4){
+            if(bulkEditDialogVisible.value){
+                console.log('bulkEditDialogVisible is true');
+                bulkEditDialogTab.value = newTabValue * 1;
+                
+                // Guest edit
+                if(bulkEditDialogTab.value  === 2){
+                    initializeGuests();
+                    // console.log('Guest edit tab selected.');                
+                }
                 // Period change
-                const hotelId = editReservationDetails.value[0].hotel_id;
-                console.log('selectedGroup', selectedGroup.value.room_id);
-                const roomId = selectedGroup.value.room_id;
-                newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
-                newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
+                if(bulkEditDialogTab.value  === 4){                    
+                    const hotelId = editReservationDetails.value[0].hotel_id;
+                    console.log('selectedGroup', selectedGroup.value.room_id);
+                    const roomId = selectedGroup.value.room_id;
+                    newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
+                    newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
 
-                const checkIn = formatDate(newCheckIn.value);
-                const checkOut = formatDate(newCheckOut.value);
+                    const checkIn = formatDate(newCheckIn.value);
+                    const checkOut = formatDate(newCheckOut.value);
 
-                const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
+                    const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
 
-                if (results.earliestCheckIn) {
-                    minCheckIn.value = new Date(results.earliestCheckIn);
-                } else {
-                    minCheckIn.value = null; // Ensuring it's null when there's no value
+                    if (results.earliestCheckIn) {
+                        minCheckIn.value = new Date(results.earliestCheckIn);
+                    } else {
+                        minCheckIn.value = null; // Ensuring it's null when there's no value
+                    }
+
+                    if (results.latestCheckOut) {
+                        maxCheckOut.value = new Date(results.latestCheckOut);
+                    } else {
+                        maxCheckOut.value = null; // Ensuring it's null when there's no value
+                    }
+                                    
+                    // console.log('in',minCheckIn.value,'out',maxCheckOut.value);
                 }
+            }
+            if(bulkEditReservationDialogVisible.value){
+                console.log('bulkEditReservationDialogVisible is true');
+                bulkEditReservationDialogTab.value = newTabValue * 1;
+                // Period change
+                if(bulkEditReservationDialogTab.value === 4){                    
+                    const hotelId = editReservationDetails.value[0].hotel_id;
+                    newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
+                    newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
 
-                if (results.latestCheckOut) {
-                    maxCheckOut.value = new Date(results.latestCheckOut);
-                } else {
-                    maxCheckOut.value = null; // Ensuring it's null when there's no value
+                    const checkIn = formatDate(newCheckIn.value);
+                    const checkOut = formatDate(newCheckOut.value);
+
+                    groupedRooms.value.every(async (room) =>{
+                        const roomId = room.room_id;
+                        const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
+                        
+                        if (results.earliestCheckIn) {
+                            const earliestCheckInDate = new Date(results.earliestCheckIn);
+                            if (!minCheckIn.value || earliestCheckInDate > minCheckIn.value) {
+                                minCheckIn.value = earliestCheckInDate;
+                            }
+                        }
+
+                        if (results.latestCheckOut) {
+                            const latestCheckOutDate = new Date(results.latestCheckOut);
+                            if (!maxCheckOut.value || latestCheckOutDate < maxCheckOut.value) {
+                                maxCheckOut.value = latestCheckOutDate;
+                            }
+                        }
+
+                        // Store the results and room values in roomsAvailableChanges
+                        roomsAvailableChanges.value.push({
+                            roomId: roomId,
+                            roomValues: room,
+                            results: results
+                        });
+                        console.log('roomsAvailableChanges', roomsAvailableChanges.value);
+                        console.log('Earliest Check-In:', minCheckIn.value, 'Latest Check-Out:', maxCheckOut.value);
+                    });
                 }
-                                
-                console.log('in',minCheckIn.value,'out',maxCheckOut.value);
             }
         };
 
@@ -1682,11 +1817,67 @@ export default {
             const new_room_id = selectedGroup.value.room_id;
             const number_of_people = editReservationDetails.value[0].number_of_people;
 
-            await setCalendarChange (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people);
+            await setCalendarChange (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'solo');
 
             closeBulkEditDialog();
 
             toast.add({ severity: 'success', summary: 'Success', detail: '部屋の宿泊期間が更新されました。', life: 3000 });  
+            
+        }
+
+        const applyDateChangesToAll = async () => {
+            console.log("roomsAvailableChanges:", roomsAvailableChanges);
+            console.log("Type:", typeof roomsAvailableChanges);
+            console.log("Is Array?", Array.isArray(roomsAvailableChanges));
+            // Checks            
+            if (!newCheckIn.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックイン日を指定してください。`,
+                    life: 3000
+                });
+                return;
+            }
+            if (!newCheckOut.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックアウト日を指定してください。`,
+                    life: 3000
+                });
+                return;
+            }
+            if (newCheckOut.value <= newCheckIn.value) {
+                toast.add({
+                    severity: 'warn',
+                    summary: 'Warning',
+                    detail: `チェックアウト日がチェックイン日以前になっています。`,
+                    life: 3000
+                });
+                return;
+            }
+
+            const new_check_in = formatDate(new Date(newCheckIn.value));
+            const new_check_out = formatDate(new Date(newCheckOut.value));
+
+            // Loop through roomsAvailableChanges and apply changes
+            for (const room of roomsAvailableChanges.value) {
+                for (const detail of room.roomValues.details) {
+                    const id = detail.reservation_id;
+                    const old_check_in = detail.check_in;
+                    const old_check_out = detail.check_out;
+                    const old_room_id = room.roomId;
+                    const new_room_id = room.roomId;
+                    const number_of_people = detail.number_of_people;
+
+                    await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
+                }
+            }
+
+            closeReservationBulkEditDialog();
+
+            toast.add({ severity: 'success', summary: 'Success', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });  
             
         }
 
@@ -1954,7 +2145,8 @@ export default {
 
         return {  
             formatDateTime,  
-            formatCurrency,        
+            formatCurrency,  
+            getAvailableDatesForChange,      
             editReservationDetails,
             groupedRooms,
             formattedGroupDetails,
@@ -1975,6 +2167,7 @@ export default {
             newCheckOut,
             minCheckIn,
             maxCheckOut,
+            roomsAvailableChanges,
             filteredRooms,
             guests,
             filteredClients,
@@ -2004,6 +2197,7 @@ export default {
             applyRoomChanges,
             applyGuestChanges,
             applyDateChanges,
+            applyDateChangesToAll,
             applyReservationRoomChanges,
             deleteRoom,
             changeGuestNumber,

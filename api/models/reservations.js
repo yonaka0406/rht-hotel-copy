@@ -326,7 +326,7 @@ const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut)
     `;
     const valuesMax = [hotelId, roomId, checkIn];
     const minDateQuery = `
-      SELECT TO_CHAR(MAX(date) + INTERVAL '1 day', 'YYYY-MM-DD') AS min_date
+      SELECT TO_CHAR(MAX(date), 'YYYY-MM-DD') AS min_date
       FROM reservation_details
       WHERE hotel_id = $1 AND room_id = $2 AND date >= $3
     `;
@@ -593,7 +593,7 @@ const updateReservationResponsible = async (id, updatedFields, user_id) => {
 };
 
 const updateRoomByCalendar = async (roomData) => {
-  const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, updated_by } = roomData;
+  const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
 
   console.log('roomData',roomData);
 
@@ -623,7 +623,7 @@ const updateRoomByCalendar = async (roomData) => {
     let newReservationId = id;
 
     // If room_count > 1 and check_in/check_out dates change, create a new reservation_id
-    if (roomCount > 1 && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
+    if (roomCount > 1 && mode === 'solo' && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
       
       console.log('Check-in or check-out dates changed, creating a new reservation_id...');
         

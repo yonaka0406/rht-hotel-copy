@@ -627,14 +627,14 @@ const editReservationResponsible = async (req, res) => {
 
 const editRoomFromCalendar = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people } = req.body;
+  const { hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode } = req.body;
   const updated_by = req.user.id;
 
   try {
     // Call the function to update reservation status in the database
     const updatedReservation = await updateRoomByCalendar({
       id,
-      hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people,
+      hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode,
       updated_by
     });
 

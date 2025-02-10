@@ -262,7 +262,7 @@
         // Logic to determine if the cell is the first in a sequence
         return reservedRooms.value.some((room) => {
           if (room.room_id === room_id && formatDate(new Date(room.check_in)) === date) {
-            console.log('isCellFirst for', room_id, 'and', date, 'match check-in', formatDate(new Date(room.check_in)));
+            // console.log('isCellFirst for', room_id, 'and', date, 'match check-in', formatDate(new Date(room.check_in)));
             return true;  // Ensure that we return true if there's a match
           }
           return false;  // Return false if no match
@@ -278,7 +278,7 @@
         
         // Logic to determine if the cell is the last in a sequence
         return reservedRooms.value.some((room) => {
-          console.log('isCellLast for', room_id, 'and', date, 'checking check-out', formatDate(new Date(room.check_out)));
+          // console.log('isCellLast for', room_id, 'and', date, 'checking check-out', formatDate(new Date(room.check_out)));
           return room.room_id === room_id && formatDate(new Date(room.check_out)) === formattedNextDate;  // Compare with date + 1
         });
       };
@@ -382,7 +382,7 @@
           
           if(!checkForConflicts(from, to)){
             // console.log('No conflicts found');
-            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people);
+            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people, 'solo');
             await setReservationId(null);
           } else {
             // console.log('Conflict found');
@@ -618,7 +618,7 @@
     text-align: center;
     min-width: 120px;
     max-width: 140px;
-  }
+  }  
   td {
     text-align: left;
     border-left: 4px solid white;
@@ -632,7 +632,6 @@
     border-left: 4px solid white !important;
     border-right: 4px solid white !important;
   }
-
   .cell-last {
     border-bottom-left-radius: 40px !important;
     border-bottom-right-radius: 40px !important;
