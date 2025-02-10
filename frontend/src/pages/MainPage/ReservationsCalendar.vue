@@ -34,7 +34,7 @@
           <tbody>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
               <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">
-                {{ date }}
+                {{ formatDateWithDay(date) }}
               </td>
               <td
                 v-for="(room, roomIndex) in selectedHotelRooms"
@@ -51,14 +51,16 @@
                     'bg-lime-200': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_in',
                     'bg-gray-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_out',
                     'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
+                    'cell-first': isCellFirst(room.room_id, date),
+                    'cell-last': isCellLast(room.room_id, date),
                     'cursor-pointer': true,
                     'compact-cell': isCompactView,
                 }"
-                class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis"
+                class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4"
               >
                 <div 
                   v-if="isRoomReserved(room.room_id, date)"
-                >                  
+                >
                   <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
                     <i class="pi pi-pause"></i> 
                     {{ fillRoomInfo(room.room_id, date).client_name }}
@@ -156,6 +158,11 @@
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       };
+      const formatDateWithDay = (date) => {
+          const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
+          const parsedDate = new Date(date);
+          return `${parsedDate.toLocaleDateString(undefined, options)}`;
+      };
 
       // Generate date range from current date - 10 days to current date + 40 days
       /*
@@ -243,17 +250,38 @@
       // Check if a room is reserved for a specific date
       const isRoomReserved = (room_id, date) => {
         //console.log('For',room_id,'and',date,'match');
-        
         return reservedRooms.value.some(
           (reservation) => {
             const formattedDate = formatDate(new Date(reservation.date));            
             //console.log('Reservation:', reservation.room_id === room_id && formattedDate === date, reservation.room_id, formattedDate, room_id, date);
             return reservation.room_id === room_id && formattedDate === date
-          }
-            
+          } 
         );
       };
+      const isCellFirst = (room_id, date) => {        
+        // Logic to determine if the cell is the first in a sequence
+        return reservedRooms.value.some((room) => {
+          if (room.room_id === room_id && formatDate(new Date(room.check_in)) === date) {
+            console.log('isCellFirst for', room_id, 'and', date, 'match check-in', formatDate(new Date(room.check_in)));
+            return true;  // Ensure that we return true if there's a match
+          }
+          return false;  // Return false if no match
+        });
+      };
+      const isCellLast = (room_id, date) => {        
+        // Convert the date to a Date object and add 1 day
+        const nextDate = new Date(date);
+        nextDate.setDate(nextDate.getDate() + 1);
 
+        // Format the new date for comparison
+        const formattedNextDate = formatDate(nextDate);
+        
+        // Logic to determine if the cell is the last in a sequence
+        return reservedRooms.value.some((room) => {
+          console.log('isCellLast for', room_id, 'and', date, 'checking check-out', formatDate(new Date(room.check_out)));
+          return room.room_id === room_id && formatDate(new Date(room.check_out)) === formattedNextDate;  // Compare with date + 1
+        });
+      };
       const fillRoomInfo = (room_id, date) => {
 
         const reservation = reservedRooms.value.find(
@@ -497,6 +525,7 @@
 
         nextTick(async () => {
           await fetchReservations();
+          // console.log('reservedRooms', reservedRooms);
 
           // Scroll to 1/5 of the total scroll height
           const tableContainer = document.querySelector(".table-container");
@@ -546,10 +575,13 @@
         dateRange,        
         selectedHotelRooms,
         isRoomReserved,
+        isCellFirst,
+        isCellLast,
         fillRoomInfo, 
         drawerVisible,
         tableModeOptions,
         isCompactView,
+        formatDateWithDay,
         openDrawer,
         onDragStart,
         onDrop,
@@ -581,7 +613,7 @@
   }
 
   th, td {
-    border: 0px solid #ddd;
+    border: 0px solid;
     padding: 8px 12px; /* Increased padding for readability */
     text-align: center;
     min-width: 120px;
@@ -589,6 +621,24 @@
   }
   td {
     text-align: left;
+    border-left: 4px solid white;
+    border-right: 4px solid white;
+  }
+
+  .cell-first {
+    border-top-left-radius: 40px !important;
+    border-top-right-radius: 40px !important;
+    border-top: 4px solid white !important;
+    border-left: 4px solid white !important;
+    border-right: 4px solid white !important;
+  }
+
+  .cell-last {
+    border-bottom-left-radius: 40px !important;
+    border-bottom-right-radius: 40px !important;
+    border-bottom: 4px solid white !important;
+    border-left: 4px solid white !important;
+    border-right: 4px solid white !important;
   }
 
   .table-container::-webkit-scrollbar-button:single-button {
