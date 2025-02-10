@@ -96,8 +96,8 @@ const getAvailableDatesForChange = async (req, res) => {
   const { hid, rid, ci, co } = req.params;
 
   try {
-    const { maxDate, minDate } = await selectAvailableDatesForChange(hid, rid, ci, co);
-    res.status(200).json({ maxDate, minDate });
+    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(hid, rid, ci, co);
+    res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {    
     console.error('Error getting available dates for change:', error);
     res.status(500).json({ error: 'Internal Server Error' });

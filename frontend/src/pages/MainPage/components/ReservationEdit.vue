@@ -519,6 +519,8 @@
                                         id="checkin" 
                                         v-model="newCheckIn"
                                         :showIcon="true" 
+                                        :minDate="minCheckIn || undefined"
+                                        :maxDate="maxCheckOut || undefined"
                                         iconDisplay="input" 
                                         dateFormat="yy-mm-dd"
                                         class="w-full"
@@ -532,6 +534,8 @@
                                             id="checkout" 
                                             v-model="newCheckOut"
                                             :showIcon="true" 
+                                            :minDate="minCheckIn || undefined"
+                                            :maxDate="maxCheckOut || undefined"
                                             iconDisplay="input" 
                                             dateFormat="yy-mm-dd"
                                             class="w-full"
@@ -699,7 +703,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const { selectedHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -727,6 +731,8 @@ export default {
         const numberOfPeopleToMove = ref(0);
         const newCheckIn = ref(null);
         const newCheckOut = ref(null);
+        const minCheckIn = ref(null);
+        const maxCheckOut = ref(null);        
         const filteredRooms = computed(() => {
             const reservedRoomIds = editReservationDetails.value.map(detail => detail.room_id);
 
@@ -1000,7 +1006,7 @@ export default {
             });
         };
 
-        function handleTabChange (newTabValue) {
+        const handleTabChange = async (newTabValue) => {
             
             bulkEditDialogTab.value = newTabValue * 1;
             bulkEditReservationDialogTab.value = newTabValue * 1;
@@ -1026,7 +1032,31 @@ export default {
                 // console.log('Guest edit tab selected.');                
             }
             if(bulkEditDialogTab.value  === 4){
-                
+                // Period change
+                const hotelId = editReservationDetails.value[0].hotel_id;
+                console.log('selectedGroup', selectedGroup.value.room_id);
+                const roomId = selectedGroup.value.room_id;
+                newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
+                newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
+
+                const checkIn = formatDate(newCheckIn.value);
+                const checkOut = formatDate(newCheckOut.value);
+
+                const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
+
+                if (results.earliestCheckIn) {
+                    minCheckIn.value = new Date(results.earliestCheckIn);
+                } else {
+                    minCheckIn.value = null; // Ensuring it's null when there's no value
+                }
+
+                if (results.latestCheckOut) {
+                    maxCheckOut.value = new Date(results.latestCheckOut);
+                } else {
+                    maxCheckOut.value = null; // Ensuring it's null when there's no value
+                }
+                                
+                console.log('in',minCheckIn.value,'out',maxCheckOut.value);
             }
         };
 
@@ -1640,11 +1670,24 @@ export default {
                 });
                 return;
             }
-            newCheckIn.value = formatDate(newCheckIn.value);
-            newCheckOut.value = formatDate(newCheckOut.value);
+            //newCheckIn.value = formatDate(newCheckIn.value);
+            //newCheckOut.value = formatDate(newCheckOut.value);
+
+            const id = editReservationDetails.value[0].reservation_id;
+            const old_check_in = editReservationDetails.value[0].check_in;
+            const old_check_out = editReservationDetails.value[0].check_out;
+            const new_check_in = formatDate(new Date(newCheckIn.value));
+            const new_check_out = formatDate(new Date(newCheckOut.value));
+            const old_room_id = selectedGroup.value.room_id;
+            const new_room_id = selectedGroup.value.room_id;
+            const number_of_people = editReservationDetails.value[0].number_of_people;
+
+            await setCalendarChange (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people);
+
+            closeBulkEditDialog();
+
+            toast.add({ severity: 'success', summary: 'Success', detail: '部屋の宿泊期間が更新されました。', life: 3000 });  
             
-            console.log(editReservationDetails.value[0].hotel_id, selectedGroup.value.room_id)
-            console.log(newCheckIn.value, newCheckOut.value);
         }
 
         const applyReservationRoomChanges = async () => {
@@ -1798,18 +1841,16 @@ export default {
                 await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);                
             }
         });            
-        watch(editReservationDetails, (newValue, oldValue) => {
+        watch(editReservationDetails, async (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 console.log('editReservationDetails changed:', newValue);
-                fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+                await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
                 selectedClient.value = editReservationDetails.value[0].client_id;
-                newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
-                newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
 
                 /*
                 // IMPLEMENT:
                 I need to run getAvailableDatesForChange for each room_id in editReservationDetails.value array and log each result
-                getAvailableDatesForChange()
+                getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut)
                 */
 
                 //console.log('selectedClient.value:', selectedClient.value);
@@ -1835,7 +1876,7 @@ export default {
 
                         if (updatedGroup) {
                             // console.log('selectedGroup updated');
-                            selectedGroup.value = updatedGroup; // Update the selected group if found
+                            selectedGroup.value = updatedGroup; // Update the selected group if found                            
                         } else {
                             // console.log('selectedGroup not selected or no longer exists');
                             selectedGroup.value = null; // Reset if the group no longer exists
@@ -1932,6 +1973,8 @@ export default {
             numberOfPeopleToMove,
             newCheckIn,
             newCheckOut,
+            minCheckIn,
+            maxCheckOut,
             filteredRooms,
             guests,
             filteredClients,
