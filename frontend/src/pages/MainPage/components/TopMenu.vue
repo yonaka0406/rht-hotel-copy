@@ -103,11 +103,13 @@
             };
 
             onMounted( async () => {
-                await fetchMyHoldReservations();                
+                
+                        
                 //console.log('holdReservations:',holdReservations.value);
-                // Already called in SideMenu
+                // Already called in SideMenu                
                 //fetchHotels(); 
-                await fetchUser();
+                // await fetchUser();
+                //await fetchMyHoldReservations();    
                 //console.log('Logged user:',logged_user.value);                
             });
             

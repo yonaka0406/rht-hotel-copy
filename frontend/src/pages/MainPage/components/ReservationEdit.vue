@@ -56,11 +56,11 @@
                     <div class="field flex flex-col">
                         <span><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
                     </div>
-
+<!--
                     <div class="field flex flex-col">
                         <span><span class="font-bold">更新日時：</span> {{ formatDateTime(updatedDateTime) }}</span>
                     </div>
-
+-->
                     <div class="field flex flex-col col-span-2">
                         
                         <div class="grid grid-cols-4 gap-x-6">
@@ -727,7 +727,7 @@
 </template>
 
 <script>
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';  
 import { io } from 'socket.io-client';
 import { useToast } from 'primevue/usetoast';
@@ -791,6 +791,7 @@ export default {
         const socket = ref(null);
         const toast = useToast();
         const confirm = useConfirm();
+        const isUpdating = ref(false);
         const { selectedHotelId } = useHotelStore();
         const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
@@ -991,6 +992,7 @@ export default {
                 return '不明'; // Or any default value you prefer
             }
         });
+/*
         const updatedDateTime = computed(() => {
             // console.log('updatedDateTime', editReservationDetails.value)
             return editReservationDetails.value.reduce((max, detail) => {
@@ -998,7 +1000,8 @@ export default {
                 //console.log('max:', max);
                 return maxLogTime > max ? maxLogTime : max;
             }, new Date(0));            
-        });        
+        });
+*/        
 
         // Format
         const rowStyle = (data) => {
@@ -1385,6 +1388,7 @@ export default {
             }).flat();
 
             // console.log('dataToUpdate', dataToUpdate);
+            isUpdating.value = true; // Disable WebSocket updates
 
             try {
                 for (const data of dataToUpdate) {
@@ -1426,8 +1430,9 @@ export default {
                         //console.log('Updated Reservation:', updatedReservation);
                     }
                 }
-
-                // await fetchReservation(props.reservation_id);
+                
+                isUpdating.value = false; // Re-enable WebSocket updates
+                await fetchReservation(props.reservation_id);
 
                 closeBulkEditDialog();
 
@@ -1494,6 +1499,8 @@ export default {
             );
             console.log('Data to Update:', dataToUpdate);
 
+            isUpdating.value = true; // Disable WebSocket updates
+
             try {
                 for (const data of dataToUpdate) {
                     const authToken = localStorage.getItem('authToken');
@@ -1535,7 +1542,8 @@ export default {
                     }
                 }
 
-                // await fetchReservation(props.reservation_id);
+                await fetchReservation(props.reservation_id);
+                isUpdating.value = false; // Re-enable WebSocket updates
 
                 closeReservationBulkEditDialog();
 
@@ -1631,6 +1639,7 @@ export default {
             }).flat();
 
             // console.log('dataToUpdate', dataToUpdate);
+            isUpdating.value = true; // Disable WebSocket updates
 
             try {
                 for (const data of dataToUpdate) {
@@ -1673,7 +1682,8 @@ export default {
                     }
                 }
 
-                // await fetchReservation(props.reservation_id);
+                isUpdating.value = false; // Re-enable WebSocket updates
+                await fetchReservation(props.reservation_id);
 
                 closeBulkEditDialog();
 
@@ -1756,6 +1766,7 @@ export default {
                     };
                 });
                 // console.log('dataToUpdate', dataToUpdate);
+                isUpdating.value = true; // Disable WebSocket updates
 
                 try {
                     const authToken = localStorage.getItem('authToken');
@@ -1774,7 +1785,8 @@ export default {
                         throw new Error(`Error updating reservation guests: ${updatedReservation.error || 'Unknown error'}`);
                     }
 
-                    // await fetchReservation(props.reservation_id);
+                    isUpdating.value = false; // Re-enable WebSocket updates
+                    await fetchReservation(props.reservation_id);
 
                     closeBulkEditDialog();
 
@@ -1838,10 +1850,7 @@ export default {
             
         }
 
-        const applyDateChangesToAll = async () => {
-            console.log("roomsAvailableChanges:", roomsAvailableChanges);
-            console.log("Type:", typeof roomsAvailableChanges);
-            console.log("Is Array?", Array.isArray(roomsAvailableChanges));
+        const applyDateChangesToAll = async () => {            
             // Checks            
             if (!newCheckIn.value) {
                 toast.add({
@@ -1874,19 +1883,22 @@ export default {
             const new_check_in = formatDate(new Date(newCheckIn.value));
             const new_check_out = formatDate(new Date(newCheckOut.value));
 
-            // Loop through roomsAvailableChanges and apply changes
-            for (const room of roomsAvailableChanges.value) {
-                for (const detail of room.roomValues.details) {
-                    const id = detail.reservation_id;
-                    const old_check_in = detail.check_in;
-                    const old_check_out = detail.check_out;
-                    const old_room_id = room.roomId;
-                    const new_room_id = room.roomId;
-                    const number_of_people = detail.number_of_people;
+            isUpdating.value = true; // Disable WebSocket updates
 
-                    await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
-                }
+            for (const room of roomsAvailableChanges.value) {
+                
+                const id = room.roomValues.details[0].reservation_id;
+                const old_check_in = room.roomValues.details[0].check_in;
+                const old_check_out = room.roomValues.details[0].check_out;
+                const old_room_id = room.roomId;
+                const new_room_id = room.roomId;
+                const number_of_people = room.roomValues.details[0].number_of_people;
+                
+                await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
             }
+
+            await fetchReservation(props.reservation_id);
+            isUpdating.value = false; // Re-enable WebSocket updates
 
             closeReservationBulkEditDialog();
 
@@ -1912,7 +1924,9 @@ export default {
                 reservationId: props.reservation_id, 
                 numberOfPeople: numberOfPeopleToMove.value, 
                 roomId: targetRoom.value.value,
-            }            
+            }
+
+            isUpdating.value = true; // Disable WebSocket updates
 
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -1929,9 +1943,10 @@ export default {
 
                 if (!response.ok) {
                     throw new Error(`Error creating new reservation detail: ${newReservation.error || 'Unknown error'}`);
-                }
-                // console.log('Created New Reservation:', newReservation);
-                // await fetchReservation(props.reservation_id);
+                }                
+
+                isUpdating.value = false; // Re-enable WebSocket updates
+                await fetchReservation(props.reservation_id);
 
                 closeBulkEditRoomDialog();
                 
@@ -2026,7 +2041,7 @@ export default {
 
         // Fetch reservation details on mount
         onMounted(async () => {
-            console.log('Reservation ID provided:', props.reservation_id);
+            // console.log('Reservation ID provided:', props.reservation_id);
             await fetchReservation(props.reservation_id);
             // Establish Socket.IO connection
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -2036,10 +2051,22 @@ export default {
             });
 
             socket.value.on('tableUpdate', async (data) => {
-                // console.log('Reservation updated detected in ReservationEdit');
+                // Prevent fetching if bulk update is in progress
+                if (isUpdating.value) {
+                    console.log('Skipping fetchReservation because update is still running');
+                    return;
+                }
+                console.log('Reservation updated detected in ReservationEdit');
                 // Web Socket fetchReservation                
                 await fetchReservation(props.reservation_id);
             });
+        });
+
+        onUnmounted(() => {
+            // Close the Socket.IO connection when the component is unmounted
+            if (socket.value) {
+            socket.value.disconnect();
+            }
         });
 
         // Watch
@@ -2140,9 +2167,12 @@ export default {
         watch(selectedHotelId, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // console.log('selectedHotelId changed:', newValue);
+                /*
+                // If another hotel is selected, go to a new reservation page (still needed?)
                 if (newValue !== editReservationDetails.value[0]?.hotel_id) {
                     goToNewReservation();
                 }
+                */
                 
             }
         }, { deep: true });
@@ -2188,7 +2218,7 @@ export default {
             isValidPhone,
             allRoomsHavePlan,
             reservationStatus,
-            updatedDateTime,            
+/*          updatedDateTime,          */
             plans,
             daysOfWeek,
             availableRooms,

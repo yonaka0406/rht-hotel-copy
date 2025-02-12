@@ -97,6 +97,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       res.status(500).json({ error: error.message });
     } finally {
       client.release();
+      console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
   }
 
@@ -146,6 +147,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       res.status(500).json({ error: error.message });
     } finally {
       client.release();
+      console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
 
   }

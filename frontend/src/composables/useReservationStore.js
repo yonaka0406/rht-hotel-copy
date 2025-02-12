@@ -18,11 +18,12 @@
 
         // Set
         const setReservationId = (id) => {
-            reservationId.value = id;
-            // console.log('From Reservation Store => New reservation ID is:',reservationId.value);
+            console.log('From Reservation Store => setReservationId:',reservationId.value);
+            reservationId.value = id;            
         };
         
         const setReservationStatus = async (status) => {            
+            console.log('From Reservation Store => setReservationStatus:',status);
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Get the hotel_id for the current reservation
@@ -50,7 +51,7 @@
         };
 
         const setReservationClient = async (client_id) => {
-            // console.log('From Reservation Store => Set reservation client:',client_id);
+            console.log('From Reservation Store => setReservationClient:',client_id);
             try {
               const authToken = localStorage.getItem('authToken');
               // Get the hotel_id for the current reservation
@@ -76,7 +77,8 @@
             }
           };
 
-        const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {            
+        const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
+            console.log('From Reservation Store => setCalendarChange');         
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Get the hotel_id for the current reservation
@@ -102,7 +104,7 @@
         };
 
         const changeReservationRoomGuestNumber = async (id, room, mode) => {
-            
+            console.log('From Reservation Store => changeReservationRoomGuestNumber');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/update/room/guestnumber/${id}`;
@@ -128,16 +130,22 @@
 
         // Get reservationId from the store
         const getReservationId = () => {
+            console.log('From Reservation Store => getReservationId:',reservationId.value);
             return reservationId.value;
         };
 
-        const getReservationHotelId = async (reservation_id) => {
-            await fetchReservation(reservation_id);
+        const getReservationHotelId = async (reservation_id) => {            
+            console.log('From Reservation Store => getReservationHotelId');
+            if (!reservationDetails.value.reservation) {
+                console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
+                await fetchReservation(reservation_id);
+            }
 
-            return reservationDetails.value.reservation[0].hotel_id;
+            return reservationDetails.value.reservation?.[0]?.hotel_id || null;
         };
 
         const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
+            console.log('From Reservation Store => getAvailableDatesForChange');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
@@ -166,8 +174,8 @@
         // Fetch 
         
         const fetchReservation = async (reservation_id) => {
-            reservationId.value = reservation_id;
-            // console.log('From Reservation Store => Fetch reservation ID ',reservation_id, ' with reservationId:',reservationId.value);
+            console.log('From Reservation Store => fetchReservation:',reservation_id);
+            reservationId.value = reservation_id;            
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/info?id=${reservation_id}`;
@@ -180,6 +188,8 @@
                 });
     
                 const data = await response.json();
+
+                console.log('From Reservation Store => fetchReservation data:',data);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch reservation details');
@@ -211,6 +221,7 @@
         };
         
         const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
+            console.log('From Reservation Store => fetchAvailableRooms');
             try {
                 const authToken = localStorage.getItem('authToken');            
                 const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
@@ -251,6 +262,7 @@
         };
 
         const fetchReservedRooms = async (hotelId, startDate, endDate) => {
+            console.log('From Reservation Store => fetchReservedRooms');
             try {
                 const authToken = localStorage.getItem('authToken');            
                 const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
@@ -291,6 +303,7 @@
         };
 
         const fetchMyHoldReservations = async () => {
+            console.log('From Reservation Store => fetchMyHoldReservations');
             try{
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/hold-list`;
@@ -346,7 +359,7 @@
         // Delete
 
         const deleteHoldReservation = async (id) => {
-            
+            console.log('From Reservation Store => deleteHoldReservation');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/delete/hold/${id}`;
@@ -370,7 +383,7 @@
         };
 
         const deleteReservationRoom = async (id, room) => {
-            
+            console.log('From Reservation Store => deleteReservationRoom');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/delete/room/${id}`;
@@ -399,6 +412,12 @@
         watch(availableRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // console.log('availableRooms changed in Store:', newValue);
+            }
+        }, { deep: true });
+
+        watch(reservationDetails, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('reservationDetails changed in Store from ',oldValue,'to', newValue);
             }
         }, { deep: true });
 

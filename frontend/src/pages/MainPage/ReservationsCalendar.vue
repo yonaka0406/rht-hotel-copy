@@ -132,6 +132,7 @@
     setup() {
       const socket = ref(null);
       const toast = useToast();
+      const isUpdating = ref(false);
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
       const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
@@ -294,6 +295,7 @@
       };
       
       const openDrawer = (roomId, date) => {
+        isUpdating.value = true; // Disable WebSocket updates
         selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === roomId);
         selectedDate.value = date;
 
@@ -308,6 +310,7 @@
         } else {
           
         }
+        
       };
 
       const drawerHeader = computed(() => {
@@ -381,9 +384,12 @@
           // console.log('Confirmed');
           
           if(!checkForConflicts(from, to)){
+            isUpdating.value = true; // Disable WebSocket updates
             // console.log('No conflicts found');
             await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people, 'solo');
             await setReservationId(null);
+            isUpdating.value = false; // Re-enable WebSocket updates
+            await fetchReservations();
           } else {
             // console.log('Conflict found');
             toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
@@ -505,10 +511,15 @@
           // console.log('Connected to server');
         });
 
-        socket.value.on('tableUpdate', (data) => {
+        socket.value.on('tableUpdate', async (data) => {
+          // Prevent fetching if bulk update is in progress
+          if (isUpdating.value) {
+              console.log('Skipping fetchReservation because update is still running');
+              return;
+          }
           // Update the reservations data in your component
           // console.log('Received updated data:', data);
-          fetchReservations();          
+          await fetchReservations();          
         });
         
         await fetchHotels();
@@ -567,8 +578,13 @@
           console.log('Table in compact view mode:', isCompactView.value);
         }
       });
-
-
+      watch(drawerVisible, async (newVal, oldVal) => {
+        if (newVal === false) {          
+          console.log('Edit drawer became false');
+          isUpdating.value = false;
+          await fetchReservations();
+        }
+      });
 
       return {
         reservationId,

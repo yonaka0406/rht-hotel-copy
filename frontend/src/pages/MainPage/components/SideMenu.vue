@@ -266,7 +266,7 @@
                 }
                 
                 //console.log(isAdmin.value)
-                await fetchMyHoldReservations();
+                await fetchMyHoldReservations();                
             });
 /*
             watch(hotels, (newVal, oldVal) => {

@@ -639,7 +639,7 @@ const editRoomFromCalendar = async (req, res) => {
     });
 
     // Respond with the updated reservation details
-    res.json(updatedReservation);
+    res.json({success: 'Edit made with success.'});
   } catch (err) {
     console.error('Error updating room:', err);
     res.status(500).json({ error: 'Failed to update room' });
