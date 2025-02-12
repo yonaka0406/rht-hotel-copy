@@ -1033,7 +1033,7 @@ const deleteReservationClientsByDetailId = async (reservation_detail_id, updated
   }   
 };
 
-const deleteReservationRoom = async (detailsArray, updated_by) => {
+const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeople, updated_by) => {
 
   const client = await pool.connect();
 
@@ -1052,7 +1052,7 @@ const deleteReservationRoom = async (detailsArray, updated_by) => {
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await client.query(updateQuery, [detailsArray[0].number_of_people, detailsArray[0].reservation_id, detailsArray[0].hotel_id]);
+    const updateResult = await client.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -1061,22 +1061,19 @@ const deleteReservationRoom = async (detailsArray, updated_by) => {
       return { success: false, message: 'Invalid operation: number_of_people would be zero or negative' };
     }
 
-    // Delete the reservation details with promise    
-    const deletePromises = detailsArray.map(({ id }) => {
-      const deleteQuery = `
-        DELETE FROM reservation_details
-        WHERE id = $1
-        RETURNING *;
-      `;
-      return client.query(deleteQuery, [id]);
-    });
-
-    const deleteResults = await Promise.all(deletePromises);
+    // Delete the reservation details
+    
+    const deleteQuery = `
+      DELETE FROM reservation_details
+      WHERE reservation_id = $1 and room_id = $2
+      RETURNING *;
+    `;
+    const deleteResults = await client.query(deleteQuery, [reservationId, roomId]);
 
     // Commit the transaction
     await client.query('COMMIT');
 
-    return { success: true, rowCount: deleteResults.reduce((sum, res) => sum + res.rowCount, 0) };
+    return { success: true };
 
   } catch (err) {
     await client.query('ROLLBACK');

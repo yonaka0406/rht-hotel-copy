@@ -1956,8 +1956,16 @@ export default {
             }
         };
 
-        const deleteRoom = async (group) => {            
-            const response = await deleteReservationRoom(group.details[0].reservation_id, group);                        
+        const deleteRoom = async (group) => {    
+
+            const room = {
+                hotelId: group.details[0].hotel_id,
+                roomId: group.details[0].room_id,
+                reservationId: group.details[0].reservation_id,
+                numberOfPeople: group.details[0].number_of_people,
+            }
+
+            const response = await deleteReservationRoom(group.details[0].reservation_id, room);                        
             closeBulkEditDialog();
 
             // Provide feedback to the user
