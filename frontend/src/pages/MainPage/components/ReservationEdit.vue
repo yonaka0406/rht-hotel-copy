@@ -1078,6 +1078,7 @@ export default {
                         detail: `保留中予約削除されました。`,
                         life: 3000
                     });
+                    setReservationId(null);
                     goToNewReservation();
                 },
                 rejectProps: {
@@ -1195,7 +1196,13 @@ export default {
             }
         };
 
-        const openReservationBulkEditDialog = () => {
+        const openReservationBulkEditDialog = async () => {
+            const hotelId = editReservationDetails.value[0].hotel_id;
+            const startDate = editReservationDetails.value[0].check_in;
+            const endDate = editReservationDetails.value[0].check_out;
+
+            await fetchAvailableRooms(hotelId, startDate, endDate);
+            await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
             bulkEditReservationDialogTab.value = 0;
             bulkEditReservationDialogVisible.value = true;
         };
@@ -1218,7 +1225,13 @@ export default {
             addons.value = [];
         }; 
 
-        const openBulkEditDialog = (group) => {
+        const openBulkEditDialog = async (group) => {
+            const hotelId = editReservationDetails.value[0].hotel_id;
+            const startDate = editReservationDetails.value[0].check_in;
+            const endDate = editReservationDetails.value[0].check_out;
+
+            await fetchAvailableRooms(hotelId, startDate, endDate);
+            await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
             selectedGroup.value = group;
             bulkEditDialogTab.value = 0;
             bulkEditDialogVisible.value = true;
@@ -1961,7 +1974,13 @@ export default {
             changeClientDialogVisible.value = false;
         };
 
-        const openBulkEditRoomDialog = () => {
+        const openBulkEditRoomDialog = async () => {
+            const hotelId = editReservationDetails.value[0].hotel_id;
+            const startDate = editReservationDetails.value[0].check_in;
+            const endDate = editReservationDetails.value[0].check_out;
+
+            await fetchAvailableRooms(hotelId, startDate, endDate);
+            await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
             bulkEditRoomDialogVisible.value = true;
         };
 
@@ -2029,13 +2048,12 @@ export default {
                 //console.log("reservation_id changed:", newReservationId);
                 // await fetchReservation(newReservationId);
                 // console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
-                await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);                
+                
             }
         });            
         watch(editReservationDetails, async (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('editReservationDetails changed:', newValue);
-                await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+                console.log('editReservationDetails changed:', newValue);                
                 selectedClient.value = editReservationDetails.value[0].client_id;
 
                 /*
@@ -2051,12 +2069,7 @@ export default {
             if (newValue !== oldValue) {
                 // console.log('groupedRooms changed:', newValue);
 
-                if (newValue && newValue.length > 0) {
-                    const details = newValue[0].details;
-                    const startDate = details[0].check_in;
-                    const endDate = details[0].check_out;        
-
-                    fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
+                if (newValue && newValue.length > 0) {                    
 
                     if(!selectedGroup){
                         // Try to find the updated group in newValue
@@ -2080,11 +2093,7 @@ export default {
             if (newValue !== oldValue) {
                 // console.log('selectedGroup changed:', newValue);
                 if (newValue && newValue.details && newValue.details.length > 0) {
-                    const details = newValue.details;
-                    const startDate = details[0].check_in;
-                    const endDate = details[0].check_out;        
-
-                    fetchAvailableRooms(editReservationDetails.value[0].hotel_id, startDate, endDate);
+                    
                 }                
             }
         }, { deep: true });

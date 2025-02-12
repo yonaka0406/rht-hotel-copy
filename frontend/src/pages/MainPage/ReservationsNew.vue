@@ -1,14 +1,6 @@
 <template>
-  <div class="p-2">
-    <Panel 
-      v-if="reservation_id"
-      header="予約編集"
-    >
-      <ReservationEdit 
-        :reservation_id="reservation_id"
-      />
-    </Panel>
-    <Panel v-else header="新規予約">
+  <div class="p-2">    
+    <Panel header="新規予約">
       <!-- Select Dates and Number of People -->
       <div class="grid grid-cols-3 mb-4 mr-4 gap-2">
         <div class="col-span-3">
@@ -287,8 +279,7 @@
 
 <script>
   import { ref, computed, watch, onMounted, nextTick } from 'vue';
-  import ReservationEdit from './components/ReservationEdit.vue';
-
+  import { useRouter } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
   import { useHotelStore } from '@/composables/useHotelStore';
   import { useClientStore } from '@/composables/useClientStore';
@@ -303,8 +294,7 @@
 
   export default {  
     name: "ReservationsNew",
-    components: {   
-        ReservationEdit,   
+    components: {
         Panel,
         FloatLabel,
         DatePicker,
@@ -325,6 +315,7 @@
       };
     },
     setup() {
+      const router = useRouter();
       const toast = useToast();
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
@@ -680,9 +671,9 @@
             const { reservation, reservationDetails } = data;
             toast.add({ severity: 'success', summary: 'Success', detail: '保留中予約作成されました。', life: 3000 });
             
-            await setReservationId(reservation.id);
-            await fetchReservation(reservation.id);
             await fetchMyHoldReservations();
+            await goToEditReservationPage(reservation.id);            
+            
             dialogVisible.value = false;
 /*
             // Fetch available rooms
@@ -754,6 +745,12 @@
         } catch (error) {
           console.error('Network error:', error); // Handle any network errors
         }
+      };
+
+      const goToEditReservationPage = async (reservation_id) => {                
+          await setReservationId(reservation_id);
+                    
+          router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
       };
 
       // Compute

@@ -18,6 +18,7 @@ const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
+const ReservationEdit = () => import('@/pages/MainPage/components/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
 
 const routes = [
@@ -27,6 +28,7 @@ const routes = [
     component: MainPage,
     children: [
       { path: '/reservations/new/', name: 'ReservationsNew', component: ReservationsNew },
+      { path: '/reservations/edit/:reservation_id', name: 'ReservationEdit', component: ReservationEdit, props: true },
       { path: '/reservations/calendar', name: 'ReservationsCalendar', component: ReservationsCalendar },
     ],
     meta: { requiresAuth: true },

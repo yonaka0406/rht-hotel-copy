@@ -39,7 +39,7 @@
     <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
         <ul v-if="holdReservations.length">
             <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                <button @click="goToNewReservationPage(reservation.reservation_id)">
+                <button @click="goToEditReservationPage(reservation.reservation_id)">
                     {{ reservation.hotel_name }}<p>保留中予約を完成させてください: </p>
                     {{ reservation.client_name }} @ {{ reservation.check_in }}
                 </button>
@@ -91,15 +91,15 @@
                 return userMessage;
             });
 
-            // Handle notification click (navigate to New Reservation page)            
-            const goToNewReservationPage = async (reservation_id) => {                
+            // Handle notification click
+            const goToEditReservationPage = async (reservation_id) => {                
                 await setReservationId(reservation_id);
-
                 const hotel_id = await getReservationHotelId(reservation_id);
                 setHotelId(hotel_id);
                 
-                router.push({ name: 'ReservationsNew' });                
-                showDrawer.value = false; // Close the notifications drawer
+                showDrawer.value = false;
+
+                router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
             };
 
             onMounted( async () => {
@@ -127,7 +127,7 @@
                 holdReservations,                
                 showDrawer,       
                 userGreeting,         
-                goToNewReservationPage,
+                goToEditReservationPage,
             };
         },
         methods: {
