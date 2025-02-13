@@ -127,7 +127,7 @@
 
         <!-- Rooms Data Table -->
         <Card class="m-2">
-            <template #title>Rooms</template>
+            <template #title>部屋</template>
             <template #content>
                 <Accordion :activeIndex="0">
                     <AccordionPanel                        

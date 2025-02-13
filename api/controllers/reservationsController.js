@@ -110,6 +110,7 @@ const createReservationHold = async (req, res) => {
   const {
     hotel_id,
     room_type_id,
+    room_id,
     client_id,
     check_in,
     check_out,
@@ -153,7 +154,7 @@ const createReservationHold = async (req, res) => {
 
     // Add the reservation with the final client_id
     const reservationData = {
-      hotel_id,      
+      hotel_id,
       reservation_client_id: finalClientId,
       check_in,
       check_out,
@@ -165,25 +166,36 @@ const createReservationHold = async (req, res) => {
     // Add the reservation to the database
     const newReservation = await addReservationHold(reservationData);
     // Get available rooms for the reservation period
-    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);    
-    
-    // Filter available rooms by room_type_id
-    const availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
+    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
 
-    if (availableRoomsFiltered.length === 0) {
-      return res.status(400).json({ error: 'No available rooms for the specified period.' });
-    }
-    
-
-    let remainingPeople = number_of_people;
     const reservationDetails = [];
+    const availableRoomsFiltered = [];
+    let bestRoom = null;
+    
+    if(room_type_id !== null){
+      // Filter available rooms by room_type_id
+      availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
+    } else if(room_id !== null){      
+      // Filter available rooms by room_id
+      availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));      
+    }
+
+    if (availableRoomsFiltered.value.length === 0) {
+      return res.status(400).json({ error: 'No available rooms for the specified period.' });
+    }    
+
+    console.log('availableRoomsFiltered',availableRoomsFiltered.value);
+
+    let remainingPeople = number_of_people; 
+    
+    console.log('remainingPeople', remainingPeople);
 
     // Distribute people into rooms
-    while (remainingPeople > 0) {
-      let bestRoom = null;
+    while (remainingPeople > 0) {      
 
       // Find the best-fit room
-      for (const room of availableRoomsFiltered) {
+      for (const room of availableRoomsFiltered.value) {
+        console.log('room capacity', room.capacity);
         if (room.capacity === remainingPeople) {
           bestRoom = room;
           break; // Perfect fit, stop searching
@@ -201,7 +213,7 @@ const createReservationHold = async (req, res) => {
       // Assign people to the best room and remove it from the list of available rooms
       const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
       remainingPeople -= peopleAssigned;
-
+      
       dateRange.forEach((date) => {
         reservationDetails.push({
           reservation_id: newReservation.id,
@@ -216,11 +228,11 @@ const createReservationHold = async (req, res) => {
           updated_by,
         });
       });
-
+      
       // Remove the room from availableRooms
       const roomIndex = availableRoomsFiltered.indexOf(bestRoom);
       availableRoomsFiltered.splice(roomIndex, 1);
-    } 
+    }
 
     // Add reservation details to the database
     for (const detail of reservationDetails) {

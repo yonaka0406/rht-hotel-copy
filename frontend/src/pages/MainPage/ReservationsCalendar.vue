@@ -104,6 +104,11 @@
         :reservation_id="reservationId"
         :room_id="selectedRoom.room_id"        
       />
+      <ReservationAddRoom
+        v-else
+        :room_id="selectedRoom.room_id"
+        :date="selectedDate"
+      />
     </Drawer>
   </div>
 </template>
@@ -115,7 +120,8 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
-  import ReservationEdit from './components/ReservationEdit.vue';  
+  import ReservationEdit from './components/ReservationEdit.vue';
+  import ReservationAddRoom from './components/ReservationAddRoom.vue';
   import { Panel, Drawer, Skeleton } from 'primevue';
   import { SelectButton } from 'primevue';
   
@@ -123,6 +129,7 @@
     name: "ReservationsCalendar",
     components: {  
         ReservationEdit,
+        ReservationAddRoom,
         Panel,
         Drawer,
         Skeleton,

@@ -115,7 +115,7 @@
       <!-- Dialog -->
       <Dialog 
         v-model:visible="dialogVisible" 
-        :header="'Reservation'" 
+        :header="'予約'" 
         :closable="true"
         :modal="true"
         :style="{ width: '600px' }"
@@ -338,6 +338,7 @@
       const reservationDetails = ref({
         hotel_id: null,
         room_type_id: null,
+        room_id: null,
         client_id: null,
         check_in: '',
         check_out: '',
@@ -626,8 +627,8 @@
         if (!reservationDetails.value.email && !reservationDetails.value.phone) {
           toast.add({
             severity: 'warn',
-            summary: 'Validation Error',
-            detail: 'At least one of Email or Phone must be filled.',
+            summary: '注意',
+            detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
             life: 3000,
           });
           return; // Stop further execution if validation fails
@@ -637,8 +638,8 @@
         if (reservationDetails.value.email && !isValidEmail.value) {
           toast.add({
             severity: 'warn',
-            summary: 'Invalid Email',
-            detail: 'Please provide a valid email address.',
+            summary: '注意',
+            detail: '有効なメールアドレスを入力してください。',
             life: 3000,
           });
           return;
@@ -648,8 +649,8 @@
         if (reservationDetails.value.phone && !isValidPhone.value) {
           toast.add({
             severity: 'warn',
-            summary: 'Invalid Phone',
-            detail: 'Please provide a valid phone number.',
+            summary: '注意',
+            detail: '有効な電話番号を入力してください。',
             life: 3000,
           });
           return;
