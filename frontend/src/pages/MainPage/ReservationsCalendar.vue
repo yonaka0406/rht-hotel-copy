@@ -57,37 +57,40 @@
                     'compact-cell': isCompactView,
                 }"
                 class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4"
-              >
-                <div 
-                  v-if="isRoomReserved(room.room_id, date)"
-                >
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
-                    <i class="pi pi-pause"></i> 
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'provisory'">
-                    <i class="pi pi-clock"></i>
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'confirmed'">
-                    <i class="pi pi-check-circle"></i>
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_in'">
-                    <i class="pi pi-user"></i>
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_out'">
-                    <i class="pi pi-sign-out"></i>
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                  <template v-if="fillRoomInfo(room.room_id, date).status === 'cancelled'">
-                    <i class="pi pi-times"></i>
-                    {{ fillRoomInfo(room.room_id, date).client_name }}
-                  </template>
-                </div>
+              >                
+                <div v-if="isLoading && !isRoomReserved(room.room_id, date)">
+                  <Skeleton class="mb-2"></Skeleton>
+                </div> 
                 <div v-else>
-                  <i class="pi pi-check"></i> 空室
+                  <div v-if="isRoomReserved(room.room_id, date)">
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
+                      <i class="pi pi-pause"></i> 
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'provisory'">
+                      <i class="pi pi-clock"></i>
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'confirmed'">
+                      <i class="pi pi-check-circle"></i>
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_in'">
+                      <i class="pi pi-user"></i>
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_out'">
+                      <i class="pi pi-sign-out"></i>
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                    <template v-if="fillRoomInfo(room.room_id, date).status === 'cancelled'">
+                      <i class="pi pi-times"></i>
+                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                    </template>
+                  </div>
+                  <div v-else>
+                    <i class="pi pi-check"></i> 空室
+                  </div>
                 </div>
               </td>
             </tr>
@@ -113,7 +116,7 @@
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
   import ReservationEdit from './components/ReservationEdit.vue';  
-  import { Panel, Drawer } from 'primevue';
+  import { Panel, Drawer, Skeleton } from 'primevue';
   import { SelectButton } from 'primevue';
   
   export default {  
@@ -122,6 +125,7 @@
         ReservationEdit,
         Panel,
         Drawer,
+        Skeleton,
         SelectButton,
     },
     data() {
@@ -133,6 +137,7 @@
       const socket = ref(null);
       const toast = useToast();
       const isUpdating = ref(false);
+      const isLoading = ref(false);
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
       const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
@@ -487,23 +492,29 @@
           timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
       };
-      const handleScroll = async (event) => {
+      const handleScroll = debounce(async (event) => {
+        if (isLoading.value) return;
+
         const container = event.target;
         const threshold = 1;
         const minScrollTop = threshold;
         const { scrollTop, scrollHeight, clientHeight } = container;
 
-        if (container.scrollTop < minScrollTop) {  
-            debounce(appendDaysToRange("up"), 200);
-            container.scrollTop = minScrollTop + 10;
+        if (container.scrollTop < minScrollTop) {
+          isLoading.value = true;          
+          await appendDaysToRange("up");
+          container.scrollTop = minScrollTop + 10;
+          isLoading.value = false;          
         } else if (scrollTop + clientHeight >= scrollHeight - threshold) {
+          isLoading.value = true;          
           // Scrolled to the bottom
-          debounce(appendDaysToRange("down"), 200);
+          await appendDaysToRange("down");
+          isLoading.value = false;          
         }
-      };
+      }, 10);
 
       // Mount
-      onMounted(async () => {   
+      onMounted(async () => {
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
@@ -585,9 +596,16 @@
           await fetchReservations();
         }
       });
+      watch(isLoading, async (newVal, oldVal) => {
+        console.log("watch triggered");
+        if (newVal !== oldVal) {
+          console.log('isLoading:',newVal);
+        }
+      });
 
       return {
         reservationId,
+        isLoading,
         dateRange,        
         selectedHotelRooms,
         isRoomReserved,
