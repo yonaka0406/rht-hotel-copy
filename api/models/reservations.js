@@ -21,7 +21,8 @@ const selectAvailableRooms = async (hotelId, checkIn, checkOut) => {
         reservation_details
       WHERE
         date >= $1 AND date < $2
-        AND room_id IS NOT NULL 
+        AND room_id IS NOT NULL
+        AND cancelled IS NULL 
     )
     SELECT
       r.id AS room_id,
@@ -84,6 +85,7 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date < $3
+      AND reservation_details.cancelled IS NULL
       AND rooms.for_sale = TRUE
       AND reservation_details.room_id = rooms.id
       AND reservation_details.hotel_id = rooms.hotel_id
@@ -550,24 +552,44 @@ const updateReservationDetail = async (reservationData) => {
 const updateReservationStatus = async (reservationData) => {
   const { id, hotel_id, status, updated_by } = reservationData;
 
-  const query = `
-      UPDATE reservations
-      SET
-        status = $1,          
-        updated_by = $2          
-      WHERE id = $3::UUID AND hotel_id = $4
-      RETURNING *;
-  `;
-  const values = [
-    status,    
-    updated_by,
-    id,
-    hotel_id,
-  ];  
-
   try {
-      const result = await pool.query(query, values);
-      return result.rows[0];
+
+    const query = `
+        UPDATE reservations
+        SET
+          status = $1,          
+          updated_by = $2          
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+    `;
+    const values = [
+      status,    
+      updated_by,
+      id,
+      hotel_id,
+    ];
+
+    const result = await pool.query(query, values);
+
+    if(status==='cancelled'){
+      const queryTwo = `
+          UPDATE reservation_details
+          SET
+            cancelled = gen_random_uuid()          
+            ,updated_by = $1          
+          WHERE reservation_id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+      const valuesTwo = [            
+        updated_by,
+        id,
+        hotel_id,
+      ];
+
+      await pool.query(queryTwo, valuesTwo);
+    }
+
+    return result.rows[0];
   } catch (err) {
       console.error('Error updating reservation detail:', err);
       throw new Error('Database error');
