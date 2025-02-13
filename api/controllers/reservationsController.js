@@ -75,6 +75,23 @@ const getReservation = async (req, res) => {
   }
 };
 
+const getReservationDetails = async (req, res) => {
+  const { id } = req.query;
+
+  try {    
+    const reservation = await selectReservationDetail(id);    
+    
+    if (reservation.length === 0) {
+      return res.status(404).json({ message: 'No reservation detail for the provided id.' });
+    }
+
+    return res.status(200).json({ reservation });
+  } catch (error) {
+    console.error('Error fetching reservation:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching reservation.' });
+  }
+}
+
 const getMyHoldReservations = async (req, res) => {
   const user_id = req.user.id;
   
@@ -701,5 +718,5 @@ const deleteRoomFromReservation = async (req, res) => {
   }
 };
 
-module.exports = { getAvailableRooms, getReservedRooms, getReservation, getMyHoldReservations, getAvailableDatesForChange,
+module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getAvailableDatesForChange,
   createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };

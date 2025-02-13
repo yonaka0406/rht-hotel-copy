@@ -240,8 +240,94 @@ const selectReservation = async (id) => {
 
 const selectReservationDetail = async (id) => {
   const query = `
-    SELECT * FROM reservation_details
-    WHERE id = $1
+    SELECT
+      reservation_details.id,
+      reservation_details.hotel_id,
+      reservation_details.reservation_id,
+      clients.id AS client_id,
+      COALESCE(clients.name_kanji, clients.name) AS client_name,
+      reservations.check_in,
+      reservations.check_out,
+      reservations.number_of_people AS reservation_number_of_people,
+      reservations.status,  
+      reservation_details.date,
+      rooms.room_type_id,
+      room_types.name AS room_type_name,
+      reservation_details.room_id,
+      rooms.room_number,
+      rooms.smoking,
+      rooms.capacity,
+      rooms.floor,
+      reservation_details.plans_global_id,
+      reservation_details.plans_hotel_id,
+      COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type,
+      COALESCE(plans_hotel.name, plans_global.name) AS plan_name,
+      reservation_details.number_of_people,
+      reservation_details.price AS plan_total_price,
+      COALESCE(ra.total_price, 0) AS addon_total_price, 
+      CASE 
+        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
+        THEN reservation_details.price 
+        ELSE reservation_details.price * reservation_details.number_of_people
+      END + COALESCE(ra.total_price, 0) AS price,
+      COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
+      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
+    FROM
+      reservation_details
+      JOIN reservations 
+        ON reservations.id = reservation_details.reservation_id 
+        AND reservations.hotel_id = reservation_details.hotel_id
+      JOIN clients 
+        ON clients.id = reservations.reservation_client_id
+      JOIN rooms 
+        ON rooms.id = reservation_details.room_id 
+        AND rooms.hotel_id = reservation_details.hotel_id
+      JOIN room_types 
+        ON room_types.id = rooms.room_type_id 
+        AND room_types.hotel_id = rooms.hotel_id
+      LEFT JOIN plans_hotel 
+        ON plans_hotel.hotel_id = reservation_details.hotel_id 
+        AND plans_hotel.id = reservation_details.plans_hotel_id
+      LEFT JOIN plans_global 
+        ON plans_global.id = reservation_details.plans_global_id
+      LEFT JOIN (
+        SELECT
+		    ra.reservation_detail_id,
+		    SUM(ra.price * ra.quantity) AS total_price,
+		    JSON_AGG(
+		        JSON_BUILD_OBJECT(
+		            'addon_id', ra.id,
+		            'name', COALESCE(ah.name, ag.name), -- Prefer hotel-specific name, fallback to global
+		            'quantity', ra.quantity,
+		            'price', ra.price
+		        )
+		    ) AS addons_json
+		FROM reservation_addons ra
+		LEFT JOIN addons_hotel ah 
+		    ON ra.addons_hotel_id = ah.id 
+		    AND ra.hotel_id = ah.hotel_id
+		LEFT JOIN addons_global ag 
+		    ON ra.addons_global_id = ag.id
+		GROUP BY ra.reservation_detail_id
+      ) ra ON reservation_details.id = ra.reservation_detail_id
+      LEFT JOIN (
+        SELECT 
+          rc.reservation_details_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'client_id', rc.client_id,
+              'name', c.name,
+              'name_kana', c.name_kana,
+              'name_kanji', c.name_kanji,
+              'email', c.email,
+              'phone', c.phone
+            )
+          ) AS clients_json
+        FROM reservation_clients rc
+        JOIN clients c ON rc.client_id = c.id
+        GROUP BY rc.reservation_details_id
+      ) rc ON rc.reservation_details_id = reservation_details.id
+    WHERE reservation_details.id = $1
   `;
 
   const values = [id];

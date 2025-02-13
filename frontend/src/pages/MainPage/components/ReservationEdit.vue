@@ -178,6 +178,11 @@
                                 <Column field="plan_name" header="プラン" class="text-xs" />
                                 <Column field="number_of_people" header="人数" class="text-xs" />
                                 <Column field="price" header="料金" class="text-xs" />
+                                <Column header="詳細">
+                                    <template #body="slotProps">
+                                        <Button icon="pi pi-eye" @click="openReservationDayDetailDialog(slotProps.data)" size="small" variant="text" />
+                                    </template>
+                                </Column>
                             </DataTable>
                         </AccordionContent>                        
                     </AccordionPanel>
@@ -721,7 +726,26 @@
                 
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeBulkEditRoomDialog" />                
             </template>            
-        </Dialog>        
+        </Dialog>
+        
+        <!-- Day Detail Dialog -->
+        <Dialog 
+            v-model:visible="changeReservationDayDetailDialogVisible" 
+            :header="'日付詳細'" 
+            :closable="true"
+            :modal="true"
+            :breakpoints="{ '960px': '75vw', '640px': '100vw' }"
+            style="width: 50vw"
+        >
+            <ReservationDayDetail                
+                :hotel_id="dialogHotelId"
+                :reservation_id="dialogReservationId"
+                :reservation_details_id="dialogReservationDtlId"
+            />
+            <template #footer>                
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeReservationDayDetailDialog" />                
+            </template>  
+        </Dialog>
 
     </div>
 </template>
@@ -738,6 +762,7 @@ import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
 import { useClientStore } from '@/composables/useClientStore';
 import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
+import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
 
 import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
 import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
@@ -760,6 +785,7 @@ export default {
     name: "ReservationEdit",
     components: { 
         ClientEdit,
+        ReservationDayDetail,
         Panel,  
         Card,
         Divider,
@@ -811,6 +837,7 @@ export default {
         const bulkEditReservationDialogVisible = ref(false);
         const bulkEditReservationDialogTab = ref(0);
         const changeClientDialogVisible = ref(false);
+        const changeReservationDayDetailDialogVisible = ref(false);        
         const bulkEditRoomDialogVisible = ref(false);        
         const selectedClient = ref(null);
         const selectedGroup = ref(null);
@@ -847,6 +874,9 @@ export default {
         const isValidEmail = ref(true);
         const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
         const isValidPhone = ref(true);
+        const dialogHotelId = ref(null);
+        const dialogReservationId = ref(null);
+        const dialogReservationDtlId = ref(null);
 
         // Helper
         const formatDate = (date) => {
@@ -1227,6 +1257,24 @@ export default {
             
             addons.value = [];
         }; 
+
+        const openReservationDayDetailDialog = (day) => {            
+            
+            dialogHotelId.value = day.hotel_id;            
+            dialogReservationId.value = day.reservation_id;
+            dialogReservationDtlId.value = day.id;
+            
+            changeReservationDayDetailDialogVisible.value = true;
+        };
+
+        const closeChangeReservationDayDetailDialog = () => {
+            
+            dialogHotelId.value = null;
+            dialogReservationId.value = null;
+            dialogReservationDtlId.value = null;
+
+            changeReservationDayDetailDialogVisible.value = false;
+        };
 
         const openBulkEditDialog = async (group) => {
             const hotelId = editReservationDetails.value[0].hotel_id;
@@ -2200,6 +2248,7 @@ export default {
             bulkEditDialogVisible,
             bulkEditDialogTab,
             changeClientDialogVisible,
+            changeReservationDayDetailDialogVisible,
             bulkEditRoomDialogVisible,
             bulkEditReservationDialogVisible,
             bulkEditReservationDialogTab,
@@ -2224,6 +2273,9 @@ export default {
             isValidEmail,
             phonePattern,
             isValidPhone,
+            dialogHotelId,
+            dialogReservationId,
+            dialogReservationDtlId,
             allRoomsHavePlan,
             reservationStatus,
 /*          updatedDateTime,          */
@@ -2237,6 +2289,8 @@ export default {
             handleTabChange,
             openReservationBulkEditDialog,
             closeReservationBulkEditDialog,
+            openReservationDayDetailDialog,
+            closeChangeReservationDayDetailDialog,
             openBulkEditDialog,
             closeBulkEditDialog,
             applyPlanChanges,

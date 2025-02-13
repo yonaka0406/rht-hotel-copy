@@ -219,6 +219,50 @@
                 return null;
             }
         };
+
+        const fetchreservationDetail = async (id) => {
+            console.log('From Reservation Store => fetchreservationDetail:',id);
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/detail/info?id=${id}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+    
+                const data = await response.json();
+
+                console.log('From Reservation Store => fetchreservationDetail data:',data);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch reservation details');
+                }
+
+                // Handle if no reservation was found
+                if (data.message) {
+                    console.error(data.message);
+                    return;
+                }
+
+                // Format the date fields for each reservation in the array
+                if (Array.isArray(data.reservation)) {
+                    data.reservation.forEach((reservation) => {
+                        reservation.check_in = formatDate(new Date(reservation.check_in));
+                        reservation.check_out = formatDate(new Date(reservation.check_out));
+                        reservation.date = formatDate(new Date(reservation.date));
+                    });
+                }  
+                
+                return data;
+                    
+            } catch (error) {
+                console.error('Error fetching reservation:', error);                
+                return null;
+            }            
+        };
         
         const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
             console.log('From Reservation Store => fetchAvailableRooms');
@@ -437,6 +481,7 @@
         getReservationHotelId,
         getAvailableDatesForChange,
         fetchReservation,
+        fetchreservationDetail,
         fetchAvailableRooms,
         fetchReservedRooms,
         fetchMyHoldReservations, 

@@ -186,8 +186,8 @@
                             },
                             { 
                                 key: 'reservationsView',
-                                label: '予約参照', 
-                                icon: 'pi pi-fw pi-eye', 
+                                label: '予約カレンダー', 
+                                icon: 'pi pi-fw pi-calendar', 
                                 command: () => {
                                     router.push('/reservations/calendar');
                                 },                                

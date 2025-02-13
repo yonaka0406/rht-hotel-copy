@@ -17,6 +17,11 @@ export function usePlansStore() {
             });
             
             plans.value = await response.json();
+            plans.value = plans.value.map(plan => ({
+                ...plan,
+                plan_key: 
+                  (plan.plans_global_id ?? '') + 'h' + (plan.plans_hotel_id ?? '')
+              }));
             console.log('Fetch plans from Store:',plans.value);
             
         } catch (error) {
@@ -36,6 +41,7 @@ export function usePlansStore() {
             });
             
             addons.value = await response.json();
+            console.log('From Store => fetchPlanAddons:', addons.value);
             
         } catch (error) {
             console.error('Failed to fetch plan addons', error);
