@@ -21,7 +21,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
         RETURNING id
       `;
       
-      const hotelResult = await client.query(hotelQuery, [      
+      const hotelResult = await pool.query(hotelQuery, [      
         req.body.formal_name, req.body.name, req.body.facility_type.code,
         req.body.open_date, req.body.total_rooms, req.body.postal_code,
         req.body.address, req.body.email, req.body.phone_number,      
@@ -36,7 +36,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
           PARTITION OF ${tableName} 
           FOR VALUES IN (${hotelId})
         `;
-        await client.query(partitionQuery);
+        await pool.query(partitionQuery);
       };
 
       // Create partitions for all related tables
@@ -83,7 +83,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
         VALUES ($1, $2, $3, $4, $5)
         RETURNING id
       `;
-      const result = await client.query(insertRoomTypeQuery, [name, description, hotel_id, created_by, updated_by]);
+      const result = await pool.query(insertRoomTypeQuery, [name, description, hotel_id, created_by, updated_by]);
 
       await client.query('COMMIT');
       res.status(201).json({
@@ -133,7 +133,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
       `;
-      const result = await client.query(insertRoomQuery, [finalRoomTypeId, floor, room_number, capacity, smoking, for_sale, hotel_id, created_by, updated_by]);
+      const result = await pool.query(insertRoomQuery, [finalRoomTypeId, floor, room_number, capacity, smoking, for_sale, hotel_id, created_by, updated_by]);
       
       await client.query('COMMIT');
       res.status(201).json({

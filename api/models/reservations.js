@@ -478,7 +478,7 @@ const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userI
           updated_by = $2
       WHERE id = $3::UUID;
     `;
-    await client.query(updateReservationQuery, [numberOfPeople, userId, reservationId]);
+    await pool.query(updateReservationQuery, [numberOfPeople, userId, reservationId]);
 
     // Copy one existing room_id in the reservation_details table
     const copyRoomQuery = `
@@ -493,7 +493,7 @@ const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userI
       )
       RETURNING *;
     `;
-    const result = await client.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId]);
+    const result = await pool.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId]);
 
     await client.query('COMMIT');
     return result.rows[0];
@@ -627,7 +627,7 @@ const updateRoomByCalendar = async (roomData) => {
       WHERE reservation_id = $1 AND hotel_id = $2
     `;
     const checkValues = [id, hotel_id];
-    const checkResult = await client.query(checkQuery, checkValues);
+    const checkResult = await pool.query(checkQuery, checkValues);
     const roomCount = checkResult.rows[0].room_count;
     // console.log('Room count:', roomCount);
 
@@ -646,7 +646,7 @@ const updateRoomByCalendar = async (roomData) => {
         RETURNING id
       `;
       const insertReservationValues = [new_check_out, new_check_out, updated_by, id, hotel_id, number_of_people];
-      const insertResult = await client.query(insertReservationQuery, insertReservationValues);
+      const insertResult = await pool.query(insertReservationQuery, insertReservationValues);
       newReservationId = insertResult.rows[0].id;
       // console.log('New reservation_id:', newReservationId);
 
@@ -657,7 +657,7 @@ const updateRoomByCalendar = async (roomData) => {
         WHERE id = $2 AND hotel_id = $3
       `;
       const updateValues = [number_of_people, id, hotel_id];
-      await client.query(updateQuery, updateValues);
+      await pool.query(updateQuery, updateValues);
       // console.log('Updated number_of_people in reservations table.');
 
       // Commit the first transaction
@@ -674,87 +674,57 @@ const updateRoomByCalendar = async (roomData) => {
     // Calculate the difference in days
     const oldDuration = (new Date(old_check_out) - new Date(old_check_in)) / (1000 * 60 * 60 * 24);
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
-    const dateShift = (new Date(new_check_in) - new Date(old_check_in)) / (1000 * 60 * 60 * 24);
-    // console.log(`Old duration: ${oldDuration}, New duration: ${newDuration}, Date shift: ${dateShift}`);
-
-    const updateDatesQuery = `
-      WITH date_diff AS (
-        SELECT
-          reservations.check_in AS old_check_in,
-          reservations.check_out AS old_check_out,
-          $1::DATE - reservations.check_in AS date_diff
-        FROM reservations
-        WHERE
-          reservations.id = $2
-          AND reservations.hotel_id = $3
-      ),
-      ordered_details AS (
-          SELECT *, (SELECT date_diff FROM date_diff) AS shift_days
-          FROM reservation_details
-          WHERE reservation_id = $2
-          AND hotel_id = $3
-          AND room_id = $7
-          ORDER BY date ${shiftDirection} NULLS LAST
-      ),
-      updated_dates AS (
-        UPDATE reservation_details
-        SET
-          reservation_id = $4,
-          room_id = $5,
-          updated_by = $6,
-          date = reservation_details.date + (SELECT date_diff FROM date_diff)
-        FROM
-          ordered_details
-        WHERE reservation_details.id = ordered_details.id
-        RETURNING reservation_details.*
-      )
-      SELECT * FROM updated_dates;
-    `;
-    const values = [
-      new_check_in,
-      id,
-      hotel_id,
-      newReservationId,
-      new_room_id,
-      updated_by,
-      old_room_id
-    ];
-    // console.log('Executing updateDatesQuery update query with values:', values);    
-    const result = await pool.query(updateDatesQuery, values);
-
-    // Delete old dates beyond new_check_out
-    const deleteOutdatedCheckOut = `
-      DELETE FROM reservation_details 
-      WHERE reservation_id = $1 
-      AND hotel_id = $2 
-      AND room_id = $3
-      AND date >= $4;
-    `;
-    await client.query(deleteOutdatedCheckOut, [newReservationId, hotel_id, new_room_id, new_check_out]);
-    // console.log('Deleting >= ', new_check_out);
-
-    // Delete old dates before new_check_in
-    const deleteOutdatedCheckIn = `
-      DELETE FROM reservation_details 
-      WHERE reservation_id = $1 
-      AND hotel_id = $2 
-      AND room_id = $3
-      AND date < $4;
-    `;
-    await client.query(deleteOutdatedCheckIn, [newReservationId, hotel_id, new_room_id, new_check_in]);
-    // console.log('Deleting < ', new_check_in);
-
-    // Calculate the extra days
     const extraDays = newDuration - oldDuration;
-
-    if (extraDays > 0) {
-      // Commit the transaction
-      await client.query('COMMIT');
-      
-      // Start a new transaction for updating reservation details
-      await client.query('BEGIN'); 
-      // console.log(`Adding ${extraDays} new rows to reservation_details.`);
-      
+    console.log(`Old duration: ${oldDuration}, New duration: ${newDuration}, Days difference: ${extraDays}`);
+    
+    // If the duration is the same, update the dates. Else, add dates and delete the fat
+    if(oldDuration === newDuration){
+      const updateDatesQuery = `
+        WITH date_diff AS (
+          SELECT
+            reservations.check_in AS old_check_in,
+            reservations.check_out AS old_check_out,
+            $1::DATE - reservations.check_in AS date_diff
+          FROM reservations
+          WHERE
+            reservations.id = $2
+            AND reservations.hotel_id = $3
+        ),
+        ordered_details AS (
+            SELECT *, (SELECT date_diff FROM date_diff) AS shift_days
+            FROM reservation_details
+            WHERE reservation_id = $2
+            AND hotel_id = $3
+            AND room_id = $7
+            ORDER BY date ${shiftDirection} NULLS LAST
+        ),
+        updated_dates AS (
+          UPDATE reservation_details
+          SET
+            reservation_id = $4,
+            room_id = $5,
+            updated_by = $6,
+            date = reservation_details.date + (SELECT date_diff FROM date_diff)
+          FROM
+            ordered_details
+          WHERE reservation_details.id = ordered_details.id
+          RETURNING reservation_details.*
+        )
+        SELECT * FROM updated_dates;
+      `;
+      const values = [
+        new_check_in,
+        id,
+        hotel_id,
+        newReservationId,
+        new_room_id,
+        updated_by,
+        old_room_id
+      ];
+      // console.log('Executing updateDatesQuery update query with values:', values);    
+      const result = await pool.query(updateDatesQuery, values);
+    }else{
+      // generate_series from new_check_in and new_check_out and add dates
       const insertDetailsQuery = `
           INSERT INTO reservation_details (hotel_id, reservation_id, payer_client_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
           
@@ -769,11 +739,10 @@ const updateRoomByCalendar = async (roomData) => {
             SELECT 1 FROM reservation_details rd WHERE datesList.hotel_id = rd.hotel_id AND datesList.reservation_id = rd.reservation_id AND datesList.room_id = rd.room_id
             AND datesList.series = rd.date )
 
-          ORDER BY datesList.series
-          LIMIT ${extraDays}
+          ORDER BY datesList.series          
         ;
       `;
-      
+  
       const insertDetailsValues = [
         newReservationId, // New or existing reservation ID
         new_room_id,
@@ -785,8 +754,30 @@ const updateRoomByCalendar = async (roomData) => {
       // console.log('Executing Query insertDetailsValues:', insertDetailsQuery);
       // console.log('With Values:', insertDetailsValues);
       
-      await client.query(insertDetailsQuery, insertDetailsValues);
+      await pool.query(insertDetailsQuery, insertDetailsValues);
       // console.log('Inserted new reservation_details rows for extra days.');
+
+      // Delete old dates beyond new_check_out
+      const deleteOutdatedCheckOut = `
+        DELETE FROM reservation_details 
+        WHERE reservation_id = $1 
+        AND hotel_id = $2 
+        AND room_id = $3
+        AND date >= $4;
+      `;
+      await pool.query(deleteOutdatedCheckOut, [newReservationId, hotel_id, new_room_id, new_check_out]);
+      // console.log('Deleting >= ', new_check_out);
+
+      // Delete old dates before new_check_in
+      const deleteOutdatedCheckIn = `
+        DELETE FROM reservation_details 
+        WHERE reservation_id = $1 
+        AND hotel_id = $2 
+        AND room_id = $3
+        AND date < $4;
+      `;
+      await pool.query(deleteOutdatedCheckIn, [newReservationId, hotel_id, new_room_id, new_check_in]);
+      // console.log('Deleting < ', new_check_in);
     }
 
     // Update reservations table with new check_in and check_out
@@ -796,14 +787,13 @@ const updateRoomByCalendar = async (roomData) => {
       WHERE id = $4 AND hotel_id = $5
     `;
     const updateReservationValues = [new_check_in, new_check_out, updated_by, newReservationId, hotel_id];
-    await client.query(updateReservationQuery, updateReservationValues);
+    await pool.query(updateReservationQuery, updateReservationValues);
     // console.log('Updated reservations table with new check_in and check_out.');
 
     await recalculatePlanPrice(newReservationId, hotel_id, new_room_id);
 
     await client.query('COMMIT');
-    console.log('Transaction updateRoomByCalendar committed successfully.');
-    return result.rows;
+    console.log('Transaction updateRoomByCalendar committed successfully.');    
   }catch (err) {
     await client.query('ROLLBACK');
     console.error('Error updating reservation detail:', err);
@@ -811,8 +801,7 @@ const updateRoomByCalendar = async (roomData) => {
   } finally {
     client.release();    
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
-  }
-  
+  }  
 };
 
 const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
@@ -835,7 +824,7 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await client.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id, updated_by]);
+    const updateResult = await pool.query(updateQuery, [detailsArray[0].operation_mode, detailsArray[0].reservation_id, detailsArray[0].hotel_id, updated_by]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -878,7 +867,7 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
         FROM reservation_clients
         WHERE reservation_details_id = $1;
       `;
-      const clientCountResult = await client.query(clientCountQuery, [id]);
+      const clientCountResult = await pool.query(clientCountQuery, [id]);
       const clientCount = parseInt(clientCountResult.rows[0].client_count, 10);
 
       if (number_of_people < clientCount) {
@@ -892,7 +881,7 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
           DELETE FROM reservation_clients
           WHERE id IN (SELECT id FROM deleted);
         `;
-        await client.query(deleteClientQuery, [id]);
+        await pool.query(deleteClientQuery, [id]);
       }
 
 
@@ -946,7 +935,7 @@ const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
       FROM reservation_details
       WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3;
     `;
-    const detailsResult = await client.query(detailsQuery, [reservation_id, hotel_id, room_id]);
+    const detailsResult = await pool.query(detailsQuery, [reservation_id, hotel_id, room_id]);
     const detailsArray = detailsResult.rows;
 
     // Update the reservation details with promise
@@ -960,7 +949,7 @@ const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
         WHERE id = $2
         RETURNING *;
       `;
-      return client.query(dtlUpdateQuery, [newPrice, id]);
+      return pool.query(dtlUpdateQuery, [newPrice, id]);
     });
 
     // Wait for all promises to resolve
@@ -1052,7 +1041,7 @@ const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeo
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await client.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
+    const updateResult = await pool.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -1068,7 +1057,7 @@ const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeo
       WHERE reservation_id = $1 and room_id = $2
       RETURNING *;
     `;
-    const deleteResults = await client.query(deleteQuery, [reservationId, roomId]);
+    const deleteResults = await pool.query(deleteQuery, [reservationId, roomId]);
 
     // Commit the transaction
     await client.query('COMMIT');
