@@ -211,58 +211,98 @@
                      
                     <TabPanels>
                         <!-- Tab 1: Apply Plan -->
-                        <TabPanel value="0">                            
-                            <div class="field mt-8">
-                                <FloatLabel>
-                                    <Select
-                                        id="bulk-plan"
-                                        v-model="selectedPlan"
-                                        :options="plans"
-                                        optionLabel="name"
-                                        showClear 
-                                        fluid                           
-                                        @change="updatePlanAddOns"
-                                    />
-                                    <label for="bulk-plan">プラン選択</label>
-                                </FloatLabel>
-                            </div>
-                            <div class="field mt-6">
-                                <FloatLabel>
-                                    <MultiSelect
-                                        v-model="selectedDays"
-                                        :options="daysOfWeek"
-                                        optionLabel="label"
-                                        fluid                            
-                                        :maxSelectedLabels="3"
-                                    />
-                                    <label>曜日</label>
-                                </FloatLabel>
-                            </div>                
-                            <div class="field mt-6">
-                                <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                    <Column field="name" header="アドオン名" />                        
-                                    <Column field="quantity" header="数量">
-                                        <template #body="slotProps">
-                                            <InputNumber 
-                                                v-model="slotProps.data.quantity" 
-                                                :min="0" 
-                                                placeholder="数量を記入" 
-                                                class="w-full" 
+                        <TabPanel value="0"> 
+                            <Card class="mb-2">
+                                <template #title>プラン</template>
+                                <template #content>
+                                    <div class="field mt-8">
+                                        <FloatLabel>
+                                            <Select
+                                                id="bulk-plan"
+                                                v-model="selectedPlan"
+                                                :options="plans"
+                                                optionLabel="name"
+                                                showClear 
+                                                fluid                           
+                                                @change="updatePlanAddOns"
                                             />
-                                        </template>
-                                    </Column>
-                                    <Column field="price" header="価格">
-                                        <template #body="slotProps">
-                                            <InputNumber 
-                                                v-model="slotProps.data.price" 
-                                                :min="0" 
-                                                placeholder="価格を記入" 
-                                                class="w-full" 
+                                            <label for="bulk-plan">プラン選択</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="field mt-6">
+                                        <FloatLabel>
+                                            <MultiSelect
+                                                v-model="selectedDays"
+                                                :options="daysOfWeek"
+                                                optionLabel="label"
+                                                fluid                            
+                                                :maxSelectedLabels="3"
                                             />
-                                        </template>
-                                    </Column>
-                                </DataTable>
-                            </div>
+                                            <label>曜日</label>
+                                        </FloatLabel>
+                                    </div>
+                                </template>
+                            </Card>
+                            <Card>
+                                <template #title>アドオン</template>
+                                <template #content>
+                                    <div class="grid grid-cols-4">
+                                        <div class="field col-span-3 mt-8">
+                                            <FloatLabel>
+                                                <Select
+                                                    v-model="selectedAddonOption"
+                                                    :options="addonOptions"
+                                                    optionLabel="name"
+                                                    optionValue="id"
+                                                    showClear 
+                                                    fluid                             
+                                                />
+                                                <label>アドオン選択</label>
+                                            </FloatLabel>
+                                        </div>
+                                        <div class="field col mt-8 ml-2">
+                                            <Button label="追加" @click="generateAddonPreview" />
+                                        </div>
+                                    </div>
+                                    
+                                    <Divider />
+
+                                    <div class="field mt-6">
+                                        <DataTable :value="selectedAddon" class="p-datatable-sm">
+                                            <Column field="name" header="アドオン名" style="width:40%" />                        
+                                            <Column field="quantity" header="数量">
+                                                <template #body="slotProps">
+                                                    <InputNumber 
+                                                        v-model="slotProps.data.quantity" 
+                                                        :min="0" 
+                                                        placeholder="数量を記入"          
+                                                        fluid
+                                                    />
+                                                </template>
+                                            </Column>
+                                            <Column field="price" header="価格">
+                                                <template #body="slotProps">
+                                                    <InputNumber 
+                                                        v-model="slotProps.data.price" 
+                                                        :min="0" 
+                                                        placeholder="価格を記入" 
+                                                        fluid
+                                                    />
+                                                </template>
+                                            </Column>
+                                            <Column header="操作">
+                                                <template #body="slotProps">
+                                                    <Button                                       
+                                                    icon="pi pi-trash"
+                                                    class="p-button-text p-button-danger p-button-sm"
+                                                    @click="deleteAddon(slotProps.data)" 
+                                                    />
+                                                </template>
+                                            </Column>
+                                        </DataTable>
+                                    </div>
+                                </template>
+                            </Card>
                         </TabPanel>   
                         <!-- Tab 5: Modify period -->
                         <TabPanel value="4">
@@ -386,58 +426,99 @@
                     <TabPanels>
                         <!-- Tab 1: Apply Plan -->
                         <TabPanel value="0">
-                            <h4 class="mb-3 font-bold">プラン適用</h4>
-                            <div class="field mt-8">
-                                <FloatLabel>
-                                    <Select
-                                        id="bulk-plan"
-                                        v-model="selectedPlan"
-                                        :options="plans"
-                                        optionLabel="name"
-                                        showClear 
-                                        fluid                           
-                                        @change="updatePlanAddOns"
-                                    />
-                                    <label for="bulk-plan">プラン選択</label>
-                                </FloatLabel>
-                            </div>
-                            <div class="field mt-6">
-                                <FloatLabel>
-                                    <MultiSelect
-                                        v-model="selectedDays"
-                                        :options="daysOfWeek"
-                                        optionLabel="label"
-                                        fluid                            
-                                        :maxSelectedLabels="3"
-                                    />
-                                    <label>曜日</label>
-                                </FloatLabel>
-                            </div>                
-                            <div class="field mt-6">
-                                <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                    <Column field="name" header="アドオン名" />                        
-                                    <Column field="quantity" header="数量">
-                                        <template #body="slotProps">
-                                            <InputNumber 
-                                                v-model="slotProps.data.quantity" 
-                                                :min="0" 
-                                                placeholder="数量を記入" 
-                                                class="w-full" 
+                            <Card class="mb-2">
+                                <template #title>プラン</template>
+                                <template #content>
+                                    <div class="field mt-8">
+                                        <FloatLabel>
+                                            <Select
+                                                id="bulk-plan"
+                                                v-model="selectedPlan"
+                                                :options="plans"
+                                                optionLabel="name"
+                                                showClear 
+                                                fluid                           
+                                                @change="updatePlanAddOns"
                                             />
-                                        </template>
-                                    </Column>
-                                    <Column field="price" header="価格">
-                                        <template #body="slotProps">
-                                            <InputNumber 
-                                                v-model="slotProps.data.price" 
-                                                :min="0" 
-                                                placeholder="価格を記入" 
-                                                class="w-full" 
+                                            <label for="bulk-plan">プラン選択</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="field mt-6">
+                                        <FloatLabel>
+                                            <MultiSelect
+                                                v-model="selectedDays"
+                                                :options="daysOfWeek"
+                                                optionLabel="label"
+                                                fluid                            
+                                                :maxSelectedLabels="3"
                                             />
-                                        </template>
-                                    </Column>
-                                </DataTable>
-                            </div>
+                                            <label>曜日</label>
+                                        </FloatLabel>
+                                    </div>
+                                </template>
+                            </Card>
+                            <Card>
+                                <template #title>アドオン</template>
+                                <template #content>
+                                    <div class="grid grid-cols-4">
+                                        <div class="field col-span-3 mt-8">
+                                            <FloatLabel>
+                                                <Select
+                                                    v-model="selectedAddonOption"
+                                                    :options="addonOptions"
+                                                    optionLabel="name"
+                                                    optionValue="id"
+                                                    showClear 
+                                                    fluid                             
+                                                />
+                                                <label>アドオン選択</label>
+                                            </FloatLabel>
+                                        </div>
+                                        <div class="field col mt-8 ml-2">
+                                            <Button label="追加" @click="generateAddonPreview" />
+                                        </div>
+                                    </div>
+                                    
+                                    <Divider />
+                                    <div class="field mt-6">
+                                        <DataTable :value="selectedAddon" class="p-datatable-sm">
+                                            <Column field="name" header="アドオン名" style="width:40%" />
+                                            <Column field="quantity" header="数量">
+                                                <template #body="slotProps">
+                                                    <InputNumber 
+                                                        v-model="slotProps.data.quantity" 
+                                                        :min="0" 
+                                                        placeholder="数量を記入" 
+                                                        fluid
+                                                    />
+                                                </template>
+                                            </Column>
+                                            <Column field="price" header="価格">
+                                                <template #body="slotProps">
+                                                    <InputNumber 
+                                                        v-model="slotProps.data.price" 
+                                                        :min="0" 
+                                                        placeholder="価格を記入" 
+                                                        fluid
+                                                    />
+                                                </template>
+                                            </Column>
+                                            <Column header="操作">
+                                                <template #body="slotProps">
+                                                    <Button                                       
+                                                    icon="pi pi-trash"
+                                                    class="p-button-text p-button-danger p-button-sm"
+                                                    @click="deleteAddon(slotProps.data)" 
+                                                    />
+                                                </template>
+                                            </Column>
+                                        </DataTable>
+                                    </div>
+                                </template>
+                            </Card>
+                            
+                                            
+                            
                         </TabPanel>
                         <!-- Tab 2: Move Rooms Content -->
                         <TabPanel value="1">
@@ -820,7 +901,7 @@ export default {
         const isUpdating = ref(false);
         const { selectedHotelId } = useHotelStore();
         const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
-        const { plans, addons, fetchPlansForHotel, fetchPlanAddons } = usePlansStore();
+        const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
         const daysOfWeek = [
@@ -844,6 +925,8 @@ export default {
         const selectedPlan = ref(null);
         const selectedDays = ref(daysOfWeek);
         const selectedAddon = ref();
+        const addonOptions = ref(null);
+        const selectedAddonOption = ref(null);
         const targetRoom = ref(null);
         const numberOfPeopleToMove = ref(0);
         const newCheckIn = ref(null);
@@ -998,6 +1081,35 @@ export default {
             }
 
             // console.log('onClientChange guests:', guests.value);
+        };
+
+        const generateAddonPreview = () => {
+            // Check
+            if(!selectedAddonOption.value){
+                toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
+                return
+            }
+
+            const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
+            console.log('foundAddon:',foundAddon);
+            const isHotelAddon = foundAddon.id.startsWith('H');
+            console.log('selectedAddon:',selectedAddon.value);
+            console.log('selectedAddonOption:', selectedAddonOption.value);            
+            selectedAddon.value.push({
+                addons_global_id: isHotelAddon ? null : foundAddon.id,
+                addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
+                hotel_id: foundAddon.hotel_id,
+                name: foundAddon.name,
+                price: foundAddon.price,
+                quantity: 1,
+            });            
+        };
+
+        const deleteAddon = (addon) => {
+            const index = selectedAddon.value.indexOf(addon);
+            if (index !== -1) {
+                selectedAddon.value.splice(index, 1);
+            }
         };
 
         // Computed
@@ -1236,6 +1348,8 @@ export default {
 
             await fetchAvailableRooms(hotelId, startDate, endDate);
             await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+            // Addons
+            addonOptions.value = await fetchAllAddons(hotelId);
             bulkEditReservationDialogTab.value = 0;
             bulkEditReservationDialogVisible.value = true;
         };
@@ -1283,6 +1397,8 @@ export default {
 
             await fetchAvailableRooms(hotelId, startDate, endDate);
             await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+            // Addons
+            addonOptions.value = await fetchAllAddons(hotelId);
             selectedGroup.value = group;
             bulkEditDialogTab.value = 0;
             bulkEditDialogVisible.value = true;
@@ -2052,6 +2168,8 @@ export default {
 
             await fetchAvailableRooms(hotelId, startDate, endDate);
             await fetchPlansForHotel(editReservationDetails.value[0].hotel_id);
+            // Addons
+            addonOptions.value = await fetchAllAddons(hotelId);
             bulkEditRoomDialogVisible.value = true;
         };
 
@@ -2256,7 +2374,9 @@ export default {
             selectedGroup,
             selectedPlan,
             selectedDays,
-            selectedAddon,            
+            selectedAddon,  
+            addonOptions,
+            selectedAddonOption,
             targetRoom,
             numberOfPeopleToMove,
             newCheckIn,
@@ -2313,7 +2433,9 @@ export default {
             validatePhone,
             filterClients,
             onClientSelect,     
-            onClientChange,       
+            onClientChange, 
+            generateAddonPreview,
+            deleteAddon,
         };
     },    
 };
