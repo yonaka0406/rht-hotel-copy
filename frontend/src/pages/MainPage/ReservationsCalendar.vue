@@ -712,16 +712,16 @@
   .compact-view th, 
   .compact-view td {
     padding: 4px 6px;
-    min-width: 30px; /* Adjust as needed */
+    min-width: 20px; /* Adjust as needed */
     max-width: 100px;
-    font-size: 12px;
+    font-size: 10px;
   }
   .compact-cell {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;    
-    height: 30px; /* Adjust height */
-    width: 30px;  /* Adjust width */
-    font-size: 12px;
+    height: 10px; /* Adjust height */
+    width: 20px;  /* Adjust width */
+    font-size: 10px;
   }
 </style>

@@ -486,8 +486,8 @@ export default {
             await fetchClients();
             const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today), formatDate(tomorrow));
 
-            if(datesResult.earliestCheckIn){
-                minDateRange.value = datesResult.earliestCheckIn;
+            if(datesResult.earliestCheckIn){                
+                minDateRange.value = new Date(datesResult.earliestCheckIn);
             }
             if(datesResult.latestCheckOut){
                 maxDateRange.value = new Date(datesResult.latestCheckOut);

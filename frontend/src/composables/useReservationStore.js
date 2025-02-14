@@ -75,7 +75,55 @@
             } catch (error) {
               console.error('Error updating reservation client:', error);
             }
-          };
+        };
+
+        const setReservationPlan = async (id, hotel_id, gid, hid, price) => {            
+            console.log('From Reservation Store => setReservationPlan');
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Assuming you have an API endpoint to update the reservation status
+                const response = await fetch(`/api/reservation/update/plan/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ hotel_id, gid, hid, price })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation status');
+                }
+
+                return 'Updated reservation plan.';
+            } catch (error) {
+                console.error('Error updating reservation status:', error);
+            }
+        };
+
+        const setReservationAddons = async (id, addons) => {
+            console.log('From Reservation Store => setReservationAddons');
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Assuming you have an API endpoint to update the reservation status
+                const response = await fetch(`/api/reservation/update/addon/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },                    
+                    body: JSON.stringify(addons),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation');
+                }
+
+                return 'Updated reservation addons.';
+            } catch (error) {
+                console.error('Error updating reservation:', error);
+            }
+        };
 
         const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
             console.log('From Reservation Store => setCalendarChange');         
@@ -220,8 +268,8 @@
             }
         };
 
-        const fetchreservationDetail = async (id) => {
-            console.log('From Reservation Store => fetchreservationDetail:',id);
+        const fetchReservationDetail = async (id) => {
+            console.log('From Reservation Store => fetchReservationDetail:',id);
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/detail/info?id=${id}`;
@@ -235,7 +283,7 @@
     
                 const data = await response.json();
 
-                console.log('From Reservation Store => fetchreservationDetail data:',data);
+                console.log('From Reservation Store => fetchReservationDetail data:',data);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch reservation details');
@@ -475,13 +523,15 @@
         setReservationId,
         setReservationStatus,
         setReservationClient,
+        setReservationPlan,
+        setReservationAddons,
         setCalendarChange,
         changeReservationRoomGuestNumber,
         getReservationId,
         getReservationHotelId,
         getAvailableDatesForChange,
         fetchReservation,
-        fetchreservationDetail,
+        fetchReservationDetail,
         fetchAvailableRooms,
         fetchReservedRooms,
         fetchMyHoldReservations, 

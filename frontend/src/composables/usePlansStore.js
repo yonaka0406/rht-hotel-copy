@@ -46,12 +46,33 @@ export function usePlansStore() {
         } catch (error) {
             console.error('Failed to fetch plan addons', error);
         }
-    };    
+    };
+
+    const fetchPlanRate = async (gid, hid, hotel_id, date) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plan/rate/${gid}/${hid}/${hotel_id}/${date}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            const rate = await response.json();
+            console.log('From Store => fetchPlanRate:', rate);
+            return rate;
+            
+        } catch (error) {
+            console.error('Failed to fetch plan rate', error);
+        }
+    };
 
     return {
         plans,      
         addons,  
         fetchPlansForHotel, 
-        fetchPlanAddons,       
+        fetchPlanAddons,
+        fetchPlanRate,
     };
 }

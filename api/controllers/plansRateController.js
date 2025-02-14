@@ -1,4 +1,4 @@
-const { getAllPlansRates, createPlansRate, updatePlansRate, deletePlansRate, getPlansRateById } = require('../models/planRate');
+const { getAllPlansRates, getPriceForReservation, createPlansRate, updatePlansRate, deletePlansRate, getPlansRateById } = require('../models/planRate');
 
 // GET all plan rates
 const getPlanRates = async (req, res) => {
@@ -29,6 +29,21 @@ const getPlanRate = async (req, res) => {
         res.json(rate);
     } catch (error) {
         console.error('Error getting plan rate:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getPlanRateByDay = async (req, res) => {
+    const plans_global_id = req.params.gid;
+    const plans_hotel_id = req.params.hid;
+    const hotel_id = req.params.hotel_id;
+    const date = req.params.date;
+
+    try {
+        const rates = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, date);                
+        res.json(rates);
+    } catch (error) {
+        console.error('Error getting plan rates:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -99,6 +114,7 @@ const deletePlanRate = async (req, res) => {
 module.exports = {
     getPlanRates,
     getPlanRate,
+    getPlanRateByDay,
     createNewPlanRate,
     updateExistingPlanRate,
     deletePlanRate

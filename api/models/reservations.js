@@ -502,6 +502,7 @@ const addReservationDetail = async (reservationDetail) => {
 };
 
 const addReservationAddon = async (reservationAddon) => {
+  
   const query = `
     INSERT INTO reservation_addons (
       hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by, updated_by
@@ -1008,8 +1009,7 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
   }
 };
 
-const updateReservationGuest = async (oldValue, newValue) => {
-  const client = await pool.connect();
+const updateReservationGuest = async (oldValue, newValue) => {  
   
   const query = `
     UPDATE reservation_clients
@@ -1024,14 +1024,51 @@ const updateReservationGuest = async (oldValue, newValue) => {
   `;
 
   try {
-    await client.query(query, [newValue, oldValue]);
+    await pool.query(query, [newValue, oldValue]);
     // console.log('Reservation guest updated successfully');
   } catch (err) {
     console.error('Error updating reservation guest:', err);
-  } finally {    
-    client.release();   
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
-  }
+  } 
+};
+
+const updateReservationDetailPlan = async (id, hotel_id, gid, hid, price, user_id) => {
+  const plans_global_id = gid === 0 ? null : gid;
+  const plans_hotel_id = hid === 0 ? null : hid;
+  const query = `
+    UPDATE reservation_details
+    SET plans_global_id = $1
+      ,plans_hotel_id = $2
+      ,price = $3
+      ,updated_by = $4
+    WHERE hotel_id = $5 AND id = $6::uuid
+    RETURNING *;
+  `;  
+
+  try {
+    await pool.query(query, [plans_global_id, plans_hotel_id, price, user_id, hotel_id, id]);    
+  } catch (err) {
+    console.error('Error updating reservation guest:', err);
+  } 
+};
+
+const updateReservationDetailAddon = async (id, addons, user_id) => {
+  
+  await deleteReservationAddonsByDetailId(id, user_id); 
+  
+  const addOnPromises = addons.map(addon =>
+      addReservationAddon({
+          hotel_id: addon.hotel_id,
+          reservation_detail_id: id,
+          addons_global_id: addon.addons_global_id,
+          addons_hotel_id: addon.addons_hotel_id,
+          quantity: addon.quantity,
+          price: addon.price,
+          created_by: user_id, 
+          updated_by: user_id, 
+      })
+  );  
+  await Promise.all(addOnPromises);
+  
 };
 
 const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
@@ -1201,6 +1238,8 @@ module.exports = {
     updateRoomByCalendar,
     updateReservationRoomGuestNumber,
     updateReservationGuest,
+    updateReservationDetailPlan,
+    updateReservationDetailAddon,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,

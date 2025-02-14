@@ -369,22 +369,6 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_details 
-ADD COLUMN cancelled UUID DEFAULT NULL;
-
-SELECT conname AS constraint_name, contype AS constraint_type
-FROM pg_constraint
-WHERE conrelid = 'reservation_details'::regclass;
-
--- Drop the old unique constraint
-ALTER TABLE reservation_details 
-DROP CONSTRAINT reservation_details_hotel_id_reservation_id_room_id_date_key;
-
--- Add the new unique constraint including `cancelled`
-ALTER TABLE reservation_details 
-ADD CONSTRAINT reservation_details_hotel_id_reservation_id_room_id_date_cancelled_key 
-UNIQUE (hotel_id, reservation_id, room_id, date, cancelled);
-
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
