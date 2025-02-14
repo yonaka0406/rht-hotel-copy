@@ -1381,11 +1381,12 @@ export default {
             changeReservationDayDetailDialogVisible.value = true;
         };
 
-        const closeChangeReservationDayDetailDialog = () => {
+        const closeChangeReservationDayDetailDialog = async () => {
             
             dialogHotelId.value = null;
             dialogReservationId.value = null;
             dialogReservationDtlId.value = null;
+            await fetchReservation(props.reservation_id);
 
             changeReservationDayDetailDialogVisible.value = false;
         };
@@ -2221,7 +2222,7 @@ export default {
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
             socket.value.on('connect', () => {
-                // console.log('Connected to server');
+                 console.log('Connected to server');
             });
 
             socket.value.on('tableUpdate', async (data) => {
@@ -2239,7 +2240,7 @@ export default {
         onUnmounted(() => {
             // Close the Socket.IO connection when the component is unmounted
             if (socket.value) {
-            socket.value.disconnect();
+                socket.value.disconnect();
             }
         });
 

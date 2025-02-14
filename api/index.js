@@ -53,22 +53,21 @@ const listenClient = new Pool({
   database: process.env.PG_DATABASE,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
-  max: 50,
-  idleTimeoutMillis: 2000,
-  connectionTimeoutMillis: 2000,
+  max: 50, // Allow up to 50 concurrent connections
 });
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
-  //const client = await listenClient.connect();
+  const client = await listenClient.connect();
   
-  listenClient.on('notification', (msg) => {    
-    if (msg.channel === 'logs_reservation_changed') {      
+  client.on('notification', (msg) => {    
+    if (msg.channel === 'logs_reservation_changed') {
+      //console.log('Notification received:', msg.channel); // Debugging
       io.emit('tableUpdate', 'Reservation update detected'); // Emit to clients
     }
   });
 
-  await listenClient.query('LISTEN logs_reservation_changed');
+  await client.query('LISTEN logs_reservation_changed');
   //console.log('Listening for changes on logs_reservation_changed');
 };
 

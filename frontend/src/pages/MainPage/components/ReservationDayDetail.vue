@@ -338,6 +338,9 @@ export default {
             }));
             
             await setReservationAddons(props.reservation_details_id, addonDataArray);
+
+            const data = await fetchReservationDetail(props.reservation_details_id);
+            reservationDetail.value = data.reservation[0];
             
             toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 });            
         };
@@ -345,6 +348,9 @@ export default {
         const saveRoom = async () => {
             console.log('targetRoom', targetRoom.value.value);
             await setReservationRoom(props.reservation_details_id, targetRoom.value.value);
+
+            const data = await fetchReservationDetail(props.reservation_details_id);
+            reservationDetail.value = data.reservation[0];
 
             toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 }); 
 
@@ -355,9 +361,8 @@ export default {
         onMounted(async() => {   
             // Reservation data         
             const data = await fetchReservationDetail(props.reservation_details_id);
-            reservationDetail.value = data.reservation[0];
-            console.log('reservationDetail',reservationDetail.value);
-            
+            reservationDetail.value = data.reservation[0];            
+        /*
             // Header
             drawerHeader.value = reservationDetail.value.date + '：' + reservationDetail.value.room_number + '号室 ' + reservationDetail.value.room_type_name;
             selectedPlan.value = (reservationDetail.value.plans_global_id ?? '') + 'h' + (reservationDetail.value.plans_hotel_id ?? '');
@@ -398,8 +403,57 @@ export default {
                     label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
                     value: room.room_id, // Value for selection
                 }));
+        */
             
         });
+
+        // Watcher to update when reservationDetail changes
+        watch(reservationDetail, async (newVal) => {
+            if (!newVal) return;
+
+            console.log('reservationDetail updated:', newVal);
+
+            // Header
+            drawerHeader.value = newVal.date + '：' + newVal.room_number + '号室 ' + newVal.room_type_name;
+            selectedPlan.value = (newVal.plans_global_id ?? '') + 'h' + (newVal.plans_hotel_id ?? '');
+
+            // Plans
+            await fetchPlansForHotel(props.hotel_id);
+
+            selectedAddon.value = newVal.reservation_addons.map(addon => ({
+                ...addon,
+            }));
+            selectedClients.value = newVal.reservation_clients.map(client => ({
+                ...client,
+                display_name: client.name_kanji
+                    ? `${client.name_kanji}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
+                    : `${client.name}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
+            }));
+
+            planBillType.value = newVal.plan_type === 'per_person' 
+                ? '人数あたり' 
+                : '部屋あたり';
+            planTotalRate.value = newVal.plan_total_price;
+
+            // Addons
+            addonOptions.value = await fetchAllAddons(props.hotel_id);
+            console.log('addonOptions:', addonOptions.value);
+
+            // Room
+            numberOfPeopleToMove.value = newVal.number_of_people;
+
+            const endDate = new Date(newVal.date);
+            endDate.setDate(endDate.getDate() + 1);
+            await fetchAvailableRooms(props.hotel_id, newVal.date, formatDate(endDate));
+
+            filteredRooms.value = availableRooms.value
+                .filter(room => room.capacity >= numberOfPeopleToMove.value)
+                .filter(room => room.room_id !== newVal.room_id)
+                .map(room => ({
+                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
+                    value: room.room_id,
+                }));
+        }, { deep: true, immediate: true });
 
         // Watch       
         watch(addons, (newValue, oldValue) => {
