@@ -335,10 +335,12 @@
       });
 
       const onDragStart = async (event, roomId, date) => {
-        // console.log('Drag start, room:', roomId, 'date:', date);  
-        // console.log('Fill room info:', fillRoomInfo(roomId, date));      
+        console.log('Drag start, room:', roomId, 'date:', date);  
+        console.log('Fill room info:', fillRoomInfo(roomId, date));  
+        console.log('reservedRooms', reservedRooms.value);
         
         const reservation_id = fillRoomInfo(roomId, date).reservation_id;
+
         if(reservation_id){
           const check_in = formatDate(new Date(fillRoomInfo(roomId, date).check_in));
           const check_out = formatDate(new Date(fillRoomInfo(roomId, date).check_out));
@@ -349,13 +351,13 @@
           const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
           dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
-          // console.log(fillRoomInfo(roomId, date));
-          await fetchReservation(reservation_id);          
+          const reservationData = await fetchReservation(reservation_id);
+          console.log('Drag reservationData:', reservationData);
         }
         
       };
 
-      const onDrop = (event, roomId, date) => {
+      const onDrop = (event, roomId, date) => {        
         // console.log('Drop');
         const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
         // console.log('Selected room:', selectedRoom);
@@ -369,8 +371,33 @@
         
         const from = dragFrom.value;
         const to = dragTo.value;
-        
-        if(from.number_of_people > to.capacity){
+
+        // isRoomFullyBooked
+        // Convert check-in and check-out to Date objects
+        const startDate = new Date(from.check_in);
+        const endDate = new Date(from.check_out);
+        endDate.setDate(endDate.getDate() - 1); // Adjust end date to be check_out - 1 day
+        // Generate all dates between check-in and check-out - 1
+        const allDates = [];
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+            allDates.push(currentDate.toISOString().split('T')[0]); // Store as YYYY-MM-DD
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        // Filter reservations that match the given reservation_id and room_id
+        const roomReservations = reservedRooms.value.filter(
+          room => room.reservation_id === from.reservation_id && room.room_id === from.room_id
+        );
+        // Extract booked dates from filtered reservations
+        const bookedDates = roomReservations.map(room => formatDate(new Date(room.date)));
+        console.log('allDates', allDates);
+        console.log('bookedDates:', bookedDates);          
+        console.log (allDates.every(date => bookedDates.includes(date)));
+        const isRoomFullyBooked = allDates.every(date => bookedDates.includes(date));
+
+        if(!isRoomFullyBooked){
+          toast.add({ severity: 'warn', summary: '注意', detail: '部屋が分割されています。予約編集から変更を行ってください。' , life: 3000 });
+        } else if(from.number_of_people > to.capacity){
           toast.add({ severity: 'error', summary: 'エラー', detail: '人数が収容人数を超えています。' , life: 3000 });
         } else if(!checkForConflicts(from, to)){
           showConfirmationPrompt();

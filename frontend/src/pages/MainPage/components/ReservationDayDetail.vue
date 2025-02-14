@@ -18,69 +18,106 @@
                             <!-- Tab 1: Change Plan and Addon -->
                             <TabPanel value="0">
                                 <form @submit.prevent="savePlan">
-                                    <div class="field mt-8">
-                                        <FloatLabel>
-                                            <Select                                            
-                                                v-model="selectedPlan"
-                                                :options="plans"
-                                                optionLabel="name"
-                                                optionValue="plan_key"
-                                                showClear 
-                                                fluid                           
-                                                @change="updatePlanAddOns"
-                                            />
-                                            <label>プラン選択</label>
-                                        </FloatLabel>
-                                    </div>
-                                    <div class="grid grid-cols-2">
-                                        <div class="field flex flex-col mt-6">
-                                            <FloatLabel>
-                                                <InputText
-                                                    v-model="planBillType"
-                                                    filled
-                                                    disabled
-                                                >
-                                                </InputText>
-                                                <label>請求種類</label>
-                                            </FloatLabel>
-                                        </div>
-                                        <div class="field flex flex-col mt-6">
-                                            <FloatLabel>
-                                                <InputNumber
-                                                    v-model="planTotalRate"
-                                                >
-                                                </InputNumber>
-                                                <label>プラン料金</label>
-                                            </FloatLabel>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="field mt-6">
-                                        <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                            <Column field="name" header="アドオン名" style="width:50%" />                        
-                                            <Column field="quantity" header="数量">
-                                                <template #body="slotProps">
-                                                    <InputNumber 
-                                                        v-model="slotProps.data.quantity" 
-                                                        :min="0" 
-                                                        placeholder="数量を記入" 
-                                                        fluid
+                                    <Card class="mb-2">
+                                        <template #title>プラン</template>
+                                        <template #content>
+                                            <div class="field mt-8">
+                                                <FloatLabel>
+                                                    <Select                                            
+                                                        v-model="selectedPlan"
+                                                        :options="plans"
+                                                        optionLabel="name"
+                                                        optionValue="plan_key"
+                                                        showClear 
+                                                        fluid                           
+                                                        @change="updatePlanAddOns"
                                                     />
-                                                </template>
-                                            </Column>
-                                            <Column field="price" header="単価">
-                                                <template #body="slotProps">
-                                                    <InputNumber 
-                                                        v-model="slotProps.data.price" 
-                                                        :min="0" 
-                                                        placeholder="価格を記入" 
-                                                        fluid
-                                                    />
-                                                </template>
-                                            </Column>
-                                        </DataTable>
-                                    </div>
-
+                                                    <label>プラン選択</label>
+                                                </FloatLabel>
+                                            </div>
+                                            <div class="grid grid-cols-2">
+                                                <div class="field flex flex-col mt-6">
+                                                    <FloatLabel>
+                                                        <InputText
+                                                            v-model="planBillType"
+                                                            filled
+                                                            disabled
+                                                        >
+                                                        </InputText>
+                                                        <label>請求種類</label>
+                                                    </FloatLabel>
+                                                </div>
+                                                <div class="field flex flex-col mt-6">
+                                                    <FloatLabel>
+                                                        <InputNumber
+                                                            v-model="planTotalRate"
+                                                        >
+                                                        </InputNumber>
+                                                        <label>プラン料金</label>
+                                                    </FloatLabel>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </Card>
+                                    <Card>
+                                        <template #title>アドオン</template>
+                                        <template #content>
+                                            <div class="grid grid-cols-4">
+                                                <div class="field col-span-3 mt-8">
+                                                    <FloatLabel>
+                                                        <Select
+                                                            v-model="selectedAddonOption"
+                                                            :options="addonOptions"
+                                                            optionLabel="name"
+                                                            optionValue="id"
+                                                            showClear 
+                                                            fluid                             
+                                                        />
+                                                        <label>アドオン選択</label>
+                                                    </FloatLabel>
+                                                </div>
+                                                <div class="field col mt-8 ml-2">
+                                                    <Button label="追加" @click="generateAddonPreview" />
+                                                </div>
+                                            </div>
+                                            
+                                            <Divider />
+                                            <div class="field mt-6">
+                                                <DataTable :value="selectedAddon" class="p-datatable-sm">
+                                                    <Column field="name" header="アドオン名" style="width:40%" />                        
+                                                    <Column field="quantity" header="数量">
+                                                        <template #body="slotProps">
+                                                            <InputNumber 
+                                                                v-model="slotProps.data.quantity" 
+                                                                :min="0" 
+                                                                placeholder="数量を記入" 
+                                                                fluid
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                    <Column field="price" header="単価">
+                                                        <template #body="slotProps">
+                                                            <InputNumber 
+                                                                v-model="slotProps.data.price" 
+                                                                :min="0" 
+                                                                placeholder="価格を記入" 
+                                                                fluid
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="操作">
+                                                        <template #body="slotProps">
+                                                            <Button                                       
+                                                            icon="pi pi-trash"
+                                                            class="p-button-text p-button-danger p-button-sm"
+                                                            @click="deleteAddon(slotProps.data)" 
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                </DataTable>
+                                            </div>
+                                        </template>                                        
+                                    </Card>                                    
                                     <Divider />
                                     <div class="flex justify-center items-center">                                    
                                         <Button label="保存" severity="info" type="submit" />
@@ -196,7 +233,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const isUpdating = ref(false);
-        const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchPlanRate } = usePlansStore();        
+        const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate } = usePlansStore();        
         const { clients, fetchClients } = useClientStore();
         const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom } = useReservationStore();
 
@@ -206,6 +243,8 @@ export default {
         const planBillType = ref(null);
         const planTotalRate = ref(0);
         const selectedAddon = ref(null);
+        const addonOptions = ref(null);
+        const selectedAddonOption = ref(null);
         const targetRoom = ref(null);
         const numberOfPeopleToMove = ref(0);
         const selectedClients = ref(null);
@@ -249,6 +288,36 @@ export default {
             }
         };
 
+        const generateAddonPreview = () => {
+            // Check
+            if(!selectedAddonOption.value){
+                toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
+                return
+            }
+
+            const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
+            console.log('foundAddon:',foundAddon);
+            const isHotelAddon = foundAddon.id.startsWith('H');
+            console.log('selectedAddon:',selectedAddon.value);
+            console.log('selectedAddonOption:', selectedAddonOption.value);            
+            selectedAddon.value.push({
+                addons_global_id: isHotelAddon ? null : foundAddon.id,
+                addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
+                hotel_id: foundAddon.hotel_id,
+                name: foundAddon.name,
+                price: foundAddon.price,
+                quantity: 1,
+            });            
+        };
+
+        const deleteAddon = (addon) => {
+            const index = selectedAddon.value.indexOf(addon);
+            if (index !== -1) {
+                selectedAddon.value.splice(index, 1);
+            }
+        };
+        
+
         const savePlan = async () => {
             const plan_key = selectedPlan.value;
             const [global, hotel] = plan_key.split('h').map(Number);
@@ -283,14 +352,17 @@ export default {
 
         // Fetch reservation details on mount
         
-        onMounted(async() => {            
+        onMounted(async() => {   
+            // Reservation data         
             const data = await fetchReservationDetail(props.reservation_details_id);
             reservationDetail.value = data.reservation[0];
             console.log('reservationDetail',reservationDetail.value);
             
+            // Header
             drawerHeader.value = reservationDetail.value.date + '：' + reservationDetail.value.room_number + '号室 ' + reservationDetail.value.room_type_name;
             selectedPlan.value = (reservationDetail.value.plans_global_id ?? '') + 'h' + (reservationDetail.value.plans_hotel_id ?? '');
             
+            // Plans
             await fetchPlansForHotel(props.hotel_id);
 
             selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
@@ -308,10 +380,13 @@ export default {
                 : '部屋あたり';
             planTotalRate.value = reservationDetail.value.plan_total_price;
 
+            // Addons
+            addonOptions.value = await fetchAllAddons(props.hotel_id);
+            console.log('addonOptions:', addonOptions.value);
+            
+            // Room
             numberOfPeopleToMove.value = reservationDetail.value.number_of_people;
 
-            console.log('room_id', reservationDetail.value.room_id);
-            // fetchAvailableRooms            
             const endDate = new Date(reservationDetail.value.date);
             endDate.setDate(endDate.getDate() + 1);
             await fetchAvailableRooms(props.hotel_id, reservationDetail.value.date, formatDate(endDate));
@@ -346,11 +421,15 @@ export default {
             planBillType,
             planTotalRate,
             selectedAddon,
+            addonOptions,
+            selectedAddonOption,
             targetRoom,
             numberOfPeopleToMove,
             selectedClients,
             filteredRooms,
             updatePlanAddOns,
+            generateAddonPreview,
+            deleteAddon,
             savePlan,
             saveRoom,
         };

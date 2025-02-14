@@ -6,7 +6,7 @@
                     <span class="font-bold text-lg">アドオン</span>
                 </div>
                 <div class="flex justify-start">
-                    <Button @click="openAddonDialog" label="Add New Addon" icon="pi pi-plus" />
+                    <Button @click="openAddonDialog" label="新規アドオン" icon="pi pi-plus" />
                 </div>
             </div>
             <Accordion value="0">
@@ -94,7 +94,7 @@
                                 :options="allAddons"
                                 optionLabel="name"
                                 optionValue="id"
-                                placeholder="グローバルアドオンを選択する" 
+                                placeholder="アドオンを選択する" 
                                 class="w-full"                            
                                 filter 
                                 required

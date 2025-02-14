@@ -48,6 +48,29 @@ export function usePlansStore() {
         }
     };
 
+    const fetchAllAddons = async (hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken')
+            const response = await fetch(`/api/addons/all/${hotel_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`)
+            }
+            const data = await response.json()
+            return data
+            
+        } catch (err) {
+            console.error('Error fetching global addons:', err)
+            err.value = err.message || 'Failed to fetch global addons'
+        } finally {
+        }
+    };
+
     const fetchPlanRate = async (gid, hid, hotel_id, date) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -73,6 +96,7 @@ export function usePlansStore() {
         addons,  
         fetchPlansForHotel, 
         fetchPlanAddons,
+        fetchAllAddons,
         fetchPlanRate,
     };
 }
