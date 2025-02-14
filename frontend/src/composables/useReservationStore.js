@@ -77,12 +77,12 @@
             }
         };
 
-        const setReservationPlan = async (id, hotel_id, gid, hid, price) => {            
+        const setReservationPlan = async (detail_id, hotel_id, gid, hid, price) => {            
             console.log('From Reservation Store => setReservationPlan');
             try {
                 const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation status
-                const response = await fetch(`/api/reservation/update/plan/${id}`, {
+                // Assuming you have an API endpoint to update the reservation
+                const response = await fetch(`/api/reservation/update/plan/${detail_id}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
@@ -92,21 +92,21 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to update reservation status');
+                    throw new Error('Failed to update reservation');
                 }
 
                 return 'Updated reservation plan.';
             } catch (error) {
-                console.error('Error updating reservation status:', error);
+                console.error('Error updating reservation:', error);
             }
         };
 
-        const setReservationAddons = async (id, addons) => {
+        const setReservationAddons = async (detail_id, addons) => {
             console.log('From Reservation Store => setReservationAddons');
             try {
                 const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation status
-                const response = await fetch(`/api/reservation/update/addon/${id}`, {
+                // Assuming you have an API endpoint to update the reservation
+                const response = await fetch(`/api/reservation/update/addon/${detail_id}`, {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
@@ -120,6 +120,30 @@
                 }
 
                 return 'Updated reservation addons.';
+            } catch (error) {
+                console.error('Error updating reservation:', error);
+            }
+        };
+
+        const setReservationRoom = async (detail_id, room_id) => {
+            console.log('From Reservation Store => setReservationRoom');
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Assuming you have an API endpoint to update the reservation
+                const response = await fetch(`/api/reservation/update/room/${detail_id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ room_id })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation');
+                }
+
+                return 'Updated reservation plan.';
             } catch (error) {
                 console.error('Error updating reservation:', error);
             }
@@ -525,6 +549,7 @@
         setReservationClient,
         setReservationPlan,
         setReservationAddons,
+        setReservationRoom,
         setCalendarChange,
         changeReservationRoomGuestNumber,
         getReservationId,

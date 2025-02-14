@@ -1071,6 +1071,22 @@ const updateReservationDetailAddon = async (id, addons, user_id) => {
   
 };
 
+const updateReservationDetailRoom = async (id, room_id, user_id) => {  
+  const query = `
+    UPDATE reservation_details
+    SET room_id = $1      
+      ,updated_by = $2
+    WHERE id = $3::uuid
+    RETURNING *;
+  `;  
+
+  try {
+    await pool.query(query, [room_id, user_id, id]);    
+  } catch (err) {
+    console.error('Error updating reservation guest:', err);
+  } 
+};
+
 const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
   const client = await pool.connect();
   try {
@@ -1240,6 +1256,7 @@ module.exports = {
     updateReservationGuest,
     updateReservationDetailPlan,
     updateReservationDetailAddon,
+    updateReservationDetailRoom,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,

@@ -11,9 +11,11 @@
                     >
                         <TabList>
                             <Tab value="0">プラン</Tab>
-                            <Tab value="1">宿泊者</Tab>
+                            <Tab value="1">部屋移動</Tab>
+                            <Tab value="2">宿泊者</Tab>
                         </TabList>
                         <TabPanels>
+                            <!-- Tab 1: Change Plan and Addon -->
                             <TabPanel value="0">
                                 <form @submit.prevent="savePlan">
                                     <div class="field mt-8">
@@ -85,12 +87,51 @@
                                     </div>
                                 </form>                                
                             </TabPanel>
+                            <!-- Tab 2: Move Rooms -->
                             <TabPanel value="1">
+                                <form @submit.prevent="saveRoom">
+                                
+                                    <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
+                                        <div class="field mt-6 col-6">
+                                            <FloatLabel>
+                                                <InputNumber
+                                                    id="move-people"
+                                                    v-model="numberOfPeopleToMove"
+                                                    :min="numberOfPeopleToMove"
+                                                    :max="numberOfPeopleToMove"
+                                                    filled
+                                                    disabled
+                                                />
+                                                <label for="move-people">人数</label>
+                                            </FloatLabel>
+                                        </div>
+                                        <div class="field mt-6 col-6">
+                                            <FloatLabel>
+                                                <Select
+                                                    id="move-room"
+                                                    v-model="targetRoom"
+                                                    :options="filteredRooms"
+                                                    optionLabel="label"
+                                                    showClear 
+                                                    fluid
+                                                />
+                                                <label for="move-room">部屋へ移動</label>
+                                            </FloatLabel>
+                                        </div>
+                                    </div>
+                                    <Divider />
+                                    <div class="flex justify-center items-center">                                    
+                                        <Button label="保存" severity="info" type="submit" />
+                                    </div>
+                                </form>
+                            </TabPanel>
+                            <!-- Tab 3: Guests -->
+                            <TabPanel value="2">
                                 <div class="field mt-6">
                                     <DataTable :value="selectedClients" class="p-datatable-sm">
                                         <Column field="display_name" header="宿泊者名" style="width:50%" />
                                         <Column field="phone" header="電話番号" style="width:25%" />
-                                        <Column field="email" header="メールアドレス" style="width:25%" />        
+                                        <Column field="email" header="メールアドレス" style="width:25%" />
                                     </DataTable>
                                 </div>
                             </TabPanel>
@@ -157,7 +198,7 @@ export default {
         const isUpdating = ref(false);
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchPlanRate } = usePlansStore();        
         const { clients, fetchClients } = useClientStore();
-        const { fetchReservationDetail, setReservationPlan, setReservationAddons } = useReservationStore();
+        const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom } = useReservationStore();
 
         const drawerHeader = ref('Loading...');
         const reservationDetail = ref(null);
@@ -165,8 +206,18 @@ export default {
         const planBillType = ref(null);
         const planTotalRate = ref(0);
         const selectedAddon = ref(null);
+        const targetRoom = ref(null);
+        const numberOfPeopleToMove = ref(0);
         const selectedClients = ref(null);
+        const filteredRooms = ref(null);
 
+        // Helper
+        const formatDate = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, "0");
+            const day = String(date.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
 
         const updatePlanAddOns = async () => {            
             const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
@@ -222,6 +273,14 @@ export default {
             toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 });            
         };
 
+        const saveRoom = async () => {
+            console.log('targetRoom', targetRoom.value.value);
+            await setReservationRoom(props.reservation_details_id, targetRoom.value.value);
+
+            toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 }); 
+
+        };
+
         // Fetch reservation details on mount
         
         onMounted(async() => {            
@@ -248,6 +307,22 @@ export default {
                 ? '人数あたり' 
                 : '部屋あたり';
             planTotalRate.value = reservationDetail.value.plan_total_price;
+
+            numberOfPeopleToMove.value = reservationDetail.value.number_of_people;
+
+            console.log('room_id', reservationDetail.value.room_id);
+            // fetchAvailableRooms            
+            const endDate = new Date(reservationDetail.value.date);
+            endDate.setDate(endDate.getDate() + 1);
+            await fetchAvailableRooms(props.hotel_id, reservationDetail.value.date, formatDate(endDate));
+
+            filteredRooms.value = availableRooms.value
+                .filter(room => room.capacity >= numberOfPeopleToMove.value)
+                .filter(room => room.room_id !== reservationDetail.value.room_id)
+                .map(room => ({
+                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
+                    value: room.room_id, // Value for selection
+                }));
             
         });
 
@@ -271,9 +346,13 @@ export default {
             planBillType,
             planTotalRate,
             selectedAddon,
+            targetRoom,
+            numberOfPeopleToMove,
             selectedClients,
+            filteredRooms,
             updatePlanAddOns,
             savePlan,
+            saveRoom,
         };
     },    
 };
