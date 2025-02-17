@@ -9,7 +9,7 @@
       <StepPanels>
         <StepPanel v-slot="{ activateCallback }" value="1">
           <div class="flex flex-col">
-              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
+              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 <Card class="m-2">
                   <template #title>ホテル基本情報</template>
                   <template #content>
@@ -100,7 +100,7 @@
 
         <StepPanel v-slot="{ activateCallback }" value="2">
           <div class="flex flex-col">
-              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
+              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 <Card class="m-2">
                   <template #title>
                     <div class="flex justify-between items-center">
@@ -150,7 +150,7 @@
 
         <StepPanel v-slot="{ activateCallback }" value="3">
           <div class="flex flex-col">
-              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
+              <div class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded-sm bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
                 
                 <div class="flex flex-col">
                   <Card class="m-2">

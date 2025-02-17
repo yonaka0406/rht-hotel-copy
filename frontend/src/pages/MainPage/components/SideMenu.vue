@@ -7,7 +7,8 @@
                     <div>                                    
                         <button
                             @click="toggleSidebar"
-                            class="p-2 bg-gray-800 text-white rounded-full m-2 p-2"
+                            class="p-2 text-white rounded-full m-2 p-2"
+                            style="background-color: transparent;"
                             aria-label="Toggle Sidebar"
                         >
                             <i class="pi" :class="isCollapsed ? 'pi-arrow-right' : 'pi-arrow-left'"></i>
@@ -15,8 +16,8 @@
                     </div>
                     <!-- Title -->
                     <div v-if="!isCollapsed" class="justify-items-start">
-                        <router-link to="/" class="text-white p-2 block rounded">
-                            <h2 class="text-xl font-semibold">PMS</h2>
+                        <router-link to="/" class="text-white p-2 block rounded-sm">
+                            <span class="text-xl font-semibold text-white">PMS</span>
                         </router-link>                    
                     </div>
                 </div>
@@ -58,16 +59,18 @@
 
                     <router-link v-if="isAdmin"
                         to="/admin"
-                        class="text-white hover:bg-yellow-100 p-2 block rounded mt-4"
+                        class="bg-yellow-500 hover:bg-yellow-600 p-2 block rounded-sm mt-4 mb-2"
                     >
-                        <i class="pi pi-cog mr-2"></i>管理者パネル
+                        <i class="pi pi-cog text-white mr-2"></i>
+                        <span class="text-white">管理者パネル</span>
                     </router-link>                 
-                    <button
+                    <Button
                         @click="handleLogout"
-                        class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded mt-4"
+                        severity="danger"                        
+                        fluid
                     >
                         <i class="pi pi-sign-out mr-2"></i>ログアウト
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>
@@ -79,7 +82,7 @@
                         <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />                                   
                 </template>
                 <template #end>                    
-                    <div class="flex items-center gap-2">     
+                    <div class="flex items-center gap-4">     
                         <span>{{ userGreeting }}</span>                   
                         <!-- Notifications Icon -->                        
                         <OverlayBadge :value="holdReservations.length" class="mr-2">
@@ -102,13 +105,13 @@
                         <!-- Home Router Link with Icon in the Menubar -->
                         <router-link
                             to="/"
-                            class="text-primary hover:bg-yellow-100 p-2 block rounded flex items-end"
+                            class="text-primary hover:bg-yellow-100 p-2 block rounded-sm flex items-end"
                         >
                             <i class="pi pi-home"></i>                        
                         </router-link>
                         <button
                             @click="handleLogout"
-                            class="text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded items-end"
+                            class="text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm items-end"
                         >
                             <i class="pi pi-sign-out"></i>                        
                         </button>
@@ -314,17 +317,11 @@
     .no-scroll {
         overflow: hidden; /* Prevent scrolling entirely */
     }
-
     .no-scroll::-webkit-scrollbar {
         display: none; /* Hide scrollbars in WebKit browsers */
     }
-
     .no-scroll {
         -ms-overflow-style: none; /* Hide scrollbars in IE/Edge */
         scrollbar-width: none;    /* Hide scrollbars in Firefox */
-    }
-
-    button {
-        background-color: transparent;
     }
 </style>

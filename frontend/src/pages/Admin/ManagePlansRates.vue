@@ -1,6 +1,6 @@
 <template>
     <div v-if="plan">
-        <div class="flex space-x-4 mb-4">
+        <div class="flex gap-4 mb-4">
             <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
                 <h3 class="text-xl font-semibold">日付を選択:</h3>
                 <DatePicker v-model="selectedDate" 
@@ -30,7 +30,7 @@
                 </div>
             </div>
         </div>
-        <div class="flex space-x-4">
+        <div class="flex gap-4">
             <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
                 <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
                 <div>

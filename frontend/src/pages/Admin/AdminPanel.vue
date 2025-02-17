@@ -3,17 +3,17 @@
         <!-- Menubar for Sidebar -->
         <Menubar :model="items" class="w-full mb-4">
             <template #end>
-                <div class="flex items-center space-x-4 mt-4">
+                <div class="flex items-center gap-4 mt-4">
                     <!-- Home Router Link with Icon in the Menubar -->
                     <router-link
                         to="/"
-                        class="text-primary hover:bg-yellow-100 p-2 block rounded mt-4 flex items-center"
+                        class="text-primary hover:bg-yellow-100 p-2 block rounded-sm mt-4 flex items-center"
                     >
                         <i class="pi pi-home"></i>                        
                     </router-link>
                     <button
                         @click="handleLogout"
-                        class="w-full text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded mt-4"
+                        class="w-full text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm mt-4"
                     >
                         <i class="pi pi-sign-out"></i>                        
                     </button>
@@ -28,7 +28,7 @@
             <div class="flex justify-between items-center mb-6">
                 <router-link
                     to="/admin"
-                    class="text-white p-2 block rounded"
+                    class="text-white p-2 block rounded-sm"
                 >
                     <h2 class="text-xl font-semibold">管理者パネル</h2>
                 </router-link>
@@ -63,13 +63,13 @@
             <div class="mt-auto">
                 <router-link
                     to="/"
-                    class="text-white hover:bg-yellow-100 p-2 block rounded mt-4"
+                    class="text-white hover:bg-yellow-100 p-2 block rounded-sm mt-4"
                 >
                 <i class="pi pi-home mr-2"></i>ホームへ戻る                    
                 </router-link>
                 <button
                     @click="handleLogout"
-                    class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded mt-4"
+                    class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm mt-4"
                 >
                     <i class="pi pi-sign-out mr-2"></i>ログアウト
                 </button>
@@ -87,7 +87,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                         <!-- Quick Stats Cards -->
                         <div class="bg-blue-50 p-6 rounded-lg flex flex-col">
-                            <div class="flex-grow h-16">
+                            <div class="grow h-16">
                                 <h3 class="text-lg font-semibold text-blue-800">ログイン中ユーザー</h3>
                             </div>
                             <div class="mt-auto h-12">
@@ -96,7 +96,7 @@
                         </div>
 
                         <div class="bg-green-50 p-6 rounded-lg flex flex-col">
-                            <div class="flex-grow h-16">
+                            <div class="grow h-16">
                                 <h3 class="text-lg font-semibold text-green-800">ホテル</h3>
                             </div>
                             <div class="mt-auto h-12">
@@ -105,7 +105,7 @@
                         </div>
 
                         <div class="bg-purple-50 p-6 rounded-lg flex flex-col">
-                            <div class="flex-grow h-16">
+                            <div class="grow h-16">
                                 <h3 class="text-lg font-semibold text-purple-800">予約数</h3>
                             </div>
                             <div class="mt-auto h-12">

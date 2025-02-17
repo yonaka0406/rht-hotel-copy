@@ -1,5 +1,5 @@
 <template>
-    <div class="p-2 rounded" :class="{'bg-cyan-400': isClientSelected, 'bg-lime-400': !isClientSelected}">
+    <div class="p-2 rounded-sm" :class="{'bg-cyan-400': isClientSelected, 'bg-lime-400': !isClientSelected}">
       <Card>
         <template #title>            
             <div :class="{'text-cyan-700': isClientSelected, 'text-lime-700': !isClientSelected}">

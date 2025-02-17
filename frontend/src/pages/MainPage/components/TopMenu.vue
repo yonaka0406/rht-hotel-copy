@@ -2,16 +2,16 @@
     <Toolbar class="bg-gray-100 border-b border-gray-300 shadow-md">
         <!-- Left Section -->
         <template #start>
-            <div class="flex items-center space-x-4">                
+            <div class="flex items-center gap-4">                
                 <!-- Logo -->
                 <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />
                 <!-- Title -->
-                <h1 class="text-lg font-semibold text-gray-700">RHT Hotel PMS</h1>
+                <span class="text-lg font-semibold text-gray-700">RHT Hotel PMS</span>
             </div>
         </template>
         <!-- Right Section -->
         <template #end>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center gap-4">
                 <span>{{ userGreeting }}</span>
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2">

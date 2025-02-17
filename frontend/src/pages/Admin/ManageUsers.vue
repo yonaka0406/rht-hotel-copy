@@ -114,7 +114,7 @@
                         </div>
 
                         <!-- Buttons -->
-                        <div class="mb-3 mt-6 text-center space-x-2">
+                        <div class="mb-3 mt-6 text-center gap-2">
                             <!-- Submit Button -->
                             <Button
                                 type="submit"
@@ -141,7 +141,7 @@
                     <Accordion :activeIndex="0">
                         <AccordionPanel value="1">
                             <AccordionHeader>                               
-                                <div class="flex space-x-4">
+                                <div class="flex gap-4">
                                     <span class="inline">ユーザー一覧</span>
                                     <div class="flex items-center">
                                         <Badge
@@ -203,7 +203,7 @@
                         
                         <AccordionPanel value="2">
                             <AccordionHeader>                                
-                                <div class="flex space-x-4">
+                                <div class="flex gap-4">
                                     <span class="inline">無効ユーザー一覧</span>
                                     <div class="flex items-center">
                                         <Badge
@@ -348,7 +348,7 @@
                         </div>
 
                         <!-- Buttons -->
-                        <div class="mb-3 mt-6 text-center space-x-2">
+                        <div class="mb-3 mt-6 text-center gap-2">
                             <!-- Edit Button -->
                             <Button
                                 type="submit"
