@@ -13,23 +13,33 @@
 
             <!-- Main Content --> 
             <div :class="mainContentClass">
-                <router-view />                
+                <router-view />
+
+                <div v-if="!hasActiveRoute">
+                    <RoomIndicator />
+                </div>
+                
             </div>
+            
         </div>
     </div>
 </template>
   
 <script>
-    import TopMenu from './components/TopMenu.vue';
-    import SideMenu from './components/SideMenu.vue';    
+    import { computed } from "vue";
+    import { useRoute } from "vue-router";
 
-    import Splitter from 'primevue/splitter';
-    import SplitterPanel from 'primevue/splitterpanel';
+    import TopMenu from './components/TopMenu.vue';
+    import SideMenu from './components/SideMenu.vue';
+    import RoomIndicator from './RoomIndicator.vue';
+
+    import { Splitter, SplitterPanel } from 'primevue';    
   
     export default {
         components: {
             TopMenu,
-            SideMenu,            
+            SideMenu,
+            RoomIndicator,
             Splitter,
             SplitterPanel,
         },
@@ -55,7 +65,15 @@
             },
         },
         setup() {
-            
+            const route = useRoute();
+
+            const hasActiveRoute = computed(() => {
+                return route.matched.length > 1; // If there are matched routes, it's active
+            });
+
+            return {
+                hasActiveRoute,
+            }
         },
         methods: {
             toggleSidebar() {

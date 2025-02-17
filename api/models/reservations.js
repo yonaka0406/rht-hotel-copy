@@ -412,6 +412,92 @@ const selectMyHoldReservations = async (user_id) => {
   }
 };
 
+const selectReservationsToday = async (hotelId, date) => {
+  const query = `
+    SELECT    
+      reservations.hotel_id
+      ,reservations.id
+      ,reservations.reservation_client_id
+      ,COALESCE(r_client.name_kanji, r_client.name) as client_name
+      ,reservations.check_in
+      ,reservations.check_out
+      ,reservations.number_of_people as reservation_number_of_people
+      ,reservations.status	  
+      ,reservation_details.id as reservation_details_id
+      ,reservation_details.date
+      ,reservation_details.room_id      
+      ,rooms.room_number
+      ,rooms.floor
+      ,rooms.capacity
+      ,rooms.for_sale
+      ,rooms.smoking
+      ,room_types.name as room_type_name
+      ,reservation_details.number_of_people
+      ,reservation_details.price
+      ,reservation_details.plans_global_id
+      ,reservation_details.plans_hotel_id
+      ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
+      ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) as plan_type
+      ,rc.clients_json
+      ,reservation_details.cancelled
+    
+    FROM
+      hotels
+      ,rooms
+      ,room_types
+      ,reservations
+      ,clients r_client
+      ,reservation_details
+      LEFT JOIN (
+          SELECT 
+            rc.reservation_details_id,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'client_id', rc.client_id,
+                'name', c.name,
+                'name_kana', c.name_kana,
+                'name_kanji', c.name_kanji,
+                'email', c.email,
+                'phone', c.phone
+              )
+            ) AS clients_json
+          FROM reservation_clients rc
+          JOIN clients c ON rc.client_id = c.id
+          GROUP BY rc.reservation_details_id
+        ) rc ON rc.reservation_details_id = reservation_details.id
+      LEFT JOIN plans_hotel 
+      ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
+      LEFT JOIN plans_global 
+      ON plans_global.id = reservation_details.plans_global_id
+      
+    WHERE
+	    reservations.hotel_id = $1 
+      AND (reservation_details.date = $2 OR reservations.check_out = $2)	    
+      AND reservations.hotel_id = hotels.id
+      AND reservation_details.room_id = rooms.id
+      AND reservation_details.hotel_id = rooms.hotel_id
+      AND room_types.id = rooms.room_type_id
+      AND room_types.hotel_id = rooms.hotel_id
+      AND reservations.id = reservation_details.reservation_id
+      AND reservations.hotel_id = reservation_details.hotel_id
+      AND r_client.id = reservations.reservation_client_id
+    ORDER BY 
+      rooms.floor
+      ,rooms.room_number
+      ,reservation_details.room_id
+  `;
+
+  const values = [hotelId, date];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservations:', err);
+    throw new Error('Database error');
+  }
+}
+
 const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {
   try {
     const maxDateQuery = `
@@ -1242,6 +1328,7 @@ module.exports = {
     selectReservationDetail,
     selectReservationAddons,
     selectMyHoldReservations,
+    selectReservationsToday,
     selectAvailableDatesForChange,
     addReservationHold,
     addReservationDetail,

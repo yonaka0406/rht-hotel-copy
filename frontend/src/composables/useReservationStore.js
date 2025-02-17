@@ -6,6 +6,11 @@
     const holdReservations = ref([]);
     const reservationId = ref(null);
     const reservationDetails = ref({});
+    const reservedRoomsDayView = ref([]);
+
+    import { useHotelStore } from '@/composables/useHotelStore';
+    const { selectedHotelId } = useHotelStore();
+    
 
     export function useReservationStore() {
         // Helper
@@ -472,6 +477,34 @@
             }
         };
 
+        const fetchReservationsToday = async (hotelId, day) => {
+            console.log('From Reservation Store => fetchReservationsToday');
+            try{
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/today/${hotelId}/${day}`;
+
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+
+                if (!response.ok) {                                        
+                    reservedRoomsDayView.value = [];
+                }
+
+                const data = await response.json();
+                reservedRoomsDayView.value = data;
+                
+                return data;
+
+            } catch (error) {
+                console.error("Error fetching reservations:", error);
+            }
+        };
+
         // Delete
 
         const deleteHoldReservation = async (id) => {
@@ -537,6 +570,12 @@
             }
         }, { deep: true });
 
+        watch(reservedRoomsDayView, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
+            }
+        }, { deep: true });
+
 
     return {
         availableRooms,
@@ -544,6 +583,7 @@
         holdReservations,
         reservationId,
         reservationDetails,
+        reservedRoomsDayView,
         setReservationId,
         setReservationStatus,
         setReservationClient,
@@ -560,6 +600,7 @@
         fetchAvailableRooms,
         fetchReservedRooms,
         fetchMyHoldReservations, 
+        fetchReservationsToday,
         deleteHoldReservation,
         deleteReservationRoom,     
     };

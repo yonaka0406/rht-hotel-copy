@@ -138,7 +138,7 @@
       <template #header>
         <h2 class="text-lg font-bold ">部屋編集</h2>
         <Button 
-          label="Add Room"
+          label="部屋追加"
           icon="pi pi-plus"
           @click="openRoomDialog"
           class="p-button-sm m-2"
@@ -326,6 +326,7 @@
 
       // Functions
       function onCellEditComplete(event) {
+        console.log('onCellEditComplete event triggered.');
         const { data, newValue, field } = event;
         if (field) {
           data[field] = newValue;
@@ -455,8 +456,8 @@
           }
 
           // Filter out unchanged room types
-          const changedRooms = rooms.value.filter(room => room.changed);
-
+          const changedRooms = rooms.value.filter(room => room.changed);          
+          
           //Loop through changed room types and update them
           for (const room of changedRooms) {              
             const response = await fetch(`/api/room/${room.id}`, {
@@ -488,7 +489,7 @@
             detail: '部屋更新されました。', 
             life: 3000 
           });
-          roomTypesDialogVisible.value = false;
+          roomsDialogVisible.value = false;
         } catch (error) {
           
         }
@@ -684,20 +685,20 @@
           toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room', life: 3000 });
         }
       };
-/*
+
       watch(roomTypes, (newVal, oldVal) => {
-        // console.log('room type changed:', newVal);
-        // Implement any additional logic needed when roomTypes changes
+        console.log('room type changed:', newVal);
+        
       });
       watch(rooms, (newVal, oldVal) => {
-        // console.log('room changed:', newVal);
-        // Implement any additional logic needed when roomTypes changes
+        console.log('room changed:', newVal);
+        
       });
       watch(newRoom, (newVal, oldVal) => {
-        // console.log('room changed:', newVal);
-        // Implement any additional logic needed when roomTypes changes
+        console.log('room changed:', newVal);
+        
       });
-*/          
+          
       onMounted(fetchHotels);
 
       return {

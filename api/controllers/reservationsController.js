@@ -1,6 +1,6 @@
 const pool = require('../config/database');
 const { 
-  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectAvailableDatesForChange,
+  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
   updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
@@ -100,6 +100,23 @@ const getMyHoldReservations = async (req, res) => {
 
     if (reservations.length === 0) {
       return res.status(404).json({ message: 'No hold reservations found for the specified user.' });
+    }
+
+    return res.status(200).json({ reservations });
+  } catch (error) {
+    console.error('Error fetching reservations:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
+  }
+};
+
+const getReservationsToday = async (req, res) => {
+  const { hid, date } = req.params;
+
+  try {
+    const reservations = await selectReservationsToday(hid, date);
+
+    if (reservations.length === 0) {
+      return res.status(404).json({ message: 'No reservations found.' });
     }
 
     return res.status(200).json({ reservations });
@@ -760,5 +777,5 @@ const deleteRoomFromReservation = async (req, res) => {
   }
 };
 
-module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getAvailableDatesForChange,
+module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange,
   createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
