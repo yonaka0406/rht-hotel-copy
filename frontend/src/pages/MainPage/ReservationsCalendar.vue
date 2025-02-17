@@ -1,16 +1,33 @@
 <template>
   <div class="p-2">
-    <Panel header="予約カレンダー">
-      <div class="header flex justify-end items-center p-2 w-full">
-        <div class="mr-4">
-          <SelectButton 
-            optionLabel="label"
-            optionValue="value"  
-            :options="tableModeOptions" 
-            v-model="isCompactView"
-          />
+    <Panel header="">
+      <template #header>
+        <div class="grid grid-cols-3">
+          <p class="text-lg font-bold">予約カレンダー</p>
+          <div>
+            <p>日付へ飛ぶ：</p>
+            <DatePicker v-model="selectedDate" 
+                :showIcon="true" 
+                iconDisplay="input" 
+                dateFormat="yy-mm-dd"
+                class="w-full"
+                required 
+            />
+          </div>
+          <div class="justify-end p-2 w-full">
+            <div class="mr-4">
+              <SelectButton 
+                optionLabel="label"
+                optionValue="value"  
+                :options="tableModeOptions" 
+                v-model="isCompactView"
+              />
+            </div>        
+          </div>
+          
         </div>        
-      </div>
+      </template>
+      
       <div 
         class="table-container" 
         :class="{ 'compact-view': isCompactView }"
@@ -123,7 +140,7 @@
   import ReservationEdit from './components/ReservationEdit.vue';
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
   import { Panel, Drawer, Skeleton } from 'primevue';
-  import { SelectButton } from 'primevue';
+  import { SelectButton, DatePicker } from 'primevue';
   
   export default {  
     name: "ReservationsCalendar",
@@ -134,6 +151,7 @@
         Drawer,
         Skeleton,
         SelectButton,
+        DatePicker
     },
     data() {
       return {

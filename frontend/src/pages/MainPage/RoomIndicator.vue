@@ -11,8 +11,7 @@
               class="w-full"
               required 
           />
-        </div>
-        
+        </div>        
       </template>
       <div v-if="isLoading" class="grid gap-4">
         <div v-for="n in 4" :key="n" class="col-span-1 md:col-span-1">
