@@ -50,7 +50,7 @@ const getReservedRooms = async (req, res) => {
     if (reservedRooms.length === 0) {
       return res.status(201).json({ message: 'No reserved rooms for the specified period.' });
     }
-
+        
     return res.status(200).json({ reservedRooms });
   } catch (error) {
     console.error('Error fetching reserved rooms:', error);

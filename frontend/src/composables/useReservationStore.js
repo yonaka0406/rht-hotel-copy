@@ -20,6 +20,11 @@
             const day = String(date.getDate()).padStart(2, "0");
             return `${year}-${month}-${day}`;
         };
+        // Helper
+        const isDateBetweenRange = (roomDate, startDate, endDate) => {
+            const roomDateObj = new Date(roomDate);
+            return roomDateObj >= new Date(startDate) && roomDateObj <= new Date(endDate);
+        };
 
         // Set
         const setReservationId = (id) => {
@@ -404,17 +409,16 @@
 
                 const data = await response.json();
 
-                if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {
-                    reservedRooms.value = data.reservedRooms;
-                } else if (data && data.message === 'No reserved rooms for the specified period.') {
-                    reservedRooms.value = []; // Correctly handle the "no rooms" message
-                } else if (data && Object.keys(data).length === 0) {
-                    reservedRooms.value = [];
-                }
-                else {
-                    console.error("Invalid API response format:", data);
-                    reservedRooms.value = [];
-                }
+                if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {                    
+                    // Exclude rooms that have a date between startDate and endDate
+                    reservedRooms.value = reservedRooms.value.filter(room => {
+                        return !isDateBetweenRange(room.date, startDate, endDate); // Assuming room.date is the field to check
+                    });
+
+                    // Now add the new reserved rooms in the specified date range
+                    reservedRooms.value.push(...data.reservedRooms);                    
+                } 
+
                 return response;
 
             } catch (error) {
@@ -570,11 +574,30 @@
             }
         }, { deep: true });
 
+        watch(reservedRooms, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                // Log the minimum and maximum dates
+                const dates = newValue.map(item => new Date(item.date));
+                const validDates = dates.filter(date => !isNaN(date.getTime()));
+                if (validDates.length > 0) {
+                    const minDate = new Date(Math.min(...validDates));
+                    const maxDate = new Date(Math.max(...validDates));                    
+                    console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
+                } else {
+                    console.log('No valid dates found in reservedRooms.');
+                }
+            }
+        }, { deep: true });
         watch(reservedRoomsDayView, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
             }
         }, { deep: true });
+
+        watch(() => selectedHotelId.value, () => {
+            // console.log('From Reservation Store => selectedHotelId changed', selectedHotelId.value);
+            reservedRooms.value = [];
+        });
 
 
     return {

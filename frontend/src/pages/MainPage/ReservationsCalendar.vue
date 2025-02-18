@@ -113,7 +113,7 @@
         </table>
       </div>
     </Panel>    
-    <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":header="drawerHeader":closable="true">
+    <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":closable="true">
       <ReservationEdit
         v-if="reservationId"
         :reservation_id="reservationId"
@@ -224,7 +224,12 @@
         return dates;
       };
       const appendDaysToRange = async (direction) => {
-        if (direction === "up") {
+        const oldMinDate = minDate.value;
+        const oldMaxDate = maxDate.value;
+
+        console.log('appendDaysToRange calls fetchReservations', oldMinDate, oldMaxDate);
+
+        if (direction === "up") {          
           const newMinDate = new Date(minDate.value);
           const newMaxDate = new Date(minDate.value);
           newMinDate.setDate(newMinDate.getDate() - 3);
@@ -232,7 +237,7 @@
           const newDates = generateDateRange(newMinDate, newMaxDate);
           dateRange.value = [...newDates, ...dateRange.value];
           minDate.value = formatDate(newMinDate);
-          await fetchReservations();
+          await fetchReservations(oldMinDate, oldMaxDate);
         } else if (direction === "down") {
           const newMinDate = new Date(maxDate.value);
           const newMaxDate = new Date(maxDate.value);
@@ -241,15 +246,31 @@
           const newDates = generateDateRange(newMinDate, newMaxDate);
           dateRange.value = [...dateRange.value, ...newDates];
           maxDate.value = formatDate(newMaxDate);
-          await fetchReservations();
+          await fetchReservations(oldMinDate, oldMaxDate);
         }
       };
 
       // Fetch reserved rooms data
-      const fetchReservations = async () => {
+      const fetchReservations = async (oldMinDate = null, oldMaxDate = null) => {
         try {
-          const startDate = dateRange.value[0];
-          const endDate = dateRange.value[dateRange.value.length - 1];
+          let startDate = dateRange.value[0];
+          let endDate = dateRange.value[dateRange.value.length - 1];
+          
+          let newEndDate = new Date(oldMinDate);
+          let newStartDate = new Date(oldMaxDate);
+
+          // Check if oldMinDate is provided and adjust the date range accordingly
+          if (oldMinDate && new Date(oldMinDate) > new Date(startDate)) {
+            newEndDate.setDate(newEndDate.getDate() - 1);
+            endDate = formatDate(newEndDate);
+          }
+
+          // Check if oldMaxDate is provided and adjust the date range accordingly
+          if (oldMaxDate && new Date(oldMaxDate) < new Date(endDate)) {            
+            newStartDate.setDate(newStartDate.getDate() + 1);
+            startDate = formatDate(newStartDate);
+          }
+
           await fetchReservedRooms(
             selectedHotelId.value,
             startDate,
@@ -346,15 +367,6 @@
         }
         
       };
-
-      const drawerHeader = computed(() => {
-        /*
-        if (selectedRoom.value) {
-          return `予約編集 - ${selectedRoom.value.room_type_name} ${selectedRoom.value.room_number} - ${selectedDate.value}`;
-        }
-        return '予約編集';
-        */
-      });
 
       const onDragStart = async (event, roomId, date) => {
         console.log('Drag start, room:', roomId, 'date:', date);  
@@ -571,6 +583,7 @@
 
       // Mount
       onMounted(async () => {
+        isLoading.value = true; 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
@@ -618,6 +631,7 @@
           }          
    
         });
+        isLoading.value = false;
       });
 
       onUnmounted(() => {
@@ -652,14 +666,14 @@
           await fetchReservations();
         }
       });
-      watch(isLoading, async (newVal, oldVal) => {
-        console.log("watch triggered");
+      watch(isLoading, async (newVal, oldVal) => {        
         if (newVal !== oldVal) {
-          console.log('isLoading:',newVal);
+          // console.log('isLoading:',newVal);
         }
       });
       watch(centerDate, async (newVal, oldVal) => {
         console.log("centerDate changed:",newVal);
+        isLoading.value = true;
         
         const today = newVal;
         const initialMinDate = new Date(today);
@@ -670,6 +684,7 @@
         maxDate.value = initialMaxDate;        
         dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
         await fetchReservations();
+        isLoading.value = false;
       });
       
       return {
@@ -688,7 +703,6 @@
         openDrawer,
         onDragStart,
         onDrop,
-        drawerHeader,
         selectedRoom,
         selectedDate,
         centerDate,
