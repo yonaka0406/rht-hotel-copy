@@ -2,11 +2,11 @@
   <div class="p-2">
     <Panel header="">
       <template #header>
-        <div class="grid grid-cols-3">
+        <div class="grid grid-cols-3 items-center">
           <p class="text-lg font-bold">予約カレンダー</p>
-          <div>
+          <div class="flex justify-start">
             <p>日付へ飛ぶ：</p>
-            <DatePicker v-model="selectedDate" 
+            <DatePicker v-model="centerDate" 
                 :showIcon="true" 
                 iconDisplay="input" 
                 dateFormat="yy-mm-dd"
@@ -14,15 +14,13 @@
                 required 
             />
           </div>
-          <div class="justify-end p-2 w-full">
-            <div class="mr-4">
+          <div class="flex justify-end">            
               <SelectButton 
                 optionLabel="label"
                 optionValue="value"  
                 :options="tableModeOptions" 
                 v-model="isCompactView"
-              />
-            </div>        
+              />            
           </div>
           
         </div>        
@@ -184,6 +182,10 @@
       
       // Helper function
       const formatDate = (date) => {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+          console.error("Invalid Date object:", date);
+          throw new Error("The provided input is not a valid Date object:");
+        }
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
@@ -194,6 +196,8 @@
           const parsedDate = new Date(date);
           return `${parsedDate.toLocaleDateString(undefined, options)}`;
       };
+
+      const centerDate = ref(formatDate(new Date()));
 
       // Generate date range from current date - 10 days to current date + 40 days
       /*
@@ -654,7 +658,20 @@
           console.log('isLoading:',newVal);
         }
       });
-
+      watch(centerDate, async (newVal, oldVal) => {
+        console.log("centerDate changed:",newVal);
+        
+        const today = newVal;
+        const initialMinDate = new Date(today);
+        initialMinDate.setDate(initialMinDate.getDate() - 10);
+        const initialMaxDate = new Date(today);
+        initialMaxDate.setDate(initialMaxDate.getDate() + 40);
+        minDate.value = initialMinDate;
+        maxDate.value = initialMaxDate;        
+        dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+        await fetchReservations();
+      });
+      
       return {
         reservationId,
         isLoading,
@@ -673,7 +690,8 @@
         onDrop,
         drawerHeader,
         selectedRoom,
-        selectedDate,      
+        selectedDate,
+        centerDate,
         onScroll,
       };
     },
