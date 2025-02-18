@@ -102,13 +102,7 @@
                             placeholder="ホテル選択"
                             filter
                         />
-                        <!-- Home Router Link with Icon in the Menubar -->
-                        <router-link
-                            to="/"
-                            class="text-primary hover:bg-yellow-100 p-2 block rounded-sm flex items-end"
-                        >
-                            <i class="pi pi-home"></i>                        
-                        </router-link>
+                        <!-- Home Router Link with Icon in the Menubar -->                        
                         <button
                             @click="handleLogout"
                             class="text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm items-end"
@@ -168,10 +162,21 @@
             const expandedKeys = ref({});
             const items = ref([
                     {
+                        key: 'indicator',
+                        label: 'ホーム',
+                        icon: 'pi pi-fw pi-home',
+                        command: () => {
+                            router.push('/reservations/day');
+                        },
+                        
+                    },
+                    {
                         key: 'dashboard',
                         label: 'ダッシュボード',
-                        icon: 'pi pi-fw pi-chart-bar',
-                        route: '/dashboard',
+                        icon: 'pi pi-fw pi-chart-bar',                        
+                        command: () => {
+                            router.push('/dashboard');
+                        },
                     },
                     {
                         key: 'reservations',
