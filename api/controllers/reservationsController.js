@@ -208,9 +208,11 @@ const createReservationHold = async (req, res) => {
     
     if(room_type_id !== null){
       // Filter available rooms by room_type_id
+      console.log('room_type_id is not null');
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
     } else if(room_id !== null){      
       // Filter available rooms by room_id
+      console.log('room_id is not null');
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));      
     }
 
@@ -218,7 +220,7 @@ const createReservationHold = async (req, res) => {
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
     }    
 
-    console.log('availableRoomsFiltered',availableRoomsFiltered.value);
+    console.log('availableRoomsFiltered length:',availableRoomsFiltered.value.length);
 
     let remainingPeople = number_of_people; 
     
@@ -226,22 +228,24 @@ const createReservationHold = async (req, res) => {
 
     // Distribute people into rooms
     while (remainingPeople > 0) {      
-
+      console.log('remainingPeople:', remainingPeople);
       // Find the best-fit room
       for (const room of availableRoomsFiltered.value) {
-        console.log('room capacity', room.capacity);
-        if (room.capacity === remainingPeople) {
+        console.log('room capacity',room.capacity);
+        if (room.capacity === remainingPeople) {          
           bestRoom = room;
-          break; // Perfect fit, stop searching
+          console.log('room capacity === remainingPeople', bestRoom);
+          break;
         }
         if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
-          bestRoom = room; // Choose the smallest room that can accommodate the remaining people
+          bestRoom = room;
+          break;
         }
       }
-
+      
       // If no perfect or near-perfect room found, pick the largest available room
-      if (!bestRoom) {         
-        bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev));
+      if (!bestRoom && availableRoomsFiltered.value.length > 0) {
+        bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev), availableRoomsFiltered.value[0]);
       }
 
       // Assign people to the best room and remove it from the list of available rooms

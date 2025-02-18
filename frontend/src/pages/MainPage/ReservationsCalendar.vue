@@ -102,7 +102,7 @@
                     </template>
                   </div>
                   <div v-else>
-                    <i class="pi pi-check"></i> 空室
+                    <i class="pi pi-circle"></i> 空室
                   </div>
                 </div>
               </td>
