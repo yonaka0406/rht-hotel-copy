@@ -6,10 +6,8 @@
           <p class="text-lg font-bold">予約カレンダー</p>
           <div class="flex justify-start">
             <p>日付へ飛ぶ：</p>
-            <DatePicker v-model="centerDate" 
-                :showIcon="true" 
-                iconDisplay="input" 
-                dateFormat="yy-mm-dd"
+            <InputText v-model="centerDate" 
+                type="date"                
                 class="w-full"
                 required 
             />
@@ -138,7 +136,7 @@
   import ReservationEdit from './components/ReservationEdit.vue';
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
   import { Panel, Drawer, Skeleton } from 'primevue';
-  import { SelectButton, DatePicker } from 'primevue';
+  import { SelectButton, DatePicker, InputText } from 'primevue';
   
   export default {  
     name: "ReservationsCalendar",
@@ -149,7 +147,8 @@
         Drawer,
         Skeleton,
         SelectButton,
-        DatePicker
+        DatePicker,
+        InputText,
     },
     data() {
       return {
@@ -641,11 +640,10 @@
         }
       });
 
-      // Watch
-
+      // Needed Watchers
       watch(reservationId, async (newReservationId, oldReservationId) => {
         if (newReservationId) {
-          // console.log('Reservation ID:', newReservationId);
+          
           await fetchReservation(newReservationId);
         } 
       }, { immediate: true });
@@ -664,11 +662,6 @@
           console.log('Edit drawer became false');
           isUpdating.value = false;
           await fetchReservations();
-        }
-      });
-      watch(isLoading, async (newVal, oldVal) => {        
-        if (newVal !== oldVal) {
-          // console.log('isLoading:',newVal);
         }
       });
       watch(centerDate, async (newVal, oldVal) => {
