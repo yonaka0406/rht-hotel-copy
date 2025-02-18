@@ -227,7 +227,7 @@
         const oldMinDate = minDate.value;
         const oldMaxDate = maxDate.value;
 
-        console.log('appendDaysToRange calls fetchReservations', oldMinDate, oldMaxDate);
+        // console.log('appendDaysToRange calls fetchReservations', oldMinDate, oldMaxDate);
 
         if (direction === "up") {          
           const newMinDate = new Date(minDate.value);
