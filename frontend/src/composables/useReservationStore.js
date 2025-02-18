@@ -582,7 +582,7 @@
                 if (validDates.length > 0) {
                     const minDate = new Date(Math.min(...validDates));
                     const maxDate = new Date(Math.max(...validDates));                    
-                    console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
+                    // console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
                 } else {
                     console.log('No valid dates found in reservedRooms.');
                 }
