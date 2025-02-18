@@ -33,6 +33,7 @@ const addonRoutes = require('./routes/addonRoutes');
 const plansRoutes = require('./routes/plansRoutes');
 const clientsRoutes = require('./routes/clientsRoutes');
 const reservationsRoutes = require('./routes/reservationsRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -44,6 +45,7 @@ app.use('/api', addonRoutes);
 app.use('/api', plansRoutes);
 app.use('/api', clientsRoutes);
 app.use('/api', reservationsRoutes);
+app.use('/api', reportRoutes);
 
 // Connect to PostgreSQL database
 const pool = require('./config/database');

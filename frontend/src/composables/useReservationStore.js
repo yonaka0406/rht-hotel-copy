@@ -584,7 +584,7 @@
                     const maxDate = new Date(Math.max(...validDates));                    
                     // console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
                 } else {
-                    console.log('No valid dates found in reservedRooms.');
+                    // console.log('No valid dates found in reservedRooms.');
                 }
             }
         }, { deep: true });

@@ -17,6 +17,7 @@ const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
+const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
 const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/components/ReservationEdit.vue');
@@ -28,6 +29,7 @@ const routes = [
     name: 'MainPage',
     component: MainPage,
     children: [
+      { path: '/dashboard', name: 'Dashboard', component: Dashboard },
       { path: '/reservations/day', name: 'RoomIndicator', component: RoomIndicator },
       { path: '/reservations/new', name: 'ReservationsNew', component: ReservationsNew },
       { path: '/reservations/edit/:reservation_id', name: 'ReservationEdit', component: ReservationEdit, props: true },
