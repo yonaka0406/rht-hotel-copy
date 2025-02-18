@@ -23,12 +23,12 @@
 
         // Set
         const setReservationId = (id) => {
-            console.log('From Reservation Store => setReservationId:',reservationId.value);
+            // console.log('From Reservation Store => setReservationId:',reservationId.value);
             reservationId.value = id;            
         };
         
         const setReservationStatus = async (status) => {            
-            console.log('From Reservation Store => setReservationStatus:',status);
+            // console.log('From Reservation Store => setReservationStatus:',status);
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Get the hotel_id for the current reservation
@@ -56,7 +56,7 @@
         };
 
         const setReservationClient = async (client_id) => {
-            console.log('From Reservation Store => setReservationClient:',client_id);
+            // console.log('From Reservation Store => setReservationClient:',client_id);
             try {
               const authToken = localStorage.getItem('authToken');
               // Get the hotel_id for the current reservation
@@ -83,7 +83,7 @@
         };
 
         const setReservationPlan = async (detail_id, hotel_id, gid, hid, price) => {            
-            console.log('From Reservation Store => setReservationPlan');
+            // console.log('From Reservation Store => setReservationPlan');
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Assuming you have an API endpoint to update the reservation
@@ -107,7 +107,7 @@
         };
 
         const setReservationAddons = async (detail_id, addons) => {
-            console.log('From Reservation Store => setReservationAddons');
+            // console.log('From Reservation Store => setReservationAddons');
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Assuming you have an API endpoint to update the reservation
@@ -131,7 +131,7 @@
         };
 
         const setReservationRoom = async (detail_id, room_id) => {
-            console.log('From Reservation Store => setReservationRoom');
+            // console.log('From Reservation Store => setReservationRoom');
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Assuming you have an API endpoint to update the reservation
@@ -155,7 +155,7 @@
         };
 
         const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
-            console.log('From Reservation Store => setCalendarChange');         
+            // console.log('From Reservation Store => setCalendarChange');         
             try {
                 const authToken = localStorage.getItem('authToken');
                 // Get the hotel_id for the current reservation
@@ -181,7 +181,7 @@
         };
 
         const changeReservationRoomGuestNumber = async (id, room, mode) => {
-            console.log('From Reservation Store => changeReservationRoomGuestNumber');
+            // console.log('From Reservation Store => changeReservationRoomGuestNumber');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/update/room/guestnumber/${id}`;
@@ -207,14 +207,14 @@
 
         // Get reservationId from the store
         const getReservationId = () => {
-            console.log('From Reservation Store => getReservationId:',reservationId.value);
+            // console.log('From Reservation Store => getReservationId:',reservationId.value);
             return reservationId.value;
         };
 
         const getReservationHotelId = async (reservation_id) => {            
-            console.log('From Reservation Store => getReservationHotelId');
+            // console.log('From Reservation Store => getReservationHotelId');
             if (!reservationDetails.value.reservation) {
-                console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
+                // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
                 await fetchReservation(reservation_id);
             }
 
@@ -222,7 +222,7 @@
         };
 
         const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
-            console.log('From Reservation Store => getAvailableDatesForChange');
+            // console.log('From Reservation Store => getAvailableDatesForChange');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
@@ -251,7 +251,7 @@
         // Fetch 
         
         const fetchReservation = async (reservation_id) => {
-            console.log('From Reservation Store => fetchReservation:',reservation_id);
+            // console.log('From Reservation Store => fetchReservation:',reservation_id);
             reservationId.value = reservation_id;            
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -266,7 +266,7 @@
     
                 const data = await response.json();
 
-                console.log('From Reservation Store => fetchReservation data:',data);
+                // console.log('From Reservation Store => fetchReservation data:',data);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch reservation details');
@@ -298,7 +298,7 @@
         };
 
         const fetchReservationDetail = async (id) => {
-            console.log('From Reservation Store => fetchReservationDetail:',id);
+            // console.log('From Reservation Store => fetchReservationDetail:',id);
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/detail/info?id=${id}`;
@@ -312,7 +312,7 @@
     
                 const data = await response.json();
 
-                console.log('From Reservation Store => fetchReservationDetail data:',data);
+                // console.log('From Reservation Store => fetchReservationDetail data:',data);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch reservation details');
@@ -342,7 +342,7 @@
         };
         
         const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
-            console.log('From Reservation Store => fetchAvailableRooms');
+            // console.log('From Reservation Store => fetchAvailableRooms');
             try {
                 const authToken = localStorage.getItem('authToken');            
                 const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
@@ -383,7 +383,7 @@
         };
 
         const fetchReservedRooms = async (hotelId, startDate, endDate) => {
-            console.log('From Reservation Store => fetchReservedRooms');
+            // console.log('From Reservation Store => fetchReservedRooms');
             try {
                 const authToken = localStorage.getItem('authToken');            
                 const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
@@ -424,7 +424,7 @@
         };
 
         const fetchMyHoldReservations = async () => {
-            console.log('From Reservation Store => fetchMyHoldReservations');
+            // console.log('From Reservation Store => fetchMyHoldReservations');
             try{
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/hold-list`;
@@ -478,7 +478,7 @@
         };
 
         const fetchReservationsToday = async (hotelId, day) => {
-            console.log('From Reservation Store => fetchReservationsToday');
+            // console.log('From Reservation Store => fetchReservationsToday');
             try{
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/today/${hotelId}/${day}`;
@@ -508,7 +508,7 @@
         // Delete
 
         const deleteHoldReservation = async (id) => {
-            console.log('From Reservation Store => deleteHoldReservation');
+            // console.log('From Reservation Store => deleteHoldReservation');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/delete/hold/${id}`;
@@ -532,7 +532,7 @@
         };
 
         const deleteReservationRoom = async (id, room) => {
-            console.log('From Reservation Store => deleteReservationRoom');
+            // console.log('From Reservation Store => deleteReservationRoom');
             try {
                 const authToken = localStorage.getItem('authToken');
                 const url = `/api/reservation/delete/room/${id}`;
@@ -566,13 +566,13 @@
 
         watch(reservationDetails, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('reservationDetails changed in Store from ',oldValue,'to', newValue);
+                // console.log('reservationDetails changed in Store from ',oldValue,'to', newValue);
             }
         }, { deep: true });
 
         watch(reservedRoomsDayView, (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
+                // console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
             }
         }, { deep: true });
 

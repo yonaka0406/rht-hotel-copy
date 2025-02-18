@@ -17,6 +17,7 @@ const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
+const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/components/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
@@ -27,7 +28,8 @@ const routes = [
     name: 'MainPage',
     component: MainPage,
     children: [
-      { path: '/reservations/new/', name: 'ReservationsNew', component: ReservationsNew },
+      { path: '/reservations/day', name: 'RoomIndicator', component: RoomIndicator },
+      { path: '/reservations/new', name: 'ReservationsNew', component: ReservationsNew },
       { path: '/reservations/edit/:reservation_id', name: 'ReservationEdit', component: ReservationEdit, props: true },
       { path: '/reservations/calendar', name: 'ReservationsCalendar', component: ReservationsCalendar },
     ],
@@ -91,7 +93,12 @@ router.beforeEach((to, from, next) => {
   }
 
   if (isAuthenticated && to.name === 'Login') {
-    return next({ name: 'MainPage' });
+    return next({ name: 'RoomIndicator' });
+  }
+  
+  // Redirect to RoomIndicator if path is '/'
+  if (to.path === '/') {
+      return next({ name: 'RoomIndicator' });  
   }
 
   const verifyToken = async (url) => {

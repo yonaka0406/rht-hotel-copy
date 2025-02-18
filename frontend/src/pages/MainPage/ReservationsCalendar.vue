@@ -571,7 +571,7 @@
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
         socket.value.on('connect', () => {
-          // console.log('Connected to server');
+          console.log('Connected to server');
         });
 
         socket.value.on('tableUpdate', async (data) => {
