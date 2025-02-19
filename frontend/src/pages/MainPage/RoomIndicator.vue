@@ -159,7 +159,7 @@
           return `${parsedDate.toLocaleDateString(undefined, options)}`;
       };
 
-      const selectedDate = ref(formatDate(new Date()));
+      const selectedDate = ref(new Date());
 
       // Computed
       const roomGroups = computed(() => {
@@ -331,6 +331,8 @@
 
         await fetchHotels();
         await fetchHotel();
+
+        await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
         
         isLoading.value = false;        
         
@@ -339,6 +341,7 @@
       onUnmounted(() => {
         // Close the Socket.IO connection when the component is unmounted
         if (socket.value) {
+          console.log('Disconnected from the server.');
           socket.value.disconnect();
         }
       });
@@ -357,7 +360,7 @@
       watch(selectedDate, async (newValue, oldValue) => {
             if (newValue !== oldValue) {
               // console.log('selectedDate changed to:',newValue);
-              await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));              
+              await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
             }
       }, { deep: true });
       watch(reservedRoomsDayView, async (newValue, oldValue) => {
