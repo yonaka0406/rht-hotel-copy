@@ -27,10 +27,10 @@ export function useHotelStore() {
 
             // Set the first hotel as selected if none is selected
             if (hotels.value.length > 0 && !selectedHotelId.value) {
-                console.log('From Hotel Store => No hotel was previously selected.');
+                // console.log('From Hotel Store => No hotel was previously selected.');
                 selectedHotelId.value = hotels.value[0].id;
             }
-            console.log('From Hotel Store => fetchHotels Hotel ID',selectedHotelId.value);
+            // console.log('From Hotel Store => fetchHotels Hotel ID',selectedHotelId.value);
 
         } catch (error) {
             console.error('Failed to fetch hotels', error);
@@ -41,10 +41,10 @@ export function useHotelStore() {
     const fetchHotel = async () => {
         
         if (hotels.value.length > 0 && !selectedHotelId.value) {
-            console.log('From Hotel Store => No hotel was previously selected.');
+            // console.log('From Hotel Store => No hotel was previously selected.');
             selectedHotelId.value = hotels.value[0].id;
         }
-        console.log('From Hotel Store => fetchHotel Hotel ID',selectedHotelId.value);
+        // console.log('From Hotel Store => fetchHotel Hotel ID',selectedHotelId.value);
 
         try {
             const authToken = localStorage.getItem('authToken');

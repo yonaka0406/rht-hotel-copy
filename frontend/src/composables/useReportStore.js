@@ -27,6 +27,31 @@ export function useReportStore() {
         }
     };
 
+    const fetchCountReservationDetails = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/res/count/dtl/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }
+    };
+
     const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -54,6 +79,7 @@ export function useReportStore() {
 
     return {
         fetchCountReservation,
+        fetchCountReservationDetails,
         fetchOccupationByPeriod,
     };
 }

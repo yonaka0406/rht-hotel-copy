@@ -14,6 +14,7 @@
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
             <div ref="barChart" class="w-full h-100"></div>
+            <div ref="barStackChart" :key="chartKey" class="w-full h-100"></div>
             <div ref="gaugeChart" class="w-full h-100"></div>
         </div>
         
@@ -22,14 +23,39 @@
 </template>
   
 <script>
-    import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
-    import * as echarts from 'echarts';
+    import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';    
        
     import { Panel, Skeleton } from 'primevue';
     import { DatePicker } from 'primevue';
 
     import { useReportStore } from '@/composables/useReportStore';    
     import { useHotelStore } from '@/composables/useHotelStore';
+
+    import * as echarts from 'echarts/core';
+    import {
+        TitleComponent,
+        ToolboxComponent,
+        TooltipComponent,
+        GridComponent,
+        LegendComponent
+    } from 'echarts/components';
+    import { BarChart, LineChart } from 'echarts/charts'; 
+    import { GaugeChart } from 'echarts/charts';   
+    import { UniversalTransition } from 'echarts/features';
+    import { CanvasRenderer } from 'echarts/renderers';
+
+    echarts.use([
+        TitleComponent,
+        ToolboxComponent,
+        TooltipComponent,
+        GridComponent,
+        LegendComponent,
+        BarChart,
+        LineChart,
+        GaugeChart,
+        CanvasRenderer,
+        UniversalTransition
+    ]);
     
     export default {  
         name: "Dashboard",
@@ -39,8 +65,10 @@
             DatePicker
         },
         setup() {
-            const { fetchCountReservation, fetchOccupationByPeriod } = useReportStore();
+            const { fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod } = useReportStore();
             const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+
+            const chartKey = ref(0);
 
             const barChartxAxis = ref([]);
             const barChartyAxisMax = ref([]);
@@ -48,7 +76,11 @@
             const barChartyAxisLine = ref([0, 0, 0, 0, 0, 0, 0]);         
 
             const barChart = ref(null);
-            const barChartOption = ref(null);            
+            const barChartOption = ref(null);
+
+            const barStackChart = ref(null);
+            const barStackChartData = ref(null);
+            const barStackChartOption = ref(null);
 
             const gaugeChart = ref(null);
             const gaugeData = ref([
@@ -87,6 +119,9 @@
                 }
             ]);
             const gaugeChartOption = {
+                title: {
+                    text: '稼働率',                
+                },
                 series: [
                     {
                     type: 'gauge',
@@ -179,7 +214,7 @@
                 barChartyAxisLine.value = new Array(dateArray.length).fill(0);
                 
                 if(!countData){                    
-                    barChartyAxisMax.value = [];                    
+                    barChartyAxisMax.value = [];
                     return
                 }
 
@@ -191,7 +226,7 @@
 
                     if (index !== -1) {
                         barChartyAxisBar.value[index] = item.room_count;
-                        barChartyAxisLine.value[index] = item.total_rooms ? item.room_count / item.total_rooms * 100 : 0;
+                        barChartyAxisLine.value[index] = item.total_rooms ? Math.round(item.room_count / item.total_rooms * 10000) / 100 : 0;
                     }
                 });
                 
@@ -199,19 +234,25 @@
                     barChartOption.value = generateBarChartOptions();                    
                 });                
             };
-
             const generateBarChartOptions = () => ({
+                title: {
+                    text: '予約数ｘ稼働率',                
+                },
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: {
-                        type: 'cross',
-                        crossStyle: {
-                            color: '#999'
-                        }
+                        type: 'shadow'
                     }
-                },                
+                },
                 legend: {
-                    data: ['予約', '稼働率']
+                    data: ['予約', '稼働率'],
+                    bottom: '0%'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '20%',
+                    containLabel: true
                 },
                 xAxis: [
                     {
@@ -256,16 +297,139 @@
                         data: barChartyAxisBar,
                     },
                     {
-                    name: '稼働率',
-                    type: 'line',
-                    yAxisIndex: 1,
-                    tooltip: {
-                        valueFormatter: function (value) {
-                        return value + ' %';
-                        }
-                    },
-                    data: barChartyAxisLine,
+                        name: '稼働率',
+                        type: 'line',
+                        yAxisIndex: 1,
+                        tooltip: {
+                            valueFormatter: function (value) {
+                            return value + ' %';
+                            }
+                        },
+                        data: barChartyAxisLine,
                     }
+                ]
+            });
+
+            const fetchBarStackChartData = async () => {              
+                const countData = await fetchCountReservationDetails(selectedHotelId.value, startDate.value, endDate.value);
+
+                // Generate an array of dates from startDate to endDate
+                const dateArray = [];
+                let currentDate = new Date(startDate.value);
+                const endDateObj = new Date(endDate.value);
+
+                while (currentDate <= endDateObj) {
+                    dateArray.push(formatDate(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                barStackChartData.value = {
+                    series: [],
+                };
+
+                // console.log('fetchBarStackChartData countData:',countData);
+
+                const createSeriesItem = (keyField, stack, countData, dateArray) => {
+                    const data = [];                    
+                    let name = '';
+
+                    dateArray.forEach(dateStr => {                    
+                        let value = 0;                         
+
+                        if (countData[dateStr]) {                            
+                            const items = stack === 'Plan' ? countData[dateStr].plans || [] : countData[dateStr].addons || [];
+                            const foundItem = items.find(item => item.key === keyField);
+                            if (foundItem) {
+                                name = foundItem.name || name; // Assign name if found
+                                value = foundItem.quantity || 0;
+                            }
+                        }
+                        data.push(value);
+                    });
+
+                    return {
+                        name: name,
+                        type: 'bar',
+                        stack: stack,
+                        emphasis: { focus: 'series' },
+                        data: data,
+                    };
+                };
+
+                if(!countData){
+                    console.log('No data was found for fetchBarStackChartData');
+                    chartKey.value++;
+                    barStackChartOption.value = generateBarStackChartOptions();                
+                    return;
+                }
+
+                if(countData){
+                    const series = [];
+
+                    // Extract unique plan_keys and addon_keys:
+                    const uniquePlanKeys = new Set();
+                    const uniqueAddonKeys = new Set();
+
+                    for (const date in countData) {
+                        if (countData.hasOwnProperty(date)) {
+                            const item = countData[date];
+                            if (item.plans) {
+                                item.plans.forEach(plan => uniquePlanKeys.add(plan.key));
+                            }
+                            if (item.addons) {
+                                item.addons.forEach(addon => uniqueAddonKeys.add(addon.key));
+                            }
+                        }
+                    }
+                    uniquePlanKeys.forEach(key => {                    
+                        series.push(createSeriesItem(key, 'Plan', countData, dateArray));
+                    });
+
+                    uniqueAddonKeys.forEach(key => {
+                        series.push(createSeriesItem(key, 'Addon', countData, dateArray));
+                    });
+
+                    console.log('series:',series);
+                                    
+                    barStackChartData.value.series = series;
+                }
+                
+                nextTick(() => {                    
+                    barStackChartOption.value = generateBarStackChartOptions();                    
+                });                
+            };
+            const generateBarStackChartOptions = () => ({
+                title: {
+                    text: 'プラン＆アドオン',                
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    }
+                },
+                legend: {
+                    bottom: '0%'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '20%',
+                    containLabel: true
+                },
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: barChartxAxis,                    
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value'
+                    }
+                ],
+                series: [
+                                       
                 ]
             });
 
@@ -300,13 +464,6 @@
             onMounted(async () => {
                 await fetchHotels();
                 await fetchHotel();
-
-                window.addEventListener('resize', () => {
-                    const myBarChart = echarts.getInstanceByDom(barChart.value);
-                    if (myBarChart) {
-                        myBarChart.resize();
-                    }
-                });
             });
 
             watch(() => [selectedDate.value, selectedHotelId.value], // Watch both values
@@ -314,6 +471,7 @@
                     await fetchHotels();
                     await fetchHotel();
                     await fetchBarChartData();
+                    await fetchBarStackChartData();
                     await fetchGaugeChartData();
 
                     nextTick(() => { // Update chart after data changes
@@ -325,21 +483,35 @@
                             myBarChart.setOption(barChartOption.value);
                         }
 
-                        const myGaugeChart = echarts.getInstanceByDom(gaugeChart.value); // Get existing instance
+                        const myGaugeChart = echarts.getInstanceByDom(gaugeChart.value);
                         if (myGaugeChart) {
-                            myGaugeChart.setOption(gaugeChartOption); // Update with new data
-                        } else {
-                            const myGaugeChart = echarts.init(gaugeChart.value); // Create if it doesn't exist
                             myGaugeChart.setOption(gaugeChartOption);
+                        } else {
+                            const myGaugeChart = echarts.init(gaugeChart.value);
+                            myGaugeChart.setOption(gaugeChartOption);
+                        }
+
+                        const myBarStackChart = echarts.getInstanceByDom(barStackChart.value);
+                        if (myBarStackChart) {
+                            barStackChartOption.value.series = barStackChartData.value.series;
+                            myBarStackChart.setOption(barStackChartOption.value);
+                            myBarStackChart.resize();
+                        } else {
+                            const myBarStackChart = echarts.init(barStackChart.value);
+                            barStackChartOption.value.series = barStackChartData.value.series;
+                            myBarStackChart.setOption(barStackChartOption.value); 
+                            myBarStackChart.resize();                           
                         }
                     });
                 },
                 { immediate: true }
-            );            
-
+            );
+            
             return {
+                chartKey,
                 selectedDate,
                 barChart,
+                barStackChart,
                 gaugeChart,
             };
         }
