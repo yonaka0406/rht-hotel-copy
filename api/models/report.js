@@ -5,13 +5,13 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
   const query = `
     SELECT 
       reservation_details.date
-      ,roomTotal.roomCount
+      ,roomTotal.total_rooms
       ,COUNT(reservation_details.room_id) as room_count
       ,SUM(reservation_details.number_of_people) AS people_sum
     FROM
       reservation_details
       ,(
-        SELECT hotel_id, COUNT(*) as roomCount
+        SELECT hotel_id, COUNT(*) as total_rooms
         FROM rooms
         WHERE for_sale = true AND hotel_id = $1
         GROUP BY hotel_id
@@ -23,7 +23,7 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
       AND reservation_details.hotel_id = roomTotal.hotel_id
     GROUP BY
       reservation_details.date
-      ,roomTotal.roomCount
+      ,roomTotal.total_rooms
     ORDER BY 1;
   `;
   const values = [hotelId, dateStart, dateEnd]
@@ -37,6 +37,56 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
   }
 };
 
+const selectOccupationByPeriod = async (period, hotelId, refDate) => {
+  const date = new Date(refDate);
+
+  if (period === 'month_0') {
+    date.setDate(1); // First day of current month
+  } else if (period === 'month_1') {
+    date.setMonth(date.getMonth() + 1, 1); // First day of next month
+  } else if (period === 'month_2') {
+    date.setMonth(date.getMonth() + 2, 1); // First day of the month after next
+  } else {
+    throw new Error("Invalid period. Use 'month_0', 'month_1', or 'month_2'.");
+  }
+
+  const formattedDate = date.toISOString().split('T')[0];
+
+  const query = `
+    WITH roomTotal AS (
+      SELECT 
+        hotel_id,
+        EXTRACT(DAY FROM (DATE_TRUNC('month', $1::DATE) + INTERVAL '1 month' - INTERVAL '1 day')) AS last_day,
+        COUNT(*) as total_rooms
+      FROM rooms
+      WHERE for_sale = true AND hotel_id = $2
+      GROUP BY hotel_id
+    )
+    SELECT
+      COUNT(reservation_details.room_id) as room_count,
+      (roomTotal.total_rooms * roomTotal.last_day) as available_rooms
+    FROM reservation_details
+    JOIN roomTotal ON reservation_details.hotel_id = roomTotal.hotel_id
+    WHERE
+      reservation_details.hotel_id = $2
+      AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
+      AND reservation_details.cancelled IS NULL
+    GROUP BY roomTotal.total_rooms, roomTotal.last_day;
+  `;
+
+  const values = [formattedDate, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+
+
 module.exports = {
   selectCountReservation,
+  selectOccupationByPeriod,
 };

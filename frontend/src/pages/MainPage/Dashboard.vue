@@ -39,35 +39,35 @@
             DatePicker
         },
         setup() {
-            const { fetchCountReservation } = useReportStore();
+            const { fetchCountReservation, fetchOccupationByPeriod } = useReportStore();
             const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
             const barChartxAxis = ref([]);
             const barChartyAxisMax = ref([]);
-            const barChartyAxisBar = ref([]);
-            const barChartyAxisLine = ref([]);            
+            const barChartyAxisBar = ref([0, 0, 0, 0, 0, 0, 0]);
+            const barChartyAxisLine = ref([0, 0, 0, 0, 0, 0, 0]);         
 
             const barChart = ref(null);
             const barChartOption = ref(null);            
 
             const gaugeChart = ref(null);
-            const gaugeData = [
+            const gaugeData = ref([
                 {
-                    value: 20,
-                    name: 'Perfect',
+                    value: 0,
+                    name: '再来月',
                     title: {
-                    offsetCenter: ['0%', '-30%']
+                    offsetCenter: ['0%', '-45%']
                     },
                     detail: {
                     valueAnimation: true,
-                    offsetCenter: ['0%', '-20%']
+                    offsetCenter: ['0%', '-30%']
                     }
                 },
                 {
-                    value: 40,
-                    name: 'Good',
+                    value: 0,
+                    name: '来月',
                     title: {
-                    offsetCenter: ['0%', '0%']
+                    offsetCenter: ['0%', '-5%']
                     },
                     detail: {
                     valueAnimation: true,
@@ -75,17 +75,17 @@
                     }
                 },
                 {
-                    value: 60,
-                    name: 'Commonly',
+                    value: 0,
+                    name: '今月',
                     title: {
-                    offsetCenter: ['0%', '30%']
+                    offsetCenter: ['0%', '35%']
                     },
                     detail: {
                     valueAnimation: true,
-                    offsetCenter: ['0%', '40%']
+                    offsetCenter: ['0%', '50%']
                     }
                 }
-            ];
+            ]);
             const gaugeChartOption = {
                 series: [
                     {
@@ -122,7 +122,7 @@
                         show: false,
                         distance: 50
                     },
-                    data: gaugeData,
+                    data: gaugeData.value,
                     title: {
                         fontSize: 14
                     },
@@ -159,30 +159,48 @@
             const selectedDate = ref(new Date());
             // Define start and end based on selectedDate
             const startDate = computed(() => formatDate(selectedDate.value)); 
-            const endDate = computed(() => formatDate(new Date(new Date(selectedDate.value).setDate(new Date(selectedDate.value).getDate() + 6))));
+            const endDate = computed(() => formatDate(new Date(new Date(selectedDate.value).setDate(new Date(selectedDate.value).getDate() + 6))));            
 
-            const fetchBarChartData = async () => {                
+            const fetchBarChartData = async () => {              
                 const countData = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
 
-                // Fill xAxis with formatted dates
-                barChartxAxis.value = countData.map(item => formatDateWithDay(new Date(item.date)));
+                // Generate an array of dates from startDate to endDate
+                const dateArray = [];
+                let currentDate = new Date(startDate.value);
+                const endDateObj = new Date(endDate.value);
 
-                // Fill yAxis bar and line data
-                barChartyAxisMax.value = countData[0].roomcount;
-                barChartyAxisBar.value = countData.map(item => item.room_count);
-                barChartyAxisLine.value = countData.map(item => 
-                    item.roomcount ? item.room_count / item.roomcount * 100 : 0
-                );
+                while (currentDate <= endDateObj) {
+                    dateArray.push(formatDateWithDay(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                barChartxAxis.value = dateArray;
+                barChartyAxisBar.value = new Array(dateArray.length).fill(0);
+                barChartyAxisLine.value = new Array(dateArray.length).fill(0);
                 
-                nextTick(() => {
-                    console.log('generateChartOptions');
-                    barChartOption.value = generateChartOptions();
-                    console.log('barChartOption:',barChartOption.value )
+                if(!countData){                    
+                    barChartyAxisMax.value = [];                    
+                    return
+                }
+
+                barChartyAxisMax.value = countData.length > 0 ? countData[0].total_rooms : 0;
+                // Fill data for returned dates only
+                countData.forEach(item => {
+                    const itemDate = formatDateWithDay(new Date(item.date));
+                    const index = dateArray.indexOf(itemDate);
+
+                    if (index !== -1) {
+                        barChartyAxisBar.value[index] = item.room_count;
+                        barChartyAxisLine.value[index] = item.total_rooms ? item.room_count / item.total_rooms * 100 : 0;
+                    }
                 });
                 
+                nextTick(() => {                    
+                    barChartOption.value = generateBarChartOptions();                    
+                });                
             };
 
-            const generateChartOptions = () => ({
+            const generateBarChartOptions = () => ({
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: {
@@ -210,7 +228,7 @@
                         name: '予約',
                         min: 0,
                         max: barChartyAxisMax,
-                        interval: 5,
+                        interval: 10,
                         axisLabel: {
                             formatter: '{value} 室'
                         }
@@ -251,6 +269,34 @@
                 ]
             });
 
+            const fetchGaugeChartData = async () => {
+                const month_0 = await fetchOccupationByPeriod('month_0', selectedHotelId.value, startDate.value);
+                const month_1 = await fetchOccupationByPeriod('month_1', selectedHotelId.value, startDate.value);
+                const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId.value, startDate.value);
+
+                if(month_0){
+                    const gaugeValue_0 = Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;
+                    gaugeData.value[2].value = gaugeValue_0;
+                }else(gaugeData.value[2].value = 0)
+                if(month_1){
+                    const gaugeValue_1 = Math.round(month_1[0].room_count / month_1[0].available_rooms * 10000) / 100;
+                    gaugeData.value[1].value = gaugeValue_1;
+                }else(gaugeData.value[1].value = 0)
+                if(month_2){
+                    const gaugeValue_2 = Math.round(month_2[0].room_count / month_2[0].available_rooms * 10000) / 100;
+                    gaugeData.value[0].value = gaugeValue_2;
+                }else(gaugeData.value[0].value = 0)
+                
+                // Get the month from startDate.value
+                const gaugeName_0 = new Date(startDate.value).getMonth() + 1;
+                const gaugeName_1 = new Date(startDate.value).getMonth() + 2;
+                const gaugeName_2 = new Date(startDate.value).getMonth() + 3;
+                
+                gaugeData.value[0].name = gaugeName_2 + '月';
+                gaugeData.value[1].name = gaugeName_1 + '月';
+                gaugeData.value[2].name = gaugeName_0 + '月';                
+            }
+
             onMounted(async () => {
                 await fetchHotels();
                 await fetchHotel();
@@ -264,9 +310,12 @@
             });
 
             watch(() => [selectedDate.value, selectedHotelId.value], // Watch both values
-                async () => {
-                    console.log('fetchBarChartData');
+                async () => {                    
+                    await fetchHotels();
+                    await fetchHotel();
                     await fetchBarChartData();
+                    await fetchGaugeChartData();
+
                     nextTick(() => { // Update chart after data changes
                         const myBarChart = echarts.getInstanceByDom(barChart.value); // Get existing instance
                         if (myBarChart) {
@@ -284,7 +333,8 @@
                             myGaugeChart.setOption(gaugeChartOption);
                         }
                     });
-                }
+                },
+                { immediate: true }
             );            
 
             return {

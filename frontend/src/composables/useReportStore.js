@@ -27,7 +27,33 @@ export function useReportStore() {
         }
     };
 
+    const fetchOccupationByPeriod = async (period, hotelId, refDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/occ/${period}/${hotelId}/${refDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }
+    };
+
     return {
         fetchCountReservation,
+        fetchOccupationByPeriod,
     };
 }
