@@ -85,8 +85,7 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date <= $3
-      AND reservation_details.cancelled IS NULL
-      AND rooms.for_sale = TRUE
+      AND reservation_details.cancelled IS NULL      
       AND reservation_details.room_id = rooms.id
       AND reservation_details.hotel_id = rooms.hotel_id
       AND room_types.id = rooms.room_type_id
