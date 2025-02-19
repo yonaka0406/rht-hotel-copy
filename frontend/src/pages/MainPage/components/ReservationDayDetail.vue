@@ -27,8 +27,7 @@
                                                         v-model="selectedPlan"
                                                         :options="plans"
                                                         optionLabel="name"
-                                                        optionValue="plan_key"
-                                                        showClear 
+                                                        optionValue="plan_key"                                                         
                                                         fluid                           
                                                         @change="updatePlanAddOns"
                                                     />
@@ -40,6 +39,7 @@
                                                     <FloatLabel>
                                                         <InputText
                                                             v-model="planBillType"
+                                                            fluid
                                                             filled
                                                             disabled
                                                         >
@@ -47,10 +47,11 @@
                                                         <label>請求種類</label>
                                                     </FloatLabel>
                                                 </div>
-                                                <div class="field flex flex-col mt-6">
+                                                <div class="field flex flex-col ml-2 mt-6">
                                                     <FloatLabel>
                                                         <InputNumber
                                                             v-model="planTotalRate"
+                                                            fluid
                                                         >
                                                         </InputNumber>
                                                         <label>プラン料金</label>
@@ -258,7 +259,8 @@ export default {
             return `${year}-${month}-${day}`;
         };
 
-        const updatePlanAddOns = async () => {            
+        const updatePlanAddOns = async (event) => { 
+            console.log('Selected Plan:', event.value);           
             const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
             console.log('selectedPlanObject',selectedPlanObject)
             if (selectedPlan.value) {
@@ -276,8 +278,8 @@ export default {
                     const selectedPlan = plans.value.find(plan => 
                         plan.plans_global_id === gidFixed && plan.plans_hotel_id === hidFixed
                     );
-                    reservationDetail.value.plan_type = selectedPlan ? selectedPlan.plan_type : null;
-                    planBillType.value = reservationDetail.value.plan_type === 'per_person' 
+                    planBillType.value = selectedPlan ? selectedPlan.plan_type : null;
+                    planBillType.value = selectedPlan.value === 'per_person' 
                         ? '人数あたり' 
                         : '部屋あたり';
                     
@@ -306,7 +308,7 @@ export default {
                 hotel_id: foundAddon.hotel_id,
                 name: foundAddon.name,
                 price: foundAddon.price,
-                quantity: 1,
+                quantity: reservationDetail.value.number_of_people,
             });            
         };
 
@@ -361,50 +363,7 @@ export default {
         onMounted(async() => {   
             // Reservation data         
             const data = await fetchReservationDetail(props.reservation_details_id);
-            reservationDetail.value = data.reservation[0];            
-        /*
-            // Header
-            drawerHeader.value = reservationDetail.value.date + '：' + reservationDetail.value.room_number + '号室 ' + reservationDetail.value.room_type_name;
-            selectedPlan.value = (reservationDetail.value.plans_global_id ?? '') + 'h' + (reservationDetail.value.plans_hotel_id ?? '');
-            
-            // Plans
-            await fetchPlansForHotel(props.hotel_id);
-
-            selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
-                ...addon,
-            }));            
-            selectedClients.value = reservationDetail.value.reservation_clients.map(client => ({
-                ...client,
-                display_name: client.name_kanji
-                    ? `${client.name_kanji}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
-                    : `${client.name}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
-            }));
-
-            planBillType.value = reservationDetail.value.plan_type === 'per_person' 
-                ? '人数あたり' 
-                : '部屋あたり';
-            planTotalRate.value = reservationDetail.value.plan_total_price;
-
-            // Addons
-            addonOptions.value = await fetchAllAddons(props.hotel_id);
-            console.log('addonOptions:', addonOptions.value);
-            
-            // Room
-            numberOfPeopleToMove.value = reservationDetail.value.number_of_people;
-
-            const endDate = new Date(reservationDetail.value.date);
-            endDate.setDate(endDate.getDate() + 1);
-            await fetchAvailableRooms(props.hotel_id, reservationDetail.value.date, formatDate(endDate));
-
-            filteredRooms.value = availableRooms.value
-                .filter(room => room.capacity >= numberOfPeopleToMove.value)
-                .filter(room => room.room_id !== reservationDetail.value.room_id)
-                .map(room => ({
-                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
-                    value: room.room_id, // Value for selection
-                }));
-        */
-            
+            reservationDetail.value = data.reservation[0];
         });
 
         // Watcher to update when reservationDetail changes
@@ -462,7 +421,7 @@ export default {
                 // Add a 'quantity' field with default value 1 to each add-on
                 selectedAddon.value = newValue.map(addon => ({
                     ...addon,
-                    quantity: 1
+                    quantity: reservationDetail.value.number_of_people
                 }));
             }
         }, { deep: true });

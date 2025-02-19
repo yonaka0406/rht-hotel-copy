@@ -1101,7 +1101,7 @@ export default {
                 hotel_id: foundAddon.hotel_id,
                 name: foundAddon.name,
                 price: foundAddon.price,
-                quantity: 1,
+                quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1,
             });            
         };
 
@@ -1383,9 +1383,9 @@ export default {
 
         const closeChangeReservationDayDetailDialog = async () => {
             
-            dialogHotelId.value = null;
-            dialogReservationId.value = null;
-            dialogReservationDtlId.value = null;
+            // dialogHotelId.value = null;
+            // dialogReservationId.value = null;
+            // dialogReservationDtlId.value = null;
             await fetchReservation(props.reservation_id);
 
             changeReservationDayDetailDialogVisible.value = false;
@@ -2317,10 +2317,11 @@ export default {
         watch(addons, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 //console.log('addons changed:', newValue);
+                
                 // Add a 'quantity' field with default value 1 to each add-on
                 selectedAddon.value = newValue.map(addon => ({
-                    ...addon,
-                    quantity: 1
+                    ...addon,                    
+                    quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
                 }));
             }
         }, { deep: true });
