@@ -648,10 +648,12 @@
         } 
       }, { immediate: true });
       watch(selectedHotelId, async (newVal, oldVal) => {
-        if (oldVal !== null) {          
+        if (oldVal !== null) {
+          await fetchHotel();    
           await fetchReservations();
+          console.log('watch selectedHotelId:', selectedHotelRooms.value);
         }
-      });
+      }, { immediate: true });
       watch(isCompactView, async (newVal, oldVal) => {
         if (oldVal !== null) {          
           console.log('Table in compact view mode:', isCompactView.value);
