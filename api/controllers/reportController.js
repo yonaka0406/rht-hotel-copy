@@ -1,4 +1,4 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView } = require('../models/report');
 
 const formatDate = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
@@ -95,8 +95,28 @@ const getOccupationByPeriod = async (req, res) => {
   }
 };
 
+const getReservationListView = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {    
+    const data = await selectReservationListView(hotelId, startDate, endDate);    
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
+    }  
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 module.exports = { 
   getCountReservation,
   getCountReservationDetails,
   getOccupationByPeriod,
+  getReservationListView,
 };

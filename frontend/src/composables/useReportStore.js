@@ -1,5 +1,7 @@
 import { ref, watch } from 'vue';
 
+const reservationList = ref(null);
+
 export function useReportStore() {
     
     const fetchCountReservation = async (hotelId, startDate, endDate) => {
@@ -77,9 +79,40 @@ export function useReportStore() {
         }
     };
 
+    const fetchReservationListView = async(hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/res/list/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            // Convert clients_json field from string to JSON
+            reservationList.value = data.map(reservation => ({
+                ...reservation,
+                clients_json: reservation.clients_json ? JSON.parse(reservation.clients_json) : []
+            }));
+            
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }
+    }
+
     return {
+        reservationList,
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
+        fetchReservationListView,
     };
 }
