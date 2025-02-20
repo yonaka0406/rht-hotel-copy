@@ -104,6 +104,7 @@ export function useReportStore() {
             }));
             
         } catch (error) {
+            reservationList.value = [];
             console.error('Failed to fetch data', error);
         }
     }
