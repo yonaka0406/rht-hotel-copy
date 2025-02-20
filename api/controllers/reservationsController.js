@@ -203,17 +203,16 @@ const createReservationHold = async (req, res) => {
     const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
 
     const reservationDetails = [];
-    const availableRoomsFiltered = [];
-    let bestRoom = null;
+    const availableRoomsFiltered = [];    
     
     if(room_type_id !== null){
-      // Filter available rooms by room_type_id
-      console.log('room_type_id is not null');
+      // Filter available rooms by room_type_id      
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
+      console.log('room_type_id is not null. Available Rooms:',availableRoomsFiltered.value);
     } else if(room_id !== null){      
-      // Filter available rooms by room_id
-      console.log('room_id is not null');
-      availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));      
+      // Filter available rooms by room_id      
+      availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));
+      console.log('room_id is not null. Available Rooms:',availableRoomsFiltered.value);
     }
 
     if (availableRoomsFiltered.value.length === 0) {
@@ -222,30 +221,41 @@ const createReservationHold = async (req, res) => {
 
     console.log('availableRoomsFiltered length:',availableRoomsFiltered.value.length);
 
-    let remainingPeople = number_of_people; 
-    
-    console.log('remainingPeople', remainingPeople);
+    let remainingPeople = number_of_people;
 
     // Distribute people into rooms
     while (remainingPeople > 0) {      
       console.log('remainingPeople:', remainingPeople);
+
+      let bestRoom = null;
+
       // Find the best-fit room
       for (const room of availableRoomsFiltered.value) {
-        console.log('room capacity',room.capacity);
-        if (room.capacity === remainingPeople) {          
+        console.log('Testing room',room.room_number,'with capacity:',room.capacity);
+        if (room.capacity === remainingPeople) {
           bestRoom = room;
-          console.log('room capacity === remainingPeople', bestRoom);
+          console.log('Perfect match found:', bestRoom);
           break;
         }
+
         if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
           bestRoom = room;
-          break;
+          console.log('Smaller suitable room found:', bestRoom);
         }
       }
-      
-      // If no perfect or near-perfect room found, pick the largest available room
+
+      // If no suitable room was found, pick the largest available room
       if (!bestRoom && availableRoomsFiltered.value.length > 0) {
-        bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev), availableRoomsFiltered.value[0]);
+        bestRoom = availableRoomsFiltered.value.reduce(
+          (prev, curr) => (curr.capacity > prev.capacity ? curr : prev),
+          availableRoomsFiltered.value[0]
+        );
+        console.log('Largest available room selected:', bestRoom);
+      }
+
+      if (!bestRoom) {
+        console.error('No room found for remaining people:', remainingPeople);
+        break; // Avoid infinite loop
       }
 
       // Assign people to the best room and remove it from the list of available rooms
@@ -266,10 +276,9 @@ const createReservationHold = async (req, res) => {
           updated_by,
         });
       });
-      
+            
       // Remove the room from availableRooms
-      const roomIndex = availableRoomsFiltered.indexOf(bestRoom);
-      availableRoomsFiltered.splice(roomIndex, 1);
+      availableRoomsFiltered.value = availableRoomsFiltered.value.filter(room => room.room_id !== bestRoom.room_id);
     }
 
     // Add reservation details to the database
