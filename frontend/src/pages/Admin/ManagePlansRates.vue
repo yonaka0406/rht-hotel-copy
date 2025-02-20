@@ -546,9 +546,9 @@
                 { label: '定額料金', value: 'flat_fee' },
             ];
             const conditionTypes = [
-                { label: 'No Restriction', value: 'no_restriction' },
-                { label: 'Day of Week', value: 'day_of_week' },
-                { label: 'Month', value: 'month' },
+                { label: '条件なし', value: 'no_restriction' },
+                { label: '曜日毎', value: 'day_of_week' },
+                { label: '月毎', value: 'month' },
             ];
             const conditionValues = ref([]);
             const filteredCurrentAddons = ref([]);
