@@ -23,9 +23,6 @@
                 :loading="tableLoading"
                 :paginator="true"
                 :rows="10"
-                :filters="filters"
-                @page="onPage"
-                @filter="onFilter"
                 dataKey="id"                
                 stripedRows
             >
@@ -34,7 +31,8 @@
                         <p class="font-bold text-lg">予約一覧</p>
                     </div>
                 </template>
-                <Column field="status" header="ステータス" :filterMenuStyle="{ width: '14rem' }" style="width:10%">
+                <template #empty> 指定されている期間中では予約ありません。 </template>
+                <Column field="status" header="ステータス" style="width:10%">
                     <template #body="slotProps">
                         <div class="flex justify-center items-center">
                             <span v-if="slotProps.data.status === 'hold'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause" v-tooltip="'保留中'"></i></span>
@@ -45,76 +43,36 @@
                             <span v-if="slotProps.data.status === 'cancelled'" class="px-2 py-1 rounded-md bg-gray-200 text-gray-700"><i class="pi pi-times" v-tooltip="'キャンセル'"></i></span>
                         </div>                        
                     </template>
-                    <template #filter="{ filterModel, filterCallback }">
-                        <Select
-                        v-model="filterModel.value"
-                        :options="statusOptions"
-                        placeholder="Select a Status"
-                        @change="filterCallback()"
-                        class="p-column-filter"
-                        />
-                    </template>
                 </Column>
-                <Column field="booker_name" header="予約者" :filterMenuStyle="{ width: '14rem' }" style="width:20%">
-                    <template #filter="{ filterModel, filterCallback }">
-                        <AutoComplete
-                            v-model="filterModel.value"
-                            :suggestions="filteredClients"
-                            @complete="searchClients($event)"
-                            @change="filterCallback()"
-                            placeholder="Search by Booker"
-                            field="name"
-                            class="p-column-filter"
-                        />
-                    </template>
+                <Column field="booker_name" header="予約者" style="width:20%">
                 </Column>
-                <Column field="clients_json" header="宿泊者" :filterMenuStyle="{ width: '14rem' }" style="width:20%">
+                <Column field="clients_json" header="宿泊者" style="width:20%">
                     <template #body="{ data }">
                         <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
                             {{ getVisibleClientNames(data.clients_json) }}
                         </span>
                     </template>
-                    <template #filter="{ filterModel, filterCallback }">
-                        <AutoComplete
-                            v-model="filterModel.value"
-                            :suggestions="filteredClients"
-                            @complete="searchClients($event)"
-                            @change="filterCallback()"
-                            placeholder="Search by Guest"
-                            field="name"
-                            class="p-column-filter"
-                        />
-                    </template>
                 </Column>
-                <Column field="check_in" header="チェックイン" :filterMenuStyle="{ width: '14rem' }" style="width:15%">
+                <Column field="check_in" header="チェックイン" sortable style="width:15%">
                     <template #body="slotProps">                        
                         <span>{{ formatDateWithDay(slotProps.data.check_in) }}</span>
                     </template>                    
-                    <template #filter="{ filterModel, filterCallback }">
-                        <DatePicker
-                            v-model="filterModel.value"
-                            @change="filterCallback()"
-                            selectionMode="range"
-                            :showIcon="true"
-                            class="p-column-filter"
-                        />
-                    </template>
                 </Column>
-                <Column field="number_of_people" header="宿泊者数" style="width:10%">
+                <Column field="number_of_people" header="宿泊者数" sortable style="width:10%">
                     <template #body="slotProps">
                         <div class="flex justify-end mr-4">
                             <span>{{ slotProps.data.number_of_people }}</span>
                         </div>
                     </template> 
                 </Column>
-                <Column field="number_of_nights" header="宿泊数" style="width:10%">
+                <Column field="number_of_nights" header="宿泊数" sortable style="width:10%">
                     <template #body="slotProps">
                         <div class="flex justify-end mr-4">
                             <span>{{ slotProps.data.number_of_nights }}</span>
                         </div>
                     </template> 
                 </Column>                
-                <Column field="price" header="料金" style="width:10%">
+                <Column field="price" header="料金" sortable style="width:10%">
                     <template #body="slotProps">
                         <div class="flex justify-end mr-2">
                             <span class="items-end">{{ formatCurrency(slotProps.data.price) }}</span>
@@ -183,7 +141,6 @@
         setup() {
             const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
             const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-            const { clients, fetchClients } = useClientStore();
 
             // Charts
                 const chartKey = ref(0);
@@ -294,8 +251,6 @@
                 };
             // Data Table                
                 const tableLoading = ref(true);
-                const filters = ref({});                
-                const filteredClients = ref([]);
                 const drawerVisible = ref(false);                
 
             // Helper function
@@ -588,50 +543,20 @@
                 };
 
             // Data Table
-            const initFilters = () => {
-                filters.value = {
-                    status: { value: null, matchMode: 'equals' },
-                    booker: { value: null, matchMode: 'contains' },
-                    guest: { value: null, matchMode: 'contains' },
-                    checkin: { value: null, matchMode: 'between' },
+                const getVisibleClientNames = (clients) => {
+                    const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
+                    return parsedClients
+                        .slice(0, 1)
+                        .map(client => client.name_kanji || client.name)
+                        .join("\n")
                 };
-            };
-            const statusOptions = [
-                { label: 'Option 1', value: 'option1' },
-                { label: 'Option 2', value: 'option2' },
-                // ... more status options
-            ];
-            
-            const searchClients = (event) => {
-                filteredClients.value = clients.value.filter((client) =>
-                    client.name.toLowerCase().includes(event.query.toLowerCase())
-                );
-            };
-            const onPage = (event) => {
-                // Handle pagination, e.g., fetch new data from the server
-                console.log('Pagination event:', event);
-            };
-
-            const onFilter = (event) => {
-                // Handle filtering, e.g., update the reservations data based on filters
-                console.log('Filter event:', event);
-            };
-
-            const getVisibleClientNames = (clients) => {
-                const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-                return parsedClients
-                    .slice(0, 1)
-                    .map(client => client.name_kanji || client.name)
-                    .join("\n")
-            };
-
-            const formatClientNames = (clients) => {
-                const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-                if (parsedClients.length <= 2) return "";
-                return parsedClients
-                    .map(client => client.name_kanji || client.name)
-                    .join("\n")
-            };
+                const formatClientNames = (clients) => {
+                    const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
+                    if (parsedClients.length <= 2) return "";
+                    return parsedClients
+                        .map(client => client.name_kanji || client.name)
+                        .join("\n")
+                };
 
             const openDrawer = () => {                
                 drawerVisible.value = true;
@@ -641,9 +566,6 @@
             onMounted(async () => {
                 await fetchHotels();
                 await fetchHotel();
-                
-                initFilters();
-                await fetchClients();
             });
 
             watch(() => [selectedDate.value, selectedHotelId.value], // Watch both values
@@ -654,7 +576,7 @@
                     await fetchHotel();
                     await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
                     tableLoading.value = false;
-                    console.log('from watch reservationList', reservationList.value);
+                        console.log('from watch reservationList', reservationList.value);
                     await fetchBarChartData();
                     await fetchBarStackChartData();
                     await fetchGaugeChartData();
@@ -697,16 +619,12 @@
                 formatDateWithDay,
                 formatCurrency,
                 tableLoading,
-                filters,
-                filteredClients,
                 drawerVisible,
                 chartKey,
                 selectedDate,
                 barChart,
                 barStackChart,
                 gaugeChart,
-                onPage,
-                onFilter,
                 getVisibleClientNames,
                 formatClientNames,
                 openDrawer,

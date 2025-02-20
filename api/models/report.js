@@ -210,7 +210,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
             LEFT JOIN 
           (
             SELECT 
-              rd.reservation_id,
+              rc.reservation_id,
               JSON_AGG(
                 JSON_BUILD_OBJECT(
                   'client_id', rc.client_id,
@@ -221,10 +221,10 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
                   'phone', c.phone
                 )
               ) AS clients_json
-            FROM reservation_clients rc
-            JOIN clients c ON rc.client_id = c.id
-            JOIN reservation_details rd ON rc.reservation_details_id = rd.id
-            GROUP BY rd.reservation_id
+            FROM 
+              (SELECT DISTINCT reservation_id, client_id FROM reservation_clients rc JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
+              JOIN clients c ON rc.client_id = c.id
+            GROUP BY rc.reservation_id
           ) rc ON rc.reservation_id = reservation_details.reservation_id
         WHERE
           reservation_details.hotel_id = $1
@@ -241,7 +241,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
       AND reservations.reservation_client_id = booker.id
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
-    ;
+    ORDER BY 5, 7;
   `;
   const values = [hotelId, dateStart, dateEnd]
 
