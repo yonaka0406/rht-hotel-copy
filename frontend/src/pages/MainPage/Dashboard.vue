@@ -392,7 +392,8 @@
                         }
                     ]
                 });
-                const fetchBarStackChartData = async () => {              
+                const fetchBarStackChartData = async () => {  
+                    barStackChartData.value = null;            
                     const countData = await fetchCountReservationDetails(selectedHotelId.value, startDate.value, endDate.value);
 
                     // Generate an array of dates from startDate to endDate

@@ -235,7 +235,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
       ) AS details
     WHERE
       reservations.hotel_id = $1
-      AND reservations.check_out >= $2
+      AND reservations.check_out > $2
       AND reservations.check_in <= $3
 	    AND reservations.check_in <= '2025-02-26'
       AND reservations.reservation_client_id = booker.id

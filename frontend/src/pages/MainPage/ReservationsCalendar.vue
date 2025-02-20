@@ -159,7 +159,7 @@
       const socket = ref(null);
       const toast = useToast();
       const isUpdating = ref(false);
-      const isLoading = ref(false);
+      const isLoading = ref(true);
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
       const { clients, fetchClients } = useClientStore();
       const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
@@ -231,7 +231,7 @@
         if (direction === "up") {          
           const newMinDate = new Date(minDate.value);
           const newMaxDate = new Date(minDate.value);
-          newMinDate.setDate(newMinDate.getDate() - 3);
+          newMinDate.setDate(newMinDate.getDate() - 7);
           newMaxDate.setDate(newMaxDate.getDate() - 1);
           const newDates = generateDateRange(newMinDate, newMaxDate);
           dateRange.value = [...newDates, ...dateRange.value];
@@ -241,7 +241,7 @@
           const newMinDate = new Date(maxDate.value);
           const newMaxDate = new Date(maxDate.value);
           newMinDate.setDate(newMinDate.getDate() + 1);
-          newMaxDate.setDate(newMaxDate.getDate() + 3);
+          newMaxDate.setDate(newMaxDate.getDate() + 7);
           const newDates = generateDateRange(newMinDate, newMaxDate);
           dateRange.value = [...dateRange.value, ...newDates];
           maxDate.value = formatDate(newMaxDate);
@@ -561,20 +561,20 @@
       };
       const handleScroll = debounce(async (event) => {
         if (isLoading.value) return;
+         
 
         const container = event.target;
         const threshold = 1;
         const minScrollTop = threshold;
         const { scrollTop, scrollHeight, clientHeight } = container;
 
-        if (container.scrollTop < minScrollTop) {
-          isLoading.value = true;          
+        if (container.scrollTop < minScrollTop) {                   
+          isLoading.value = true;
           await appendDaysToRange("up");
           container.scrollTop = minScrollTop + 10;
           isLoading.value = false;          
-        } else if (scrollTop + clientHeight >= scrollHeight - threshold) {
-          isLoading.value = true;          
-          // Scrolled to the bottom
+        } else if (scrollTop + clientHeight >= scrollHeight - threshold) {                   
+          isLoading.value = true;
           await appendDaysToRange("down");
           isLoading.value = false;          
         }
@@ -648,10 +648,12 @@
         } 
       }, { immediate: true });
       watch(selectedHotelId, async (newVal, oldVal) => {
-        if (oldVal !== null) {
+        isLoading.value = true;
+        if (oldVal !== null && newVal !== null) {
           await fetchHotel();    
           await fetchReservations();
           console.log('watch selectedHotelId:', selectedHotelRooms.value);
+          isLoading.value = false;
         }
       }, { immediate: true });
       watch(isCompactView, async (newVal, oldVal) => {
