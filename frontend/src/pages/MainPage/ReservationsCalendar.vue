@@ -2,15 +2,21 @@
   <div class="p-2">
     <Panel header="">
       <template #header>
-        <div class="grid grid-cols-3 items-center">
+        <div class="grid grid-cols-4 items-center">
           <p class="text-lg font-bold">予約カレンダー</p>
-          <div class="flex justify-start">
-            <p>日付へ飛ぶ：</p>
+          <div class="flex justify-start grid grid-cols-2 mr-4">
+            <p class="mr-2">日付へ飛ぶ：</p>
             <InputText v-model="centerDate" 
                 type="date"                
-                class="w-full"
+                fluid
                 required 
             />
+          </div>
+          <div class="flex grid grid-cols-5">            
+            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" class="flex items-center text-sm rounded" style="overflow: hidden;
+    text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }">              
+              <span>{{ legendItem.plan_name }}</span>              
+            </div>
           </div>
           <div class="flex justify-end">            
               <SelectButton 
@@ -21,7 +27,8 @@
               />            
           </div>
           
-        </div>        
+        </div>   
+        
       </template>
       
       <div 
@@ -194,23 +201,6 @@
 
       const centerDate = ref(formatDate(new Date()));
 
-      // Generate date range from current date - 10 days to current date + 40 days
-      /*
-      const generateDateRange = () => {
-        const today = new Date();
-        const startDate = new Date(today);
-        startDate.setDate(today.getDate() - 10);
-
-        const endDate = new Date(today);
-        endDate.setDate(today.getDate() + 40);
-
-        const dates = [];
-        for (let d = startDate; d <= endDate; d.setDate(d.getDate() + 1)) {
-          dates.push(formatDate(new Date(d))); // Format YYYY-MM-DD
-        }
-        return dates;
-      };
-      */
       const generateDateRange = (start, end) => {
         const dates = [];
         for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
@@ -311,10 +301,15 @@
       };      
       const getCellStyle = (room_id, date) => {
         const roomInfo = fillRoomInfo(room_id, date);
+        let roomColor = '#d3063d';
+        
         if (roomInfo && roomInfo.plan_color) {          
-          return { backgroundColor: `${roomInfo.plan_color}` };
-        }
-        return {}; // Return empty object if no color
+          roomColor = roomInfo.plan_color;
+          return { backgroundColor: `${roomColor}` };
+        }else if(roomInfo && roomInfo.status !== 'available'){
+          return { color: `${roomColor}`, fontWeight : 'bold' };
+        }     
+        return { };
       };
       const isCellFirst = (room_id, date) => {        
         // Logic to determine if the cell is the first in a sequence
@@ -350,6 +345,22 @@
         
         
       };
+      const uniqueLegendItems = computed(() => {
+        const uniqueItems = new Set();
+        const legendItems = [];
+
+        reservedRooms.value.forEach(room => {
+          if (room.plan_name && room.plan_color) {  // Check if properties exist
+            const key = `${room.plan_name}-${room.plan_color}`; // Create a unique key
+            if (!uniqueItems.has(key)) {
+              uniqueItems.add(key);
+              legendItems.push({ plan_name: room.plan_name, plan_color: room.plan_color });
+            }
+          }
+        });
+
+        return legendItems;
+      });
       
       const openDrawer = (roomId, date) => {
         isUpdating.value = true; // Disable WebSocket updates
@@ -392,7 +403,6 @@
         }
         
       };
-
       const onDrop = (event, roomId, date) => {        
         // console.log('Drop');
         const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
@@ -442,7 +452,6 @@
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
         }        
       };
-
       const showConfirmationPrompt = async () => {
         const from = dragFrom.value;
         const to = dragTo.value;
@@ -472,7 +481,6 @@
           
         }
       };
-
       const checkForConflicts = (from, to) => {
         //console.log('Checking for conflicts...');
 
@@ -697,6 +705,7 @@
         isCellFirst,
         isCellLast,
         fillRoomInfo, 
+        uniqueLegendItems,
         drawerVisible,
         tableModeOptions,
         isCompactView,
