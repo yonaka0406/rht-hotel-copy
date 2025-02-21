@@ -746,7 +746,7 @@
                 :client_id="selectedClient"                
             />
             <template #footer>                
-                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeClientDialog" />                
+                <Button label="閉じる" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeClientDialog" />                
             </template>  
         </Dialog>
 
