@@ -16,8 +16,8 @@
                         <AutoComplete
                             v-model="client.display_name"
                             :suggestions="filteredClients"
-                            @complete="filterClients"
-                            field="id"                
+                            field="id"
+                            @complete="filterClients"                                            
                             @option-select="onClientSelect"                
                             fluid
                             required
@@ -271,11 +271,16 @@
         client.value.email = selectedClient.value.email;
         client.value.phone = selectedClient.value.phone;
         client.value.fax = selectedClient.value.fax;
+        
+        console.log('onClientSelect event:',client.value);
       };
   
       const saveClient = async () => {
         if (isClientSelected.value) {
-          client.value.date_of_birth = formatDate(new Date(client.value.date_of_birth));
+          
+          !client.value.date_of_birth ? formatDate(new Date(client.value.date_of_birth)): null;
+          console.log('saveClient:',client.value)
+          
           await updateClientInfo(client.value.id, client.value);
           await setReservationClient(client.value.id);          
           toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
