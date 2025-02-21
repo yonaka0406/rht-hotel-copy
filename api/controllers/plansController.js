@@ -56,12 +56,14 @@ const fetchAllHotelPlans = async (req, res) => {
 
 // POST
 const createGlobalPlan = async (req, res) => {
-    const { name, description, plan_type } = req.body;
+    const { name, description, plan_type, colorHEX } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
+    const color = '#' + colorHEX;
+
     try {
-        const newPlan = await newGlobalPlan(name, description, plan_type, created_by, updated_by);
+        const newPlan = await newGlobalPlan(name, description, plan_type, color, created_by, updated_by);
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating global Plan:', err);
@@ -70,12 +72,14 @@ const createGlobalPlan = async (req, res) => {
 };
 
 const createHotelPlan = async (req, res) => {
-    const { hotel_id, plans_global_id, name, description, plan_type } = req.body;
+    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
     const created_by = req.user.id;
     const updated_by = req.user.id;
 
+    const color = '#' + colorHEX;
+
     try {
-        const newPlan = await newHotelPlan(hotel_id, plans_global_id, name, description, plan_type, created_by, updated_by);
+        const newPlan = await newHotelPlan(hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by);
         res.json(newPlan);
     } catch (err) {
         console.error('Error creating hotel Plan:', err);
@@ -86,11 +90,13 @@ const createHotelPlan = async (req, res) => {
 // PUT
 const editGlobalPlan = async (req, res) => {
     const { id } = req.params;
-    const { name, description, plan_type } = req.body;
+    const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
 
+    const color = '#' + colorHEX;
+
     try {
-        const updatedPlan = await updateGlobalPlan(id, name, description, plan_type, updated_by);
+        const updatedPlan = await updateGlobalPlan(id, name, description, plan_type, color, updated_by);
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating global Plan:', err);
@@ -100,11 +106,13 @@ const editGlobalPlan = async (req, res) => {
 
 const editHotelPlan = async (req, res) => {
     const { id } = req.params;
-    const { hotel_id, plans_global_id, name, description, plan_type } = req.body;
+    const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
 
+    const color = '#' + colorHEX;
+
     try {
-        const updatedPlan = await updateHotelPlan(id, hotel_id, plans_global_id, name, description, plan_type, updated_by);
+        const updatedPlan = await updateHotelPlan(id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by);
         res.json(updatedPlan);
     } catch (err) {
         console.error('Error updating hotel Plan:', err);

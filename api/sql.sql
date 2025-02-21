@@ -238,7 +238,8 @@ CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    
     name TEXT NOT NULL,
     description TEXT,     
-    plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',  
+    plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',
+    color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -250,14 +251,21 @@ CREATE TABLE plans_hotel (
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     plans_global_id INT REFERENCES plans_global(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
-    description TEXT, -- Description of the plan (optional)    
+    description TEXT,
     plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',  
+    color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE plans_global
+ADD COLUMN color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3';
+
+ALTER TABLE plans_hotel
+ADD COLUMN color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3';
 
 CREATE TABLE plans_rates (
     id SERIAL PRIMARY KEY,

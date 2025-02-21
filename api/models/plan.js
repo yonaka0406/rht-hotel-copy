@@ -93,13 +93,13 @@ const getHotelPlanById = async (hotel_id, id) => {
 };
 
 // Add entry
-const newGlobalPlan = async (name, description, plan_type, created_by, updated_by) => {
+const newGlobalPlan = async (name, description, plan_type, color, created_by, updated_by) => {
     const query = `
-        INSERT INTO plans_global (name, description, plan_type, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO plans_global (name, description, plan_type, color, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *;
     `;
-    const values = [name, description, plan_type, created_by, updated_by];
+    const values = [name, description, plan_type, color, created_by, updated_by];
 
     try {
         const result = await pool.query(query, values);
@@ -110,13 +110,13 @@ const newGlobalPlan = async (name, description, plan_type, created_by, updated_b
     }
 };
 
-const newHotelPlan = async (hotel_id, plans_global_id, name, description, plan_type, created_by, updated_by) => {
+const newHotelPlan = async (hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by) => {
     const query = `
-        INSERT INTO plans_hotel (hotel_id, plans_global_id, name, description, plan_type, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO plans_hotel (hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *;
     `;
-    const values = [hotel_id, plans_global_id, name, description, plan_type, created_by, updated_by];
+    const values = [hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by];
 
     try {
         const result = await pool.query(query, values);
@@ -128,14 +128,14 @@ const newHotelPlan = async (hotel_id, plans_global_id, name, description, plan_t
 };
 
 // Update entry
-const updateGlobalPlan = async (id, name, description, plan_type, updated_by) => {
+const updateGlobalPlan = async (id, name, description, plan_type, color, updated_by) => {
     const query = `
         UPDATE plans_global
-        SET name = $1, description = $2, plan_type = $3, updated_by = $4
-        WHERE id = $5
+        SET name = $1, description = $2, plan_type = $3, color = $4, updated_by = $5
+        WHERE id = $6
         RETURNING *;
     `;
-    const values = [name, description, plan_type, updated_by, id];
+    const values = [name, description, plan_type, color, updated_by, id];
 
     try {
         const result = await pool.query(query, values);
@@ -146,14 +146,14 @@ const updateGlobalPlan = async (id, name, description, plan_type, updated_by) =>
     }
 };
 
-const updateHotelPlan = async (id, hotel_id, plans_global_id, name, description, plan_type, updated_by) => {
+const updateHotelPlan = async (id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by) => {
     const query = `
         UPDATE plans_hotel
-        SET plans_global_id = $1, name = $2, description = $3, plan_type = $4, updated_by = $5
-        WHERE hotel_id = $6 AND id = $7
+        SET plans_global_id = $1, name = $2, description = $3, plan_type = $4, color = $5, updated_by = $6
+        WHERE hotel_id = $7 AND id = $8
         RETURNING *;
     `;
-    const values = [plans_global_id, name, description, plan_type, updated_by, hotel_id, id];
+    const values = [plans_global_id, name, description, plan_type, color, updated_by, hotel_id, id];
 
     try {
         const result = await pool.query(query, values);
