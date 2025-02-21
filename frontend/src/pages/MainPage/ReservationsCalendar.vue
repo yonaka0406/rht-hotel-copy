@@ -13,8 +13,7 @@
             />
           </div>
           <div class="flex grid grid-cols-5">            
-            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" class="flex items-center text-sm rounded" style="overflow: hidden;
-    text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }">              
+            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" class="flex items-center text-sm rounded mr-1" style="overflow: hidden; text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }">
               <span>{{ legendItem.plan_name }}</span>              
             </div>
           </div>
@@ -303,10 +302,13 @@
         const roomInfo = fillRoomInfo(room_id, date);
         let roomColor = '#d3063d';
         
-        if (roomInfo && roomInfo.plan_color) {          
+        if (roomInfo && roomInfo.status === 'provisory') {
+          roomColor = '#fcd34d';
+          return { backgroundColor: `${roomColor}` };
+        } else if (roomInfo && roomInfo.plan_color) {
           roomColor = roomInfo.plan_color;
           return { backgroundColor: `${roomColor}` };
-        }else if(roomInfo && roomInfo.status !== 'available'){
+        } else if(roomInfo && roomInfo.status !== 'available'){
           return { color: `${roomColor}`, fontWeight : 'bold' };
         }     
         return { };
@@ -358,6 +360,8 @@
             }
           }
         });
+
+        legendItems.push({ plan_name: '仮予約', plan_color: '#fcd34d' });
 
         return legendItems;
       });
