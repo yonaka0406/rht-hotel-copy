@@ -352,6 +352,7 @@
         try {
           if (newValue !== oldValue) {
             selectedDate.value = today;
+            await fetchHotel();
             await fetchReservationsToday(selectedHotelId.value, formatDate(today));
           }
         } catch (error) {
