@@ -899,7 +899,7 @@ export default {
         const toast = useToast();
         const confirm = useConfirm();
         const isUpdating = ref(false);
-        const { selectedHotelId } = useHotelStore();
+        const { selectedHotelId, setHotelId } = useHotelStore();
         const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
@@ -2218,6 +2218,7 @@ export default {
         onMounted(async () => {
             // console.log('Reservation ID provided:', props.reservation_id);
             await fetchReservation(props.reservation_id);
+            
             // Establish Socket.IO connection
             socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
@@ -2255,7 +2256,8 @@ export default {
         }, { deep: true });          
         watch(editReservationDetails, async (newValue, oldValue) => {
             if (newValue !== oldValue) {
-                console.log('editReservationDetails changed:', newValue);                
+                console.log('editReservationDetails changed:', newValue);  
+                await setHotelId(editReservationDetails.value[0].hotel_id);              
                 selectedClient.value = editReservationDetails.value[0].client_id;
 
                 /*
