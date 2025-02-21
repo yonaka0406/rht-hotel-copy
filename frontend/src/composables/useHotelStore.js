@@ -1,9 +1,9 @@
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const hotels = ref([]);
 const selectedHotel = ref(null);
 const selectedHotelId = ref(null);
-const selectedHotelRooms = ref([]);
+const hotelRooms = ref([]);
 
 export function useHotelStore() {
 
@@ -56,7 +56,7 @@ export function useHotelStore() {
                 },
             });
             
-            selectedHotelRooms.value = await response.json();
+            hotelRooms.value = await response.json();
 
             // Update selectedHotel based on selectedHotelId
             selectedHotel.value = hotels.value.find(
@@ -75,6 +75,11 @@ export function useHotelStore() {
             // fetchHotel when necessary
             // fetchHotel(); // Re-fetch hotel and rooms when the hotel ID changes
         }
+    });
+
+    // Computed property to return sorted rooms
+    const selectedHotelRooms = computed(() => {
+        return [...hotelRooms.value].sort((a, b) => a.room_number - b.room_number);
     });
 
     return {
