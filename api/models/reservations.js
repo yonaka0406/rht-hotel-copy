@@ -413,7 +413,7 @@ const selectMyHoldReservations = async (user_id) => {
 
 const selectReservationsToday = async (hotelId, date) => {
   const query = `
-    SELECT    
+    SELECT DISTINCT
       reservations.hotel_id
       ,reservations.id
       ,reservations.reservation_client_id
@@ -422,8 +422,8 @@ const selectReservationsToday = async (hotelId, date) => {
       ,reservations.check_out
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status	  
-      ,reservation_details.id as reservation_details_id
-      ,reservation_details.date
+      --,reservation_details.id as reservation_details_id
+      --,reservation_details.date
       ,reservation_details.room_id      
       ,rooms.room_number
       ,rooms.floor
@@ -437,7 +437,7 @@ const selectReservationsToday = async (hotelId, date) => {
       ,reservation_details.plans_hotel_id
       ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
       ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) as plan_type
-      ,rc.clients_json
+      ,rc.clients_json::TEXT
       ,reservation_details.cancelled
     
     FROM
