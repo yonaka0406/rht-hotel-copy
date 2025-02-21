@@ -7,16 +7,16 @@
                     <!-- Home Router Link with Icon in the Menubar -->
                     <router-link
                         to="/"
-                        class="text-primary hover:bg-yellow-100 p-2 block rounded-sm mt-4 flex items-center"
+                        class="text-primary hover:bg-yellow-100 p-2 block rounded-sm flex items-center"
                     >
                         <i class="pi pi-home"></i>                        
                     </router-link>
-                    <button
+                    <Button
                         @click="handleLogout"
-                        class="w-full text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm mt-4"
+                        severity="danger"
                     >
                         <i class="pi pi-sign-out"></i>                        
-                    </button>
+                    </Button>
                 </div>
             </template>
         </Menubar>
@@ -30,13 +30,12 @@
                     to="/admin"
                     class="text-white p-2 block rounded-sm"
                 >
-                    <h2 class="text-xl font-semibold">管理者パネル</h2>
+                    <h2 class="text-xl text-white font-semibold">管理者パネル</h2>
                 </router-link>
                 <Button
                     type="button"
                     label="すべて切り替え"
-                    severity="secondary"
-                    text
+                    severity="secondary"                    
                     @click="toggleAll"
                 />
             </div>
@@ -63,16 +62,18 @@
             <div class="mt-auto">
                 <router-link
                     to="/"
-                    class="text-white hover:bg-yellow-100 p-2 block rounded-sm mt-4"
+                    class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm mt-4 mb-2"
                 >
-                <i class="pi pi-home mr-2"></i>ホームへ戻る                    
+                <i class="pi pi-home text-white mr-2"></i>
+                <span class="text-white">ホームへ戻る</span>
                 </router-link>
-                <button
+                <Button
                     @click="handleLogout"
-                    class="w-full text-white bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm mt-4"
+                    severity="danger"                        
+                    fluid
                 >
                     <i class="pi pi-sign-out mr-2"></i>ログアウト
-                </button>
+                </Button>
             </div>
         </div>
 

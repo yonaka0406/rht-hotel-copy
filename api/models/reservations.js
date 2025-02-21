@@ -73,6 +73,8 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
       ,rooms.room_number
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
+      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
+	    ,COALESCE(plans_hotel.color, plans_global.color) AS plan_color
       ,reservation_details.number_of_people
       ,reservation_details.price
 
@@ -80,8 +82,15 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
       rooms
       ,room_types
       ,reservations
-      ,reservation_details
       ,clients
+      ,reservation_details
+        LEFT JOIN
+      plans_global
+        ON reservation_details.plans_global_id = plans_global.id
+        LEFT JOIN
+      plans_hotel
+        ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+      
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date <= $3

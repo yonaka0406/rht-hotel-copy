@@ -57,13 +57,8 @@
                 @dragover.prevent
                 @drop="onDrop($event, room.room_id, date)"
                 draggable="true"
-                :class="{                    
-                    'bg-yellow-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'hold',
-                    'bg-cyan-200': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'provisory',
-                    'bg-sky-300': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'confirmed',
-                    'bg-green-400': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_in',
-                    'bg-gray-300': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'checked_out',
-                    'bg-red-100': isRoomReserved(room.room_id, date) && fillRoomInfo(room.room_id, date).status === 'cancelled',
+                :style="getCellStyle(room.room_id, date)"
+                :class="{
                     'cell-first': isCellFirst(room.room_id, date),
                     'cell-last': isCellLast(room.room_id, date),
                     'cursor-pointer': true,
@@ -75,31 +70,32 @@
                   <Skeleton class="mb-2"></Skeleton>
                 </div> 
                 <div v-else>
-                  <div v-if="isRoomReserved(room.room_id, date)">
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
-                      <i class="pi pi-pause"></i> 
+                  <div v-if="isRoomReserved(room.room_id, date)" class="flex items-center">
+                    <div>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
+                        <i class="pi pi-pause bg-yellow-100 p-1 rounded"></i>
+                      </template>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'provisory'">
+                        <i class="pi pi-clock bg-cyan-200 p-1 rounded"></i>                        
+                      </template>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'confirmed'">
+                        <i class="pi pi-check-circle bg-sky-300 p-1 rounded"></i>                        
+                      </template>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_in'">
+                        <i class="pi pi-user bg-green-400 p-1 rounded"></i>                        
+                      </template>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_out'">
+                        <i class="pi pi-sign-out bg-gray-300 p-1 rounded"></i>                        
+                      </template>
+                      <template v-if="fillRoomInfo(room.room_id, date).status === 'cancelled'">
+                        <i class="pi pi-times bg-red-100 p-1 rounded"></i>                        
+                      </template>
+                    </div>
+                    <div class="ml-1">
                       {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'provisory'">
-                      <i class="pi pi-clock"></i>
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'confirmed'">
-                      <i class="pi pi-check-circle"></i>
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_in'">
-                      <i class="pi pi-user"></i>
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_out'">
-                      <i class="pi pi-sign-out"></i>
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
-                    <template v-if="fillRoomInfo(room.room_id, date).status === 'cancelled'">
-                      <i class="pi pi-times"></i>
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
-                    </template>
+                    </div>
+                    
+                    
                   </div>
                   <div v-else>
                     <i class="pi pi-circle"></i> 空室
@@ -312,6 +308,13 @@
             return reservation.room_id === room_id && formattedDate === date
           } 
         );
+      };      
+      const getCellStyle = (room_id, date) => {
+        const roomInfo = fillRoomInfo(room_id, date);
+        if (roomInfo && roomInfo.plan_color) {          
+          return { backgroundColor: `${roomInfo.plan_color}` };
+        }
+        return {}; // Return empty object if no color
       };
       const isCellFirst = (room_id, date) => {        
         // Logic to determine if the cell is the first in a sequence
@@ -598,7 +601,7 @@
           }
           // Update the reservations data in your component
           // console.log('Received updated data:', data);
-          await fetchReservations();          
+          await fetchReservations();
         });
         
         await fetchHotels();
@@ -690,6 +693,7 @@
         dateRange,        
         selectedHotelRooms,
         isRoomReserved,
+        getCellStyle,
         isCellFirst,
         isCellLast,
         fillRoomInfo, 

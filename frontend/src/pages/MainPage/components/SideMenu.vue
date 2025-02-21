@@ -103,12 +103,12 @@
                             filter
                         />
                         <!-- Home Router Link with Icon in the Menubar -->                        
-                        <button
+                        <Button
                             @click="handleLogout"
-                            class="text-red-500 bg-transparent hover:bg-red-500 hover:border-red-500 p-2 block rounded-sm items-end"
+                            severity="danger"
                         >
                             <i class="pi pi-sign-out"></i>                        
-                        </button>
+                        </Button>
                     </div>
                 </template>
             </Menubar>

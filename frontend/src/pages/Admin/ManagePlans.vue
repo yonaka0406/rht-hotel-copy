@@ -189,6 +189,15 @@
               <label>名称</label>
             </FloatLabel>
           </div>
+          <div class="col-6">
+            <div class="flex grid-cols-2 justify-center items-center">
+              <FloatLabel>
+                <InputText v-model="newGlobalPlan.colorHEX"></InputText>
+                <label>プラン表示HEX</label>
+              </FloatLabel>
+              <ColorPicker v-model="newGlobalPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
+            </div>
+          </div>
           <div class="col-6">            
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
@@ -222,6 +231,15 @@
               <label>名称</label>
             </FloatLabel>
           </div>
+          <div class="col-6">
+            <div class="flex grid-cols-2 justify-center items-center">
+              <FloatLabel>
+                <InputText v-model="editGlobalPlan.colorHEX"></InputText>
+                <label>プラン表示HEX</label>
+              </FloatLabel>
+              <ColorPicker v-model="editGlobalPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
+            </div>
+          </div>
           <div class="col-6">            
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
@@ -253,6 +271,15 @@
               <InputText v-model="newHotelPlan.name" fluid />
               <label>名称</label>
             </FloatLabel>
+          </div>
+          <div class="col-6">
+            <div class="flex grid-cols-2 justify-center items-center">
+              <FloatLabel>
+                <InputText v-model="newHotelPlan.colorHEX"></InputText>
+                <label>プラン表示HEX</label>
+              </FloatLabel>
+              <ColorPicker v-model="newHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
+            </div>
           </div>
           <div class="col-6">
             <div class="p-float-label flex align-items-center gap-2">
@@ -302,6 +329,15 @@
             </FloatLabel>
           </div>
           <div class="col-6">
+            <div class="flex grid-cols-2 justify-center items-center">
+              <FloatLabel>
+                <InputText v-model="editHotelPlan.colorHEX"></InputText>
+                <label>プラン表示HEX</label>
+              </FloatLabel>
+              <ColorPicker v-model="editHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
+            </div>
+          </div>
+          <div class="col-6">
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
               <SelectButton 
@@ -345,25 +381,9 @@
   import { defineAsyncComponent, ref, computed, watch, onMounted } from 'vue';
   import { useToast } from 'primevue/usetoast';
 
-  import Panel from 'primevue/panel';
-  import Card from 'primevue/card';
-  import Tabs from 'primevue/tabs';
-  import TabList from 'primevue/tablist';
-  import Tab from 'primevue/tab';
-  import TabPanels from 'primevue/tabpanels';
-  import TabPanel from 'primevue/tabpanel';
-  import DataTable from 'primevue/datatable';
-  import Column from 'primevue/column';
-  import Button from 'primevue/button';
-  import Badge from 'primevue/badge';
-  import Dialog from 'primevue/dialog';
-  import InputText from 'primevue/inputtext';  
-  import InputNumber from 'primevue/inputnumber';
-  import InputMask from 'primevue/inputmask';
-  import Textarea from 'primevue/textarea';
-  import Select from 'primevue/select';
-  import SelectButton from 'primevue/selectbutton';
-  import FloatLabel from 'primevue/floatlabel';  
+  import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue'
+  import { DataTable, Column } from 'primevue'
+  import { InputText, InputNumber, ColorPicker, InputMask, Textarea, Select, SelectButton, Button, FloatLabel, Badge } from 'primevue'
 
   export default {
     name: "ManagePlans",
@@ -388,6 +408,7 @@
       Dialog,
       InputText,      
       InputNumber,
+      ColorPicker,
       InputMask,
       Textarea,
       Select,
@@ -407,12 +428,14 @@
       const newGlobalPlan = ref({ 
         name: '', 
         description: '', 
-        plan_type: 'per_room'
+        plan_type: 'per_room',
+        colorHEX: 'D3D3D3'
       });
       const editGlobalPlan = ref({ 
         id: null, 
         name: '', 
-        description: ''        
+        description: '',
+        colorHEX: 'D3D3D3'
       });
 
       const showHotelDialog = ref(false);
@@ -422,6 +445,7 @@
         name: '', 
         description: '', 
         plan_type: 'per_room',
+        colorHEX: 'D3D3D3',
         plans_global_id: null 
       });
       const editHotelPlan = ref({ 
@@ -429,13 +453,14 @@
         hotel_id: null,
         plans_global_id: null,
         name: '', 
-        description: ''        
+        description: '',
+        colorHEX: 'D3D3D3'
       });
       
       const sb_options = ref([
         { label: '部屋', value: 'per_room' },
         { label: '１人当たり', value: 'per_person' },
-      ]);
+      ]);      
 
       const loading = ref(false);
       const error = ref(null);
@@ -554,7 +579,8 @@
           newGlobalPlan.value = { 
             name: '', 
             description: '', 
-            plan_type: 'per_room' 
+            plan_type: 'per_room',
+            colorHEX: 'D3D3D3' 
           };
           toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン追加されました。', life: 3000 });
         } catch (err) {
@@ -564,7 +590,10 @@
       };
 
       const openEditGlobalPlan = async (data) => {
-        editGlobalPlan.value = { ...data};
+        editGlobalPlan.value = { 
+          ...data
+          ,colorHEX: data.color.replace('#', '')
+        };
         showEditGlobalDialog.value = true;
       };
 
@@ -608,7 +637,8 @@
           editGlobalPlan.value = { 
             id: null, 
             name: '', 
-            description: ''            
+            description: '',
+            colorHEX: 'D3D3D3'            
           };
           toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン更新されました。', life: 3000 });
         } catch (err) {
@@ -655,7 +685,8 @@
             hotel_id: null, 
             name: '', 
             description: '', 
-            plan_type: 'per_room', 
+            plan_type: 'per_room',
+            colorHEX: 'D3D3D3', 
             plans_global_id: null 
           };
           toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン追加されました。', life: 3000 });
@@ -666,7 +697,10 @@
       };
 
       const openEditHotelDialog = async (data) => {
-        editHotelPlan.value = { ...data};
+        editHotelPlan.value = { 
+          ...data
+          ,colorHEX: data.color.replace('#', '')
+        };
         showEditHotelDialog.value = true;
       };
 
@@ -716,7 +750,8 @@
             hotel_id: null,
             plans_global_id: null,
             name: '', 
-            description: ''
+            description: '',
+            colorHEX: 'D3D3D3'
           };
           toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン更新されました。', life: 3000 });
         } catch (err) {
@@ -770,12 +805,14 @@
       onMounted(fetchGlobalPlans);
       onMounted(fetchHotels);
       onMounted(fetchHotelsPlans);
-/*
-      watch(newGlobalPlan, (newVal, oldVal) => {
-        // console.log('editHotelAddon changed:', newVal);
-        // Add your custom logic here
-      }, { deep: true });      
-*/    
+
+      watch(editGlobalPlan, (newVal, oldVal) => {
+         console.log('editGlobalPlan changed:', newVal);
+      }, { deep: true });
+      watch(editHotelPlan, (newVal, oldVal) => {
+         console.log('editHotelPlan changed:', newVal);
+      }, { deep: true });
+   
       return {
         activeTab,
         hotels,
@@ -790,7 +827,7 @@
         showEditHotelDialog,
         newHotelPlan,
         editHotelPlan,
-        sb_options,     
+        sb_options,        
         filteredHotelPlans,
         saveGlobalPlan,
         openEditGlobalPlan,
