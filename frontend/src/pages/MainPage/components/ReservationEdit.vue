@@ -2252,7 +2252,7 @@ export default {
                 // console.log('editReservationDetails.value[0].hotel_id:', editReservationDetails.value[0].hotel_id);
                 
             }
-        });            
+        }, { deep: true });          
         watch(editReservationDetails, async (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 console.log('editReservationDetails changed:', newValue);                
