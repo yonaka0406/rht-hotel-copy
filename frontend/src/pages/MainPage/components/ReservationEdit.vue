@@ -900,7 +900,7 @@ export default {
         const confirm = useConfirm();
         const isUpdating = ref(false);
         const { selectedHotelId, setHotelId } = useHotelStore();
-        const { availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setReservationId, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+        const { setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
         const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
         const { clients, fetchClients } = useClientStore();
         const editReservationDetails = computed(() => reservationDetails.value.reservation);        
@@ -1342,6 +1342,8 @@ export default {
         };
 
         const openReservationBulkEditDialog = async () => {
+            await setReservationId(editReservationDetails.value[0].reservation_id);
+
             const hotelId = editReservationDetails.value[0].hotel_id;
             const startDate = editReservationDetails.value[0].check_in;
             const endDate = editReservationDetails.value[0].check_out;
@@ -1372,7 +1374,9 @@ export default {
             addons.value = [];
         }; 
 
-        const openReservationDayDetailDialog = (day) => {            
+        const openReservationDayDetailDialog = async (day) => {   
+            
+            await setReservationId(day.reservation_id);
             
             dialogHotelId.value = day.hotel_id;            
             dialogReservationId.value = day.reservation_id;
