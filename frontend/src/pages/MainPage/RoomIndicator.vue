@@ -214,9 +214,9 @@
           }
 
           // Ensure date is valid
-          const roomDate = new Date(room.date);
-          if (isNaN(roomDate.getTime())) {
-            console.warn(`Invalid date: ${room.date}`);
+          const checkOutDate = new Date(room.check_out);
+          if (isNaN(checkOutDate.getTime())) {
+            console.warn(`Invalid date: ${room.check_out}`);
             return false;
           }
 
@@ -227,8 +227,8 @@
             return false;
           }
 
-          return formatDate(checkInDate) !== formatDate(selectedDateObj) 
-            && formatDate(roomDate) === formatDate(selectedDateObj)
+          return checkInDate <= selectedDateObj 
+            && checkOutDate > selectedDateObj
             && room.cancelled === null;
         }) || [];
 
@@ -244,22 +244,23 @@
           // Check if the room is for sale and is not already reserved
           return room.room_for_sale_idc === true
             && !reservedRoomsDayView.value?.reservations?.some((res) => {
-              // Ensure date is valid for each reservation
-              const resDate = new Date(res.date);
-              if (isNaN(resDate.getTime())) {
-                console.warn(`Invalid reservation date: ${res.date}`);
-                return false;
-              }
-
+              
               // Ensure check_in date is valid for each reservation
               const checkInDate = new Date(res.check_in);
               if (isNaN(checkInDate.getTime())) {
                 console.warn(`Invalid reservation check_in date: ${res.check_in}`);
                 return false;
               }
+              // Ensure check_out date is valid for each reservation
+              const checkOutDate = new Date(res.check_out);
+              if (isNaN(checkOutDate.getTime())) {
+                console.warn(`Invalid reservation check_out date: ${res.check_out}`);
+                return false;
+              }
 
               return res.room_id === room.room_id
-                && formatDate(resDate) === formatDate(selectedDateObj);
+                && checkInDate <= selectedDateObj 
+                && checkOutDate > selectedDateObj;
             });
         }) || [];
 
