@@ -824,7 +824,7 @@
                 :reservation_details_id="dialogReservationDtlId"
             />
             <template #footer>                
-                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeReservationDayDetailDialog" />                
+                <Button label="閉じる" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeChangeReservationDayDetailDialog" />                
             </template>  
         </Dialog>
 
