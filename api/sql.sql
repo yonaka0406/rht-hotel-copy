@@ -261,12 +261,6 @@ CREATE TABLE plans_hotel (
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE plans_global
-ADD COLUMN color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3';
-
-ALTER TABLE plans_hotel
-ADD COLUMN color VARCHAR(7) CHECK (color ~ '^#[0-9A-Fa-f]{6}$') DEFAULT '#D3D3D3';
-
 CREATE TABLE plans_rates (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- hotel, NULL for global adjustments
