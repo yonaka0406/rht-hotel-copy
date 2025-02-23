@@ -42,15 +42,8 @@
                           />
                         </div>
                         <div class="flex flex-col">
-                          <label class="mb-2 font-medium">開業日 *</label>
-                          <DatePicker 
-                            v-model="hotel.open_date"
-                            :showIcon="true" 
-                            iconDisplay="input" 
-                            dateFormat="yy-mm-dd"
-                            class="w-full"                            
-                            required
-                          />
+                          <label class="mb-2 font-medium">開業日 *</label>                          
+                          <InputText type="date" v-model="hotel.open_date" />
                         </div>
                         <div class="flex flex-col">
                           <label class="mb-2 font-medium">メールアドレス *</label>
