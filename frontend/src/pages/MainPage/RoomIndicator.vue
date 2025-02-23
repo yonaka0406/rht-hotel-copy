@@ -20,49 +20,57 @@
       </div>
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="group in roomGroups" :key="group.title" class="col-span-1 md:col-span-1">
-          <div :class="`p-4 rounded-lg ${group.color}`">
-            <h3 class="text-lg font-semibold mb-2">{{ group.title }} ({{ group.rooms.length }})</h3>
-            <div v-if="group.rooms.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
-              <div v-for="room in group.rooms" :key="room.room_id" 
-                class="p-2 rounded outline-zinc-500/50 outline-dashed"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="font-semibold">{{ room.room_number + '：' + room.room_type_name }}</span>
-                  <div class="flex items-center">
-                    <div v-if="room.number_of_people"class="flex items-center mr-2">
+          <div :class="`p-2 rounded-lg ${group.color}`">
+            <Card class="p-2">
+              <template #header>
+                <h3 :class="`text-lg rounded-lg font-semibold mb-2 ${group.color}`">{{ group.title }} ({{ group.rooms.length }})</h3>
+              </template>
+              <template #content>
+                <div v-if="group.rooms.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
+                  <div v-for="room in group.rooms" :key="room.room_id" 
+                    class="p-2 rounded outline-zinc-500/50 outline-dashed"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold">{{ room.room_number + '：' + room.room_type_name }}</span>
                       <div class="flex items-center">
-                      <i class="pi pi-users mr-1"></i>
-                      <span>{{ room.number_of_people }}</span>
+                        <div v-if="room.number_of_people"class="flex items-center mr-2">
+                          <div class="flex items-center">
+                          <i class="pi pi-users mr-1"></i>
+                          <span>{{ room.number_of_people }}</span>
+                          </div>
+                        </div>
+                        <div class="flex items-center justify-end">                    
+                          <span v-if="room.status === 'hold'" class="bg-yellow-500 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'provisory'" class="bg-cyan-300 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'confirmed'" class="bg-sky-600 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'checked_in'" class="bg-green-500 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'checked_out'" class="bg-purple-500 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'cancelled'" class="bg-black-500 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else class="bg-gray-500 rounded-full w-3 h-3 mr-1"></span>
+                        </div>
                       </div>
                     </div>
-                    <div class="flex items-center justify-end">                    
-                      <span v-if="room.status === 'hold'" class="bg-yellow-500 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else-if="room.status === 'provisory'" class="bg-cyan-300 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else-if="room.status === 'confirmed'" class="bg-sky-600 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else-if="room.status === 'checked_in'" class="bg-green-500 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else-if="room.status === 'checked_out'" class="bg-purple-500 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else-if="room.status === 'cancelled'" class="bg-black-500 rounded-full w-3 h-3 mr-1"></span>
-                      <span v-else class="bg-gray-500 rounded-full w-3 h-3 mr-1"></span>
+                    
+                    <div v-if="room.client_name" class="flex self-center" @click="openEditReservation(room)">
+                      <Avatar icon="pi pi-user" size="small" class="mr-2"/>
+                      <span class="mb-4">{{ room.client_name }}</span> 
                     </div>
+                    <div v-else @click="openNewReservation(room)">
+                      <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
+                      <span>予約を追加</span> 
+                    </div>
+                    <div v-if="room.plan_name">
+                      <span class="p-1 rounded-lg" :style="{ backgroundColor: `${room.plan_color}` }">{{ room.plan_name }}</span>
+                    </div>                
                   </div>
                 </div>
-                
-                <div v-if="room.client_name" class="flex items-center" @click="openEditReservation(room)">
-                  <Avatar icon="pi pi-user" size="small" class="mr-2"/>
-                  <span>{{ room.client_name }}</span> 
+                <div v-else>
+                  <p>部屋はありません。</p>
                 </div>
-                <div v-else @click="openNewReservation(room)">
-                  <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
-                  <span>予約を追加</span> 
-                </div>
-                <div v-if="room.plan_name">
-                  <span>{{ room.plan_name }}</span>
-                </div>                
-              </div>
-            </div>
-            <div v-else>
-              <p>部屋はありません。</p>
-            </div>
+              </template>
+            
+            
+          </Card>
           </div>
         </div>
       </div>
@@ -105,7 +113,7 @@
   import { useReservationStore } from '@/composables/useReservationStore';  
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
   import ReservationEdit from './components/ReservationEdit.vue';
-  import { Panel, Drawer, Skeleton, Avatar } from 'primevue';
+  import { Panel, Card, Drawer, Skeleton, Avatar } from 'primevue';
   import { DatePicker, Button } from 'primevue';
   
   export default {  
@@ -114,6 +122,7 @@
       ReservationAddRoom,
       ReservationEdit,
       Panel,
+      Card,
       Drawer,
       Skeleton,
       Avatar,
@@ -272,7 +281,7 @@
           { title: '空室', rooms: freeRooms, color: 'bg-gray-100' },
         ];
 
-        // console.log('roomGroups:', result);
+        console.log('roomGroups:', result);
         return result;
 
       });
