@@ -23,9 +23,14 @@ const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/components/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
 
+const ClientHomePage = () => import('@/pages/CRM/ClientHomePage.vue');
+const ClientDashboard = () => import('@/pages/CRM/ClientDashboard.vue');
+const ClientList = () => import('@/pages/CRM/ClientList.vue');
+const ClientDuplicates = () => import('@/pages/CRM/ClientDuplicates.vue');
+const SalesInteractions = () => import('@/pages/CRM/SalesInteractions.vue');
+
 const routes = [
-  {
-    path: '/',
+  {path: '/',
     name: 'MainPage',
     component: MainPage,
     children: [
@@ -37,23 +42,19 @@ const routes = [
     ],
     meta: { requiresAuth: true },
   },  
-  {
-    path: '/login',
+  {path: '/login',
     name: 'Login',
     component: Login,
   },
-  {
-    path: '/forgot-password',
+  {path: '/forgot-password',
     name: 'ForgotPassword',
     component: ForgotPassword,
   },
-  {
-    path: '/reset-password',
+  {path: '/reset-password',
     name: 'ResetPassword',    
     component: ResetPassword,
   },
-  {
-    path: '/admin',
+  {path: '/admin',
     component: AdminPanel,
     children: [
       { path: 'users', component: ManageUsers },
@@ -63,6 +64,16 @@ const routes = [
       { path: 'hotel-plans', component: ManagePlans },
       { path: 'hotel-addons', component: ManageAddons },
       { path: 'ota', component: ManageOTA }
+    ],
+    meta: { requiresAuth: true },
+  },
+  {path: '/crm',
+    component: ClientHomePage,
+    children: [
+      { path: 'dashboard', component: ClientDashboard },
+      { path: 'clients/all', component: ClientList },
+      { path: 'clients/duplicates', component: ClientDuplicates },
+      { path: 'sales/interactions', component: SalesInteractions },
     ],
     meta: { requiresAuth: true },
   },
