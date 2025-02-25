@@ -2,9 +2,9 @@
   <div class="p-2">
     <Panel header="">
       <template #header>
-        <div class="grid grid-cols-4 items-center">
+        <div class="grid grid-cols-6 items-center">
           <p class="text-lg font-bold">予約カレンダー</p>
-          <div class="flex justify-start grid grid-cols-2 mr-4">
+          <div class="flex justify-start grid grid-cols-2 col-span-2 mr-4">
             <p class="mr-2">日付へ飛ぶ：</p>
             <InputText v-model="centerDate" 
                 type="date"                
@@ -12,7 +12,7 @@
                 required 
             />
           </div>
-          <div class="flex grid grid-cols-5">            
+          <div class="flex grid grid-cols-5 col-span-2">            
             <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" class="flex items-center text-sm rounded mr-1" style="overflow: hidden; text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }">
               <span>{{ legendItem.plan_name }}</span>              
             </div>
@@ -24,14 +24,12 @@
                 :options="tableModeOptions" 
                 v-model="isCompactView"
               />            
-          </div>
-          
-        </div>   
-        
+          </div>          
+        </div>
       </template>
       
       <div 
-        class="table-container" 
+        class="table-container min-h-screen" 
         :class="{ 'compact-view': isCompactView }"
         ref="tableContainer" 
         @scroll="onScroll">

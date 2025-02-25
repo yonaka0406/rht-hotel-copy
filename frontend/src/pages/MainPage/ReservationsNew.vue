@@ -818,15 +818,13 @@
           }
         }
       );
-
-      watch(selectedHotelId, (newVal) => {
-          nextTick(() => {
-              if (newVal) {                  
-                  // Handle updated hotel ID
-                  //console.log('Hotel ID in ReservationsNew:', newVal);                  
-              }
-          });
-      });      
+        
+      watch(selectedHotelId, async (newVal) => {
+        if (newVal) {                              
+            // console.log('Hotel ID in ReservationsNew:', newVal);   
+            await fetchHotel();               
+        }
+      });    
       watch(() => selectedDates.value,
           (newDates) => {
             if (newDates.length === 2) {
