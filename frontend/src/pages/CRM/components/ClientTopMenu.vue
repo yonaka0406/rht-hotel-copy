@@ -49,6 +49,13 @@
                         </template>
                     </AutoComplete>
                 </template>
+                <router-link
+                    to="/"
+                    class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm"
+                >
+                    <i class="pi pi-home text-white mr-2"></i>
+                    <span class="text-white">PMS</span>
+                </router-link>
                 
             </div>
         </template>
@@ -90,6 +97,11 @@
             label: '顧客情報',
             icon: 'pi pi-user',
             items: [
+                {
+                    label: 'ダッシュボード',
+                    icon: 'pi pi-chart-bar',
+                    route: '/crm/dashboard'                    
+                },
                 {
                     label: '顧客一覧',
                     route: '/crm/clients/all'
