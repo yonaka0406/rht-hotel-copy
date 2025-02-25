@@ -742,7 +742,7 @@
             :modal="true"
             :style="{ width: '600px' }"
         >
-            <ClientEdit
+            <ReservationClientEdit
                 v-if="selectedClient"
                 :client_id="selectedClient"                
             />
@@ -843,7 +843,7 @@ import { useHotelStore } from '@/composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
 import { useClientStore } from '@/composables/useClientStore';
-import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
+import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
 
 import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
@@ -866,7 +866,7 @@ export default {
     },
     name: "ReservationEdit",
     components: { 
-        ClientEdit,
+        ReservationClientEdit,
         ReservationDayDetail,
         Panel,  
         Card,

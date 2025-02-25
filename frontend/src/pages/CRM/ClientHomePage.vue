@@ -16,34 +16,21 @@
     </div>
 </template>
   
-<script>
+<script setup>
     import { onMounted } from "vue";
     import { useRoute, useRouter } from "vue-router";
     import ClientTopMenu from './components/ClientTopMenu.vue';    
     
-    import { Menu, Panel } from 'primevue';    
-  
-    export default {
-        components: { 
-            ClientTopMenu,            
-            Menu,
-            Panel,            
-        },
-        setup() {
-            const route = useRoute();
-            const router = useRouter();
+    import { Menu, Panel } from 'primevue';
 
-            onMounted(() => {
-                if (route.path === '/crm') {
-                    router.push('/crm/dashboard');
-                }
-            });
-            
-            return {
-                
-            }
-        },        
-    };
+    const route = useRoute();
+    const router = useRouter();
+
+    onMounted(() => {
+        if (route.path === '/crm') {
+            router.push('/crm/dashboard');
+        }
+    });    
 </script>
 <style scoped>
 </style>

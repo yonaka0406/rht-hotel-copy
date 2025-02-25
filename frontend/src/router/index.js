@@ -27,6 +27,7 @@ const ClientHomePage = () => import('@/pages/CRM/ClientHomePage.vue');
 const ClientDashboard = () => import('@/pages/CRM/ClientDashboard.vue');
 const ClientList = () => import('@/pages/CRM/ClientList.vue');
 const ClientDuplicates = () => import('@/pages/CRM/ClientDuplicates.vue');
+const ClientEdit = () => import('@/pages/CRM/ClientEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/SalesInteractions.vue');
 
 const routes = [
@@ -73,6 +74,7 @@ const routes = [
       { path: 'dashboard', component: ClientDashboard },
       { path: 'clients/all', component: ClientList },
       { path: 'clients/duplicates', component: ClientDuplicates },
+      { path: 'clients/edit/:clientId', name: 'ClientEdit', component: ClientEdit, props: true },
       { path: 'sales/interactions', component: SalesInteractions },
     ],
     meta: { requiresAuth: true },

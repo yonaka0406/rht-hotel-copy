@@ -1,13 +1,35 @@
 const pool = require('../config/database');
-const { processNameString, getAllClients, addClientByName, addNewClient, editClient } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, getTotalClientsCount, addClientByName, addNewClient, editClient, editClientFull } = require('../models/clients');
 
 // GET
   const getClients = async (req, res) => {
+    const { page } = req.params;
+    const limit = 5000;
+    const offset = (page - 1) * limit;
+
     try {
-      const clients = await getAllClients();
-      res.json(clients);
+      const clients = await getAllClients(limit, offset);
+      const totalClients = await getTotalClientsCount();
+      res.status(200).json({
+        clients,
+        total: totalClients,
+        page: parseInt(page),
+        totalPages: Math.ceil(totalClients / limit),
+      });
     } catch (error) {
       console.error('Error getting clients:', error);
+      res.status(500).json({ error: error.message });
+    }
+  };
+
+  const getClient = async (req, res) => {
+    const { id } = req.params;
+      
+    try{
+      const client = await selectClient(id);
+      res.status(200).json({ client });
+    } catch (error) {
+      console.error('Error getting client:', error);
       res.status(500).json({ error: error.message });
     }
   };
@@ -71,12 +93,34 @@ const updateClient = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await editClient(clientId, updatedFields, user_id);
-    res.json({ message: 'Client updated successfully' });
+    const updatedClient = await editClient(clientId, updatedFields, user_id);
+    res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
 };
 
-module.exports = { getClients, getConvertedName, createClientBasic, createClient, updateClient };
+const updateClientFull = async (req, res) => {
+  const clientId = req.params.id;
+  const updatedFields = req.body;
+  const user_id = req.user.id;
+
+  try {    
+    const updatedClient = await editClientFull(clientId, updatedFields, user_id);
+    res.json(updatedClient);
+  } catch (err) {
+    console.error('Error updating client:', err);
+    res.status(500).json({ error: 'Failed to update client' });
+  }
+}
+
+module.exports = { 
+  getClients, 
+  getClient,
+  getConvertedName, 
+  createClientBasic, 
+  createClient, 
+  updateClient,
+  updateClientFull,
+};

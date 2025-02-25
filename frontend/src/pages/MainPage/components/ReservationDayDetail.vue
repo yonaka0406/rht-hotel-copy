@@ -192,7 +192,7 @@ import { useHotelStore } from '@/composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
 import { useClientStore } from '@/composables/useClientStore';
-import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
+import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 
 import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Button, Divider } from 'primevue';
 import { FloatLabel, Select, InputText, InputNumber } from 'primevue';

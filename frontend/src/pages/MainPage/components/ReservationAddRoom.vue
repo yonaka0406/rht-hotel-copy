@@ -230,7 +230,7 @@ import { useHotelStore } from '@/composables/useHotelStore';
 import { useReservationStore } from '@/composables/useReservationStore';
 import { usePlansStore } from '@/composables/usePlansStore';
 import { useClientStore } from '@/composables/useClientStore';
-import ClientEdit from '@/pages/MainPage/components/ClientEdit.vue';
+import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 
 import { Card, Dialog, FloatLabel, Button } from 'primevue';
 import { DatePicker, InputNumber, InputText, AutoComplete, SelectButton, RadioButton } from 'primevue';
@@ -248,7 +248,7 @@ export default {
     },
     name: "ReservationAddRoom",
     components: { 
-        ClientEdit,        
+        ReservationClientEdit,        
         Card,
         Dialog,
         FloatLabel,

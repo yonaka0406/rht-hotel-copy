@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 
 const clients = ref([]);
+const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
 
 export function useClientStore() {
@@ -8,21 +9,47 @@ export function useClientStore() {
     const setClients = (newClients) => {
         clients.value = newClients;
     };
+    const appendClients = (newClients) => {
+        clients.value = [...clients.value, ...newClients]; // Append new clients
+    };
+    const setClientsIsLoading = (bool) => {
+        clientsIsLoading.value = bool;
+    };
 
     // Fetch the list of clients
-    const fetchClients = async () => {
+    const fetchClients = async (page) => {
+        // console.log('From Client Store => fetchClients page:', page);
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch('/api/client-list', {
+            const response = await fetch(`/api/client-list/${page}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
             });
-            
-            data = await response.json();
-            setClients(data);
+            // Check if the response is okay
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            // Log the response before parsing
+            const data = await response.json();
+            // console.log('From Client Store => fetchClients data:', data);
+
+            if (data && data.clients) {                
+                if (page === 1) {
+                    setClients(data.clients);                
+                    return data.totalPages;
+                } else {
+                    appendClients(data.clients);                
+                    return data.totalPages;
+                }
+
+                // Log the updated clients
+                // console.log('From Client Store => Current clients:', clients.value);
+            } else {
+                console.warn('No clients data received');
+            }
 
         } catch (error) {
             console.error('Failed to fetch hotels', error);
@@ -120,13 +147,40 @@ export function useClientStore() {
         }
     };
 
+    const updateClientInfoCRM = async (client_id, updatedFields) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/crm/client/update/${client_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedFields),
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to update client');
+            }
+        
+            const updatedClient = await response.json();
+            console.log('From Client Store => updateClientInfoCRM updatedClient:', updatedClient);
+            selectedClient.value = updatedClient;
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
+    };
+
     return {
         clients,
+        clientsIsLoading,
         selectedClient,
+        setClientsIsLoading,
         fetchClients,
         fetchClient,
         fetchClientNameConversion,
         createClient,
         updateClientInfo,
+        updateClientInfoCRM,
     };
 }

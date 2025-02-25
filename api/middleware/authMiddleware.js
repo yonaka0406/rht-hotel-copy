@@ -129,4 +129,35 @@ const authMiddleware_manageDB = (req, res, next) => {
   }
 };
 
-module.exports = {authMiddleware, authMiddlewareAdmin, authMiddleware_manageUsers, authMiddleware_manageDB};
+const authMiddleware_manageClients = (req, res, next) => {
+  const tokenVerification = verifyTokenFromHeader(req);
+
+  if (tokenVerification.error) {
+    return res.status(401).json({ error: tokenVerification.error });
+  }
+
+  try {
+    const { token, decoded } = tokenVerification;
+    req.user = decoded;
+    // Refresh session asynchronously without blocking
+    sessionService.refreshSession(decoded.id, token)
+      .catch(error => console.error('Session refresh error:', error));
+
+    // Check if the user has 'manage_clients' permission
+    if (!decoded.permissions || decoded.permissions.manage_clients !== true) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to manage databases' });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+
+module.exports = {
+  authMiddleware, 
+  authMiddlewareAdmin, 
+  authMiddleware_manageUsers, 
+  authMiddleware_manageDB, 
+  authMiddleware_manageClients
+};

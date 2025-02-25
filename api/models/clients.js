@@ -83,14 +83,48 @@ const processNameString = async (nameString) => {
 }
 
 // Return all clients
-const getAllClients = async () => {
-  const query = 'SELECT clients.*, CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key FROM clients ORDER BY name ASC';
+const getAllClients = async (limit, offset) => {
+  const query = `
+    SELECT 
+      clients.*
+      ,CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key 
+      ,CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
+    FROM clients 
+    ORDER BY name ASC
+    LIMIT $1 OFFSET $2
+  `;
 
   try {
-    const result = await pool.query(query);    
+    const result = await pool.query(query, [limit, offset]);    
     return result.rows; // Return all
   } catch (err) {
     console.error('Error retrieving all clients:', err);
+    throw new Error('Database error');
+  }
+};
+
+const getTotalClientsCount = async () => {
+  const query = 'SELECT COUNT(*) FROM clients';
+
+  try {
+    const result = await pool.query(query);
+    return parseInt(result.rows[0].count); // Return total count
+  } catch (err) {
+    console.error('Error retrieving total clients count:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectClient = async (clientId) => {
+  const query = 'SELECT * FROM clients WHERE id = $1';
+  const values = [clientId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the selected client
+  }
+  catch (err) {
+    console.error('Error selecting client:', err);
     throw new Error('Database error');
   }
 };
@@ -179,6 +213,7 @@ const editClient = async (clientId, updatedFields, user_id) => {
       fax = $7,      
       updated_by = $8
     WHERE id = $9
+    RETURNING *;
   `;
 
   const values = [
@@ -194,8 +229,48 @@ const editClient = async (clientId, updatedFields, user_id) => {
   ];
 
   try {
-    await pool.query(query, values);
-    // console.log('Client updated successfully');
+    const result = await pool.query(query, values);
+    return result.rows;    
+  } catch (err) {
+    console.error('Error updating client:', err);
+    throw err;
+  }
+};
+
+const editClientFull = async (clientId, updatedFields, user_id) => {
+  const query = `
+    UPDATE clients SET
+      name = $1,
+      name_kana = $2,
+      name_kanji = $3,
+      date_of_birth = $4,
+      legal_or_natural_person = $5,
+      gender = $6,
+      email = $7,
+      phone = $8,
+      fax = $9,      
+      updated_by = $10
+    WHERE id = $11
+    RETURNING *;
+  `;
+
+  const values = [
+    updatedFields.name,
+    updatedFields.name_kana,
+    updatedFields.name_kanji,
+    updatedFields.date_of_birth,
+    updatedFields.legal_or_natural_person,
+    updatedFields.gender,
+    updatedFields.email,
+    updatedFields.phone,
+    updatedFields.fax,    
+    user_id,
+    clientId
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;    
   } catch (err) {
     console.error('Error updating client:', err);
     throw err;
@@ -205,7 +280,10 @@ const editClient = async (clientId, updatedFields, user_id) => {
 module.exports = {
   processNameString,
   getAllClients,
+  getTotalClientsCount,
+  selectClient,
   addClientByName,
   addNewClient,
   editClient,
+  editClientFull,
 };

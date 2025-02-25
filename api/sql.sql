@@ -145,19 +145,26 @@ INSERT INTO clients (
     gender, email, phone, fax, created_by
 )
 SELECT 
-    ('Client ' || floor(random() * 1000)::TEXT) AS name,
-    ('クライアント' || floor(random() * 1000)::TEXT) AS name_kana,
-    ('顧客' || floor(random() * 1000)::TEXT) AS name_kanji,
+    ('Client ' || random_number) AS name,
+    ('クライアント' || random_number) AS name_kana,
+    ('顧客' || random_number) AS name_kanji,
     (CURRENT_DATE - (floor(random() * 365 * 50) || ' days')::INTERVAL)::DATE AS date_of_birth,
-    CASE WHEN random() < 0.5 THEN 'natural' ELSE 'legal' END AS legal_or_natural_person,
-    CASE WHEN random() < 0.33 THEN 'male' 
-         WHEN random() < 0.66 THEN 'female' 
-         ELSE 'other' END AS gender,
-    ('client' || floor(random() * 1000)::TEXT || '@example.com') AS email,
+    CASE WHEN random_boolean THEN 'natural' ELSE 'legal' END AS legal_or_natural_person,
+    CASE 
+        WHEN random() < 0.8 AND random_boolean THEN 'male' 
+        WHEN random() >= 0.2 AND random_boolean THEN 'female' 
+        ELSE 'other' 
+    END AS gender,
+    ('client' || random_number || '@example.com') AS email,
     ('050-' || floor(random() * 9000 + 1000)::TEXT || '-' || floor(random() * 9000 + 1000)::TEXT) AS phone,
     ('03-' || floor(random() * 9000 + 1000)::TEXT || '-' || floor(random() * 9000 + 1000)::TEXT) AS fax,
     1 AS created_by
-FROM generate_series(1, 100000);
+FROM (
+    SELECT 
+        generate_series(1, 100000) AS id,
+        floor(random() * 99000)::TEXT AS random_number,
+		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
+) AS random_data;
 -- Mock data for 'clients' table
     INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
     VALUES
