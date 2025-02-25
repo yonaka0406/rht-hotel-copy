@@ -16,16 +16,27 @@
 </template>
   
 <script>
-    import { computed, ref, } from "vue";
-    
+    import { ref, onMounted } from "vue";
+    import { useRouter } from 'vue-router';
+    import { useClientStore } from '@/composables/useClientStore';
     import { Card } from 'primevue';
+
   
     export default {
         components: {
             Card
         },
         setup() {
-                
+            const router = useRouter();
+            const { clients, fetchClients } = useClientStore();
+
+            onMounted( async () => {    
+                if(clients.value.length === 0) {
+                    await fetchClients();
+                }                
+                console.log('Clients:', clients.value);
+            });
+
             return {
                 
             }

@@ -4,6 +4,11 @@ const clients = ref([]);
 const selectedClient = ref(null);
 
 export function useClientStore() {
+    
+    const setClients = (newClients) => {
+        clients.value = newClients;
+    };
+
     // Fetch the list of clients
     const fetchClients = async () => {
         try {
@@ -16,7 +21,8 @@ export function useClientStore() {
                 },
             });
             
-            clients.value = await response.json();
+            data = await response.json();
+            setClients(data);
 
         } catch (error) {
             console.error('Failed to fetch hotels', error);

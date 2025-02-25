@@ -34,7 +34,9 @@
             const router = useRouter();
 
             onMounted(() => {
-                router.push('/crm/dashboard');
+                if (route.path === '/crm') {
+                    router.push('/crm/dashboard');
+                }
             });
             
             return {
