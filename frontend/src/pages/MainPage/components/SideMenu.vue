@@ -59,18 +59,28 @@
 
                     <router-link v-if="isAdmin"
                         to="/admin"
-                        class="bg-yellow-500 hover:bg-yellow-600 p-2 block rounded-sm mt-4 mb-2"
+                        class="bg-yellow-500 hover:bg-yellow-600 p-2 block rounded mt-4 mx-2 mb-2"
                     >
                         <i class="pi pi-cog text-white mr-2"></i>
                         <span class="text-white">管理者パネル</span>
                     </router-link>                 
-                    <Button
-                        @click="handleLogout"
-                        severity="danger"                        
-                        fluid
+                    <router-link v-if="isClientEditor"
+                        to="/crm/dashboard"
+                        class="bg-blue-500 hover:bg-blue-600 p-2 block rounded mx-2 mb-2"
                     >
-                        <i class="pi pi-sign-out mr-2"></i>ログアウト
-                    </Button>
+                        <i class="pi pi-users text-white mr-2"></i>
+                        <span class="text-white">顧客情報</span>
+                    </router-link>
+                    <div class="mx-2">
+                        <Button
+                            @click="handleLogout"
+                            severity="danger"                        
+                            fluid
+                        >
+                            <i class="pi pi-sign-out"></i>ログアウト
+                        </Button>
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -211,14 +221,14 @@
                                 label: '日次レポート', 
                                 icon: 'pi pi-fw pi-calendar',
                                 command: () => {
-                                    router.push('/reports/daily');
+                                    router.push('/report/daily');
                                 },                                 
                             },
                             { 
                                 label: '月次レポート', 
                                 icon: 'pi pi-fw pi-calendar-plus', 
                                 command: () => {
-                                    router.push('/reports/monthly');
+                                    router.push('/report/monthly');
                                 },
                             },
                         ],
@@ -226,6 +236,7 @@
             ]);
             const showDrawer = ref(false);
             const isAdmin = ref(false);
+            const isClientEditor = ref(false);            
             const userMessage = ref(null);
 
             const userGreeting = computed(() => {
@@ -266,11 +277,17 @@
             });
             onMounted( async () => {
                 await fetchUser();
-                //console.log('Logged user:',logged_user.value);
+                // console.log('Logged user:',logged_user.value);
                 if(!logged_user.value?.[0]?.permissions?.manage_db || !logged_user.value?.[0]?.permissions?.manage_users){
                     isAdmin.value = false;
                 }else{
                     isAdmin.value = true;
+                }
+
+                if(!logged_user.value?.[0]?.permissions?.manage_clients){
+                    isClientEditor.value = false;
+                }else{
+                    isClientEditor.value = true;
                 }
                 
                 //console.log(isAdmin.value)
@@ -299,6 +316,7 @@
                 holdReservations,                
                 showDrawer,   
                 isAdmin,
+                isClientEditor,
                 userGreeting,             
                 goToEditReservationPage,
                 goToNewReservation,
