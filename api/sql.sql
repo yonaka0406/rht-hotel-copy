@@ -139,7 +139,25 @@ CREATE TABLE clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
-
+-- Mock data generator
+INSERT INTO clients (
+    name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, 
+    gender, email, phone, fax, created_by
+)
+SELECT 
+    ('Client ' || floor(random() * 1000)::TEXT) AS name,
+    ('クライアント' || floor(random() * 1000)::TEXT) AS name_kana,
+    ('顧客' || floor(random() * 1000)::TEXT) AS name_kanji,
+    (CURRENT_DATE - (floor(random() * 365 * 50) || ' days')::INTERVAL)::DATE AS date_of_birth,
+    CASE WHEN random() < 0.5 THEN 'natural' ELSE 'legal' END AS legal_or_natural_person,
+    CASE WHEN random() < 0.33 THEN 'male' 
+         WHEN random() < 0.66 THEN 'female' 
+         ELSE 'other' END AS gender,
+    ('client' || floor(random() * 1000)::TEXT || '@example.com') AS email,
+    ('050-' || floor(random() * 9000 + 1000)::TEXT || '-' || floor(random() * 9000 + 1000)::TEXT) AS phone,
+    ('03-' || floor(random() * 9000 + 1000)::TEXT || '-' || floor(random() * 9000 + 1000)::TEXT) AS fax,
+    1 AS created_by
+FROM generate_series(1, 100000);
 -- Mock data for 'clients' table
     INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
     VALUES
