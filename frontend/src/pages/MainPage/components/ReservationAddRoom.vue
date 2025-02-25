@@ -65,8 +65,9 @@
                 <div class="col-span-2">
                     <FloatLabel>              
                         <AutoComplete
-                            v-model="reservationDetails.name"
+                            v-model="reservationDetails"
                             :suggestions="filteredClients"
+                            optionLabel="name"
                             @complete="filterClients"
                             field="id"                
                             @option-select="onClientSelect"

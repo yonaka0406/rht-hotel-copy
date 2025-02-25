@@ -562,9 +562,10 @@
                                 <Column field="name" header="宿泊者" style="width: 40%">                                    
                                     <template #body="slotProps">
                                         <AutoComplete
-                                            v-model="slotProps.data.name"
+                                            v-model="slotProps.data"
                                             :placeholder="slotProps.data.guest_no"
                                             :suggestions="filteredClients"
+                                            optionLabel="name"
                                             @complete="filterClients"
                                             field="id"                
                                             @option-select="onClientSelect($event, slotProps.data)"   
@@ -1019,7 +1020,7 @@ export default {
             guests.value = Array.from({ length: capacity }, (_, i) => ({
                 id: null,
                 guest_no: '宿泊者 ' + (i + 1),
-                name: '',
+                name: '',                
                 legal_or_natural_person: 'natural',
                 gender: 'male',
                 email: '',
@@ -1031,14 +1032,14 @@ export default {
                 reservationClients.forEach((client, i) => {
                 if (i < capacity) { // Important check: Don't exceed capacity
                     guests.value[i] = { // Update existing guest object
-                    id: client.client_id || null,
-                    guest_no: '宿泊者 ' + (i + 1),
-                    name: client.name || '',
-                    legal_or_natural_person: 'natural',
-                    gender: client.gender || 'male',
-                    email: client.email || '',
-                    phone: client.phone || '',
-                    isClientSelected: true
+                        id: client.client_id || null,
+                        guest_no: '宿泊者 ' + (i + 1),
+                        name: client.name_kanji || client.name || '',                        
+                        legal_or_natural_person: 'natural',
+                        gender: client.gender || 'male',
+                        email: client.email || '',
+                        phone: client.phone || '',
+                        isClientSelected: true
                     };
                 }
                 });

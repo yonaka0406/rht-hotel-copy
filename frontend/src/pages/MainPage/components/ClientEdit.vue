@@ -14,8 +14,9 @@
                 <div class="col-span-2">
                     <FloatLabel>              
                         <AutoComplete
-                            v-model="client.display_name"
+                            v-model="client"
                             :suggestions="filteredClients"
+                            optionLabel="display_name"
                             field="id"
                             @complete="filterClients"                                            
                             @option-select="onClientSelect"                
