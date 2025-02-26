@@ -319,7 +319,7 @@
       const router = useRouter();
       const toast = useToast();
       const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-      const { clients, fetchClients } = useClientStore();
+      const { clients, fetchClients, setClientsIsLoading } = useClientStore();
       const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
       const filteredClients = ref([]);
       
@@ -965,8 +965,16 @@
           }
         });
         nextTick(() => {
-          fetchClients();          
-        })      
+          if(clients.value.length === 0) {
+              setClientsIsLoading(true);
+              const clientsTotalPages = await fetchClients(1);
+              // Fetch clients for all pages
+              for (let page = 2; page <= clientsTotalPages; page++) {
+                  await fetchClients(page);
+              }
+              setClientsIsLoading(false);            
+          }
+        });      
       });      
 
       return {    

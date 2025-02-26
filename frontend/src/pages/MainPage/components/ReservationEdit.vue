@@ -873,7 +873,7 @@
     const { selectedHotelId, setHotelId } = useHotelStore();
     const { setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, setRoomPlan, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
-    const { clients, fetchClients } = useClientStore();
+    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
     const editReservationDetails = computed(() => reservationDetails.value.reservation);        
     const daysOfWeek = [
@@ -1380,7 +1380,15 @@
         bulkEditDialogTab.value = 0;
         bulkEditDialogVisible.value = true;
         initializeGuests();
-        fetchClients();
+        if(clients.value.length === 0) {
+            setClientsIsLoading(true);
+            const clientsTotalPages = await fetchClients(1);
+            // Fetch clients for all pages
+            for (let page = 2; page <= clientsTotalPages; page++) {
+                await fetchClients(page);
+            }
+            setClientsIsLoading(false);            
+        }
     };
 
     const closeBulkEditDialog = () => {

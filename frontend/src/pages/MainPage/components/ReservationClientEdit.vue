@@ -192,7 +192,7 @@
     },
     setup(props) {
       const toast = useToast();
-      const { clients, fetchClients, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
+      const { clients, fetchClients, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
       const { setReservationClient } = useReservationStore();
 
       const client = ref({});
@@ -312,7 +312,16 @@
   
       onMounted(async () => { 
         // console.log('Client ID:', props.client_id);       
-        await fetchClients();
+        if(clients.value.length === 0) {
+            setClientsIsLoading(true);
+            const clientsTotalPages = await fetchClients(1);
+            // Fetch clients for all pages
+            for (let page = 2; page <= clientsTotalPages; page++) {
+                await fetchClients(page);
+            }
+            setClientsIsLoading(false);            
+        }
+
         if (props.client_id) {
           const selectedClient = clients.value.find((client) => client.id === props.client_id);
           if (selectedClient) {

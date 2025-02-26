@@ -266,7 +266,7 @@ export default {
         const confirm = useConfirm();
         const isUpdating = ref(false);
         const { selectedHotelId, selectedHotelRooms } = useHotelStore();
-        const { clients, fetchClients } = useClientStore();
+        const { clients, fetchClients, setClientsIsLoading } = useClientStore();
         const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
         
         const filteredClients = ref([]);
@@ -484,7 +484,15 @@ export default {
             drawerHeader.value = selectedRoom.value.name + '：' + selectedRoom.value.room_number + '号室 ' + selectedRoom.value.room_type_name;
             maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
-            await fetchClients();
+            if(clients.value.length === 0) {
+               setClientsIsLoading(true);
+                const clientsTotalPages = await fetchClients(1);
+                // Fetch clients for all pages
+                for (let page = 2; page <= clientsTotalPages; page++) {
+                    await fetchClients(page);
+                }
+                setClientsIsLoading(false);            
+            }
             const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today), formatDate(tomorrow));
 
             if(datesResult.earliestCheckIn){                
