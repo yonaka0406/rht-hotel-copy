@@ -375,9 +375,6 @@ CREATE TABLE reservations (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservations
-ADD COLUMN type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default';
-
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
@@ -399,7 +396,6 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
-
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
