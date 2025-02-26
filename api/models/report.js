@@ -9,7 +9,8 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
       ,COUNT(reservation_details.room_id) as room_count
       ,SUM(reservation_details.number_of_people) AS people_sum
     FROM
-      reservation_details
+      reservations
+      ,reservation_details
       ,(
         SELECT hotel_id, COUNT(*) as total_rooms
         FROM rooms
@@ -20,7 +21,11 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
+      AND reservations.type <> 'employee'
+      AND reservations.status <> 'hold'
       AND reservation_details.hotel_id = roomTotal.hotel_id
+      AND reservation_details.reservation_id = reservations.id
+      AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY
       reservation_details.date
       ,roomTotal.total_rooms
@@ -47,7 +52,8 @@ const selectCountReservationDetailsPlans = async (hotelId, dateStart, dateEnd) =
       ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN 1
         ELSE reservation_details.number_of_people END) AS quantity
     FROM
-      reservation_details
+      reservations
+      ,reservation_details
         LEFT JOIN
       plans_global
         ON reservation_details.plans_global_id = plans_global.id
@@ -59,6 +65,10 @@ const selectCountReservationDetailsPlans = async (hotelId, dateStart, dateEnd) =
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
+      AND reservations.type <> 'employee'
+      AND reservations.status <> 'hold'
+      AND reservation_details.reservation_id = reservations.id
+      AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY
       reservation_details.date
       ,reservation_details.plans_global_id
@@ -87,7 +97,8 @@ const selectCountReservationDetailsAddons = async (hotelId, dateStart, dateEnd) 
       ,SUM(reservation_addons.quantity) AS quantity
       
     FROM  
-      reservation_details
+      reservations
+      ,reservation_details
       ,reservation_addons
         LEFT JOIN
       addons_global
@@ -100,6 +111,10 @@ const selectCountReservationDetailsAddons = async (hotelId, dateStart, dateEnd) 
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
+      AND reservations.type <> 'employee'
+      AND reservations.status <> 'hold'
+      AND reservation_details.reservation_id = reservations.id
+      AND reservation_details.hotel_id = reservations.hotel_id
       AND reservation_details.hotel_id = reservation_addons.hotel_id
       AND reservation_details.id = reservation_addons.reservation_detail_id
     GROUP BY
@@ -149,12 +164,18 @@ const selectOccupationByPeriod = async (period, hotelId, refDate) => {
     SELECT
       COUNT(reservation_details.room_id) as room_count,
       (roomTotal.total_rooms * roomTotal.last_day) as available_rooms
-    FROM reservation_details
-    JOIN roomTotal ON reservation_details.hotel_id = roomTotal.hotel_id
+    FROM 
+      reservations
+      ,reservation_details
+      JOIN roomTotal ON reservation_details.hotel_id = roomTotal.hotel_id
     WHERE
       reservation_details.hotel_id = $2
       AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
       AND reservation_details.cancelled IS NULL
+      AND reservations.type <> 'employee'
+      AND reservations.status <> 'hold'
+      AND reservation_details.reservation_id = reservations.id
+      AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY roomTotal.total_rooms, roomTotal.last_day;
   `;
 
@@ -236,8 +257,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
     WHERE
       reservations.hotel_id = $1
       AND reservations.check_out > $2
-      AND reservations.check_in <= $3
-	    AND reservations.check_in <= '2025-02-26'
+      AND reservations.check_in <= $3	    
       AND reservations.reservation_client_id = booker.id
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
