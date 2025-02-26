@@ -58,11 +58,26 @@
                     </div>             
                     
                     <div class="field flex flex-col">
-                        <span><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
+                        <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
                     </div>
 
-                    <div class="field flex flex-col">
-                        <span><span class="font-bold">種類：</span> {{ reservationType }}</span>
+                    <div class="field flex flex-col ">
+                        <div class="items-center flex">
+                            <span class="font-bold">種類：</span>
+                            <template v-if="reservationType === '通常予約' || reservationType === '社員'">
+                                <SelectButton 
+                                    v-model="reservationTypeSelected"     
+                                    :options="reservationTypeOptions" 
+                                    optionLabel="label"
+                                    optionValue="value"                                
+                                    @change="updateReservationType"
+
+                                />
+                            </template>
+                            <template v-else>
+                                <span>{{ reservationType }}</span>
+                            </template>
+                        </div>
                     </div>
 
                     <div class="field flex flex-col col-span-2">
@@ -853,7 +868,7 @@
     import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
     import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
     import { DataTable, Column } from 'primevue';
-    import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, RadioButton, Button, DatePicker } from 'primevue';
+    import { FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, SelectButton, Button, DatePicker } from 'primevue';
 
     const props = defineProps({
         reservation_id: {
@@ -875,7 +890,7 @@
 
     // Stores
     const { selectedHotelId, setHotelId } = useHotelStore();
-    const { setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, changeReservationRoomGuestNumber, setRoomPlan, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+    const { setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, setReservationType, changeReservationRoomGuestNumber, setRoomPlan, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
@@ -1110,6 +1125,9 @@
             return '不明'; // Or any default value you prefer
         }
     });
+
+    // Reservation Type
+    const reservationTypeSelected = ref(null);
     const reservationType = computed(() => {        
         switch (editReservationDetails.value[0]?.type) {
             case 'default':
@@ -1124,6 +1142,25 @@
             return '不明';
         }
     });
+    const reservationTypeOptions = [
+        { label: '通常予約', value: '通常予約', type: 'default' },
+        { label: '社員', value: '社員', type: 'employee' },
+    ];
+    const updateReservationType = async () => {
+        // Add your logic here to update the reservation type in the database
+        try {
+            const selectedType = reservationTypeOptions.find(option => option.value === reservationTypeSelected.value)?.type;
+            console.log('selectedType:', selectedType);
+            await setReservationType(selectedType);
+
+            // Handle success, e.g., show a success message
+            toast.add({ severity: 'success', summary: 'Success', detail: '予約種類更新されました。', life: 3000 });
+            
+        } catch (error) {
+            console.error('Error updating reservation type:', error);
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update reservation type.', life: 3000 });
+        }
+    };
 /*
     const updatedDateTime = computed(() => {
         // console.log('updatedDateTime', editReservationDetails.value)
@@ -2013,6 +2050,7 @@
             console.log('editReservationDetails changed:', newValue);  
             await setHotelId(editReservationDetails.value[0].hotel_id);              
             selectedClient.value = editReservationDetails.value[0].client_id;
+            reservationTypeSelected.value = reservationType.value;            
 
             /*
             // IMPLEMENT:

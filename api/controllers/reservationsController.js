@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
-  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoomPlan,
+  updateReservationDetail, updateReservationStatus, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoomPlan,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -726,6 +726,28 @@ const editReservationStatus = async (req, res) => {
   }
 };
 
+const editReservationType = async (req, res) => {
+  const { id } = req.params;
+  const { hotel_id, type } = req.body;
+  const updated_by = req.user.id;
+
+  try {
+    // Call the function to update reservation status in the database
+    const updatedReservation = await updateReservationType({
+      id,
+      hotel_id,
+      type,      
+      updated_by,
+    });
+
+    // Respond with the updated reservation details
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating reservation status:', err);
+    res.status(500).json({ error: 'Failed to update reservation status' });
+  }
+};
+
 const editReservationResponsible = async (req, res) => {
   const id = req.params.id;
   const updatedFields = req.body;
@@ -805,4 +827,4 @@ const deleteRoomFromReservation = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
