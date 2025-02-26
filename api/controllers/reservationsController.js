@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
-  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom,
+  updateReservationDetail, updateReservationStatus, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoomPlan,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -690,6 +690,20 @@ const editReservationRoom = async (req, res) => {
   }
 };
 
+const editReservationRoomPlan = async (req, res) => {
+  const { hid, rid, id } = req.params;
+  const { plan, addons } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const updatedReservation = await updateReservationRoomPlan( id, hid, rid, plan, addons, user_id);
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating reservation detail:', err);
+    res.status(500).json({ error: 'Failed to update reservation detail' });
+  }
+};
+
 const editReservationStatus = async (req, res) => {
   const { id } = req.params;
   const { hotel_id, status } = req.body;
@@ -791,4 +805,4 @@ const deleteRoomFromReservation = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };

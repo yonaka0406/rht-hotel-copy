@@ -31,16 +31,33 @@ const getAddons = async (hotel_id) => {
 
     if(hotel_id === 0) {
         query = `
-            SELECT NULL as hotel_id, id::TEXT as id, name, description, price
+            SELECT 
+                NULL as hotel_id, 
+                id::TEXT as id, 
+                NULL AS addons_hotel_id,
+				id AS addons_global_id,
+                name, 
+                description, 
+                price
             FROM addons_global 
             WHERE visible = TRUE
-            ORDER BY visible DESC, name ASC`;
+            ORDER BY visible DESC, name ASC
+        `;
     } else {    
         query = `
-            SELECT hotel_id, CASE WHEN hotel_id IS NULL THEN id::TEXT ELSE 'H' || id::TEXT END as id, name, description, price
+            SELECT 
+                hotel_id, 
+                CASE WHEN hotel_id IS NULL THEN id::TEXT ELSE 'H' || id::TEXT END as id,
+                addons_hotel_id,
+				addons_global_id,
+                name, 
+                description, 
+                price
             FROM (
                 SELECT 
                     COALESCE(hotel.id, global.id) AS id,
+                    hotel.id AS addons_hotel_id,
+					global.id AS addons_global_id,
                     COALESCE(hotel.name, global.name) AS name,
                     COALESCE(hotel.description, global.description) AS description,
                     COALESCE(hotel.price, global.price) AS price,

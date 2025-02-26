@@ -305,6 +305,8 @@ const selectReservationDetail = async (id) => {
 		    JSON_AGG(
 		        JSON_BUILD_OBJECT(
 		            'addon_id', ra.id,
+                'addons_global_id', ra.addons_global_id,
+					      'addons_hotel_id', ra.addons_hotel_id,
 		            'name', COALESCE(ah.name, ag.name), -- Prefer hotel-specific name, fallback to global
 		            'quantity', ra.quantity,
 		            'price', ra.price
@@ -346,6 +348,31 @@ const selectReservationDetail = async (id) => {
   } catch (err) {
     console.error('Error fetching reservation detail:', err);
     throw new Error('Database error');
+  }
+};
+
+const selectRoomReservationDetails = async (hotelId, roomId, reservationId) => {
+  const query = `
+    SELECT 
+      reservation_details.id,
+      reservation_details.hotel_id,
+      reservation_details.room_id,
+      reservation_details.reservation_id      
+    FROM
+      reservation_details
+    WHERE
+      reservation_details.hotel_id = $1
+      AND reservation_details.room_id = $2
+      AND reservation_details.reservation_id = $3
+  `;
+  const values = [hotelId, roomId, reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching room reservation details:', err);
+    throw new Error('Database error');  
   }
 };
 
@@ -1148,11 +1175,12 @@ const updateReservationDetailPlan = async (id, hotel_id, gid, hid, price, user_i
 
 const updateReservationDetailAddon = async (id, addons, user_id) => {
   
-  await deleteReservationAddonsByDetailId(id, user_id); 
+  await deleteReservationAddonsByDetailId(id, user_id);
+  const reservationDetail = await selectReservationDetail(id);  
   
   const addOnPromises = addons.map(addon =>
       addReservationAddon({
-          hotel_id: addon.hotel_id,
+          hotel_id: reservationDetail[0].hotel_id,
           reservation_detail_id: id,
           addons_global_id: addon.addons_global_id,
           addons_hotel_id: addon.addons_hotel_id,
@@ -1180,6 +1208,47 @@ const updateReservationDetailRoom = async (id, room_id, user_id) => {
   } catch (err) {
     console.error('Error updating reservation guest:', err);
   } 
+};
+
+const updateReservationRoomPlan = async (reservationId, hotelId, roomId, plan, addons, user_id) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
+    await client.query(setSessionQuery);
+
+    const detailsArray = await selectRoomReservationDetails(hotelId, roomId, reservationId);
+
+    // Update the reservation details with promise
+    const updatePromises = detailsArray.map(async (detail) => {
+      const { id } = detail;
+
+      // 1. Update Plan
+      await updateReservationDetailPlan(id, hotelId, plan.plans_global_id, plan.plans_hotel_id, plan.price, user_id);
+
+      // 2. Update Addons
+      await updateReservationDetailAddon(id, addons, user_id);
+
+    });
+
+    await Promise.all(updatePromises);
+
+    // 3. Recalculate Price after updating plans and addons
+    await recalculatePlanPrice(reservationId, hotelId, roomId);
+
+    await client.query('COMMIT');
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating room plan:', error);
+    throw error;
+  } finally {
+    client.release();
+    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+  }
 };
 
 const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
@@ -1353,6 +1422,7 @@ module.exports = {
     updateReservationDetailPlan,
     updateReservationDetailAddon,
     updateReservationDetailRoom,
+    updateReservationRoomPlan,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,

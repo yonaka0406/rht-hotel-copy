@@ -20,18 +20,57 @@
             const day = String(date.getDate()).padStart(2, "0");
             return `${year}-${month}-${day}`;
         };
-        // Helper
         const isDateBetweenRange = (roomDate, startDate, endDate) => {
             const roomDateObj = new Date(roomDate);
             return roomDateObj >= new Date(startDate) && roomDateObj <= new Date(endDate);
         };
 
+        // Get 
+        const getReservationId = () => {
+            // console.log('From Reservation Store => getReservationId:',reservationId.value);
+            return reservationId.value;
+        };
+        const getReservationHotelId = async (reservation_id) => {            
+            // console.log('From Reservation Store => getReservationHotelId');
+            if (!reservationDetails.value.reservation) {
+                // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
+                await fetchReservation(reservation_id);
+            }
+
+            return reservationDetails.value.reservation?.[0]?.hotel_id || null;
+        };
+        const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
+            // console.log('From Reservation Store => getAvailableDatesForChange');
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },                
+                });
+    
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+
+                return data;
+                    
+            } catch (error) {
+                console.error('Error fetching data:', error);                
+                return null;
+            }
+        }
+
         // Set
         const setReservationId = (id) => {
             // console.log('From Reservation Store => setReservationId:',reservationId.value);
             reservationId.value = id;            
-        };
-        
+        };        
         const setReservationStatus = async (status) => {            
             // console.log('From Reservation Store => setReservationStatus:',status);
             try {
@@ -59,7 +98,6 @@
                 console.error('Error updating reservation status:', error);
             }
         };
-
         const setReservationClient = async (client_id) => {
             // console.log('From Reservation Store => setReservationClient:',client_id);
             try {
@@ -86,7 +124,6 @@
               console.error('Error updating reservation client:', error);
             }
         };
-
         const setReservationPlan = async (detail_id, hotel_id, gid, hid, price) => {            
             // console.log('From Reservation Store => setReservationPlan');
             try {
@@ -110,7 +147,6 @@
                 console.error('Error updating reservation:', error);
             }
         };
-
         const setReservationAddons = async (detail_id, addons) => {
             // console.log('From Reservation Store => setReservationAddons');
             try {
@@ -134,7 +170,6 @@
                 console.error('Error updating reservation:', error);
             }
         };
-
         const setReservationRoom = async (detail_id, room_id) => {
             // console.log('From Reservation Store => setReservationRoom');
             try {
@@ -158,7 +193,6 @@
                 console.error('Error updating reservation:', error);
             }
         };
-
         const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
             // console.log('From Reservation Store => setCalendarChange');         
             try {
@@ -180,6 +214,30 @@
                     throw new Error('Failed to update reservation');
                 }
                 
+            } catch (error) {
+                console.error('Error updating reservation:', error);
+            }
+        };
+
+        // Bulk Update
+        const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons) => {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                // Assuming you have an API endpoint to update the reservation
+                const response = await fetch(`/api/reservation/update/room/plan/${hotelId}/${roomId}/${reservationId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ plan, addons })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update reservation');
+                }
+
+                return 'Updated reservation plan.';
             } catch (error) {
                 console.error('Error updating reservation:', error);
             }
@@ -208,53 +266,9 @@
                 console.error('Error updating room guest number:', error);
                 throw error;
             }
-        };
-
-        // Get reservationId from the store
-        const getReservationId = () => {
-            // console.log('From Reservation Store => getReservationId:',reservationId.value);
-            return reservationId.value;
-        };
-
-        const getReservationHotelId = async (reservation_id) => {            
-            // console.log('From Reservation Store => getReservationHotelId');
-            if (!reservationDetails.value.reservation) {
-                // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
-                await fetchReservation(reservation_id);
-            }
-
-            return reservationDetails.value.reservation?.[0]?.hotel_id || null;
-        };
-
-        const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
-            // console.log('From Reservation Store => getAvailableDatesForChange');
-            try {
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
+        };  
     
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-
-                return data;
-                    
-            } catch (error) {
-                console.error('Error fetching data:', error);                
-                return null;
-            }
-        }
-    
-        // Fetch 
-        
+        // Fetch
         const fetchReservation = async (reservation_id) => {
             // console.log('From Reservation Store => fetchReservation:',reservation_id);
             reservationId.value = reservation_id;            
@@ -301,7 +315,6 @@
                 return null;
             }
         };
-
         const fetchReservationDetail = async (id) => {
             // console.log('From Reservation Store => fetchReservationDetail:',id);
             try {
@@ -344,8 +357,7 @@
                 console.error('Error fetching reservation:', error);                
                 return null;
             }            
-        };
-        
+        };        
         const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
             // console.log('From Reservation Store => fetchAvailableRooms');
             try {
@@ -386,7 +398,6 @@
                 availableRooms.value = [];
             }
         };
-
         const fetchReservedRooms = async (hotelId, startDate, endDate) => {
             // console.log('From Reservation Store => fetchReservedRooms');
             try {
@@ -426,7 +437,6 @@
                 reservedRooms.value = [];
             }
         };
-
         const fetchMyHoldReservations = async () => {
             // console.log('From Reservation Store => fetchMyHoldReservations');
             try{
@@ -480,7 +490,6 @@
                 console.error("Error fetching hold reservations:", error);
             }
         };
-
         const fetchReservationsToday = async (hotelId, day) => {
             // console.log('From Reservation Store => fetchReservationsToday');
             try{
@@ -510,7 +519,6 @@
         };
 
         // Delete
-
         const deleteHoldReservation = async (id) => {
             // console.log('From Reservation Store => deleteHoldReservation');
             try {
@@ -534,7 +542,6 @@
                 throw error;
             }
         };
-
         const deleteReservationRoom = async (id, room) => {
             // console.log('From Reservation Store => deleteReservationRoom');
             try {
@@ -560,8 +567,8 @@
             }
         };
 
-        // Watcher
-
+        // Watchers
+        /*
         watch(availableRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // console.log('availableRooms changed in Store:', newValue);
@@ -573,7 +580,12 @@
                 // console.log('reservationDetails changed in Store from ',oldValue,'to', newValue);
             }
         }, { deep: true });
-
+        watch(reservedRoomsDayView, (newValue, oldValue) => {
+            if (newValue !== oldValue) {
+                // console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
+            }
+        }, { deep: true });
+        */
         watch(reservedRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // Log the minimum and maximum dates
@@ -588,17 +600,10 @@
                 }
             }
         }, { deep: true });
-        watch(reservedRoomsDayView, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                // console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
-            }
-        }, { deep: true });
-
         watch(() => selectedHotelId.value, () => {
             // console.log('From Reservation Store => selectedHotelId changed', selectedHotelId.value);
             reservedRooms.value = [];
         });
-
 
     return {
         availableRooms,
@@ -607,6 +612,9 @@
         reservationId,
         reservationDetails,
         reservedRoomsDayView,
+        getReservationId,
+        getReservationHotelId,
+        getAvailableDatesForChange,
         setReservationId,
         setReservationStatus,
         setReservationClient,
@@ -614,10 +622,8 @@
         setReservationAddons,
         setReservationRoom,
         setCalendarChange,
-        changeReservationRoomGuestNumber,
-        getReservationId,
-        getReservationHotelId,
-        getAvailableDatesForChange,
+        setRoomPlan,
+        changeReservationRoomGuestNumber,        
         fetchReservation,
         fetchReservationDetail,
         fetchAvailableRooms,

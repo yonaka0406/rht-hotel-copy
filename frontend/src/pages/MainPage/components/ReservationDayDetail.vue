@@ -69,8 +69,7 @@
                                                         <Select
                                                             v-model="selectedAddonOption"
                                                             :options="addonOptions"
-                                                            optionLabel="name"
-                                                            optionValue="id"
+                                                            optionLabel="name"       
                                                             showClear 
                                                             fluid                             
                                                         />
@@ -297,7 +296,9 @@ export default {
                 return
             }
 
-            const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
+            console.log('selectedAddonOption in select:', selectedAddonOption.value);
+
+            const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
             console.log('foundAddon:',foundAddon);
             const isHotelAddon = foundAddon.id.startsWith('H');
             console.log('selectedAddon:',selectedAddon.value);
@@ -338,7 +339,9 @@ export default {
                 quantity: addon.quantity,
                 price: addon.price
             }));
-            
+
+            console.log('addonDataArray:', addonDataArray);
+                       
             await setReservationAddons(props.reservation_details_id, addonDataArray);
 
             const data = await fetchReservationDetail(props.reservation_details_id);
