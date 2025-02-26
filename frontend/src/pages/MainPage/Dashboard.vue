@@ -265,7 +265,7 @@
     const endDate = computed(() => formatDate(new Date(new Date(selectedDate.value).setDate(new Date(selectedDate.value).getDate() + 6))));
 
     // Charts
-        const fetchBarChartData = async () => {              
+        const fetchBarChartData = async () => {
             const countData = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
 
             // Generate an array of dates from startDate to endDate
@@ -284,6 +284,7 @@
             
             if(!countData){                    
                 barChartyAxisMax.value = [];
+                barChartOption.value = generateBarChartOptions();                
                 return
             }
 
@@ -330,6 +331,9 @@
                     data: barChartxAxis,
                     axisPointer: {
                         type: 'shadow'
+                    },
+                    axisLabel: {
+                       rotate: 55
                     }
                 }
             ],
@@ -490,7 +494,10 @@
             xAxis: [
                 {
                     type: 'category',
-                    data: barChartxAxis,                    
+                    data: barChartxAxis,  
+                    axisLabel: {
+                       rotate: 55
+                    }                  
                 }
             ],
             yAxis: [
