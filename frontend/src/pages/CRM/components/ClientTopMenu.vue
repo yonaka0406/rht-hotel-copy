@@ -94,14 +94,14 @@
     });
     const items = ref([
         {
+            label: 'ダッシュボード',
+            icon: 'pi pi-chart-bar',
+            route: '/crm/dashboard'                    
+        },
+        {
             label: '顧客情報',
             icon: 'pi pi-user',
-            items: [
-                {
-                    label: 'ダッシュボード',
-                    icon: 'pi pi-chart-bar',
-                    route: '/crm/dashboard'                    
-                },
+            items: [                
                 {
                     label: '顧客一覧',
                     route: '/crm/clients/all'
