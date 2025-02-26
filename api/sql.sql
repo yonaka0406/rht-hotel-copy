@@ -367,12 +367,16 @@ CREATE TABLE reservations (
     check_out DATE NOT NULL,  
     number_of_people INT NOT NULL,  
     status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled')) NOT NULL DEFAULT 'hold',
+    type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservations
+ADD COLUMN type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default';
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),

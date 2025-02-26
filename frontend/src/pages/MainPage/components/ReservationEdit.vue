@@ -61,6 +61,10 @@
                         <span><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
                     </div>
 
+                    <div class="field flex flex-col">
+                        <span><span class="font-bold">種類：</span> {{ reservationType }}</span>
+                    </div>
+
                     <div class="field flex flex-col col-span-2">
                         
                         <div class="grid grid-cols-4 gap-x-6">
@@ -159,7 +163,7 @@
                                     ></i>                                    
 
                                 </div>
-                                <div class="col-span-2 text-right">
+                                <div class="col-span-2 text-right mr-4">
                                     <Button
                                         icon="pi pi-pencil"
                                         label="一括編集"
@@ -1104,6 +1108,20 @@
             return 'キャンセル';
             default:
             return '不明'; // Or any default value you prefer
+        }
+    });
+    const reservationType = computed(() => {        
+        switch (editReservationDetails.value[0]?.type) {
+            case 'default':
+            return '通常予約';
+            case 'employee':
+            return '社員';
+            case 'ota':
+            return 'OTA';
+            case 'web':
+            return '自社WEB';            
+            default:
+            return '不明';
         }
     });
 /*

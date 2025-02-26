@@ -129,7 +129,8 @@ const selectReservation = async (id) => {
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people as reservation_number_of_people
-      ,reservations.status      
+      ,reservations.status   
+      ,reservations.type   
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name
