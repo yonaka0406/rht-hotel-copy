@@ -66,6 +66,7 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
       ,reservations.check_out
       ,reservations.number_of_people
       ,reservations.status
+      ,reservations.type
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name

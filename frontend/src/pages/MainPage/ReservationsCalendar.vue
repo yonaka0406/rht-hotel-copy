@@ -13,7 +13,12 @@
             />
           </div>
           <div class="flex grid grid-cols-5 col-span-2">            
-            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" class="flex items-center text-sm rounded mr-1" style="overflow: hidden; text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }">
+            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index" 
+              class="flex items-center text-sm rounded mr-1 font-bold justify-center" 
+              style="overflow: hidden; 
+              text-overflow: ellipsis" 
+              :style="{ backgroundColor: `${legendItem.plan_color}` }"
+            >
               <span>{{ legendItem.plan_name }}</span>              
             </div>
           </div>
@@ -301,7 +306,13 @@
         let roomColor = '#d3063d';
         
         if (roomInfo && roomInfo.status === 'provisory') {
-          roomColor = '#fcd34d';
+          roomColor = '#ead59f';
+          return { backgroundColor: `${roomColor}` };
+        } else if (roomInfo && roomInfo.type === 'employee') {
+          roomColor = '#f1bfce';
+          return { backgroundColor: `${roomColor}` };
+        } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
+          roomColor = '#9fead5';
           return { backgroundColor: `${roomColor}` };
         } else if (roomInfo && roomInfo.plan_color) {
           roomColor = roomInfo.plan_color;
@@ -359,7 +370,9 @@
           }
         });
 
-        legendItems.push({ plan_name: '仮予約', plan_color: '#fcd34d' });
+        legendItems.push({ plan_name: '仮予約', plan_color: '#ead59f' });
+        legendItems.push({ plan_name: '社員', plan_color: '#f1bfce' });
+        legendItems.push({ plan_name: 'OTA', plan_color: '#9fead5' });
 
         return legendItems;
       });
