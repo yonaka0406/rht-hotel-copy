@@ -967,10 +967,10 @@
         nextTick(() => {
           if(clients.value.length === 0) {
               setClientsIsLoading(true);
-              const clientsTotalPages = await fetchClients(1);
+              const clientsTotalPages = fetchClients(1);
               // Fetch clients for all pages
               for (let page = 2; page <= clientsTotalPages; page++) {
-                  await fetchClients(page);
+                  fetchClients(page);
               }
               setClientsIsLoading(false);            
           }
