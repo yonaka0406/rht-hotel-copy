@@ -217,6 +217,7 @@
                         label: 'レポート',
                         icon: 'pi pi-fw pi-file',
                         items: [
+                            /*
                             { 
                                 label: '日次レポート', 
                                 icon: 'pi pi-fw pi-calendar',
@@ -224,6 +225,7 @@
                                     router.push('/report/daily');
                                 },                                 
                             },
+                            */
                             { 
                                 label: '月次レポート', 
                                 icon: 'pi pi-fw pi-calendar-plus', 
