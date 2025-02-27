@@ -9,8 +9,12 @@
                     <div class="flex justify-end mb-6">
                         <SelectButton v-model="tableSize" :options="tableSizeOptions" optionLabel="label" dataKey="label" />
                     </div>
-                    <DataTable 
+                    <DataTable
+                        v-model:filters="filters"
                         :value="clients"
+                        dataKey="id"
+                        filterDisplay="row"
+                        :loading="clientsIsLoading"
                         :size="tableSize.value"
                         tableStyle="min-width: 50rem"
                         stripedRows 
@@ -18,7 +22,8 @@
                         :rows="10"
                         :rowsPerPageOptions="[5, 10, 25, 50]"
                         removableSort 
-                    >   
+                    >
+                    <template #empty> 顧客見つかりません </template>
                     <template v-if="clientsIsLoading">                            
                         <Skeleton class="mb-3" width="100%" height="3rem" />                                
                         <div class="grid grid-cols-6 gap-3 mb-3" v-for="i in 10":key="i"> 
@@ -37,21 +42,56 @@
                                 </Button>
                             </template>
                         </Column>
-                        <Column field="name" sortable header="氏名"></Column>
-                        <Column field="name_kanji" sortable header="氏名（漢字）"></Column>
-                        <Column field="name_kana" sortable header="氏名（カナ）"></Column>
-                        <Column field="is_legal_person" header="法人 / 個人">
+                        <Column header="氏名・名称" filterField="name" sortable>
+                            <template #body="{ data }">
+                                {{ data.name }}
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称検索" />
+                            </template>
+                        </Column>
+                        <Column header="氏名・名称（漢字）" filterField="name_kanji" sortable>
+                            <template #body="{ data }">
+                                {{ data.name_kanji }}
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（漢字）検索" />
+                            </template>
+                        </Column>
+                        <Column header="氏名・名称（カナ）" filterField="name_kana" sortable>
+                            <template #body="{ data }">
+                                {{ data.name_kana }}
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（カナ）検索" />
+                            </template>
+                        </Column>
+                        <Column field="legal_or_natural_person" header="法人 / 個人">
                             <template #body="slotProps">
                                 <span v-if="slotProps.data.is_legal_person">                                    
                                     <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                 </span>
                                 <span v-else>
                                     <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
-                                </span>
+                                </span>                                
+                            </template>                                                       
+                        </Column>
+                        <Column header="電話番号" filterField="phone">
+                            <template #body="{ data }">
+                                {{ data.phone }}
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="電話番号検索" />
+                            </template>
+                        </Column>                        
+                        <Column header="メールアドレス" filterField="email" sortable>
+                            <template #body="{ data }">
+                                {{ data.email }}
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="メールアドレス検索" />
                             </template>
                         </Column>
-                        <Column field="phone" sortable header="電話番号"></Column>
-                        <Column field="email" sortable header="メールアドレス"></Column>
                     </template>                         
                         
                     </DataTable>                    
@@ -67,7 +107,8 @@
     import { useClientStore } from '@/composables/useClientStore';
     import { Card, Skeleton } from 'primevue';
     import { DataTable, Column } from 'primevue';
-    import { SelectButton, Tag, Button } from 'primevue';
+    import { SelectButton, Tag, Button, InputText, MultiSelect } from 'primevue';
+    import { FilterMatchMode } from '@primevue/core/api';
 
     const router = useRouter();
     const { clients, clientsIsLoading } = useClientStore();
@@ -79,13 +120,24 @@
         { label: '中', value: 'null' },
         { label: '大', value: 'large' }
     ]);
+    const person_type = ref([
+        { name: 'legal', value: 'legal' },
+        { name: 'natural', value: 'natural' },
+    ]);
+    const filters = ref({        
+        name: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        name_kanji: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        name_kana: { value: null, matchMode: FilterMatchMode.CONTAINS },        
+        phone: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        email: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    });
 
     const goToEditClientPage = (clientId) => {
         router.push({ name: 'ClientEdit', params: { clientId: clientId } });
     };
 
     onMounted( async () => {  
-        
+        // console.log(clients);
     });
 
 </script>

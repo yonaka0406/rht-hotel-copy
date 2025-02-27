@@ -183,8 +183,12 @@
     };
     const onClientSelect = (event) => {
         client.value = event.value;
-        client.value.display_name = event.value.name_kanji || event.value.name;
-        console.log('Selected Client:', client.value); 
+        client.value.display_name = event.value.name_kanji || event.value.name;        
+        goToEditClientPage(client.value.id);
+    };
+
+    const goToEditClientPage = (clientId) => {        
+        router.push({ name: 'ClientEdit', params: { clientId: clientId } });
     };
 
     onMounted( async () => {
