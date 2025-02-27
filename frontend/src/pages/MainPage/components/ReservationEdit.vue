@@ -581,14 +581,14 @@
                                 <Column field="name" header="宿泊者" style="width: 40%">                                    
                                     <template #body="slotProps">
                                         <AutoComplete
-                                            v-model="slotProps.data"
+                                            v-model="slotProps.data.name"
                                             :placeholder="slotProps.data.guest_no"
                                             :suggestions="filteredClients"
                                             optionLabel="name"
                                             @complete="filterClients"
                                             field="id"                
                                             @option-select="onClientSelect($event, slotProps.data)"   
-                                            @change="onClientChange(slotProps.data)"                                         
+                                            @change="onClientChange(slotProps.data)" 
                                         >
                                             <template #option="slotProps">
                                                 <div>
@@ -1060,7 +1060,7 @@
             guests.value[guestIndex].isClientSelected = true;               
         }
 
-        // console.log('onClientSelect guests:', guests.value);
+        console.log('onClientSelect guests:', guests.value);
     };
     const onClientChange = (rowData) => {
         // Find the guest in the guests array that was just selected
@@ -1071,7 +1071,7 @@
             guests.value[guestIndex].isClientSelected = false;
         }
 
-        // console.log('onClientChange guests:', guests.value);
+        console.log('onClientChange guests:', guests.value);
     };
 
     const generateAddonPreview = () => {
@@ -1289,7 +1289,7 @@
         roomsAvailableChanges.value = [];
         
         if(bulkEditDialogVisible.value){
-            console.log('bulkEditDialogVisible is true');
+            // console.log('bulkEditDialogVisible is true');
             bulkEditDialogTab.value = newTabValue * 1;
             
             // Guest edit
