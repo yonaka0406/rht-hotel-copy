@@ -11,10 +11,9 @@
                             iconDisplay="input" 
                             dateFormat="yy年mm月"
                             view="month"
-                            class="flex col-span-8"
-                            fluid
-                            required 
-                        />
+                            class="flex col-span-2"
+                            fluid                             
+                        />                        
                     </div>
                     
                 </template>
@@ -49,21 +48,6 @@
                             <span class="text-4xl justify-center font-bold">{{ lineChartSumData[lineChartSumData.length - 1].toLocaleString('ja-JP') }} 円</span>
                         </div>
                         <div class="col-span-6">
-                            <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
-                                <p class="m-0">
-                                    1室あたりの収益額：
-                                    <span class="inline-block">
-                                        <span class="">売上の合計</span>
-                                        <span class="block"></span>
-                                        <span class="border-t border-black">販売用部屋数の合計</span>
-                                    </span>
-                                </p>
-                            </Fieldset>
-                        </div>    
-                        <div class="flex justify-center items-center col-span-6">
-                            <span class="text-4xl justify-center font-bold">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
-                        </div>
-                        <div class="col-span-6">
                             <Fieldset legend="ADR" :toggleable="true" collapsed>                        
                                 <p class="m-0">
                                     客室平均単価：
@@ -78,6 +62,21 @@
                         <div class="flex justify-center items-center col-span-6">
                             <span class="text-4xl justify-center font-bold">{{ ADR.toLocaleString('ja-JP') }} 円</span>
                         </div>
+                        <div class="col-span-6">
+                            <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
+                                <p class="m-0">
+                                    1室あたりの収益額：
+                                    <span class="inline-block">
+                                        <span class="">売上の合計</span>
+                                        <span class="block"></span>
+                                        <span class="border-t border-black">販売用部屋数の合計</span>
+                                    </span>
+                                </p>
+                            </Fieldset>
+                        </div>    
+                        <div class="flex justify-center items-center col-span-6">
+                            <span class="text-4xl justify-center font-bold">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
+                        </div>                        
                     </div>
                     
                     
