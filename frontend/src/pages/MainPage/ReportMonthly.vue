@@ -112,9 +112,10 @@
     const reservations = ref({});
 
     // RevPAR
-    const revPAR = ref(null);
+    const revPAR = ref(0);
     const fetchRevPAR = () => {
         if(!reservations.value){
+            revPAR.value = 0;
             return;
         }
         
@@ -189,14 +190,15 @@
     const heatMapMax = ref(0);
     const heatMapData = ref([]);
 
-    const fetchHeatMapData = async () => {
+    const fetchHeatMapData = async () => {        
         reservations.value = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
-        // console.log('reservations',reservations.value);
-        if (!reservations){
+        
+        heatMapData.value = [];
+
+        if (!reservations.value){
+            initHeatMap();
             return;
         }
-
-        heatMapData.value = [];
 
         // Create datePositionMap 
         const start = new Date(startDate.value);
@@ -250,16 +252,7 @@
                 
         // console.log('heatMapData', heatMapData.value);
 
-        heatMapOption.value = generateHeatMapOption();
-
-        myHeatMap = echarts.getInstanceByDom(heatMap.value);
-        if (myHeatMap) {
-            myHeatMap.setOption(heatMapOption.value);
-        } else {
-            myHeatMap = echarts.init(heatMap.value);
-            myHeatMap.setOption(heatMapOption.value);
-        }
-
+        initHeatMap();
     };
     const generateHeatMapOption = () => ({
         /*tooltip: {
@@ -313,6 +306,16 @@
             }
         ]
     });
+    const initHeatMap = () => {
+        heatMapOption.value = generateHeatMapOption();
+        myHeatMap = echarts.getInstanceByDom(heatMap.value);
+        if (myHeatMap) {
+            myHeatMap.setOption(heatMapOption.value);
+        } else {
+            myHeatMap = echarts.init(heatMap.value);
+            myHeatMap.setOption(heatMapOption.value);
+        }
+    }
 
     let myLineChart;
     const lineChart = ref(null);
@@ -335,11 +338,15 @@
     const lineChartData = ref([]);
 
     const fetchLineChartData = async => {
-        if (!reservations){
+        
+        lineChartData.value = [];
+
+        if (!reservations.value){
+            initLineChart();
             return;
         }
 
-        lineChartData.value = [];
+        
         const chartData = [];
 
         const dateMap = {}; // Create a map for quick date lookup
@@ -363,18 +370,10 @@
 
         // console.log('lineChartData:',lineChartData.value);
 
-        lineChartOption.value = generateLineChartOption();
-
-        myLineChart = echarts.getInstanceByDom(lineChart.value);
-        if (myLineChart) {            
-            myLineChart.setOption(lineChartOption.value);
-        } else {
-            myLineChart = echarts.init(lineChart.value);
-            myLineChart.setOption(lineChartOption.value);
-        }
+        initLineChart();
         
     };
-    const generateLineChartOption = () => ({
+    const generateLineChartOption = (AxisXvalue) => ({
         tooltip: {
             position: 'top'
         },
@@ -386,7 +385,7 @@
         },
         xAxis: {
             type: 'category',
-            data: lineChartAxisX.value,            
+            data: AxisXvalue,            
             axisLabel: {
                 rotate: 55                
             },
@@ -408,6 +407,16 @@
             }
         ]
     });
+    const initLineChart = () => {
+        lineChartOption.value = generateLineChartOption(lineChartAxisX.value);
+        myLineChart = echarts.getInstanceByDom(lineChart.value);
+        if (myLineChart) {            
+            myLineChart.setOption(lineChartOption.value);
+        } else {
+            myLineChart = echarts.init(lineChart.value);
+            myLineChart.setOption(lineChartOption.value);
+        }
+    }
 
     const handleResize = () => {
         if (myHeatMap) {
@@ -416,13 +425,11 @@
         if (myLineChart) {
             myLineChart.resize();
         }
-    };
+    };    
 
     onMounted(async () => {
         await fetchHotels();
         await fetchHotel();
-
-        //console.log(lineChartAxisX.value);
 
         window.addEventListener('resize', handleResize);
     });
@@ -432,17 +439,18 @@
     });
 
     watch(selectedMonth, async (newValue, oldValue) => {
-        // console.log('selectedMonth changed', newValue);
-        // console.log('startDate', startDate.value,'endDate', endDate.value);
+        console.log('selectedMonth changed', newValue);
+        // console.log('startDate', startDate.value,'endDate', endDate.value);        
         await fetchHeatMapData();
         fetchLineChartData();
         fetchRevPAR();
-    });
-    watch(selectedHotelId, async (newValue, oldValue) => {    
-        await fetchHeatMapData();
+    }, { deep: true });  
+    watch(selectedHotelId, async (newValue, oldValue) => {         
+        console.log('selectedHotelId changed:',newValue) ;
+        await fetchHeatMapData();        
         fetchLineChartData();
         fetchRevPAR();
-    });
+    }, { deep: true });  
   
 </script>
 <style scoped>
