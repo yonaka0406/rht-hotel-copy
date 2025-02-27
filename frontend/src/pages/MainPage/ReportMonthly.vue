@@ -1,6 +1,23 @@
 <template>
     <div class="min-h-screen p-2">
         <div class="grid grid-cols-12 gap-4">
+            <Card class="flex col-span-12">
+                <template #content> 
+                    <div class="grid grid-cols-12 gap-4 items-center">
+                        <span class="col-span-4 font-bold">月分：</span>
+                        <DatePicker v-model="selectedMonth" 
+                            :showIcon="true" 
+                            iconDisplay="input" 
+                            dateFormat="yy年mm月"
+                            view="month"
+                            class="flex col-span-8"
+                            fluid
+                            required 
+                        />
+                    </div>
+                    
+                </template>
+            </Card>
             <Card class="flex col-span-6">
                 <template #title>
                     <p>法人・個人（性別）：パイグラフ</p>
@@ -37,8 +54,8 @@
 </template>
   
 <script setup>
-    import { ref, computed, onMounted } from "vue";    
-    import { Card } from 'primevue';
+    import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";    
+    import { Card, DatePicker } from 'primevue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';    
@@ -66,7 +83,8 @@
         date.setDate(0); 
         return formatDate(date);
     });
-    function formatDate(date) {
+    function formatDate(date) {        
+        date.setHours(date.getHours() + 9); // JST adjustment        
         return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
     };
 
@@ -88,6 +106,7 @@
         CanvasRenderer
     ]);
 
+    let myHeatMap;
     const heatMap = ref(null);
     const heatMapOption = ref(null);
     const heatMapAxisX = computed(() => {
@@ -119,86 +138,74 @@
             return;
         }
 
-        // Initialize heatMapData with 0s for all dates
+        heatMapData.value = [];
+
+        // Create datePositionMap 
         const start = new Date(startDate.value);
         const end = new Date(endDate.value);
         let current = new Date(start);
         let weekIndex = 0;
-        while (current <= end) {
-            for (let dayIndex = 0; dayIndex < 7; dayIndex++) {                
-                heatMapData.value.push([weekIndex, dayIndex, 0,]);
-            }
+        let dayIndex = 6;
 
-            // Move to the next week
-            current.setDate(current.getDate() + 7);
+        const datePositionMap = {};
+
+        while (current <= end) {
+            const currentDateISO = current.toISOString().split("T")[0];
+            datePositionMap[currentDateISO] = { week: weekIndex, day: dayIndex };
+            dayIndex--;
+            if (dayIndex < 0) {
+                dayIndex = 6;
+                weekIndex++;
+            }
+            current.setDate(current.getDate() + 1);
+        }
+
+        console.log('datePositionMap:', datePositionMap);
+
+        reservations.forEach(reservation => {
+            const reservationDateISO = formatDate(new Date(reservation.date));
+            const position = datePositionMap[reservationDateISO];
+            if (position) {
+                heatMapData.value.push([position.week, position.day, parseInt(reservation.room_count)]);
+            }
+        });
+
+        const dateMap = {}; // Create a map for quick date lookup
+        reservations.forEach(reservation => {
+            const dateISO = formatDate(new Date(reservation.date));
+            dateMap[dateISO] = reservation.room_count;
+        });
+        console.log('dateMap:',dateMap);
+        
+        while (current <= end) {
+            for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+            const currentDateISO = current.toISOString().split('T')[0];
+            const roomCount = dateMap[currentDateISO] ? parseInt(dateMap[currentDateISO]) : 0; // Get room_count or 0
+            heatMapData.value.push([weekIndex, dayIndex, roomCount]);
+            current.setDate(current.getDate() + 1); // Move to the next day
+            }
             weekIndex++;
         }
-        //console.log('heatMapData blank:',heatMapData.value);
 
-        // Populate heatMapData with reservation data
-        reservations.forEach(reservation => {
-            const date = new Date(reservation.date);
-            const dayOfWeek = date.getDay();
-            const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            const weekStartDate = new Date(date.setDate(diff));
-            const weekStartDateString = weekStartDate.toISOString().split('T');
-            const originalDateString = reservation.date.split('T');
+        heatMapMax.value = reservations[0].total_rooms;
+                
+        // console.log('heatMapData', heatMapData.value);
 
-            // Find the corresponding weekIndex and dayIndex
-            const weekIndex = heatMapAxisX.value.findIndex(weekLabel => weekLabel.includes(weekStartDateString));
-            const dayIndex = dayOfWeek;
+        heatMapOption.value = generateHeatMapOption();
 
-            // Update the count and dates array
-            if (weekIndex !== -1) {
-                const dataPointIndex = weekIndex * 7 + dayIndex; // Calculate the index in heatMapData
-                heatMapData.value[dataPointIndex] += reservation.room_count;
-                heatMapData.value[dataPointIndex].push(originalDateString);
-            }
-
-            heatMapMax.value = reservation.total_rooms;
-        });
-
-        /*
-
-        const weeklyData = {};
-        const weekStartDates = [];
-
-        reservations.forEach(reservation => {
-            const date = new Date(reservation.date);
-            const dayOfWeek = date.getDay(); // 0 (Sunday) to 6 (Saturday)
-            const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust when day is sunday
-            const weekStartDate = new Date(date.setDate(diff));
-            const weekStartDateString = weekStartDate.toISOString().split('T')[0];
-
-            if (!weeklyData[weekStartDateString]) {
-                weeklyData[weekStartDateString] = {
-                    weekStartDate: weekStartDate,
-                    days: Array(7).fill(0), // Initialize days of the week
-                };
-                weekStartDates.push(weekStartDate);
-            }
-
-            weeklyData[weekStartDateString].days[dayOfWeek] += reservation.room_count; // Assuming 'count' is the number of reservations
-            heatMapMax.value = reservation.total_rooms;
-        });
-
-        weekStartDates.sort((a, b) => a - b); // Sort week start dates
-
-        weekStartDates.forEach((weekStartDate, weekIndex) => {
-            const weekStartDateString = weekStartDate.toISOString().split('T')[0];
-            weeklyData[weekStartDateString].days.forEach((count, dayIndex) => {
-                heatMapData.value.push([weekIndex, dayIndex, count]);
-            });
-        });
-        */
-        console.log('heatMapAxisX', heatMapAxisX.value);
-        console.log('heatMapData', heatMapData.value);
+        myHeatMap = echarts.getInstanceByDom(heatMap.value);
+        if (myHeatMap) {
+            myHeatMap.setOption(heatMapOption.value);
+        } else {
+            const myHeatMap = echarts.init(heatMap.value);
+            myHeatMap.setOption(heatMapOption.value);
+        }
 
     };
     const generateHeatMapOption = () => ({
-        tooltip: {
+        /*tooltip: {
             position: 'top'
-        },
+        },*/
         grid: {
             height: '50%',
             top: '10%'
@@ -208,7 +215,12 @@
             data: heatMapAxisX.value,
             splitArea: {
                 show: true
-            }
+            },
+            axisLabel: {
+                formatter: function (value) {
+                    return value.split('').join('\n'); // Split each character and add a newline
+                },
+            },
         },
         yAxis: {
             type: 'category',
@@ -223,7 +235,7 @@
             calculable: true,
             orient: 'horizontal',
             left: 'center',
-            bottom: '15%'
+            bottom: '0%'
         },
         series: [
             {
@@ -243,25 +255,32 @@
         ]
     });
 
+    const handleResize = () => {
+        if (myHeatMap) {
+            myHeatMap.resize();
+        }
+    };
+
     onMounted(async () => {
         await fetchHotels();
-        await fetchHotel();     
-        await fetchHeatMapData();   
+        await fetchHotel();
 
-        heatMapOption.value = generateHeatMapOption();
-
-        const myHeatMap = echarts.getInstanceByDom(heatMap.value);
-        if (myHeatMap) {
-            myHeatMap.setOption(heatMapOption.value);
-        } else {
-            const myHeatMap = echarts.init(heatMap.value);
-            myHeatMap.setOption(heatMapOption.value);
-        }
+        window.addEventListener('resize', handleResize);
     });
-    
-    
+
+    onBeforeUnmount(() => {
+        window.removeEventListener('resize', handleResize);
+    });
+
+    watch(selectedMonth, async (newValue, oldValue) => {
+        console.log('selectedMonth changed', newValue);
+        console.log('startDate', startDate.value,'endDate', endDate.value);
+        await fetchHeatMapData();
+    });
+    watch(selectedHotelId, async (newValue, oldValue) => {    
+        await fetchHeatMapData();
+    });
   
-    
 </script>
 <style scoped>
 </style>
