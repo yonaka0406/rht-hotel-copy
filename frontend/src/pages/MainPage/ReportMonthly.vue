@@ -18,24 +18,33 @@
                     
                 </template>
             </Card>
-            <Card class="flex col-span-6">
-                <template #title>
-                    <p>法人・個人（性別）：パイグラフ</p>
-                </template>
-                <template #subtitle>
-                    <p>All time statistics</p>
-                </template>
-                <template #content>                    
+            <Card class="flex col-span-6">                
+                <template #content>
+                    <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
+                        <p class="m-0">
+                            1室あたりの収益額：
+                            <span class="inline-block">
+                                <span class="">売上の合計</span>
+                                <span class="block"></span>
+                                <span class="border-t border-black">販売用部屋数の合計</span>
+                            </span>
+                        </p>
+                    </Fieldset>
+                    <div class="flex items-center justify-center">
+                        <span class="text-4xl font-bold mt-4">{{ revPAR }} 円</span>
+                    </div>
+                    
                 </template>
             </Card>
             <Card class="flex col-span-6">
                 <template #title>
-                    <p>売上：縦バーグラフ</p>
+                    <p>売上</p>
                 </template>
                 <template #subtitle>
-                    <p>1 year total</p>
+                    <p>当月の日次売上</p>
                 </template>
-                <template #content>                    
+                <template #content>    
+                    <div ref="lineChart" class="w-full h-40"></div>                
                 </template>
             </Card>
             <Card class="flex col-span-12">
@@ -43,7 +52,7 @@
                     <p>稼働マップ</p>
                 </template>
                 <template #subtitle>
-                    <p></p>
+                    <p>曜日毎の予約数ヒートマップ</p>
                 </template>
                 <template #content>    
                     <div ref="heatMap" class="w-full h-100"></div>                
@@ -55,7 +64,7 @@
   
 <script setup>
     import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";    
-    import { Card, DatePicker } from 'primevue';
+    import { Card, DatePicker, Fieldset } from 'primevue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';    
@@ -64,7 +73,7 @@
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
     // Page Setting
-    const selectedMonth = ref(new Date());
+    const selectedMonth = ref(new Date());    
     const startDate = computed(() => {
         const date = new Date(selectedMonth.value);
         date.setDate(1); // Set to first day of the month
@@ -83,9 +92,54 @@
         date.setDate(0); 
         return formatDate(date);
     });
+    const startOfMonth = computed(() => {
+        const date = new Date(selectedMonth.value);
+        date.setDate(1);
+        return formatDate(date);
+    });
+    const endOfMonth = computed(() => {
+        const date = new Date(selectedMonth.value);
+        date.setDate(1);
+        date.setMonth(date.getMonth() + 1);
+        date.setDate(0);
+        return formatDate(date);      
+    });
     function formatDate(date) {        
         date.setHours(date.getHours() + 9); // JST adjustment        
         return date.toISOString().split("T")[0]; // Format as YYYY-MM-DD
+    };
+
+    const reservations = ref({});
+
+    // RevPAR
+    const revPAR = ref(null);
+    const fetchRevPAR = () => {
+        if(!reservations.value){
+            return;
+        }
+        
+        const firstDayOfMonth = new Date(startOfMonth.value);
+        const lastDayOfMonth = new Date(endOfMonth.value);
+
+        const filteredReservations = reservations.value.filter(reservation => {
+            
+            const reservationDate = new Date(reservation.date);
+            return reservationDate >= firstDayOfMonth && reservationDate <= lastDayOfMonth;
+        });
+
+        let totalRooms = 0;
+        let totalPrice = 0;
+
+        filteredReservations.forEach(reservation => {
+            totalRooms += parseInt(reservation.total_rooms);
+            totalPrice += parseFloat(reservation.price); // Assuming there's a `price` property in your reservation data
+        });
+
+        if (totalRooms === 0) {
+            return 0; // Prevent division by zero
+        }
+
+        revPAR.value = Math.round(totalPrice / totalRooms);
     };
 
     // eCharts
@@ -96,6 +150,8 @@
         VisualMapComponent
     } from 'echarts/components';
     import { HeatmapChart } from 'echarts/charts';
+    import { LineChart } from 'echarts/charts';
+    import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
 
     echarts.use([
@@ -103,6 +159,8 @@
         GridComponent,
         VisualMapComponent,
         HeatmapChart,
+        LineChart,
+        UniversalTransition,
         CanvasRenderer
     ]);
 
@@ -132,8 +190,8 @@
     const heatMapData = ref([]);
 
     const fetchHeatMapData = async () => {
-        const reservations = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
-        console.log('reservations',reservations);
+        reservations.value = await fetchCountReservation(selectedHotelId.value, startDate.value, endDate.value);
+        // console.log('reservations',reservations.value);
         if (!reservations){
             return;
         }
@@ -160,9 +218,9 @@
             current.setDate(current.getDate() + 1);
         }
 
-        console.log('datePositionMap:', datePositionMap);
+        // console.log('datePositionMap:', datePositionMap);
 
-        reservations.forEach(reservation => {
+        reservations.value.forEach(reservation => {
             const reservationDateISO = formatDate(new Date(reservation.date));
             const position = datePositionMap[reservationDateISO];
             if (position) {
@@ -171,11 +229,11 @@
         });
 
         const dateMap = {}; // Create a map for quick date lookup
-        reservations.forEach(reservation => {
+        reservations.value.forEach(reservation => {
             const dateISO = formatDate(new Date(reservation.date));
             dateMap[dateISO] = reservation.room_count;
         });
-        console.log('dateMap:',dateMap);
+        // console.log('dateMap:',dateMap);
         
         while (current <= end) {
             for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
@@ -187,7 +245,8 @@
             weekIndex++;
         }
 
-        heatMapMax.value = reservations[0].total_rooms;
+        heatMapMax.value = reservations.value[0].total_rooms;
+        // console.log('heatMapMax:',heatMapMax);
                 
         // console.log('heatMapData', heatMapData.value);
 
@@ -197,7 +256,7 @@
         if (myHeatMap) {
             myHeatMap.setOption(heatMapOption.value);
         } else {
-            const myHeatMap = echarts.init(heatMap.value);
+            myHeatMap = echarts.init(heatMap.value);
             myHeatMap.setOption(heatMapOption.value);
         }
 
@@ -255,15 +314,115 @@
         ]
     });
 
+    let myLineChart;
+    const lineChart = ref(null);
+    const lineChartOption = ref(null);
+    const lineChartAxisX = computed(() => {
+        const start = new Date(startOfMonth.value);
+        const end = new Date(endOfMonth.value);
+        const days = [];
+        let current = new Date(start);
+        while (current <= end) {
+            
+            const day = current.getDate();
+            days.push(current.toISOString().split("T")[0]);
+
+            // Move to the next week
+            current.setDate(current.getDate() + 1);
+        }        
+        return days;
+    });
+    const lineChartData = ref([]);
+
+    const fetchLineChartData = async => {
+        if (!reservations){
+            return;
+        }
+
+        lineChartData.value = [];
+        const chartData = [];
+
+        const dateMap = {}; // Create a map for quick date lookup
+        reservations.value.forEach(reservation => {
+            const dateISO = formatDate(new Date(reservation.date));
+            dateMap[dateISO] = Math.round(reservation.price);
+        });
+        // console.log('dateMap:',dateMap);
+
+        const datePositionMap = {};
+        let index = 0;
+        lineChartAxisX.value.forEach(date => {
+            datePositionMap[date] = index;
+            const price = dateMap[date] ? parseInt(dateMap[date]) : 0;
+            chartData.push(price);
+            index++;
+        });
+        lineChartData.value = chartData;
+        
+        // console.log('datePositionMap:',datePositionMap);
+
+        // console.log('lineChartData:',lineChartData.value);
+
+        lineChartOption.value = generateLineChartOption();
+
+        myLineChart = echarts.getInstanceByDom(lineChart.value);
+        if (myLineChart) {            
+            myLineChart.setOption(lineChartOption.value);
+        } else {
+            myLineChart = echarts.init(lineChart.value);
+            myLineChart.setOption(lineChartOption.value);
+        }
+        
+    };
+    const generateLineChartOption = () => ({
+        tooltip: {
+            position: 'top'
+        },
+        grid: {
+            height: '50%',
+            top: '5%',
+            left: '15%',
+            right: '5%',
+        },
+        xAxis: {
+            type: 'category',
+            data: lineChartAxisX.value,            
+            axisLabel: {
+                rotate: 55                
+            },
+        },
+        yAxis: {
+            type: 'value',
+            axisLabel: {
+                formatter: (value) => {
+                    return (value / 10000).toLocaleString() + '万円'; // Divide by 10,000 and add '万円'
+                }
+            }
+        },        
+        series: [
+            {
+                name: '売上',
+                data: lineChartData,
+                type: 'line',
+                smooth: true            
+            }
+        ]
+    });
+
     const handleResize = () => {
         if (myHeatMap) {
             myHeatMap.resize();
+        }
+        if (myLineChart) {
+            myLineChart.resize();
         }
     };
 
     onMounted(async () => {
         await fetchHotels();
         await fetchHotel();
+
+        //console.log(lineChartAxisX.value);
 
         window.addEventListener('resize', handleResize);
     });
@@ -273,12 +432,16 @@
     });
 
     watch(selectedMonth, async (newValue, oldValue) => {
-        console.log('selectedMonth changed', newValue);
-        console.log('startDate', startDate.value,'endDate', endDate.value);
+        // console.log('selectedMonth changed', newValue);
+        // console.log('startDate', startDate.value,'endDate', endDate.value);
         await fetchHeatMapData();
+        fetchLineChartData();
+        fetchRevPAR();
     });
     watch(selectedHotelId, async (newValue, oldValue) => {    
         await fetchHeatMapData();
+        fetchLineChartData();
+        fetchRevPAR();
     });
   
 </script>

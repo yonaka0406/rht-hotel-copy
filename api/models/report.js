@@ -8,9 +8,29 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
       ,roomTotal.total_rooms
       ,COUNT(reservation_details.room_id) as room_count
       ,SUM(reservation_details.number_of_people) AS people_sum
+      ,SUM(CASE 
+        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
+        THEN reservation_details.price 
+        ELSE reservation_details.price * reservation_details.number_of_people
+      END + COALESCE(ra.total_price, 0)) AS price
     FROM
       reservations
       ,reservation_details
+        LEFT JOIN 
+      plans_hotel 
+        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
+        LEFT JOIN 
+      plans_global 
+        ON plans_global.id = reservation_details.plans_global_id
+        LEFT JOIN 
+      (
+        SELECT
+          ra.reservation_detail_id
+          ,SUM(ra.price * ra.quantity) AS total_price
+        FROM reservation_addons ra
+        GROUP BY ra.reservation_detail_id
+      ) ra 
+        ON reservation_details.id = ra.reservation_detail_id
       ,(
         SELECT hotel_id, COUNT(*) as total_rooms
         FROM rooms
