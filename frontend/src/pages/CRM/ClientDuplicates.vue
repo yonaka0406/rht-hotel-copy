@@ -6,7 +6,7 @@
                     顧客重複チェック
                 </template>
                 <template #subtitle>
-                    氏名・名称
+                    
                 </template>
                 <template #content>  
                     <div v-if="duplicatePairs.length > 0">
