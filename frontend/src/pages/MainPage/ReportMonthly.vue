@@ -1,6 +1,7 @@
 <template>
     <div class="min-h-screen p-2">
         <div class="grid grid-cols-12 gap-4">
+            <!-- Selection Card -->
             <Card class="flex col-span-12">
                 <template #content> 
                     <div class="grid grid-cols-12 gap-4 items-center">
@@ -17,25 +18,8 @@
                     </div>
                     
                 </template>
-            </Card>
-            <Card class="flex col-span-6">                
-                <template #content>
-                    <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
-                        <p class="m-0">
-                            1室あたりの収益額：
-                            <span class="inline-block">
-                                <span class="">売上の合計</span>
-                                <span class="block"></span>
-                                <span class="border-t border-black">販売用部屋数の合計</span>
-                            </span>
-                        </p>
-                    </Fieldset>
-                    <div class="flex items-center justify-center">
-                        <span class="text-4xl font-bold mt-4">{{ revPAR }} 円</span>
-                    </div>
-                    
-                </template>
-            </Card>
+            </Card>            
+            <!-- Line Chart -->
             <Card class="flex col-span-6">
                 <template #title>
                     <p>売上</p>
@@ -47,6 +31,47 @@
                     <div ref="lineChart" class="w-full h-40"></div>                
                 </template>
             </Card>
+            <!-- Indexes -->
+            <Card class="flex col-span-6">                
+                <template #content>
+                    <div class="grid grid-cols-12 gap-2">
+                        <div class="col-span-6">
+                            <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
+                                <p class="m-0">
+                                    1室あたりの収益額：
+                                    <span class="inline-block">
+                                        <span class="">売上の合計</span>
+                                        <span class="block"></span>
+                                        <span class="border-t border-black">販売用部屋数の合計</span>
+                                    </span>
+                                </p>
+                            </Fieldset>
+                        </div>    
+                        <div class="flex justify-center items-center col-span-6">
+                            <span class="text-4xl justify-center font-bold">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
+                        </div>
+                        <div class="col-span-6">
+                            <Fieldset legend="ADR" :toggleable="true" collapsed>                        
+                                <p class="m-0">
+                                    客室平均単価：
+                                    <span class="inline-block">
+                                        <span class="">売上の合計</span>
+                                        <span class="block"></span>
+                                        <span class="border-t border-black">販売部屋数の合計</span>
+                                    </span>
+                                </p>
+                            </Fieldset>
+                        </div>    
+                        <div class="flex justify-center items-center col-span-6">
+                            <span class="text-4xl justify-center font-bold">{{ ADR.toLocaleString('ja-JP') }} 円</span>
+                        </div>
+                    </div>
+                    
+                    
+                    
+                </template>
+            </Card>
+            <!-- Heat Map -->
             <Card class="flex col-span-12">
                 <template #title>
                     <p>稼働マップ</p>
@@ -143,23 +168,57 @@
         revPAR.value = Math.round(totalPrice / totalRooms);
     };
 
+    // ADR
+    const ADR = ref(0);
+    const fetchADR = () => {
+        if(!reservations.value){
+            ADR.value = 0;
+            return;
+        }
+        
+        const firstDayOfMonth = new Date(startOfMonth.value);
+        const lastDayOfMonth = new Date(endOfMonth.value);
+
+        const filteredReservations = reservations.value.filter(reservation => {            
+            const reservationDate = new Date(reservation.date);
+            return reservationDate >= firstDayOfMonth && reservationDate <= lastDayOfMonth;
+        });
+
+        let totalRooms = 0;
+        let totalPrice = 0;
+
+        filteredReservations.forEach(reservation => {
+            totalRooms += parseInt(reservation.room_count);
+            totalPrice += parseFloat(reservation.price);
+        });
+
+        if (totalRooms === 0) {
+            return 0; // Prevent division by zero
+        }
+
+        ADR.value = Math.round(totalPrice / totalRooms);
+    };
+
     // eCharts
     import * as echarts from 'echarts/core';
-    import {
-        TooltipComponent,
-        GridComponent,
-        VisualMapComponent
-    } from 'echarts/components';
-    import { HeatmapChart } from 'echarts/charts';
-    import { LineChart } from 'echarts/charts';
-    import { UniversalTransition } from 'echarts/features';
-    import { CanvasRenderer } from 'echarts/renderers';
-
-    echarts.use([
+    import {        
         TooltipComponent,
         GridComponent,
         VisualMapComponent,
+        LegendComponent,
+    } from 'echarts/components';
+    import { HeatmapChart } from 'echarts/charts';
+    import { BarChart, LineChart } from 'echarts/charts';
+    import { UniversalTransition } from 'echarts/features';
+    import { CanvasRenderer } from 'echarts/renderers';
+
+    echarts.use([        
+        TooltipComponent,
+        GridComponent,
+        LegendComponent,
+        VisualMapComponent,
         HeatmapChart,
+        BarChart,
         LineChart,
         UniversalTransition,
         CanvasRenderer
@@ -336,10 +395,12 @@
         return days;
     });
     const lineChartData = ref([]);
+    const lineChartSumData = ref([]);
 
     const fetchLineChartData = async => {
         
         lineChartData.value = [];
+        lineChartSumData.value = [];
 
         if (!reservations.value){
             initLineChart();
@@ -348,6 +409,7 @@
 
         
         const chartData = [];
+        const chartSumData = [];
 
         const dateMap = {}; // Create a map for quick date lookup
         reservations.value.forEach(reservation => {
@@ -358,13 +420,18 @@
 
         const datePositionMap = {};
         let index = 0;
+        let sumPrice = 0;
         lineChartAxisX.value.forEach(date => {
             datePositionMap[date] = index;
             const price = dateMap[date] ? parseInt(dateMap[date]) : 0;
+            sumPrice = price + sumPrice;
             chartData.push(price);
+            chartSumData.push(sumPrice);
+
             index++;
         });
         lineChartData.value = chartData;
+        lineChartSumData.value = chartSumData;
         
         // console.log('datePositionMap:',datePositionMap);
 
@@ -373,9 +440,12 @@
         initLineChart();
         
     };
-    const generateLineChartOption = (AxisXvalue) => ({
+    const generateLineChartOption = () => ({
         tooltip: {
             position: 'top'
+        },
+        legend: {
+            data: ['単日', '累計']
         },
         grid: {
             height: '50%',
@@ -385,13 +455,14 @@
         },
         xAxis: {
             type: 'category',
-            data: AxisXvalue,            
+            data: lineChartAxisX.value,            
             axisLabel: {
                 rotate: 55                
             },
         },
         yAxis: {
             type: 'value',
+            name: '単日',
             axisLabel: {
                 formatter: (value) => {
                     return (value / 10000).toLocaleString() + '万円'; // Divide by 10,000 and add '万円'
@@ -400,15 +471,21 @@
         },        
         series: [
             {
-                name: '売上',
+                name: '単日',
                 data: lineChartData,
+                type: 'bar'                          
+            },
+            {
+                name: '累計',
+                data: lineChartSumData,
                 type: 'line',
                 smooth: true            
             }
+
         ]
     });
     const initLineChart = () => {
-        lineChartOption.value = generateLineChartOption(lineChartAxisX.value);
+        lineChartOption.value = generateLineChartOption();
         myLineChart = echarts.getInstanceByDom(lineChart.value);
         if (myLineChart) {            
             myLineChart.setOption(lineChartOption.value);
@@ -431,6 +508,11 @@
         await fetchHotels();
         await fetchHotel();
 
+        await fetchHeatMapData();
+        fetchLineChartData();
+        fetchRevPAR();
+        fetchADR();
+
         window.addEventListener('resize', handleResize);
     });
 
@@ -444,12 +526,14 @@
         await fetchHeatMapData();
         fetchLineChartData();
         fetchRevPAR();
+        fetchADR();
     }, { deep: true });  
     watch(selectedHotelId, async (newValue, oldValue) => {         
         console.log('selectedHotelId changed:',newValue) ;
         await fetchHeatMapData();        
         fetchLineChartData();
         fetchRevPAR();
+        fetchADR();
     }, { deep: true });  
   
 </script>
