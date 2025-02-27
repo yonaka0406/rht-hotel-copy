@@ -36,6 +36,19 @@
                 <template #content>
                     <div class="grid grid-cols-12 gap-2">
                         <div class="col-span-6">
+                            <Fieldset legend="売上" :toggleable="true" collapsed>                        
+                                <p class="m-0">
+                                    仮予約、確定予約のプランとアドオンの合計                                    
+                                </p>
+                                <p class="m-0">                                    
+                                    保留予約と社員を含まない金額
+                                </p>
+                            </Fieldset>
+                        </div>    
+                        <div class="flex justify-center items-center col-span-6">
+                            <span class="text-4xl justify-center font-bold">{{ lineChartSumData[lineChartSumData.length - 1].toLocaleString('ja-JP') }} 円</span>
+                        </div>
+                        <div class="col-span-6">
                             <Fieldset legend="RevPAR" :toggleable="true" collapsed>                        
                                 <p class="m-0">
                                     1室あたりの収益額：
