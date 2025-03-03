@@ -206,11 +206,12 @@ export function useClientStore() {
                 throw new Error('Failed to update client');
             }
             const updatedClient = await response.json();
+            res.status(200).json({ message: 'Client merged successfully' });
             
         } catch (error) {
             console.error('Failed to update client', error);
         }
-    }
+    };
 
     return {
         clients,

@@ -166,7 +166,7 @@
 </template>
   
 <script setup>
-    import { ref, computed, onMounted } from "vue";
+    import { ref, computed, watch } from "vue";
     import { useRouter } from 'vue-router';
     import ClientMerge from './components/ClientMerge.vue';
     import { useClientStore } from '@/composables/useClientStore';
@@ -352,10 +352,12 @@
         drawerProps.value = { oldClientId: oldId, newClientId };
 
     };
-
-    onMounted( async () => {  
-        
-    });
+    
+    watch(clientsIsLoading, (newVal, oldVal) => {
+        if(newVal){
+            showDrawer.value = false;
+        }
+    }, { deep: true });
     
 </script>
 <style scoped>

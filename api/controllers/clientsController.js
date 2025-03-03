@@ -138,6 +138,7 @@ const mergeClients = async (req, res) => {
     await editClientFull(newClientId, updatedFields, user_id);
     await updateClientInReservation(oldClientId, newClientId);
     await deleteClient(oldClientId, user_id);
+    res.json({message: 'Success'});
   } catch (err) {
   console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });

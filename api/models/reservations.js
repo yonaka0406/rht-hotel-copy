@@ -1213,6 +1213,7 @@ const updateClientInReservation = async (oldValue, newValue) => {
     );
 
     await client.query('COMMIT'); // Commit transaction
+    console.log('updateClientInReservation commit');
   } catch (err) {
     await client.query('ROLLBACK'); // Rollback transaction on error    
   } finally {

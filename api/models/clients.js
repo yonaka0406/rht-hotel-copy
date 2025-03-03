@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const format = require('pg-format');
 
 const transliterateKanaToRomaji = async (kanaString) => {  
   const { toRomaji } = await import('../utils/japaneseUtils.mjs');
@@ -269,6 +270,7 @@ const editClientFull = async (clientId, updatedFields, user_id) => {
 
   try {
     const result = await pool.query(query, values);
+    console.log('editClientFull success');
     return result.rows;    
   } catch (err) {
     console.error('Error updating client:', err);
@@ -324,6 +326,7 @@ const deleteClient = async (clientId, updatedBy) => {
 
   try {
     const result = await pool.query(query);
+    console.log('deleteClient success');
     return result.rowCount;
   } catch (err) {
     console.error('Error deleting client:', err);
