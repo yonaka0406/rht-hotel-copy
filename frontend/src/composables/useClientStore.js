@@ -69,6 +69,7 @@ export function useClientStore() {
             });
             
             selectedClient.value = await response.json();
+            return selectedClient.value;
             
         } catch (error) {
             console.error('Failed to fetch hotel rooms', error);
@@ -99,6 +100,24 @@ export function useClientStore() {
         }
     };
 
+    const fetchClientReservations = async (clientId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/reservation/history/${clientId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            selectedClient.value = await response.json();
+            
+        } catch (error) {
+            console.error('Failed to fetch hotel rooms', error);
+        }
+    };
+    
     const createClient = async (clientFields) => {        
         try {
           const authToken = localStorage.getItem('authToken');
@@ -122,7 +141,7 @@ export function useClientStore() {
           console.error('Failed to create client', error);
           throw error;
         }
-      };
+    };
 
     const updateClientInfo = async (client_id, updatedFields) => {
         try {
@@ -171,6 +190,28 @@ export function useClientStore() {
         }
     };
 
+    const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/crm/client/${newClientId}/merge/${oldClientId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedFields),
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to update client');
+            }
+            const updatedClient = await response.json();
+            
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
+    }
+
     return {
         clients,
         clientsIsLoading,
@@ -179,8 +220,10 @@ export function useClientStore() {
         fetchClients,
         fetchClient,
         fetchClientNameConversion,
+        fetchClientReservations,
         createClient,
         updateClientInfo,
         updateClientInfoCRM,
+        mergeClientsCRM,
     };
 }

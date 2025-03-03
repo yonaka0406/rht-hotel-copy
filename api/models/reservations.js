@@ -1184,6 +1184,43 @@ const updateReservationGuest = async (oldValue, newValue) => {
   } 
 };
 
+const updateClientInReservation = async (oldValue, newValue) => {
+  
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN'); // Start transaction
+
+    await client.query(
+      `UPDATE reservations
+       SET reservation_client_id = $1
+       WHERE reservation_client_id = $2`,
+      [newValue, oldValue]
+    );
+
+    await client.query(
+      `UPDATE reservation_details
+       SET payer_client_id = $1
+       WHERE payer_client_id = $2`,
+      [newValue, oldValue]
+    );
+
+    await client.query(
+      `UPDATE reservation_clients
+       SET client_id = $1
+       WHERE client_id = $2`,
+      [newValue, oldValue]
+    );
+
+    await client.query('COMMIT'); // Commit transaction
+  } catch (err) {
+    await client.query('ROLLBACK'); // Rollback transaction on error    
+  } finally {
+    client.release(); // Release the client back to the pool
+  }
+  
+};
+
 const updateReservationDetailPlan = async (id, hotel_id, gid, hid, price, user_id) => {
   const plans_global_id = gid === 0 ? null : gid;
   const plans_hotel_id = hid === 0 ? null : hid;
@@ -1451,6 +1488,7 @@ module.exports = {
     updateRoomByCalendar,
     updateReservationRoomGuestNumber,
     updateReservationGuest,
+    updateClientInReservation,
     updateReservationDetailPlan,
     updateReservationDetailAddon,
     updateReservationDetailRoom,

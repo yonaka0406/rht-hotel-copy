@@ -200,7 +200,6 @@ const addNewClient = async (user_id, client) => {
   }
 };
 
-
 const editClient = async (clientId, updatedFields, user_id) => {
   const query = `
     UPDATE clients SET
@@ -277,6 +276,61 @@ const editClientFull = async (clientId, updatedFields, user_id) => {
   }
 };
 
+const selectClientReservations = async (clientId) => {
+  const query = `
+    SELECT	
+      COUNT(distinct reservation_details.hotel_id) AS hotel_count
+      ,COUNT(reservation_details.date) as date_count
+      ,SUM(
+        CASE 
+        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
+        THEN reservation_details.price / reservation_details.number_of_people
+        ELSE reservation_details.price END
+        ) AS price_sum	
+    FROM 
+      reservation_clients
+      ,reservation_details
+      LEFT JOIN plans_hotel 
+        ON plans_hotel.hotel_id = reservation_details.hotel_id 
+        AND plans_hotel.id = reservation_details.plans_hotel_id
+        LEFT JOIN plans_global 
+        ON plans_global.id = reservation_details.plans_global_id
+    WHERE
+      reservation_clients.client_id = $1
+      AND reservation_details.cancelled IS NULL
+      AND reservation_clients.reservation_details_id = reservation_details.id      
+  `;
+  const values = [clientId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  }
+  catch (err) {
+    console.error('Error selecting client:', err);
+    throw new Error('Database error');
+  }
+};
+
+const deleteClient = async (clientId, updatedBy) => {
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
+
+    DELETE FROM clients
+    WHERE id = %L
+    RETURNING *;
+  `, updatedBy, clientId);
+
+  try {
+    const result = await pool.query(query);
+    return result.rowCount;
+  } catch (err) {
+    console.error('Error deleting client:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   processNameString,
   getAllClients,
@@ -286,4 +340,6 @@ module.exports = {
   addNewClient,
   editClient,
   editClientFull,
+  selectClientReservations,
+  deleteClient,
 };
