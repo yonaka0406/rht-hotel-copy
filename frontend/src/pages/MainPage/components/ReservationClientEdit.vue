@@ -112,7 +112,7 @@
                             v-model="client.email"
                             :pattern="emailPattern"
                             :class="{'p-invalid': !isValidEmail}"
-                            @input="validateEmail"
+                            @input="validateEmail(client.email)"
                             fluid                         
                         />
                         <label>メールアドレス</label>
@@ -232,8 +232,8 @@
         
         return normalizedStr;
       };
-      const validateEmail = () => {
-        isValidEmail.value = emailPattern.test(client.value.email);
+      const validateEmail = (email) => {
+        isValidEmail.value = emailPattern.test(email);
       };
       const validatePhone = (phone) => {
         isValidPhone.value = phonePattern.test(phone);
@@ -257,10 +257,12 @@
         if (event.value) {
           const selectedClient = event.value;
           isClientSelected.value = true;
+          
           client.value = {
             ...selectedClient,
             display_name: selectedClient.name_kanji || selectedClient.name,
           };
+          
         } else {
           resetClient();
         }
