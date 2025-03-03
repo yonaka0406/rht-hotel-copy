@@ -36,14 +36,14 @@
                 </div>
                     <div class="field">
                         <FloatLabel>
-                            <InputText id="name" v-model="client.name" required />
+                            <InputText id="name" v-model="clientDetails.name" required />
                             <label for="name">氏名・名称</label>
                         </FloatLabel>
                     </div>
                     <div class="field">
                         <FloatLabel>
                             <label for="name_kana">カナ</label>
-                            <InputText id="name_kana" v-model="client.name_kana" />
+                            <InputText id="name_kana" v-model="clientDetails.name_kana" />
                         </FloatLabel>                        
                     </div>
                     <div class="field">
@@ -51,7 +51,7 @@
                             <label for="name_kanji">漢字</label>
                             <InputText 
                                 id="name_kanji" 
-                                v-model="client.name_kanji"                             
+                                v-model="clientDetails.name_kanji"                             
                             />
                         </FloatLabel>                        
                     </div>
@@ -60,7 +60,7 @@
                         <FloatLabel>                            
                             <label for="date_of_birth">生年月日・設立日</label>
                             
-                            <DatePicker v-model="client.date_of_birth" 
+                            <DatePicker v-model="clientDetails.date_of_birth" 
                                 class="w-full"      
                                 :showIcon="true" 
                                 iconDisplay="input"                      
@@ -71,7 +71,7 @@
                 <!-- Type of person (Legal or Natural) -->
                 <div class="field col-6">
                     <SelectButton 
-                        v-model="client.legal_or_natural_person" 
+                        v-model="clientDetails.legal_or_natural_person" 
                         :options="personTypeOptions" 
                         option-label="label" 
                         option-value="value"
@@ -81,23 +81,23 @@
                 </div>
                 <!-- Gender input if person is natural -->
                 <div class="field col-6">          
-                    <div v-if="client.legal_or_natural_person === 'natural'" class="flex gap-3">
+                    <div v-if="clientDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
                         <RadioButton
-                            v-model="client.gender"
+                            v-model="clientDetails.gender"
                             :inputId="'male'"
                             :value="'male'"
                             :disabled="isClientSelected"
                         />
                         <label for="male">男性</label>
                         <RadioButton
-                            v-model="client.gender"
+                            v-model="clientDetails.gender"
                             :inputId="'female'"
                             :value="'female'"
                             :disabled="isClientSelected"
                         />
                         <label for="female">女性</label>
                         <RadioButton
-                            v-model="client.gender"
+                            v-model="clientDetails.gender"
                             :inputId="'other'"
                             :value="'other'"
                             :disabled="isClientSelected"
@@ -109,10 +109,10 @@
                 <div class="field col-6">
                     <FloatLabel>
                         <InputText 
-                            v-model="client.email"
+                            v-model="clientDetails.email"
                             :pattern="emailPattern"
                             :class="{'p-invalid': !isValidEmail}"
-                            @input="validateEmail(client.email)"
+                            @input="validateEmail(clientDetails.email)"
                             fluid                         
                         />
                         <label>メールアドレス</label>
@@ -123,10 +123,10 @@
                 <div class="field col-6">
                     <FloatLabel>
                     <InputText
-                        v-model="client.phone"
+                        v-model="clientDetails.phone"
                         :pattern="phonePattern"
                         :class="{'p-invalid': !isValidPhone}"
-                        @input="validatePhone(client.phone)"
+                        @input="validatePhone(clientDetails.phone)"
                         fluid                        
                     />
                     <label>電話番号</label>
@@ -137,10 +137,10 @@
                 <div class="field col-6">
                     <FloatLabel>
                     <InputText
-                        v-model="client.fax"
+                        v-model="clientDetails.fax"
                         :pattern="phonePattern"
                         :class="{'p-invalid': !isValidPhone}"
-                        @input="validatePhone(client.fax)"
+                        @input="validatePhone(clientDetails.fax)"
                         fluid
                     />
                     <label>FAX</label>
@@ -181,7 +181,8 @@
       const { clients, fetchClients, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
       const { setReservationClient } = useReservationStore();
 
-      const client = ref({
+      const client = ref({});
+      const clientDetails = ref({
         id: null,
         name: '',
         name_kana: '',
@@ -258,7 +259,7 @@
           const selectedClient = event.value;
           isClientSelected.value = true;
           
-          client.value = {
+          clientDetails.value = {
             ...selectedClient,
             display_name: selectedClient.name_kanji || selectedClient.name,
           };
@@ -273,14 +274,14 @@
       const saveClient = async () => {
         if (isClientSelected.value) {
           
-          !client.value.date_of_birth ? formatDate(new Date(client.value.date_of_birth)): null;
-          console.log('saveClient:',client.value)
-          
-          await updateClientInfo(client.value.id, client.value);
-          await setReservationClient(client.value.id);          
+          !clientDetails.value.date_of_birth ? formatDate(new Date(clientDetails.value.date_of_birth)): null;
+          //console.log('saveClient:',clientDetails.value);
+          await updateClientInfo(clientDetails.value.id, clientDetails.value);
+          await setReservationClient(clientDetails.value.id);          
           toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
         } else {
-          const newClient = await createClient(client.value);
+          //console.log('newClient:',clientDetails.value);
+          const newClient = await createClient(clientDetails.value);
           // console.log(newClient);
           // console.log('New client id:', newClient.id);
           await setReservationClient(newClient.id);          
@@ -289,7 +290,7 @@
       };
 
       const resetClient = () => {
-        client.value = {
+        clientDetails.value = {
           id: null,
           name: '',
           name_kana: '',
@@ -319,70 +320,59 @@
         }
 
         if (props.client_id) {
-          const selectedClient = clients.value.find((client) => client.id === props.client_id);
+          selectedClient.value = clients.value.find((client) => client.id === props.client_id);
           if (selectedClient) {
-            client.value = { 
-                ...selectedClient,
-                display_name: selectedClient.name_kanji || selectedClient.name,
+            clientDetails.value = { 
+                ...selectedClient.value,
+                display_name: selectedClient.value.name_kanji || selectedClient.value.name,
             };
+            client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name }
           }
         }
-        // console.log('Client:', client.value);
+        console.log('onMounted clientDetails:', clientDetails.value);
         isClientSelected.value = true;
         
       });
 
       watch(client, async (newValue, oldValue) => {
-          // console.log('Client changed:', newValue);                   
+             
+        if(oldValue.display_name){
+          // console.log('Client changed with display_name old:', oldValue.display_name, 'new:', newValue.display_name);      
+          resetClient(); 
+        } else if(newValue && !newValue.display_name){
+          // console.log('Client changed with old:', oldValue, 'new:', newValue); 
+          const clientName = await fetchClientNameConversion(newValue);
+          clientDetails.value.name = clientName.name;
+          // console.log('clientName name:', clientName.name);
+          clientDetails.value.name_kana = clientName.nameKana;
+          // console.log('clientName nameKana:', clientName.nameKana);
+          clientDetails.value.name_kanji = clientName.nameKanji;
+          // console.log('clientName nameKanji:', clientName.nameKanji);
+        }
       }, { deep: true });
-      watch(() => client.value.legal_or_natural_person,
+
+      watch(() => clientDetails.value.legal_or_natural_person,
         (newValue) => {
           if (newValue === 'legal') {
             //console.log('Changed to other');
-            client.value.gender = 'other';
+            clientDetails.value.gender = 'other';
           } 
-          if (newValue === 'natural' && client.value.id == null){
-            client.value.gender = 'male';
+          if (newValue === 'natural' && clientDetails.value.id == null){
+            clientDetails.value.gender = 'male';
           }
         },
-      );
-      watch(() => client.value.display_name,
-        async (newValue, oldValue) => {
-          //console.log('Changed name:', newValue); 
-          //console.log('Selected client:', client.value);
-          if(client.value && oldValue !== undefined){   
-            const selectedName = client.value.name_kanji || client.value.name;
-            //console.log('Selected name:', selectedName); 
-            const clientName = await fetchClientNameConversion(client.value.display_name);
-            
-            if (newValue && newValue !== oldValue && newValue !== selectedName) {            
-              // Reset fields if name changes and a client was previously selected
-              // console.log('Resetting client details'); 
-              resetClient();
-              // console.log('clientName:', clientName);
-              
-              client.value.name = clientName.name;
-              // console.log('clientName name:', clientName.name);
-              client.value.name_kana = clientName.nameKana;
-              // console.log('clientName nameKana:', clientName.nameKana);
-              client.value.name_kanji = clientName.nameKanji;
-              // console.log('clientName nameKanji:', clientName.nameKanji);
-            }
-          }
-        },
-        { immediate: true }
-      );
+      );      
       
   </script>
   
 <style scoped>
-    .field {
+  .field {
     margin-bottom: 1rem;
-    }
-    .bg-edit {
-        background-color: lightcyan; /* Change to your desired color for editing */
-    }
-    .bg-new {
-        background-color: honeydew; /* Change to your desired color for new client */
-    }
+  }
+  .bg-edit {
+      background-color: lightcyan; /* Change to your desired color for editing */
+  }
+  .bg-new {
+      background-color: honeydew; /* Change to your desired color for new client */
+  }
 </style>
