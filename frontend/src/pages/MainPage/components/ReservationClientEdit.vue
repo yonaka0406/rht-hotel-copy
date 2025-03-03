@@ -18,8 +18,9 @@
                             :suggestions="filteredClients"
                             optionLabel="display_name"
                             field="id"
-                            @complete="filterClients"                                            
-                            @option-select="onClientSelect"                
+                            @complete="filterClients"
+                            @option-select="onClientSelect"
+                            @clear="resetClient"
                             fluid
                             required
                         >
@@ -160,7 +161,7 @@
     </div>
   </template>
   
-  <script>
+  <script setup>
   import { ref, watch, computed, onMounted } from 'vue';
   import { useRoute } from 'vue-router';
   import { useToast } from 'primevue/usetoast';
@@ -169,33 +170,31 @@
   import { Card } from 'primevue';  
   import { FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, MultiSelect, AutoComplete, RadioButton, Button } from 'primevue';  
   
-  export default {
-    name: 'ClientEdit',
-    components: {
-      Card,
-      FloatLabel,
-      InputText,
-      InputNumber,
-      DatePicker,
-      Select,
-      SelectButton,
-      MultiSelect,
-      AutoComplete,
-      RadioButton,
-      Button,
-    },
-    props: {
-      client_id: {
-        type: String,
-        default: null,
-      },
-    },
-    setup(props) {
+    const props = defineProps({        
+        client_id: {
+            type: String,
+            default: null,
+        },        
+    });
+
       const toast = useToast();
       const { clients, fetchClients, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
       const { setReservationClient } = useReservationStore();
 
-      const client = ref({});
+      const client = ref({
+        id: null,
+        name: '',
+        name_kana: '',
+        name_kanji: '',
+        full_name_key: '',
+        legal_or_natural_person: 'legal',
+        gender: 'other',
+        date_of_birth: null,
+        email: '',
+        phone: '',
+        fax: '',
+        display_name: '', 
+      });
   
       const personTypeOptions = [
         { label: '法人', value: 'legal' },
@@ -295,18 +294,20 @@
       };
 
       const resetClient = () => {
-        client.value.id = null;
-        client.value.name = '';
-        client.value.name_kana = '';
-        client.value.name_kanji = '';
-        client.value.full_name_key = '';
-        client.value.legal_or_natural_person = 'legal';
-        client.value.gender = 'other';
-        client.value.date_of_birth = null;
-        client.value.email = '';
-        client.value.phone = '';
-        client.value.fax = '';
-
+        client.value = {
+          id: null,
+          name: '',
+          name_kana: '',
+          name_kanji: '',
+          full_name_key: '',
+          legal_or_natural_person: 'legal',
+          gender: 'other',
+          date_of_birth: null,
+          email: '',
+          phone: '',
+          fax: '',
+          display_name: '',
+        };
         isClientSelected.value = false;
       };
   
@@ -377,25 +378,6 @@
         { immediate: true }
       );
       
-  
-      return {
-        client,
-        personTypeOptions,
-        emailPattern,
-        isValidEmail,
-        phonePattern,
-        isValidPhone,
-        validateEmail,
-        validatePhone,
-        isClientSelected,
-        selectedClient,
-        filteredClients,        
-        filterClients,
-        onClientSelect,
-        saveClient,
-      };
-    },
-  };
   </script>
   
 <style scoped>
