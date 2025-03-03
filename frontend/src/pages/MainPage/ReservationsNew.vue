@@ -132,7 +132,7 @@
                 field="id"                
                 @option-select="onClientSelect"                
                 fluid
-                required
+                required                
               >
                 <template #option="slotProps">
                   <div>
@@ -583,6 +583,8 @@
       (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
       (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
     );
+    
+    reservationDetails.value.name = query;
   };      
   const onClientSelect = (event) => {
     // Get selected client object from the event
