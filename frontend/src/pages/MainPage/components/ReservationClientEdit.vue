@@ -254,23 +254,16 @@
         );
       };      
       const onClientSelect = (event) => {
-        // Get selected client object from the event
-        selectedClient.value = event.value;        
-        isClientSelected.value = true;
-        // console.log('Selected Client:', selectedClient.value);        
-
-        // Update reservationDetails with the selected client's information
-        client.value.id = selectedClient.value.id;
-        client.value.display_name = selectedClient.value.name_kanji || selectedClient.value.name;
-        client.value.name = selectedClient.value.name;
-        client.value.name_kana = selectedClient.value.name_kana;
-        client.value.name_kanji = selectedClient.value.name_kanji;
-        client.value.legal_or_natural_person = selectedClient.value.legal_or_natural_person;
-        client.value.gender = selectedClient.value.gender;
-        client.value.date_of_birth = selectedClient.value.date_of_birth;        
-        client.value.email = selectedClient.value.email;
-        client.value.phone = selectedClient.value.phone;
-        client.value.fax = selectedClient.value.fax;
+        if (event.value) {
+          const selectedClient = event.value;
+          isClientSelected.value = true;
+          client.value = {
+            ...selectedClient,
+            display_name: selectedClient.name_kanji || selectedClient.name,
+          };
+        } else {
+          resetClient();
+        }
         
         console.log('onClientSelect event:',client.value);
       };
