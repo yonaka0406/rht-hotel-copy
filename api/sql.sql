@@ -433,6 +433,7 @@ CREATE TABLE reservation_payments (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
     reservation_id UUID NOT NULL, -- Reference to reservations table
+    date DATE NOT NULL,
     room_id INT,
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
     price DECIMAL,
