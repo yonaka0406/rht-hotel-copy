@@ -178,7 +178,7 @@ import { toDisplayString } from 'vue';
         const uniqueRoomIds = [...new Set(reservationDetails.value.reservation.map(room => room.room_id))];
         newPayment.value.room_id = uniqueRoomIds[0];
 
-        console.log('onMounted newPayment:', newPayment.value)
+        // console.log('onMounted newPayment:', newPayment.value)
     });
 /*
     watch(reservationRooms, (newValue, oldValue) => {
