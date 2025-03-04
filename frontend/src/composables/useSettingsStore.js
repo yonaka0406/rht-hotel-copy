@@ -37,11 +37,51 @@ export function useSettingsStore() {
         } catch (error) {
             console.error('Failed to fetch payment types', error);
         }
-    }
+    };
+
+    const alterPaymentTypeVisibility = async (id, visible) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/settings/payments/visibility/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ visible })
+            });
+    
+            const data = await response.json();
+            return data
+        } catch (error) {
+            console.error('Failed to fetch payment types', error);
+        }
+    };
+
+    const alterPaymentTypeDescription = async (id, description) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/settings/payments/description/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ description })
+            });
+    
+            const data = await response.json();
+            return data
+        } catch (error) {
+            console.error('Failed to fetch payment types', error);
+        }
+    };
 
     return {        
         paymentTypes,
         fetchPaymentTypes,
         createPaymentType,
+        alterPaymentTypeVisibility,
+        alterPaymentTypeDescription,
     };
 }

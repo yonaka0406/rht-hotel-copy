@@ -448,7 +448,8 @@ CREATE TABLE payment_types (
     hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
     name TEXT NOT NULL,
     description TEXT,     
-    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point')) NOT NULL DEFAULT 'cash',    
+    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point')) NOT NULL DEFAULT 'cash',
+    visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),

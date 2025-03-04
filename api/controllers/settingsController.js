@@ -1,4 +1,4 @@
-const { selectPaymentTypes, insertPaymentType } = require('../models/settings');
+const { selectPaymentTypes, insertPaymentType, updatePaymentTypeVisibility, updatePaymentTypeDescription } = require('../models/settings');
 
 const getPaymentTypes = async (req, res) => {
   try {
@@ -28,23 +28,34 @@ const addPaymentType = async (req, res) => {
   }
 };
 
-const setPaymentTypes = async (req, res) => {
-  const { id, name, status_id, role_id } = req.body;
-  const updated_by = req.user.id;
-
-  // Validate that all required fields are provided
-  if (!id || !status_id || !role_id) {
-    return res.status(400).json({ error: 'User ID, status ID, and role ID are required' });
-  }
+const changePaymentTypeVisibility = async (req, res) => {
+  const { id } = req.params;
+  const { visible } = req.body;
+  const user_id = req.user.id;
 
   try {
-    const user = await updateUserInfo(id, name, status_id, role_id, updated_by);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    // Successfully updated the user
-    res.status(200).json({ message: 'User updated successfully' });
+    const data = await updatePaymentTypeVisibility(id, visible, user_id);
+    if (!data) {
+      return res.status(404).json({ error: 'Data not found' });
+    }        
+    res.status(200).json({ message: 'Data updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const changePaymentTypeDescription = async (req, res) => {
+  const { id } = req.params;
+  const { description } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const data = await updatePaymentTypeDescription(id, description, user_id);
+    if (!data) {
+      return res.status(404).json({ error: 'Data not found' });
+    }        
+    res.status(200).json({ message: 'Data updated successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -55,5 +66,6 @@ const setPaymentTypes = async (req, res) => {
 module.exports = { 
   getPaymentTypes, 
   addPaymentType, 
-  setPaymentTypes,   
+  changePaymentTypeVisibility,
+  changePaymentTypeDescription, 
 };

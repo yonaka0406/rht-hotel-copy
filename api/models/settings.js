@@ -33,7 +33,48 @@ const insertPaymentType = async (newData, userId) => {
   }
 }
 
+const updatePaymentTypeVisibility = async (id, visible, userId) => {
+  const query = `
+      UPDATE payment_types SET 
+        visible = $1
+        ,updated_by = $2
+      WHERE id = $3
+      RETURNING *;
+  `;
+  const values = [visible, userId, id];
+
+  try {
+      const result = await pool.query(query, values);
+      console.log('updatePaymentTypeVisibility:', result.rows);
+      return result.rows[0];
+  } catch (err) {
+      console.error('Error:', err);
+      throw new Error('Database error');
+  }
+};
+
+const updatePaymentTypeDescription = async (id, description, userId) => {
+  const query = `
+      UPDATE payment_types SET 
+        description = $1
+        ,updated_by = $2
+      WHERE id = $3
+      RETURNING *;
+  `;
+  const values = [description, userId, id];
+
+  try {
+      const result = await pool.query(query, values);
+      return result.rows[0];
+  } catch (err) {
+      console.error('Error:', err);
+      throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectPaymentTypes,
-  insertPaymentType,  
+  insertPaymentType,
+  updatePaymentTypeVisibility,
+  updatePaymentTypeDescription,
 };

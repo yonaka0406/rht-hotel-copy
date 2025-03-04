@@ -18,10 +18,37 @@
                     
                     
                 </template>
-                <template #contents>
-                    <DataTable :value="paymentTypes">
-                        <Column>
-                        </Column>
+                <template #content>
+                    <DataTable :value="paymentTypes"
+                        paginator :rows="5"
+                    >
+                    <Column header="ホテルID">
+                        <template #body="slotProps">
+                            <Select v-model="slotProps.data.hotel_id" 
+                                :options="hotels" 
+                                optionLabel="name"
+                                optionValue="id"
+                                disabled
+                                fluid
+                            />
+                        </template>
+                    </Column>
+                    <Column field="name" header="名称"></Column>
+                    <Column field="transaction" header="支払い区分">
+                        <template #body="{ data }">
+                            <Tag :value="getTransactionLabel(data.transaction)" :style="{ backgroundColor: getTransactionColor(data.transaction), color: 'white' }" />
+                        </template>
+                    </Column>
+                    <Column field="description" header="詳細">
+                        <template #body="{ data }">
+                            <InputText v-model="data.description" @blur="updateDescription(data)" />
+                        </template>
+                    </Column>
+                    <Column field="visible" header="表示">
+                        <template #body="{ data }">
+                            <ToggleSwitch v-model="data.visible" @change="toggleVisibility(data)" />
+                        </template>
+                    </Column>
                     </DataTable>
                 </template>
             </Card>
@@ -74,10 +101,7 @@
             </div>
         </div>
     </Dialog>
-    
-    <Dialog header="支払い方法編集" v-model:visible="showEditDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
 
-    </Dialog>
 </template>
 
 <script setup>
@@ -86,31 +110,32 @@
     import { useSettingsStore } from '@/composables/useSettingsStore';
     import { useHotelStore } from '@/composables/useHotelStore';
 
-    import { Panel, Card, Button, DataTable, Column, Dialog, FloatLabel, InputText, Select, Textarea } from "primevue";
+    import { Panel, Card, Tag, Button, DataTable, Column, Dialog, FloatLabel, InputText, ToggleSwitch, Select, Textarea } from "primevue";
 
-    const { paymentTypes, fetchPaymentTypes, createPaymentType } = useSettingsStore();
+    const { paymentTypes, fetchPaymentTypes, createPaymentType, alterPaymentTypeVisibility, alterPaymentTypeDescription } = useSettingsStore();
     const { hotels, fetchHotels } = useHotelStore();
 
     const toast = useToast();
 
     const showDialog = ref(false);
-    const showEditDialog = ref(false);
 
-    const newData = ref({ 
-        name: '', 
-        description: '', 
-        transaction: 'cash',
-        hotel_id: null
-    });
-    const editData = ref(null);
+    const newData = ref(null);
     const transactionOptions = [
-        { label: '現金', value: 'cash' },
-        { label: '振込', value: 'wire' },
-        { label: 'クレジットカード', value: 'credit' },
-        { label: '請求書', value: 'bill' },
-        { label: 'ポイント', value: 'point' }
-    ];    
+        { label: '現金', value: 'cash', color: '#28a745' },
+        { label: '振込', value: 'wire', color: '#007bff' },
+        { label: 'クレジットカード', value: 'credit', color: '#6f42c1' },
+        { label: '請求書', value: 'bill', color: '#fd7e14' },
+        { label: 'ポイント', value: 'point', color: '#e83e8c' }
+    ];
 
+    const resetNewData = () => {
+        newData.value = { 
+            name: '', 
+            description: '', 
+            transaction: 'cash',
+            hotel_id: null
+        };
+    }
     const addNewData = async () => {
         // Validation
         if (!newData.value.name.trim()) {
@@ -131,24 +156,44 @@
         // console.log('newData:', newData.value);
         await createPaymentType(newData.value);
 
-        toast.add({ severity: 'success', summary: '新規追加', detail: '支払い方法追加されました。', life: 3000 });            
+        toast.add({ severity: 'success', summary: '新規追加', detail: '支払い方法追加されました。', life: 3000 });
+        
+        resetNewData();
+        await fetchPaymentTypes();
 
         showDialog.value = false;
     };
-    const resetEditData = () => {
-        editData.value = { 
-            id: null, 
-            name: '', 
-            description: '', 
-            transaction: 'cash',
-            hotel_id: null
-        };
+
+    const getTransactionLabel = (value) => {
+        const option = transactionOptions.find(opt => opt.value === value);
+        return option ? option.label : value;
+    };
+    const getTransactionColor = (value) => {
+        const option = transactionOptions.find(opt => opt.value === value);
+        return option ? option.color : 'gray'; // Default color if not found
+    };
+    const updateDescription = async (paymentType) => {
+        try {
+            await alterPaymentTypeDescription(paymentType.id, paymentType.description);
+            
+            toast.add({ severity: 'success', summary: '更新完了', detail: '詳細を更新しました。', life: 3000 });
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: '詳細の更新に失敗しました。', life: 3000 });
+        }
+    };
+    const toggleVisibility = async (paymentType) => {
+        try {
+            await alterPaymentTypeVisibility(paymentType.id, paymentType.visible);
+            
+            toast.add({ severity: 'success', summary: '更新完了', detail: '表示設定を変更しました。', life: 3000 });
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: '表示設定の更新に失敗しました。', life: 3000 });
+        }
     };
 
     onMounted(async () => {        
         await fetchPaymentTypes();
         await fetchHotels();
-
-        console.log('paymentTypes:', paymentTypes.value)
+        resetNewData();
     });
 </script>
