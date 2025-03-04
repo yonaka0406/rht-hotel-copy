@@ -1,36 +1,72 @@
 <template>
     <div class="p-4">
-        <Card>
-            <template #title>
-                Add Payment
-            </template>
+        <Card>            
             <template #content>
                 <form @submit.prevent="addPayment">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="paymentType" class="block text-sm font-medium text-gray-700">Payment Type</label>
-                            <Select v-model="newPayment.type"   
-                                :options="paymentTypes" 
-                                placeholder="Select Type"
-                                id="paymentType" 
-                            />
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        <!-- Date -->
+                        <div class="mb-4">
+                            <FloatLabel>
+                                <label>日付</label>
+                                <InputText v-model="newPayment.date" 
+                                    type="date" 
+                                    fluid
+                                    required
+                                />
+                            </FloatLabel>
                         </div>
-                        <div>
-                            <label for="paymentValue" class="block text-sm font-medium text-gray-700">Value</label>
-                            <InputNumber v-model="newPayment.value" mode="currency" currency="USD" locale="en-US" id="paymentValue" />
+                        <!-- Transaction type -->
+                        <div class="mb-4">
+                            <FloatLabel>
+                                <label>支払い方法</label>
+                                <Select v-model="newPayment.type"   
+                                    :options="paymentTypes"                                     
+                                    optionLabel="name"
+                                    optionValue="transaction"
+                                    fluid
+                                    required
+                                />
+                            </FloatLabel>                            
                         </div>
-
-                        <div>
-                            <label for="room" class="block text-sm font-medium text-gray-700">Room</label>
-                            <Select v-model="newPayment.room" :options="availableRooms" optionLabel="roomNumber" placeholder="Select Room" id="room" />
+                        <!-- Room -->
+                        <div class="mb-4">
+                            <FloatLabel>
+                                <label>部屋</label>
+                                <Select v-model="newPayment.room_id" 
+                                    :options="reservationRooms"
+                                    optionLabel="room_number"
+                                    optionValue="room_id"
+                                    fluid
+                                    required 
+                                />
+                            </FloatLabel>   
                         </div>
-
-                        <div>
-                            <label for="payerClientId" class="block text-sm font-medium text-gray-700">Payer Client ID</label>
-                            <Select v-model="newPayment.payerClientId" :options="clientIds" placeholder="Select Client ID" id="payerClientId" />
+                        <!-- Value -->
+                        <div class="mb-4">
+                            <FloatLabel>
+                                <label>金額</label>
+                                <InputNumber v-model="newPayment.value" 
+                                    mode="currency" 
+                                    currency="JPY" locale="jp-JA" 
+                                    fluid
+                                    required
+                                />
+                            </FloatLabel>
+                        </div>
+                        <!-- Client -->
+                        <div class="mb-4">
+                            <FloatLabel>
+                                <label>支払者</label>
+                                <Select v-model="newPayment.payerClientId" 
+                                    :options="clientIds" 
+                                    placeholder="支払者"
+                                    fluid
+                                    required
+                                />
+                            </FloatLabel>
                         </div>                        
-                        <div class="mt-4">
-                            <Button label="Add Payment" class="p-button-primary" type="submit" />
+                        <div>
+                            <Button label="追加" class="p-button-primary" type="submit" />
                         </div>
                     </div>
                 </form>
@@ -56,9 +92,18 @@
 </template>
 
 <script setup>
-    import { ref, computed } from 'vue';
-    import { Card, Select, InputNumber, Button } from 'primevue';
-    import { DataTable, Column } from 'primevue';
+    import { ref, computed, watch, onMounted } from 'vue';
+    import { useToast } from 'primevue/usetoast';
+    import { useSettingsStore } from '@/composables/useSettingsStore';
+    import { useReservationStore } from '@/composables/useReservationStore';
+    import { useHotelStore } from '@/composables/useHotelStore';
+
+    import { Card, FloatLabel, Select, InputText, InputNumber, Button, DataTable, Column } from 'primevue';    
+import { toDisplayString } from 'vue';
+
+    const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
+    const { reservationDetails, fetchReservation } = useReservationStore();
+    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
     
     const props = defineProps({        
         hotel_id: {
@@ -71,42 +116,75 @@
         },
     });
 
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
     // Mock Data (Replace with your actual data)
     const reservation = ref({
         rooms: [{ roomNumber: '101' }, { roomNumber: '102' }],
         clients: [{ id: 'C1' }, { id: 'C2' }],
         billableAmount: 500,
     });
+    
+    const reservationRooms = computed(() => {
+        if (!reservationDetails.value || !selectedHotelRooms.value || !reservationDetails.value.reservation) {
+            return [];
+        }
 
-    const availableRooms = computed(() => reservation.value.rooms);
+        const uniqueRoomIds = [...new Set(reservationDetails.value.reservation.map(room => room.room_id))];
+        return selectedHotelRooms.value.filter(room => uniqueRoomIds.includes(room.room_id));
+    });
     const clientIds = computed(() => reservation.value.clients.map(client => client.id));
     const billableAmount = computed(() => reservation.value.billableAmount);
-
-    const paymentTypes = ['Cash', 'Card', 'Billing', 'Check']; // Replace with your payment types
+    
     const payments = ref([
     { date: '2023-10-26', type: 'Card', value: 200, room: { roomNumber: '101' }, payerClientId: 'C1', billingNo: 'B123' },
     { date: '2023-10-25', type: 'Cash', value: 150, room: { roomNumber: '102' }, payerClientId: 'C2', billingNo: 'B124' },
     ]);
 
     const newPayment = ref({
-    type: null,
-    value: null,
-    room: null,
-    payerClientId: null,
+        date: formatDate(new Date()),
+        type: 'cash',
+        value: 0,
+        room_id: null,
+        payerClientId: null,
     });
 
     const addPayment = () => {
-    payments.value.push({
-        ...newPayment.value,
-        date: new Date().toISOString().slice(0, 10),
-        billingNo: 'TBD', // Add logic for billing number here
-    });
-    newPayment.value = { type: null, value: null, room: null, payerClientId: null };
+        payments.value.push({
+            ...newPayment.value,
+            date: new Date().toISOString().slice(0, 10),
+            billingNo: 'TBD', // Add logic for billing number here
+        });
+        newPayment.value = { type: null, value: null, room: null, payerClientId: null };
     };
 
     const totalPaidBilled = computed(() => {
     return payments.value.reduce((acc, payment) => acc + payment.value, 0);
     });
+
+    onMounted( async () => {   
+        await setHotelId(props.hotel_id);
+        await fetchHotel();
+        await fetchReservation(props.reservation_id);
+        await fetchPaymentTypes();
+        // console.log(reservationDetails.value)
+        // console.log(selectedHotelRooms.value)
+
+        const uniqueRoomIds = [...new Set(reservationDetails.value.reservation.map(room => room.room_id))];
+        newPayment.value.room_id = uniqueRoomIds[0];
+
+        console.log('onMounted newPayment:', newPayment.value)
+    });
+/*
+    watch(reservationRooms, (newValue, oldValue) => {
+        console.log('reservationRooms changed:', newValue);
+    });
+*/
 </script>
 
 <style scoped>
