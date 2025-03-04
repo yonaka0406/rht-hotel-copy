@@ -144,6 +144,18 @@
             
         </Card>
 
+        <!-- Rooms Data Table component-->
+        <Card class="m-2">
+            <template #title>部屋</template>
+            <template #content>
+                <ReservationRoomsView 
+                    v-if="reservationDetails"
+                    :reservation_details="reservationDetails"                    
+                />
+            </template>
+            
+        </Card>
+
         <!-- Rooms Data Table -->
         <Card class="m-2">
             <template #title>部屋</template>
@@ -876,7 +888,8 @@
     import { useClientStore } from '@/composables/useClientStore';
     import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
     import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
-    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
+    import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
+    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';    
 
     import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
     import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
