@@ -581,48 +581,8 @@
                 // console.log('in',minCheckIn.value,'out',maxCheckOut.value);
             }
         }
-        if(bulkEditReservationDialogVisible.value){
-            console.log('bulkEditReservationDialogVisible is true');
-            bulkEditReservationDialogTab.value = newTabValue * 1;
-            // Period change
-            if(bulkEditReservationDialogTab.value === 4){                    
-                const hotelId = editReservationDetails.value[0].hotel_id;
-                newCheckIn.value = new Date(editReservationDetails.value[0].check_in);
-                newCheckOut.value = new Date(editReservationDetails.value[0].check_out);
 
-                const checkIn = formatDate(newCheckIn.value);
-                const checkOut = formatDate(newCheckOut.value);
-
-                groupedRooms.value.every(async (room) =>{
-                    const roomId = room.room_id;
-                    const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
-                    
-                    if (results.earliestCheckIn) {
-                        const earliestCheckInDate = new Date(results.earliestCheckIn);
-                        if (!minCheckIn.value || earliestCheckInDate > minCheckIn.value) {
-                            minCheckIn.value = earliestCheckInDate;
-                        }
-                    }
-
-                    if (results.latestCheckOut) {
-                        const latestCheckOutDate = new Date(results.latestCheckOut);
-                        if (!maxCheckOut.value || latestCheckOutDate < maxCheckOut.value) {
-                            maxCheckOut.value = latestCheckOutDate;
-                        }
-                    }
-
-                    // Store the results and room values in roomsAvailableChanges
-                    roomsAvailableChanges.value.push({
-                        roomId: roomId,
-                        roomValues: room,
-                        results: results
-                    });
-                    console.log('roomsAvailableChanges', roomsAvailableChanges.value);
-                    console.log('Earliest Check-In:', minCheckIn.value, 'Latest Check-Out:', maxCheckOut.value);
-                });
-            }
-        }
-        };
+    };
     // Day
     const openReservationDayDetailDialog = async (day) => {   
         dialogHotelId.value = day.hotel_id;            
