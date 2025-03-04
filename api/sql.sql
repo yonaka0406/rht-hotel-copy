@@ -387,6 +387,7 @@ CREATE TABLE reservation_details (
     number_of_people INT NOT NULL,
     price DECIMAL,
     cancelled UUID DEFAULT NULL,
+    billable BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -396,6 +397,9 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_details 
+ADD COLUMN billable BOOLEAN DEFAULT TRUE;
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
@@ -417,13 +421,39 @@ CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
     reservation_details_id UUID NOT NULL, -- Reference to reservation_details table
-    client_id UUID NOT NULL REFERENCES clients(id),              -- Reference to clients table    
+    client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE    
 ) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE reservation_payments (
+    id UUID DEFAULT gen_random_uuid(),
+    hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
+    reservation_id UUID NOT NULL, -- Reference to reservations table
+    room_id INT,
+    client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
+    price DECIMAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    PRIMARY KEY (hotel_id, id),
+    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
+) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE payment_types (
+    id SERIAL PRIMARY KEY, 
+    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
+    name TEXT NOT NULL,
+    description TEXT,     
+    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point')) NOT NULL DEFAULT 'cash',    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    UNIQUE (name)
+);
 
 --Ainda nao esta certo que vai ser usada
 

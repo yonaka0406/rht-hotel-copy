@@ -34,6 +34,7 @@ const plansRoutes = require('./routes/plansRoutes');
 const clientsRoutes = require('./routes/clientsRoutes');
 const reservationsRoutes = require('./routes/reservationsRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const settingsRoutes = require('./routes/settingsRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -46,6 +47,7 @@ app.use('/api', plansRoutes);
 app.use('/api', clientsRoutes);
 app.use('/api', reservationsRoutes);
 app.use('/api', reportRoutes);
+app.use('/api', settingsRoutes);
 
 // Connect to PostgreSQL database
 const pool = require('./config/database');

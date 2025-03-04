@@ -122,7 +122,7 @@
       >
         <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
           <!-- Name of the person making the reservation -->
-          <div class="col-span-2">
+          <div class="col-span-2 mb-6">
             <FloatLabel>              
               <AutoComplete
                 v-model="client"

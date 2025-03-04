@@ -225,6 +225,14 @@
                     ],
                 },
                 {
+                    key: 'other-settings',
+                    label: 'その他設定',
+                    icon: 'pi pi-cog',
+                    command: () => {
+                        router.push('/admin/settings');
+                    }
+                },
+                {
                     key: 'manage-ota',
                     label: 'OTA Exchange',
                     icon: 'pi pi-arrow-right-arrow-left',

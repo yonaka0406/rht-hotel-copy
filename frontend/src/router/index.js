@@ -14,6 +14,7 @@ const ManageHotels = () => import('@/pages/Admin/ManageHotels.vue');
 const ManageHotel = () => import('@/pages/Admin/ManageHotel.vue');
 const ManagePlans = () => import('@/pages/Admin/ManagePlans.vue');
 const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
+const ManageSettings = () => import('@/pages/Admin/ManageSettings.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
@@ -68,6 +69,7 @@ const routes = [
       { path: 'hotel-edit', component: ManageHotel },
       { path: 'hotel-plans', component: ManagePlans },
       { path: 'hotel-addons', component: ManageAddons },
+      { path: 'settings', component: ManageSettings },
       { path: 'ota', component: ManageOTA }
     ],
     meta: { requiresAuth: true },
