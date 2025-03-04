@@ -149,11 +149,10 @@
             <template #title>部屋</template>
             <template #content>
                 <ReservationRoomsView 
-                    v-if="reservationDetails"
-                    :reservation_details="reservationDetails"                    
+                    v-if="reservationDetails.reservation"
+                    :reservation_details="reservationDetails.reservation"                    
                 />
-            </template>
-            
+            </template>            
         </Card>
 
         <!-- Rooms Data Table -->
