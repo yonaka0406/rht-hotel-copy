@@ -21,7 +21,7 @@ const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
 const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
-const ReservationEdit = () => import('@/pages/MainPage/components/ReservationEdit.vue');
+const ReservationEdit = () => import('@/pages/MainPage/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
 const ReportDaily = () => import('@/pages/MainPage/ReportDaily.vue');
 const ReportMonthly = () => import('@/pages/MainPage/ReportMonthly.vue');

@@ -112,7 +112,7 @@
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';  
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
-  import ReservationEdit from './components/ReservationEdit.vue';
+  import ReservationEdit from './ReservationEdit.vue';
   import { Panel, Card, Drawer, Skeleton, Avatar } from 'primevue';
   import { DatePicker, Button } from 'primevue';
   

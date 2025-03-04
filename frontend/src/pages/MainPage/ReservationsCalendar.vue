@@ -138,7 +138,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   import { useClientStore } from '@/composables/useClientStore';
   import { useReservationStore } from '@/composables/useReservationStore';
-  import ReservationEdit from './components/ReservationEdit.vue';
+  import ReservationEdit from './ReservationEdit.vue';
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
   import { Panel, Drawer, Skeleton } from 'primevue';
   import { SelectButton, DatePicker, InputText } from 'primevue';
