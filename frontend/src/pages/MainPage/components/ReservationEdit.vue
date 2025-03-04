@@ -209,6 +209,18 @@
             </template>
         </Card>
 
+        <Card class="m-2">
+            <template #title>清算</template>
+            <template #content>
+                <ReservationPayments
+                    v-if="selectedHotelId && reservationId"
+                    :hotel_id="selectedHotelId"
+                    :reservation_id="reservationId"              
+                />
+            </template>
+            
+        </Card>
+
         <!-- Reservation Bulk Edit Dialog -->
         <Dialog
             v-model:visible="bulkEditReservationDialogVisible"
@@ -864,6 +876,7 @@
     import { useClientStore } from '@/composables/useClientStore';
     import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
     import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
+    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
 
     import { Panel, Card, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, ConfirmPopup } from 'primevue';
     import { Accordion, AccordionPanel, AccordionHeader, AccordionContent } from 'primevue';
@@ -890,7 +903,7 @@
 
     // Stores
     const { selectedHotelId, setHotelId } = useHotelStore();
-    const { setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, setReservationType, changeReservationRoomGuestNumber, setRoomPlan, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
+    const { reservationId, setReservationId, availableRooms, reservationDetails, fetchReservation, fetchReservations, fetchAvailableRooms, setCalendarChange, getAvailableDatesForChange,  setReservationStatus, setReservationType, changeReservationRoomGuestNumber, setRoomPlan, deleteHoldReservation, deleteReservationRoom } = useReservationStore();        
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
@@ -2008,7 +2021,7 @@
     // Fetch reservation details on mount
     onMounted(async () => {
         // console.log('Reservation ID provided:', props.reservation_id);
-        await fetchReservation(props.reservation_id);
+        await fetchReservation(props.reservation_id);        
         
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);

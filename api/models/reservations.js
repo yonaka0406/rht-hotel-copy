@@ -786,7 +786,8 @@ const updateReservationStatus = async (reservationData) => {
       const queryTwo = `
           UPDATE reservation_details
           SET
-            cancelled = gen_random_uuid()          
+            cancelled = gen_random_uuid()
+            ,billable = FALSE
             ,updated_by = $1          
           WHERE reservation_id = $2::UUID AND hotel_id = $3
           RETURNING *;
