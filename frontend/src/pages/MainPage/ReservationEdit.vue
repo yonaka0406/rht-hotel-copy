@@ -61,7 +61,7 @@
 
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { reservationId, setReservationId, reservationDetails, fetchReservation } = useReservationStore();
+    const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation } = useReservationStore();
     
     // Primevue
     import { Card } from 'primevue';
@@ -75,10 +75,50 @@
         await fetchReservation(reservationId.value);
             reservation_details.value = reservationDetails.value.reservation;
 
+        // Establish Socket.IO connection
+        socket.value = io(import.meta.env.VITE_BACKEND_URL);
+
+        socket.value.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.value.on('tableUpdate', async (data) => {
+            // Prevent fetching if bulk update is in progress
+            if (reservationIsUpdating.value) {
+                console.log('Skipping fetchReservation because update is still running');
+                return;
+            }
+            console.log('Reservation updated detected in ReservationEdit');
+            // Web Socket fetchReservation                
+            await fetchReservation(reservationId.value);
+                reservation_details.value = reservationDetails.value.reservation;
+        });
+
         
         //console.log('onMounted ReservationEdit reservation_id:', reservationId.value);
         //console.log('onMounted ReservationEdit reservation_details:', reservation_details.value);
-    });    
+    });   
+    
+    onUnmounted(() => {
+        // Close the Socket.IO connection when the component is unmounted
+        if (socket.value) {
+            socket.value.disconnect();
+        }
+    });
+
+    // Watcher
+    watch(reservationIsUpdating, async (newVal, oldVal) => {
+        if (newVal === true) {
+            console.log("Updating...");
+            //await fetchReservation(reservationId.value);
+                //reservation_details.value = reservationDetails.value.reservation;
+        }
+        if (newVal === false) {
+            console.log("Not Updating...");
+            await fetchReservation(reservationId.value);
+                reservation_details.value = reservationDetails.value.reservation;
+        }
+    });
 
 </script>
 
