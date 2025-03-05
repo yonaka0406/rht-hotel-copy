@@ -398,9 +398,6 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_details 
-ADD COLUMN billable BOOLEAN DEFAULT TRUE;
-
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel

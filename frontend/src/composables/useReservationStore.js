@@ -569,7 +569,31 @@
                 console.error('Error:', error);
                 throw error;
             }
-        }
+        };
+
+        const moveReservationRoom = async (data) => {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/move/room/`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });                
+        
+                if (!response.ok) {
+                    throw new Error('Failed to add room.');
+                }
+        
+                return await response.json();                
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        };
 
         // Delete
         const deleteHoldReservation = async (id) => {
@@ -667,6 +691,7 @@
         fetchMyHoldReservations, 
         fetchReservationsToday,
         addRoomToReservation,
+        moveReservationRoom,
         deleteHoldReservation,
         deleteReservationRoom,     
     };

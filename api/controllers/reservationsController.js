@@ -2,7 +2,7 @@ const pool = require('../config/database');
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
-  updateReservationDetail, updateReservationStatus, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoomPlan,
+  updateReservationDetail, updateReservationStatus, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -463,6 +463,36 @@ const addNewRoomToReservation = async (req, res) => {
   }
 };
 
+// POST
+const alterReservationRoom = async (req, res) => {
+  const { reservationId, numberOfPeopleOGM, numberOfPeopleToMove, roomIdOld, roomIdNew } = req.body;
+  const userId = req.user.id; 
+  
+  try {
+    if (numberOfPeopleToMove === numberOfPeopleOGM){
+      const newRoom = await updateReservationRoom(reservationId, roomIdOld, roomIdNew, userId);
+      res.status(200).json({
+        message: 'Room changed in reservation successfully',
+        data: newRoom
+      });
+    } 
+    if (numberOfPeopleToMove < numberOfPeopleOGM){
+      const newRoom = await updateReservationRoomWithCreate(reservationId, roomIdOld, roomIdNew, numberOfPeopleToMove, userId);
+      res.status(200).json({
+        message: 'Room added to reservation successfully',
+        data: newRoom
+      });
+    } 
+  } catch (err) {
+    console.error('Error moving room:', err);
+    res.status(500).json({
+      message: 'Database error',
+      error: err.message
+    });
+  }
+  
+};
+
 // PUT
 const editReservationDetail = async (req, res) => {  
   const { id } = req.params;
@@ -827,4 +857,4 @@ const deleteRoomFromReservation = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
