@@ -1,6 +1,7 @@
     import { ref, watch } from 'vue';
 
     // Define shared state outside the function
+    const reservationIsUpdating = ref(false);
     const availableRooms = ref([]);
     const reservedRooms = ref([]);
     const holdReservations = ref([]);
@@ -545,6 +546,31 @@
             }
         };
 
+        // Add
+        const addRoomToReservation = async (data) => {
+            try {
+                const authToken = localStorage.getItem('authToken');
+                const url = `/api/reservation/add/room/`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });                
+        
+                if (!response.ok) {
+                    throw new Error('Failed to add room.');
+                }
+        
+                return await response.json();                
+            } catch (error) {
+                console.error('Error:', error);
+                throw error;
+            }
+        }
+
         // Delete
         const deleteHoldReservation = async (id) => {
             // console.log('From Reservation Store => deleteHoldReservation');
@@ -595,24 +621,6 @@
         };
 
         // Watchers
-        /*
-        watch(availableRooms, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                // console.log('availableRooms changed in Store:', newValue);
-            }
-        }, { deep: true });
-
-        watch(reservationDetails, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                // console.log('reservationDetails changed in Store from ',oldValue,'to', newValue);
-            }
-        }, { deep: true });
-        watch(reservedRoomsDayView, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                // console.log('reservedRoomsDayView changed in Store from ',oldValue,'to', newValue);
-            }
-        }, { deep: true });
-        */
         watch(reservedRooms, (newValue, oldValue) => {
             if (newValue !== oldValue) {
                 // Log the minimum and maximum dates
@@ -658,6 +666,7 @@
         fetchReservedRooms,
         fetchMyHoldReservations, 
         fetchReservationsToday,
+        addRoomToReservation,
         deleteHoldReservation,
         deleteReservationRoom,     
     };
