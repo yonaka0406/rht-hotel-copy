@@ -391,9 +391,7 @@
         style="width: 50vw"
     >
         <ReservationDayDetail                
-            :hotel_id="dialogHotelId"
-            :reservation_id="dialogReservationId"
-            :reservation_details_id="dialogReservationDtlId"
+            :reservation_details="reservation_details_day"            
         />
         <template #footer>                
             <Button label="閉じる" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeDayDetailDialog" />                
@@ -402,7 +400,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';
+    import { ref, computed, onMounted, watch } from 'vue';
 
     import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
 
@@ -1004,14 +1002,9 @@
 
     // Dialog: Day Detail
     const visibleDayDetailDialog = ref(false);
-    const dialogHotelId = ref(null);
-    const dialogReservationId = ref(null);
-    const dialogReservationDtlId = ref(null);
+    const reservation_details_day = ref(null);    
     const openDayDetailDialog = async (day) => {   
-        dialogHotelId.value = day.hotel_id;            
-        dialogReservationId.value = day.reservation_id;
-        dialogReservationDtlId.value = day.id;
-        
+        reservation_details_day.value = day;
         visibleDayDetailDialog.value = true;
     };
     const closeDayDetailDialog = async () => {
@@ -1022,5 +1015,18 @@
         // console.log('onMounted RoomView:', props.reservation_details);
         reservationInfo.value = props.reservation_details[0];
     });
+
+    // Watcher
+    watch(addons, (newValue, oldValue) => {
+        if (newValue !== oldValue) {
+            //console.log('addons changed:', newValue);
+            
+            // Add a 'quantity' field with default value 1 to each add-on
+            selectedAddon.value = newValue.map(addon => ({
+                ...addon,                    
+                quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
+            }));
+        }
+    }, { deep: true });
 
 </script>

@@ -181,276 +181,219 @@
     </div>
 </template>
 
-<script>
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast } from 'primevue/usetoast';
-import { useConfirm } from "primevue/useconfirm";
+<script setup>
+    // Vue
+    import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+    import { useRouter } from 'vue-router';
+    const router = useRouter();
 
-import { useHotelStore } from '@/composables/useHotelStore';
-import { useReservationStore } from '@/composables/useReservationStore';
-import { usePlansStore } from '@/composables/usePlansStore';
-import { useClientStore } from '@/composables/useClientStore';
-import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
-
-import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Button, Divider } from 'primevue';
-import { FloatLabel, Select, InputText, InputNumber } from 'primevue';
-
-export default {
-    props: {        
-        hotel_id: { // Add room_id prop
-            type: [String, Number],
+    const props = defineProps({        
+        reservation_details: {
+            type: [Object],
             required: true,
-        },
-        reservation_id: { // Add room_id prop
-            type: [String],
-            required: true,
-        },
-        reservation_details_id: { // Add room_id prop
-            type: [String],
-            required: true,
-        },
-    },
-    name: "ReservationDayDetail",
-    components: { 
-        Card,
-        Tabs,
-        TabList,
-        Tab,
-        TabPanels,
-        TabPanel,
-        DataTable, 
-        Column,
-        Button,
-        Divider,
-        FloatLabel,
-        Select,
-        InputText,
-        InputNumber,
-    },
-    setup(props) {
-        const router = useRouter();
-        const toast = useToast();
-        const confirm = useConfirm();
-        const isUpdating = ref(false);
-        const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate } = usePlansStore();        
-        const { clients, fetchClients } = useClientStore();
-        const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom } = useReservationStore();
+        },        
+    });
 
-        const drawerHeader = ref('Loading...');
-        const reservationDetail = ref(null);
-        const selectedPlan = ref(null);
-        const planBillType = ref(null);
-        const planTotalRate = ref(0);
-        const selectedAddon = ref(null);
-        const addonOptions = ref(null);
-        const selectedAddonOption = ref(null);
-        const targetRoom = ref(null);
-        const numberOfPeopleToMove = ref(0);
-        const selectedClients = ref(null);
-        const filteredRooms = ref(null);
+    import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 
-        // Helper
-        const formatDate = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
-        };
+    // Primevue
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
+    import { useConfirm } from "primevue/useconfirm";
+    const confirm = useConfirm();
+    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Button, Divider } from 'primevue';
+    import { FloatLabel, Select, InputText, InputNumber } from 'primevue';
 
-        const updatePlanAddOns = async (event) => { 
-            console.log('Selected Plan:', event.value);           
-            const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
-            console.log('selectedPlanObject',selectedPlanObject)
-            if (selectedPlan.value) {
-                const gid = selectedPlanObject.plans_global_id ?? 0;
-                const hid = selectedPlanObject.plans_hotel_id ?? 0;
-                const hotel_id = props.hotel_id ?? 0;
+    // Stores    
+    import { useReservationStore } from '@/composables/useReservationStore';
+    const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom } = useReservationStore();
+    import { usePlansStore } from '@/composables/usePlansStore';
+    const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate } = usePlansStore();
+    import { useClientStore } from '@/composables/useClientStore';
+    const { clients, fetchClients } = useClientStore();
 
-                try {
-                    await fetchPlanAddons(gid, hid, hotel_id);
-                    planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);                    
-                    reservationDetail.value.plan_total_price = planTotalRate.value;
+    // Helper
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };  
 
-                    const gidFixed = gid === 0 ? null : gid;
-                    const hidFixed = hid === 0 ? null : hid;                    
-                    const selectedPlan = plans.value.find(plan => 
-                        plan.plans_global_id === gidFixed && plan.plans_hotel_id === hidFixed
-                    );
-                    planBillType.value = selectedPlan ? selectedPlan.plan_type : null;
-                    planBillType.value = selectedPlan.value === 'per_person' 
-                        ? '人数あたり' 
-                        : '部屋あたり';
+    const drawerHeader = ref('Loading...');
+    const reservationDetail = ref(null);
+
+    // Plan
+    const selectedPlan = ref(null);
+    const planBillType = ref(null);
+    const planTotalRate = ref(0);
+    const selectedAddon = ref(null);
+    const addonOptions = ref(null);
+    const selectedAddonOption = ref(null);
+    const updatePlanAddOns = async (event) => { 
+        console.log('Selected Plan:', event.value);           
+        const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
+        console.log('selectedPlanObject',selectedPlanObject)
+        if (selectedPlan.value) {
+            const gid = selectedPlanObject.plans_global_id ?? 0;
+            const hid = selectedPlanObject.plans_hotel_id ?? 0;
+            const hotel_id = props.reservation_details.hotel_id ?? 0;
+
+            try {
+                await fetchPlanAddons(gid, hid, hotel_id);
+                planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);                    
+                reservationDetail.value.plan_total_price = planTotalRate.value;
+
+                const gidFixed = gid === 0 ? null : gid;
+                const hidFixed = hid === 0 ? null : hid;                    
+                const selectedPlan = plans.value.find(plan => 
+                    plan.plans_global_id === gidFixed && plan.plans_hotel_id === hidFixed
+                );
+                planBillType.value = selectedPlan ? selectedPlan.plan_type : null;
+                planBillType.value = selectedPlan.value === 'per_person' 
+                    ? '人数あたり' 
+                    : '部屋あたり';
+                
+            } catch (error) {
+                console.error('Failed to fetch plan add-ons:', error);
+                addons.value = [];
+            }
+        }
+    };
+    const generateAddonPreview = () => {
+        // Check
+        if(!selectedAddonOption.value){
+            toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
+            return
+        }
+
+        console.log('selectedAddonOption in select:', selectedAddonOption.value);
+
+        const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
+        console.log('foundAddon:',foundAddon);
+        const isHotelAddon = foundAddon.id.startsWith('H');
+        console.log('selectedAddon:',selectedAddon.value);
+        console.log('selectedAddonOption:', selectedAddonOption.value);            
+        selectedAddon.value.push({
+            addons_global_id: isHotelAddon ? null : foundAddon.id,
+            addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
+            hotel_id: foundAddon.hotel_id,
+            name: foundAddon.name,
+            price: foundAddon.price,
+            quantity: reservationDetail.value.number_of_people,
+        });            
+    };
+    const deleteAddon = (addon) => {
+        const index = selectedAddon.value.indexOf(addon);
+        if (index !== -1) {
+            selectedAddon.value.splice(index, 1);
+        }
+    };
+    const savePlan = async () => {
+        const plan_key = selectedPlan.value;
+        const [global, hotel] = plan_key.split('h').map(Number);
+        const plans_global_id = global || 0;
+        const plans_hotel_id = hotel || 0; 
+        const price = planTotalRate.value || 0;
+
+        console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
+
+        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, plans_global_id, plans_hotel_id, price);
+
+        const addonDataArray = selectedAddon.value.map(addon => ({
+            hotel_id: props.reservation_details.hotel_id,  
+            addons_global_id: addon.addons_global_id,
+            addons_hotel_id: addon.addons_hotel_id,
+            quantity: addon.quantity,
+            price: addon.price
+        }));
+
+        console.log('addonDataArray:', addonDataArray);
                     
-                } catch (error) {
-                    console.error('Failed to fetch plan add-ons:', error);
-                    addons.value = [];
-                }
-            }
-        };
+        await setReservationAddons(props.reservation_details.id, addonDataArray);
 
-        const generateAddonPreview = () => {
-            // Check
-            if(!selectedAddonOption.value){
-                toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
-                return
-            }
-
-            console.log('selectedAddonOption in select:', selectedAddonOption.value);
-
-            const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
-            console.log('foundAddon:',foundAddon);
-            const isHotelAddon = foundAddon.id.startsWith('H');
-            console.log('selectedAddon:',selectedAddon.value);
-            console.log('selectedAddonOption:', selectedAddonOption.value);            
-            selectedAddon.value.push({
-                addons_global_id: isHotelAddon ? null : foundAddon.id,
-                addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
-                hotel_id: foundAddon.hotel_id,
-                name: foundAddon.name,
-                price: foundAddon.price,
-                quantity: reservationDetail.value.number_of_people,
-            });            
-        };
-
-        const deleteAddon = (addon) => {
-            const index = selectedAddon.value.indexOf(addon);
-            if (index !== -1) {
-                selectedAddon.value.splice(index, 1);
-            }
-        };
+        const data = await fetchReservationDetail(props.reservation_details.id);
+        reservationDetail.value = data.reservation[0];
         
+        toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 });            
+    };
 
-        const savePlan = async () => {
-            const plan_key = selectedPlan.value;
-            const [global, hotel] = plan_key.split('h').map(Number);
-            const plans_global_id = global || 0;
-            const plans_hotel_id = hotel || 0; 
-            const price = planTotalRate.value || 0;
+    // Room
+    const targetRoom = ref(null);
+    const numberOfPeopleToMove = ref(0);
+    const filteredRooms = ref(null);
+    const saveRoom = async () => {
+        console.log('targetRoom', targetRoom.value.value);
+        await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
 
-            console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
+        const data = await fetchReservationDetail(props.reservation_details.id);
+        reservationDetail.value = data.reservation[0];
 
-            await setReservationPlan(props.reservation_details_id, props.hotel_id, plans_global_id, plans_hotel_id, price);
+        toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 }); 
 
-            const addonDataArray = selectedAddon.value.map(addon => ({
-                hotel_id: props.hotel_id,  
-                addons_global_id: addon.addons_global_id,
-                addons_hotel_id: addon.addons_hotel_id,
-                quantity: addon.quantity,
-                price: addon.price
-            }));
+    };
 
-            console.log('addonDataArray:', addonDataArray);
-                       
-            await setReservationAddons(props.reservation_details_id, addonDataArray);
-
-            const data = await fetchReservationDetail(props.reservation_details_id);
-            reservationDetail.value = data.reservation[0];
-            
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 });            
-        };
-
-        const saveRoom = async () => {
-            console.log('targetRoom', targetRoom.value.value);
-            await setReservationRoom(props.reservation_details_id, targetRoom.value.value);
-
-            const data = await fetchReservationDetail(props.reservation_details_id);
-            reservationDetail.value = data.reservation[0];
-
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 }); 
-
-        };
-
-        // Fetch reservation details on mount
+    // Clients
+    const selectedClients = ref(null);
         
-        onMounted(async() => {   
-            // Reservation data         
-            const data = await fetchReservationDetail(props.reservation_details_id);
-            reservationDetail.value = data.reservation[0];
-        });
+    onMounted(async() => {   
+        console.log('onMounted ReservationDayDetail:', props.reservation_details);                 
+        const data = await fetchReservationDetail(props.reservation_details.id);
+        reservationDetail.value = data.reservation[0];
 
-        // Watcher to update when reservationDetail changes
-        watch(reservationDetail, async (newVal) => {
-            if (!newVal) return;
+        // Header
+        drawerHeader.value = props.reservation_details.date + '：' + props.reservation_details.room_number + '号室 ' + props.reservation_details.room_type_name;
+        selectedPlan.value = (props.reservation_details.plans_global_id ?? '') + 'h' + (props.reservation_details.plans_hotel_id ?? '');
 
-            console.log('reservationDetail updated:', newVal);
+        // Plans
+        await fetchPlansForHotel(props.reservation_details.hotel_id);
+        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
 
-            // Header
-            drawerHeader.value = newVal.date + '：' + newVal.room_number + '号室 ' + newVal.room_type_name;
-            selectedPlan.value = (newVal.plans_global_id ?? '') + 'h' + (newVal.plans_hotel_id ?? '');
+        selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
+            ...addon,
+        }));
+        selectedClients.value = props.reservation_details.reservation_clients.map(client => ({
+            ...client,
+            display_name: client.name_kanji
+                ? `${client.name_kanji}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
+                : `${client.name}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
+        }));
 
-            // Plans
-            await fetchPlansForHotel(props.hotel_id);
+        planBillType.value = props.reservation_details.plan_type === 'per_person' 
+            ? '人数あたり' 
+            : '部屋あたり';
+        planTotalRate.value = props.reservation_details.plan_total_price;
+        
+        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
+        console.log('addonOptions:', addonOptions.value);
 
-            selectedAddon.value = newVal.reservation_addons.map(addon => ({
+        // Room
+        numberOfPeopleToMove.value = props.reservation_details.number_of_people;
+
+        const endDate = new Date(props.reservation_details.date);
+        endDate.setDate(endDate.getDate() + 1);
+        await fetchAvailableRooms(props.reservation_details.hotel_id, props.reservation_details.date, formatDate(endDate));
+
+        filteredRooms.value = availableRooms.value
+        .filter(room => room.capacity >= numberOfPeopleToMove.value)
+        .filter(room => room.room_id !== props.reservation_details.room_id)
+        .map(room => ({
+            label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
+            value: room.room_id,
+        }));
+    });
+
+    // Watcher
+    watch(addons, (newValue, oldValue) => {
+        if (newValue !== oldValue) {
+            console.log('addons changed:', newValue);            
+            selectedAddon.value = newValue.map(addon => ({
                 ...addon,
+                quantity: reservationDetail.value.number_of_people
             }));
-            selectedClients.value = newVal.reservation_clients.map(client => ({
-                ...client,
-                display_name: client.name_kanji
-                    ? `${client.name_kanji}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
-                    : `${client.name}${client.name_kana ? '（' + client.name_kana + '）' : ''}`
-            }));
-
-            planBillType.value = newVal.plan_type === 'per_person' 
-                ? '人数あたり' 
-                : '部屋あたり';
-            planTotalRate.value = newVal.plan_total_price;
-
-            // Addons
-            addonOptions.value = await fetchAllAddons(props.hotel_id);
-            console.log('addonOptions:', addonOptions.value);
-
-            // Room
-            numberOfPeopleToMove.value = newVal.number_of_people;
-
-            const endDate = new Date(newVal.date);
-            endDate.setDate(endDate.getDate() + 1);
-            await fetchAvailableRooms(props.hotel_id, newVal.date, formatDate(endDate));
-
-            filteredRooms.value = availableRooms.value
-                .filter(room => room.capacity >= numberOfPeopleToMove.value)
-                .filter(room => room.room_id !== newVal.room_id)
-                .map(room => ({
-                    label: `${room.room_number} - ${room.room_type_name} (${room.capacity}) ${room.smoking ? ' 🚬' : ''} (${room.floor}階)`,
-                    value: room.room_id,
-                }));
-        }, { deep: true, immediate: true });
-
-        // Watch       
-        watch(addons, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                console.log('addons changed:', newValue);
-                // Add a 'quantity' field with default value 1 to each add-on
-                selectedAddon.value = newValue.map(addon => ({
-                    ...addon,
-                    quantity: reservationDetail.value.number_of_people
-                }));
-            }
-        }, { deep: true });
-
-        return {
-            plans,
-            drawerHeader,
-            reservationDetail,
-            selectedPlan,
-            planBillType,
-            planTotalRate,
-            selectedAddon,
-            addonOptions,
-            selectedAddonOption,
-            targetRoom,
-            numberOfPeopleToMove,
-            selectedClients,
-            filteredRooms,
-            updatePlanAddOns,
-            generateAddonPreview,
-            deleteAddon,
-            savePlan,
-            saveRoom,
-        };
-    },    
-};
+        }
+    }, { deep: true });
+      
 </script>
 
 <style scoped>

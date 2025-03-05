@@ -878,4 +878,17 @@
 
         console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
     });
+
+    // Watcher
+    watch(addons, (newValue, oldValue) => {
+        if (newValue !== oldValue) {
+            //console.log('addons changed:', newValue);
+            
+            // Add a 'quantity' field with default value 1 to each add-on
+            selectedAddon.value = newValue.map(addon => ({
+                ...addon,                    
+                quantity: 1
+            }));
+        }
+    }, { deep: true });
 </script>
