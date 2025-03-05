@@ -807,7 +807,9 @@
                     };
                 });
                 
-                await setRoomGuests(reservationInfo.value.reservation_id, dataToUpdate);
+                await setRoomGuests(reservationInfo.value.reservation_id, dataToUpdate[0]);
+
+                // So preciso enviar uma linha com room_id e guestsToAdd
 
                 closeRoomEditDialog();
 

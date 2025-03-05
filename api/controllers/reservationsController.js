@@ -612,48 +612,30 @@ const editReservationGuests = async (req, res) => {
           }
         }
 
-        // Now, update ALL guestsToAdd arrays in guestDataArray
-        for (let i = 0; i < guestDataArray.length; i++) {
-          guestDataArray[i].guestsToAdd = guestsToAddForDetail;  // Substitute with the updated array
-        }
+        // Update guestsToAdd array in guestDataArray      
+        guestDataArray.guestsToAdd = guestsToAddForDetail;
+      
       }
 
-      for (const guestData of guestDataArray) { // loop for each reservation details
-          const { id: reservation_detail_id, hotel_id, room_id, number_of_people, guestsToAdd } = guestData;
+      
 
           const existingReservation = await selectReservation(id);
-          const filteredReservations = existingReservation.filter(reservation => reservation.room_id === room_id);
+          const filteredReservations = existingReservation.filter(reservation => reservation.room_id === guestDataArray.room_id);
           
           for (const reservationDetail of filteredReservations) {
               // Delete existing clients for this reservation detail
               await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
 
               // Add the new clients
-              if (guestsToAdd && guestsToAdd.length > 0) {
-                  for (let i = 0; i < guestsToAdd.length; i++) {
-                    let guest = guestsToAdd[i];
+              if (guestDataArray.guestsToAdd && guestDataArray.guestsToAdd.length > 0) {
+                  for (let i = 0; i < guestDataArray.guestsToAdd.length; i++) {
+                    let guest = guestDataArray.guestsToAdd[i];
                     let finalClientId = guest.id;
           
                     if(finalClientId !== '' && finalClientId !== null && finalClientId !== undefined){
                       //console.log('Client ID was provided');
                     } else{
-                      console.log('Client ID was empty');                      
-                      /*
-                      const clientData = {
-                        name: guest.name,
-                        legal_or_natural_person: guest.legal_or_natural_person,
-                        gender: guest.gender,
-                        email: guest.email,
-                        phone: guest.phone,
-                        created_by,
-                        updated_by,
-                      };
-                      
-                      const newClient = await addClientByName(clientData);
-                      finalClientId = newClient.id;
-                      // Update the guest object in guestsToAdd to prevet multiple entries
-                      guestsToAdd[i].id = finalClientId;  // Update the ID directly in the array
-                      */
+                      console.log('Client ID was empty');                                            
                     }
                     
                     const guestInfo = {
@@ -668,7 +650,7 @@ const editReservationGuests = async (req, res) => {
                   }
               }
           }
-      }
+      
       res.status(200).json({ message: "Guests updated successfully" }); // Send a success response
 
   } catch (err) {
