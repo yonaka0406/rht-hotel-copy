@@ -27,9 +27,8 @@
         <template #title>清算</template>
         <template #content>
             <ReservationPayments
-                v-if="hotelId && reservationId"
-                :hotel_id="hotelId"
-                :reservation_id="reservationId"              
+                v-if="reservation_details"
+                :reservation_details="reservation_details"              
             />
         </template>
     </Card>
@@ -62,6 +61,8 @@
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation } = useReservationStore();
+    import { useHotelStore } from '@/composables/useHotelStore';
+    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
     
     // Primevue
     import { Card } from 'primevue';
@@ -71,9 +72,10 @@
     
     // Fetch reservation details on mount
     onMounted(async () => {
+        
         await setReservationId(props.reservation_id);
         await fetchReservation(reservationId.value);
-            reservation_details.value = reservationDetails.value.reservation;
+            reservation_details.value = reservationDetails.value.reservation;        
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);

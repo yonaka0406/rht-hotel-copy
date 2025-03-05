@@ -92,30 +92,32 @@
 </template>
 
 <script setup>
+    // Vue
     import { ref, computed, watch, onMounted } from 'vue';
-    import { useToast } from 'primevue/usetoast';
-    import { useSettingsStore } from '@/composables/useSettingsStore';
-    import { useReservationStore } from '@/composables/useReservationStore';
-    import { useHotelStore } from '@/composables/useHotelStore';
 
-    import { Card, FloatLabel, Select, InputText, InputNumber, Button, DataTable, Column } from 'primevue';    
-import { toDisplayString } from 'vue';
-
-    const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
-    const { reservationDetails, fetchReservation } = useReservationStore();
-    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
-    
     const props = defineProps({        
-        hotel_id: {
-            type: [Number],
+        reservation_details: {
+            type: [Object],
             required: true,
-        },
-        reservation_id: {
-            type: [String],
-            required: true,
-        },
+        }, 
     });
 
+    // Primevue
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
+    import { useConfirm } from "primevue/useconfirm";
+    const confirm = useConfirm();
+    import { Card, FloatLabel, Select, InputText, InputNumber, Button, DataTable, Column } from 'primevue';    
+
+    // Stores
+    import { useSettingsStore } from '@/composables/useSettingsStore';
+    const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
+    import { useReservationStore } from '@/composables/useReservationStore';
+    const { reservationDetails, fetchReservation } = useReservationStore();
+    import { useHotelStore } from '@/composables/useHotelStore';
+    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
+
+    // Helper
     function formatDate(date) {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
@@ -168,17 +170,19 @@ import { toDisplayString } from 'vue';
     });
 
     onMounted( async () => {   
-        await setHotelId(props.hotel_id);
-        await fetchHotel();
-        await fetchReservation(props.reservation_id);
-        await fetchPaymentTypes();
-        // console.log(reservationDetails.value)
-        // console.log(selectedHotelRooms.value)
+        console.log('onMounted ReservationPayments;', props.reservation_details);
 
-        const uniqueRoomIds = [...new Set(reservationDetails.value.reservation.map(room => room.room_id))];
+        await setHotelId(reservationDetails.value.reservation.hotel_id);
+        await fetchHotel(); 
+        
+        await fetchPaymentTypes();                
+
+        const uniqueRoomIds = [...new Set(props.reservation_details.map(room => room.room_id))];
         newPayment.value.room_id = uniqueRoomIds[0];
 
-        // console.log('onMounted newPayment:', newPayment.value)
+        
+
+         console.log('onMounted newPayment:', newPayment.value)
     });
 /*
     watch(reservationRooms, (newValue, oldValue) => {
