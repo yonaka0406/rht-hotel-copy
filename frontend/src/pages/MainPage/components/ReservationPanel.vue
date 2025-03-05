@@ -445,8 +445,7 @@
     const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
-
-    const reservationInfo = ref({});
+    
     const reservationTypeSelected = ref(null);
     const reservationTypeOptions = [
         { label: '通常予約', value: 'default' },
@@ -462,6 +461,7 @@
     };
 
     // Computed
+    const reservationInfo = computed(() => props.reservation_details?.[0]);
     const reservationStatus = computed(() => {
         switch (reservationInfo.value.status) {
             case 'hold':
@@ -872,11 +872,11 @@
         };
 
     onMounted(async () => {
-        reservationInfo.value = props.reservation_details[0];
+        
         reservationTypeSelected.value = reservationInfo.value.type;
         selectedClient.value = reservationInfo.value.client_id;
 
-        console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
+        // console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
     });
 
     // Watcher

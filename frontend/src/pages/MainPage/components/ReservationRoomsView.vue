@@ -418,13 +418,11 @@
 
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setRoomPlan, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();  
+    const { setRoomPlan, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();  
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
-
-    const reservationInfo = ref({});
 
     // Helper
     const formatDate = (date) => {
@@ -496,6 +494,7 @@
     };
 
     // Computed
+    const reservationInfo = computed(() => props.reservation_details?.[0]);
     const reservationStatus = computed(() => {
         switch (reservationInfo.value.status) {
             case 'hold':
@@ -808,32 +807,12 @@
                     };
                 });
                 
-                try {
-                    const authToken = localStorage.getItem('authToken');
-                    const response = await fetch(`/api/reservation/update/guest/${reservationInfo.value.reservation_id}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${authToken}`, // Pass token for authentication
-                            'Content-Type': 'application/json', // Ensure the body is JSON
-                        },
-                        body: JSON.stringify(dataToUpdate), 
-                    });
+                await setRoomGuests(reservationInfo.value.reservation_id, dataToUpdate);
 
-                    const updatedReservation = await response.json();
+                closeRoomEditDialog();
 
-                    if (!response.ok) {
-                        throw new Error(`Error updating reservation guests: ${updatedReservation.error || 'Unknown error'}`);
-                    }
-                    
-                    closeRoomEditDialog();
-
-                    // Provide feedback to the user (optional)                
-                    toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
-                } catch (err) {
-                    console.error('Error during fetch:', err);
-                    console.error('Failed to apply changes:', error);                
-                    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
-                }
+                // Provide feedback to the user (optional)                
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });                
             }
         };
 
@@ -1012,8 +991,7 @@
     };
     
     onMounted(async () => {
-        // console.log('onMounted RoomView:', props.reservation_details);
-        reservationInfo.value = props.reservation_details[0];
+        // console.log('onMounted RoomView:', props.reservation_details);        
     });
 
     // Watcher
@@ -1027,6 +1005,6 @@
                 quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
             }));
         }
-    }, { deep: true });
+    }, { deep: true });    
 
 </script>
