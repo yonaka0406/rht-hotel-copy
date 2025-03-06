@@ -442,7 +442,7 @@
 
     //Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation } = useReservationStore();
+    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     
@@ -696,9 +696,10 @@
         tabsReservationBulkEditDialog.value = newTabValue * 1;
         
         // Period change
-        if(tabsReservationBulkEditDialog.value  === 4){                    
-            const hotelId = reservationInfo.value.hotel_id;
-            const roomId = selectedGroup.value.room_id;            
+        if(tabsReservationBulkEditDialog.value  === 4){
+            console.log('Period change tab')
+            roomsAvailableChanges.value = [];
+            const hotelId = reservationInfo.value.hotel_id;                        
             newCheckIn.value = new Date(reservationInfo.value.check_in);
             newCheckOut.value = new Date(reservationInfo.value.check_out);
 
@@ -731,8 +732,7 @@
                 });
                 console.log('roomsAvailableChanges', roomsAvailableChanges.value);
                 console.log('Earliest Check-In:', minCheckIn.value, 'Latest Check-Out:', maxCheckOut.value);
-            });
-            
+            });            
         }
     };
     
