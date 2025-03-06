@@ -22,7 +22,7 @@ export function usePlansStore() {
                 plan_key: 
                   (plan.plans_global_id ?? '') + 'h' + (plan.plans_hotel_id ?? '')
               }));
-            console.log('Fetch plans from Store:',plans.value);
+            // console.log('Fetch plans from Store:',plans.value);
             
         } catch (error) {
             console.error('Failed to fetch hotel plans', error);
@@ -41,7 +41,7 @@ export function usePlansStore() {
             });
             
             addons.value = await response.json();
-            console.log('From Store => fetchPlanAddons:', addons.value);
+            // console.log('From Store => fetchPlanAddons:', addons.value);
             
         } catch (error) {
             console.error('Failed to fetch plan addons', error);
@@ -83,7 +83,7 @@ export function usePlansStore() {
             });
             
             const rate = await response.json();
-            console.log('From Store => fetchPlanRate:', rate);
+            // console.log('From Store => fetchPlanRate:', rate);
             return rate;
             
         } catch (error) {

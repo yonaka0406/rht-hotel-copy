@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, 
+const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, 
     createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom,
     editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
@@ -12,6 +12,7 @@ router.get('/reservation/detail/info', authMiddleware, getReservationDetails);
 router.get('/reservation/hold-list', authMiddleware, getMyHoldReservations);
 router.get('/reservation/today/:hid/:date', authMiddleware, getReservationsToday);
 router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, getAvailableDatesForChange);
+router.get('/reservation/list/clients/:hid/:id', authMiddleware, getReservationClientIds);
 router.post('/reservation/hold', authMiddleware, createReservationHold);
 router.post('/reservation/addon', authMiddleware, createReservationAddons);
 router.post('/reservation/client', authMiddleware, createReservationClient);

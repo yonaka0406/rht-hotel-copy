@@ -48,6 +48,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
         createPartition('reservation_details'),
         createPartition('reservation_addons'), 
         createPartition('reservation_clients'),
+        createPartition('reservation_payments'),
         createPartition('plans_hotel'),        
         createPartition('addons_hotel')
       ]);

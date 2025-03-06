@@ -433,13 +433,20 @@ CREATE TABLE reservation_payments (
     date DATE NOT NULL,
     room_id INT,
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
-    price DECIMAL,
+    value DECIMAL,
+    comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
+/*ATENCAO: ADICIONAR TABELA A QUERY DA PARTITION
+CREATE TABLE reservation_payments_7 
+PARTITION OF reservation_payments 
+FOR VALUES IN (7)
+*/
 
 CREATE TABLE payment_types (
     id SERIAL PRIMARY KEY, 

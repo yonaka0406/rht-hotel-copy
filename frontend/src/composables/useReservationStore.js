@@ -1,717 +1,741 @@
-    import { ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 
-    // Define shared state outside the function
-    const reservationIsUpdating = ref(false);
-    const availableRooms = ref([]);
-    const reservedRooms = ref([]);
-    const holdReservations = ref([]);
-    const reservationId = ref(null);
-    const reservationDetails = ref({});
-    const reservedRoomsDayView = ref([]);
+// Define shared state outside the function
+const reservationIsUpdating = ref(false);
+const availableRooms = ref([]);
+const reservedRooms = ref([]);
+const holdReservations = ref([]);
+const reservationId = ref(null);
+const reservationDetails = ref({});
+const reservedRoomsDayView = ref([]);
 
-    import { useHotelStore } from '@/composables/useHotelStore';
-    const { selectedHotelId } = useHotelStore();
-    
+import { useHotelStore } from '@/composables/useHotelStore';
+const { selectedHotelId } = useHotelStore();    
 
-    export function useReservationStore() {
-        // Helper
-        const formatDate = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, "0");
-            const day = String(date.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
-        };
-        const isDateBetweenRange = (roomDate, startDate, endDate) => {
-            const roomDateObj = new Date(roomDate);
-            return roomDateObj >= new Date(startDate) && roomDateObj <= new Date(endDate);
-        };
+export function useReservationStore() {
+    // Helper
+    const formatDate = (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+    const isDateBetweenRange = (roomDate, startDate, endDate) => {
+        const roomDateObj = new Date(roomDate);
+        return roomDateObj >= new Date(startDate) && roomDateObj <= new Date(endDate);
+    };
 
-        // Set
-        const setReservationIsUpdating = (bool) => {
-            reservationIsUpdating.value = bool;
+    // Set
+    const setReservationIsUpdating = (bool) => {
+        reservationIsUpdating.value = bool;
+    }
+
+    // Get 
+    const getReservationId = () => {
+        // console.log('From Reservation Store => getReservationId:',reservationId.value);
+        return reservationId.value;
+    };
+    const getReservationHotelId = async (reservation_id) => {            
+        // console.log('From Reservation Store => getReservationHotelId');
+        if (!reservationDetails.value.reservation) {
+            // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
+            await fetchReservation(reservation_id);
         }
 
-        // Get 
-        const getReservationId = () => {
-            // console.log('From Reservation Store => getReservationId:',reservationId.value);
-            return reservationId.value;
-        };
-        const getReservationHotelId = async (reservation_id) => {            
-            // console.log('From Reservation Store => getReservationHotelId');
-            if (!reservationDetails.value.reservation) {
-                // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
-                await fetchReservation(reservation_id);
+        return reservationDetails.value.reservation?.[0]?.hotel_id || null;
+    };
+    const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
+        // console.log('From Reservation Store => getAvailableDatesForChange');
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
             }
 
-            return reservationDetails.value.reservation?.[0]?.hotel_id || null;
-        };
-        const getAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {            
-            // console.log('From Reservation Store => getAvailableDatesForChange');
-            try {
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/query/${hotelId}/${roomId}/${checkIn}/${checkOut}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
-    
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-
-                return data;
-                    
-            } catch (error) {
-                console.error('Error fetching data:', error);                
-                return null;
-            }
-        }
-
-        // Set
-        const setReservationId = (id) => {
-            // console.log('From Reservation Store => setReservationId:',reservationId.value);
-            reservationId.value = id;            
-        };        
-        const setReservationStatus = async (status) => {            
-            // console.log('From Reservation Store => setReservationStatus:',status);
-            try {
-                setReservationIsUpdating(true);
-
-                const authToken = localStorage.getItem('authToken');
-                // Get the hotel_id for the current reservation
-                const hotel_id = await getReservationHotelId(reservationId.value);
-
-                // Assuming you have an API endpoint to update the reservation status
-                const response = await fetch(`/api/reservation/update/status/${reservationId.value}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ hotel_id, status })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation status');
-                }
-
-                // Update the local reservationDetails state
-                reservationDetails.value.status = status;
-
-                setReservationIsUpdating(false);
-            } catch (error) {
-                console.error('Error updating reservation status:', error);
-            }
-        };
-        const setReservationType = async (type) => {            
-            // console.log('From Reservation Store => setReservationType:',status);            
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                // Get the hotel_id for the current reservation
-                const hotel_id = await getReservationHotelId(reservationId.value);
+            return data;
                 
-                // Assuming you have an API endpoint to update the reservation status
-                const response = await fetch(`/api/reservation/update/type/${reservationId.value}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ hotel_id, type })
-                });
+        } catch (error) {
+            console.error('Error fetching data:', error);                
+            return null;
+        }
+    };
+    const fetchReservationClientIds = async (hotelId, reservationId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/list/clients/${hotelId}/${reservationId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
 
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation status');
-                }
+            const data = await response.json();
 
-                // Update the local reservationDetails state
-                reservationDetails.value.type = type;
-                setReservationIsUpdating(false);
-            } catch (error) {
-                console.error('Error updating reservation status:', error);
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
             }
-        };
-        const setReservationClient = async (client_id) => {
-            // console.log('From Reservation Store => setReservationClient:',client_id);
-            try {
-                setReservationIsUpdating(true);
-              const authToken = localStorage.getItem('authToken');
-              // Get the hotel_id for the current reservation
-              const hotel_id = await getReservationHotelId(reservationId.value);
-              const response = await fetch(`/api/reservation/update/client/${reservationId.value}`, {
+
+            return data;
+                
+        } catch (error) {
+            console.error('Error fetching data:', error);                
+            return null;
+        }
+    }
+
+    // Set
+    const setReservationId = (id) => {
+        // console.log('From Reservation Store => setReservationId:',reservationId.value);
+        reservationId.value = id;            
+    };        
+    const setReservationStatus = async (status) => {            
+        // console.log('From Reservation Store => setReservationStatus:',status);
+        try {
+            setReservationIsUpdating(true);
+
+            const authToken = localStorage.getItem('authToken');
+            // Get the hotel_id for the current reservation
+            const hotel_id = await getReservationHotelId(reservationId.value);
+
+            // Assuming you have an API endpoint to update the reservation status
+            const response = await fetch(`/api/reservation/update/status/${reservationId.value}`, {
                 method: 'PUT',
                 headers: {
-                  'Authorization': `Bearer ${authToken}`,
-                  'Content-Type': 'application/json'
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ client_id, hotel_id })
-              });
-        
-              if (!response.ok) {
-                throw new Error('Failed to update reservation client');
-              }
-        
-              const updatedReservation = await response.json();
-              await fetchReservation(reservationId.value);
+                body: JSON.stringify({ hotel_id, status })
+            });
 
-              setReservationIsUpdating(false);
-              
-            } catch (error) {
-              console.error('Error updating reservation client:', error);
+            if (!response.ok) {
+                throw new Error('Failed to update reservation status');
             }
-        };
-        const setReservationPlan = async (detail_id, hotel_id, gid, hid, price) => {            
-            // console.log('From Reservation Store => setReservationPlan');
-            try {
-                const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation
-                const response = await fetch(`/api/reservation/update/plan/${detail_id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ hotel_id, gid, hid, price })
-                });
 
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation');
-                }
+            // Update the local reservationDetails state
+            reservationDetails.value.status = status;
 
-                return 'Updated reservation plan.';
-            } catch (error) {
-                console.error('Error updating reservation:', error);
+            setReservationIsUpdating(false);
+        } catch (error) {
+            console.error('Error updating reservation status:', error);
+        }
+    };
+    const setReservationType = async (type) => {            
+        // console.log('From Reservation Store => setReservationType:',status);            
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Get the hotel_id for the current reservation
+            const hotel_id = await getReservationHotelId(reservationId.value);
+            
+            // Assuming you have an API endpoint to update the reservation status
+            const response = await fetch(`/api/reservation/update/type/${reservationId.value}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotel_id, type })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation status');
             }
-        };
-        const setReservationAddons = async (detail_id, addons) => {
-            // console.log('From Reservation Store => setReservationAddons');
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation
-                const response = await fetch(`/api/reservation/update/addon/${detail_id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },                    
-                    body: JSON.stringify(addons),
-                });
 
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation');
-                }
-                setReservationIsUpdating(false);
-                return 'Updated reservation addons.';
-            } catch (error) {
-                console.error('Error updating reservation:', error);
-            }
-        };
-        const setReservationRoom = async (detail_id, room_id) => {
-            // console.log('From Reservation Store => setReservationRoom');
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation
-                const response = await fetch(`/api/reservation/update/room/${detail_id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ room_id })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation');
-                }
-                setReservationIsUpdating(false);
-                return 'Updated reservation plan.';
-            } catch (error) {
-                console.error('Error updating reservation:', error);
-            }
-        };
-        const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
-            // console.log('From Reservation Store => setCalendarChange');         
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                // Get the hotel_id for the current reservation
-                const hotel_id = await getReservationHotelId(id);
-
-                // Assuming you have an API endpoint to update the reservation status
-                const response = await fetch(`/api/reservation/update/calendar/${id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation');
-                }
-
-                setReservationIsUpdating(false);
-                
-            } catch (error) {
-                console.error('Error updating reservation:', error);
-            }
-        };
-
-        // Bulk Update
-        const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons) => {
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                // Assuming you have an API endpoint to update the reservation
-                const response = await fetch(`/api/reservation/update/room/plan/${hotelId}/${roomId}/${reservationId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ plan, addons })
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to update reservation');
-                }
-
-                setReservationIsUpdating(false);
-
-                return 'Updated reservation plan.';
-            } catch (error) {
-                console.error('Error updating reservation:', error);
-            }
-        };
-        const setRoomGuests = async (reservationId, dataToUpdate) => {
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/update/guest/${reservationId}`;
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(dataToUpdate),
-                });
-        
-                if (!response.ok) {
-                    throw new Error('Failed to update room guest number.');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error updating room guest number:', error);
-                throw error;
-            }
-        };
-        const changeReservationRoomGuestNumber = async (id, room, mode) => {
-            // console.log('From Reservation Store => changeReservationRoomGuestNumber');
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/update/room/guestnumber/${id}`;
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(room),
-                });
-        
-                if (!response.ok) {
-                    throw new Error('Failed to update room guest number.');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error updating room guest number:', error);
-                throw error;
-            }
-        };  
+            // Update the local reservationDetails state
+            reservationDetails.value.type = type;
+            setReservationIsUpdating(false);
+        } catch (error) {
+            console.error('Error updating reservation status:', error);
+        }
+    };
+    const setReservationClient = async (client_id) => {
+        // console.log('From Reservation Store => setReservationClient:',client_id);
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Get the hotel_id for the current reservation
+            const hotel_id = await getReservationHotelId(reservationId.value);
+            const response = await fetch(`/api/reservation/update/client/${reservationId.value}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ client_id, hotel_id })
+            });
     
-        // Fetch
-        const fetchReservation = async (reservation_id) => {
-            // console.log('From Reservation Store => fetchReservation:',reservation_id);
-            reservationId.value = reservation_id;            
-            try {
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/info?id=${reservation_id}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
-    
-                const data = await response.json();
-
-                // console.log('From Reservation Store => fetchReservation data:',data);
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch reservation details');
-                }
-
-                // Handle if no reservation was found
-                if (data.message) {
-                    console.error(data.message); // Log message for debugging
-                    reservationDetails.value = {}; // Reset reservationDetails
-                    return; // Exit the function early since no reservation was found
-                }
-
-                // Format the date fields for each reservation in the array
-                if (Array.isArray(data.reservation)) {
-                    data.reservation.forEach((reservation) => {
-                        reservation.check_in = formatDate(new Date(reservation.check_in));
-                        reservation.check_out = formatDate(new Date(reservation.check_out));
-                        reservation.date = formatDate(new Date(reservation.date));
-                    });
-                }
-                
-                reservationDetails.value = data;                
-                    
-            } catch (error) {
-                console.error('Error fetching reservation:', error);
-                reservationDetails.value = {};
-                return null;
+            if (!response.ok) {
+            throw new Error('Failed to update reservation client');
             }
-        };
-        const fetchReservationDetail = async (id) => {
-            // console.log('From Reservation Store => fetchReservationDetail:',id);
-            try {
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/detail/info?id=${id}`;
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
     
-                const data = await response.json();
+            const updatedReservation = await response.json();
+            await fetchReservation(reservationId.value);
 
-                // console.log('From Reservation Store => fetchReservationDetail data:',data);
+            setReservationIsUpdating(false);
+            
+        } catch (error) {
+            console.error('Error updating reservation client:', error);
+        }
+    };
+    const setReservationPlan = async (detail_id, hotel_id, gid, hid, price) => {            
+        // console.log('From Reservation Store => setReservationPlan');
+        try {
+            const authToken = localStorage.getItem('authToken');
+            // Assuming you have an API endpoint to update the reservation
+            const response = await fetch(`/api/reservation/update/plan/${detail_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotel_id, gid, hid, price })
+            });
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch reservation details');
-                }
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
 
-                // Handle if no reservation was found
-                if (data.message) {
-                    console.error(data.message);
-                    return;
-                }
+            return 'Updated reservation plan.';
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
+    const setReservationAddons = async (detail_id, addons) => {
+        // console.log('From Reservation Store => setReservationAddons');
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Assuming you have an API endpoint to update the reservation
+            const response = await fetch(`/api/reservation/update/addon/${detail_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },                    
+                body: JSON.stringify(addons),
+            });
 
-                // Format the date fields for each reservation in the array
-                if (Array.isArray(data.reservation)) {
-                    data.reservation.forEach((reservation) => {
-                        reservation.check_in = formatDate(new Date(reservation.check_in));
-                        reservation.check_out = formatDate(new Date(reservation.check_out));
-                        reservation.date = formatDate(new Date(reservation.date));
-                    });
-                }  
-                
-                return data;
-                    
-            } catch (error) {
-                console.error('Error fetching reservation:', error);                
-                return null;
-            }            
-        };        
-        const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
-            // console.log('From Reservation Store => fetchAvailableRooms');
-            try {
-                const authToken = localStorage.getItem('authToken');            
-                const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+            setReservationIsUpdating(false);
+            return 'Updated reservation addons.';
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
+    const setReservationRoom = async (detail_id, room_id) => {
+        // console.log('From Reservation Store => setReservationRoom');
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Assuming you have an API endpoint to update the reservation
+            const response = await fetch(`/api/reservation/update/room/${detail_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ room_id })
+            });
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+            setReservationIsUpdating(false);
+            return 'Updated reservation plan.';
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
+    const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
+        // console.log('From Reservation Store => setCalendarChange');         
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Get the hotel_id for the current reservation
+            const hotel_id = await getReservationHotelId(id);
+
+            // Assuming you have an API endpoint to update the reservation status
+            const response = await fetch(`/api/reservation/update/calendar/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+
+            setReservationIsUpdating(false);
+            
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
+
+    // Bulk Update
+    const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Assuming you have an API endpoint to update the reservation
+            const response = await fetch(`/api/reservation/update/room/plan/${hotelId}/${roomId}/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ plan, addons })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+
+            setReservationIsUpdating(false);
+
+            return 'Updated reservation plan.';
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
+    const setRoomGuests = async (reservationId, dataToUpdate) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/update/guest/${reservationId}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(dataToUpdate),
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to update room guest number.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error updating room guest number:', error);
+            throw error;
+        }
+    };
+    const changeReservationRoomGuestNumber = async (id, room, mode) => {
+        // console.log('From Reservation Store => changeReservationRoomGuestNumber');
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/update/room/guestnumber/${id}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(room),
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to update room guest number.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error updating room guest number:', error);
+            throw error;
+        }
+    };  
+
+    // Fetch
+    const fetchReservation = async (reservation_id) => {
+        // console.log('From Reservation Store => fetchReservation:',reservation_id);
+        reservationId.value = reservation_id;            
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/info?id=${reservation_id}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            // console.log('From Reservation Store => fetchReservation data:',data);
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservation details');
+            }
+
+            // Handle if no reservation was found
+            if (data.message) {
+                console.error(data.message); // Log message for debugging
+                reservationDetails.value = {}; // Reset reservationDetails
+                return; // Exit the function early since no reservation was found
+            }
+
+            // Format the date fields for each reservation in the array
+            if (Array.isArray(data.reservation)) {
+                data.reservation.forEach((reservation) => {
+                    reservation.check_in = formatDate(new Date(reservation.check_in));
+                    reservation.check_out = formatDate(new Date(reservation.check_out));
+                    reservation.date = formatDate(new Date(reservation.date));
                 });
+            }
+            
+            reservationDetails.value = data;                
+                
+        } catch (error) {
+            console.error('Error fetching reservation:', error);
+            reservationDetails.value = {};
+            return null;
+        }
+    };
+    const fetchReservationDetail = async (id) => {
+        // console.log('From Reservation Store => fetchReservationDetail:',id);
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/detail/info?id=${id}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("fetchAvailableRooms API Error:", response.status, response.statusText, errorText);
-                    throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
-                }
+            const data = await response.json();
 
-                const data = await response.json();
+            // console.log('From Reservation Store => fetchReservationDetail data:',data);
 
-                if (data && data.availableRooms && Array.isArray(data.availableRooms)) {
-                    availableRooms.value = data.availableRooms;
-                } else if (data && data.message === 'No available rooms for the specified period.') {
-                    availableRooms.value = []; // Correctly handle the "no rooms" message
-                } else if (data && Object.keys(data).length === 0) {
-                    availableRooms.value = [];
-                }
-                else {
-                    console.error("Invalid API response format:", data);
-                    availableRooms.value = [];
-                }
-                return response;
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservation details');
+            }
 
-            } catch (error) {
-                console.error('Failed to fetch available rooms', error);
+            // Handle if no reservation was found
+            if (data.message) {
+                console.error(data.message);
+                return;
+            }
+
+            // Format the date fields for each reservation in the array
+            if (Array.isArray(data.reservation)) {
+                data.reservation.forEach((reservation) => {
+                    reservation.check_in = formatDate(new Date(reservation.check_in));
+                    reservation.check_out = formatDate(new Date(reservation.check_out));
+                    reservation.date = formatDate(new Date(reservation.date));
+                });
+            }  
+            
+            return data;
+                
+        } catch (error) {
+            console.error('Error fetching reservation:', error);                
+            return null;
+        }            
+    };        
+    const fetchAvailableRooms = async (hotelId, startDate, endDate) => {
+        // console.log('From Reservation Store => fetchAvailableRooms');
+        try {
+            const authToken = localStorage.getItem('authToken');            
+            const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("fetchAvailableRooms API Error:", response.status, response.statusText, errorText);
+                throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (data && data.availableRooms && Array.isArray(data.availableRooms)) {
+                availableRooms.value = data.availableRooms;
+            } else if (data && data.message === 'No available rooms for the specified period.') {
+                availableRooms.value = []; // Correctly handle the "no rooms" message
+            } else if (data && Object.keys(data).length === 0) {
                 availableRooms.value = [];
             }
-        };
-        const fetchReservedRooms = async (hotelId, startDate, endDate) => {
-            // console.log('From Reservation Store => fetchReservedRooms');
-            try {
-                const authToken = localStorage.getItem('authToken');            
-                const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+            else {
+                console.error("Invalid API response format:", data);
+                availableRooms.value = [];
+            }
+            return response;
 
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
+        } catch (error) {
+            console.error('Failed to fetch available rooms', error);
+            availableRooms.value = [];
+        }
+    };
+    const fetchReservedRooms = async (hotelId, startDate, endDate) => {
+        // console.log('From Reservation Store => fetchReservedRooms');
+        try {
+            const authToken = localStorage.getItem('authToken');            
+            const url = `/api/reservation/reserved-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("fetchReservedRooms API Error:", response.status, response.statusText, errorText);
+                throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {                    
+                // Exclude rooms that have a date between startDate and endDate
+                reservedRooms.value = reservedRooms.value.filter(room => {
+                    return !isDateBetweenRange(room.date, startDate, endDate); // Assuming room.date is the field to check
                 });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("fetchReservedRooms API Error:", response.status, response.statusText, errorText);
-                    throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
-                }
+                // Now add the new reserved rooms in the specified date range
+                reservedRooms.value.push(...data.reservedRooms);                    
+            } 
 
-                const data = await response.json();
+            return response;
 
-                if (data && data.reservedRooms && Array.isArray(data.reservedRooms)) {                    
-                    // Exclude rooms that have a date between startDate and endDate
-                    reservedRooms.value = reservedRooms.value.filter(room => {
-                        return !isDateBetweenRange(room.date, startDate, endDate); // Assuming room.date is the field to check
-                    });
-
-                    // Now add the new reserved rooms in the specified date range
-                    reservedRooms.value.push(...data.reservedRooms);                    
-                } 
-
-                return response;
-
-            } catch (error) {
-                console.error('Failed to fetch reserved rooms', error);
-                reservedRooms.value = [];
-            }
-        };
-        const fetchMyHoldReservations = async () => {
-            // console.log('From Reservation Store => fetchMyHoldReservations');
-            try{
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/hold-list`;
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    //console.error("fetchMyHoldReservations API Error:", response.status, response.statusText, errorText);
-                    //throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
-                    holdReservations.value = [];
-                }
-
-                const data = await response.json();
-                if (data.reservations) {
-                    // Group by unique combinations of the fields
-                    const groupedReservations = {};
-
-                    data.reservations.forEach(reservation => {
-                        const key = `${reservation.hotel_name}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
-                        
-                        if (!groupedReservations[key]) {
-                            // Store the first occurrence of each unique combination
-                            groupedReservations[key] = {
-                                hotel_id: reservation.hotel_id,
-                                hotel_name: reservation.name,
-                                reservation_id: reservation.reservation_id,
-                                client_name: reservation.client_name,
-                                check_in: formatDate(new Date(reservation.check_in)),
-                                check_out: formatDate(new Date(reservation.check_out)),
-                                number_of_people: reservation.number_of_people,
-                            };
-                        }
-                    });
-
-                    // Convert groupedReservations object to an array
-                    holdReservations.value = Object.values(groupedReservations);
-                }
-
-                return data;
-
-            } catch (error) {
-                console.error("Error fetching hold reservations:", error);
-            }
-        };
-        const fetchReservationsToday = async (hotelId, day) => {
-            // console.log('From Reservation Store => fetchReservationsToday');
-            try{
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/today/${hotelId}/${day}`;
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },                
-                });
-
-                if (!response.ok) {                                        
-                    reservedRoomsDayView.value = [];
-                }
-
-                const data = await response.json();
-                reservedRoomsDayView.value = data;
-                
-                return data;
-
-            } catch (error) {
-                console.error("Error fetching reservations:", error);
-            }
-        };
-
-        // Add
-        const addRoomToReservation = async (data) => {
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/add/room/`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                });                
-        
-                if (!response.ok) {
-                    throw new Error('Failed to add room.');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error:', error);
-                throw error;
-            }
-        };
-        const moveReservationRoom = async (data) => {
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/move/room/`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data),
-                });                
-        
-                if (!response.ok) {
-                    throw new Error('Failed to add room.');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error:', error);
-                throw error;
-            }
-        };
-
-        // Delete
-        const deleteHoldReservation = async (id) => {
-            // console.log('From Reservation Store => deleteHoldReservation');
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/delete/hold/${id}`;
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                });
-        
-                if (!response.ok) {
-                    throw new Error('Failed to delete hold reservation');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error deleting hold reservation:', error);
-                throw error;
-            }
-        };
-        const deleteReservationRoom = async (id, room) => {
-            // console.log('From Reservation Store => deleteReservationRoom');
-            try {
-                setReservationIsUpdating(true);
-                const authToken = localStorage.getItem('authToken');
-                const url = `/api/reservation/delete/room/${id}`;
-                const response = await fetch(url, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(room),
-                });
-        
-                if (!response.ok) {
-                    throw new Error('Failed to delete room from reservation.');
-                }
-                setReservationIsUpdating(false);
-                return await response.json();                
-            } catch (error) {
-                console.error('Error deleting room from reservation:', error);
-                throw error;
-            }
-        };
-
-        // Watchers
-        watch(reservedRooms, (newValue, oldValue) => {
-            if (newValue !== oldValue) {
-                // Log the minimum and maximum dates
-                const dates = newValue.map(item => new Date(item.date));
-                const validDates = dates.filter(date => !isNaN(date.getTime()));
-                if (validDates.length > 0) {
-                    const minDate = new Date(Math.min(...validDates));
-                    const maxDate = new Date(Math.max(...validDates));                    
-                    // console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
-                } else {
-                    // console.log('No valid dates found in reservedRooms.');
-                }
-            }
-        }, { deep: true });
-        watch(() => selectedHotelId.value, () => {
-            // console.log('From Reservation Store => selectedHotelId changed', selectedHotelId.value);
+        } catch (error) {
+            console.error('Failed to fetch reserved rooms', error);
             reservedRooms.value = [];
-        });
+        }
+    };
+    const fetchMyHoldReservations = async () => {
+        // console.log('From Reservation Store => fetchMyHoldReservations');
+        try{
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/hold-list`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                //console.error("fetchMyHoldReservations API Error:", response.status, response.statusText, errorText);
+                //throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+                holdReservations.value = [];
+            }
+
+            const data = await response.json();
+            if (data.reservations) {
+                // Group by unique combinations of the fields
+                const groupedReservations = {};
+
+                data.reservations.forEach(reservation => {
+                    const key = `${reservation.hotel_name}-${reservation.reservation_id}-${reservation.client_name}-${reservation.check_in}-${reservation.check_out}-${reservation.number_of_people}`;
+                    
+                    if (!groupedReservations[key]) {
+                        // Store the first occurrence of each unique combination
+                        groupedReservations[key] = {
+                            hotel_id: reservation.hotel_id,
+                            hotel_name: reservation.name,
+                            reservation_id: reservation.reservation_id,
+                            client_name: reservation.client_name,
+                            check_in: formatDate(new Date(reservation.check_in)),
+                            check_out: formatDate(new Date(reservation.check_out)),
+                            number_of_people: reservation.number_of_people,
+                        };
+                    }
+                });
+
+                // Convert groupedReservations object to an array
+                holdReservations.value = Object.values(groupedReservations);
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error("Error fetching hold reservations:", error);
+        }
+    };
+    const fetchReservationsToday = async (hotelId, day) => {
+        // console.log('From Reservation Store => fetchReservationsToday');
+        try{
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/today/${hotelId}/${day}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            if (!response.ok) {                                        
+                reservedRoomsDayView.value = [];
+            }
+
+            const data = await response.json();
+            reservedRoomsDayView.value = data;
+            
+            return data;
+
+        } catch (error) {
+            console.error("Error fetching reservations:", error);
+        }
+    };
+
+    // Add
+    const addRoomToReservation = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/add/room/`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });                
+    
+            if (!response.ok) {
+                throw new Error('Failed to add room.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    };
+    const moveReservationRoom = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/move/room/`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });                
+    
+            if (!response.ok) {
+                throw new Error('Failed to add room.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    };
+
+    // Delete
+    const deleteHoldReservation = async (id) => {
+        // console.log('From Reservation Store => deleteHoldReservation');
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/delete/hold/${id}`;
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to delete hold reservation');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error deleting hold reservation:', error);
+            throw error;
+        }
+    };
+    const deleteReservationRoom = async (id, room) => {
+        // console.log('From Reservation Store => deleteReservationRoom');
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/delete/room/${id}`;
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(room),
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to delete room from reservation.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error deleting room from reservation:', error);
+            throw error;
+        }
+    };
+
+    // Watchers
+    watch(reservedRooms, (newValue, oldValue) => {
+        if (newValue !== oldValue) {
+            // Log the minimum and maximum dates
+            const dates = newValue.map(item => new Date(item.date));
+            const validDates = dates.filter(date => !isNaN(date.getTime()));
+            if (validDates.length > 0) {
+                const minDate = new Date(Math.min(...validDates));
+                const maxDate = new Date(Math.max(...validDates));                    
+                // console.log('reservedRooms changed in Store: min', minDate.toLocaleDateString(),'max', maxDate.toLocaleDateString(), 'rows:', newValue.length);
+            } else {
+                // console.log('No valid dates found in reservedRooms.');
+            }
+        }
+    }, { deep: true });
+    watch(() => selectedHotelId.value, () => {
+        // console.log('From Reservation Store => selectedHotelId changed', selectedHotelId.value);
+        reservedRooms.value = [];
+    });
 
     return {
         reservationIsUpdating,
@@ -724,6 +748,7 @@
         getReservationId,
         getReservationHotelId,
         getAvailableDatesForChange,
+        fetchReservationClientIds,
         setReservationId,
         setReservationStatus,
         setReservationType,

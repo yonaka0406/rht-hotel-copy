@@ -312,7 +312,7 @@
         fax: '',
         display_name: '',
       };
-    }
+    };
   
     onMounted(async () => { 
       
