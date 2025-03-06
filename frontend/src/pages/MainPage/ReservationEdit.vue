@@ -121,6 +121,14 @@
                 reservation_details.value = reservationDetails.value.reservation;
         }
     });
+    watch(reservationId, async (newVal, oldVal) => {
+        if(oldVal && newVal !== oldVal){
+            console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
+            await fetchReservation(newVal);
+                reservation_details.value = reservationDetails.value.reservation;
+        }
+        
+    });
 
 </script>
 

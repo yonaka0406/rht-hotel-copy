@@ -127,7 +127,7 @@
             <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
                 <ul v-if="holdReservations.length">
                     <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                        <button @click="goToEditReservationPage(reservation.reservation_id)">
+                        <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)">
                             <p>保留中予約を完成させてください:</p>
                             {{ reservation.client_name }} @ {{ reservation.check_in }}
                         </button>
@@ -259,16 +259,17 @@
                 return userMessage;
             });
 
-            // Handle notification click           
-            const goToEditReservationPage = async (reservation_id) => {                
+            // Handle notification click
+            const goToEditReservationPage = async (hotel_id, reservation_id) => {
+                await setHotelId(hotel_id);
                 await setReservationId(reservation_id);
-                const hotel_id = await getReservationHotelId(reservation_id);
-                setHotelId(hotel_id);
 
+                // console.log('SideMenu goToEditReservationPage:', hotel_id, reservation_id)
+                
                 showDrawer.value = false;
 
                 router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
-            };
+            }; 
             const goToNewReservation = () => {                
                 setReservationId(null);                
                 router.push({ name: 'ReservationsNew' });
@@ -304,7 +305,7 @@
                 selectedHotelId,
                 (newVal, oldVal) => {                    
                     if (newVal) {
-                        //console.log(`Hotel ID ${newVal} is being provided by SideMenu.`);
+                        // console.log(`Hotel ID ${newVal} is being provided by SideMenu.`);
                     }
                 },
                 { immediate: true } 

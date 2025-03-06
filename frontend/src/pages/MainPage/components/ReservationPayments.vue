@@ -20,7 +20,7 @@
                             <FloatLabel>
                                 <label>支払い方法</label>
                                 <Select v-model="newPayment.type"   
-                                    :options="paymentTypes"                                     
+                                    :options="filteredPaymentTypes"                                     
                                     optionLabel="name"
                                     optionValue="transaction"
                                     fluid
@@ -115,7 +115,7 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationDetails, fetchReservation } = useReservationStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
+    const { selectedHotelId, selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
 
     // Helper
     function formatDate(date) {
@@ -123,7 +123,18 @@
         const month = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-    }
+    };
+
+    // Computed
+    const filteredPaymentTypes = computed(() => {
+        if(!paymentTypes.value) {
+            return
+        }            
+        
+        return paymentTypes.value.filter(pt => 
+            pt.hotel_id === null || pt.hotel_id === props.reservation_details[0].hotel_id
+        );
+    });
 
     // Mock Data (Replace with your actual data)
     const reservation = ref({
@@ -171,11 +182,13 @@
 
     onMounted( async () => {   
         console.log('onMounted ReservationPayments;', props.reservation_details);
-
-        await setHotelId(reservationDetails.value.reservation.hotel_id);
+        
+        await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel(); 
         
-        await fetchPaymentTypes();                
+        await fetchPaymentTypes(); 
+        
+        console.log('paymentTypes:', paymentTypes.value);
 
         const uniqueRoomIds = [...new Set(props.reservation_details.map(room => room.room_id))];
         newPayment.value.room_id = uniqueRoomIds[0];
@@ -189,6 +202,11 @@
         console.log('reservationRooms changed:', newValue);
     });
 */
+    watch(filteredPaymentTypes, (newVal, oldVal) => {
+    console.log("Filtered payment types changed:", newVal);
+    // Add any additional logic here
+    }, { deep: true });
+    
 </script>
 
 <style scoped>

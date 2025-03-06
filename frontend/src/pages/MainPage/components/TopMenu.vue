@@ -39,7 +39,7 @@
     <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
         <ul v-if="holdReservations.length">
             <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                <button @click="goToEditReservationPage(reservation.reservation_id)">
+                <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)">
                     {{ reservation.hotel_name }}<p>保留中予約を完成させてください: </p>
                     {{ reservation.client_name }} @ {{ reservation.check_in }}
                 </button>
@@ -69,7 +69,7 @@
             const router = useRouter();       
             const { logged_user, fetchUser } = useUserStore();
             const { hotels, setHotelId, selectedHotelId } = useHotelStore();
-            const { holdReservations, fetchMyHoldReservations, getReservationHotelId, setReservationId } = useReservationStore();
+            const { holdReservations, fetchMyHoldReservations, getReservationHotelId, setReservationId, fetchReservation } = useReservationStore();
             const showDrawer = ref(false);
             const userMessage = ref('');
 
@@ -92,19 +92,18 @@
             });
 
             // Handle notification click
-            const goToEditReservationPage = async (reservation_id) => {                
+            const goToEditReservationPage = async (hotel_id, reservation_id) => {
+                await setHotelId(hotel_id);
                 await setReservationId(reservation_id);
-                const hotel_id = await getReservationHotelId(reservation_id);
-                setHotelId(hotel_id);
+
+                // console.log('TopMenu goToEditReservationPage:', hotel_id, reservation_id)
                 
                 showDrawer.value = false;
 
                 router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
-            };
+            };            
 
             onMounted( async () => {
-                
-                        
                 //console.log('holdReservations:',holdReservations.value);
                 // Already called in SideMenu                
                 //fetchHotels(); 
@@ -116,7 +115,7 @@
             watch(selectedHotelId,
                 (newVal, oldVal) => {                    
                     if (newVal) {
-                        //console.log(`Hotel ID ${newVal} is being provided by TopMenu.`);
+                        // console.log(`Hotel ID ${newVal} is being provided by TopMenu.`);
                     }
                 },
                 { immediate: true } // This ensures the watcher runs on initialization
