@@ -433,6 +433,7 @@ CREATE TABLE reservation_payments (
     date DATE NOT NULL,
     room_id INT,
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
+    payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table
     value DECIMAL,
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

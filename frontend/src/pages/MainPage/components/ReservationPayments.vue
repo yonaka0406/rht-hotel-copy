@@ -1,10 +1,26 @@
 <template>
     <div class="p-4">
+        <ConfirmDialog></ConfirmDialog>
         <Card>
             <template #title>
-                請求金額：{{ Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(totalPrice) }}　未請求分：
+                <span>
+                    請求金額：
+                    {{ Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(totalPrice) }}
+                </span>
+                <span v-if="remainingBalance > 0">
+                    ｜
+                    未請求分：
+                    {{ Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(remainingBalance) }}
+                </span>
+                <span v-else-if="remainingBalance === 0">
+                    ｜ ✅ 完済済み
+                </span>
+                <span v-else>
+                    ｜ ⚠️ 過払い：
+                    {{ Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(Math.abs(remainingBalance)) }}
+                </span>
             </template>
-            <template #content>
+            <template #content>                
                 <form @submit.prevent="addPayment">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <!-- Room -->
@@ -27,7 +43,7 @@
                                 <Select v-model="newPayment.type"   
                                     :options="filteredPaymentTypes"                                     
                                     optionLabel="name"
-                                    optionValue="transaction"
+                                    optionValue="id"
                                     fluid
                                     required
                                 />
@@ -118,7 +134,7 @@
                                 />
                             </FloatLabel>
                         </div>                         
-                        <div>
+                        <div>                            
                             <Button label="追加" class="p-button-primary" type="submit" />
                         </div>
                     </div>
@@ -126,21 +142,37 @@
             </template>
         </Card>
 
-        <h2 class="text-lg font-semibold mb-4">Payments History</h2>
-        <DataTable :value="payments" :sort-field="'date'" :sort-order="-1">
-            <Column field="date" header="Date"></Column>
-            <Column field="type" header="Type"></Column>
-            <Column field="value" header="Value"></Column>
-            <Column field="room.roomNumber" header="Room"></Column>
-            <Column field="payerClientId" header="Payer Client ID"></Column>
-            <Column field="billingNo" header="Billing No"></Column>
-        </DataTable>
-
-        <div class="mt-4">
-            <p>Total Paid/Billed: {{ totalPaidBilled }}</p>
-            <p>Billable Amount: {{ billableAmount }}</p>
-            <p>Difference: {{ billableAmount - totalPaidBilled }}</p>
-        </div>
+        <h2 class="text-lg font-semibold my-4">清算履歴</h2>
+        <DataTable :value="reservation_payments">
+            <Column header="日付">
+                <template #body="{ data }">
+                    <span>{{  formatDate(new Date(data.date)) }}</span>
+                </template>
+            </Column>
+            <Column field="room_number" header="部屋"></Column>
+            <Column field="payment_type_name" header="支払方法"></Column>
+            <Column header="金額">
+                <template #body="{ data }">
+                    <span>{{ Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(data.value) }}</span>
+                </template>
+            </Column>            
+            <Column field="payer_name" header="支払者"></Column>
+            <Column header="備考">
+                <template #body="{ data }">
+                    <span class="text-xs">{{ data.comment }}</span>
+                </template>
+            </Column>
+            <Column header="削除" style="width: 100px; text-align: center;">
+                <template #body="{ data }">
+                    <ConfirmDialog group="headless"></ConfirmDialog>
+                    <Button 
+                        icon="pi pi-trash" 
+                        class="p-button-danger p-button-text" 
+                        @click="deletePayment(data)"
+                    />
+                </template>
+            </Column>
+        </DataTable>        
     </div>
 </template>
 
@@ -153,20 +185,25 @@
             type: [Object],
             required: true,
         }, 
+        reservation_payments: {
+            type: [Object],
+            required: true,
+        }, 
     });
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
-    const confirm = useConfirm();
-    import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, DataTable, Column } from 'primevue';    
+    const confirmPayment = useConfirm();
+    const confirmDelete = useConfirm();
+    import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';    
 
     // Stores
     import { useSettingsStore } from '@/composables/useSettingsStore';
     const { paymentTypes, fetchPaymentTypes } = useSettingsStore();
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { reservationIsUpdating, fetchReservationClientIds } = useReservationStore();
+    const { reservationIsUpdating, fetchReservationClientIds, addReservationPayment, deleteReservationPayment } = useReservationStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
@@ -202,7 +239,7 @@
         }            
         
         return paymentTypes.value.filter(pt => 
-            pt.hotel_id === null || pt.hotel_id === props.reservation_details[0].hotel_id
+            pt.visible === true && (pt.hotel_id === null || pt.hotel_id === props.reservation_details[0].hotel_id)
         );
     });
     const reservationRooms = computed(() => {
@@ -224,15 +261,36 @@
             if (!acc[room.room_id]) {
             acc[room.room_id] = 0;
             }
-            acc[room.room_id] += room.price || 0;
+            acc[room.room_id] += room.price * 1 || 0;
             return acc;
         }, {});
+    });
+    const totalPayment = computed(() => {
+        if (!props.reservation_payments) return 0;
+
+        return props.reservation_payments.reduce((sum, room) => sum + (room.value * 1 || 0), 0);
+    });
+    const paymentPerRoom = computed(() => {
+        if (!props.reservation_payments) return [];
+
+        return props.reservation_payments.reduce((acc, room) => {
+            if (!acc[room.room_id]) {
+            acc[room.room_id] = 0;
+            }
+            acc[room.room_id] += room.value * 1 || 0;
+            return acc;
+        }, {});
+    });
+    const remainingBalance = computed(() => {
+        const price = Number(totalPrice.value) || 0;
+        const payment = Number(totalPayment.value) || 0;
+        return price - payment;
     });
 
     // Form
     const newPayment = ref({
         date: formatDate(new Date()),
-        type: 'cash',
+        type: 0,
         value: 0,
         room_id: null,
         room_balance: 0,
@@ -240,14 +298,94 @@
         comment: null,
     });
     const resetPaymentForm = () => {
+        console.log('resetPaymentForm')
         newPayment.value.value = 0;
-        newPayment.value.comment = null;         
+        newPayment.value.comment = null;
+        
+        const price = pricePerRoom.value[newPayment.value.room_id] || 0;
+        const payment = paymentPerRoom.value[newPayment.value.room_id] || 0;
+        newPayment.value.room_balance = price * 1 - payment * 1;
     };
-    const addPayment = () => {
-        
-        
+    const addPayment = async () => {
 
-        resetPaymentForm();
+        if(!newPayment.value.room_id){
+            toast.add({ severity: 'warn', summary: '注意', detail: '部屋が選択されていません。', life: 3000 }); 
+            return
+        }
+        if(!newPayment.value.date){
+            toast.add({ severity: 'warn', summary: '注意', detail: '日付が選択されていません。', life: 3000 }); 
+            return
+        }
+        if(!newPayment.value.type){
+            toast.add({ severity: 'warn', summary: '注意', detail: '支払方法が選択されていません。', life: 3000 }); 
+            return
+        }
+        if(!newPayment.value.value || newPayment.value.value === 0){
+            toast.add({ severity: 'warn', summary: '注意', detail: '金額を入力してください。', life: 3000 }); 
+            return
+        }
+        if(!newPayment.value.payerClientId){
+            toast.add({ severity: 'warn', summary: '注意', detail: '支払者が選択されていません。', life: 3000 }); 
+            return
+        }
+        
+        const dataToAdd = {
+            hotelId: props.reservation_details[0].hotel_id,
+            reservationId: props.reservation_details[0].reservation_id, 
+            date: newPayment.value.date, 
+            roomId: newPayment.value.room_id, 
+            clientId: newPayment.value.payerClientId, 
+            paymentTypeId: newPayment.value.type,
+            value: newPayment.value.value, 
+            comment: newPayment.value.comment,
+        };
+
+        if (newPayment.value.value > newPayment.value.room_balance) {
+            confirmPayment.require({
+                message: "金額が部屋残高を超えています。本当に続行しますか？",
+                header: "確認",
+                icon: "pi pi-exclamation-triangle",
+                rejectProps: {
+                    label: 'キャンセル',
+                    severity: 'secondary',
+                    outlined: true
+                },
+                acceptProps: {
+                    label: 'はい'
+                },                
+                accept: () => {
+                    addReservationPayment(dataToAdd);
+                    resetPaymentForm();
+                    toast.add({ severity: 'success', summary: '追加', detail: '清算登録されました。', life: 3000 });
+                },
+                reject: () => {
+                },
+            });
+        } else {
+            await addReservationPayment(dataToAdd);
+            resetPaymentForm();
+            toast.add({ severity: 'success', summary: '追加', detail: '清算登録されました。', life: 3000 });
+        }
+    };
+    const deletePayment = (payment) => {
+        deleteReservationPayment(payment.id);
+        /*
+        confirmDelete.require({
+            message: `本当に削除しますか？ (金額: ${Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(payment.value)})`,
+            header: "確認",
+            icon: "pi pi-exclamation-triangle",
+            rejectProps: {
+                    label: 'キャンセル',
+                    severity: 'secondary',
+                    outlined: true
+                },
+                acceptProps: {
+                    label: '削除',
+                    severity: 'danger',
+                }, 
+            accept: () => deleteReservationPayment(payment.id),
+        });
+        */
     };
     
     // Client select
@@ -299,38 +437,10 @@
     const resetClient = () => {
       isClientSelected.value = false;
       newPayment.value.payerClientId = null;
-    };
-
-
-
-
-
-
-    // Mock Data (Replace with your actual data)
-    const reservation = ref({
-        rooms: [{ roomNumber: '101' }, { roomNumber: '102' }],
-        clients: [{ id: 'C1' }, { id: 'C2' }],
-        billableAmount: 500,
-    });    
-   
-
-    const billableAmount = computed(() => reservation.value.billableAmount);
-    
-    const payments = ref([
-    { date: '2023-10-26', type: 'Card', value: 200, room: { roomNumber: '101' }, payerClientId: 'C1', billingNo: 'B123' },
-    { date: '2023-10-25', type: 'Cash', value: 150, room: { roomNumber: '102' }, payerClientId: 'C2', billingNo: 'B124' },
-    ]);
-
-    
-
-    
-
-    const totalPaidBilled = computed(() => {
-    return payments.value.reduce((acc, payment) => acc + payment.value, 0);
-    });
+    }; 
 
     onMounted( async () => {   
-        console.log('onMounted ReservationPayments;', props.reservation_details);
+        console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
         
         await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel();
@@ -347,18 +457,25 @@
             setClientsIsLoading(false);            
         }
         
-        // Initialize newPayment
-        resetPaymentForm();
+        // Initialize newPayment        
         const uniqueRoomIds = [...new Set(props.reservation_details.map(room => room.room_id))];
         newPayment.value.room_id = uniqueRoomIds[0];
+        const cashPaymentTypes = paymentTypes.value.filter(pt => 
+            pt.visible === true && pt.transaction === 'cash' && (pt.hotel_id === null || pt.hotel_id === props.reservation_details[0].hotel_id)
+        );
+        newPayment.value.type = cashPaymentTypes[0].id;
+        resetPaymentForm();
 
         // console.log('onMounted newPayment:', newPayment.value)
     });
 
     // Watcher
     watch(newPayment, (newVal, oldVal) => {
-        console.log('watch newPayment', newPayment.value);
-        newPayment.value.room_balance = pricePerRoom.value[newPayment.value.room_id] * 1;        
+        
+        const price = pricePerRoom.value[newPayment.value.room_id] || 0;
+        const payment = paymentPerRoom.value[newPayment.value.room_id] || 0;
+        newPayment.value.room_balance = price * 1 - payment * 1;  
+        //console.log('watch newPayment', newVal);
         
     }, { deep: true });
 
@@ -370,6 +487,14 @@
             // console.log("Not Updating...");
             await updateReservationClients();
         }
+    });
+
+    watch(remainingBalance, async (newVal, oldVal) =>{
+        console.log('watch remainingBalance', oldVal, newVal);
+
+        const price = pricePerRoom.value[newPayment.value.room_id] || 0;
+        const payment = paymentPerRoom.value[newPayment.value.room_id] || 0;
+        newPayment.value.room_balance = price * 1 - payment * 1;     
     });
     
     

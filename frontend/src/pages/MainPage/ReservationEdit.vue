@@ -27,8 +27,9 @@
         <template #title>清算</template>
         <template #content>
             <ReservationPayments
-                v-if="reservation_details"
-                :reservation_details="reservation_details"              
+                v-if="reservation_details && reservation_payments"
+                :reservation_details="reservation_details"
+                :reservation_payments="reservation_payments"
             />
         </template>
     </Card>
@@ -60,22 +61,24 @@
 
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation } = useReservationStore();
-    import { useHotelStore } from '@/composables/useHotelStore';
-    const { selectedHotelRooms, setHotelId, fetchHotel } = useHotelStore();
+    const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
+    
     
     // Primevue
     import { Card } from 'primevue';
         
     const hotelId = ref(null);
     const reservation_details = ref(null);
+    const reservation_payments = ref(null);
     
     // Fetch reservation details on mount
     onMounted(async () => {
         
         await setReservationId(props.reservation_id);
         await fetchReservation(reservationId.value);
-            reservation_details.value = reservationDetails.value.reservation;        
+            reservation_details.value = reservationDetails.value.reservation;
+        const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+            reservation_payments.value = pmtData.payments;
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -94,6 +97,8 @@
             // Web Socket fetchReservation                
             await fetchReservation(reservationId.value);
                 reservation_details.value = reservationDetails.value.reservation;
+            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                reservation_payments.value = pmtData.payments;
         });
 
         
@@ -111,14 +116,14 @@
     // Watcher
     watch(reservationIsUpdating, async (newVal, oldVal) => {
         if (newVal === true) {
-            console.log("Updating...");
-            //await fetchReservation(reservationId.value);
-                //reservation_details.value = reservationDetails.value.reservation;
+            // console.log("Updating...");            
         }
         if (newVal === false) {
-            console.log("Not Updating...");
+            // console.log("Not Updating...");
             await fetchReservation(reservationId.value);
                 reservation_details.value = reservationDetails.value.reservation;
+            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                reservation_payments.value = pmtData.payments;
         }
     });
     watch(reservationId, async (newVal, oldVal) => {
@@ -126,6 +131,8 @@
             console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
             await fetchReservation(newVal);
                 reservation_details.value = reservationDetails.value.reservation;
+            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                reservation_payments.value = pmtData.payments;
         }
         
     });

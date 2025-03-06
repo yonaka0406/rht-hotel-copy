@@ -94,7 +94,7 @@ export function useReservationStore() {
             console.error('Error fetching data:', error);                
             return null;
         }
-    }
+    };
 
     // Set
     const setReservationId = (id) => {
@@ -615,6 +615,27 @@ export function useReservationStore() {
             console.error("Error fetching reservations:", error);
         }
     };
+    const fetchReservationPayments = async (hotelId, reservation_id) => {
+        try{
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/payment/list/${hotelId}/${reservation_id}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+            
+            const data = await response.json();
+            
+            return data;
+
+        } catch (error) {
+            console.error("Error fetching reservations:", error);
+        }
+    };
 
     // Add
     const addRoomToReservation = async (data) => {
@@ -665,6 +686,30 @@ export function useReservationStore() {
             throw error;
         }
     };
+    const addReservationPayment = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/payment/add/`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });                
+    
+            if (!response.ok) {
+                throw new Error('Failed to add room.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    }
 
     // Delete
     const deleteHoldReservation = async (id) => {
@@ -713,6 +758,29 @@ export function useReservationStore() {
             return await response.json();                
         } catch (error) {
             console.error('Error deleting room from reservation:', error);
+            throw error;
+        }
+    };
+    const deleteReservationPayment = async (id) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/payment/delete/${id}`;
+            const response = await fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to delete payment from reservation.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error deleting payment from reservation:', error);
             throw error;
         }
     };
@@ -766,9 +834,12 @@ export function useReservationStore() {
         fetchReservedRooms,
         fetchMyHoldReservations, 
         fetchReservationsToday,
+        fetchReservationPayments,
         addRoomToReservation,
         moveReservationRoom,
+        addReservationPayment,
         deleteHoldReservation,
-        deleteReservationRoom,     
+        deleteReservationRoom,
+        deleteReservationPayment,     
     };
 }

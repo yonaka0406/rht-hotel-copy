@@ -1,9 +1,9 @@
 const pool = require('../config/database');
 const { 
-  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds,
-  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, 
+  selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
+  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan,
-  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom
+  deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -149,7 +149,19 @@ const getReservationClientIds = async (req, res) => {
     console.error('Error getting clients:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-}
+};
+
+const getReservationPayments = async (req, res) => {
+  const { hid, id } = req.params;
+
+  try {
+    const payments = await selectReservationPayments(hid, id);
+    res.status(200).json({ payments });
+  } catch (error) {    
+    console.error('Error getting payments:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
 
 // POST
 const createReservationHold = async (req, res) => {
@@ -505,6 +517,25 @@ const alterReservationRoom = async (req, res) => {
   
 };
 
+const createReservationPayment = async (req, res) => {
+  const { hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment } = req.body;
+  const userId = req.user.id;     
+
+  try {
+    const newPMT = await insertReservationPayment(hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
+      res.status(200).json({
+        message: 'Payment added to reservation successfully',
+        data: newPMT
+      });
+  } catch (err) {
+    console.error('Error adding payment:', err);
+    res.status(500).json({
+      message: 'Database error',
+      error: err.message
+    });
+  }
+};
+
 // PUT
 const editReservationDetail = async (req, res) => {  
   const { id } = req.params;
@@ -850,5 +881,19 @@ const deleteRoomFromReservation = async (req, res) => {
   }
 };
 
-module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation };
+const delReservationPayment = async (req, res) => {
+  const { id } = req.params;
+  const user_id = req.user.id; 
+    
+  try {      
+      await deleteReservationPayment(id, user_id);      
+      res.status(200).json({ message: "Payment deleted successfully" });
+  } catch (err) {
+      console.error("Error deleting room:", err);
+      res.status(500).json({ error: "Failed to delete payment" });
+  }
+
+};
+
+module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };

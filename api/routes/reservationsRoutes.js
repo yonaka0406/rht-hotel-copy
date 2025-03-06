@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, 
-    createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom,
-    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation } = require('../controllers/reservationsController');
+const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, 
+    createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment,
+    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/reservation/available-rooms', authMiddleware, getAvailableRooms);
@@ -13,11 +13,13 @@ router.get('/reservation/hold-list', authMiddleware, getMyHoldReservations);
 router.get('/reservation/today/:hid/:date', authMiddleware, getReservationsToday);
 router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, getAvailableDatesForChange);
 router.get('/reservation/list/clients/:hid/:id', authMiddleware, getReservationClientIds);
+router.get('/reservation/payment/list/:hid/:id', authMiddleware, getReservationPayments);
 router.post('/reservation/hold', authMiddleware, createReservationHold);
 router.post('/reservation/addon', authMiddleware, createReservationAddons);
 router.post('/reservation/client', authMiddleware, createReservationClient);
 router.post('/reservation/add/room', authMiddleware, addNewRoomToReservation);
 router.post('/reservation/move/room', authMiddleware, alterReservationRoom);
+router.post('/reservation/payment/add', authMiddleware, createReservationPayment);
 router.post('/reservation/update/details', authMiddleware, createReservationDetails);
 router.put('/reservation/update/details/:id', authMiddleware, editReservationDetail);
 router.put('/reservation/update/guest/:id', authMiddleware, editReservationGuests);
@@ -32,6 +34,7 @@ router.put('/reservation/update/calendar/:id', authMiddleware, editRoomFromCalen
 router.put('/reservation/update/room/guestnumber/:id', authMiddleware, editRoomGuestNumber);
 router.delete('/reservation/delete/hold/:id', authMiddleware, deleteHoldReservation);
 router.delete('/reservation/delete/room/:id', authMiddleware, deleteRoomFromReservation);
+router.delete('/reservation/payment/delete/:id', authMiddleware, delReservationPayment);
 
 
 module.exports = router;

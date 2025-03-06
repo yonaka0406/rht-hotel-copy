@@ -598,7 +598,41 @@ const selectReservationClientIds = async(hotelId, reservationId) => {
     console.error('Error fetching reservations:', err);
     throw new Error('Database error');
   }
-}
+};
+
+const selectReservationPayments = async(hotelId, reservationId) => {
+  const query = `
+    SELECT 
+      reservation_payments.*
+      ,payment_types.name as payment_type_name
+      ,payment_types.transaction as transaction_type
+      ,rooms.room_number
+      ,COALESCE(clients.name_kanji, clients.name) AS payer_name
+    FROM 
+      reservation_payments
+      ,payment_types
+      ,rooms
+      ,clients
+    WHERE
+      reservation_payments.hotel_id = $1
+      AND reservation_payments.reservation_id = $2
+      AND reservation_payments.payment_type_id = payment_types.id
+      AND reservation_payments.room_id = rooms.id
+      AND reservation_payments.client_id = clients.id
+    ORDER BY
+      reservation_payments.date, reservation_payments.client_id, reservation_payments.value
+  `;
+
+  const values = [hotelId, reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservations:', err);
+    throw new Error('Database error');
+  }
+};
 
 // Function to Add
 
@@ -754,6 +788,25 @@ const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userI
   } finally {
     client.release();
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+  }
+};
+
+const insertReservationPayment = async (hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
+  const query = `
+    INSERT INTO reservation_payments (
+      hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+    RETURNING *;
+  `;
+
+  const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the inserted reservation client
+  } catch (err) {
+    console.error('Error adding payment to reservation:', err);
+    throw new Error('Database error');
   }
 };
 
@@ -1577,6 +1630,33 @@ const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeo
   }
 };
 
+const deleteReservationPayment = async (id, userId) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userId);
+    await client.query(setSessionQuery);
+
+    const deleteQuery = `
+      DELETE FROM reservation_payments
+      WHERE id = $1
+      RETURNING *;
+    `;
+    const deleteResults = await pool.query(deleteQuery, [id]);
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error:', err);
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {    
     selectAvailableRooms,
     selectReservedRooms,
@@ -1587,11 +1667,13 @@ module.exports = {
     selectReservationsToday,
     selectAvailableDatesForChange,
     selectReservationClientIds,
+    selectReservationPayments,
     addReservationHold,
     addReservationDetail,
     addReservationAddon,
     addReservationClient,
     addRoomToReservation,
+    insertReservationPayment,
     updateReservationDetail,
     updateReservationStatus,
     updateReservationType,
@@ -1610,5 +1692,6 @@ module.exports = {
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,
     deleteReservationRoom,
+    deleteReservationPayment,
 };
 
