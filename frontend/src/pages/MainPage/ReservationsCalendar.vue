@@ -49,14 +49,14 @@
                 class="px-2 py-2 text-center bg-white aspect-square w-32 h-16 sticky top-0 z-10"
               > 
                   {{ room.room_type_name }} <br/>
-                  {{ room.room_number }}
+                  <span class="text-lg">{{ room.room_number }}</span>
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
-              <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">
-                {{ formatDateWithDay(date) }}
+              <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">                
+                <span class="text-xs">{{ formatDateWithDay(date) }}</span>
               </td>
               <td
                 v-for="(room, roomIndex) in selectedHotelRooms"
@@ -103,8 +103,6 @@
                     <div class="ml-1">
                       {{ fillRoomInfo(room.room_id, date).client_name }}
                     </div>
-                    
-                    
                   </div>
                   <div v-else>
                     <i class="pi pi-circle"></i> 空室
@@ -129,48 +127,69 @@
       />
     </Drawer>
   </div>
+  <ConfirmDialog group="templating">
+    <template #message="slotProps">
+      <div class="flex flex-col items-center w-full gap-4 border-b border-surface-200 dark:border-surface-700">
+        <i :class="slotProps.message.icon" class="!text-6xl text-primary-500"></i>
+        <div v-html="formattedMessage"></div>
+      </div>
+    </template>
+  </ConfirmDialog>
 </template>
 
-<script>
+
+
+<script setup>
+  // Vue
   import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
-  import io from 'socket.io-client';
-  import { useToast } from 'primevue/usetoast';
-  import { useHotelStore } from '@/composables/useHotelStore';
-  import { useClientStore } from '@/composables/useClientStore';
-  import { useReservationStore } from '@/composables/useReservationStore';
+
   import ReservationEdit from './ReservationEdit.vue';
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
+
+  //Websocket
+  import io from 'socket.io-client';
+  const socket = ref(null);
+
+  // Primevue
+  import { useToast } from 'primevue/usetoast';
+  const toast = useToast();
+  import { useConfirm } from "primevue/useconfirm";
+  const confirm = useConfirm();
   import { Panel, Drawer, Skeleton } from 'primevue';
-  import { SelectButton, DatePicker, InputText } from 'primevue';
-  
-  export default {  
-    name: "ReservationsCalendar",
-    components: {  
-        ReservationEdit,
-        ReservationAddRoom,
-        Panel,
-        Drawer,
-        Skeleton,
-        SelectButton,
-        DatePicker,
-        InputText,
-    },
-    data() {
-      return {
-        
-      };
-    },
-    setup() {
-      const socket = ref(null);
-      const toast = useToast();
-      const isUpdating = ref(false);
-      const isLoading = ref(true);
-      const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
-      const { clients, fetchClients } = useClientStore();
-      const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
-      const dateRange = ref([]); 
-      const minDate = ref(null);
-      const maxDate = ref(null);
+  import { SelectButton, InputText, ConfirmDialog  } from 'primevue';
+
+  // Stores  
+  import { useHotelStore } from '@/composables/useHotelStore';
+  const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+  import { useClientStore } from '@/composables/useClientStore';
+  const { clients, fetchClients } = useClientStore();
+  import { useReservationStore } from '@/composables/useReservationStore';
+  const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange } = useReservationStore();
+
+  // Helper function
+  const formatDate = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      console.error("Invalid Date object:", date);
+      throw new Error("The provided input is not a valid Date object:");
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const formatDateWithDay = (date) => {
+      const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
+      const parsedDate = new Date(date);
+      return `${parsedDate.toLocaleDateString(undefined, options)}`;
+  };
+      
+  const isUpdating = ref(false);
+  const isLoading = ref(true);
+      
+  const dateRange = ref([]); 
+  const minDate = ref(null);
+  const maxDate = ref(null);
+  const centerDate = ref(formatDate(new Date()));
       const reservedRoomsMap = ref([]);
       const drawerVisible = ref(false);
       const selectedRoom = ref(null);
@@ -179,29 +198,13 @@
       const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null });      
       const tableModeOptions = ref([
         { label: '縮小', value: true },
-        { label: '拡大', value: false },
-        // Add more options as needed
+        { label: '拡大', value: false },        
       ]);
       const isCompactView = ref(true);
       
-      // Helper function
-      const formatDate = (date) => {
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-          console.error("Invalid Date object:", date);
-          throw new Error("The provided input is not a valid Date object:");
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-      };
-      const formatDateWithDay = (date) => {
-          const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-          const parsedDate = new Date(date);
-          return `${parsedDate.toLocaleDateString(undefined, options)}`;
-      };
+      
 
-      const centerDate = ref(formatDate(new Date()));
+      
 
       const generateDateRange = (start, end) => {
         const dates = [];
@@ -326,7 +329,7 @@
         // Logic to determine if the cell is the first in a sequence
         return reservedRooms.value.some((room) => {
           if (room.room_id === room_id && formatDate(new Date(room.check_in)) === date) {
-            // console.log('isCellFirst for', room_id, 'and', date, 'match check-in', formatDate(new Date(room.check_in)));
+            //console.log('isCellFirst for', room, 'because',room_id, 'and', date, 'match check-in', formatDate(new Date(room.check_in)));
             return true;  // Ensure that we return true if there's a match
           }
           return false;  // Return false if no match
@@ -467,34 +470,58 @@
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
         }        
       };
+      
+      const formattedMessage = ref('');
       const showConfirmationPrompt = async () => {
         const from = dragFrom.value;
         const to = dragTo.value;
-        let confirmation = false;
+        let message = '';
         if (from.room_number === to.room_number) {
-          confirmation = confirm(`${from.room_number}号室の宿泊期間を「IN：${from.check_in} OUT：${from.check_out}」から「IN：${to.check_in} OUT：${to.check_out}」にしますか?`);  
+          message = `
+            <b>${from.room_number}号室</b>の宿泊期間を<br/>
+            「IN：${from.check_in} OUT：${from.check_out}」から<br/>
+            「IN：${to.check_in} OUT：${to.check_out}」にしますか?<br/>`;
         } else if (from.check_in === to.check_in && from.check_out === to.check_out) {
-          confirmation = confirm(`${from.room_number}号室の予約を${to.room_number}号室に移動しますか?`);
+          message = `
+            <b>${from.room_number}号室</b>の予約を<br/>
+            <b>${to.room_number}号室</b>に移動しますか?<br/>`;
         } else {
-          confirmation = confirm(`${from.room_number}号室の宿泊期間を「IN：${from.check_in} OUT：${from.check_out}」から「IN：${to.check_in} OUT：${to.check_out}」に変更し、${to.room_number}号室に移動しますか?`);
+          message = `
+            <b>${from.room_number}号室</b>の宿泊期間を<br/>
+            「IN：${from.check_in} OUT：${from.check_out}」から<br/>
+            「IN：${to.check_in} OUT：${to.check_out}」に変更し、<br/>
+            <b>${to.room_number}号室</b>に移動しますか?<br/>`;
         }
-                
-        if (confirmation) {
-          // console.log('Confirmed');
-          
-          if(!checkForConflicts(from, to)){
-            isUpdating.value = true; // Disable WebSocket updates
-            // console.log('No conflicts found');
-            await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people, 'solo');
-            await setReservationId(null);
-            isUpdating.value = false; // Re-enable WebSocket updates
-            await fetchReservations();
-          } else {
-            // console.log('Conflict found');
-            toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
+
+        formattedMessage.value = message;
+
+        confirm.require({
+          group: 'templating',          
+          header: '確認',
+          icon: 'pi pi-exclamation-triangle',
+          acceptProps: {
+              label: 'はい'
+          },
+          accept: async () => {
+            if (!checkForConflicts(from, to)) {
+              isUpdating.value = true; // Disable WebSocket updates
+              await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people, 'solo');
+              await setReservationId(null);
+              isUpdating.value = false; // Re-enable WebSocket updates
+              await fetchReservations();
+            } else {
+              toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
+            }
+          },
+          rejectProps: {
+              label: 'キャンセル',
+              severity: 'secondary',
+              outlined: true
+          },
+          reject: () => {
+            
           }
-          
-        }
+        });
       };
       const checkForConflicts = (from, to) => {
         //console.log('Checking for conflicts...');
@@ -641,7 +668,7 @@
 
         nextTick(async () => {
           await fetchReservations();
-          // console.log('reservedRooms', reservedRooms);
+          console.log('reservedRooms', reservedRooms.value);
 
           // Scroll to 1/5 of the total scroll height
           const tableContainer = document.querySelector(".table-container");
@@ -710,34 +737,7 @@
         isLoading.value = false;
       });
       
-      return {
-        reservationId,
-        isLoading,
-        dateRange,        
-        selectedHotelRooms,
-        isRoomReserved,
-        getCellStyle,
-        isCellFirst,
-        isCellLast,
-        fillRoomInfo, 
-        uniqueLegendItems,
-        drawerVisible,
-        tableModeOptions,
-        isCompactView,
-        formatDateWithDay,
-        openDrawer,
-        onDragStart,
-        onDrop,
-        selectedRoom,
-        selectedDate,
-        centerDate,
-        onScroll,
-      };
-    },
-    methods: {
-      
-    },
-  }
+
 
 </script>
 
