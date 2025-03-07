@@ -368,8 +368,6 @@
         }
     };
     const deletePayment = (payment) => {
-        deleteReservationPayment(payment.id);
-        /*
         confirmDelete.require({
             message: `本当に削除しますか？ (金額: ${Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(payment.value)})`,
             header: "確認",
@@ -385,7 +383,7 @@
                 }, 
             accept: () => deleteReservationPayment(payment.id),
         });
-        */
+        
     };
     
     // Client select
