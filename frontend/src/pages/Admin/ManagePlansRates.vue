@@ -6,8 +6,8 @@
                 <DatePicker v-model="selectedDate" 
                     :showIcon="true" 
                     iconDisplay="input" 
-                    class="w-full" 
-                    placeholder="Select Date"
+                    :selectOtherMonths="true"                 
+                    fluid
                     dateFormat="yy-mm-dd" 
                 />
             </div>
@@ -323,7 +323,7 @@
                             optionLabel="label" 
                             optionValue="value"
                             :maxSelectedLabels="3"
-                            class="w-full"
+                            fluid
                         />
                     </FloatLabel>
                 </div>
@@ -334,7 +334,8 @@
                             :showIcon="true" 
                             iconDisplay="input" 
                             dateFormat="yy-mm-dd"
-                            class="w-full"
+                            :selectOtherMonths="true"                 
+                            fluid
                             required 
                         />
                     </FloatLabel>                
@@ -346,7 +347,8 @@
                             :showIcon="true" 
                             iconDisplay="input" 
                             dateFormat="yy-mm-dd"
-                            class="w-full"  
+                            :selectOtherMonths="true"                 
+                            fluid
                         />
                     </FloatLabel>                
                 </div>
@@ -426,7 +428,8 @@
                             :showIcon="true" 
                             iconDisplay="input" 
                             dateFormat="yy-mm-dd"
-                            class="w-full"
+                            :selectOtherMonths="true"                 
+                            fluid
                             required 
                         />
                     </FloatLabel>                
@@ -438,7 +441,8 @@
                             :showIcon="true" 
                             iconDisplay="input"     
                             dateFormat="yy-mm-dd"
-                            class="w-full"  
+                            :selectOtherMonths="true"                 
+                            fluid
                         />
                     </FloatLabel>                
                 </div>

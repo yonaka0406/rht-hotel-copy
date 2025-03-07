@@ -16,6 +16,7 @@
                                 :maxDate="maxDateRange"
                                 iconDisplay="input" 
                                 dateFormat="yy-mm-dd"
+                                :selectOtherMonths="true"                 
                                 fluid
                             />
                             <label>チェックイン & チェックアウト</label>

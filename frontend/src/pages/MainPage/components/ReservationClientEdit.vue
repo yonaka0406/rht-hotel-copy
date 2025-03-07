@@ -58,11 +58,12 @@
                 <div class="field">                        
                     <FloatLabel>                            
                         <label for="date_of_birth">生年月日・設立日</label>                            
-                        <DatePicker v-model="clientDetails.date_of_birth" 
-                            class="w-full"      
+                        <DatePicker v-model="clientDetails.date_of_birth"                               
                             :showIcon="true" 
                             iconDisplay="input"                      
-                            dateFormat="yy-mm-dd" 
+                            dateFormat="yy-mm-dd"
+                            :selectOtherMonths="true"                 
+                            fluid 
                         />
                     </FloatLabel>                        
                 </div>

@@ -7,7 +7,8 @@
                 :showIcon="true" 
                 iconDisplay="input" 
                 dateFormat="yy-mm-dd"
-                class="w-full"
+                :selectOtherMonths="true"                 
+                fluid
                 required 
             />
             </div>        

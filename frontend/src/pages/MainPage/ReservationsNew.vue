@@ -14,6 +14,8 @@
               :showIcon="true" 
               iconDisplay="input" 
               dateFormat="yy-mm-dd"
+              :selectOtherMonths="true"
+              :numberOfMonths="2"
               fluid           
               @update:model-value="onDateChange"
             />

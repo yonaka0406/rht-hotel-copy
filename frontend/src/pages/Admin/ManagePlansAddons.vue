@@ -121,7 +121,8 @@
                                     :showIcon="true" 
                                     iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
-                                    class="w-full"
+                                    :selectOtherMonths="true"                 
+                                    fluid
                                     required 
                                 />
                             </FloatLabel>                
@@ -133,7 +134,8 @@
                                     :showIcon="true" 
                                     iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
-                                    class="w-full"  
+                                    :selectOtherMonths="true"                 
+                                    fluid
                                 />
                             </FloatLabel>                
                         </div>
@@ -175,7 +177,8 @@
                                     :showIcon="true" 
                                     iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
-                                    class="w-full"
+                                    :selectOtherMonths="true"                 
+                                    fluid
                                     required 
                                 />
                             </FloatLabel>                
@@ -187,7 +190,8 @@
                                     :showIcon="true" 
                                     iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
-                                    class="w-full"  
+                                    :selectOtherMonths="true"                 
+                                    fluid
                                 />
                             </FloatLabel>                
                         </div>

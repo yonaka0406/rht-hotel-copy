@@ -37,6 +37,7 @@
                                     :showIcon="true" 
                                     iconDisplay="input"                      
                                     dateFormat="yy-mm-dd" 
+                                    :selectOtherMonths="true"                 
                                     fluid
                                 />
                             </FloatLabel>                        

@@ -346,7 +346,8 @@
                                     :maxDate="maxCheckOut || undefined"
                                     iconDisplay="input" 
                                     dateFormat="yy-mm-dd"
-                                    class="w-full"
+                                    :selectOtherMonths="true"                 
+                                    fluid
                                 />
                                 </FloatLabel>
                             </div>
@@ -361,7 +362,8 @@
                                         :maxDate="maxCheckOut || undefined"
                                         iconDisplay="input" 
                                         dateFormat="yy-mm-dd"
-                                        class="w-full"
+                                        :selectOtherMonths="true"                 
+                                        fluid
                                     />
                                 </FloatLabel>
                             </div>
