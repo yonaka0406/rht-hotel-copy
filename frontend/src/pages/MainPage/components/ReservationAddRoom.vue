@@ -9,17 +9,31 @@
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
                             <DatePicker 
-                                v-model="selectedDates"
-                                selection-mode="range"
+                                v-model="today"                                
                                 :showIcon="true"
                                 :minDate="minDateRange"
                                 :maxDate="maxDateRange"
                                 iconDisplay="input" 
                                 dateFormat="yy-mm-dd"
-                                :selectOtherMonths="true"                 
+                                :selectOtherMonths="true"
                                 fluid
                             />
-                            <label>チェックイン & チェックアウト</label>
+                            <label>チェックイン</label>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <DatePicker 
+                                v-model="tomorrow"
+                                :showIcon="true"
+                                :minDate="minDateRange"
+                                :maxDate="maxDateRange"
+                                iconDisplay="input" 
+                                dateFormat="yy-mm-dd"
+                                :selectOtherMonths="true"
+                                fluid
+                            />
+                            <label>チェックアウト</label>
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
@@ -98,32 +112,20 @@
                     />
                 </div>
 
-                <!-- Gender input if person is natural -->
-                <div class="col-6">          
-                    <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
-                        <RadioButton
-                        v-model="reservationDetails.gender"
-                        :inputId="'male'"
-                        :value="'male'"
-                        :disabled="isClientSelected"
-                        />
-                        <label for="male">男性</label>
-                        <RadioButton
-                        v-model="reservationDetails.gender"
-                        :inputId="'female'"
-                        :value="'female'"
-                        :disabled="isClientSelected"
-                        />
-                        <label for="female">女性</label>
-                        <RadioButton
-                        v-model="reservationDetails.gender"
-                        :inputId="'other'"
-                        :value="'other'"
-                        :disabled="isClientSelected"
-                        />
-                        <label for="other">その他</label>
-                    </div>
-                </div>
+                <!-- Gender input if person is natural -->                 
+                <div class="field col-6">
+                  <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
+                      <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                          <RadioButton
+                              v-model="reservationDetails.gender"
+                              :inputId="option.value"
+                              :value="option.value"
+                              :disabled="isClientSelected"
+                          />
+                          <label :for="option.value">{{ option.label }}</label>
+                      </div>
+                  </div>
+                </div>                
 
                 <!-- Email input -->
                 <div class="col-6">
@@ -208,10 +210,6 @@
                         <label>人数</label>
                     </FloatLabel>
                 </div>
-
-
-
-
             </div>
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
@@ -222,19 +220,10 @@
 </template>
 
 <script setup>
+    // Vue
     import { ref, watch, computed, onMounted } from 'vue';
     import { useRouter } from 'vue-router';
-    import { useToast } from 'primevue/usetoast';
-    import { useConfirm } from "primevue/useconfirm";
-
-    import { useHotelStore } from '@/composables/useHotelStore';
-    import { useReservationStore } from '@/composables/useReservationStore';
-    import { usePlansStore } from '@/composables/usePlansStore';
-    import { useClientStore } from '@/composables/useClientStore';
-    import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
-
-    import { Card, Dialog, FloatLabel, Button } from 'primevue';
-    import { DatePicker, InputNumber, InputText, AutoComplete, SelectButton, RadioButton } from 'primevue';
+    const router = useRouter();
 
     const props = defineProps({        
         room_id: {
@@ -247,26 +236,50 @@
         },
     });
 
+    import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 
-    const router = useRouter();
+    // Primevue
+    import { useToast } from 'primevue/usetoast';
     const toast = useToast();
+    import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
-    const isUpdating = ref(false);
+    import { Card, Dialog, FloatLabel, DatePicker, InputNumber, InputText, AutoComplete, SelectButton, RadioButton, Button } from 'primevue';    
+
+    // Stores
+    import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, selectedHotelRooms } = useHotelStore();
-    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+    import { useReservationStore } from '@/composables/useReservationStore';    
     const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
-        
-    const client = ref({});
-    const filteredClients = ref([]);
-    const today = new Date(props.date);
-    const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-    const selectedDates = ref([today, tomorrow]);
+    import { useClientStore } from '@/composables/useClientStore';
+    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+
+    
+    // Form
+    const today = ref(new Date(props.date));
+    const tomorrow = ref(new Date(today.value));
+        tomorrow.value.setDate(today.value.getDate() + 1);    
     const minDateRange = ref(null);
     const maxDateRange = ref(null);
     const numberOfPeople = ref(1);
-    const maxNumberOfPeople = ref(1);
+    const maxNumberOfPeople = ref(1);    
+    const numberOfNights = computed(() => {
+        if (today && tomorrow) {
+        const checkInDate = today.value;
+        const checkOutDate = tomorrow.value;
+        const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+        if(dayDiff < 0){
+            return 0;  
+        } 
+
+        return dayDiff;
+        }
+        return 0;
+    });
+    
+    // Dialog    
     const dialogVisible = ref(false);
+    const client = ref({});
+    const filteredClients = ref([]);
     const reservationDetails = ref({
         hotel_id: selectedHotelId.value,
         room_type_id: null,
@@ -327,22 +340,7 @@
     };
     const validatePhone = () => {
         isValidPhone.value = phonePattern.test(reservationDetails.value.phone);
-    };
-
-    // Compute
-    const numberOfNights = computed(() => {
-        if (selectedDates.value.length === 2) {
-        const checkInDate = selectedDates.value[0];
-        const checkOutDate = selectedDates.value[1];
-        const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-        if(dayDiff < 0){
-            return 0;  
-        } 
-
-        return dayDiff;
-        }
-        return 0;
-    });
+    };    
 
     // Dialog
     const openDialog = () => {   
@@ -354,6 +352,15 @@
                 life: 3000,
             });
             return
+        }
+        if (new Date(reservationDetails.value.check_in) >= new Date(reservationDetails.value.check_out)) {
+            toast.add({
+                severity: 'warn',
+                summary: '日付エラー',
+                detail: 'チェックイン日はチェックアウト日より前にしてください。',
+                life: 3000,
+            });
+            return;
         }
 
         dialogVisible.value = true;
@@ -463,7 +470,6 @@
         router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
     };
 
-
     // Fetch reservation details on mount
     
     onMounted(async() => {
@@ -482,7 +488,7 @@
             }
             setClientsIsLoading(false);            
         }
-        const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today), formatDate(tomorrow));
+        const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
         if(datesResult.earliestCheckIn){                
             minDateRange.value = new Date(datesResult.earliestCheckIn);
@@ -497,21 +503,14 @@
     });
 
     // Watch
-    watch(reservationDetails, (newVal, oldVal) => {
-        console.log('reservationDetails changed:', newVal);        
-    }, { deep: true });
-    watch(() => selectedDates.value, (newDates) => {
-            if (newDates.length === 2) {
-            const [checkInDate, checkOutDate] = newDates;
-            if (checkInDate && checkOutDate) {
-                reservationDetails.value.check_in = formatDate(checkInDate);
-                reservationDetails.value.check_out = formatDate(checkOutDate);
-                reservationDetails.value.number_of_nights = numberOfNights.value;
-                reservationDetails.value.number_of_people = numberOfPeople.value;
-            }
-            }
-        },
-    { immediate: true });
+    watch([today, tomorrow], ([checkInDate, checkOutDate]) => {
+        if (checkInDate && checkOutDate) {
+            reservationDetails.value.check_in = formatDate(checkInDate);
+            reservationDetails.value.check_out = formatDate(checkOutDate);
+            reservationDetails.value.number_of_nights = numberOfNights.value;
+            reservationDetails.value.number_of_people = numberOfPeople.value;
+        }
+    }, { immediate: true });
     watch(() => numberOfPeople.value,
     (newNumber) => {
         reservationDetails.value.number_of_people = numberOfPeople.value;

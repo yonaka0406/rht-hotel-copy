@@ -2,24 +2,36 @@
   <div class="p-2">    
     <Panel header="新規予約">
       <!-- Select Dates and Number of People -->
-      <div class="grid grid-cols-3 mb-4 mr-4 gap-2">
-        <div class="col-span-3">
+      <div class="grid grid-cols-4 mb-4 mr-4 gap-2">
+        <div class="col-span-4">
           <p class="text-lg text-left mb-2">期間ごと空室</p>
         </div>
-        <div class="col-span-2 mt-6">
+        <div class="col-span-1 mt-6">
           <FloatLabel>
             <DatePicker 
-              v-model="selectedDates"
-              selection-mode="range"
+              v-model="inDate"
               :showIcon="true" 
               iconDisplay="input" 
               dateFormat="yy-mm-dd"
-              :selectOtherMonths="true"
-              :numberOfMonths="2"
+              :selectOtherMonths="true"              
               fluid           
               @update:model-value="onDateChange"
             />
-            <label>チェックイン & チェックアウト</label>
+            <label>チェックイン</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-1 mt-6">
+          <FloatLabel>
+            <DatePicker 
+              v-model="outDate"
+              :showIcon="true" 
+              iconDisplay="input" 
+              dateFormat="yy-mm-dd"
+              :selectOtherMonths="true"              
+              fluid           
+              @update:model-value="onDateChange"
+            />
+            <label>チェックアウト</label>
           </FloatLabel>
         </div>
         <div class="col-span-1 mt-6">
@@ -27,6 +39,7 @@
             <InputNumber
               v-model="numberOfPeople"
               :min="1"
+              fluid
             />
             <label>人数</label>
           </FloatLabel>
@@ -160,31 +173,19 @@
           </div>
 
           <!-- Gender input if person is natural -->
-          <div class="col-6">          
-              <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
-                <RadioButton
-                  v-model="reservationDetails.gender"
-                  :inputId="'male'"
-                  :value="'male'"
-                  :disabled="isClientSelected"
-                />
-                <label for="male">男性</label>
-                <RadioButton
-                  v-model="reservationDetails.gender"
-                  :inputId="'female'"
-                  :value="'female'"
-                  :disabled="isClientSelected"
-                />
-                <label for="female">女性</label>
-                <RadioButton
-                  v-model="reservationDetails.gender"
-                  :inputId="'other'"
-                  :value="'other'"
-                  :disabled="isClientSelected"
-                />
-                <label for="other">その他</label>
-              </div>
-          </div>
+          <div class="field col-6">
+            <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
+                <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                    <RadioButton
+                        v-model="reservationDetails.gender"
+                        :inputId="option.value"
+                        :value="option.value"
+                        :disabled="isClientSelected"
+                    />
+                    <label :for="option.value">{{ option.label }}</label>
+                </div>
+            </div>
+          </div> 
 
           <!-- Email input -->
           <div class="col-6">
@@ -281,32 +282,33 @@
 
 
 <script setup>
+  // Vue
   import { ref, computed, watch, onMounted, nextTick } from 'vue';
   import { useRouter } from 'vue-router';
+  const router = useRouter();
+
+  // Primevue
   import { useToast } from 'primevue/usetoast';
-  import { useHotelStore } from '@/composables/useHotelStore';
-  import { useClientStore } from '@/composables/useClientStore';
-  import { useReservationStore } from '@/composables/useReservationStore';
+  const toast = useToast();
   import Panel from 'primevue/panel';
   import FloatLabel from 'primevue/floatlabel'
   import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton } from 'primevue';
   import { DataTable, Column } from 'primevue';
   import Dialog from 'primevue/dialog';
   import Button from 'primevue/button'
-  
 
-  const router = useRouter();
-  const toast = useToast();
+  // Stores
+  import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+  import { useClientStore } from '@/composables/useClientStore';
   const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+  import { useReservationStore } from '@/composables/useReservationStore';
   const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
-  const client = ref({});
-  const filteredClients = ref([]);
-      
-  const today = new Date();
-  const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-  const selectedDates = ref([today, tomorrow]);
+  
+  // Form
+  const inDate = ref(new Date());
+  const outDate = ref(new Date(inDate.value));
+    outDate.value.setDate(inDate.value.getDate() + 1);  
   const centralDate = ref(new Date());
   const roomDataCache = ref(new Map());
   const generateDateRangeArray = ref([]);
@@ -315,6 +317,21 @@
   const selectedCell = ref(null);
   const roomTypeInput = ref('');       
   const loading = ref(false);
+  const numberOfNights = computed(() => {
+      if (inDate && outDate) {
+      const checkInDate = inDate.value;
+      const checkOutDate = outDate.value;
+      const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+      if(dayDiff < 0){
+          return 0;  
+      } 
+
+      return dayDiff;
+      }
+      return 0;
+  });
+
+  // Dialog
   const dialogVisible = ref(false);
   const reservationDetails = ref({
     hotel_id: null,
@@ -346,6 +363,8 @@
   const isValidPhone = ref(true);
   const isClientSelected = ref(false);
   const selectedClient = ref(null);
+  const client = ref({});
+  const filteredClients = ref([]);
 
   const dateRange = ref([]); 
   const minDate = ref(null);
@@ -459,13 +478,11 @@
 
   const onDateChange = async () => {
     
-    // Ensure the selectedDates contains valid date objects before calculating the min value
-    if (selectedDates.value && selectedDates.value.length === 2 && selectedDates.value[0] && selectedDates.value[1]) {
-      // Set centralDate to the minimum value of the selectedDates array (check-in date)
-      centralDate.value = new Date(Math.min(...selectedDates.value.map(date => date.getTime())));
-      //console.log('New centralDate set to: ', centralDate.value);
+    // Set central date
+    if (inDate.value && outDate.value) {         
+      centralDate.value = new Date(Math.min(inDate.value.getTime(), outDate.value.getTime()));
     } else {
-      //console.error('Invalid dates in selectedDates:', selectedDates.value);
+      
     }
 
     // Reset date-related data
@@ -562,7 +579,8 @@
     
     const endDate = new Date(selectedDate);
     endDate.setDate(selectedDate.getDate() + numberOfNights.value);
-    selectedDates.value = [selectedDate, endDate];        
+    inDate.value = selectedDate;
+    outDate.value = endDate;       
     
   };
   const isSelectedCell = (roomTypeId, dateIndex) => {
@@ -739,22 +757,7 @@
                 
       router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
   };
-
-  // Compute
-  const numberOfNights = computed(() => {
-    if (selectedDates.value.length === 2) {
-      const checkInDate = selectedDates.value[0];
-      const checkOutDate = selectedDates.value[1];
-      const dayDiff = Math.floor((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-      if(dayDiff < 0){
-        return 0;  
-      } 
-
-      return dayDiff;
-    }
-    return 0;
-  });
-
+  
   // Watcher
   watch(() => selectedHotel.value,
     async (newVal, oldVal) => {
@@ -810,20 +813,14 @@
         await fetchHotel();               
     }
   });    
-  watch(() => selectedDates.value,
-      (newDates) => {
-        if (newDates.length === 2) {
-          const [checkInDate, checkOutDate] = newDates;
-          if (checkInDate && checkOutDate) {
-            reservationDetails.value.check_in = formatDate(checkInDate);
-            reservationDetails.value.check_out = formatDate(checkOutDate);
-            reservationDetails.value.number_of_nights = numberOfNights.value;
-            reservationDetails.value.number_of_people = numberOfPeople.value;
-          }
-        }
-    },
-    { immediate: true } // Run immediately on initial setup
-  );  
+  watch([inDate, outDate], ([checkInDate, checkOutDate]) => {
+      if (checkInDate && checkOutDate) {
+          reservationDetails.value.check_in = formatDate(checkInDate);
+          reservationDetails.value.check_out = formatDate(checkOutDate);
+          reservationDetails.value.number_of_nights = numberOfNights.value;
+          reservationDetails.value.number_of_people = numberOfPeople.value;
+      }
+  }, { immediate: true }); 
   watch(() => numberOfPeople.value,
     (newNumber) => {
       reservationDetails.value.number_of_people = numberOfPeople.value;
