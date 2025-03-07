@@ -75,8 +75,8 @@
                     <Tab value="0">プラン適用</Tab>
                     <Tab value="1">部屋移動</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="2">宿泊者</Tab>
-                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="3">追加・削除</Tab>
-                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="4">期間</Tab>
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="3">追加・削除</Tab>
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="4">期間</Tab>
                 </TabList>
                     
                 <TabPanels>
@@ -372,10 +372,10 @@
         
         </div>
         <template #footer>
-            <Button v-if="tabsRoomEditDialog === 0" label="適用0" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
-            <Button v-if="tabsRoomEditDialog === 1" label="適用1" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
-            <Button v-if="tabsRoomEditDialog === 2" label="適用2" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
-            <Button v-if="tabsRoomEditDialog === 4" label="適用4" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
+            <Button v-if="tabsRoomEditDialog === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+            <Button v-if="tabsRoomEditDialog === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
+            <Button v-if="tabsRoomEditDialog === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
+            <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
             
             <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeRoomEditDialog" />                
         </template>            

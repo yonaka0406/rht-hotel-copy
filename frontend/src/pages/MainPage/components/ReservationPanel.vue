@@ -10,7 +10,7 @@
             <InputText type="text" v-model="reservationInfo.client_name" disabled style="background-color: transparent;"/>                        
         </div>   
         <div class="field flex flex-col" >
-            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'">
+            <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'">
                 <div class="flex items-center justify-between mr-2 mb-2">
                     <p class="font-bold">宿泊者：</p>                    
                     <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openAddRoomDialog" />                    
@@ -212,7 +212,7 @@
             >
                 <TabList>
                     <Tab value="0">プラン適用</Tab>                        
-                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約'" value="4">期間</Tab>
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="4">期間</Tab>
                 </TabList>
                 
                     
@@ -516,6 +516,14 @@
     const allHavePlan = (group) => {
         return group.details.every(
             (detail) => detail.plans_global_id || detail.plans_hotel_id
+        );
+    };
+    const allGroupsPeopleCountMatch = computed(() => {
+        return groupedRooms.value.every(group => allPeopleCountMatch(group));
+    });
+    const allPeopleCountMatch = (group) => {
+        return group.details.every(
+            (detail) => detail.number_of_people === detail.reservation_clients.length
         );
     };
 
