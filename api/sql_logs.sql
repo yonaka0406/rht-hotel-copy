@@ -267,7 +267,12 @@
     -- For the `reservation_clients` table
     CREATE TRIGGER log_reservation_clients_trigger
     AFTER INSERT OR UPDATE OR DELETE ON reservation_clients
-    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();       
+    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
+    
+    -- For the `reservation_payments` table
+    CREATE TRIGGER log_reservation_payments_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON reservation_payments
+    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();  
 
 
 
