@@ -498,15 +498,17 @@
     }
     if (dragMode.value === 'roomByDay') {
       if (reservedRoomsMap.value[key]) {
-          const index = selectedRoomByDay.value.indexOf(key);
+          const index = selectedRoomByDay.value.findIndex(item => item.key === key);
           console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
-          if (index === -1) {            
-            if (selectedRoomByDay.value.length === 0 || isContiguous(selectedRoomByDay.value, key)) {              
-              selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
-            } else {              
-              selectedRoomByDay.value = [];
-              selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
-            }
+          if (index === -1) {
+              if (selectedRoomByDay.value.length === 0 || isContiguous(selectedRoomByDay.value, key)) {
+                  selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
+              } else {
+                  selectedRoomByDay.value = [{ key: key, reservation: reservedRoomsMap.value[key] }];
+              }
+          } else if (index !== -1) { 
+              console.log('splice');
+              selectedRoomByDay.value.splice(index, 1);
           } 
       } else {        
           if (selectedRoomByDay.value.length > 0) {   
@@ -521,14 +523,19 @@
             `;
             confirmRoomMode.require({
               group: 'templating',
-              header: '確認',
+              header: '日ごと移動確認',
               icon: 'pi pi-exclamation-triangle',
               acceptProps: {
                   label: 'はい'
               },
-              accept: async () => {                  
-                  //await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
+              accept: async () => {
+                  isUpdating.value = true;
+                  for (const item of selectedRoomByDay.value) {
+                      await setReservationRoom(item.reservation.id, room.room_id);
+                  }                  
                   selectedRoomByDay.value = [];
+                  isUpdating.value = false;
+                  await fetchReservations();
               },
               rejectProps: {
                   label: 'キャンセル',
@@ -582,8 +589,12 @@
     return selectedRoomByDay.value?.some(item => item.key === `${roomId}_${date}`);
   };
   const isContiguous = (selected, key) => {  
-    console.log('isContiguous')  
-        
+    // Check if the key is already in the array
+    if (selected.some(item => item.key === key)) {
+        return false;
+    }
+
+    // Check day difference between items
     const newRoomId = key.split('_')[0];
     const newDate = new Date(key.split('_')[1]);
 
@@ -1013,7 +1024,10 @@
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
     await fetchReservations();
     isLoading.value = false;
-  });  
+  }); 
+  watch(dragMode, async (newVal, oldVal) => {
+    selectedRoomByDay.value = [];
+  }) 
 
 </script>
 
