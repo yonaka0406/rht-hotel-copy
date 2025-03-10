@@ -11,7 +11,7 @@
               <InputText
                 id="email"
                 v-model="email"
-                class="w-full"
+                fluid
                 :class="{'p-invalid': emailError}"
                 required
                 @blur="validateEmail"
@@ -32,7 +32,7 @@
                 :class="{'p-invalid': passwordError}"
                 type="password"
                 required
-                fuild
+                fluid
                 @blur="validatePassword"
               />
               <label for="password">パスワード</label>
@@ -68,7 +68,7 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Card, Fluid, FloatLabel, InputText, Password, Button } from 'primevue';
+  import { Card, FloatLabel, InputText, Password, Button } from 'primevue';
 
   const email = ref('');
   const password = ref('');
