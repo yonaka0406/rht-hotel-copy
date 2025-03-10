@@ -59,120 +59,100 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  // Vue
+  import { ref } from 'vue';
+  import { useRouter } from 'vue-router';
+  const router = useRouter();
+
+  // Primevue
   import { useToast } from 'primevue/usetoast';
-  import InputText from 'primevue/inputtext';
-  import Password from 'primevue/password';
-  import FloatLabel from 'primevue/floatlabel';
-  import Card from 'primevue/card';
-  import Button from 'primevue/button';
-  import Fluid from 'primevue/fluid';
+  const toast = useToast();
+  import { Card, Fluid, FloatLabel, InputText, Password, Button } from 'primevue';
 
-  export default {
-    components: {
-      InputText,
-      Password,
-      FloatLabel,
-      Card,
-      Button,
-      Fluid,
-    },
-    data() {
-      return {
-        email: '',
-        password: '',
-        error: null,
-        isLoading: false,
-        emailError: null,
-        passwordError: null,
-      };
-    },
-    setup () {
-      const toast = useToast();
-      return { toast };
-    },
-    methods: {
-      validateEmail() {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        this.emailError = !this.email 
-          ? 'メールアドレスは必須です。' 
-          : !emailRegex.test(this.email) 
-          ? '無効なメール形式' 
-          : null;
-      },
-      validatePassword() {
-        this.passwordError = !this.password 
-          ? 'パスワードが必要です。' 
-          : null;
-      },
-      async handleLogin() {
-        try {
-          // Validate email and password fields
-          this.validateEmail();
-          this.validatePassword();
+  const email = ref('');
+  const password = ref('');
+  const error = ref(null);
+  const isLoading = ref(false);
+  const emailError = ref(null);
+  const passwordError = ref(null);
 
-          // Stop if there are validation errors
-          if (this.emailError || this.passwordError) {
-            return;
-          }
-
-          // Reset errors and start loading
-          this.error = null;
-          this.isLoading = true;
-          
-          // Make the login request
-          const response = await this.$http.post('/api/auth/login', {
-            email: this.email,
-            password: this.password,
-          });
-          
-          // Extract and store the authentication token
-          const authToken = response.data.token;
-          localStorage.setItem('authToken', authToken);
-
-          // Redirect the user to the home page
-          this.$router.push('/');        
-        } catch (err) {          
-          // Handle different kinds of errors
-          if (!err.response) {
-            // Network or server error
-            this.error = 'ネットワークエラーです。接続を確認してください。';
-          } else if (err.response.status === 401) {
-            // Authentication errors
-            this.error = err.response.data?.error || '認証が無効です。';
-            this.toast.add({
-              severity: 'error',
-              summary: 'ログイン失敗',
-              detail: err.response ? err.response.data?.error : 'エラーが起きました。',
-              life: 3000
-            });
-          } else {
-            // General error message
-            this.error = '予期しないエラーが発生しました。もう一度お試しください。';
-          }
-          
-          // Handle different kinds of errors
-          if (!err.response) {
-            // Network or server error
-            this.error = 'ネットワークエラーです。接続を確認してください。';
-          } else if (err.response.status === 401) {
-            // Authentication errors
-            this.error = err.response.data?.error || '資格情報が無効です。';
-          } else {
-            // General error message
-            this.error = '予期しないエラーが発生しました。もう一度お試しください。';
-          }
-          
-          // Set specific field errors based on backend response
-          if (this.error.includes('ユーザー見つかりません。')) {
-            this.emailError = this.error;
-          } else if (this.error.includes('パスワードの誤差があります。')) {
-            this.passwordError = this.error;
-          }
-        } finally {
-          this.isLoading = false;
-        }
-      },
-    },
+  const validateEmail = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value) {
+      emailError.value = 'メールアドレスは必須です。';
+    } else if (!emailRegex.test(email.value)) {
+      emailError.value = '無効なメール形式';
+    } else {
+      emailError.value = null;
+    }
   };
+  const validatePassword = () => {
+    passwordError.value = password.value ? null : 'パスワードが必要です。';
+  };
+
+  const handleLogin = async () => {
+    validateEmail();
+    validatePassword();
+
+    if (emailError.value) {
+      toast.add({ severity: 'error', summary: '入力エラー', detail: emailError.value, life: 3000 });
+      return;
+    }
+    
+    if (passwordError.value) {
+      toast.add({ severity: 'error', summary: '入力エラー', detail: passwordError.value, life: 3000 });
+      return;
+    }
+
+    try {
+      error.value = null;
+      isLoading.value = true;
+
+      const data = {
+        email: email.value,
+        password: password.value,
+      };
+      
+      const url = `/api/auth/login`;
+      const response = await fetch(url, {
+          method: 'POST',
+          headers: {              
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+      }); 
+
+      const responseData = await response.json();
+
+      if (responseData.token) {
+        // ✅ Successful login
+        localStorage.setItem('authToken', responseData.token);
+        toast.add({ severity: 'success', summary: 'ログイン成功', detail: responseData.message || 'ログインしました。', life: 3000 });
+        router.push('/');
+      } else {
+        // ✅ Edge case: No token in response
+        throw new Error('サーバーエラーが発生しました。');
+      }
+      
+    } catch (err) {
+      error.value = err.message || '予期しないエラーが発生しました。';
+
+      // Show toast based on API response messages
+      if (error.value === 'Email and password are required') {
+        toast.add({ severity: 'error', summary: '入力エラー', detail: 'メールとパスワードを入力してください。', life: 3000 });
+      } else if (error.value === 'User not found') {
+        toast.add({ severity: 'error', summary: 'ログイン失敗', detail: 'ユーザーが見つかりません。', life: 3000 });
+        emailError.value = 'ユーザーが見つかりません。';
+      } else if (error.value === 'パスワードの誤差がありました。') {
+        toast.add({ severity: 'error', summary: 'ログイン失敗', detail: 'パスワードが間違っています。', life: 3000 });
+        passwordError.value = 'パスワードが間違っています。';
+      } else if (error.value === 'ユーザーが無効になっています。') {
+        toast.add({ severity: 'error', summary: 'アカウント無効', detail: 'このユーザーは無効になっています。', life: 3000 });
+      } 
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
 </script>

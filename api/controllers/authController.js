@@ -29,7 +29,7 @@ const login = async (req, res) => {
     }
 
     const token = generateToken(user);
-    res.json({ message: 'Login successful', token });
+    res.json({ message: 'ログインしました。', token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
