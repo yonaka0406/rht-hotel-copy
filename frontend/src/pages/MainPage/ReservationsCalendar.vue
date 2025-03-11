@@ -62,7 +62,17 @@
           <tbody @dragover.prevent>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
               <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">                
-                <span class="text-xs">{{ formatDateWithDay(date) }}</span>
+                <span class="text-xs">{{ formatDateWithDay(date) }}</span>  
+                
+                <div 
+                  class="text-2xs text-gray-500 flex justify-center"
+                  :class="{
+                    'text-red-400': availableRoomsByDate[date] === 0
+                  }"
+                >
+                  空室: {{ availableRoomsByDate[date] }}
+                </div>                
+                
               </td>
               <td
                 v-for="(room, roomIndex) in selectedHotelRooms"
@@ -336,9 +346,24 @@
       return map;
   });
 
+  // Count of available rooms
+  const availableRoomsByDate = computed(() => {
+    const availability = {};       
+    dateRange.value.forEach(date => {
+      const roomsForSale = selectedHotelRooms.value.filter(room => room.room_for_sale_idc === true);
+      const reservedCount = roomsForSale.filter(room =>
+        reservedRoomsMap.value[`${room.room_id}_${date}`]
+      ).length;      
+
+      availability[date] = roomsForSale.length * 1 - reservedCount * 1;
+    });
+    
+    return availability;
+  });  
+
   // Fill & Format the table 
   const isRoomReserved = (roomId, date, useTemp = false) => {
-    const key = `${roomId}_${date}`;     
+    const key = `${roomId}_${date}`;        
     return useTemp ? !!tempReservationsMap.value[key] : !!reservedRoomsMap.value[key];
   };
   const fillRoomInfo = (room_id, date, useTemp = false) => {
