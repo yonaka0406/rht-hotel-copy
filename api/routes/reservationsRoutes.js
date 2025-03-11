@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, 
     createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment,
-    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
+    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/reservation/available-rooms', authMiddleware, getAvailableRooms);
@@ -31,6 +31,7 @@ router.put('/reservation/update/status/:id', authMiddleware, editReservationStat
 router.put('/reservation/update/type/:id', authMiddleware, editReservationType);
 router.put('/reservation/update/client/:id', authMiddleware, editReservationResponsible);
 router.put('/reservation/update/calendar/:id', authMiddleware, editRoomFromCalendar);
+router.put('/reservation/update/free/calendar', authMiddleware, editCalendarFreeChange);
 router.put('/reservation/update/room/guestnumber/:id', authMiddleware, editRoomGuestNumber);
 router.delete('/reservation/delete/hold/:id', authMiddleware, deleteHoldReservation);
 router.delete('/reservation/delete/room/:id', authMiddleware, deleteRoomFromReservation);

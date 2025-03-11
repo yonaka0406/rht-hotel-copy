@@ -75,10 +75,10 @@
                 @dragleave="removeHighlight($event, room.room_id, date)"
                 @drop="handleDrop($event, room.room_id, date)"
                 draggable="true"                
-                :style="getCellStyle(room.room_id, date)"
+                :style="getCellStyle(room.room_id, date, dragMode === 'reorganizeRooms')"
                 :class="{
-                    'cell-first': isCellFirst(room.room_id, date),
-                    'cell-last': isCellLast(room.room_id, date),
+                    'cell-first': isCellFirst(room.room_id, date, dragMode === 'reorganizeRooms'),
+                    'cell-last': isCellLast(room.room_id, date, dragMode === 'reorganizeRooms'),
                     'cursor-pointer': true,
                     'compact-cell': isCompactView,
                     'selected-room-by-day': isSelectedRoomByDay(room.room_id, date),
@@ -87,33 +87,33 @@
                 @mouseover="applyHover(roomIndex, dateIndex)"
                 @mouseleave="removeHover(roomIndex, dateIndex)"
               >                
-                <div v-if="isLoading && !isRoomReserved(room.room_id, date)">
+                <div v-if="isLoading && !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')">
                   <Skeleton class="mb-2"></Skeleton>
                 </div> 
                 <div v-else>
-                  <div v-if="isRoomReserved(room.room_id, date)" class="flex items-center">
+                  <div v-if="isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')" class="flex items-center">
                     <div>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'hold'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
                         <i class="pi pi-pause bg-yellow-100 p-1 rounded"></i>
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'provisory'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
                         <i class="pi pi-clock bg-cyan-200 p-1 rounded"></i>                        
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'confirmed'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
                         <i class="pi pi-check-circle bg-sky-300 p-1 rounded"></i>                        
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_in'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
                         <i class="pi pi-user bg-green-400 p-1 rounded"></i>                        
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'checked_out'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
                         <i class="pi pi-sign-out bg-gray-300 p-1 rounded"></i>                        
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date).status === 'cancelled'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'cancelled'">
                         <i class="pi pi-times bg-red-100 p-1 rounded"></i>                        
                       </template>
                     </div>
                     <div class="ml-1">
-                      {{ fillRoomInfo(room.room_id, date).client_name }}
+                      {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name }}
                     </div>
                   </div>
                   <div v-else>
@@ -126,7 +126,7 @@
         </table>
       </div>
       <template #footer>
-        編集モード：{{ dragModeLabel }}
+        <span class="mr-4">編集モード：{{ dragModeLabel }}</span>
         <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization">変更適用</Button>        
       </template>
     </Panel>  
@@ -193,7 +193,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();  
   import { useReservationStore } from '@/composables/useReservationStore';
-  const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setReservationRoom } = useReservationStore();
+  const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
 
   // Helper function
   const formatDate = (date) => {
@@ -285,6 +285,7 @@
   };
 
   // Fetch reserved rooms data
+  const tempReservations = ref(null); 
   const fetchReservations = async (oldMinDate = null, oldMaxDate = null) => {
     try {
       let startDate = dateRange.value[0];
@@ -311,6 +312,7 @@
         endDate
       );
       // console.log('reservedRooms:', reservedRooms.value);
+      tempReservations.value = reservedRooms.value;
     } catch (error) {
       console.error('Error fetching reservations:', error);
     }
@@ -325,18 +327,26 @@
       });
       return map;
   });
+  const tempReservationsMap = computed(() => {
+      const map = {};      
+      tempReservations.value.forEach(reservation => {
+          const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
+          map[key] = reservation;
+      });
+      return map;
+  });
 
-  // Fill & Format the table  
-  const isRoomReserved = (room_id, date) => {    
-      const key = `${room_id}_${date}`;
-      return !!reservedRoomsMap.value[key];
+  // Fill & Format the table 
+  const isRoomReserved = (roomId, date, useTemp = false) => {
+    const key = `${roomId}_${date}`;     
+    return useTemp ? !!tempReservationsMap.value[key] : !!reservedRoomsMap.value[key];
   };
-  const fillRoomInfo = (room_id, date) => {
+  const fillRoomInfo = (room_id, date, useTemp = false) => {
     const key = `${room_id}_${date}`;
-    return reservedRoomsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
+    return useTemp ? tempReservationsMap.value[key] || { status: 'available', client_name: '', reservation_id: null } : reservedRoomsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
   };
-  const getCellStyle = (room_id, date) => {
-    const roomInfo = fillRoomInfo(room_id, date);
+  const getCellStyle = (room_id, date, useTemp = false) => {
+    const roomInfo = fillRoomInfo(room_id, date, dragMode.value === 'reorganizeRooms');
     let roomColor = '#d3063d';
     let style = {};
 
@@ -354,6 +364,15 @@
       style = { backgroundColor: `${roomColor}` };
     } else if (roomInfo && roomInfo.status !== 'available') {
       style = { color: `${roomColor}`, fontWeight: 'bold' };
+    }
+
+    if (useTemp) {
+        const originalReservation = reservedRooms.value.find(r => r.room_id === room_id && formatDate(new Date(r.date)) === date);
+        const tempReservation = tempReservations.value.find(r => r.room_id === room_id && formatDate(new Date(r.date)) === date);
+
+        if (originalReservation?.id !== tempReservation?.id) {
+            style.border = '2px solid red'; // Highlight modified cells
+        }
     }
     
     return style;    
@@ -374,13 +393,29 @@
       });
       return lastMap;
   });
-  const isCellFirst = (room_id, date) => {
+  const firstCellTempMap = computed(() => {
+      const firstMap = {};
+      tempReservations.value.forEach(room => {
+          const checkInKey = `${room.room_id}_${formatDate(new Date(room.check_in))}`;
+          firstMap[checkInKey] = true;
+      });
+      return firstMap;
+  });
+  const lastCellTempMap = computed(() => {
+      const lastMap = {};
+      tempReservations.value.forEach(room => {
+          const checkOutKey = `${room.room_id}_${formatDate(new Date(new Date(room.check_out).setDate(new Date(room.check_out).getDate() - 1)))}`;
+          lastMap[checkOutKey] = true;
+      });
+      return lastMap;
+  });
+  const isCellFirst = (room_id, date, useTemp = false) => {
       const key = `${room_id}_${date}`;
-      return !!firstCellMap.value[key];
+      return useTemp ? !!firstCellTempMap.value[key] : !!firstCellMap.value[key];
   };
-  const isCellLast = (room_id, date) => {
+  const isCellLast = (room_id, date, useTemp = false) => {
       const key = `${room_id}_${date}`;
-      return !!lastCellMap.value[key];
+      return useTemp ? !!lastCellTempMap.value[key] : !!lastCellMap.value[key];
   };
   const applyHover = (roomIndex, dateIndex) => {    
     const firstColCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:first-child`);
@@ -415,11 +450,11 @@
     selectedDate.value = date;
 
     if (selectedRoom.value) {
-      if(!fillRoomInfo(roomId, date).reservation_id) {
+      if(!fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id) {
         setReservationId(null);
         drawerVisible.value = true;
       } else {            
-        setReservationId(fillRoomInfo(roomId, date).reservation_id);
+        setReservationId(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id);
         drawerVisible.value = true;
       }
     } else {
@@ -433,6 +468,7 @@
   const draggingStyle = ref({});
   const draggingDates = ref([]);
   const draggingRoomId = ref(null);
+  const draggingDate = ref(null);
   const draggingCheckIn = ref(null);
   const draggingCheckOut = ref(null);
   const draggingRoomNumber = ref(null);
@@ -453,7 +489,7 @@
 
     return { minDate: minDate, maxDate: maxDate };
   });
-  const tempRoomData = ref({});
+  const tempRoomData = ref([]);
   const hasChanges = ref(false);
   const dragMode = ref('reservation');
   const dragModeLabel = computed(() => {
@@ -463,7 +499,7 @@
       case 'roomByDay':
         return '日ごとに部屋移動';
       case 'reorganizeRooms':
-        return '部屋テトリス';
+        return 'フリー移動';
       default:
         return '不明なモード';
     }
@@ -472,7 +508,7 @@
   const speedDialModel = ref([
     {
       label: '予約移動',
-      icon: 'pi pi-arrows-h',
+      icon: 'pi pi-address-book',
       command: () => (dragMode.value = 'reservation'),
     },
     {
@@ -481,8 +517,8 @@
       command: () => (dragMode.value = 'roomByDay'),
     },
     {
-      label: '部屋テトリス',
-      icon: 'pi pi-sitemap',
+      label: 'フリー移動',
+      icon: 'pi pi-arrows-alt',
       command: () => (dragMode.value = 'reorganizeRooms'),
     },
   ]);
@@ -555,15 +591,12 @@
     if (dragMode.value === 'reservation') {
       onDragStart(event, roomId, date);
       startDrag(event, roomId, date);
-    } else if (dragMode.value === 'reorganizeRooms') {
-      if (!tempRoomData.value[roomId]) {
-          tempRoomData.value[roomId] = {};
-      }
-      tempRoomData.value[roomId][formatDate(date)] = fillRoomInfo(roomId, date);
+    } else if (dragMode.value === 'reorganizeRooms') {      
       startDrag(event, roomId, date);
     }
   };
   const handleDrop = (event, roomId, date) => {
+    console.log('handleDrop')
     if (dragMode.value === 'reservation') {
       onDrop(event, roomId, date);
     } else if (dragMode.value === 'roomByDay') {
@@ -573,15 +606,90 @@
         selectedRoomByDay.value = [];
       }
     } else if (dragMode.value === 'reorganizeRooms') {
-      // Logic to move reservations within tempRoomData
-      tempRoomData.value[roomId][formatDate(date)] = fillRoomInfo(draggingRoomId.value, draggingCheckIn.value);
-      hasChanges.value = true;
+      const key = `${draggingRoomId.value}_${draggingDate.value}`;
+      console.log(key)
+      if (tempReservationsMap.value[key]) {
+          // Update the reservation in tempReservations
+          const reservation = tempReservationsMap.value[key];
+          const reservationIdToUpdate = reservation.reservation_id;
+          const originalRoomId = reservation.room_id;
+          // Create Sets
+          const updatedDates = new Set();
+          const updatedReservationIds = new Set();
+          
+          tempReservations.value = tempReservations.value.map(item => {            
+            if (item.reservation_id === reservationIdToUpdate && item.room_id === originalRoomId) {
+                const updatedItem = { ...item };
+                updatedItem.room_id = roomId;
+                const dateDiff = new Date(date) - new Date(draggingDate.value);
+                updatedItem.check_in = formatDate(new Date(new Date(updatedItem.check_in).setDate(new Date(updatedItem.check_in).getDate() + dateDiff / (1000 * 60 * 60 * 24))));
+                updatedItem.check_out = formatDate(new Date(new Date(updatedItem.check_out).setDate(new Date(updatedItem.check_out).getDate() + dateDiff / (1000 * 60 * 60 * 24))));
+                updatedItem.date = formatDate(new Date(new Date(updatedItem.date).setDate(new Date(updatedItem.date).getDate() + dateDiff / (1000 * 60 * 60 * 24))));
+
+                // Store all updated dates & reservation IDs
+                updatedDates.add(updatedItem.date);
+                updatedReservationIds.add(updatedItem.reservation_id);
+
+                // Remove existing item in tempRoomData if it already exists
+                const existingItemIndex = tempRoomData.value.findIndex(item => item.id === updatedItem.id);
+                if (existingItemIndex !== -1) {
+                    tempRoomData.value.splice(existingItemIndex, 1); // Remove the existing item
+                }
+
+                // Store changed data
+                tempRoomData.value.push(updatedItem);
+                                
+                return updatedItem;
+            }
+            return item;
+          });
+
+          // Loop through updated dates and update reservations
+          updatedDates.forEach(updatedDate => {
+              tempReservations.value = tempReservations.value.map(innerItem => {
+                  if (innerItem.room_id === roomId && formatDate(new Date(innerItem.date)) === updatedDate && !updatedReservationIds.has(innerItem.reservation_id)) {
+                      console.log("Should move", innerItem.client_name, 'from', innerItem.room_id, 'to', draggingRoomId.value);
+                      const swappedItem = { ...innerItem, room_id: draggingRoomId.value };
+
+                      // Remove existing item in tempRoomData if it already exists
+                      const existingSwappedItemIndex = tempRoomData.value.findIndex(item => item.id === swappedItem.id);
+                      if (existingSwappedItemIndex !== -1) {
+                          tempRoomData.value.splice(existingSwappedItemIndex, 1); // Remove the existing item
+                      }
+            
+                      // Store changed data
+                      tempRoomData.value.push(swappedItem);
+
+                      return swappedItem;
+                  }
+                  return innerItem;
+              });
+          });
+                    
+          // Reorder tempReservations based on check-in date and room number
+          tempReservations.value.sort((a, b) => {
+              const dateA = new Date(a.check_in);
+              const dateB = new Date(b.check_in);
+              if (dateA - dateB === 0) {
+                  return a.room_number - b.room_number;
+              }
+              return dateA - dateB;
+          });
+
+          hasChanges.value = true;
+      }
+      
     }
     removeHighlight();
   };
-  const applyReorganization = () => {
-    // API call to update all reservations in tempRoomData
-    console.log('API call to update all reservations:', tempRoomData.value);
+  const applyReorganization = async () => {    
+    
+    console.log("Updated Reservations:", tempRoomData.value);
+    await setCalendarFreeChange(tempRoomData.value);
+    
+    // Reset
+    await fetchReservations();
+    dragMode.value = 'reservation'
     tempRoomData.value = {};
     hasChanges.value = false;
   };
@@ -627,10 +735,12 @@
     return true;
   };
   const startDrag = (event, roomId, date) => {
-    const reservation = fillRoomInfo(roomId, date);
+    console.log('startDrag')
+    const reservation = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms');
     if (reservation.reservation_id) {
       draggingReservation.value = true;
       draggingRoomId.value = roomId;
+      draggingDate.value = date;
       draggingCheckIn.value = new Date(reservation.check_in);
       draggingCheckOut.value = new Date(reservation.check_out);
       draggingRoomNumber.value = reservation.room_number;
@@ -663,6 +773,7 @@
     draggingReservation.value = false;
     draggingDates.value = [];
     draggingRoomId.value = null;
+    draggingDate.value = null;
     draggingCheckIn.value = null;
     draggingCheckOut.value = null;
     draggingRoomNumber.value = null;
@@ -721,27 +832,31 @@
     }
   };
 
+  // Reservation Mode
   const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
   const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null }); 
   const onDragStart = async (event, roomId, date) => {
+    console.log('onDragStart')
     dragFrom.value = null;
     
-    const reservation_id = fillRoomInfo(roomId, date).reservation_id;
+    const reservation_id = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id;
         
     if(reservation_id){      
-      const check_in = formatDate(new Date(fillRoomInfo(roomId, date).check_in));
-      const check_out = formatDate(new Date(fillRoomInfo(roomId, date).check_out));
-      const room_id = fillRoomInfo(roomId, date).room_id;
-      const room_number = fillRoomInfo(roomId, date).room_number;
-      const room_type_name = fillRoomInfo(roomId, date).room_type_name;
-      const number_of_people = fillRoomInfo(roomId, date).number_of_people;
+      const check_in = formatDate(new Date(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').check_in));
+      const check_out = formatDate(new Date(fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').check_out));
+      const room_id = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_id;
+      const room_number = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_number;
+      const room_type_name = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').room_type_name;
+      const number_of_people = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').number_of_people;
       const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
       dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
-      const reservationData = await fetchReservation(reservation_id);      
+      const reservationData = await fetchReservation(reservation_id);    
+      
+      console.log('dragFrom',dragFrom.value)
     }else{
       return;
-    }    
+    }        
     
   };
   const onDrop = (event, roomId, date) => {        
@@ -749,8 +864,7 @@
     if(!dragFrom.value){
       return;
     }
-    const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);
-    // console.log('Selected room:', selectedRoom);
+    const selectedRoom = selectedHotelRooms.value.find(room => room.room_id === roomId);    
     const check_in = formatDate(new Date(date));
     const check_out = formatDate(new Date(new Date(date).setDate(new Date(date).getDate() + dragFrom.value.days)));        
     const room_id = selectedRoom.room_id;
@@ -792,8 +906,7 @@
       // console.log('Conflict found');
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。' , life: 3000 });
     }        
-  };
-      
+  };      
   const formattedMessage = ref('');
   const showConfirmationPrompt = async () => {
     const from = dragFrom.value;
@@ -1027,6 +1140,9 @@
   }); 
   watch(dragMode, async (newVal, oldVal) => {
     selectedRoomByDay.value = [];
+    tempRoomData.value = [];
+    await fetchReservations();
+    console.log(newVal);
   }) 
 
 </script>

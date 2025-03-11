@@ -268,8 +268,7 @@ export function useReservationStore() {
             const authToken = localStorage.getItem('authToken');
             // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(id);
-
-            // Assuming you have an API endpoint to update the reservation status
+            
             const response = await fetch(`/api/reservation/update/calendar/${id}`, {
                 method: 'PUT',
                 headers: {
@@ -287,6 +286,31 @@ export function useReservationStore() {
             
         } catch (error) {
             console.error('Error updating reservation:', error);
+        }
+    };
+
+    const setCalendarFreeChange = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const id = data[0].hotel_id;
+
+            const response = await fetch(`/api/reservation/update/free/calendar`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ data })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+
+            setReservationIsUpdating(false);
+        } catch(err){
+            console.error('Error updating reservation:', err);
         }
     };
 
@@ -825,6 +849,7 @@ export function useReservationStore() {
         setReservationAddons,
         setReservationRoom,
         setCalendarChange,
+        setCalendarFreeChange,
         setRoomPlan,
         setRoomGuests,
         changeReservationRoomGuestNumber,        
