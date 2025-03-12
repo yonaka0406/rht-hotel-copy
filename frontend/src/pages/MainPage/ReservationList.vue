@@ -13,7 +13,7 @@
                 dataKey="id"                
                 stripedRows
                 @row-dblclick="openDrawer"
-                :rowClass="rowClass"
+                selectionMode="single"
                 removableSort
                 v-model:expandedRows="expandedRows"
                 :rowExpansion="true"
@@ -31,8 +31,8 @@
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
                     </div>
                 </template>
-                <template #empty> 指定されている期間中では予約ありません。 </template>
-                <Column expander header="詳細" style="width: 1%">                   
+                <template #empty> 指定されている期間中では予約ありません。 </template>                
+                <Column expander header="詳細" style="width: 1%;">
                 </Column>
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">                    
                     <template #filter="{ filterModel, filterCallback }">                        
@@ -43,6 +43,7 @@
                             optionValue="value" 
                             @change="filterCallback" 
                             placeholder="選択"
+                            showClear 
                             fluid
                         />                        
                     </template>                    
@@ -303,9 +304,6 @@
             .map(client => client.name_kanji || client.name)
             .join("\n")
     };
-    const rowClass = () => {
-        return 'clickable-row';
-    };
     const openDrawer = (event) => {    
         selectedReservation.value = event.data;    
         console.log('selectedReservation:',selectedReservation.value)        ;
@@ -333,13 +331,24 @@
 </script>
 
 <style scoped>
-    /* Ensure pointer cursor */
-    :deep(.p-datatable tbody tr.clickable-row) {
-        cursor: pointer !important;
+    ::v-deep(.p-datatable-row-toggle-button) {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 5px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 0px solid;
+        cursor: pointer;
     }
 
-    /* Add hover effect */
-    :deep(.p-datatable tbody tr.clickable-row:hover) {
-        background-color: #f1f5f9 !important; /* Light gray/blue */
+    ::v-deep(.p-datatable-row-toggle-icon) {
+        fill: #333 !important; /* Ensure it has a visible color */
+        display: block !important;
+        width: 2px !important;
+        height: 5px !important;
+        border: 2px solid black !important;
     }
+
 </style>

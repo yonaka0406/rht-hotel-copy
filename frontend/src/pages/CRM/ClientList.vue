@@ -7,7 +7,8 @@
                 </template>                
                 <template #content>                    
                     <div class="flex justify-end mb-6">
-                        <SelectButton v-model="tableSize" :options="tableSizeOptions" optionLabel="label" dataKey="label" />
+                        <SelectButton v-model="tableSize" :options="tableSizeOptions" 
+                        optionLabel="label" dataKey="label" />
                     </div>
                     <DataTable
                         v-model:filters="filters"
@@ -117,8 +118,7 @@
     const tableSize = ref({ label: '中', value: 'null' });
     const tableSizeOptions = ref([
         { label: '小', value: 'small' },
-        { label: '中', value: 'null' },
-        { label: '大', value: 'large' }
+        { label: '中', value: 'null' }
     ]);
     const person_type = ref([
         { name: 'legal', value: 'legal' },
