@@ -130,6 +130,8 @@
         localStorage.setItem('authToken', responseData.token);
         toast.add({ severity: 'success', summary: 'ログイン成功', detail: responseData.message || 'ログインしました。', life: 3000 });
         router.push('/');
+      } else if(responseData.error){
+        toast.add({ severity: 'warn', summary: 'ログイン失敗', detail: responseData.error || 'ログインできなかった。', life: 3000 });
       } else {
         // ✅ Edge case: No token in response
         throw new Error('サーバーエラーが発生しました。');
