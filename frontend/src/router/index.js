@@ -23,6 +23,7 @@ const RoomIndicator = () => import('@/pages/MainPage/RoomIndicator.vue');
 const ReservationsNew = () => import('@/pages/MainPage/ReservationsNew.vue');
 const ReservationEdit = () => import('@/pages/MainPage/ReservationEdit.vue');
 const ReservationsCalendar = () => import('@/pages/MainPage/ReservationsCalendar.vue');
+const ReservationList = () => import('@/pages/MainPage/ReservationList.vue');
 const ReportDaily = () => import('@/pages/MainPage/ReportDaily.vue');
 const ReportMonthly = () => import('@/pages/MainPage/ReportMonthly.vue');
 
@@ -43,6 +44,7 @@ const routes = [
       { path: '/reservations/new', name: 'ReservationsNew', component: ReservationsNew },
       { path: '/reservations/edit/:reservation_id', name: 'ReservationEdit', component: ReservationEdit, props: true },
       { path: '/reservations/calendar', name: 'ReservationsCalendar', component: ReservationsCalendar },
+      { path: '/reservations/list', name: 'ReservationList', component: ReservationList },
       { path: '/report/daily', name: 'ReportDaily', component: ReportDaily },
       { path: '/report/monthly', name: 'ReportMonthly', component: ReportMonthly },
     ],

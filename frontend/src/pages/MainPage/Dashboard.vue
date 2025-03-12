@@ -259,7 +259,7 @@
     const formatCurrency = (value) => {
         if (value == null) return '';
         return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
-    }
+    };
     const selectedDate = ref(new Date());
     // Define start and end based on selectedDate
     const startDate = computed(() => formatDate(selectedDate.value)); 

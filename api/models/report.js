@@ -217,6 +217,8 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
       ,reservations.status
       ,reservations.reservation_client_id AS booker_id
       ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+      ,booker.name_kana AS booker_name_kana
+      ,booker.name_kanji AS booker_name_kanji
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.check_out - reservations.check_in AS number_of_nights
@@ -224,6 +226,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
       ,details.plan_price
       ,details.addon_price
       ,(details.plan_price + details.addon_price) AS price
+      ,details.payment
       ,details.clients_json
     FROM
       reservations	
@@ -233,6 +236,7 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
           reservation_details.hotel_id
           ,reservation_details.reservation_id
           ,rc.clients_json::TEXT
+          ,COALESCE(rp.payment,0) as payment
           ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
             ELSE reservation_details.price * reservation_details.number_of_people END
           ) AS plan_price
@@ -267,12 +271,21 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
               JOIN clients c ON rc.client_id = c.id
             GROUP BY rc.reservation_id
           ) rc ON rc.reservation_id = reservation_details.reservation_id
+           LEFT JOIN
+          (
+            SELECT
+              reservation_id
+              ,SUM(value) as payment
+            FROM reservation_payments
+            GROUP BY reservation_id
+          ) rp ON rp.reservation_id = reservation_details.reservation_id
         WHERE
           reservation_details.hotel_id = $1
         GROUP BY
           reservation_details.hotel_id
           ,reservation_details.reservation_id
           ,rc.clients_json::TEXT
+          ,rp.payment
       ) AS details
     WHERE
       reservations.hotel_id = $1

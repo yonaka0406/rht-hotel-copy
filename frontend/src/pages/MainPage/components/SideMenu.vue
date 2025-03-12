@@ -210,6 +210,14 @@
                                     router.push('/reservations/calendar');
                                 },                                
                             },
+                            { 
+                                key: 'reservationsList',
+                                label: '予約一覧', 
+                                icon: 'pi pi-fw pi-list', 
+                                command: () => {
+                                    router.push('/reservations/list');
+                                },                                
+                            },
                         ],
                     },
                     {
