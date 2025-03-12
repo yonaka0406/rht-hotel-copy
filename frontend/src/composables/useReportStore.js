@@ -107,7 +107,70 @@ export function useReportStore() {
             reservationList.value = [];
             console.error('Failed to fetch data', error);
         }
-    }
+    };
+
+    // Export
+    const exportReservationList = async(hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/download/res/list/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch CSV");
+            }
+
+            const blob = await response.blob();
+            const dlURL = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = dlURL;
+            link.setAttribute("download", "reservations.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }
+    };
+
+    const exportReservationDetails = async(hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/download/res/dtl/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch CSV");
+            }
+
+            const blob = await response.blob();
+            const dlURL = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = dlURL;
+            link.setAttribute("download", "reservation_details.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }
+    };
 
     return {
         reservationList,
@@ -115,5 +178,7 @@ export function useReportStore() {
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
         fetchReservationListView,
+        exportReservationList,
+        exportReservationDetails,
     };
 }

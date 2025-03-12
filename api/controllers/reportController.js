@@ -1,5 +1,7 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails } = require('../models/report');
+const { format } = require("@fast-csv/format");
 
+// Helper
 const formatDate = (date) => {
   if (!(date instanceof Date) || isNaN(date.getTime())) {
       console.error("Invalid Date object:", date);
@@ -9,6 +11,24 @@ const formatDate = (date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+const translateStatus = (status) => {
+  switch (status) {
+    case 'hold':
+      return '保留中';
+    case 'provisory':
+      return '仮予約';
+    case 'confirmed':
+      return '確定';
+    case 'checked_in':
+      return 'チェックイン';
+    case 'checked_out':
+      return 'チェックアウト';
+    case 'cancelled':
+      return 'キャンセル';
+    default:
+      return '不明';
+  }
 };
 
 const getCountReservation = async (req, res) => {
@@ -114,9 +134,113 @@ const getReservationListView = async (req, res) => {
   }
 }
 
+const getExportReservationList = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const result = await selectExportReservationList(hotelId, startDate, endDate); 
+    console.log("Export Data:", result);
+
+    if (!result || result.length === 0) {
+      return res.status(404).send("No data available for the given dates.");
+    }
+
+    // CSV
+
+    res.setHeader("Content-Disposition", "attachment; filename=reservations.csv");
+    res.setHeader("Content-Type", "text/csv");
+
+    const csvStream = format({ headers: true });
+    csvStream.pipe(res);
+
+    result.forEach((reservation) => {
+      const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
+      const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+
+      // Write data to CSV, add a formatted row
+      csvStream.write({
+        ホテルID: reservation.hotel_id,
+        ホテル名称: reservation.formal_name,
+        滞在期間:  `${startDate}～${endDate}`,
+        ステータス: translateStatus(reservation.status),
+        予約者: reservation.booker_name,
+        チェックイン: formatDate(new Date(reservation.check_in)),
+        チェックアウト: formatDate(new Date(reservation.check_out)),        
+        宿泊数: reservation.number_of_nights,
+        人数: reservation.number_of_people,
+        プラン料金: Math.floor(parseFloat(reservation.plan_price)),
+        アドオン料金: Math.floor(parseFloat(reservation.addon_price)),
+        請求額: Math.floor(parseFloat(reservation.price)),
+        入金額: Math.floor(parseFloat(reservation.payment)),        
+        宿泊者: clientNames,
+        予約ID: reservation.id,
+      });
+    });
+    csvStream.end();
+  } catch (err) {
+    console.error("Error generating CSV:", err);
+    res.status(500).send("Error generating CSV");
+  }
+};
+
+const getExportReservationDetails = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const result = await selectExportReservationDetails(hotelId, startDate, endDate); 
+    console.log("Export Data:", result);
+
+    if (!result || result.length === 0) {
+      return res.status(404).send("No data available for the given dates.");
+    }
+
+    // CSV
+
+    res.setHeader("Content-Disposition", "attachment; filename=reservation_details.csv");
+    res.setHeader("Content-Type", "text/csv");
+
+    const csvStream = format({ headers: true });
+    csvStream.pipe(res);
+
+    result.forEach((reservation) => {
+      const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
+      const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+
+      // Write data to CSV, add a formatted row
+      csvStream.write({
+        ホテルID: reservation.hotel_id,
+        ホテル名称: reservation.formal_name,
+        滞在期間:  `${startDate}～${endDate}`,
+        ステータス: translateStatus(reservation.status),
+        予約者: reservation.booker_name,
+        チェックイン: formatDate(new Date(reservation.check_in)),
+        チェックアウト: formatDate(new Date(reservation.check_out)),        
+        宿泊数: reservation.number_of_nights,
+        人数: reservation.number_of_people,
+        プラン料金: Math.floor(parseFloat(reservation.plan_price)),
+        アドオン料金: Math.floor(parseFloat(reservation.addon_price)),
+        請求額: Math.floor(parseFloat(reservation.price)),
+        入金額: Math.floor(parseFloat(reservation.payment)),        
+        宿泊者: clientNames,
+        予約ID: reservation.id,
+      });
+    });
+    csvStream.end();
+  } catch (err) {
+    console.error("Error generating CSV:", err);
+    res.status(500).send("Error generating CSV");
+  }
+};
+
 module.exports = { 
   getCountReservation,
   getCountReservationDetails,
   getOccupationByPeriod,
   getReservationListView,
+  getExportReservationList,
+  getExportReservationDetails,
 };

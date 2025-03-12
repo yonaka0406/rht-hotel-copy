@@ -307,10 +307,214 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
   }
 };
 
+const selectExportReservationList = async (hotelId, dateStart, dateEnd) => {
+  const query = `
+    SELECT
+      reservations.hotel_id
+      ,hotels.formal_name
+      ,reservations.id
+      ,reservations.status
+      ,reservations.reservation_client_id AS booker_id
+      ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+      ,booker.name_kana AS booker_name_kana
+      ,booker.name_kanji AS booker_name_kanji
+      ,reservations.check_in
+      ,reservations.check_out
+      ,reservations.check_out - reservations.check_in AS number_of_nights
+      ,reservations.number_of_people
+      ,details.plan_price
+      ,details.addon_price
+      ,(details.plan_price + details.addon_price) AS price
+      ,details.payment
+      ,details.clients_json
+    FROM
+      reservations	
+      ,hotels
+      ,clients AS booker
+      ,(
+        SELECT 
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,rc.clients_json::TEXT
+          ,COALESCE(rp.payment,0) as payment
+          ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+            ELSE reservation_details.price * reservation_details.number_of_people END
+          ) AS plan_price
+          ,SUM(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_price
+        FROM
+          reservation_details
+            LEFT JOIN
+          plans_global
+            ON reservation_details.plans_global_id = plans_global.id
+            LEFT JOIN
+          plans_hotel
+            ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+            LEFT JOIN
+          reservation_addons
+            ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+            LEFT JOIN 
+          (
+            SELECT 
+              rc.reservation_id,
+              JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'client_id', rc.client_id,
+                  'name', c.name,
+                  'name_kana', c.name_kana,
+                  'name_kanji', c.name_kanji,
+                  'email', c.email,
+                  'phone', c.phone
+                )
+              ) AS clients_json
+            FROM 
+              (SELECT DISTINCT reservation_id, client_id FROM reservation_clients rc JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
+              JOIN clients c ON rc.client_id = c.id
+            GROUP BY rc.reservation_id
+          ) rc ON rc.reservation_id = reservation_details.reservation_id
+           LEFT JOIN
+          (
+            SELECT
+              reservation_id
+              ,SUM(value) as payment
+            FROM reservation_payments
+            GROUP BY reservation_id
+          ) rp ON rp.reservation_id = reservation_details.reservation_id
+        WHERE
+          reservation_details.hotel_id = $1
+        GROUP BY
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,rc.clients_json::TEXT
+          ,rp.payment
+      ) AS details
+    WHERE
+      reservations.hotel_id = $1
+      AND reservations.check_out > $2
+      AND reservations.check_in <= $3	    
+      AND reservations.reservation_client_id = booker.id
+      AND reservations.id = details.reservation_id
+      AND reservations.hotel_id = details.hotel_id
+      AND reservations.hotel_id = hotels.id
+    ORDER BY 5, 7;
+  `;
+  const values = [hotelId, dateStart, dateEnd]
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+
+const selectExportReservationDetails = async (hotelId, dateStart, dateEnd) => {
+  const query = `
+    SELECT
+      reservations.hotel_id
+      ,hotels.formal_name
+      ,reservations.id
+      ,reservations.status
+      ,reservations.reservation_client_id AS booker_id
+      ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+      ,booker.name_kana AS booker_name_kana
+      ,booker.name_kanji AS booker_name_kanji
+      ,reservations.check_in
+      ,reservations.check_out
+      ,reservations.check_out - reservations.check_in AS number_of_nights
+      ,reservations.number_of_people
+      ,details.plan_price
+      ,details.addon_price
+      ,(details.plan_price + details.addon_price) AS price
+      ,details.payment
+      ,details.clients_json
+    FROM
+      reservations	
+      ,hotels
+      ,clients AS booker
+      ,(
+        SELECT 
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,rc.clients_json::TEXT
+          ,COALESCE(rp.payment,0) as payment
+          ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+            ELSE reservation_details.price * reservation_details.number_of_people END
+          ) AS plan_price
+          ,SUM(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_price
+        FROM
+          reservation_details
+            LEFT JOIN
+          plans_global
+            ON reservation_details.plans_global_id = plans_global.id
+            LEFT JOIN
+          plans_hotel
+            ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+            LEFT JOIN
+          reservation_addons
+            ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+            LEFT JOIN 
+          (
+            SELECT 
+              rc.reservation_id,
+              JSON_AGG(
+                JSON_BUILD_OBJECT(
+                  'client_id', rc.client_id,
+                  'name', c.name,
+                  'name_kana', c.name_kana,
+                  'name_kanji', c.name_kanji,
+                  'email', c.email,
+                  'phone', c.phone
+                )
+              ) AS clients_json
+            FROM 
+              (SELECT DISTINCT reservation_id, client_id FROM reservation_clients rc JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
+              JOIN clients c ON rc.client_id = c.id
+            GROUP BY rc.reservation_id
+          ) rc ON rc.reservation_id = reservation_details.reservation_id
+           LEFT JOIN
+          (
+            SELECT
+              reservation_id
+              ,SUM(value) as payment
+            FROM reservation_payments
+            GROUP BY reservation_id
+          ) rp ON rp.reservation_id = reservation_details.reservation_id
+        WHERE
+          reservation_details.hotel_id = $1
+        GROUP BY
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,rc.clients_json::TEXT
+          ,rp.payment
+      ) AS details
+    WHERE
+      reservations.hotel_id = $1
+      AND reservations.check_out > $2
+      AND reservations.check_in <= $3	    
+      AND reservations.reservation_client_id = booker.id
+      AND reservations.id = details.reservation_id
+      AND reservations.hotel_id = details.hotel_id
+      AND reservations.hotel_id = hotels.id
+    ORDER BY 5, 7;
+  `;
+  const values = [hotelId, dateStart, dateEnd]
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
   selectCountReservationDetailsAddons,
   selectOccupationByPeriod,
   selectReservationListView,
+  selectExportReservationList,
+  selectExportReservationDetails,
 };

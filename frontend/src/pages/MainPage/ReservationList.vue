@@ -29,6 +29,16 @@
                         <label class="ml-4 mr-2">終了日:</label>
                         <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" />
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
+
+                        <!-- Export -->
+                        <SplitButton 
+                            label="エクスポート" 
+                            icon="pi pi-download"
+                            severity="help"
+                            class="ml-4"
+                            @click="splitButtonExportReservations"
+                            :model="exportOptions" 
+                        />
                     </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
@@ -164,12 +174,14 @@
     import ReservationEdit from './ReservationEdit.vue';
 
     // Primevue
-    import { Panel, Drawer, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column } from 'primevue';
+    import { useToast } from "primevue/usetoast";
+    const toast = useToast();
+    import { Panel, Drawer, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, SplitButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchReservationListView } = useReportStore();
+    const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -309,6 +321,34 @@
         console.log('selectedReservation:',selectedReservation.value)        ;
         drawerVisible.value = true;
     };
+
+    // Export
+    const exportOptions = ref([
+        { label: "予約の詳細をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportReservationDetails() },
+        /*
+        { label: "請求書データをエクスポート", icon: "pi pi-file-pdf", command: () => exportInvoices() },
+         */
+    ]);
+    const splitButtonExportReservations = async () => {
+        try {
+            await exportReservationList(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));            
+
+            toast.add({ severity: "success", summary: "成功", detail: "予約データをエクスポートしました", life: 3000 });
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }
+    };
+    const splitButtonExportReservationDetails = async () => {
+        try {
+            await exportReservationDetails(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));            
+
+            toast.add({ severity: "success", summary: "成功", detail: "予約の詳細をエクスポートしました", life: 3000 });
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }        
+    };    
 
     onMounted(async () => {
         await fetchHotels();
