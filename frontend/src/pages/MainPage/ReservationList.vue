@@ -3,6 +3,7 @@
         <div>
             <DataTable
                 v-model:filters="filters"
+                v-model:selection="selectedReservations"
                 filterDisplay="row"
                 :value="filteredReservations"
                 :loading="tableLoading"
@@ -42,8 +43,9 @@
                     </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
-                <Column expander header="詳細" style="width: 1%;">
-                </Column>
+                <Column expander header="詳細" style="width: 1%;"/>                
+                <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+                
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">                    
                     <template #filter="{ filterModel, filterCallback }">                        
                         <Select 
@@ -95,7 +97,7 @@
                         </div>
                     </template> 
                 </Column>
-                <Column field="number_of_nights" header="宿泊数" sortable style="width:1%">
+                <Column field="number_of_nights" header="宿泊日数" sortable style="width:1%">
                     <template #body="slotProps">
                         <div class="flex justify-end mr-4">
                             <span>{{ slotProps.data.number_of_nights }}</span>
@@ -175,6 +177,62 @@
                 :reservation_id="selectedReservation.id"                       
             />
         </Drawer>
+        <Drawer v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '33vh'}">
+            <template #header><span class="text-lg font-bold">選択された予約の詳細</span></template>
+            <div class="grid grid-cols-2 gap-4">
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ selectedReservations.length }}件</p>
+                        <p class="justify-self-center">選択された件数</p>
+                    </div>
+                    </template>
+                </Card>
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ totalPeople }}人</p>
+                        <p class="justify-self-center">合計人数</p>
+                    </div>
+                    </template>
+                </Card>
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ totalPeopleNights }}泊</p>
+                        <p class="justify-self-center">合計宿泊数</p>
+                    </div>
+                    </template>
+                </Card>
+
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ formatCurrency(totalPrice) }}</p>
+                        <p class="justify-self-center">料金合計</p>
+                    </div>
+                    </template>
+                </Card>
+
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ formatCurrency(totalPayments) }}</p>
+                        <p class="justify-self-center">入金合計</p>
+                    </div>
+                    </template>
+                </Card>
+
+                <Card>
+                    <template #content>
+                    <div class="grid grid-cols-1">
+                        <p class="text-lg font-bold justify-self-center">{{ formatCurrency(totalBalance) }}</p>
+                        <p class="justify-self-center">残高合計</p>
+                    </div>
+                    </template>
+                </Card>
+            </div>
+        </Drawer>
     </Panel>
 </template>
 
@@ -187,7 +245,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -224,6 +282,26 @@
         tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
         tableLoading.value = false;
     }
+
+    // Select
+    const selectedReservations = ref([]);
+    const drawerSelectVisible = ref(false);
+    const totalPrice = computed(() => {
+        return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.price || 0), 0);
+    });
+    const totalPayments = computed(() => {
+        return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.payments || 0), 0);
+    });
+    const totalBalance = computed(() => {
+        return selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.price || 0) - (reservation.payments || 0)), 0);
+    });
+    const totalPeopleNights = computed(() => {
+        const formattedTotalPeopleNights = selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.number_of_people || 0) * (reservation.number_of_nights || 0)), 0);
+        return formattedTotalPeopleNights.toLocaleString();
+    });
+    const totalPeople = computed(() => {
+        return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.number_of_people || 0), 0);
+    });
 
     // Filters     
     const startDateFilter = ref(new Date(new Date().setDate(new Date().getDate() - 6)));
@@ -400,10 +478,10 @@
         },
         { immediate: true }
     );  
-
-    watch(() => paymentFilter.value, () =>{
-        console.log('paymentFilter',paymentFilter.value);
-    })
+    
+    watch(selectedReservations, (newValue) => {        
+        drawerSelectVisible.value = newValue.length > 0;
+    });
 
 </script>
 
