@@ -39,10 +39,11 @@
             </AccordionHeader>
             <AccordionContent>
                 <DataTable 
-                    :value="formattedGroupDetails(group.details)"
+                    :value="matchingGroupDetails(group.details)"
                     :rowStyle="rowStyle"
                 >
-                    <Column field="display_date" header="日付" class="text-xs" />
+                    <Column field="display_date" header="日付" class="text-xs" />  
+                    <Column field="isDifferentRoom" header="日付" class="text-xs" />                  
                     <Column field="plan_name" header="プラン" class="text-xs" />
                     <Column field="number_of_people" header="人数" class="text-xs" />
                     <Column field="price" header="料金" class="text-xs" />
@@ -474,13 +475,69 @@
     };
 
     // Format
+    
     const formattedGroupDetails = (details) => {
+        console.log(details)
         return details.map((item) => ({
             ...item,
             price: formatCurrency(item.price),
             display_date: formatDateWithDay(item.date),
         }));
     };
+    const matchingGroupDetails = computed(() => (details) => {
+        console.log("matchingGroupDetails called with details:", details);
+
+        if (!details || !groupedRooms.value) {
+            console.log("details or groupedRooms.value is missing. Returning empty array.");
+            return [];
+        }
+
+        const clientIds = new Set(details.flatMap((detail) =>
+            detail.reservation_clients.map((client) => {
+                console.log("Extracted client ID from detail:", client.client_id);
+                return client.client_id;
+            })
+        ));
+
+        const matchingDetails = groupedRooms.value.flatMap((room) => {   
+            console.log("Checking room:", room); 
+            return room.details.map((detail) => {  
+                console.log("Checking detail:", detail);
+                let isDifferentRoom = false;
+
+                if (details.some((passedDetail) => passedDetail.room_id !== room.room_id)) {
+                    isDifferentRoom = true;
+                }
+
+                if (detail.reservation_clients && detail.reservation_clients.length > 0) {
+                    const detailClientId = detail.reservation_clients[0].client_id;        
+                    const includes = [...clientIds].includes(detailClientId);  
+                    //return includes;
+                    return {
+                        ...detail,
+                        isDifferentRoom: isDifferentRoom,
+                        isMatchingClient: includes,
+                    };
+                } else {        
+                    console.log("Detail reservation_clients is empty or undefined");
+                    return {
+                        ...detail,
+                        isDifferentRoom: isDifferentRoom,
+                        isMatchingClient: false,
+                    };
+                }
+            });
+        });
+
+        console.log("Matching details found:", matchingDetails);
+  
+        return matchingDetails.map((item) => ({
+            ...item,
+            price: formatCurrency(item.price),
+            display_date: formatDateWithDay(item.date),
+        }));
+    });
+    
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
