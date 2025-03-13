@@ -100,7 +100,8 @@ export function useReportStore() {
             // Convert clients_json field from string to JSON
             reservationList.value = data.map(reservation => ({
                 ...reservation,
-                clients_json: reservation.clients_json ? JSON.parse(reservation.clients_json) : []
+                clients_json: reservation.clients_json ? JSON.parse(reservation.clients_json) : [],
+                payers_json: reservation.payers_json ? JSON.parse(reservation.payers_json) : []
             }));
             
         } catch (error) {

@@ -73,7 +73,7 @@
                         <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                     </template>
                 </Column>
-                <Column field="clients_json" filterField="clients_json" header="宿泊者" style="width:3%" :showFilterMenu="false">
+                <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
                         <InputText v-model="clientsJsonFilter" type="text" placeholder="氏名・名称検索" />
                     </template>
@@ -131,8 +131,8 @@
 
                 <template #expansion="slotProps">
                     <div class="mx-20">
-                        <div v-if="Array.isArray(slotProps.data.clients_json)">
-                            <DataTable :value="slotProps.data.clients_json" size="small">
+                        <div v-if="Array.isArray(slotProps.data.merged_clients)">
+                            <DataTable :value="slotProps.data.merged_clients" size="small">
                                 <Column header="氏名・名称" sortable>
                                     <template #body="clientSlotProps">
                                         {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name || '' }}
@@ -146,6 +146,17 @@
                                 <Column header="漢字" sortable>
                                     <template #body="clientSlotProps">
                                         {{ clientSlotProps.data.name_kanji || '' }}
+                                    </template>
+                                </Column>
+                                <Column header="タグ" sortable>
+                                    <template #body="clientSlotProps">
+                                        <div v-if="clientSlotProps.data.role === 'guest'">
+                                            <Badge value="宿泊者" severity="contrast"/>
+                                        </div>
+                                        <div v-else>
+                                            <Badge value="支払者" severity="info"/>
+                                        </div>
+                                        
                                     </template>
                                 </Column>
                             </DataTable>
@@ -176,7 +187,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, SplitButton } from 'primevue';
+    import { Panel, Drawer, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -238,6 +249,32 @@
     };
     const filteredReservations = computed(() => {
         let filteredList = reservationList.value;
+        // merged_clients
+        if(filteredList){
+            filteredList = filteredList.map(reservation => {
+                const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
+                    ...client,
+                    role: "guest"
+                })) : [];
+                const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
+                    ...payer,
+                    role: "payer"
+                })) : [];
+
+                // Merge guests and payers while keeping unique client_id
+                const uniqueClients = new Map();
+                [...guests, ...payers].forEach(client => {
+                    if (!uniqueClients.has(client.client_id)) {
+                        uniqueClients.set(client.client_id, client);
+                    }
+                });               
+
+                return {
+                    ...reservation,
+                    merged_clients: Array.from(uniqueClients.values())
+                };
+            });
+        }               
 
         if (clientFilter.value !== null && clientFilter.value !== ''){
             filteredList = filteredList.filter(reservation => {
@@ -288,7 +325,7 @@
                     return payment === filterPayment;
                 }
             });            
-        }        
+        }
         
         return filteredList
     });

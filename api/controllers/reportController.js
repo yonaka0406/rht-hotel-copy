@@ -30,6 +30,30 @@ const translateStatus = (status) => {
       return '不明';
   }
 };
+const translateType = (type) => {
+  switch (type) {    
+    case 'default':
+      return '通常';
+    case 'employee':
+      return '社員';
+    case 'ota':
+      return 'OTA';
+    case 'web':
+      return '自社ウェブ';    
+    default:
+      return '不明';
+  }
+};
+const translatePlanType = (type) => {
+  switch (type) {    
+    case 'per_person':
+      return '一人当たり';
+    case 'per_room':
+      return '部屋当たり';    
+    default:
+      return '不明';
+  }
+};
 
 const getCountReservation = async (req, res) => {
   const hotelId = req.params.hid;
@@ -140,8 +164,7 @@ const getExportReservationList = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const result = await selectExportReservationList(hotelId, startDate, endDate); 
-    console.log("Export Data:", result);
+    const result = await selectExportReservationList(hotelId, startDate, endDate);     
 
     if (!result || result.length === 0) {
       return res.status(404).send("No data available for the given dates.");
@@ -150,14 +173,17 @@ const getExportReservationList = async (req, res) => {
     // CSV
 
     res.setHeader("Content-Disposition", "attachment; filename=reservations.csv");
-    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.write("\uFEFF");
 
     const csvStream = format({ headers: true });
     csvStream.pipe(res);
 
     result.forEach((reservation) => {
       const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
-      const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
+      const clientNames = clients.map(client => client.name_kana ? client.name + '(' + client.name_kana + ')' : client.name ).join(", ");
+      const payers = reservation.payers_json ? JSON.parse(reservation.payers_json) : [];
+      const payerNames = payers.map(client => client.name_kana ? client.name + '(' + client.name_kana + ')' : client.name ).join(", ");
 
       // Write data to CSV, add a formatted row
       csvStream.write({
@@ -166,6 +192,7 @@ const getExportReservationList = async (req, res) => {
         滞在期間:  `${startDate}～${endDate}`,
         ステータス: translateStatus(reservation.status),
         予約者: reservation.booker_name,
+        予約者カナ: reservation.booker_name_kana,
         チェックイン: formatDate(new Date(reservation.check_in)),
         チェックアウト: formatDate(new Date(reservation.check_out)),        
         宿泊数: reservation.number_of_nights,
@@ -174,7 +201,9 @@ const getExportReservationList = async (req, res) => {
         アドオン料金: Math.floor(parseFloat(reservation.addon_price)),
         請求額: Math.floor(parseFloat(reservation.price)),
         入金額: Math.floor(parseFloat(reservation.payment)),        
+        残高: Math.floor(parseFloat(reservation.price)) - Math.floor(parseFloat(reservation.payment)),
         宿泊者: clientNames,
+        支払者: payerNames,
         予約ID: reservation.id,
       });
     });
@@ -192,21 +221,50 @@ const getExportReservationDetails = async (req, res) => {
 
   try {
     const result = await selectExportReservationDetails(hotelId, startDate, endDate); 
-    console.log("Export Data:", result);
-
+    
     if (!result || result.length === 0) {
       return res.status(404).send("No data available for the given dates.");
     }
 
+    // Edit totals
+    const processedReservations = [];
+    const seenReservationIds = new Set();
+    const seenReservationDetailIds = new Set();
+    
+    result.forEach((reservation) => {
+      const reservationId = reservation.reservation_id;
+      const reservationDetailId = reservation.id;
+      const isFirstOccurrence = !seenReservationIds.has(reservationId);
+      const isFirstDetailOccurrence = !seenReservationDetailIds.has(reservationDetailId);
+    
+      if (isFirstOccurrence) {
+        seenReservationIds.add(reservationId);
+      }
+      if (isFirstDetailOccurrence) {
+        seenReservationDetailIds.add(reservationDetailId);
+      }
+    
+      processedReservations.push({
+        ...reservation,
+        plan_price: isFirstDetailOccurrence
+          ? Math.floor(parseFloat(reservation.plan_price) || 0)
+          : null,
+        payments: isFirstOccurrence
+          ? Math.floor(parseFloat(reservation.payments) || 0)
+          : null,
+      });
+    });
+
     // CSV
 
     res.setHeader("Content-Disposition", "attachment; filename=reservation_details.csv");
-    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.write("\uFEFF");
 
     const csvStream = format({ headers: true });
     csvStream.pipe(res);
 
-    result.forEach((reservation) => {
+    processedReservations.forEach((reservation) => {
       const clients = reservation.clients_json ? JSON.parse(reservation.clients_json) : [];
       const clientNames = clients.map(client => client.name).join(", ");  // Join all client names into one string
 
@@ -215,18 +273,32 @@ const getExportReservationDetails = async (req, res) => {
         ホテルID: reservation.hotel_id,
         ホテル名称: reservation.formal_name,
         滞在期間:  `${startDate}～${endDate}`,
-        ステータス: translateStatus(reservation.status),
+        ステータス: translateStatus(reservation.reservation_status),
+        予約種類: translateType(reservation.reservation_type),
         予約者: reservation.booker_name,
+        予約者カナ: reservation.booker_kana,
         チェックイン: formatDate(new Date(reservation.check_in)),
         チェックアウト: formatDate(new Date(reservation.check_out)),        
         宿泊数: reservation.number_of_nights,
-        人数: reservation.number_of_people,
-        プラン料金: Math.floor(parseFloat(reservation.plan_price)),
+        予約人数: reservation.reservation_number_of_people,
+        販売用部屋: reservation.for_sale ? 'はい' : 'いいえ',
+        建物階: reservation.floor,
+        部屋番号: reservation.room_number,
+        部屋タイプ: reservation.room_type_name,
+        喫煙部屋: reservation.smoking ? 'はい' : 'いいえ',
+        部屋容量: reservation.capacity,
+        滞在人数: reservation.number_of_people,
+        日付: reservation.date,
+        プラン名: reservation.plan_name,
+        プランタイプ: translatePlanType(reservation.plan_type),
+        プラン料金: reservation.plan_price,
+        アドオン名: reservation.addon_name,
         アドオン料金: Math.floor(parseFloat(reservation.addon_price)),
-        請求額: Math.floor(parseFloat(reservation.price)),
-        入金額: Math.floor(parseFloat(reservation.payment)),        
-        宿泊者: clientNames,
-        予約ID: reservation.id,
+        入金額: reservation.payments,
+        残高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_price)) - reservation.payments,
+        売上高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_price)),
+        予約ID: reservation.reservation_id,
+        予約詳細ID: reservation.id,
       });
     });
     csvStream.end();
