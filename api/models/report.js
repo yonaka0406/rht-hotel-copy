@@ -242,10 +242,15 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
           ,rc.clients_json::TEXT
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
-          ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
-            ELSE reservation_details.price * reservation_details.number_of_people END
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
+                CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+                ELSE reservation_details.price * reservation_details.number_of_people END
+              ELSE 0 END
           ) AS plan_price
-          ,SUM(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_price
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN
+                  COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)
+              ELSE 0 END
+          ) AS addon_price
         FROM
           reservation_details
             LEFT JOIN
@@ -365,10 +370,13 @@ const selectExportReservationList = async (hotelId, dateStart, dateEnd) => {
           ,rc.clients_json::TEXT
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
-          ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
-            ELSE reservation_details.price * reservation_details.number_of_people END
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
+              CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+              ELSE reservation_details.price * reservation_details.number_of_people END
+              ELSE 0 END
           ) AS plan_price
-          ,SUM(reservation_addons.price) AS addon_price
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN reservation_addons.price ELSE 0 END) AS addon_price
+
         FROM
           reservation_details
             LEFT JOIN
