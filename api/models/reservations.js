@@ -854,6 +854,7 @@ const updateReservationStatus = async (reservationData) => {
 
   try {
 
+    // Update status
     const query = `
         UPDATE reservations
         SET
@@ -868,9 +869,9 @@ const updateReservationStatus = async (reservationData) => {
       id,
       hotel_id,
     ];
-
     const result = await pool.query(query, values);
 
+    // Fill cancelled
     if(status==='cancelled'){
       const queryTwo = `
           UPDATE reservation_details
@@ -888,6 +889,43 @@ const updateReservationStatus = async (reservationData) => {
       ];
 
       await pool.query(queryTwo, valuesTwo);
+    }
+
+    // Set billable true
+    if(status==='confirmed'){
+      const queryThree = `
+          UPDATE reservation_details
+          SET            
+            billable = TRUE
+            ,updated_by = $1          
+          WHERE reservation_id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+      const valuesThree = [            
+        updated_by,
+        id,
+        hotel_id,
+      ];
+
+      await pool.query(queryThree, valuesThree);
+    }
+    // Set billable false
+    if(status==='provisory'){
+      const queryFour = `
+          UPDATE reservation_details
+          SET            
+            billable = FALSE
+            ,updated_by = $1          
+          WHERE reservation_id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+      const valuesFour = [            
+        updated_by,
+        id,
+        hotel_id,
+      ];
+
+      await pool.query(queryFour, valuesFour);
     }
 
     return result.rows[0];
