@@ -288,15 +288,18 @@ const getExportReservationDetails = async (req, res) => {
         喫煙部屋: reservation.smoking ? 'はい' : 'いいえ',
         部屋容量: reservation.capacity,
         滞在人数: reservation.number_of_people,
-        日付: reservation.date,
+        日付: formatDate(new Date(reservation.date)),
         プラン名: reservation.plan_name,
         プランタイプ: translatePlanType(reservation.plan_type),
         プラン料金: reservation.plan_price,
         アドオン名: reservation.addon_name,
-        アドオン料金: Math.floor(parseFloat(reservation.addon_price)),
-        入金額: reservation.payments,
-        残高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_price)) - reservation.payments,
-        売上高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_price)),
+        アドオン数量: reservation.addon_quantity,
+        アドオン単価: reservation.addon_price,
+        アドオン料金: Math.floor(parseFloat(reservation.addon_value)),
+        請求対象: reservation.billable ? 'はい' : 'いいえ',
+        /*入金額: reservation.payments,*/
+        /*残高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) - reservation.payments,*/
+        売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
         予約ID: reservation.reservation_id,
         予約詳細ID: reservation.id,
       });

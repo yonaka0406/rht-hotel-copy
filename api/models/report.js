@@ -495,8 +495,11 @@ const selectExportReservationDetails = async (hotelId, dateStart, dateEnd) => {
       ELSE reservation_details.price * reservation_details.number_of_people END
       ) AS plan_price
       ,COALESCE(addons_hotel.name, addons_global.name) AS addon_name  
-      ,(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_price
-      ,COALESCE(reservations.payments,0) as payments
+      ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
+      ,COALESCE(reservation_addons.price,0) AS addon_price
+      ,(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_value
+      ,COALESCE(reservations.payments,0) AS payments
+      ,reservation_details.billable
     FROM
       hotels
       ,rooms
@@ -559,7 +562,9 @@ const selectExportReservationDetails = async (hotelId, dateStart, dateEnd) => {
       AND reservation_details.room_id = rooms.id
       AND rooms.hotel_id = room_types.hotel_id
       AND rooms.room_type_id = room_types.id
-    ORDER BY reservations.check_in, reservation_details.reservation_id, rooms.room_number, reservation_details.date
+    ORDER BY 
+      reservations.check_in, reservation_details.reservation_id, rooms.room_number, 
+      reservation_details.date, addons_hotel.name, addons_global.name, reservation_addons.price DESC
   `;
   const values = [hotelId, dateStart, dateEnd]
 
