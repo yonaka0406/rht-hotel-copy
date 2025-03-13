@@ -541,6 +541,9 @@
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
+        if (data.isDifferentRoom) {
+            return { backgroundColor: 'gray' };            
+        }
         if (day === 6) {
             return { backgroundColor: '#fcfdfe' };
         }
@@ -1067,3 +1070,15 @@
     }, { deep: true });    
 
 </script>
+
+<style scoped>
+.hashed-row {    
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(0, 0, 0, 0.1) 0px,
+        rgba(0, 0, 0, 0.1) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+}
+</style>
