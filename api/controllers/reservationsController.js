@@ -630,16 +630,16 @@ const editReservationGuests = async (req, res) => {
   const updated_by = req.user.id;
 
   try {
-      if (guestDataArray.length > 0) {
-        const firstGuestDataArray = guestDataArray[0]; // Get the first row
-        const guestsToAddForDetail = [...firstGuestDataArray.guestsToAdd]; // Shallow copy
+      
+      if (guestDataArray && guestDataArray.guestsToAdd) {        
+        const guestsToAdd = guestDataArray.guestsToAdd;        
         
         // Handle addClientByName and update guestsToAdd *only for the first row*
-        for (let i = 0; i < guestsToAddForDetail.length; i++) {
-          let guest = guestsToAddForDetail[i];
+        for (let i = 0; i < guestsToAdd.length; i++) {
+          let guest = guestsToAdd[i];
           let finalClientId = guest.id;
-
-          if (!finalClientId) {
+          
+          if (!finalClientId) {            
             const clientData = {
               name: guest.name,
               legal_or_natural_person: guest.legal_or_natural_person,
@@ -650,49 +650,43 @@ const editReservationGuests = async (req, res) => {
               updated_by,
             };
             const newClient = await addClientByName(clientData);
-            finalClientId = newClient.id;
-            guestsToAddForDetail[i] = {...guest, id: finalClientId }; // Update the copied array
+            finalClientId = newClient.id;            
+            guestsToAdd[i] = { ...guest, id: finalClientId };
           }
         }
 
         // Update guestsToAdd array in guestDataArray      
-        guestDataArray.guestsToAdd = guestsToAddForDetail;
-      
+        guestDataArray.guestsToAdd = guestsToAdd;
       }
 
+      const existingReservation = await selectReservation(id);
+      const filteredReservations = existingReservation.filter(reservation => reservation.room_id === guestDataArray.room_id);
+          
+      for (const reservationDetail of filteredReservations) {
+          // Delete existing clients for this reservation detail
+          await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
+
+          // Add the new clients
+          if (guestDataArray.guestsToAdd && guestDataArray.guestsToAdd.length > 0) {
+              for (let i = 0; i < guestDataArray.guestsToAdd.length; i++) {
+                let guest = guestDataArray.guestsToAdd[i];
+                let finalClientId = guest.id;
       
-
-          const existingReservation = await selectReservation(id);
-          const filteredReservations = existingReservation.filter(reservation => reservation.room_id === guestDataArray.room_id);
-          
-          for (const reservationDetail of filteredReservations) {
-              // Delete existing clients for this reservation detail
-              await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
-
-              // Add the new clients
-              if (guestDataArray.guestsToAdd && guestDataArray.guestsToAdd.length > 0) {
-                  for (let i = 0; i < guestDataArray.guestsToAdd.length; i++) {
-                    let guest = guestDataArray.guestsToAdd[i];
-                    let finalClientId = guest.id;
-          
-                    if(finalClientId !== '' && finalClientId !== null && finalClientId !== undefined){
-                      //console.log('Client ID was provided');
-                    } else{
-                      console.log('Client ID was empty');                                            
-                    }
-                    
-                    const guestInfo = {
-                        hotel_id: reservationDetail.hotel_id,
-                        reservation_details_id: reservationDetail.id,
-                        client_id: finalClientId,
-                        created_by,
-                        updated_by
-                    };
-                    const addedGuest = await addReservationClient(guestInfo);
-                    //console.log('Guest Added:', addedGuest);
-                  }
+                if (finalClientId) {
+                  const guestInfo = {
+                    hotel_id: reservationDetail.hotel_id,
+                    reservation_details_id: reservationDetail.id,
+                    client_id: finalClientId,
+                    created_by,
+                    updated_by,
+                  };
+                  await addReservationClient(guestInfo);
+                } else {
+                    console.log("Client ID was empty after add client by name");
+                }
               }
           }
+      }
       
       res.status(200).json({ message: "Guests updated successfully" }); // Send a success response
 

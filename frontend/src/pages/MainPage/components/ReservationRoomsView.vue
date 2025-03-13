@@ -169,9 +169,6 @@
                                 </div>
                             </template>
                         </Card>
-                        
-                                        
-                        
                     </TabPanel>
                     <!-- Tab 2: Move Rooms -->
                     <TabPanel value="1">
@@ -808,14 +805,15 @@
                         guestsToAdd: guests.value.filter(guest => guest.name) 
                     };
                 });
+
+                console.log('applyGuestChanges:',reservationInfo.value.reservation_id, dataToUpdate[0]);
+
+                
                 
                 await setRoomGuests(reservationInfo.value.reservation_id, dataToUpdate[0]);
-
-                // So preciso enviar uma linha com room_id e guestsToAdd
-
+                                
                 closeRoomEditDialog();
-
-                // Provide feedback to the user (optional)                
+                
                 toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });                
             }
         };
