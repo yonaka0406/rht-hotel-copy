@@ -481,6 +481,7 @@
     // Format
     
     const formattedGroupDetails = (details) => {
+        // Before matchingGroupDetails this function was used
         console.log(details)
         return details.map((item) => ({
             ...item,
@@ -491,14 +492,12 @@
     const matchingGroupDetails = (details) => {        
 
         // Check if details is empty
-        if (!details || !groupedRooms.value) {
-            console.log("details or groupedRooms.value is missing. Returning empty array.");
+        if (!details || !groupedRooms.value) {            
             return [];
         }
 
         // Check if detail has any client. If not, return the details directly.
-        if (!details.some(detail => detail.reservation_clients && detail.reservation_clients.length > 0)) {
-            console.log('No clients found in details. Returning details directly.');
+        if (!details.some(detail => detail.reservation_clients && detail.reservation_clients.length > 0)) {            
             return details.map((item) => ({
                 ...item,
                 price: formatCurrency(item.price),
@@ -508,16 +507,12 @@
         
         // Extract room_id and reservation_clients from details
         let detailRoomIds = new Set(details.map(detail => detail.room_id));
-        let detailReservationClients = new Set(details.map(detail => detail.reservation_clients));
-        console.log('Extracted detailRoomIds:', detailRoomIds);
-        console.log('Extracted detailReservationClients:', detailReservationClients);
+        let detailReservationClients = new Set(details.map(detail => detail.reservation_clients));        
         const matchingDetails = [];        
 
         groupedRooms.value.flatMap((room) => { 
-            return room.details.flatMap((dtl) => {
-                console.log('Check room_id', dtl.room_id, 'against detail room id', detailRoomIds)
-                if([...detailRoomIds].includes(dtl.room_id)){
-                    console.log('Returns details when room_id is the same as groupedRooms', details)
+            return room.details.flatMap((dtl) => {                
+                if([...detailRoomIds].includes(dtl.room_id)){                    
                     matchingDetails.push({
                         ...dtl,
                         price: formatCurrency(dtl.price),
@@ -528,8 +523,7 @@
                         if(detailClients && detailClients.length>0 && dtl.reservation_clients && dtl.reservation_clients.length>0){                            
                             const detailClientIds = detailClients.map(client => client.client_id);
                             const dtlClientIds = dtl.reservation_clients.map(client => client.client_id)
-                            if(detailClientIds.some(client => dtlClientIds.includes(client))){
-                                console.log('Room is different but the client is the same')
+                            if(detailClientIds.some(client => dtlClientIds.includes(client))){                                
                                 matchingDetails.push({
                                     ...dtl,
                                     price: formatCurrency(dtl.price),
@@ -543,8 +537,7 @@
                     return [];
                 }                
             });
-        })
-        console.log('Matching details found:', matchingDetails);
+        })        
         return matchingDetails;
     };
     
@@ -1078,11 +1071,6 @@
                 ...addon,                    
                 quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
             }));
-        }
-    }, { deep: true });  
-    watch(matchingGroupDetails, (newValue) =>{
-        if(newValue){
-            console.log('watch matchingGroupDetails:',newValue)
         }
     }, { deep: true });  
 
