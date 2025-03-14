@@ -43,7 +43,11 @@
                     :rowStyle="rowStyle"
                 >
                     <Column field="display_date" header="日付" class="text-xs" />  
-                    <Column field="isDifferentRoom" header="日付" class="text-xs" />                  
+                    <Column header="部屋" class="text-xs">                        
+                        <template #body="slotProps">                            
+                            {{ slotProps.data.room_number }}                            
+                        </template>
+                    </Column>                  
                     <Column field="plan_name" header="プラン" class="text-xs" />
                     <Column field="number_of_people" header="人数" class="text-xs" />
                     <Column field="price" header="料金" class="text-xs" />
@@ -484,65 +488,73 @@
             display_date: formatDateWithDay(item.date),
         }));
     };
-    const matchingGroupDetails = computed(() => (details) => {
-        console.log("matchingGroupDetails called with details:", details);
+    const matchingGroupDetails = (details) => {        
 
+        // Check if details is empty
         if (!details || !groupedRooms.value) {
             console.log("details or groupedRooms.value is missing. Returning empty array.");
             return [];
         }
 
-        const clientIds = new Set(details.flatMap((detail) =>
-            detail.reservation_clients.map((client) => {
-                console.log("Extracted client ID from detail:", client.client_id);
-                return client.client_id;
-            })
-        ));
+        // Check if detail has any client. If not, return the details directly.
+        if (!details.some(detail => detail.reservation_clients && detail.reservation_clients.length > 0)) {
+            console.log('No clients found in details. Returning details directly.');
+            return details.map((item) => ({
+                ...item,
+                price: formatCurrency(item.price),
+                display_date: formatDateWithDay(item.date),
+            }));
+        } 
+        
+        // Extract room_id and reservation_clients from details
+        let detailRoomIds = new Set(details.map(detail => detail.room_id));
+        let detailReservationClients = new Set(details.map(detail => detail.reservation_clients));
+        console.log('Extracted detailRoomIds:', detailRoomIds);
+        console.log('Extracted detailReservationClients:', detailReservationClients);
+        const matchingDetails = [];        
 
-        const matchingDetails = groupedRooms.value.flatMap((room) => {   
-            console.log("Checking room:", room); 
-            return room.details.map((detail) => {  
-                console.log("Checking detail:", detail);
-                let isDifferentRoom = false;
-
-                if (details.some((passedDetail) => passedDetail.room_id !== room.room_id)) {
-                    isDifferentRoom = true;
-                }
-
-                if (detail.reservation_clients && detail.reservation_clients.length > 0) {
-                    const detailClientId = detail.reservation_clients[0].client_id;        
-                    const includes = [...clientIds].includes(detailClientId);  
-                    //return includes;
-                    return {
-                        ...detail,
-                        isDifferentRoom: isDifferentRoom,
-                        isMatchingClient: includes,
-                    };
-                } else {        
-                    console.log("Detail reservation_clients is empty or undefined");
-                    return {
-                        ...detail,
-                        isDifferentRoom: isDifferentRoom,
-                        isMatchingClient: false,
-                    };
-                }
+        groupedRooms.value.flatMap((room) => { 
+            return room.details.flatMap((dtl) => {
+                console.log('Check room_id', dtl.room_id, 'against detail room id', detailRoomIds)
+                if([...detailRoomIds].includes(dtl.room_id)){
+                    console.log('Returns details when room_id is the same as groupedRooms', details)
+                    matchingDetails.push({
+                        ...dtl,
+                        price: formatCurrency(dtl.price),
+                        display_date: formatDateWithDay(dtl.date),
+                    });
+                } else {                    
+                    for(let detailClients of detailReservationClients){
+                        if(detailClients && detailClients.length>0 && dtl.reservation_clients && dtl.reservation_clients.length>0){                            
+                            const detailClientIds = detailClients.map(client => client.client_id);
+                            const dtlClientIds = dtl.reservation_clients.map(client => client.client_id)
+                            if(detailClientIds.some(client => dtlClientIds.includes(client))){
+                                console.log('Room is different but the client is the same')
+                                matchingDetails.push({
+                                    ...dtl,
+                                    price: formatCurrency(dtl.price),
+                                    display_date: formatDateWithDay(dtl.date),
+                                    isDifferentRoom: true,
+                                });
+                                return[dtl];
+                            }
+                        }
+                    }
+                    return [];
+                }                
             });
-        });
-
-        console.log("Matching details found:", matchingDetails);
-  
-        return matchingDetails.map((item) => ({
-            ...item,
-            price: formatCurrency(item.price),
-            display_date: formatDateWithDay(item.date),
-        }));
-    });
+        })
+        console.log('Matching details found:', matchingDetails);
+        return matchingDetails;
+    };
     
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
         if (data.isDifferentRoom) {
-            return { backgroundColor: 'gray' };            
+            return {
+                backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1) 0px, rgba(0, 0, 0, 0.1) 10px, transparent 10px, transparent 20px)'
+            }           
         }
         if (day === 6) {
             return { backgroundColor: '#fcfdfe' };
@@ -1067,18 +1079,12 @@
                 quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1
             }));
         }
-    }, { deep: true });    
+    }, { deep: true });  
+    watch(matchingGroupDetails, (newValue) =>{
+        if(newValue){
+            console.log('watch matchingGroupDetails:',newValue)
+        }
+    }, { deep: true });  
 
 </script>
 
-<style scoped>
-.hashed-row {    
-    background-image: repeating-linear-gradient(
-        45deg,
-        rgba(0, 0, 0, 0.1) 0px,
-        rgba(0, 0, 0, 0.1) 10px,
-        transparent 10px,
-        transparent 20px
-    );
-}
-</style>
