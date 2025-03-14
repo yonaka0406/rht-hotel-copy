@@ -375,6 +375,10 @@ CREATE TABLE reservations (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
+ALTER TABLE reservations
+  DROP CONSTRAINT reservations_status_check,
+  ADD CONSTRAINT reservations_status_check CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block'));
+
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
