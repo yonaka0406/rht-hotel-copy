@@ -479,8 +479,10 @@
         { immediate: true }
     );  
     
-    watch(selectedReservations, (newValue) => {        
-        drawerSelectVisible.value = newValue.length > 0;
+    watch(selectedReservations, (newValue) => {     
+        if(drawerVisible.value === false){
+            drawerSelectVisible.value = newValue.length > 0;
+        }
     });
 
 </script>
