@@ -125,12 +125,17 @@
   </template>
   
 <script>
-    import { ref, onMounted } from 'vue';
-    import { useRouter } from 'vue-router';
+    // Vue
+    import { ref, computed, onMounted } from 'vue';    
+    import { useRouter, useRoute } from 'vue-router';
+
+    // Store
     import { useUserStore } from '@/composables/useUserStore';
-    import Menubar from 'primevue/menubar';
-    import PanelMenu from 'primevue/panelmenu';
-    import Button from 'primevue/button';
+    import { useHotelStore } from '@/composables/useHotelStore';
+
+    // Primevue
+    import { Menubar, PanelMenu, Button } from 'primevue';
+    
     export default {
         name: 'Dashboard',
         components: {
@@ -138,20 +143,13 @@
             PanelMenu,
             Button,
         },
-        computed: {
-            isRootAdminPath() {
-                return this.$route.path === '/admin'
-            }
-        },
-        data() {
-            return {
-                activeUsers: 0
-            }
-        },
         setup() {
             const router = useRouter();
-            const { logged_user, fetchUser } = useUserStore();       
+            const route = useRoute();
+            const { logged_user, fetchUser } = useUserStore();
+            const { hotels, fetchHotels } = useHotelStore();       
             const hotelCount = ref(0);
+            const activeUsers = ref(0);
             const expandedKeys = ref({});            
             const items = ref([
                 {
@@ -222,6 +220,14 @@
                                 router.push('/admin/hotel-addons');
                             }                        
                         },
+                        {                 
+                            key: 'mh-calendar',
+                            label: 'カレンダー',
+                            icon: 'pi pi-calendar',
+                            command: () => {
+                                router.push('/admin/hotel-calendar');
+                            }                        
+                        },
                     ],
                 },
                 {
@@ -242,12 +248,13 @@
                 },         
             ]);
             const userName = ref('');
+
+            const isRootAdminPath = computed(() => route.path === '/admin');
             
             const toggleAll = () => {
                 if (Object.keys(expandedKeys.value).length) collapseAll();
                 else expandAll();
-            }
-
+            };
             const expandAll = () => {
                 for (let node of items.value) {
                     expandNode(node);
@@ -255,11 +262,9 @@
 
                 expandedKeys.value = {...expandedKeys.value};
             };
-
             const collapseAll = () => {
                 expandedKeys.value = {};
             };
-
             const expandNode = (node) => {
                 if (node.items && node.items.length) {
                     expandedKeys.value[node.key] = true;
@@ -270,33 +275,20 @@
                 }
             };
 
-            const fetchHotels = async () => {
-                try {
-                    const response = await fetch('/api/hotel-list', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                        'Content-Type': 'application/json',
-                    },
-                    });                    
-                    const hotels = await response.json();
-                    hotelCount.value = hotels.length;
-                } catch (error) {
-                    console.error('Error fetching hotels:', error);
-                }
-            };
-
             onMounted( async () => {
                 await fetchHotels();
                 await fetchUser();
+                hotelCount.value = hotels.value.length;                
                 userName.value = logged_user.value[0]?.name + '、';
             });
 
             return {
                 userName,
                 hotelCount,
+                activeUsers,
                 expandedKeys,
                 items,
+                isRootAdminPath,
                 toggleAll,
             };
         },

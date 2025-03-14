@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, getAllRoomsByHotelId } = require('../models/hotel');
+const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, getAllRoomsByHotelId } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
@@ -69,7 +69,6 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       client.release();
     }
   };
-
   const roomTypeCreate = async (req, res) => {
     const client = await pool.connect();
     const { name, description, hotel_id } = req.body;
@@ -100,8 +99,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       client.release();
       console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
-  }
-
+  };
   const roomCreate = async (req, res) => {
     const client = await pool.connect();  
     const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, hotel_id } = req.body;    
@@ -151,7 +149,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
     }
 
-  }
+  };
 
 // GET
   const getHotels = async (req, res) => {
@@ -163,7 +161,6 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       res.status(500).json({ error: error.message });
     }
   };
-
   const getHotelRooms = async (req, res) => {
     const { id } = req.params;
 
@@ -193,40 +190,54 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, ge
       res.status(500).json({ message: 'Internal server error' });
     }
   };
+  const editRoomType = async (req, res) => {
+    const { id } = req.params;
+    const { name, description } = req.body;
+    const updated_by = req.user.id;
 
-const editRoomType = async (req, res) => {
-  const { id } = req.params;
-  const { name, description } = req.body;
-  const updated_by = req.user.id;
-
-  try {
-    const updatedRoomType = await updateRoomType(id, name, description, updated_by);
-    if (!updatedRoomType) {
-      return res.status(404).json({ message: 'Room type not found' });
+    try {
+      const updatedRoomType = await updateRoomType(id, name, description, updated_by);
+      if (!updatedRoomType) {
+        return res.status(404).json({ message: 'Room type not found' });
+      }
+      res.status(200).json(updatedRoomType);
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-    res.status(200).json(updatedRoomType);
-  } catch (error) {
-    console.error('Error updating hotel:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
+  };
+  const editRoom = async (req, res) => {
+    const { id } = req.params;
+    const { room_type_id, floor, room_number, capacity, smoking, for_sale } = req.body;
+    const updated_by = req.user.id;
 
-const editRoom = async (req, res) => {
-  const { id } = req.params;
-  const { room_type_id, floor, room_number, capacity, smoking, for_sale } = req.body;
-  const updated_by = req.user.id;
-
-  try {
-    const updatedRoom = await updateRoom(id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by);
-    if (!updatedRoom) {
-      return res.status(404).json({ message: 'Room not found' });
+    try {
+      const updatedRoom = await updateRoom(id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by);
+      if (!updatedRoom) {
+        return res.status(404).json({ message: 'Room not found' });
+      }
+      res.status(200).json(updatedRoom);
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
-    res.status(200).json(updatedRoom);
-  } catch (error) {
-    console.error('Error updating hotel:', error);
-    res.status(500).json({ message: 'Internal server error' });
+  };
+  const editHotelCalendar = async (req, res) => {
+    const { startDate, endDate } = req.params;
+    const { hotelId, roomIds } = req.body;
+    const updated_by = req.user.id;
+
+    try {
+      const updatedRoom = await updateHotelCalendar(hotelId, roomIds, startDate, endDate, updated_by);
+      if (!updatedRoom) {
+        return res.status(404).json({ message: 'Room not found' });
+      }
+      res.status(200).json({message: 'Rooms updated with success'});
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   }
-};
 
 
-module.exports = { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, getHotelRooms };
+module.exports = { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, editHotelCalendar, getHotelRooms };

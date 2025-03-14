@@ -68,6 +68,23 @@ export function useHotelStore() {
         }
     };
 
+    const applyCalendarSettings = async (hotelId, startDate, endDate, roomIds) => {
+        const authToken = localStorage.getItem('authToken');
+
+        const response = await fetch(`/api/hotel-calendar/update/${startDate}/${endDate}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ hotelId, roomIds })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to update reservation status');
+        }
+    }
+
     // Watch for changes to selectedHotelId and fetch the corresponding hotel data
     watch(selectedHotelId, (newHotelId) => {
         if (newHotelId) {
@@ -90,5 +107,6 @@ export function useHotelStore() {
         setHotelId,
         fetchHotels,
         fetchHotel,
+        applyCalendarSettings,
     };
 }

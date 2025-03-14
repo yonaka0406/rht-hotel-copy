@@ -922,7 +922,7 @@
     const isRoomFullyBooked = allDates.every(date => bookedDates.includes(date));
 
     if(!isRoomFullyBooked){
-      toast.add({ severity: 'warn', summary: '注意', detail: '部屋が分割されています。予約編集から変更を行ってください。' , life: 3000 });
+      toast.add({ severity: 'warn', summary: '注意', detail: '部屋が分割されています。日ごとに部屋移動モードで変更を行ってください。' , life: 3000 });
     } else if(from.number_of_people > to.capacity){
       toast.add({ severity: 'error', summary: 'エラー', detail: '人数が収容人数を超えています。' , life: 3000 });
     } else if(!checkForConflicts(from, to)){
