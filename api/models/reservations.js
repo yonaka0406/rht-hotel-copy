@@ -146,13 +146,14 @@ const selectReservation = async (id) => {
       ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
       ,reservation_details.number_of_people
       ,reservation_details.price AS plan_total_price
-	    ,COALESCE(ra.price, 0) AS addon_total_price      
+	    ,COALESCE(ra.total_price, 0) AS addon_total_price      
       ,CASE 
         WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price 
         ELSE reservation_details.price * reservation_details.number_of_people
-        END + COALESCE(ra.price, 0) 
+        END + COALESCE(ra.total_price, 0) 
       AS price      
       ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
+      ,COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
 
     FROM
       rooms
@@ -177,10 +178,23 @@ const selectReservation = async (id) => {
         LEFT JOIN 
       (
         SELECT
-          reservation_detail_id,
-          SUM(price * quantity) AS price
-        FROM
-          reservation_addons		
+          ra.reservation_detail_id,
+          SUM(ra.price * ra.quantity) AS total_price,
+          JSON_AGG(
+              JSON_BUILD_OBJECT(
+                  'addon_id', ra.id,
+                  'addons_global_id', ra.addons_global_id,
+                  'addons_hotel_id', ra.addons_hotel_id,
+                  'name', COALESCE(ah.name, ag.name), -- Prefer hotel-specific name, fallback to global
+                  'quantity', ra.quantity,
+                  'price', ra.price
+              )
+          ) AS addons_json
+        FROM reservation_addons ra
+          LEFT JOIN addons_hotel ah 
+	        ON ra.addons_hotel_id = ah.id AND ra.hotel_id = ah.hotel_id
+          LEFT JOIN addons_global ag 
+	        ON ra.addons_global_id = ag.id
         GROUP BY
           reservation_detail_id
       ) ra ON reservation_details.id = ra.reservation_detail_id

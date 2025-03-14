@@ -41,7 +41,10 @@
                 <DataTable 
                     :value="matchingGroupDetails(group.details)"
                     :rowStyle="rowStyle"
+                    :rowExpansion="true"
+                    v-model:expandedRows="expandedRows[group.room_id]"
                 >
+                    <Column expander header="+/-" style="width: 1%;"/> 
                     <Column field="display_date" header="日付" class="text-xs" />  
                     <Column header="部屋" class="text-xs">                        
                         <template #body="slotProps">                            
@@ -56,6 +59,33 @@
                             <Button icon="pi pi-eye" @click="openDayDetailDialog(slotProps.data)" size="small" variant="text" />
                         </template>
                     </Column>
+
+                    <template #expansion="slotProps">
+                        <div class="mx-20">
+                            <div v-if="Array.isArray(slotProps.data.reservation_addons)">
+                                <DataTable :value="slotProps.data.reservation_addons" size="small">
+                                    <Column header="アドオン" sortable>
+                                        <template #body="addonSlotProps">
+                                            {{ addonSlotProps.data.name || '' }}
+                                        </template>
+                                    </Column>
+                                    <Column header="数量" sortable>
+                                        <template #body="addonSlotProps">
+                                            {{ addonSlotProps.data.quantity || 0 }}
+                                        </template>
+                                    </Column>
+                                    <Column header="単価" sortable>
+                                        <template #body="addonSlotProps">
+                                            {{ formatCurrency(addonSlotProps.data.price) || 0 }}
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </div>
+                            <div v-else>
+                                <p>宿泊者データがありません。</p>
+                            </div>
+                        </div>
+                    </template>
                 </DataTable>
             </AccordionContent>                        
         </AccordionPanel>
@@ -540,6 +570,7 @@
         })        
         return matchingDetails;
     };
+    const expandedRows = ref({}); 
     
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
@@ -1075,4 +1106,27 @@
     }, { deep: true });  
 
 </script>
+
+<style scoped>
+    ::v-deep(.p-datatable-row-toggle-button) {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 5px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 0px solid;
+        cursor: pointer;
+    }
+
+    ::v-deep(.p-datatable-row-toggle-icon) {
+        fill: #333 !important; /* Ensure it has a visible color */
+        display: block !important;
+        width: 2px !important;
+        height: 5px !important;
+        border: 2px solid black !important;
+    }
+
+</style>
 
