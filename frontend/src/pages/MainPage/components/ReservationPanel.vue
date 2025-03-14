@@ -108,6 +108,14 @@
                         @click="updateReservationStatus('cancelled')"
                     /> 
                 </div>
+                <div v-if="reservationStatus === 'キャンセル'" class="field flex flex-col">
+                    <Button 
+                        label="キャンセル復活" 
+                        severity="secondary"
+                        raised
+                        @click="updateReservationStatus('confirmed')"
+                    /> 
+                </div>
                 
                 <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
                     <Button 
@@ -425,6 +433,7 @@
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
+    const confirmRecovery = useConfirm();
     import { 
         Card, Divider, InputNumber, InputText, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
         Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column
@@ -555,13 +564,101 @@
                 detail: '部屋の予約にプランを追加してください。', life: 3000 
             });
             return; 
-        }         
-
-        try {
-            await setReservationStatus(status);
-        } catch (error) {
-            console.error('Error updating and fetching reservation:', error);            
         }
+        
+        if(reservationStatus.value === 'キャンセル'){            
+            // Check availability for each detail in groupedRooms
+            let allRoomsAvailable = true;
+            for (const group of groupedRooms.value) {
+                for (const detail of group.details) {
+                    const hotelId = detail.hotel_id;
+                    const roomId = detail.room_id;
+                    const checkIn = detail.date;
+                    
+                    // Calculate checkOut as checkIn + 1 day
+                    const checkInDate = new Date(checkIn);
+                    const checkOutDate = new Date(checkInDate);
+                    checkOutDate.setDate(checkOutDate.getDate() + 1);
+                    const checkOut = checkOutDate.toISOString().split('T')[0];
+
+                    try {
+                        const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
+                        if (!results) {
+                            allRoomsAvailable = false;
+                            console.log(`Room ${roomId} on ${checkIn} is not available (no results).`);
+                            break;
+                        }
+
+                        let isAvailable = true;
+
+                        if (results.earliestCheckIn) {
+                            if (checkIn < results.earliestCheckIn) {
+                                isAvailable = false;
+                            }
+                        }
+                        if (results.latestCheckOut) {
+                            if (checkIn = results.latestCheckOut) {
+                                isAvailable = false;
+                            }                            
+                        }
+                        if (!isAvailable) {
+                            allRoomsAvailable = false;
+                            console.log(`Room ${roomId} on ${checkIn} is not in available range.`);
+                            break;
+                        }
+                    } catch (error) {
+                        allRoomsAvailable = false;
+                        console.error(`Error checking availability for room ${roomId} on ${checkIn}:`, error);
+                        break;
+                    }
+                }
+                if (!allRoomsAvailable) {
+                    break; // Stop loop, one or more rooms are unavailable.
+                }
+            }
+            if (!allRoomsAvailable) {
+                toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '一部の部屋は復活できません。',
+                life: 3000,
+                });
+                return; // Don't proceed with recovery
+            }
+                        
+            confirmRecovery.require({
+                message: `キャンセルされた予約を復活してもよろしいですか?`,
+                header: '復活確認',                    
+                icon: 'pi pi-info-circle',
+                acceptClass: 'p-button-warn',
+                acceptProps: {
+                    label: '復活'
+                },
+                accept: () => {
+                    setReservationStatus(status);                   
+                    toast.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: `復活されました。`,
+                        life: 3000
+                    });
+                },
+                rejectProps: {
+                    label: 'キャンセル',
+                    severity: 'secondary',
+                    outlined: true
+                },
+                reject: () => {                    
+                }
+            });
+        }else{
+            try {
+                await setReservationStatus(status);
+            } catch (error) {
+                console.error('Error updating and fetching reservation:', error);            
+            }
+        } 
+        
     };
     const deleteReservation = () => {
         const reservation_id = reservationInfo.value.reservation_id;
