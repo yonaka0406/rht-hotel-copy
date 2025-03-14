@@ -556,12 +556,14 @@ const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut)
       SELECT TO_CHAR(MAX(date) + INTERVAL '1 day', 'YYYY-MM-DD') AS max_date
       FROM reservation_details
       WHERE hotel_id = $1 AND room_id = $2 AND date < $3
+        AND cancelled IS NULL
     `;
     const valuesMax = [hotelId, roomId, checkIn];
     const minDateQuery = `
       SELECT TO_CHAR(MIN(date), 'YYYY-MM-DD') AS min_date
       FROM reservation_details
       WHERE hotel_id = $1 AND room_id = $2 AND date >= $3
+        AND cancelled IS NULL
     `;
     const valuesMin = [hotelId, roomId, checkOut];
 
@@ -909,8 +911,9 @@ const updateReservationStatus = async (reservationData) => {
     if(status==='confirmed'){
       const queryThree = `
           UPDATE reservation_details
-          SET            
-            billable = TRUE
+          SET
+            cancelled = NULL
+            ,billable = TRUE
             ,updated_by = $1          
           WHERE reservation_id = $2::UUID AND hotel_id = $3
           RETURNING *;
