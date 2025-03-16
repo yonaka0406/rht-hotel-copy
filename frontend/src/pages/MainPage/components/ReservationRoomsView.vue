@@ -593,19 +593,21 @@
     const reservationStatus = computed(() => {
         switch (reservationInfo.value.status) {
             case 'hold':
-            return '保留中';
+                return '保留中';
             case 'provisory':
-            return '仮予約';
+                return '仮予約';
             case 'confirmed':
-            return '確定';
+                return '確定';
             case 'checked_in':
-            return 'チェックイン';
+                return 'チェックイン';
             case 'checked_out':
-            return 'チェックアウト';
+                return 'チェックアウト';
             case 'cancelled':
-            return 'キャンセル';
+                return 'キャンセル';
+            case 'block':
+                return '予約不可';
             default:
-            return '不明'; // Or any default value you prefer
+                return '不明';
         }
     });
     const editReservationDetails = computed(() => props.reservation_details);

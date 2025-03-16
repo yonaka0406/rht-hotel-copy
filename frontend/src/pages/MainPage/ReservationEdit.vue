@@ -10,29 +10,31 @@
             />
         </template>  
     </Card>
+    
+     <div v-if="reservationStatus !== 'block'">
+        <!-- Rooms Data component-->
+        <Card class="m-2">
+            <template #title>部屋</template>
+            <template #content>
+                <ReservationRoomsView 
+                    v-if="reservation_details"
+                    :reservation_details="reservation_details"                    
+                />
+            </template>            
+        </Card>
 
-    <!-- Rooms Data component-->
-    <Card class="m-2">
-        <template #title>部屋</template>
-        <template #content>
-            <ReservationRoomsView 
-                v-if="reservation_details"
-                :reservation_details="reservation_details"                    
-            />
-        </template>            
-    </Card>
-
-    <!-- Payments Data component-->
-    <Card class="m-2">
-        <template #title>清算</template>
-        <template #content>
-            <ReservationPayments
-                v-if="reservation_details && reservation_payments"
-                :reservation_details="reservation_details"
-                :reservation_payments="reservation_payments"
-            />
-        </template>
-    </Card>
+        <!-- Payments Data component-->
+        <Card class="m-2">
+            <template #title>清算</template>
+            <template #content>
+                <ReservationPayments
+                    v-if="reservation_details && reservation_payments"
+                    :reservation_details="reservation_details"
+                    :reservation_payments="reservation_payments"
+                />            
+            </template>
+        </Card>
+    </div>
 </template>
 
 <script setup>
@@ -68,6 +70,7 @@
     import { Card } from 'primevue';
         
     const hotelId = ref(null);
+    const reservationStatus = ref(null);
     const reservation_details = ref(null);
     const reservation_payments = ref(null);
     
@@ -79,6 +82,9 @@
             reservation_details.value = reservationDetails.value.reservation;
         const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             reservation_payments.value = pmtData.payments;
+
+            reservationStatus.value = reservation_details.value[0].status;
+            console.log(reservationStatus.value)
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);

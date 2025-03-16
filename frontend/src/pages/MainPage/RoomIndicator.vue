@@ -21,7 +21,7 @@
       </div>
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="group in roomGroups" :key="group.title" class="col-span-1 md:col-span-1">
-          <div :class="`p-2 rounded-lg ${group.color}`">
+          <div v-if="group.title!=='部屋ブロック' || (group.rooms.length > 0 && group.title==='部屋ブロック')" :class="`p-2 rounded-lg ${group.color}`">
             <Card class="p-2">
               <template #header>
                 <h3 :class="`text-lg rounded-lg font-semibold mb-2 ${group.color}`">{{ group.title }} ({{ group.rooms.length }})</h3>
@@ -176,42 +176,42 @@
         console.log('reservedRoomsDayView:', reservedRoomsDayView.value);
         console.log('selectedHotelRooms:', selectedHotelRooms.value);
 
+        const selectedDateObj = new Date(selectedDate.value);
+        if (isNaN(selectedDateObj.getTime())) {
+            console.error("Invalid selectedDate.value:", selectedDate.value);
+            return [];
+        }
+
+        const reservedRoomIds = new Set(
+          reservedRoomsDayView.value?.reservations            
+            ?.map((res) => res.room_id) || []
+        );
+        console.log('reservedRoomIds:',reservedRoomIds)
+
         const checkInToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
           const checkInDate = new Date(room.check_in);
-
+          
           // Ensure checkInDate is a valid Date object
           if (isNaN(checkInDate.getTime())) {
             console.warn(`Invalid check_in date: ${room.check_in}`);
             return false;
           }
 
-          // Ensure selectedDate.value is a valid Date
-          const selectedDateObj = new Date(selectedDate.value);
-          if (isNaN(selectedDateObj.getTime())) {
-            console.error("Invalid selectedDate.value:", selectedDate.value);
-            return false;
-          }
-
-          return formatDate(checkInDate) === formatDate(selectedDateObj);
+          return formatDate(checkInDate) === formatDate(selectedDateObj) &&
+          room.status !== 'block';
         }) || [];
 
         const checkOutToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
           const checkOutDate = new Date(room.check_out);
-
+          
           // Ensure checkOutDate is a valid Date object
           if (isNaN(checkOutDate.getTime())) {
             console.warn(`Invalid check_out date: ${room.check_out}`);
             return false;
           }
-
-          // Ensure selectedDate.value is a valid Date object
-          const selectedDateObj = new Date(selectedDate.value);
-          if (isNaN(selectedDateObj.getTime())) {
-            console.error("Invalid selectedDate.value:", selectedDate.value);
-            return false;
-          }
-
-          return formatDate(checkOutDate) === formatDate(selectedDateObj);
+          
+          return formatDate(checkOutDate) === formatDate(selectedDateObj) &&
+          room.status !== 'block';
         }) || [];
 
 
@@ -228,51 +228,23 @@
           if (isNaN(checkOutDate.getTime())) {
             console.warn(`Invalid date: ${room.check_out}`);
             return false;
-          }
+          }          
 
-          // Ensure selectedDate.value is valid
-          const selectedDateObj = new Date(selectedDate.value);
-          if (isNaN(selectedDateObj.getTime())) {
-            console.error("Invalid selectedDate.value:", selectedDate.value);
-            return false;
-          }
-
-          return checkInDate <= selectedDateObj 
+          return !isNaN(checkInDate.getTime())
+            && !isNaN(checkOutDate.getTime()) 
+            && checkInDate <= selectedDateObj 
             && checkOutDate > selectedDateObj
-            && room.cancelled === null;
+            && room.cancelled === null
+            && room.status !== 'block';
         }) || [];
 
-
-        const freeRooms = selectedHotelRooms.value?.filter((room) => {
-          // Ensure selectedDate.value is valid
-          const selectedDateObj = new Date(selectedDate.value);
-          if (isNaN(selectedDateObj.getTime())) {
-            console.error("Invalid selectedDate.value:", selectedDate.value);
-            return false;
-          }
-
-          // Check if the room is for sale and is not already reserved
-          return room.room_for_sale_idc === true
-            && !reservedRoomsDayView.value?.reservations?.some((res) => {
-              
-              // Ensure check_in date is valid for each reservation
-              const checkInDate = new Date(res.check_in);
-              if (isNaN(checkInDate.getTime())) {
-                console.warn(`Invalid reservation check_in date: ${res.check_in}`);
-                return false;
-              }
-              // Ensure check_out date is valid for each reservation
-              const checkOutDate = new Date(res.check_out);
-              if (isNaN(checkOutDate.getTime())) {
-                console.warn(`Invalid reservation check_out date: ${res.check_out}`);
-                return false;
-              }
-
-              return res.room_id === room.room_id
-                && checkInDate <= selectedDateObj 
-                && checkOutDate > selectedDateObj;
-            });
+        const blockedRooms = reservedRoomsDayView.value?.reservations?.filter((room) => {
+          return room.status === 'block';
         }) || [];
+
+        const freeRooms = selectedHotelRooms.value?.filter((room) => 
+          room.room_for_sale_idc === true && !reservedRoomIds.has(room.room_id)
+        ) || [];
 
 
         const result = [
@@ -280,6 +252,7 @@
           { title: '本日チェックアウト', rooms: checkOutToday, color: 'bg-green-100' },
           { title: '滞在', rooms: occupiedRooms, color: 'bg-yellow-100' },
           { title: '空室', rooms: freeRooms, color: 'bg-gray-100' },
+          { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100' },
         ];
 
         console.log('roomGroups:', result);

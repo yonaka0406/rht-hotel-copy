@@ -42,7 +42,7 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status <> 'hold'
+      AND reservations.status NOT IN ('hold', 'block')
       AND reservation_details.hotel_id = roomTotal.hotel_id
       AND reservation_details.reservation_id = reservations.id
       AND reservation_details.hotel_id = reservations.hotel_id
@@ -86,7 +86,7 @@ const selectCountReservationDetailsPlans = async (hotelId, dateStart, dateEnd) =
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status <> 'hold'
+      AND reservations.status NOT IN ('hold', 'block')
       AND reservation_details.reservation_id = reservations.id
       AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY
@@ -132,7 +132,7 @@ const selectCountReservationDetailsAddons = async (hotelId, dateStart, dateEnd) 
       AND reservation_details.date BETWEEN $2 AND $3
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status <> 'hold'
+      AND reservations.status NOT IN ('hold', 'block')
       AND reservation_details.reservation_id = reservations.id
       AND reservation_details.hotel_id = reservations.hotel_id
       AND reservation_details.hotel_id = reservation_addons.hotel_id
@@ -193,7 +193,7 @@ const selectOccupationByPeriod = async (period, hotelId, refDate) => {
       AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status <> 'hold'
+      AND reservations.status NOT IN ('hold', 'block')
       AND reservation_details.reservation_id = reservations.id
       AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY roomTotal.total_rooms, roomTotal.last_day;
@@ -320,7 +320,8 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
     WHERE
       reservations.hotel_id = $1
       AND reservations.check_out > $2
-      AND reservations.check_in <= $3	    
+      AND reservations.check_in <= $3	  
+      AND reservations.status <> 'block'  
       AND reservations.reservation_client_id = booker.id
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
@@ -455,7 +456,8 @@ const selectExportReservationList = async (hotelId, dateStart, dateEnd) => {
     WHERE
       reservations.hotel_id = $1
       AND reservations.check_out > $2
-      AND reservations.check_in <= $3	    
+      AND reservations.check_in <= $3
+      AND reservations.status <> 'block'
       AND reservations.reservation_client_id = booker.id
       AND reservations.id = details.reservation_id
       AND reservations.hotel_id = details.hotel_id
@@ -533,6 +535,7 @@ const selectExportReservationDetails = async (hotelId, dateStart, dateEnd) => {
             ON reservations.hotel_id = reservation_payments.hotel_id AND reservations.id = reservation_payments.reservation_id
         WHERE
 			    reservations.reservation_client_id = clients.id
+          AND reservations.status <> 'block'
         GROUP BY
           reservations.hotel_id
           ,reservations.id

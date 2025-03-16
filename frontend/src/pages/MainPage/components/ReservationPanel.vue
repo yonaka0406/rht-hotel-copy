@@ -1,7 +1,20 @@
 <template>
     <!-- Top Panel -->
-    <div class="grid grid-cols-2 gap-2 gap-y-4">
-        <div class="field flex flex-col">                        
+    <div v-if="reservationStatus === '予約不可'" class="grid grid-cols-3 gap-2 gap-y-4 flex items-center">
+        <div class="flex">
+            <InputText type="text" v-model="reservationInfo.client_name" disabled style="background-color: transparent;"/>
+        </div>
+        <div class="flex items-start mr-2 mb-2">
+            <p class="font-bold">開始日：</p>
+            <span>{{ reservationInfo.check_in }}</span>                
+        </div>
+        <div class="flex items-start mr-2 mb-2">
+            <p class="font-bold">終了日：</p>
+            <span>{{ reservationInfo.check_out }}</span>
+        </div>
+    </div>
+    <div v-else class="grid grid-cols-2 gap-2 gap-y-4">        
+        <div class="field flex flex-col">
             <div class="flex items-center justify-between mr-2 mb-2">
                 <p class="font-bold">予約者：</p>                
                 <Button label="顧客変更" severity="help" icon="pi pi-pencil" @click="openChangeClientDialog" />
@@ -28,8 +41,7 @@
         <div class="field flex flex-col">
             <div class="flex items-start justify-between mr-2 mb-2">
                 <p class="font-bold">チェックイン：</p>
-                <span>{{ reservationInfo.check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
-                <span></span>
+                <span>{{ reservationInfo.check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>                
             </div>            
         </div>
         <div class="field flex flex-col">
@@ -476,33 +488,35 @@
     const reservationStatus = computed(() => {
         switch (reservationInfo.value.status) {
             case 'hold':
-            return '保留中';
+                return '保留中';
             case 'provisory':
-            return '仮予約';
+                return '仮予約';
             case 'confirmed':
-            return '確定';
+                return '確定';
             case 'checked_in':
-            return 'チェックイン';
+                return 'チェックイン';
             case 'checked_out':
-            return 'チェックアウト';
+                return 'チェックアウト';
             case 'cancelled':
-            return 'キャンセル';
+                return 'キャンセル';
+            case 'block':
+                return '予約不可';
             default:
-            return '不明'; // Or any default value you prefer
+                return '不明';
         }
     });
     const reservationType = computed(() => {        
         switch (reservationInfo.value.type) {
             case 'default':
-            return '通常予約';
+                return '通常予約';
             case 'employee':
-            return '社員';
+                return '社員';
             case 'ota':
-            return 'OTA';
+                return 'OTA';
             case 'web':
-            return '自社WEB';            
+                return '自社WEB';            
             default:
-            return '不明';
+                return '不明';
         }
     });    
     const groupedRooms = computed(() => {

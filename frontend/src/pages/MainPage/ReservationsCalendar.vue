@@ -118,7 +118,7 @@
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
                         <i class="pi pi-sign-out bg-gray-300 p-1 rounded"></i>                        
                       </template>
-                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'cancelled'">
+                      <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block'">
                         <i class="pi pi-times bg-red-100 p-1 rounded"></i>                        
                       </template>
                     </div>

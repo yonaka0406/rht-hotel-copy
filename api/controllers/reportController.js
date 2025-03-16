@@ -26,6 +26,8 @@ const translateStatus = (status) => {
       return 'チェックアウト';
     case 'cancelled':
       return 'キャンセル';
+    case 'block':
+      return '予約不可';
     default:
       return '不明';
   }

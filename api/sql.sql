@@ -139,6 +139,10 @@ CREATE TABLE clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+-- Default Client for status block
+INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
+('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1),
+
 -- Mock data generator
 INSERT INTO clients (
     name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, 
@@ -165,11 +169,12 @@ FROM (
         floor(random() * 99000)::TEXT AS random_number,
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
+
+
 -- Mock data for 'clients' table
     INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
     VALUES
-    -- Natural persons with different gender options
-    ('11111111-1111-1111-1111-111111111111', 'John Doe', 'ジョン・ドウ', 'ジョン道', '1980-05-15', 'natural', 'male', 'johndoe@example.com', '+1234567890', '+1234567891', 1, 2),
+    -- Natural persons with different gender options    
     ('22222222-2222-2222-2222-222222222222', 'Jane Smith', 'ジェーン・スミス', 'ジェーン氏', '1990-07-25', 'natural', 'female', 'janesmith@example.com', '+9876543210', NULL, 2, NULL),
     ('33333333-3333-3333-3333-333333333333', 'Alex Taylor', 'アレックス・テイラー', 'アレックス太郎', '2000-01-10', 'natural', 'other', 'alextaylor@example.com', NULL, '+1234509876', 3, 1),
 
