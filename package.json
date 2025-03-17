@@ -5,6 +5,8 @@
     "scripts": {
         "start": "npm run build && npm run start:backend",        
         "serve": "npm run build && npm run start:backend",
+        "serve:dev": "npm run build:frontend --mode development && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/ && sudo systemctl restart apache2 && pm2 restart backend",
+        "serve:prod": "npm run build:frontend --mode production && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/ && sudo systemctl restart apache2 && pm2 restart backend",
         "restart": "pm2 restart backend",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "build": "npm run build:frontend",
