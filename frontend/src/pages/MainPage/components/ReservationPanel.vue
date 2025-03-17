@@ -12,6 +12,10 @@
             <p class="font-bold">終了日：</p>
             <span>{{ reservationInfo.check_out }}</span>
         </div>
+        <div class="col-span-3">
+            <p class="font-bold mb-1">備考：</p>
+            <Textarea v-model="reservationInfo.comment" fluid disabled style="background-color: transparent;"/>
+        </div>
     </div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">        
         <div class="field flex flex-col">
@@ -39,17 +43,24 @@
             </span>
         </div>   
         <div class="field flex flex-col">
-            <div class="flex items-start justify-between mr-2 mb-2">
+            <div class="grid grid-cols-4">                
                 <p class="font-bold">チェックイン：</p>
-                <span>{{ reservationInfo.check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>                
-            </div>            
-        </div>
-        <div class="field flex flex-col">
-            <div class="flex items-start justify-between mr-2 mb-2">
+                <span>　{{ reservationInfo.check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
+                <span class="col-span-2"></span>
                 <p class="font-bold">チェックアウト：</p>
-                <span>{{ reservationInfo.check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>                
-                <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />                
+                <span>　{{ reservationInfo.check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>                
+            </div>   
+            <div class="flex items-start justify-between mr-2 mt-2">
+                <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />
             </div>
+            
+        </div>
+        <div class="field">
+            <p class="font-bold flex justify-start items-center">備考：<span class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
+            <Textarea v-model="reservationInfo.comment"
+                @keydown="handleKeydown"
+                fluid
+            />
         </div>
 
         <div class="field flex flex-col col-span-2">
@@ -447,7 +458,7 @@
     const confirm = useConfirm();
     const confirmRecovery = useConfirm();
     import { 
-        Card, Divider, InputNumber, InputText, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
+        Card, Divider, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
         Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column
 
      } from 'primevue';
@@ -465,7 +476,7 @@
 
     //Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange } = useReservationStore();
+    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     
@@ -556,8 +567,7 @@
     const updateReservationType = async () => {
         // Add your logic here to update the reservation type in the database
         try {
-            const selectedType = reservationTypeOptions.find(option => option.value === reservationTypeSelected.value)?.value;
-            console.log('selectedType:', selectedType);
+            const selectedType = reservationTypeOptions.find(option => option.value === reservationTypeSelected.value)?.value;            
             await setReservationType(selectedType);
 
             // Handle success, e.g., show a success message
@@ -711,6 +721,22 @@
         });
     };
 
+    // Comment update
+    const handleKeydown = (event) => {
+        if (event.key === 'Tab') {            
+            updateReservationComment(reservationInfo.value);
+        }
+    };
+    const updateReservationComment = async (data) => {
+        await setReservationComment(data.reservation_id, data.hotel_id, data.comment);
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: `備考更新されました。`,
+            life: 3000
+        });
+    };
+
     // Router
     const goToNewReservation = () => {                
         setReservationId(null);                
@@ -817,8 +843,7 @@
         tabsReservationBulkEditDialog.value = newTabValue * 1;
         
         // Period change
-        if(tabsReservationBulkEditDialog.value  === 4){
-            console.log('Period change tab')
+        if(tabsReservationBulkEditDialog.value  === 4){            
             roomsAvailableChanges.value = [];
             const hotelId = reservationInfo.value.hotel_id;                        
             newCheckIn.value = new Date(reservationInfo.value.check_in);
@@ -850,9 +875,7 @@
                     roomId: roomId,
                     roomValues: room,
                     results: results
-                });
-                console.log('roomsAvailableChanges', roomsAvailableChanges.value);
-                console.log('Earliest Check-In:', minCheckIn.value, 'Latest Check-Out:', maxCheckOut.value);
+                });                
             });            
         }
     };
@@ -893,9 +916,7 @@
                 toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
                 return
             }
-
-            console.log('selectedAddon before:',selectedAddon.value);
-
+            
             const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
             const isHotelAddon = foundAddon.id.startsWith('H');            
             selectedAddon.value.push({
@@ -908,8 +929,6 @@
             });   
             
             selectedAddonOption.value = '';
-
-            console.log('selectedAddon after:',selectedAddon.value);
         };
         const deleteAddon = (addon) => {
             const index = selectedAddon.value.indexOf(addon);
@@ -997,14 +1016,12 @@
         reservationTypeSelected.value = reservationInfo.value.type;
         selectedClient.value = reservationInfo.value.client_id;
 
-        // console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
+        console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
     });
 
     // Watcher
     watch(addons, (newValue, oldValue) => {
         if (newValue !== oldValue) {
-            //console.log('addons changed:', newValue);
-            
             // Add a 'quantity' field with default value 1 to each add-on
             selectedAddon.value = newValue.map(addon => ({
                 ...addon,                    

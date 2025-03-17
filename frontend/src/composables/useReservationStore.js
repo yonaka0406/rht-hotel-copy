@@ -313,6 +313,29 @@ export function useReservationStore() {
             console.error('Error updating reservation:', err);
         }
     };
+    const setReservationComment = async (reservationId, hotelId, comment) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');            
+
+            const response = await fetch(`/api/reservation/update/comment/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotelId, comment })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+
+            setReservationIsUpdating(false);
+        } catch(err){
+            console.error('Error updating reservation:', err);
+        }
+    };
 
     // Bulk Update
     const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons) => {
@@ -850,6 +873,7 @@ export function useReservationStore() {
         setReservationRoom,
         setCalendarChange,
         setCalendarFreeChange,
+        setReservationComment,
         setRoomPlan,
         setRoomGuests,
         changeReservationRoomGuestNumber,        

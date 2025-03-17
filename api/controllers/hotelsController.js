@@ -236,11 +236,11 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
   };
   const editHotelCalendar = async (req, res) => {
     const { startDate, endDate } = req.params;
-    const { hotelId, roomIds } = req.body;
+    const { hotelId, roomIds, comment } = req.body;
     const updated_by = req.user.id;
 
     try {
-      const updatedRoom = await updateHotelCalendar(hotelId, roomIds, startDate, endDate, updated_by);
+      const updatedRoom = await updateHotelCalendar(hotelId, roomIds, startDate, endDate, comment, updated_by);
       if (!updatedRoom.success) { 
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }

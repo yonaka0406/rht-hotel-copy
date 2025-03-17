@@ -141,7 +141,8 @@ CREATE TABLE clients (
 );
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
-('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1),
+VALUES
+('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
 
 -- Mock data generator
 INSERT INTO clients (
@@ -373,6 +374,7 @@ CREATE TABLE reservations (
     number_of_people INT NOT NULL,  
     status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block')) NOT NULL DEFAULT 'hold',
     type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
+    comment TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -381,8 +383,7 @@ CREATE TABLE reservations (
 ) PARTITION BY LIST (hotel_id);
 
 ALTER TABLE reservations
-  DROP CONSTRAINT reservations_status_check,
-  ADD CONSTRAINT reservations_status_check CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block'));
+ADD COLUMN comment TEXT NULL;
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),

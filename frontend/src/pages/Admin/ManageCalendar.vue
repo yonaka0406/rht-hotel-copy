@@ -86,6 +86,7 @@
                                 {{ formatDate(new Date(data.check_out)) }}
                             </template>
                         </Column>
+                        <Column field="comment" header="備考"></Column>
                         <Column header="削除" body="deleteButton">
                             <template #body="{ data }">
                                 <Button 
@@ -187,8 +188,9 @@
             return;
         }
         try {
-            const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null);  
+            const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null, comment.value);  
             if (response.success) {
+                await fetchBlockedRooms(selectedHotelId.value);
                 toast.add({ severity: 'success', summary: '成功', detail: '全ホテルに適用しました。', life: 3000 });
             } else {
                 toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + response.message, life: 3000 });
@@ -249,8 +251,9 @@
         }
         try {
             const roomIds = selectedRooms.value ? selectedRooms.value : null;
-            const response = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds);            
+            const response = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds, comment.value);            
             if (response.success) {
+                await fetchBlockedRooms(selectedHotelId.value);
                 toast.add({ severity: 'success', summary: '成功', detail: '選択ホテルに適用しました。', life: 3000 });
             } else {
                 toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + response.message, life: 3000 });

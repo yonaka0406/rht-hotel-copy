@@ -131,7 +131,8 @@ const selectReservation = async (id) => {
       ,reservations.check_out
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status   
-      ,reservations.type   
+      ,reservations.type  
+      ,reservations.comment 
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name
@@ -949,6 +950,34 @@ const updateReservationStatus = async (reservationData) => {
   } catch (err) {
       console.error('Error updating reservation detail:', err);
       throw new Error('Database error');
+  }
+};
+
+const updateReservationComment = async (reservationData) => {
+  const { id, hotelId, comment, updated_by } = reservationData;
+  
+  try {
+    // Update status
+    const query = `
+        UPDATE reservations
+        SET
+          comment = $1,          
+          updated_by = $2          
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+    `;
+    const values = [
+      comment,    
+      updated_by,
+      id,
+      hotelId,
+    ];
+    const result = await pool.query(query, values);    
+    return result.rows[0];
+
+  } catch (error) {
+    console.error('Error updating reservation detail:', err);
+    throw new Error('Database error');
   }
 };
 
@@ -1771,6 +1800,7 @@ module.exports = {
     insertReservationPayment,
     updateReservationDetail,
     updateReservationStatus,
+    updateReservationComment,
     updateReservationType,
     updateReservationResponsible,
     updateRoomByCalendar,

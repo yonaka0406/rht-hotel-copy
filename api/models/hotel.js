@@ -70,7 +70,7 @@ const updateRoom = async (id, room_type_id, floor, room_number, capacity, smokin
   }
 };
 
-const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, updated_by) => {
+const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, comment, updated_by) => {
   
   const client = await pool.connect();
   try {
@@ -110,14 +110,15 @@ const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, updated
 
         // Insert the reservation with check_in as the first date and check_out as the last date
         await client.query(
-          `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_by, updated_by)
-          VALUES ($1, $2, '11111111-1111-1111-1111-111111111111', $3, $4, 0, 'block', $5, $6)
+          `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, comment, created_by, updated_by)
+          VALUES ($1, $2, '11111111-1111-1111-1111-111111111111', $3, $4, 0, 'block', $5, $6, $7)
           ON CONFLICT (hotel_id, id) DO NOTHING`,
           [
               mockReservationId,
               currentHotelId,
               checkInDate,
               checkOutDate,
+              comment,
               updated_by,
               updated_by,
           ]
