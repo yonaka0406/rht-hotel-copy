@@ -4,6 +4,7 @@ const hotels = ref([]);
 const selectedHotel = ref(null);
 const selectedHotelId = ref(null);
 const hotelRooms = ref([]);
+const hotelBlockedRooms = ref([]);
 
 export function useHotelStore() {
 
@@ -36,7 +37,7 @@ export function useHotelStore() {
             console.error('Failed to fetch hotels', error);
         }
     };
-
+    
     // Fetch data for the selected hotel
     const fetchHotel = async () => {
         
@@ -68,6 +69,26 @@ export function useHotelStore() {
         }
     };
 
+    const fetchBlockedRooms = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-calendar/blocked/${selectedHotelId.value}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            hotelBlockedRooms.value = await response.json();
+
+            //console.log('Store fetchBlockedRooms:',hotelBlockedRooms.value)
+            
+        } catch (error) {
+            console.error('Failed to fetch hotels info', error);
+        }
+    };    
+
     const applyCalendarSettings = async (hotelId, startDate, endDate, roomIds) => {
         const authToken = localStorage.getItem('authToken');
 
@@ -80,10 +101,29 @@ export function useHotelStore() {
             body: JSON.stringify({ hotelId, roomIds })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            throw new Error('Failed to update reservation status');
+            return { success: false, message: data.message || 'Failed to update reservation status' };
         }
-    }
+
+        return { success: true, message: data.message || 'Calendar updated successfully' };
+    };
+    const removeCalendarSettings = async (reservationId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-calendar/unblock/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+        } catch (error) {
+            console.error('Failed to fetch hotels info', error);
+        }
+    };
 
     // Watch for changes to selectedHotelId and fetch the corresponding hotel data
     watch(selectedHotelId, (newHotelId) => {
@@ -104,9 +144,12 @@ export function useHotelStore() {
         selectedHotel,
         selectedHotelId,
         selectedHotelRooms,
+        hotelBlockedRooms,
         setHotelId,
         fetchHotels,
         fetchHotel,
+        fetchBlockedRooms,
         applyCalendarSettings,
+        removeCalendarSettings,
     };
 }

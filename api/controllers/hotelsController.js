@@ -1,5 +1,5 @@
 const pool = require('../config/database');
-const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, getAllRoomsByHotelId } = require('../models/hotel');
+const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
@@ -172,6 +172,18 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
       res.status(500).json({ error: error.message });
     }
   };
+  const getBlockedRooms = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const blocked = await selectBlockedRooms(id);
+      res.json(blocked);
+    } catch (error) {
+      console.error('Error getting hotel blocked rooms:', error);
+      res.status(500).json({ error: error.message });
+    }
+  };
+
 
 // PUT
   const editHotel = async (req, res) => {
@@ -229,15 +241,29 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
 
     try {
       const updatedRoom = await updateHotelCalendar(hotelId, roomIds, startDate, endDate, updated_by);
-      if (!updatedRoom) {
-        return res.status(404).json({ message: 'Room not found' });
+      if (!updatedRoom.success) { 
+        return res.status(400).json({ success: false, message: updatedRoom.message });
       }
-      res.status(200).json({message: 'Rooms updated with success'});
+      res.status(200).json({ success: true, message: 'Rooms updated successfully' });
     } catch (error) {
       console.error('Error updating hotel:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ success: false, message: 'Internal server error' });
     }
-  }
+  };
+  const editBlockedRooms = async (req, res) => {
+    const { id } = req.params;
+    const user_id = req.user.id;
 
+    try {
+      const unblock = await deleteBlockedRooms(id, user_id);
+      if (!unblock) {
+        return res.status(404).json({ success: false, message: 'Reservation not found' });
+      }
+      res.status(200).json({ success: true, message: 'Calendar settings updated.' });
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  };
 
-module.exports = { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, editHotelCalendar, getHotelRooms };
+module.exports = { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, editHotelCalendar, getHotelRooms, getBlockedRooms, editBlockedRooms };

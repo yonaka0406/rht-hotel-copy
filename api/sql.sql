@@ -371,7 +371,7 @@ CREATE TABLE reservations (
     check_in DATE NOT NULL,
     check_out DATE NOT NULL,  
     number_of_people INT NOT NULL,  
-    status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled')) NOT NULL DEFAULT 'hold',
+    status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block')) NOT NULL DEFAULT 'hold',
     type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),

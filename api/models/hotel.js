@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const format = require('pg-format');
 
 // Return all hotels
 const getAllHotels = async () => {
@@ -70,8 +71,6 @@ const updateRoom = async (id, room_type_id, floor, room_number, capacity, smokin
 };
 
 const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, updated_by) => {
-
-  // TO DO: checar se o room ja tem alguma reserva para o dia selecionado, em caso positivo, interromper a transacao e enviar mensagem de erro.
   
   const client = await pool.connect();
   try {
@@ -101,24 +100,40 @@ const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, updated
         const roomsResult = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [currentHotelId]);
         roomsToUpdate = roomsResult.rows.map(room => room.id);
       }
-
+      
       for (const roomId of roomsToUpdate) {
-        for (const date of dateArray) {
-          const reservationIdResult = await client.query('SELECT gen_random_uuid() as id');
-          const mockReservationId = reservationIdResult.rows[0].id;
+        // Make one reservation_id per room
+        const reservationIdResult = await client.query('SELECT gen_random_uuid() as id');
+        const mockReservationId = reservationIdResult.rows[0].id;
+        const checkInDate = dateArray[0];
+        const checkOutDate = dateArray[dateArray.length - 1];
 
-          await client.query(
-            `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_by, updated_by)
-             VALUES ($1, $2, '11111111-1111-1111-1111-111111111111', $3, $3, 0, 'block', $4, $5)
-             ON CONFLICT (hotel_id, id) DO NOTHING`,
-            [
+        // Insert the reservation with check_in as the first date and check_out as the last date
+        await client.query(
+          `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_by, updated_by)
+          VALUES ($1, $2, '11111111-1111-1111-1111-111111111111', $3, $4, 0, 'block', $5, $6)
+          ON CONFLICT (hotel_id, id) DO NOTHING`,
+          [
               mockReservationId,
               currentHotelId,
-              date,
+              checkInDate,
+              checkOutDate,
               updated_by,
               updated_by,
-            ]
+          ]
+      );
+
+        for (const date of dateArray) {
+          const existingReservation = await client.query(
+            `SELECT 1 FROM reservation_details 
+             WHERE hotel_id = $1 AND room_id = $2 AND date = $3 AND cancelled IS NULL`,
+            [currentHotelId, roomId, date]
           );
+
+          if (existingReservation.rowCount > 0) {
+            await client.query('ROLLBACK');
+            return { success: false, message: `${date.toISOString().split('T')[0]}に予約は既に登録されています。` };
+          }          
 
           await client.query(
             `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
@@ -146,6 +161,57 @@ const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, updated
     client.release();
   }
 };
+const selectBlockedRooms = async (hotelId) => {
+  const query = `
+    SELECT r.*, d.room_id, d.room_type_name, d.room_number, h.name
+    FROM 
+      hotels h,
+      reservations r
+      ,(
+        SELECT 
+          rd.hotel_id, rd.reservation_id, rd.room_id, room_types.name as room_type_name, rooms.room_number
+        FROM reservation_details rd, rooms, room_types
+        WHERE 
+          rd.hotel_id = rooms.hotel_id AND rd.room_id = rooms.id AND rooms.hotel_id = room_types.hotel_id AND rooms.room_type_id = room_types.id          
+        GROUP BY rd.hotel_id, rd.reservation_id, rd.room_id, room_types.name, rooms.room_number
+      ) d
+    WHERE 
+      r.status = 'block'
+      AND r.hotel_id = $1
+      AND r.hotel_id = d.hotel_id
+      AND r.id = d.reservation_id
+      AND r.hotel_id = h.id
+      ORDER BY 
+        r.check_out DESC
+        ,d.room_number ASC
+  `;
+
+  try {
+    const result = await pool.query(query, [hotelId]);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving blocked rooms:', err);
+    throw new Error('Database error');
+  }
+};
+const deleteBlockedRooms = async (reservationId, userID) => {
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
+
+    DELETE FROM reservations
+    WHERE id = %L AND status = 'block'
+    RETURNING *;
+  `, userID, reservationId);
+
+  try {
+    const result = await pool.query(query);    
+    return true;
+  } catch (err) {
+    console.error('Error deleting reservation:', err);
+    throw new Error('Database error');
+  }
+};
 
 // Get rooms by hotel id
 const getAllRoomsByHotelId = async (id) => {
@@ -161,6 +227,10 @@ const getAllRoomsByHotelId = async (id) => {
   }
 };
 
+
+
+
+
 module.exports = {
   getAllHotels,
   findHotelById,
@@ -168,5 +238,7 @@ module.exports = {
   updateRoomType,
   updateRoom,
   updateHotelCalendar,
+  selectBlockedRooms,
+  deleteBlockedRooms,
   getAllRoomsByHotelId,
 };

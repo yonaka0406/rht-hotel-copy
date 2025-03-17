@@ -60,8 +60,41 @@
             </Card>
             <Card>
                 <template #content>
-                    <DataTable>
-                        <Column></Column>
+                    <DataTable
+                        :value="hotelBlockedRooms"
+                        dataKey="id"
+                        paginator 
+                        :rows="30"
+                        :rowsPerPageOptions="[10, 30, 50, 100]"
+                        scrollable
+                        stripedRows
+                        responsive
+                    >
+                        <Column field="name" header="ホテル"></Column>
+                        <Column header="部屋">
+                            <template #body="{ data }">
+                                {{ data.room_type_name }}：{{ data.room_number }}号室
+                            </template>
+                        </Column>
+                        <Column header="開始日">
+                            <template #body="{ data }">
+                                {{ formatDate(new Date(data.check_in)) }}
+                            </template>
+                        </Column>
+                        <Column header="終了日">
+                            <template #body="{ data }">
+                                {{ formatDate(new Date(data.check_out)) }}
+                            </template>
+                        </Column>
+                        <Column header="削除" body="deleteButton">
+                            <template #body="{ data }">
+                                <Button 
+                                    icon="pi pi-trash"
+                                    class="p-button-text p-button-danger p-button-sm"
+                                    @click="confirmDelete(data)"
+                                />
+                            </template>                            
+                        </Column>
                     </DataTable>
                 </template>
             </Card>            
@@ -83,7 +116,7 @@
 
     // Store
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, selectedHotelId, fetchHotels, selectedHotelRooms, fetchHotel, applyCalendarSettings } = useHotelStore();
+    const { hotels, selectedHotelId, fetchHotels, selectedHotelRooms, fetchHotel, hotelBlockedRooms, fetchBlockedRooms, applyCalendarSettings, removeCalendarSettings } = useHotelStore();
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -154,8 +187,12 @@
             return;
         }
         try {
-            const results = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null);            
-            toast.add({ severity: 'success', summary: '成功', detail: '全ホテルに適用しました。', life: 3000 });
+            const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null);  
+            if (response.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: '全ホテルに適用しました。', life: 3000 });
+            } else {
+                toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + response.message, life: 3000 });
+            }            
         } catch (error) {
             toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + error.message, life: 3000 });
         }
@@ -206,22 +243,62 @@
             toast.add({ severity: 'warn', summary: '警告', detail: '開始日と終了日を選択してください。', life: 3000 });
             return;
         }
+        if (startDate.value > endDate.value) {
+            toast.add({ severity: 'warn', summary: '警告', detail: '終了日を開始日以降にしてください。', life: 3000 });
+            return;
+        }
         try {
             const roomIds = selectedRooms.value ? selectedRooms.value : null;
-            const results = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds);
-            toast.add({ severity: 'success', summary: '成功', detail: '選択ホテルに適用しました。', life: 3000 });
+            const response = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds);            
+            if (response.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: '選択ホテルに適用しました。', life: 3000 });
+            } else {
+                toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + response.message, life: 3000 });
+            }
         } catch (error) {
             toast.add({ severity: 'error', summary: 'エラー', detail: '適用に失敗しました: ' + error.message, life: 3000 });
+        }
+    };
+
+    const confirmDelete = (data) => {
+        let message = `
+                <b>${data.room_number}号室</b>、<b>${formatDate(new Date(data.check_in))}</b>～<b>${formatDate(new Date(data.check_out))}</b>に対して、<br/>                
+                販売不可設定を削除してもよろしいですか？<br/>
+        `;
+
+        formattedMessage.value = message;
+        
+        confirm.require({
+            group: 'templating',
+            message: message,
+            header: '確認',
+            icon: 'pi pi-exclamation-triangle',
+            acceptProps: { label: 'はい' },
+            accept: () => deleteBlockedRoomAction(data.id),
+            rejectProps: { label: 'キャンセル', severity: 'secondary', outlined: true },
+        });
+    };
+    const deleteBlockedRoomAction = async (id) => {
+        try {
+            const response = await removeCalendarSettings(id);
+            
+            toast.add({ severity: 'success', summary: '成功', detail: '販売不可設定を削除しました。', life: 3000 });
+            fetchBlockedRooms(selectedHotelId.value);
+            
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: '削除に失敗しました: ' + error.message, life: 3000 });
         }
     };
 
     onMounted( async () => {
         await fetchHotels();
         await fetchHotel();
+        await fetchBlockedRooms(selectedHotelId.value);
     });
 
     watch(selectedHotelId, async (newValue, oldValue) => {                 
         await fetchHotel();
+        await fetchBlockedRooms(selectedHotelId.value);
     }, { deep: true }); 
 
 </script>

@@ -151,7 +151,7 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update reservation status');
+                throw new Error('Failed to update reservation type');
             }
 
             // Update the local reservationDetails state

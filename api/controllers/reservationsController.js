@@ -792,8 +792,8 @@ const editReservationType = async (req, res) => {
     // Respond with the updated reservation details
     res.json(updatedReservation);
   } catch (err) {
-    console.error('Error updating reservation status:', err);
-    res.status(500).json({ error: 'Failed to update reservation status' });
+    console.error('Error updating reservation type:', err);
+    res.status(500).json({ error: 'Failed to update reservation type' });
   }
 };
 
