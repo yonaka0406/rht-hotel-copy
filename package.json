@@ -10,7 +10,7 @@
         "restart": "pm2 restart backend",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "build": "npm run build:frontend",
-        "build:frontend": "npm --prefix frontend run build",
+        "build:frontend": "npm --prefix frontend run build --mode",
         "dev:frontend": "npm --prefix frontend run dev",        
         "start:backend": "pm2 start api/index.js --name backend",
         "stop:backend": "pm2 stop backend",
