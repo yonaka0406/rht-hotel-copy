@@ -5,3 +5,4 @@ api/.env
 api/package-lock.json
 frontend/package-lock.json
 api/public/index.html
+frontend/.env.dev
