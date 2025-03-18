@@ -9,31 +9,28 @@ const socketio = require('socket.io');
 const fs = require('fs');
 const { Pool } = require('pg');
 
+// Get .env accordingly
+let envFrontend, envDB;
+
 const app = express();
 app.use((req, res, next) => {
   const origin = req.get('Origin') || req.get('Referer');
   if (origin && origin.includes('test.wehub.work')) {    
     process.env.NODE_ENV = 'development';
+    envFrontend = process.env.FRONTEND_URL
+    envDB = process.env.PG_DATABASE; 
   } else if(origin && origin.includes('wehub.work')) {
-    process.env.NODE_ENV = 'production';    
+    process.env.NODE_ENV = 'production';
+    envFrontend = process.env.PROD_FRONTEND_URL
+    envDB = process.env.PROD_PG_DATABASE;  
   } else {    
-    process.env.NODE_ENV = 'development';   
+    process.env.NODE_ENV = 'development';
+    envFrontend = process.env.FRONTEND_URL
+    envDB = process.env.PG_DATABASE; 
   }  
-  //console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used');
+  console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used',envFrontend,'and',envDB);
   next();
 });
-
-// Get .env accordingly
-let envFrontend, envDB;
-
-if (process.env.NODE_ENV === 'production') {
-  envFrontend = process.env.PROD_FRONTEND_URL
-  envDB = process.env.PROD_PG_DATABASE;  
-} else {
-  envFrontend = process.env.FRONTEND_URL
-  envDB = process.env.PG_DATABASE;  
-}
-console.log('index.js database being accessed:',envDB);
 
 // HTTP Server setup
 const httpServer = http.createServer(app);
