@@ -4,8 +4,17 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const https = require('https');
 const socketio = require('socket.io');
 const { Pool } = require('pg');
+
+// Load SSL certificates
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/wehub.work/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/wehub.work/fullchain.pem', 'utf8');
+const credentials = {
+  key: privateKey,
+  cert: certificate,
+};
 
 const corsOptions = {
   origin: process.env.FRONTEND_URL,  // Replace with your actual frontend domain
@@ -15,7 +24,9 @@ const corsOptions = {
 
 const app = express();
 const server = http.createServer(app);
-const io = socketio(server);
+const httpsServer = https.createServer(credentials, app);
+/*const io = socketio(server);*/
+const io = socketio(httpsServer);
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -102,6 +113,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 */
-server.listen(PORT, '0.0.0.0', () => {
+/*server.listen(PORT, '0.0.0.0', () => {
   // console.log(`Server is running on http://localhost:${PORT}`);
+});*/
+httpsServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`HTTPS Server is running on https://wehub.work:${PORT}`);
 });
