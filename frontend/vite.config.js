@@ -22,8 +22,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../api/public', // Output the build files to the backend's public folder
-    /*outDir: 'dist',*/
+    /*outDir: '../api/public', // backend's public folder*/
+    outDir: 'dist',
     emptyOutDir: true, // Clears the directory before building
     sourcemap: true, // or 'inline' to embed the source map in the output file
   },
