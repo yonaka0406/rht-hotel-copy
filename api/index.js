@@ -21,8 +21,10 @@ app.use((req, res, next) => {
   const origin = req.get('Origin') || req.get('Referer');
   if (origin && origin.includes('test.wehub.work')) {    
     process.env.NODE_ENV = 'development';
-  } else {    
+  } else if(origin && origin.includes('wehub.work')) {
     process.env.NODE_ENV = 'production';    
+  } else {    
+    process.env.NODE_ENV = 'development';   
   }  
   console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used');
   next();
