@@ -33,6 +33,7 @@ if (process.env.NODE_ENV === 'production') {
   envFrontend = process.env.FRONTEND_URL
   envDB = process.env.PG_DATABASE;  
 }
+console.log('index.js database being accessed:',envDB);
 
 // HTTP Server setup
 const httpServer = http.createServer(app);

@@ -11,6 +11,7 @@ if (process.env.NODE_ENV === 'production') {
 } else {  
   envDB = process.env.PG_DATABASE;  
 }
+console.log('database.js database being accessed:',envDB);
 
 const pool = new Pool({
   user: process.env.PG_USER,
