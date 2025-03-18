@@ -4,7 +4,9 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const https = require('https');
 const socketio = require('socket.io');
+const fs = require('fs');
 const { Pool } = require('pg');
 
 const corsOptions = {
@@ -14,9 +16,42 @@ const corsOptions = {
 };
 
 const app = express();
-const server = http.createServer(app);
-const io = socketio(server);
+// HTTP Server setup
+const httpServer = http.createServer(app);
+
+// HTTPS Server setup (try/catch block)
+let httpsServer = null; // Initialize as null
+try {
+  const privateKey = fs.readFileSync('/etc/letsencrypt/live/wehub.work/privkey.pem', 'utf8');
+  const certificate = fs.readFileSync('/etc/letsencrypt/live/wehub.work/fullchain.pem', 'utf8');
+  const credentials = {
+    key: privateKey,
+    cert: certificate,
+  };
+  httpsServer = https.createServer(credentials, app);
+} catch (error) {
+  console.error('HTTPS setup failed:', error.message);
+  console.log('HTTPS server will not be started.');
+}
+// Socket.IO setup for HTTP and HTTPS
+const ioHttp = socketio(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST"]
+  }
+});
+let ioHttps = null;
+if (httpsServer) {
+  ioHttps = socketio(httpsServer, {
+    cors: {
+      origin: process.env.FRONTEND_URL,
+      methods: ["GET", "POST"]
+    }
+  });
+}
+
 const PORT = process.env.PORT || 5000;
+const HTTPS_PORT = 443;
 
 // Middleware
 app.use(cors(corsOptions));
@@ -67,7 +102,8 @@ const listenForTableChanges = async () => {
   client.on('notification', (msg) => {    
     if (msg.channel === 'logs_reservation_changed') {
       //console.log('Notification received:', msg.channel); // Debugging
-      io.emit('tableUpdate', 'Reservation update detected'); // Emit to clients
+      ioHttp.emit('tableUpdate', 'Reservation update detected');
+      ioHttps.emit('tableUpdate', 'Reservation update detected');      
     }
   });
 
@@ -79,14 +115,24 @@ const listenForTableChanges = async () => {
 listenForTableChanges();
 
 // Socket.IO event handlers
-io.on('connection', (socket) => {
-  //console.log('Client connected');
+ioHttp.on('connection', (socket) => {
+  // console.log('Client connected (HTTP)');
 
   // Handle client disconnection
   socket.on('disconnect', () => {
-    //console.log('Client disconnected');
+    // console.log('Client disconnected (HTTP)');
   });
 });
+if (ioHttps) {
+  ioHttps.on('connection', (socket) => {
+    // console.log('Client connected (HTTPS)');
+
+    // Handle client disconnection
+    socket.on('disconnect', () => {
+      // console.log('Client disconnected (HTTPS)');
+    });
+  });
+}
 
 // Serve static files from the frontend build folder
 app.use(express.static(path.join(__dirname, 'public')));
@@ -102,6 +148,14 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 */
-server.listen(PORT, '0.0.0.0', () => {
-  // console.log(`Server is running on http://localhost:${PORT}`);
+
+// Start the servers
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
+
+if (httpsServer) {
+  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+    console.log(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
+  });
+}
