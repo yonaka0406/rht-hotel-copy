@@ -3,10 +3,19 @@
 require('dotenv').config({ path: './api/.env' });
 const { Pool } = require('pg');
 
+// Get .env accordingly
+let envDB;
+
+if (process.env.NODE_ENV === 'production') {  
+  envDB = process.env.PROD_PG_DATABASE;  
+} else {  
+  envDB = process.env.PG_DATABASE;  
+}
+
 const pool = new Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
-  database: process.env.PG_DATABASE,
+  database: envDB,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
   max: 50,

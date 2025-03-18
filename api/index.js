@@ -9,14 +9,7 @@ const socketio = require('socket.io');
 const fs = require('fs');
 const { Pool } = require('pg');
 
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,  // Replace with your actual frontend domain
-  methods: 'GET, POST, PUT, DELETE', 
-  allowedHeaders: 'Content-Type, Authorization',
-};
-
 const app = express();
-
 app.use((req, res, next) => {
   const origin = req.get('Origin') || req.get('Referer');
   if (origin && origin.includes('test.wehub.work')) {    
@@ -26,9 +19,20 @@ app.use((req, res, next) => {
   } else {    
     process.env.NODE_ENV = 'development';   
   }  
-  console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used');
+  //console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used');
   next();
 });
+
+// Get .env accordingly
+let envFrontend, envDB;
+
+if (process.env.NODE_ENV === 'production') {
+  envFrontend = process.env.PROD_FRONTEND_URL
+  envDB = process.env.PROD_PG_DATABASE;  
+} else {
+  envFrontend = process.env.FRONTEND_URL
+  envDB = process.env.PG_DATABASE;  
+}
 
 // HTTP Server setup
 const httpServer = http.createServer(app);
@@ -50,7 +54,7 @@ try {
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: envFrontend,
     methods: ["GET", "POST"]
   }
 });
@@ -58,7 +62,7 @@ let ioHttps = null;
 if (httpsServer) {
   ioHttps = socketio(httpsServer, {
     cors: {
-      origin: process.env.FRONTEND_URL,
+      origin: envFrontend,
       methods: ["GET", "POST"]
     }
   });
@@ -68,6 +72,11 @@ const PORT = process.env.PORT || 5000;
 const HTTPS_PORT = 443;
 
 // Middleware
+const corsOptions = {
+  origin: envFrontend,  // Replace with your actual frontend domain
+  methods: 'GET, POST, PUT, DELETE', 
+  allowedHeaders: 'Content-Type, Authorization',
+};
 app.use(cors(corsOptions));
 app.use(express.json());
 
@@ -103,7 +112,7 @@ const pool = require('./config/database');
 const listenClient = new Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
-  database: process.env.PG_DATABASE,
+  database: envDB,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
   max: 50, // Allow up to 50 concurrent connections

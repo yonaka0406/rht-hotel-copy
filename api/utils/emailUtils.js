@@ -1,5 +1,14 @@
 const nodemailer = require('nodemailer');
 
+// Get .env accordingly
+let envFrontend;
+
+if (process.env.NODE_ENV === 'production') {
+  envFrontend = process.env.PROD_FRONTEND_URL  
+} else {
+  envFrontend = process.env.FRONTEND_URL  
+}
+
 // Function to send the reset email
 const sendResetEmail = async (email, resetToken) => {
   const transporter = nodemailer.createTransport({
@@ -10,7 +19,7 @@ const sendResetEmail = async (email, resetToken) => {
     },
   });
 
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const resetLink = `${envFrontend}/reset-password?token=${resetToken}`;
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -39,7 +48,7 @@ const sendAdminResetEmail = async (email, resetToken) => {
     },
   });
 
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const resetLink = `${envFrontend}/reset-password?token=${resetToken}`;
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
