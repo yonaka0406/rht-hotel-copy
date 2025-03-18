@@ -16,6 +16,18 @@ const corsOptions = {
 };
 
 const app = express();
+
+app.use((req, res, next) => {
+  const origin = req.get('Origin');
+  if (origin && origin.includes('test.wehub.work')) {    
+    process.env.NODE_ENV = 'development';
+  } else {    
+    process.env.NODE_ENV = 'production';    
+  }
+  console.log('.env for',process.env.NODE_ENV,'will be used');
+  next();
+});
+
 // HTTP Server setup
 const httpServer = http.createServer(app);
 
