@@ -11,7 +11,7 @@
                         v-model="selectedPMS"
                         :options="pmsOptions"
                         optionLabel="name"
-                        placeholder="Select a PMS"
+                        placeholder="PMS選択"
                         fluid
                     />
                 </FloatLabel>
@@ -28,11 +28,24 @@
                         <FileUpload
                             id="csv-upload"
                             mode="basic"
-                            chooseLabel="Choose File"
-                            @uploader="handleFileUpload"
+                            chooseLabel="ファイル参照"
+                            @upload="onUpload"
+                            @select="handleFileUpload"
                             accept=".csv"
                             :maxFileSize="10000000"
-                        />
+                            :auto="true"                            
+                        >                        
+                        </FileUpload>
+
+                        <div v-if="loading" class="mb-4">
+                            <ProgressSpinner />
+                        </div>
+
+                        <div v-if="parsedCsvData && !loading">
+                            <DataTable :value="parsedCsvData">
+                                <Column v-for="col in columns" :field="col.field" :header="col.header" :key="col.field" />
+                            </DataTable>
+                        </div>
                     </div>
                 </template>
             </Card>            
@@ -45,8 +58,13 @@
     import { ref } from 'vue';
 
     // Primevue
-    import { Panel, Card, Select, FloatLabel } from 'primevue';
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
+    import { Panel, Card, Select, FloatLabel, ProgressSpinner, DataTable, Column } from 'primevue';
     import FileUpload from 'primevue/fileupload';
+
+    // Parse
+    import Papa from 'papaparse';
     
     // Select button
     const selectedPMS = ref(null);
@@ -56,21 +74,47 @@
     ]);
 
     // Data
-    const tempCsvData = ref(null);
+    const loading = ref(false);    
+    const parsedCsvData = ref(null);
+    const columns = ref([]);
   
     const handleFileUpload = (event) => {
+        console.log('handleFileUpload started')
         const file = event.files[0];
+        console.log('File:', file);
         const reader = new FileReader();
-    
+        loading.value = true;
+
         reader.onload = (e) => {
-        // Placeholder for CSV parsing logic
-        // In a real application, you would use a library like papaparse here
-        // to properly handle CSV parsing, including delimiters, headers, etc.
-        tempCsvData.value = e.target.result;
-        console.log('CSV Data Loaded (Placeholder):', tempCsvData.value);
+            console.log('FileReader onload triggered');
+            const text = new TextDecoder('utf-8').decode(e.target.result);
+            
+            Papa.parse(text, {
+                header: true,
+                complete: (results) => {
+                    console.log('Parsed headers:', Object.keys(results.data[0]));                    
+                    parsedCsvData.value = results.data;
+                    if (parsedCsvData.value.length > 0) {
+                    columns.value = Object.keys(parsedCsvData.value[0]).map((key) => ({
+                        field: key,
+                        header: key,
+                    }));
+                    }
+                    loading.value = false;
+                    toast.add({ severity: 'success', summary: 'Success', detail: 'CSV file uploaded and parsed successfully!', life: 3000 });
+                },
+                error: (error) => {
+                    loading.value = false;
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error parsing CSV file.', life: 3000 });
+                    console.error('CSV Parsing Error:', error);
+                }
+            });
         };
-    
+
         reader.readAsText(file);
+    };
+    const onUpload = () => {
+        toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
     };
 </script>
   
