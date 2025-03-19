@@ -98,7 +98,6 @@ app.use((req, res, next) => {
 // API Routes
 const protectedRoutes = require('./routes/protectedRoutes');
 const authRoutes = require('./routes/authRoutes');
-const messageRoutes = require('./routes/messageRoutes');
 const usersRoutes = require('./routes/usersRoutes');
 const rolesRoutes = require('./routes/rolesRoutes');
 const hotelsRoutes = require('./routes/hotelsRoutes');
@@ -111,7 +110,6 @@ const settingsRoutes = require('./routes/settingsRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
-app.use('/api', messageRoutes); // '/api/message' path
 app.use('/api', usersRoutes);
 app.use('/api', rolesRoutes);
 app.use('/api', hotelsRoutes);
