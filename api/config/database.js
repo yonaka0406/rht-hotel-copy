@@ -85,9 +85,8 @@ const setupRequestContext = (req, res, next) => {
   console.log(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
   
   // Check both origin and host to determine environment
-  const isProdOrigin = isDomainProduction(origin);
-  const isProdHost = isDomainProduction(host);
-  const isProd = isProdOrigin || isProdHost;
+  const isProdOrigin = isDomainProduction(origin);  
+  const isProd = isProdOrigin;
   
   setEnvironment(requestId, isProd ? 'prod' : 'dev');
   
@@ -106,22 +105,43 @@ const setupRequestContext = (req, res, next) => {
 };
 
 // Get appropriate pool based on the requestId
-const getPool = () => {  
-  console.log('Trying to detect from execution context');
+// Update the getPool function in your database.js
+
+const getPool = (requestId = null) => {
+  // If we have a requestId, use it to determine the environment
+  if (requestId) {
+    const env = getEnvironment(requestId);
+    console.log(`Getting pool for request #${requestId}, environment: ${env}`);
     
-  // Try to determine from the execution context
-  try {
-    const error = new Error();
-    const stack = error.stack;
-    console.log('Call stack:', stack);
-    
-    // Check if any known production routes are in the stack trace
-    if (stack.includes('/prod/') || stack.includes('production')) {
-      console.log('Production route detected in stack trace');
+    if (env === 'prod') {
       return prodPool;
     }
-  } catch (e) {
-    console.log('Error analyzing stack trace:', e.message);
+  } else {
+    console.log('No requestId provided to getPool(), checking global.currentRequest');
+    
+    // As a fallback, check the global.currentRequest
+    if (global.currentRequest) {
+      const origin = global.currentRequest.headers.origin || global.currentRequest.headers.referer || '';
+      
+      if (origin && origin.includes('wehub.work') && !origin.includes('test.wehub')) {
+        console.log('Using PROD pool based on global.currentRequest origin');
+        return prodPool;
+      }
+    }
+    
+    // Last resort: check if we're in a route that suggests production
+    try {
+      const error = new Error();
+      const stack = error.stack || '';
+      
+      // Check if the URL in the stack trace suggests production
+      if (stack.includes('wehub.work') && !stack.includes('test.wehub')) {
+        console.log('Using PROD pool based on stack trace');
+        return prodPool;
+      }
+    } catch (e) {
+      console.log('Error analyzing stack trace:', e.message);
+    }
   }
   
   // Default to development pool
