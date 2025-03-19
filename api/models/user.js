@@ -1,5 +1,5 @@
 const { getPool } = require('../config/database');
-const pool = getPool(null);
+const pool = getPool();
 //const bcrypt = require('bcrypt');
 const bcrypt = require('bcryptjs');
 

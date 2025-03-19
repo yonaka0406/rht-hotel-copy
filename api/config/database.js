@@ -106,32 +106,22 @@ const setupRequestContext = (req, res, next) => {
 };
 
 // Get appropriate pool based on the requestId
-const getPool = (requestId) => {
-  // If we have a requestId, use it to determine the environment
-  if (requestId) {
-    const env = getEnvironment(requestId);
-    console.log(`Getting pool for request #${requestId}, environment: ${env}`);
+const getPool = () => {  
+  console.log('Trying to detect from execution context');
     
-    if (env === 'prod') {
+  // Try to determine from the execution context
+  try {
+    const error = new Error();
+    const stack = error.stack;
+    console.log('Call stack:', stack);
+    
+    // Check if any known production routes are in the stack trace
+    if (stack.includes('/prod/') || stack.includes('production')) {
+      console.log('Production route detected in stack trace');
       return prodPool;
     }
-  } else {
-    console.log('No requestId provided to getPool(), trying to detect from execution context');
-    
-    // Try to determine from the execution context
-    try {
-      const error = new Error();
-      const stack = error.stack;
-      console.log('Call stack:', stack);
-      
-      // Check if any known production routes are in the stack trace
-      if (stack.includes('/prod/') || stack.includes('production')) {
-        console.log('Production route detected in stack trace');
-        return prodPool;
-      }
-    } catch (e) {
-      console.log('Error analyzing stack trace:', e.message);
-    }
+  } catch (e) {
+    console.log('Error analyzing stack trace:', e.message);
   }
   
   // Default to development pool

@@ -91,8 +91,7 @@ app.use(express.json());
 
 // Make config available to route handlers
 app.use((req, res, next) => {
-  req.envConfig = getEnvConfig(req);
-  db.setRequestContext(req);
+  req.envConfig = getEnvConfig(req);  
   next();
 });
 
