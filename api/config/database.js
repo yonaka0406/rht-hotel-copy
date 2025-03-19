@@ -36,6 +36,7 @@ const getPool = () => {
   if (asyncLocalStorage) {
     const store = asyncLocalStorage.getStore();
     if (store && store.environment === 'prod') {
+      console.log('Using PROD pool via AsyncLocalStorage');
       return prodPool;
     }
   }
@@ -43,12 +44,16 @@ const getPool = () => {
   // Otherwise, try to determine from request context (if it exists)
   if (global.currentRequest && global.currentRequest.headers && global.currentRequest.headers.origin) {
     const origin = global.currentRequest.headers.origin;
+    console.log(`Determining pool from origin: ${origin}`);
+
     if (origin.includes('wehub.work') && !origin.includes('test.wehub.work')) {
+      console.log('Using PROD pool based on origin');
       return prodPool;
     }
   }
-  
+
   // Default to development pool
+  console.log('Using DEV pool (default)');
   return pool;
 };
 
