@@ -245,7 +245,15 @@
                     command: () => {
                         router.push('/admin/ota');
                     }
-                },         
+                },
+                {
+                    key: 'import-data',
+                    label: '他社PMSデータインポート',
+                    icon: 'pi pi-file-import',
+                    command: () => {
+                        router.push('/admin/pms-import');
+                    }
+                },
             ]);
             const userName = ref('');
 

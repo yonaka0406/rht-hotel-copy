@@ -17,6 +17,7 @@ const ManageAddons = () => import('@/pages/Admin/ManageAddons.vue');
 const ManageCalendar = () => import('@/pages/Admin/ManageCalendar.vue');
 const ManageSettings = () => import('@/pages/Admin/ManageSettings.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
+const ManagePMSImport = () => import('@/pages/Admin/ManagePMSImport.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
@@ -74,7 +75,8 @@ const routes = [
       { path: 'hotel-addons', component: ManageAddons },
       { path: 'hotel-calendar', component: ManageCalendar },
       { path: 'settings', component: ManageSettings },
-      { path: 'ota', component: ManageOTA }
+      { path: 'ota', component: ManageOTA },
+      { path: 'pms-import', component: ManagePMSImport },
     ],
     meta: { requiresAuth: true },
   },
