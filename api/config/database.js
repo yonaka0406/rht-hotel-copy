@@ -47,18 +47,18 @@ const isDomainProduction = (domain) => {
   }
   
   // Log the extracted domain
-  console.log('Checking domain:', domain);
+  // console.log('Checking domain:', domain);
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
-  console.log(`Domain ${domain} identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  // console.log(`Domain ${domain} identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
   
   return isProd;
 };
 
 // Function to set environment for a specific request
 const setEnvironment = (requestId, env) => {
-  console.log(`Setting environment for request ${requestId} to ${env}`);
+  // console.log(`Setting environment for request ${requestId} to ${env}`);
   requestEnv.set(requestId, env);
   
   // Cleanup old request IDs to prevent memory leaks
@@ -94,7 +94,7 @@ const setupRequestContext = (req, res, next) => {
   res.on('finish', () => {
     setTimeout(() => {
       requestEnv.delete(requestId);
-      console.log(`Cleaned up request #${requestId} context`);
+      //console.log(`Cleaned up request #${requestId} context`);
     }, 10000); // Keep the context for 10 seconds after response
   });
   
@@ -107,7 +107,11 @@ const setupRequestContext = (req, res, next) => {
 // Get appropriate pool based on the requestId
 // Update the getPool function in your database.js
 
-const getPool = (requestId = null) => {
+const getPool = (requestId) => {
+  // Validate that requestId is provided
+  if (!requestId) {
+    throw new Error('RequestId is required to select the correct database pool');
+  }
   // If we have a requestId, use it to determine the environment
   if (requestId) {
     const env = getEnvironment(requestId);
