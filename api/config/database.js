@@ -82,7 +82,7 @@ const setupRequestContext = (req, res, next) => {
   const origin = req.headers.origin || req.headers.referer || '';
   const host = req.headers.host || '';
   
-  console.log(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
+  // console.log(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
   
   // Check both origin and host to determine environment
   const isProdOrigin = isDomainProduction(origin);  
@@ -115,20 +115,20 @@ const getPool = (requestId) => {
   // If we have a requestId, use it to determine the environment
   if (requestId) {
     const env = getEnvironment(requestId);
-    console.log(`Getting pool for request #${requestId}, environment: ${env}`);
+    //console.log(`Getting pool for request #${requestId}, environment: ${env}`);
     
     if (env === 'prod') {
       return prodPool;
     }
   } else {
-    console.log('No requestId provided to getPool(), checking global.currentRequest');
+    //console.log('No requestId provided to getPool(), checking global.currentRequest');
     
     // As a fallback, check the global.currentRequest
     if (global.currentRequest) {
       const origin = global.currentRequest.headers.origin || global.currentRequest.headers.referer || '';
       
       if (origin && origin.includes('wehub.work') && !origin.includes('test.wehub')) {
-        console.log('Using PROD pool based on global.currentRequest origin');
+        //console.log('Using PROD pool based on global.currentRequest origin');
         return prodPool;
       }
     }
@@ -140,7 +140,7 @@ const getPool = (requestId) => {
       
       // Check if the URL in the stack trace suggests production
       if (stack.includes('wehub.work') && !stack.includes('test.wehub')) {
-        console.log('Using PROD pool based on stack trace');
+        //console.log('Using PROD pool based on stack trace');
         return prodPool;
       }
     } catch (e) {
@@ -149,7 +149,7 @@ const getPool = (requestId) => {
   }
   
   // Default to development pool
-  console.log('Defaulting to development pool');
+  //console.log('Defaulting to development pool');
   return pool;
 };
 
@@ -167,11 +167,11 @@ const getDevPool = () => {
 
 // Log connections for debugging
 pool.on('connect', () => {
-  console.log('DEV pool connection created');
+  // console.log('DEV pool connection created');
 });
 
 prodPool.on('connect', () => {
-  console.log('PROD pool connection created');
+  // console.log('PROD pool connection created');
 });
 
 pool.on('error', (err) => {

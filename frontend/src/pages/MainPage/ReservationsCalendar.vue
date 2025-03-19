@@ -316,6 +316,11 @@
         startDate = formatDate(newStartDate);
       }
 
+      if(!startDate && !endDate){
+        console.log('Dates undefined');
+        return
+      }
+
       await fetchReservedRooms(
         selectedHotelId.value,
         startDate,

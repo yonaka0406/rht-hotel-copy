@@ -725,7 +725,7 @@ const addReservationDetail = async (requestId, reservationDetail) => {
 };
 
 const addReservationAddon = async (requestId, reservationAddon) => {
-  const pool = getPool(requestId);
+  const pool = getPool(requestId);  
   const query = `
     INSERT INTO reservation_addons (
       hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by, updated_by
@@ -1331,7 +1331,7 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     // Update the reservation details with promise    
     const dtlUpdatePromises = detailsArray.map(async ({ id, operation_mode, plans_global_id, plans_hotel_id, hotel_id, date }) => {
       let newPrice = 0;
-      newPrice = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+      newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
       // console.log('newPrice calculated:',newPrice);
       
       const dtlUpdateQuery = `
@@ -1482,7 +1482,7 @@ const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
   const reservationDetail = await selectReservationDetail(requestId, id);  
   
   const addOnPromises = addons.map(addon =>
-      addReservationAddon({
+      addReservationAddon(requestId, {
           hotel_id: reservationDetail[0].hotel_id,
           reservation_detail_id: id,
           addons_global_id: addon.addons_global_id,
@@ -1598,24 +1598,24 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
     await client.query(setSessionQuery);
 
-    const detailsArray = await selectRoomReservationDetails(hotelId, roomId, reservationId);
+    const detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
 
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {
       const { id } = detail;
 
       // 1. Update Plan
-      await updateReservationDetailPlan(id, hotelId, plan.plans_global_id, plan.plans_hotel_id, plan.price, user_id);
+      await updateReservationDetailPlan(requestId, id, hotelId, plan.plans_global_id, plan.plans_hotel_id, plan.price, user_id);
 
       // 2. Update Addons
-      await updateReservationDetailAddon(id, addons, user_id);
+      await updateReservationDetailAddon(requestId, id, addons, user_id);
 
     });
 
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(reservationId, hotelId, roomId);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId);
 
     await client.query('COMMIT');
 
@@ -1644,7 +1644,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 
     // Update the reservation details with promise
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
-      const newPrice = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
       // console.log('newPrice calculated:', newPrice);
 
       const dtlUpdateQuery = `

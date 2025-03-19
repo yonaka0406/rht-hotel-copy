@@ -146,7 +146,9 @@ const listenForTableChanges = async () => {
     if (msg.channel === 'logs_reservation_changed') {
       //console.log('Notification received:', msg.channel); // Debugging
       ioHttp.emit('tableUpdate', 'Reservation update detected');
-      ioHttps.emit('tableUpdate', 'Reservation update detected');      
+      if (ioHttps) {
+        ioHttps.emit('tableUpdate', 'Reservation update detected');
+      }
     }
   });
 

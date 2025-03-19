@@ -43,6 +43,8 @@
                     :rowStyle="rowStyle"
                     :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]"
+                    sortField="display_date"
+                    sortOrder="1"
                 >
                     <Column expander header="+/-" style="width: 1%;"/> 
                     <Column field="display_date" header="日付" class="text-xs" />  

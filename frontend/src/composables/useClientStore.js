@@ -44,9 +44,6 @@ export function useClientStore() {
                     appendClients(data.clients);                
                     return data.totalPages;
                 }
-
-                // Log the updated clients
-                // console.log('From Client Store => Current clients:', clients.value);
             } else {
                 console.warn('No clients data received');
             }
@@ -135,7 +132,7 @@ export function useClientStore() {
           }
       
           const newClient = await response.json();
-          clients.value.push(newClient);
+          appendClients(newClient);          
           return newClient;
         } catch (error) {
           console.error('Failed to create client', error);

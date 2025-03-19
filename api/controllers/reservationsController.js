@@ -236,35 +236,35 @@ const createReservationHold = async (req, res) => {
     } else if(room_id !== null){      
       // Filter available rooms by room_id      
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));
-      console.log('room_id is not null. Available Rooms:',availableRoomsFiltered.value);
+      // console.log('room_id is not null. Available Rooms:',availableRoomsFiltered.value);
     }
 
     if (availableRoomsFiltered.value.length === 0) {
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
     }    
 
-    console.log('availableRoomsFiltered length:',availableRoomsFiltered.value.length);
+    // console.log('availableRoomsFiltered length:',availableRoomsFiltered.value.length);
 
     let remainingPeople = number_of_people;
 
     // Distribute people into rooms
     while (remainingPeople > 0) {      
-      console.log('remainingPeople:', remainingPeople);
+      // console.log('remainingPeople:', remainingPeople);
 
       let bestRoom = null;
 
       // Find the best-fit room
       for (const room of availableRoomsFiltered.value) {
-        console.log('Testing room',room.room_number,'with capacity:',room.capacity);
+        // console.log('Testing room',room.room_number,'with capacity:',room.capacity);
         if (room.capacity === remainingPeople) {
           bestRoom = room;
-          console.log('Perfect match found:', bestRoom);
+          // console.log('Perfect match found:', bestRoom);
           break;
         }
 
         if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
           bestRoom = room;
-          console.log('Smaller suitable room found:', bestRoom);
+          // console.log('Smaller suitable room found:', bestRoom);
         }
       }
 
@@ -274,11 +274,11 @@ const createReservationHold = async (req, res) => {
           (prev, curr) => (curr.capacity > prev.capacity ? curr : prev),
           availableRoomsFiltered.value[0]
         );
-        console.log('Largest available room selected:', bestRoom);
+        // console.log('Largest available room selected:', bestRoom);
       }
 
       if (!bestRoom) {
-        console.error('No room found for remaining people:', remainingPeople);
+        // console.error('No room found for remaining people:', remainingPeople);
         break; // Avoid infinite loop
       }
 
@@ -370,7 +370,7 @@ const createReservationDetails = async (req, res) => {
 
     if (ogmReservationAddons && ogmReservationAddons.length > 0) {
       const addOnPromises = ogmReservationAddons.map(addon =>
-          addReservationAddon({
+          addReservationAddon(req.requestId, {
               hotel_id: addon.hotel_id,
               reservation_detail_id: newReservationAddon.id,
               addons_global_id: addon.addons_global_id,
@@ -599,7 +599,7 @@ const editReservationDetail = async (req, res) => {
         // console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
         const addOnPromises = addons.map(addon =>
-            addReservationAddon({
+            addReservationAddon(req.requestId, {
                 hotel_id,
                 reservation_detail_id: updatedReservation.id,
                 addons_global_id: addon.addons_global_id,
