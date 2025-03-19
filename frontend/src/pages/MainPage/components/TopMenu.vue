@@ -4,9 +4,9 @@
         <template #start>
             <div class="flex items-center gap-4">                
                 <!-- Logo -->
-                <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />
+                <img src="@/assets/logo-simple.png" alt="Hotel PMS" class="h-8" />
                 <!-- Title -->
-                <span class="text-lg font-semibold text-gray-700">RHT Hotel PMS</span>
+                <span class="text-lg font-semibold text-gray-700">WeHub</span>
             </div>
         </template>
         <!-- Right Section -->

@@ -89,7 +89,7 @@
             <Menubar :model="items" class="w-full mb-2">
                 <template #start>
                          <!-- Logo -->
-                        <img src="@/assets/vue.svg" alt="Hotel PMS" class="h-8" />                                   
+                        <img src="@/assets/logo-favi.png" alt="WeHub" class="h-8" />                                   
                 </template>
                 <template #end>                    
                     <div class="flex items-center gap-4">     
