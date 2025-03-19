@@ -14,7 +14,7 @@ const login = async (req, res) => {
   }
 
   try {
-    const user = await findUserByEmail(email);    
+    const user = await findUserByEmail(req.requestId, email);    
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
@@ -39,7 +39,7 @@ const login = async (req, res) => {
 const forgot = async (req, res) => {
   const { email } = req.body;
   try {
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmail(req.requestId, email);
     if (!user) {
       return res.status(400).json({ error: 'ユーザー見つかりません。' });
     }
@@ -87,7 +87,7 @@ const reset = async (req, res) => {
     const email = decoded.email;
 
     // Find user by reset token    
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmail(req.requestId, email);
     
     if (!user) {
       return res.status(400).json({ error: 'Invalid or expired token' });
