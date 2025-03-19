@@ -2,7 +2,7 @@ const { getAllUsers, getUsersByID, createUser, updateUserInfo } = require('../mo
 
 const users = async (req, res) => {
   try {
-    const users = await getAllUsers();    
+    const users = await getAllUsers(req.requestId);    
     if (!users) {
       return res.status(401).json({ error: 'Users not found' });
     }    
@@ -16,7 +16,7 @@ const users = async (req, res) => {
 const getUser = async (req, res) => {
   const user_id = req.user.id;
   try {
-      const user = await getUsersByID(user_id);
+      const user = await getUsersByID(req.requestId, user_id);
       res.json(user);
   } catch (error) {
       console.error('Error getting users:', error);
@@ -34,7 +34,7 @@ const registerUser = async (req, res) => {
   }
 
   try {
-    const user = await createUser(email, name, password, role, created_by, updated_by);    
+    const user = await createUser(req.requestId, email, name, password, role, created_by, updated_by);    
     res.status(201).json({ 
       message: 'User registered successfully',
       user: {
@@ -62,7 +62,7 @@ const updateUser = async (req, res) => {
   }
 
   try {
-    const user = await updateUserInfo(id, name, status_id, role_id, updated_by);
+    const user = await updateUserInfo(req.requestId, id, name, status_id, role_id, updated_by);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

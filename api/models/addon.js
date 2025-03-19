@@ -1,8 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // Return all
-const getAllGlobalAddons = async () => {
+const getAllGlobalAddons = async (requestId) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_global ORDER BY visible DESC, name ASC';
 
     try {
@@ -14,7 +14,8 @@ const getAllGlobalAddons = async () => {
     }
 };
 
-const getAllHotelsAddons = async () => {
+const getAllHotelsAddons = async (requestId) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_hotel ORDER BY hotel_id ASC, visible DESC, name ASC';    
 
     try {
@@ -26,7 +27,8 @@ const getAllHotelsAddons = async () => {
     }
 };
 
-const getAddons = async (hotel_id) => {
+const getAddons = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
     let query;
     let values = [];
 
@@ -93,7 +95,8 @@ const getAddons = async (hotel_id) => {
 };
 
 
-const getAllHotelAddons = async (hotel_id) => {
+const getAllHotelAddons = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 ORDER BY visible DESC, name ASC';
     const values = [hotel_id];
 
@@ -107,7 +110,8 @@ const getAllHotelAddons = async (hotel_id) => {
 };
 
 // Return one
-const getGlobalAddonById = async (id) => {
+const getGlobalAddonById = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_global WHERE id = $1';
     const values = [id];
 
@@ -120,7 +124,8 @@ const getGlobalAddonById = async (id) => {
     }
 };
 
-const getHotelAddonById = async (hotel_id, id) => {
+const getHotelAddonById = async (requestId, hotel_id, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 AND id = $2';
     const values = [hotel_id, id];
 
@@ -134,7 +139,8 @@ const getHotelAddonById = async (hotel_id, id) => {
 };
 
 // Add entry
-const newGlobalAddon = async (name, description, price, created_by, updated_by) => {
+const newGlobalAddon = async (requestId, name, description, price, created_by, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO addons_global (name, description, price, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5)
@@ -151,7 +157,8 @@ const newGlobalAddon = async (name, description, price, created_by, updated_by) 
     }
 };
 
-const newHotelAddon = async (hotel_id, name, description, price, created_by, updated_by, addons_global_id) => {
+const newHotelAddon = async (requestId, hotel_id, name, description, price, created_by, updated_by, addons_global_id) => {
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO addons_hotel (hotel_id, addons_global_id, name, description, price, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -169,7 +176,8 @@ const newHotelAddon = async (hotel_id, name, description, price, created_by, upd
 };
 
 // Update entry
-const updateGlobalAddon = async (id, name, description, price, visible, updated_by) => {
+const updateGlobalAddon = async (requestId, id, name, description, price, visible, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE addons_global
         SET name = $1, description = $2, price = $3, visible = $4, updated_by = $5
@@ -187,7 +195,8 @@ const updateGlobalAddon = async (id, name, description, price, visible, updated_
     }
 };
 
-const updateHotelAddon = async (id, hotel_id, addons_global_id, name, description, price, visible, updated_by) => {
+const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name, description, price, visible, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE addons_hotel
         SET addons_global_id = $1, name = $2, description = $3, price = $4, visible = $5, updated_by = $6 

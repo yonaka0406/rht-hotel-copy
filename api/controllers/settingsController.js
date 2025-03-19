@@ -2,7 +2,7 @@ const { selectPaymentTypes, insertPaymentType, updatePaymentTypeVisibility, upda
 
 const getPaymentTypes = async (req, res) => {
   try {
-    const data = await selectPaymentTypes();    
+    const data = await selectPaymentTypes(req.requestId);    
     if (!data) {
       return res.status(401).json({ error: 'Data not found' });
     }    
@@ -18,7 +18,7 @@ const addPaymentType = async (req, res) => {
   const user_id = req.user.id;  
   
   try {
-    const user = await insertPaymentType(newData, user_id);
+    const user = await insertPaymentType(req.requestId, newData, user_id);
     res.status(201).json({ 
       message: 'Payment type registered successfully',      
      });
@@ -34,7 +34,7 @@ const changePaymentTypeVisibility = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updatePaymentTypeVisibility(id, visible, user_id);
+    const data = await updatePaymentTypeVisibility(req.requestId, id, visible, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        
@@ -51,7 +51,7 @@ const changePaymentTypeDescription = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const data = await updatePaymentTypeDescription(id, description, user_id);
+    const data = await updatePaymentTypeDescription(req.requestId, id, description, user_id);
     if (!data) {
       return res.status(404).json({ error: 'Data not found' });
     }        

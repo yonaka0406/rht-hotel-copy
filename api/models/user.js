@@ -3,7 +3,7 @@ const { getPool } = require('../config/database');
 const bcrypt = require('bcryptjs');
 
 // Return all users
-const getAllUsers = async (requestId = null) => {
+const getAllUsers = async (requestId) => {
   const pool = getPool(requestId);
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
 
@@ -16,7 +16,7 @@ const getAllUsers = async (requestId = null) => {
   }
 };
 
-const getUsersByID = async (requestId = null, id) => {
+const getUsersByID = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = `
       SELECT 
@@ -49,7 +49,7 @@ const getUsersByID = async (requestId = null, id) => {
 };
 
 // Find a user by email
-const findUserByEmail = async (requestId = null, email) => {
+const findUserByEmail = async (requestId, email) => {
   const pool = getPool(requestId);
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.email = $1 AND users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
   const values = [email];
@@ -64,7 +64,7 @@ const findUserByEmail = async (requestId = null, email) => {
 };
 
 // Update a user's password hash
-const updatePasswordHash = async (requestId = null, email, passwordHash, updated_by) => {
+const updatePasswordHash = async (requestId, email, passwordHash, updated_by) => {
   const pool = getPool(requestId);
   const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
   const values = [passwordHash, updated_by, email];
@@ -79,7 +79,8 @@ const updatePasswordHash = async (requestId = null, email, passwordHash, updated
 };
 
 // Update a user's status or role
-const updateUserInfo = async (user_id, name, status_id, role_id, updated_by) => {
+const updateUserInfo = async (requestId, user_id, name, status_id, role_id, updated_by) => {
+  const pool = getPool(requestId);
   const query = 'UPDATE users SET name = $1, status_id = $2, role_id = $3, updated_by = $4 WHERE id = $5 RETURNING *';
   const values = [name, status_id, role_id, updated_by, user_id];  
 
@@ -93,7 +94,8 @@ const updateUserInfo = async (user_id, name, status_id, role_id, updated_by) => 
 };
 
 // Create a user 
-const createUser = async (email, name, password, role_id, created_by, updated_by) => {  
+const createUser = async (requestId, email, name, password, role_id, created_by, updated_by) => {  
+  const pool = getPool(requestId);
   const hashedPassword = await bcrypt.hash(password, 10);
   const query = `
     INSERT INTO users (email, name, password_hash, role_id, created_by, updated_by)

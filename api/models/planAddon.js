@@ -1,9 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // Return all plan_addons
-const getAllPlanAddons = async (plans_global_id, plans_hotel_id, hotel_id) => {
-
+const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
+    const pool = getPool(requestId);
     const query = `        
         SELECT pa.*, COALESCE(ag.name, ah.name) AS name
         FROM 
@@ -34,7 +33,8 @@ const getAllPlanAddons = async (plans_global_id, plans_hotel_id, hotel_id) => {
 };
 
 // Get plan_addon by ID
-const getPlanAddonById = async (id) => {
+const getPlanAddonById = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plan_addons WHERE id = $1';
 
     try {
@@ -50,7 +50,8 @@ const getPlanAddonById = async (id) => {
 };
 
 // Create a new plan_addon
-const createPlanAddon = async (planAddon) => {
+const createPlanAddon = async (requestId, planAddon) => {
+    const pool = getPool(requestId);
     let hotel_id = null;
     let plans_global_id = null;
     let plans_hotel_id = null;
@@ -125,7 +126,8 @@ const createPlanAddon = async (planAddon) => {
 };
 
 // Update an existing plan_addon
-const updatePlanAddon = async (id, planAddon) => {
+const updatePlanAddon = async (requestId, id, planAddon) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE plan_addons
         SET 
@@ -168,7 +170,8 @@ const updatePlanAddon = async (id, planAddon) => {
 };
 
 // Delete a plan_addon by ID
-const deletePlanAddon = async (id) => {
+const deletePlanAddon = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'DELETE FROM plan_addons WHERE id = $1 RETURNING *';
 
     try {

@@ -1,8 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // Return all users
-const selectPaymentTypes = async () => {
+const selectPaymentTypes = async (requestId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT * FROM payment_types
     ORDER BY transaction, id ASC
@@ -17,7 +17,8 @@ const selectPaymentTypes = async () => {
   }
 };
 
-const insertPaymentType = async (newData, userId) => {
+const insertPaymentType = async (requestId, newData, userId) => {
+  const pool = getPool(requestId);
   const query = `
       INSERT INTO payment_types (hotel_id, name, description, transaction, created_by, updated_by)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -34,7 +35,8 @@ const insertPaymentType = async (newData, userId) => {
   }
 }
 
-const updatePaymentTypeVisibility = async (id, visible, userId) => {
+const updatePaymentTypeVisibility = async (requestId, id, visible, userId) => {
+  const pool = getPool(requestId);
   const query = `
       UPDATE payment_types SET 
         visible = $1
@@ -54,7 +56,8 @@ const updatePaymentTypeVisibility = async (id, visible, userId) => {
   }
 };
 
-const updatePaymentTypeDescription = async (id, description, userId) => {
+const updatePaymentTypeDescription = async (requestId, id, description, userId) => {
+  const pool = getPool(requestId);
   const query = `
       UPDATE payment_types SET 
         description = $1

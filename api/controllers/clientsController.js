@@ -8,8 +8,8 @@ const getClients = async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    const clients = await getAllClients(limit, offset);
-    const totalClients = await getTotalClientsCount();
+    const clients = await getAllClients(req.requestId, limit, offset);
+    const totalClients = await getTotalClientsCount(req.requestId);
     res.status(200).json({
       clients,
       total: totalClients,
@@ -26,7 +26,7 @@ const getClient = async (req, res) => {
   const { id } = req.params;
     
   try{
-    const client = await selectClient(id);
+    const client = await selectClient(req.requestId, id);
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
@@ -40,7 +40,7 @@ const getConvertedName = async (req, res) => {
     return res.status(400).json({ error: 'getConvertedName: name is required' });
   }
   try {
-    const convertedName = await processNameString(name);
+    const convertedName = await processNameString(req.requestId, name);
     res.json(convertedName);
   } catch (error) {
     console.error('Error getting clients:', error);
@@ -52,7 +52,7 @@ const getClientReservations = async (req, res) => {
   const { id } = req.params;
     
   try{
-    const client = await selectClientReservations(id);
+    const client = await selectClientReservations(req.requestId, id);
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
@@ -77,7 +77,7 @@ const createClientBasic = async (req, res) => {
   };
 
   try {
-    const newClient = await addClientByName(client); // Call the model function with the client object
+    const newClient = await addClientByName(req.requestId, client); // Call the model function with the client object
     res.json(newClient); // Respond with the created client
   } catch (err) {
     console.error('Error creating client:', err);
@@ -90,7 +90,7 @@ const createClient = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const newClient = await addNewClient(user_id, clientFields);
+    const newClient = await addNewClient(req.requestId, user_id, clientFields);
     res.json(newClient); 
   } catch (err) {
     console.error('Error creating client:', err);
@@ -105,7 +105,7 @@ const updateClient = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await editClient(clientId, updatedFields, user_id);
+    const updatedClient = await editClient(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -119,7 +119,7 @@ const updateClientFull = async (req, res) => {
   const user_id = req.user.id;
 
   try {    
-    const updatedClient = await editClientFull(clientId, updatedFields, user_id);
+    const updatedClient = await editClientFull(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -134,9 +134,9 @@ const mergeClients = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await editClientFull(newClientId, updatedFields, user_id);
-    await updateClientInReservation(oldClientId, newClientId);
-    await deleteClient(oldClientId, user_id);
+    await editClientFull(req.requestId, newClientId, updatedFields, user_id);
+    await updateClientInReservation(req.requestId, oldClientId, newClientId);
+    await deleteClient(req.requestId, oldClientId, user_id);
     res.json({message: 'Success'});
   } catch (err) {
   console.error('Error updating client:', err);

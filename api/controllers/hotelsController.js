@@ -1,9 +1,9 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
+    const pool = getPool(req.requestId);
     const client = await pool.connect();
 
     try {
@@ -71,6 +71,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     }
   };
   const roomTypeCreate = async (req, res) => {
+    const pool = getPool(req.requestId);
     const client = await pool.connect();
     const { name, description, hotel_id } = req.body;
     const created_by = req.user.id;
@@ -102,6 +103,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     }
   };
   const roomCreate = async (req, res) => {
+    const pool = getPool(req.requestId);
     const client = await pool.connect();  
     const { floor, room_number, room_type, room_type_id, capacity, smoking, for_sale, hotel_id } = req.body;    
     const created_by = req.user.id;
@@ -155,7 +157,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
 // GET
   const getHotels = async (req, res) => {
     try {
-      const hotels = await getAllHotels();
+      const hotels = await getAllHotels(req.requestId);
       res.json(hotels);
     } catch (error) {
       console.error('Error getting hotels:', error);
@@ -166,7 +168,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const { id } = req.params;
 
     try {
-      const hotels = await getAllRoomsByHotelId(id);
+      const hotels = await getAllRoomsByHotelId(req.requestId, id);
       res.json(hotels);
     } catch (error) {
       console.error('Error getting hotel rooms:', error);
@@ -177,7 +179,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const { id } = req.params;
 
     try {
-      const blocked = await selectBlockedRooms(id);
+      const blocked = await selectBlockedRooms(req.requestId, id);
       res.json(blocked);
     } catch (error) {
       console.error('Error getting hotel blocked rooms:', error);
@@ -193,7 +195,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const updated_by = req.user.id;
 
     try {
-      const updatedHotel = await updateHotel(id, formal_name, name, email, phone_number, latitude, longitude, updated_by);
+      const updatedHotel = await updateHotel(req.requestId, id, formal_name, name, email, phone_number, latitude, longitude, updated_by);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }
@@ -209,7 +211,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const updated_by = req.user.id;
 
     try {
-      const updatedRoomType = await updateRoomType(id, name, description, updated_by);
+      const updatedRoomType = await updateRoomType(req.requestId, id, name, description, updated_by);
       if (!updatedRoomType) {
         return res.status(404).json({ message: 'Room type not found' });
       }
@@ -225,7 +227,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const updated_by = req.user.id;
 
     try {
-      const updatedRoom = await updateRoom(id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by);
+      const updatedRoom = await updateRoom(req.requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by);
       if (!updatedRoom) {
         return res.status(404).json({ message: 'Room not found' });
       }
@@ -241,7 +243,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const updated_by = req.user.id;
 
     try {
-      const updatedRoom = await updateHotelCalendar(hotelId, roomIds, startDate, endDate, comment, updated_by);
+      const updatedRoom = await updateHotelCalendar(req.requestId, hotelId, roomIds, startDate, endDate, comment, updated_by);
       if (!updatedRoom.success) { 
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }
@@ -256,7 +258,7 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     const user_id = req.user.id;
 
     try {
-      const unblock = await deleteBlockedRooms(id, user_id);
+      const unblock = await deleteBlockedRooms(req.requestId, id, user_id);
       if (!unblock) {
         return res.status(404).json({ success: false, message: 'Reservation not found' });
       }

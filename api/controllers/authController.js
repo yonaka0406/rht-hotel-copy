@@ -48,7 +48,7 @@ const forgot = async (req, res) => {
     const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
         
     // Send the email with the reset link
-    await sendResetEmail(user.email, resetToken);
+    await sendResetEmail(req.requestId, user.email, resetToken);
 
     // Respond to the client
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
@@ -66,7 +66,7 @@ const forgotAdmin = async (req, res) => {
     // console.log('email:', email);    
     // console.log('resetToken:', resetToken);  
     // Send the email with the reset link
-    await sendAdminResetEmail(email, resetToken);
+    await sendAdminResetEmail(req.requestId, email, resetToken);
 
     // Respond to the client
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
@@ -99,7 +99,7 @@ const reset = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Update user password and reset the token
-    await updatePasswordHash(email, hashedPassword, updated_by);    
+    await updatePasswordHash(req.requestId, email, hashedPassword, updated_by);    
     
     res.json({ message: 'パスワードが正常にリセットされました。' });
   } catch (error) {

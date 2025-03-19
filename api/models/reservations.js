@@ -1,9 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 const format = require('pg-format');
-
 const { getPriceForReservation } = require('../models/planRate');
 
+// Helper
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -13,7 +12,8 @@ const formatDate = (date) => {
 
 // Function to Select
 
-const selectAvailableRooms = async (hotelId, checkIn, checkOut) => {
+const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut) => {
+  const pool = getPool(requestId);
   const query = `
     WITH occupied_rooms AS (
       SELECT
@@ -56,7 +56,8 @@ const selectAvailableRooms = async (hotelId, checkIn, checkOut) => {
   }
 };
 
-const selectReservedRooms = async (hotel_id, start_date, end_date) => {
+const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
       reservation_details.id
@@ -120,7 +121,8 @@ const selectReservedRooms = async (hotel_id, start_date, end_date) => {
   }
 };
 
-const selectReservation = async (id) => {
+const selectReservation = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
       reservation_details.id
@@ -264,7 +266,8 @@ const selectReservation = async (id) => {
   }
 };
 
-const selectReservationDetail = async (id) => {
+const selectReservationDetail = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
       reservation_details.id,
@@ -369,7 +372,8 @@ const selectReservationDetail = async (id) => {
   }
 };
 
-const selectRoomReservationDetails = async (hotelId, roomId, reservationId) => {
+const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_details.id,
@@ -394,7 +398,8 @@ const selectRoomReservationDetails = async (hotelId, roomId, reservationId) => {
   }
 };
 
-const selectReservationAddons = async (id) => {
+const selectReservationAddons = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT * FROM reservation_addons
     WHERE reservation_detail_id = $1
@@ -411,7 +416,8 @@ const selectReservationAddons = async (id) => {
   }
 };
 
-const selectMyHoldReservations = async (user_id) => {
+const selectMyHoldReservations = async (requestId, user_id) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT      
       reservation_details.hotel_id
@@ -465,7 +471,8 @@ const selectMyHoldReservations = async (user_id) => {
   }
 };
 
-const selectReservationsToday = async (hotelId, date) => {
+const selectReservationsToday = async (requestId, hotelId, date) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT DISTINCT
       reservations.hotel_id
@@ -552,7 +559,8 @@ const selectReservationsToday = async (hotelId, date) => {
   }
 }
 
-const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut) => {
+const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn, checkOut) => {
+  const pool = getPool(requestId);
   try {
     const maxDateQuery = `
       SELECT TO_CHAR(MAX(date) + INTERVAL '1 day', 'YYYY-MM-DD') AS max_date
@@ -582,7 +590,8 @@ const selectAvailableDatesForChange = async (hotelId, roomId, checkIn, checkOut)
   }
 };
 
-const selectReservationClientIds = async(hotelId, reservationId) => {
+const selectReservationClientIds = async(requestId, hotelId, reservationId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT DISTINCT
       id, name, name_kana, name_kanji, COALESCE(name_kanji, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
@@ -618,7 +627,8 @@ const selectReservationClientIds = async(hotelId, reservationId) => {
   }
 };
 
-const selectReservationPayments = async(hotelId, reservationId) => {
+const selectReservationPayments = async(requestId, hotelId, reservationId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_payments.*
@@ -654,8 +664,8 @@ const selectReservationPayments = async(hotelId, reservationId) => {
 
 // Function to Add
 
-const addReservationHold = async (reservation) => {
-
+const addReservationHold = async (requestId, reservation) => {
+  const pool = getPool(requestId);
   const query = `
     INSERT INTO reservations (
       hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
@@ -682,7 +692,8 @@ const addReservationHold = async (reservation) => {
   }
 }
 
-const addReservationDetail = async (reservationDetail) => {
+const addReservationDetail = async (requestId, reservationDetail) => {
+  const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_details (
       hotel_id, reservation_id, payer_client_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by
@@ -713,8 +724,8 @@ const addReservationDetail = async (reservationDetail) => {
   }
 };
 
-const addReservationAddon = async (reservationAddon) => {
-  
+const addReservationAddon = async (requestId, reservationAddon) => {
+  const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_addons (
       hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by, updated_by
@@ -742,7 +753,8 @@ const addReservationAddon = async (reservationAddon) => {
   }
 };
 
-const addReservationClient = async (reservationClient) => {
+const addReservationClient = async (requestId, reservationClient) => {
+  const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_clients (
       hotel_id, reservation_details_id, client_id, created_by, updated_by
@@ -767,7 +779,8 @@ const addReservationClient = async (reservationClient) => {
   }
 };
 
-const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userId) => {
+const addRoomToReservation = async (requestId, reservationId, numberOfPeople, roomId, userId) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -809,7 +822,8 @@ const addRoomToReservation = async (reservationId, numberOfPeople, roomId, userI
   }
 };
 
-const insertReservationPayment = async (hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
+const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
+  const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_payments (
       hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
@@ -829,8 +843,8 @@ const insertReservationPayment = async (hotelId, reservationId, date, roomId, cl
 };
 
 // Update entry
-const updateReservationDetail = async (reservationData) => {
-  
+const updateReservationDetail = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
   const { id, hotel_id, room_id, plans_global_id, plans_hotel_id, number_of_people, price, updated_by } = reservationData;
 
   const query = `
@@ -867,7 +881,8 @@ const updateReservationDetail = async (reservationData) => {
   }
 };
 
-const updateReservationStatus = async (reservationData) => {
+const updateReservationStatus = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
   const { id, hotel_id, status, updated_by } = reservationData;
 
   try {
@@ -954,7 +969,8 @@ const updateReservationStatus = async (reservationData) => {
   }
 };
 
-const updateReservationComment = async (reservationData) => {
+const updateReservationComment = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
   const { id, hotelId, comment, updated_by } = reservationData;
   
   try {
@@ -982,7 +998,8 @@ const updateReservationComment = async (reservationData) => {
   }
 };
 
-const updateReservationType = async (reservationData) => {
+const updateReservationType = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
   const { id, hotel_id, type, updated_by } = reservationData;
 
   try {
@@ -1011,8 +1028,8 @@ const updateReservationType = async (reservationData) => {
   }
 }
 
-const updateReservationResponsible = async (id, updatedFields, user_id) => {  
-
+const updateReservationResponsible = async (requestId, id, updatedFields, user_id) => {  
+  const pool = getPool(requestId);
   const query = `
       UPDATE reservations
       SET
@@ -1037,7 +1054,8 @@ const updateReservationResponsible = async (id, updatedFields, user_id) => {
   }
 };
 
-const updateRoomByCalendar = async (roomData) => {
+const updateRoomByCalendar = async (requestId, roomData) => {
+  const pool = getPool(requestId);
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
 
   // console.log('roomData',roomData);
@@ -1241,8 +1259,8 @@ const updateRoomByCalendar = async (roomData) => {
   }  
 };
 
-const updateCalendarFreeChange = async (roomData, user_id) => {
-
+const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
@@ -1281,8 +1299,8 @@ const updateCalendarFreeChange = async (roomData, user_id) => {
   
 };
 
-const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
-
+const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated_by) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
@@ -1377,8 +1395,8 @@ const updateReservationRoomGuestNumber = async (detailsArray, updated_by) => {
   }
 };
 
-const updateReservationGuest = async (oldValue, newValue) => {  
-  
+const updateReservationGuest = async (requestId, oldValue, newValue) => {  
+  const pool = getPool(requestId);
   const query = `
     UPDATE reservation_clients
     SET reservation_details_id = $1    
@@ -1399,8 +1417,8 @@ const updateReservationGuest = async (oldValue, newValue) => {
   } 
 };
 
-const updateClientInReservation = async (oldValue, newValue) => {
-  
+const updateClientInReservation = async (requestId, oldValue, newValue) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
@@ -1437,7 +1455,8 @@ const updateClientInReservation = async (oldValue, newValue) => {
   
 };
 
-const updateReservationDetailPlan = async (id, hotel_id, gid, hid, price, user_id) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, gid, hid, price, user_id) => {
+  const pool = getPool(requestId);
   const plans_global_id = gid === 0 ? null : gid;
   const plans_hotel_id = hid === 0 ? null : hid;
   const query = `
@@ -1457,10 +1476,10 @@ const updateReservationDetailPlan = async (id, hotel_id, gid, hid, price, user_i
   } 
 };
 
-const updateReservationDetailAddon = async (id, addons, user_id) => {
+const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
   
-  await deleteReservationAddonsByDetailId(id, user_id);
-  const reservationDetail = await selectReservationDetail(id);  
+  await deleteReservationAddonsByDetailId(requestId, id, user_id);
+  const reservationDetail = await selectReservationDetail(requestId, id);  
   
   const addOnPromises = addons.map(addon =>
       addReservationAddon({
@@ -1478,7 +1497,8 @@ const updateReservationDetailAddon = async (id, addons, user_id) => {
   
 };
 
-const updateReservationDetailRoom = async (id, room_id, user_id) => {  
+const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {  
+  const pool = getPool(requestId);
   const query = `
     UPDATE reservation_details
     SET room_id = $1      
@@ -1494,7 +1514,8 @@ const updateReservationDetailRoom = async (id, room_id, user_id) => {
   } 
 };
 
-const updateReservationRoom = async (reservation_id, room_id_old, room_id_new, user_id) => {  
+const updateReservationRoom = async (requestId, reservation_id, room_id_old, room_id_new, user_id) => {  
+  const pool = getPool(requestId);
   const query = `
     UPDATE reservation_details
     SET room_id = $1
@@ -1512,9 +1533,9 @@ const updateReservationRoom = async (reservation_id, room_id_old, room_id_new, u
   } 
 };
 
-const updateReservationRoomWithCreate = async (reservation_id, room_id_old, room_id_new, numberOfPeople, user_id) => {  
+const updateReservationRoomWithCreate = async (requestId, reservation_id, room_id_old, room_id_new, numberOfPeople, user_id) => {  
+  const pool = getPool(requestId);
   const client = await pool.connect();
-
   try {
     await client.query("BEGIN");
 
@@ -1566,7 +1587,8 @@ const updateReservationRoomWithCreate = async (reservation_id, room_id_old, room
   } 
 };
 
-const updateReservationRoomPlan = async (reservationId, hotelId, roomId, plan, addons, user_id) => {
+const updateReservationRoomPlan = async (requestId, reservationId, hotelId, roomId, plan, addons, user_id) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
@@ -1607,7 +1629,8 @@ const updateReservationRoomPlan = async (reservationId, hotelId, roomId, plan, a
   }
 };
 
-const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
   try {
     // Fetch the reservation details based on reservation_id, hotel_id, and room_id
@@ -1646,7 +1669,8 @@ const recalculatePlanPrice = async (reservation_id, hotel_id, room_id) => {
 };
 
 // Delete
-const deleteHoldReservationById = async (reservation_id, updated_by) => {
+const deleteHoldReservationById = async (requestId, reservation_id, updated_by) => {
+  const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
@@ -1665,7 +1689,8 @@ const deleteHoldReservationById = async (reservation_id, updated_by) => {
   }
 };
 
-const deleteReservationAddonsByDetailId = async (reservation_detail_id, updated_by) => {
+const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
+  const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
@@ -1684,7 +1709,8 @@ const deleteReservationAddonsByDetailId = async (reservation_detail_id, updated_
   }   
 };
 
-const deleteReservationClientsByDetailId = async (reservation_detail_id, updated_by) => {
+const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
+  const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
@@ -1703,8 +1729,8 @@ const deleteReservationClientsByDetailId = async (reservation_detail_id, updated
   }   
 };
 
-const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeople, updated_by) => {
-
+const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, numberOfPeople, updated_by) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
@@ -1755,7 +1781,8 @@ const deleteReservationRoom = async (hotelId, roomId, reservationId, numberOfPeo
   }
 };
 
-const deleteReservationPayment = async (id, userId) => {
+const deleteReservationPayment = async (requestId, id, userId) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {

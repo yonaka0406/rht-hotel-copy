@@ -7,7 +7,7 @@ const getPlanAddons = async (req, res) => {
     const hotel_id = req.params.hotel_id;
 
     try {
-        const addons = await getAllPlanAddons(plans_global_id, plans_hotel_id, hotel_id);
+        const addons = await getAllPlanAddons(req.requestId, plans_global_id, plans_hotel_id, hotel_id);
         res.json(addons);
     } catch (error) {
         console.error('Error getting plan addons:', error);
@@ -20,7 +20,7 @@ const getPlanAddon = async (req, res) => {
     const addonId = parseInt(req.params.id);
 
     try {
-        const addon = await getPlanAddonById(addonId);
+        const addon = await getPlanAddonById(req.requestId, addonId);
         res.json(addon);
     } catch (error) {
         console.error('Error getting plan addon:', error);
@@ -43,7 +43,7 @@ const createNewPlanAddon = async (req, res) => {
     };
 
     try {
-        const newAddon = await createPlanAddon(planAddon);
+        const newAddon = await createPlanAddon(req.requestId, planAddon);
         res.status(201).json(newAddon);
     } catch (error) {
         console.error('Error creating plan addon:', error);
@@ -67,7 +67,7 @@ const updateExistingPlanAddon = async (req, res) => {
     };
 
     try {
-        const updatedAddon = await updatePlanAddon(addonId, planAddon);
+        const updatedAddon = await updatePlanAddon(req.requestId, addonId, planAddon);
         res.json(updatedAddon);
     } catch (error) {
         console.error('Error updating plan addon:', error);
@@ -80,7 +80,7 @@ const deleteExistingPlanAddon = async (req, res) => {
     const addonId = parseInt(req.params.id);
 
     try {
-        const deletedAddon = await deletePlanAddon(addonId);
+        const deletedAddon = await deletePlanAddon(req.requestId, addonId);
         res.json(deletedAddon);
     } catch (error) {
         console.error('Error deleting plan addon:', error);

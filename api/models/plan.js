@@ -1,8 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // Return all
-const getAllGlobalPlans = async () => {
+const getAllGlobalPlans = async (requestId) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_global ORDER BY name ASC';
 
     try {
@@ -14,7 +14,8 @@ const getAllGlobalPlans = async () => {
     }
 };
 
-const getAllHotelsPlans = async () => {
+const getAllHotelsPlans = async (requestId) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_hotel ORDER BY hotel_id ASC, name ASC';    
 
     try {
@@ -26,7 +27,8 @@ const getAllHotelsPlans = async () => {
     }
 };
 
-const getAllHotelPlans = async (hotel_id) => {
+const getAllHotelPlans = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 ORDER BY name ASC';
     const values = [hotel_id];
 
@@ -39,7 +41,8 @@ const getAllHotelPlans = async (hotel_id) => {
     }
 };
 
-const getAllPlansByHotel = async (hotel_id) => {
+const getAllPlansByHotel = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
     const query = `
         SELECT
             CASE WHEN ph.plans_global_id = pg.id THEN NULL ELSE pg.id END as plans_global_id
@@ -67,7 +70,8 @@ const getAllPlansByHotel = async (hotel_id) => {
 }
 
 // Return one
-const getGlobalPlanById = async (id) => {
+const getGlobalPlanById = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_global WHERE id = $1';
     const values = [id];
 
@@ -80,7 +84,8 @@ const getGlobalPlanById = async (id) => {
     }
 };
 
-const getHotelPlanById = async (hotel_id, id) => {
+const getHotelPlanById = async (requestId, hotel_id, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_hotel WHERE hotel_id = $1 AND id = $2';
     const values = [hotel_id, id];
 
@@ -94,7 +99,8 @@ const getHotelPlanById = async (hotel_id, id) => {
 };
 
 // Add entry
-const newGlobalPlan = async (name, description, plan_type, color, created_by, updated_by) => {
+const newGlobalPlan = async (requestId, name, description, plan_type, color, created_by, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO plans_global (name, description, plan_type, color, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -111,7 +117,8 @@ const newGlobalPlan = async (name, description, plan_type, color, created_by, up
     }
 };
 
-const newHotelPlan = async (hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by) => {
+const newHotelPlan = async (requestId, hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO plans_hotel (hotel_id, plans_global_id, name, description, plan_type, color, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -129,7 +136,8 @@ const newHotelPlan = async (hotel_id, plans_global_id, name, description, plan_t
 };
 
 // Update entry
-const updateGlobalPlan = async (id, name, description, plan_type, color, updated_by) => {
+const updateGlobalPlan = async (requestId, id, name, description, plan_type, color, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE plans_global
         SET name = $1, description = $2, plan_type = $3, color = $4, updated_by = $5
@@ -147,7 +155,8 @@ const updateGlobalPlan = async (id, name, description, plan_type, color, updated
     }
 };
 
-const updateHotelPlan = async (id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by) => {
+const updateHotelPlan = async (requestId, id, hotel_id, plans_global_id, name, description, plan_type, color, updated_by) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE plans_hotel
         SET plans_global_id = $1, name = $2, description = $3, plan_type = $4, color = $5, updated_by = $6

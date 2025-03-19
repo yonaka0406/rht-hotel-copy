@@ -8,7 +8,7 @@ const getPlanRates = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     
     try {
-        const rates = await getAllPlansRates(plans_global_id, plans_hotel_id, hotel_id);
+        const rates = await getAllPlansRates(req.requestId, plans_global_id, plans_hotel_id, hotel_id);
         
         if (rates.length === 0) {
             // console.log('No rates found for planId:');
@@ -25,7 +25,7 @@ const getPlanRate = async (req, res) => {
     const rateId = parseInt(req.params.id);
 
     try {
-        const rate = await getPlansRateById(rateId);
+        const rate = await getPlansRateById(req.requestId, rateId);
         res.json(rate);
     } catch (error) {
         console.error('Error getting plan rate:', error);
@@ -40,7 +40,7 @@ const getPlanRateByDay = async (req, res) => {
     const date = req.params.date;
 
     try {
-        const rates = await getPriceForReservation(plans_global_id, plans_hotel_id, hotel_id, date);                
+        const rates = await getPriceForReservation(req.requestId, plans_global_id, plans_hotel_id, hotel_id, date);                
         res.json(rates);
     } catch (error) {
         console.error('Error getting plan rates:', error);
@@ -65,7 +65,7 @@ const createNewPlanRate = async (req, res) => {
     };
 
     try {
-        const newRate = await createPlansRate(planRate);
+        const newRate = await createPlansRate(req.requestId, planRate);
         res.status(201).json(newRate);
     } catch (error) {
         console.error('Error creating plan rate:', error);
@@ -90,7 +90,7 @@ const updateExistingPlanRate = async (req, res) => {
     };
 
     try {
-        const updatedRate = await updatePlansRate(rateId, planRate);
+        const updatedRate = await updatePlansRate(req.requestId, rateId, planRate);
         res.json(updatedRate);
     } catch (error) {
         console.error(`Error updating plan rate with ID ${rateId}:`, error);
@@ -103,7 +103,7 @@ const deletePlanRate = async (req, res) => {
     const rateId = parseInt(req.params.id);
 
     try {
-        const deletedRate = await deletePlansRate(rateId);
+        const deletedRate = await deletePlansRate(req.requestId, rateId);
         res.json(deletedRate);
     } catch (error) {
         console.error(`Error deleting plan rate with ID ${rateId}:`, error);

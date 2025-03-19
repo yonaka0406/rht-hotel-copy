@@ -1,7 +1,7 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 const format = require('pg-format');
 
+// Helper
 const transliterateKanaToRomaji = async (kanaString) => {  
   const { toRomaji } = await import('../utils/japaneseUtils.mjs');
 
@@ -20,7 +20,6 @@ const transliterateKanaToRomaji = async (kanaString) => {
       .join(' ');
   return romaji
 };
-
 const processNameString = async (nameString) => {
   if (!nameString) {
     throw new Error('processNameString: nameString is required');
@@ -85,7 +84,8 @@ const processNameString = async (nameString) => {
 }
 
 // Return all clients
-const getAllClients = async (limit, offset) => {
+const getAllClients = async (requestId, limit, offset) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       clients.*
@@ -105,7 +105,8 @@ const getAllClients = async (limit, offset) => {
   }
 };
 
-const getTotalClientsCount = async () => {
+const getTotalClientsCount = async (requestId) => {
+  const pool = getPool(requestId);
   const query = 'SELECT COUNT(*) FROM clients';
 
   try {
@@ -117,7 +118,8 @@ const getTotalClientsCount = async () => {
   }
 };
 
-const selectClient = async (clientId) => {
+const selectClient = async (requestId, clientId) => {
+  const pool = getPool(requestId);
   const query = 'SELECT * FROM clients WHERE id = $1';
   const values = [clientId];
 
@@ -132,7 +134,8 @@ const selectClient = async (clientId) => {
 };
 
 // Function to add a new client with minimal info
-const addClientByName = async (client) => {
+const addClientByName = async (requestId, client) => {
+  const pool = getPool(requestId);
   const { name, nameKana, nameKanji } = await processNameString(client.name);
 
   const query = `
@@ -163,7 +166,8 @@ const addClientByName = async (client) => {
   }
 };
 
-const addNewClient = async (user_id, client) => {  
+const addNewClient = async (requestId, user_id, client) => {  
+  const pool = getPool(requestId);
   if(!client.name && !client.name_kana && !client.name_kanji){
     throw new Error('Client name is required');
   }
@@ -202,7 +206,8 @@ const addNewClient = async (user_id, client) => {
   }
 };
 
-const editClient = async (clientId, updatedFields, user_id) => {
+const editClient = async (requestId, clientId, updatedFields, user_id) => {
+  const pool = getPool(requestId);
   const query = `
     UPDATE clients SET
       name = $1,
@@ -238,7 +243,8 @@ const editClient = async (clientId, updatedFields, user_id) => {
   }
 };
 
-const editClientFull = async (clientId, updatedFields, user_id) => {
+const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
+  const pool = getPool(requestId);
   const query = `
     UPDATE clients SET
       name = $1,
@@ -279,7 +285,8 @@ const editClientFull = async (clientId, updatedFields, user_id) => {
   }
 };
 
-const selectClientReservations = async (clientId) => {
+const selectClientReservations = async (requestId, clientId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT	
       COUNT(distinct reservation_details.hotel_id) AS hotel_count
@@ -315,7 +322,8 @@ const selectClientReservations = async (clientId) => {
   }
 };
 
-const deleteClient = async (clientId, updatedBy) => {
+const deleteClient = async (requestId, clientId, updatedBy) => {
+  const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;

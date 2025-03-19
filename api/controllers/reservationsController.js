@@ -7,6 +7,7 @@ const {
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 
+//Helper
 const formatDate = (date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -23,7 +24,7 @@ const getAvailableRooms = async (req, res) => {
   }
 
   try {
-    const availableRooms = await selectAvailableRooms(hotel_id, start_date, end_date);
+    const availableRooms = await selectAvailableRooms(req.requestId, hotel_id, start_date, end_date);
 
     if (availableRooms.length === 0) {
       return res.status(201).json({ message: 'No available rooms for the specified period.' });
@@ -44,7 +45,7 @@ const getReservedRooms = async (req, res) => {
   }
 
   try {
-    const reservedRooms = await selectReservedRooms(hotel_id, start_date, end_date);
+    const reservedRooms = await selectReservedRooms(req.requestId, hotel_id, start_date, end_date);
 
     if (reservedRooms.length === 0) {
       return res.status(201).json({ message: 'No reserved rooms for the specified period.' });
@@ -61,7 +62,7 @@ const getReservation = async (req, res) => {
   const { id } = req.query;
 
   try {    
-    const reservation = await selectReservation(id);    
+    const reservation = await selectReservation(req.requestId, id);    
     
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation for the provided id.' });
@@ -78,7 +79,7 @@ const getReservationDetails = async (req, res) => {
   const { id } = req.query;
 
   try {    
-    const reservation = await selectReservationDetail(id);    
+    const reservation = await selectReservationDetail(req.requestId, id);    
     
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation detail for the provided id.' });
@@ -95,7 +96,7 @@ const getMyHoldReservations = async (req, res) => {
   const user_id = req.user.id;
   
   try {
-    const reservations = await selectMyHoldReservations(user_id);
+    const reservations = await selectMyHoldReservations(req.requestId, user_id);
 
     if (reservations.length === 0) {
       return res.status(404).json({ message: 'No hold reservations found for the specified user.' });
@@ -112,7 +113,7 @@ const getReservationsToday = async (req, res) => {
   const { hid, date } = req.params;
 
   try {
-    const reservations = await selectReservationsToday(hid, date);
+    const reservations = await selectReservationsToday(req.requestId, hid, date);
 
     if (reservations.length === 0) {
       return res.status(404).json({ message: 'No reservations found.' });
@@ -129,7 +130,7 @@ const getAvailableDatesForChange = async (req, res) => {
   const { hid, rid, ci, co } = req.params;
 
   try {
-    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(hid, rid, ci, co);
+    const { earliestCheckIn, latestCheckOut } = await selectAvailableDatesForChange(req.requestId, hid, rid, ci, co);
     res.status(200).json({ earliestCheckIn, latestCheckOut });
   } catch (error) {    
     console.error('Error getting available dates for change:', error);
@@ -142,7 +143,7 @@ const getReservationClientIds = async (req, res) => {
   const { hid, id } = req.params;
 
   try {
-    const clients = await selectReservationClientIds(hid, id);
+    const clients = await selectReservationClientIds(req.requestId, hid, id);
     res.status(200).json({ clients });
   } catch (error) {    
     console.error('Error getting clients:', error);
@@ -154,7 +155,7 @@ const getReservationPayments = async (req, res) => {
   const { hid, id } = req.params;
 
   try {
-    const payments = await selectReservationPayments(hid, id);
+    const payments = await selectReservationPayments(req.requestId, hid, id);
     res.status(200).json({ payments });
   } catch (error) {    
     console.error('Error getting payments:', error);
@@ -205,7 +206,7 @@ const createReservationHold = async (req, res) => {
       };
 
       // Add new client and get the created client's id
-      const newClient = await addClientByName(clientData);
+      const newClient = await addClientByName(req.requestId, clientData);
       finalClientId = newClient.id; // Use the newly created client's id
     }
 
@@ -221,9 +222,9 @@ const createReservationHold = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservation = await addReservationHold(reservationData);
+    const newReservation = await addReservationHold(req.requestId, reservationData);
     // Get available rooms for the reservation period
-    const availableRooms = await selectAvailableRooms(hotel_id, check_in, check_out);
+    const availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out);
 
     const reservationDetails = [];
     const availableRoomsFiltered = [];    
@@ -306,7 +307,7 @@ const createReservationHold = async (req, res) => {
 
     // Add reservation details to the database
     for (const detail of reservationDetails) {
-      await addReservationDetail(detail);
+      await addReservationDetail(req.requestId, detail);
     }
 
     res.status(201).json({
@@ -355,15 +356,15 @@ const createReservationDetails = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationAddon = await addReservationDetail(reservationData);
+    const newReservationAddon = await addReservationDetail(req.requestId, reservationData);
     // console.log('newReservationAddon:', newReservationAddon);
     // console.log('ogm_id:', ogm_id);
-    const ogmReservationAddons = await selectReservationAddons(ogm_id);
+    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id);
     // console.log('ogmReservationAddons:', ogmReservationAddons);
     
     // Update reservation guests
     for (let i = 0; i < number_of_people; i++) {
-      await updateReservationGuest(ogm_id, newReservationAddon.id);
+      await updateReservationGuest(req.requestId, ogm_id, newReservationAddon.id);
       // console.log('Updated ', i + 1,' of number of guests: ',number_of_people);
     }        
 
@@ -423,7 +424,7 @@ const createReservationAddons = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationAddon = await addReservationAddon(reservationData);
+    const newReservationAddon = await addReservationAddon(req.requestId, reservationData);
 
     res.status(201).json({
       addons: newReservationAddon,      
@@ -455,7 +456,7 @@ const createReservationClient = async (req, res) => {
     };
 
     // Add the reservation to the database
-    const newReservationClient = await addReservationClient(reservationData);
+    const newReservationClient = await addReservationClient(req.requestId, reservationData);
 
     res.status(201).json({
       clients: newReservationClient,      
@@ -472,7 +473,7 @@ const addNewRoomToReservation = async (req, res) => {
   const userId = req.user.id; 
 
   try {
-    const newRoom = await addRoomToReservation(reservationId, numberOfPeople, roomId, userId);
+    const newRoom = await addRoomToReservation(req.requestId, reservationId, numberOfPeople, roomId, userId);
     res.status(200).json({
       message: 'Room added to reservation successfully',
       data: newRoom
@@ -493,14 +494,14 @@ const alterReservationRoom = async (req, res) => {
   
   try {
     if (numberOfPeopleToMove === numberOfPeopleOGM){
-      const newRoom = await updateReservationRoom(reservationId, roomIdOld, roomIdNew, userId);
+      const newRoom = await updateReservationRoom(req.requestId, reservationId, roomIdOld, roomIdNew, userId);
       res.status(200).json({
         message: 'Room changed in reservation successfully',
         data: newRoom
       });
     } 
     if (numberOfPeopleToMove < numberOfPeopleOGM){
-      const newRoom = await updateReservationRoomWithCreate(reservationId, roomIdOld, roomIdNew, numberOfPeopleToMove, userId);
+      const newRoom = await updateReservationRoomWithCreate(req.requestId, reservationId, roomIdOld, roomIdNew, numberOfPeopleToMove, userId);
       res.status(200).json({
         message: 'Room added to reservation successfully',
         data: newRoom
@@ -521,7 +522,7 @@ const createReservationPayment = async (req, res) => {
   const userId = req.user.id;     
 
   try {
-    const newPMT = await insertReservationPayment(hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
+    const newPMT = await insertReservationPayment(req.requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId);
       res.status(200).json({
         message: 'Payment added to reservation successfully',
         data: newPMT
@@ -552,7 +553,7 @@ const editReservationDetail = async (req, res) => {
 
   try {
     // Fetch the existing reservation detail from the database to compare with the new data
-    const existingReservation = await selectReservationDetail(id);    
+    const existingReservation = await selectReservationDetail(req.requestId, id);    
 
     // Check if the plans_global_id and plans_hotel_id has changed
     if (
@@ -560,7 +561,7 @@ const editReservationDetail = async (req, res) => {
         existingReservation[0].plans_hotel_id !== plans_hotel_id
     ) {
       planChange = true;
-      const newPrice = await getPriceForReservation(
+      const newPrice = await getPriceForReservation(req.requestId, 
         plans_global_id, 
         plans_hotel_id, 
         hotel_id, 
@@ -578,7 +579,7 @@ const editReservationDetail = async (req, res) => {
     }
     
     // Call the function to update reservation detail in the database
-    const updatedReservation = await updateReservationDetail({
+    const updatedReservation = await updateReservationDetail(req.requestId, {
         id,
         hotel_id,
         room_id,
@@ -589,12 +590,12 @@ const editReservationDetail = async (req, res) => {
         updated_by,          
     });
     if(planChange){
-      const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
+      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
     }
       
     // Add the reservation add-ons if any
     if (addons && addons.length > 0) {      
-        // const deletedAddonsCount = await deleteReservationAddonsByDetailId(updatedReservation.id, updated_by);
+        // const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
         // console.log(`Deleted ${deletedAddonsCount} add-ons for reservation detail id: ${updatedReservation.id}`);
 
         const addOnPromises = addons.map(addon =>
@@ -648,7 +649,7 @@ const editReservationGuests = async (req, res) => {
               created_by,
               updated_by,
             };
-            const newClient = await addClientByName(clientData);
+            const newClient = await addClientByName(req.requestId, clientData);
             finalClientId = newClient.id;            
             guestsToAdd[i] = { ...guest, id: finalClientId };
           }
@@ -658,12 +659,12 @@ const editReservationGuests = async (req, res) => {
         guestDataArray.guestsToAdd = guestsToAdd;
       }
 
-      const existingReservation = await selectReservation(id);
+      const existingReservation = await selectReservation(req.requestId, id);
       const filteredReservations = existingReservation.filter(reservation => reservation.room_id === guestDataArray.room_id);
           
       for (const reservationDetail of filteredReservations) {
           // Delete existing clients for this reservation detail
-          await deleteReservationClientsByDetailId(reservationDetail.id, updated_by);
+          await deleteReservationClientsByDetailId(req.requestId, reservationDetail.id, updated_by);
 
           // Add the new clients
           if (guestDataArray.guestsToAdd && guestDataArray.guestsToAdd.length > 0) {
@@ -679,7 +680,7 @@ const editReservationGuests = async (req, res) => {
                     created_by,
                     updated_by,
                   };
-                  await addReservationClient(guestInfo);
+                  await addReservationClient(req.requestId, guestInfo);
                 } else {
                     console.log("Client ID was empty after add client by name");
                 }
@@ -702,7 +703,7 @@ const editReservationPlan = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan( id, hotel_id, gid, hid, price, user_id);
+    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, gid, hid, price, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -716,7 +717,7 @@ const editReservationAddon = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailAddon( id, addons, user_id);
+    const updatedReservation = await updateReservationDetailAddon(req.requestId, id, addons, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -730,7 +731,7 @@ const editReservationRoom = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailRoom( id, room_id, user_id);
+    const updatedReservation = await updateReservationDetailRoom(req.requestId, id, room_id, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -744,7 +745,7 @@ const editReservationRoomPlan = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationRoomPlan( id, hid, rid, plan, addons, user_id);
+    const updatedReservation = await updateReservationRoomPlan(req.requestId, id, hid, rid, plan, addons, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
@@ -759,7 +760,7 @@ const editReservationStatus = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateReservationStatus({
+    const updatedReservation = await updateReservationStatus(req.requestId, {
       id,
       hotel_id,
       status,      
@@ -781,7 +782,7 @@ const editReservationComment = async (req, res) => {
 
   try {
     // Call the function to update reservation comment in the database
-    const updatedReservation = await updateReservationComment({
+    const updatedReservation = await updateReservationComment(req.requestId, {
       id,
       hotelId,
       comment,      
@@ -803,7 +804,7 @@ const editReservationType = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateReservationType({
+    const updatedReservation = await updateReservationType(req.requestId, {
       id,
       hotel_id,
       type,      
@@ -824,7 +825,7 @@ const editReservationResponsible = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await updateReservationResponsible(id, updatedFields, user_id);
+    await updateReservationResponsible(req.requestId, id, updatedFields, user_id);
     res.json({ message: 'Reservation updated successfully' });
   } catch (err) {
     console.error('Error updating client:', err);
@@ -839,7 +840,7 @@ const editRoomFromCalendar = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateRoomByCalendar({
+    const updatedReservation = await updateRoomByCalendar(req.requestId, {
       id,
       hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode,
       updated_by
@@ -859,7 +860,7 @@ const editCalendarFreeChange = async (req, res) => {
 
   try {
     // Call the function to update reservation status in the database
-    const updatedReservation = await updateCalendarFreeChange(data, updated_by);
+    const updatedReservation = await updateCalendarFreeChange(req.requestId, data, updated_by);
 
     // Respond with the updated reservation details
     res.json({success: 'Edit made with success.'});
@@ -878,7 +879,7 @@ const editRoomGuestNumber = async (req, res) => {
   }
 
   try {      
-    await updateReservationRoomGuestNumber(roomArray.details, user_id);      
+    await updateReservationRoomGuestNumber(req.requestId, roomArray.details, user_id);      
     res.status(200).json({ message: "Room updating successfully" });
   } catch (err) {
       console.error("Error updating room:", err);
@@ -891,7 +892,7 @@ const deleteHoldReservation = async (req, res) => {
   const { id } = req.params;
   const user_id = req.user.id;
   try{
-    const updatedReservation = await deleteHoldReservationById(id, user_id);
+    const updatedReservation = await deleteHoldReservationById(req.requestId, id, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error deleting hold reservation:', err);
@@ -904,7 +905,7 @@ const deleteRoomFromReservation = async (req, res) => {
   const user_id = req.user.id; 
     
   try {      
-      await deleteReservationRoom(hotelId, roomId, reservationId, numberOfPeople, user_id);      
+      await deleteReservationRoom(req.requestId, hotelId, roomId, reservationId, numberOfPeople, user_id);      
       res.status(200).json({ message: "Room deleted successfully" });
   } catch (err) {
       console.error("Error deleting room:", err);
@@ -917,7 +918,7 @@ const delReservationPayment = async (req, res) => {
   const user_id = req.user.id; 
     
   try {      
-      await deleteReservationPayment(id, user_id);      
+      await deleteReservationPayment(req.requestId, id, user_id);      
       res.status(200).json({ message: "Payment deleted successfully" });
   } catch (err) {
       console.error("Error deleting room:", err);

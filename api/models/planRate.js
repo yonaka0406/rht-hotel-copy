@@ -1,5 +1,4 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -45,8 +44,8 @@ const isValidCondition = (row, date) => {
 };
 
 // Return all plans_rates
-const getAllPlansRates = async (plans_global_id, plans_hotel_id, hotel_id) => {
-
+const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
+    const pool = getPool(requestId);
     const query = `
         SELECT * FROM plans_rates
         WHERE 
@@ -69,7 +68,8 @@ const getAllPlansRates = async (plans_global_id, plans_hotel_id, hotel_id) => {
 };
 
 // Get plans_rates by ID
-const getPlansRateById = async (id) => {
+const getPlansRateById = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_rates WHERE id = $1';
 
     try {
@@ -84,7 +84,8 @@ const getPlansRateById = async (id) => {
     }
 };
 
-const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id, date) => {
+const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
+    const pool = getPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -141,7 +142,8 @@ const getPriceForReservation = async (plans_global_id, plans_hotel_id, hotel_id,
 };
 
 // Create a new plans_rate
-const createPlansRate = async (plansRate) => {
+const createPlansRate = async (requestId, plansRate) => {
+    const pool = getPool(requestId);
     const query = `
         INSERT INTO plans_rates (
             hotel_id, 
@@ -183,7 +185,8 @@ const createPlansRate = async (plansRate) => {
 };
 
 // Update an existing plans_rate
-const updatePlansRate = async (id, plansRate) => {
+const updatePlansRate = async (requestId, id, plansRate) => {
+    const pool = getPool(requestId);
     const query = `
         UPDATE plans_rates
         SET 
@@ -228,7 +231,8 @@ const updatePlansRate = async (id, plansRate) => {
 };
 
 // Delete a plans_rate by ID
-const deletePlansRate = async (id) => {
+const deletePlansRate = async (requestId, id) => {
+    const pool = getPool(requestId);
     const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
 
     try {

@@ -1,8 +1,8 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 // GET
-const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
+const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_details.date
@@ -63,7 +63,8 @@ const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
   }
 };
 
-const selectCountReservationDetailsPlans = async (hotelId, dateStart, dateEnd) => {
+const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_details.date
@@ -109,7 +110,8 @@ const selectCountReservationDetailsPlans = async (hotelId, dateStart, dateEnd) =
   }
 };
 
-const selectCountReservationDetailsAddons = async (hotelId, dateStart, dateEnd) => {
+const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_details.date
@@ -157,7 +159,8 @@ const selectCountReservationDetailsAddons = async (hotelId, dateStart, dateEnd) 
   }
 };
 
-const selectOccupationByPeriod = async (period, hotelId, refDate) => {
+const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => {
+  const pool = getPool(requestId);
   const date = new Date(refDate);
 
   if (period === 'month_0') {
@@ -211,7 +214,8 @@ const selectOccupationByPeriod = async (period, hotelId, refDate) => {
   }
 };
 
-const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
+const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
       reservations.hotel_id
@@ -340,7 +344,8 @@ const selectReservationListView = async (hotelId, dateStart, dateEnd) => {
   }
 };
 
-const selectExportReservationList = async (hotelId, dateStart, dateEnd) => {
+const selectExportReservationList = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT
       reservations.hotel_id
@@ -476,7 +481,8 @@ const selectExportReservationList = async (hotelId, dateStart, dateEnd) => {
   }
 };
 
-const selectExportReservationDetails = async (hotelId, dateStart, dateEnd) => {
+const selectExportReservationDetails = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT 
       reservation_details.hotel_id

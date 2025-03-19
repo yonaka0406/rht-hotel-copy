@@ -1,9 +1,9 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 const format = require('pg-format');
 
 // Return all hotels
-const getAllHotels = async () => {
+const getAllHotels = async (requestId) => {
+  const pool = getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels ORDER BY id ASC';
 
   try {
@@ -16,7 +16,8 @@ const getAllHotels = async () => {
 };
 
 // Find a hotel by id
-const findHotelById = async (id) => {
+const findHotelById = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = 'SELECT hotels.* FROM hotels WHERE hotels.id = $1';
   const values = [id];
 
@@ -30,7 +31,8 @@ const findHotelById = async (id) => {
 };
 
 // Update a hotel's basic info
-const updateHotel = async (id, formal_name, name, email, phone_number, latitude, longitude, updated_by) => {
+const updateHotel = async (requestId, id, formal_name, name, email, phone_number, latitude, longitude, updated_by) => {
+  const pool = getPool(requestId);
     const query = 'UPDATE hotels SET formal_name = $1, name = $2, email = $3, phone_number = $4, latitude = $5, longitude = $6, updated_by = $7 WHERE id = $8 RETURNING *';
     const values = [formal_name, name, email, phone_number, latitude, longitude, updated_by, id];
   
@@ -44,7 +46,8 @@ const updateHotel = async (id, formal_name, name, email, phone_number, latitude,
 };
 
 // Update a Room Type
-const updateRoomType = async (id, name, description, updated_by) => {
+const updateRoomType = async (requestId, id, name, description, updated_by) => {
+  const pool = getPool(requestId);
   const query = 'UPDATE room_types SET name = $1, description = $2, updated_by = $3 WHERE id = $4 RETURNING *';
   const values = [name, description, updated_by, id];
 
@@ -58,7 +61,8 @@ const updateRoomType = async (id, name, description, updated_by) => {
 };
 
 // Update a Room Type
-const updateRoom = async (id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by) => {
+const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by) => {
+  const pool = getPool(requestId);
   const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, updated_by = $7 WHERE id = $8 RETURNING *';
   const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, id];
 
@@ -71,8 +75,8 @@ const updateRoom = async (id, room_type_id, floor, room_number, capacity, smokin
   }
 };
 
-const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, comment, updated_by) => {
-  
+const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDate, comment, updated_by) => {
+  const pool = getPool(requestId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -163,7 +167,8 @@ const updateHotelCalendar = async (hotelId, roomIds, startDate, endDate, comment
     client.release();
   }
 };
-const selectBlockedRooms = async (hotelId) => {
+const selectBlockedRooms = async (requestId, hotelId) => {
+  const pool = getPool(requestId);
   const query = `
     SELECT r.*, d.room_id, d.room_type_name, d.room_number, h.name
     FROM 
@@ -196,7 +201,8 @@ const selectBlockedRooms = async (hotelId) => {
     throw new Error('Database error');
   }
 };
-const deleteBlockedRooms = async (reservationId, userID) => {
+const deleteBlockedRooms = async (requestId, reservationId, userID) => {
+  const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
@@ -216,7 +222,8 @@ const deleteBlockedRooms = async (reservationId, userID) => {
 };
 
 // Get rooms by hotel id
-const getAllRoomsByHotelId = async (id) => {
+const getAllRoomsByHotelId = async (requestId, id) => {
+  const pool = getPool(requestId);
   const query = 'SELECT hotels.*, room_types.id as room_type_id, room_types.name as room_type_name, room_types.description as room_type_description, rooms.id as room_id, rooms.floor as room_floor, rooms.room_number, rooms.capacity as room_capacity, rooms.for_sale as room_for_sale_idc, rooms.smoking as room_smoking_idc FROM hotels JOIN room_types ON hotels.id = room_types.hotel_id LEFT JOIN rooms ON room_types.id = rooms.room_type_id WHERE hotels.id = $1 ORDER BY room_types.id, rooms.floor, rooms.room_number ASC';
   const values = [id];
 

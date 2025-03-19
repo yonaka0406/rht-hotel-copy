@@ -63,7 +63,7 @@ const getCountReservation = async (req, res) => {
   const endDate = req.params.edate;
   
   try {    
-    const data = await selectCountReservation(hotelId, startDate, endDate);    
+    const data = await selectCountReservation(req.requestId, hotelId, startDate, endDate);    
     
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'No data found' });
@@ -82,8 +82,8 @@ const getCountReservationDetails = async (req, res) => {
   const endDate = req.params.edate;
   
   try {    
-    const planData = await selectCountReservationDetailsPlans(hotelId, startDate, endDate);
-    const addonData = await selectCountReservationDetailsAddons(hotelId, startDate, endDate);     
+    const planData = await selectCountReservationDetailsPlans(req.requestId, hotelId, startDate, endDate);
+    const addonData = await selectCountReservationDetailsAddons(req.requestId, hotelId, startDate, endDate);     
     
     if ((!planData && !addonData) || (planData.length === 0 && addonData.length === 0)) {
       return res.status(404).json({ error: 'No data found' });
@@ -128,7 +128,7 @@ const getOccupationByPeriod = async (req, res) => {
   const refDate = req.params.rdate;  
   
   try {    
-    const data = await selectOccupationByPeriod(period, hotelId, refDate);
+    const data = await selectOccupationByPeriod(req.requestId, period, hotelId, refDate);
     
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'No data found' });
@@ -147,7 +147,7 @@ const getReservationListView = async (req, res) => {
   const endDate = req.params.edate;
 
   try {    
-    const data = await selectReservationListView(hotelId, startDate, endDate);    
+    const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate);    
     
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'No data found' });
@@ -166,7 +166,7 @@ const getExportReservationList = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const result = await selectExportReservationList(hotelId, startDate, endDate);     
+    const result = await selectExportReservationList(req.requestId, hotelId, startDate, endDate);     
 
     if (!result || result.length === 0) {
       return res.status(404).send("No data available for the given dates.");
@@ -222,7 +222,7 @@ const getExportReservationDetails = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const result = await selectExportReservationDetails(hotelId, startDate, endDate); 
+    const result = await selectExportReservationDetails(req.requestId, hotelId, startDate, endDate); 
     
     if (!result || result.length === 0) {
       return res.status(404).send("No data available for the given dates.");

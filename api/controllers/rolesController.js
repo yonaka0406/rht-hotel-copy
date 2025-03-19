@@ -1,7 +1,7 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 
 const roles = async (req, res) => {
+  const pool = getPool(req.requestId);
   try {
     const result = await pool.query('SELECT * FROM user_roles ORDER BY id ASC');
     res.json(result.rows);
@@ -12,6 +12,7 @@ const roles = async (req, res) => {
 };
 
 const createRole = async (req, res) => {
+  const pool = getPool(req.requestId);
   const { role_name, permissions, description } = req.body;
 
   if (!role_name || !permissions) {
@@ -48,6 +49,7 @@ const createRole = async (req, res) => {
 };
 
 const updateRole = async (req, res) => {
+  const pool = getPool(req.requestId);
   const { id, role_name, permissions, description } = req.body;
   
   try {
@@ -77,6 +79,7 @@ const updateRole = async (req, res) => {
 }
 
 const deleteRole = async (req, res) => {
+  const pool = getPool(req.requestId);
   const { id } = req.params;
 
   // Prevent deletion of roles with ID 1 and 5
