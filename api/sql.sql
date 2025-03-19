@@ -20,12 +20,25 @@ CREATE TABLE user_status (
     description TEXT    
 );
 
+INSERT INTO user_status (status_name, description)
+    VALUES 
+        ('有効', '有効アカウント'),
+        ('無効', '無効アカウント');
+
 CREATE TABLE user_roles (
     id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE, -- Role name (e.g., 'Admin', 'User')
     permissions JSONB DEFAULT '{}', -- Permissions in JSON format for flexibility
     description TEXT    
 );
+
+INSERT INTO user_roles (role_name, permissions, description)
+    VALUES 
+        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true}', 'レポートを閲覧できます。'),
+        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": false}', '特別な権限のないデフォルトのロール。');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -50,19 +63,6 @@ CREATE TABLE users (
 
     ALTER TABLE user_roles
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
-
-    INSERT INTO user_status (status_name, description)
-    VALUES 
-        ('有効', '有効アカウント'),
-        ('無効', '無効アカウント');
-
-    INSERT INTO user_roles (role_name, permissions, description)
-    VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true}', '顧客を編集し、レポートを閲覧できます。'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true}', 'レポートを閲覧できます。'),
-        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": false}', '特別な権限のないデフォルトのロール。');
 
 -- Main Hotels Table
 CREATE TABLE hotels (
