@@ -1,7 +1,19 @@
+console.log('api/index.js: first line',process.env.NODE_ENV);
+
 require('dotenv').config({ path: './api/.env' });
 
-const path = require('path');
+console.log('api/index.js: dotenv',process.env.NODE_ENV, 'database', process.env.PG_DATABASE);
+
 const express = require('express');
+const app = express();
+
+const envSetupMiddleware = require('./envSetup');
+console.log('api/index.js: envSetup',process.env.NODE_ENV, 'database', process.env.PG_DATABASE);
+app.use(envSetupMiddleware);
+console.log('Middleware applied.')
+
+const path = require('path');
+
 const cors = require('cors');
 const http = require('http');
 const https = require('https');
@@ -9,28 +21,7 @@ const socketio = require('socket.io');
 const fs = require('fs');
 const { Pool } = require('pg');
 
-// Get .env accordingly
-let envFrontend, envDB;
 
-const app = express();
-app.use((req, res, next) => {
-  const origin = req.get('Origin') || req.get('Referer');
-  if (origin && origin.includes('test.wehub.work')) {    
-    process.env.NODE_ENV = 'development';
-    envFrontend = process.env.FRONTEND_URL
-    envDB = process.env.PG_DATABASE; 
-  } else if(origin && origin.includes('wehub.work')) {
-    process.env.NODE_ENV = 'production';
-    envFrontend = process.env.PROD_FRONTEND_URL
-    envDB = process.env.PROD_PG_DATABASE;  
-  } else {    
-    process.env.NODE_ENV = 'development';
-    envFrontend = process.env.FRONTEND_URL
-    envDB = process.env.PG_DATABASE; 
-  }  
-  console.log('For origin:', origin,'.env for',process.env.NODE_ENV,'will be used',envFrontend,'and',envDB);
-  next();
-});
 
 // HTTP Server setup
 const httpServer = http.createServer(app);
@@ -52,7 +43,7 @@ try {
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
   cors: {
-    origin: envFrontend,
+    origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST"]
   }
 });
@@ -60,7 +51,7 @@ let ioHttps = null;
 if (httpsServer) {
   ioHttps = socketio(httpsServer, {
     cors: {
-      origin: envFrontend,
+      origin: process.env.FRONTEND_URL,
       methods: ["GET", "POST"]
     }
   });
@@ -71,7 +62,7 @@ const HTTPS_PORT = 443;
 
 // Middleware
 const corsOptions = {
-  origin: envFrontend,  // Replace with your actual frontend domain
+  origin: process.env.FRONTEND_URL,  // Replace with your actual frontend domain
   methods: 'GET, POST, PUT, DELETE', 
   allowedHeaders: 'Content-Type, Authorization',
 };
@@ -110,7 +101,7 @@ const pool = require('./config/database');
 const listenClient = new Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
-  database: envDB,
+  database: process.env.PG_DATABASE,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
   max: 50, // Allow up to 50 concurrent connections
