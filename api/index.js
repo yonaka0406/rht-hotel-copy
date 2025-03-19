@@ -10,6 +10,7 @@ const db = require('./config/database');
 const { Pool } = require('pg');
 
 const app = express();
+app.use(db.setupRequestContext);
 
 // Environment configuration helper
 const getEnvConfig = (req) => {
