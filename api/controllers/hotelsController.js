@@ -1,4 +1,5 @@
-const pool = require('../config/database');
+const { getPool } = require('../config/database');
+const pool = getPool();
 const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
 
 // POST

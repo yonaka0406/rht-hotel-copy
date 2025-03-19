@@ -1,4 +1,5 @@
-const pool = require('../config/database');
+const { getPool } = require('../config/database');
+const pool = getPool();
 
 // Return all users
 const selectPaymentTypes = async () => {

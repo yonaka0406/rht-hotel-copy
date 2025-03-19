@@ -1,4 +1,3 @@
-const pool = require('../config/database');
 const { processNameString, getAllClients, selectClient, getTotalClientsCount, addClientByName, addNewClient, editClient, editClientFull, selectClientReservations, deleteClient } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 

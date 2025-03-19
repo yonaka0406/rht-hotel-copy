@@ -1,4 +1,5 @@
-const pool = require('../config/database');
+const { getPool } = require('../config/database');
+const pool = getPool();
 
 // Return all plan_addons
 const getAllPlanAddons = async (plans_global_id, plans_hotel_id, hotel_id) => {

@@ -1,4 +1,5 @@
-const pool = require('../config/database');
+const { getPool } = require('../config/database');
+const pool = getPool();
 
 // GET
 const selectCountReservation = async (hotelId, dateStart, dateEnd) => {
