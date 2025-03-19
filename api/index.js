@@ -1,27 +1,40 @@
-console.log('api/index.js: first line',process.env.NODE_ENV);
-
 require('dotenv').config({ path: './api/.env' });
-
-console.log('api/index.js: dotenv',process.env.NODE_ENV, 'database', process.env.PG_DATABASE);
-
-const express = require('express');
-const app = express();
-
-const envSetupMiddleware = require('./envSetup');
-console.log('api/index.js: envSetup',process.env.NODE_ENV, 'database', process.env.PG_DATABASE);
-app.use(envSetupMiddleware);
-console.log('Middleware applied.')
-
 const path = require('path');
-
+const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const https = require('https');
 const socketio = require('socket.io');
 const fs = require('fs');
+const db = require('./config/database');
 const { Pool } = require('pg');
 
+const app = express();
 
+// Environment configuration helper
+const getEnvConfig = (req) => {
+  // Default to dev configuration
+  let config = {
+    pgDatabase: process.env.PG_DATABASE,
+    frontendUrl: process.env.FRONTEND_URL,
+    frontendUrlHttp: process.env.FRONTEND_URL_HTTP
+  };
+  
+  // If request exists and comes from production domain
+  if (req && req.headers.origin) {
+    const origin = req.headers.origin;
+    if (origin.includes('wehub.work') && !origin.includes('test.wehub.work')) {
+      // Use production configuration
+      config = {
+        pgDatabase: process.env.PROD_PG_DATABASE,
+        frontendUrl: process.env.PROD_FRONTEND_URL,
+        frontendUrlHttp: process.env.PROD_FRONTEND_URL_HTTP
+      };
+    }
+  }
+  
+  return config;
+};
 
 // HTTP Server setup
 const httpServer = http.createServer(app);
@@ -43,7 +56,7 @@ try {
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
     methods: ["GET", "POST"]
   }
 });
@@ -51,7 +64,7 @@ let ioHttps = null;
 if (httpsServer) {
   ioHttps = socketio(httpsServer, {
     cors: {
-      origin: process.env.FRONTEND_URL,
+      origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
       methods: ["GET", "POST"]
     }
   });
@@ -60,14 +73,27 @@ if (httpsServer) {
 const PORT = process.env.PORT || 5000;
 const HTTPS_PORT = 443;
 
-// Middleware
-const corsOptions = {
-  origin: process.env.FRONTEND_URL,  // Replace with your actual frontend domain
-  methods: 'GET, POST, PUT, DELETE', 
-  allowedHeaders: 'Content-Type, Authorization',
-};
-app.use(cors(corsOptions));
+// Dynamic CORS middleware
+app.use((req, res, next) => {
+  const config = getEnvConfig(req);
+  
+  const corsOptions = {
+    origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
+    methods: 'GET, POST, PUT, DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+  };
+  
+  cors(corsOptions)(req, res, next);
+});
+
 app.use(express.json());
+
+// Make config available to route handlers
+app.use((req, res, next) => {
+  req.envConfig = getEnvConfig(req);
+  db.setRequestContext(req);
+  next();
+});
 
 // API Routes
 const protectedRoutes = require('./routes/protectedRoutes');
@@ -97,7 +123,6 @@ app.use('/api', reportRoutes);
 app.use('/api', settingsRoutes);
 
 // Connect to PostgreSQL database
-const pool = require('./config/database');
 const listenClient = new Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
@@ -105,6 +130,14 @@ const listenClient = new Pool({
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
   max: 50, // Allow up to 50 concurrent connections
+});
+const prodListenClient = new Pool({
+  user: process.env.PG_USER,
+  host: process.env.PG_HOST,
+  database: process.env.PROD_PG_DATABASE,
+  password: process.env.PG_PASSWORD,
+  port: process.env.PG_PORT,
+  max: 50,
 });
 
 // Function to listen for changes in a specific table
@@ -121,6 +154,24 @@ const listenForTableChanges = async () => {
 
   await client.query('LISTEN logs_reservation_changed');
   //console.log('Listening for changes on logs_reservation_changed');
+
+  // Prod database listener
+  const prodClient = await prodListenClient.connect();
+  prodClient.on('notification', (msg) => {    
+    if (msg.channel === 'logs_reservation_changed') {
+      ioHttp.emit('tableUpdate', { 
+        message: 'Reservation update detected',
+        environment: 'prod'
+      });
+      if (ioHttps) {
+        ioHttps.emit('tableUpdate', { 
+          message: 'Reservation update detected',
+          environment: 'prod'
+        });
+      }
+    }
+  });
+  await prodClient.query('LISTEN logs_reservation_changed');
 };
 
 // Start listening for table changes
@@ -129,6 +180,9 @@ listenForTableChanges();
 // Socket.IO event handlers
 ioHttp.on('connection', (socket) => {
   // console.log('Client connected (HTTP)');
+  const origin = socket.handshake.headers.origin;
+  const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
+  socket.join(environment);
 
   // Handle client disconnection
   socket.on('disconnect', () => {
@@ -138,6 +192,9 @@ ioHttp.on('connection', (socket) => {
 if (ioHttps) {
   ioHttps.on('connection', (socket) => {
     // console.log('Client connected (HTTPS)');
+    const origin = socket.handshake.headers.origin;
+    const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
+    socket.join(environment);
 
     // Handle client disconnection
     socket.on('disconnect', () => {
