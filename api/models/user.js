@@ -1,10 +1,10 @@
 const { getPool } = require('../config/database');
-const pool = getPool();
 //const bcrypt = require('bcrypt');
 const bcrypt = require('bcryptjs');
 
 // Return all users
-const getAllUsers = async () => {
+const getAllUsers = async (requestId = null) => {
+  const pool = getPool(requestId);
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
 
   try {
@@ -16,7 +16,8 @@ const getAllUsers = async () => {
   }
 };
 
-const getUsersByID = async (id) => {
+const getUsersByID = async (requestId = null, id) => {
+  const pool = getPool(requestId);
   const query = `
       SELECT 
           users.id, 
@@ -48,7 +49,8 @@ const getUsersByID = async (id) => {
 };
 
 // Find a user by email
-const findUserByEmail = async (email) => {
+const findUserByEmail = async (requestId = null, email) => {
+  const pool = getPool(requestId);
   const query = 'SELECT users.*, user_roles.role_name, user_roles.permissions FROM users, user_roles WHERE users.email = $1 AND users.role_id = user_roles.id ORDER BY status_id, role_id, email, id ASC';
   const values = [email];
 
@@ -62,17 +64,18 @@ const findUserByEmail = async (email) => {
 };
 
 // Update a user's password hash
-const updatePasswordHash = async (email, passwordHash, updated_by) => {
-    const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
-    const values = [passwordHash, updated_by, email];
+const updatePasswordHash = async (requestId = null, email, passwordHash, updated_by) => {
+  const pool = getPool(requestId);
+  const query = 'UPDATE users SET password_hash = $1, updated_by = $2 WHERE email = $3 RETURNING *';
+  const values = [passwordHash, updated_by, email];
   
-    try {
-      const result = await pool.query(query, values);
-      return result.rows[0]; // Return the updated user
-    } catch (err) {
-      console.error('Error updating password:', err);
-      throw new Error('Database error');
-    }
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the updated user
+  } catch (err) {
+    console.error('Error updating password:', err);
+    throw new Error('Database error');
+  }
 };
 
 // Update a user's status or role
