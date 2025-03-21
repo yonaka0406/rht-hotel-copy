@@ -65,7 +65,7 @@
                     class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm mt-4 mb-2"
                 >
                 <i class="pi pi-home text-white mr-2"></i>
-                <span class="text-white">ホームへ戻る</span>
+                <span class="text-white">PMS</span>
                 </router-link>
                 <Button
                     @click="handleLogout"
