@@ -374,6 +374,7 @@ CREATE TABLE reservations (
     number_of_people INT NOT NULL,  
     status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block')) NOT NULL DEFAULT 'hold',
     type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
+    agent TEXT NULL,
     comment TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
@@ -383,7 +384,7 @@ CREATE TABLE reservations (
 ) PARTITION BY LIST (hotel_id);
 
 ALTER TABLE reservations
-ADD COLUMN comment TEXT NULL;
+ADD COLUMN agent TEXT NULL;
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
