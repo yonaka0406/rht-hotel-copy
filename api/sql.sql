@@ -398,7 +398,7 @@ CREATE TABLE reservation_details (
     number_of_people INT NOT NULL,
     price DECIMAL,
     cancelled UUID DEFAULT NULL,
-    billable BOOLEAN DEFAULT TRUE,
+    billable BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
