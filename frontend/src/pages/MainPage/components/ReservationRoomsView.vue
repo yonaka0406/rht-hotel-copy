@@ -583,10 +583,10 @@
             }           
         }
         if (day === 6) {
-            return { backgroundColor: '#fcfdfe' };
+            return { backgroundColor: '#edf3f9' };
         }
         if (day === 0) {
-            return { backgroundColor: '#fcfcfe' };
+            return { backgroundColor: '#ededf9' };
         }
     };
 
