@@ -621,7 +621,7 @@
                             }
                         }
                         if (results.latestCheckOut) {
-                            if (checkIn = results.latestCheckOut) {
+                            if (checkIn === results.latestCheckOut) {
                                 isAvailable = false;
                             }                            
                         }
