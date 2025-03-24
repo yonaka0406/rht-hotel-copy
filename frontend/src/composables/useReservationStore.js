@@ -620,10 +620,15 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                //console.error("fetchMyHoldReservations API Error:", response.status, response.statusText, errorText);
-                //throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
-                holdReservations.value = [];
+                // If 404 or any other error, log the message and return an empty array
+                if (response.status === 404) {
+                    // console.log('No hold reservations found.');
+                    holdReservations.value = [];  // Empty array if no reservations found
+                } else {
+                    const errorText = await response.text();
+                    console.error(`API Error: ${response.status} ${response.statusText} ${errorText}`);
+                }
+                return;  // Exit the function early if there's an error
             }
 
             const data = await response.json();
