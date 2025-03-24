@@ -389,8 +389,7 @@ ADD COLUMN agent TEXT NULL;
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
-    reservation_id UUID NOT NULL,
-    payer_client_id UUID REFERENCES clients(id) ON DELETE CASCADE, -- Link to the client responsible for paying (payer)    
+    reservation_id UUID NOT NULL,    
     date DATE NOT NULL,
     room_id INT,
     plans_global_id INT REFERENCES plans_global(id),
@@ -411,6 +410,8 @@ CREATE TABLE reservation_details (
 
 ALTER TABLE reservation_details
 ALTER COLUMN billable SET DEFAULT FALSE;
+ALTER TABLE reservation_details DROP COLUMN payer_client_id;
+
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),

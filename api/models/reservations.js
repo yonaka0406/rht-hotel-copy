@@ -696,15 +696,14 @@ const addReservationDetail = async (requestId, reservationDetail) => {
   const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_details (
-      hotel_id, reservation_id, payer_client_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *;
   `;
 
   const values = [
     reservationDetail.hotel_id,
-    reservationDetail.reservation_id,
-    reservationDetail.payer_client_id,
+    reservationDetail.reservation_id,    
     reservationDetail.date,
     reservationDetail.room_id,
     reservationDetail.plans_global_id,
@@ -1181,11 +1180,11 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     }else{
       // generate_series from new_check_in and new_check_out and add dates
       const insertDetailsQuery = `
-          INSERT INTO reservation_details (hotel_id, reservation_id, payer_client_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
+          INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
           
           SELECT datesList.*
           FROM
-            (SELECT DISTINCT hotel_id, $1::uuid as reservation_id, payer_client_id, 
+            (SELECT DISTINCT hotel_id, $1::uuid as reservation_id, 
               generate_series(($3::DATE)::DATE, ($4::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL)::DATE as series, 
               $2::integer as room_id, plans_global_id, plans_hotel_id, number_of_people, price, $5::integer as created_by, $5::integer as updated_by
               FROM reservation_details
@@ -1432,14 +1431,14 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
     );
 
     await client.query(
-      `UPDATE reservation_details
-       SET payer_client_id = $1
-       WHERE payer_client_id = $2`,
+      `UPDATE reservation_clients
+       SET client_id = $1
+       WHERE client_id = $2`,
       [newValue, oldValue]
     );
 
     await client.query(
-      `UPDATE reservation_clients
+      `UPDATE reservation_payments
        SET client_id = $1
        WHERE client_id = $2`,
       [newValue, oldValue]

@@ -326,8 +326,7 @@ const createReservationDetails = async (req, res) => {
   const {
     ogm_id,
     hotel_id,
-    reservation_id,
-    payer_client_id,
+    reservation_id,    
     date,
     room_id,
     plans_global_id,
@@ -343,8 +342,7 @@ const createReservationDetails = async (req, res) => {
     // Add the reservation
     const reservationData = {
       hotel_id,
-      reservation_id,
-      payer_client_id,
+      reservation_id,      
       date,
       room_id,
       plans_global_id,
