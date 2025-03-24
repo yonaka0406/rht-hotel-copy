@@ -1540,8 +1540,8 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 
     // Step 1: Copy reservation to new room
     const insertQuery = `
-      INSERT INTO reservation_details (hotel_id, reservation_id, payer_client_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, cancelled, billable, created_by, updated_by)
-      SELECT hotel_id, reservation_id, payer_client_id, date, $1, plans_global_id, plans_hotel_id, $2, price, cancelled, billable, $3, $3
+      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, cancelled, billable, created_by, updated_by)
+      SELECT hotel_id, reservation_id, date, $1, plans_global_id, plans_hotel_id, $2, price, cancelled, billable, $3, $3
       FROM reservation_details
       WHERE reservation_id = $4::uuid AND room_id = $5
       RETURNING *;
