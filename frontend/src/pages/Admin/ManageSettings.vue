@@ -125,7 +125,8 @@
         { label: '振込', value: 'wire', color: '#007bff' },
         { label: 'クレジットカード', value: 'credit', color: '#6f42c1' },
         { label: '請求書', value: 'bill', color: '#fd7e14' },
-        { label: 'ポイント', value: 'point', color: '#e83e8c' }
+        { label: 'ポイント', value: 'point', color: '#e83e8c' },
+        { label: '値引き', value: 'discount', color: '#28a784' }
     ];
 
     const resetNewData = () => {

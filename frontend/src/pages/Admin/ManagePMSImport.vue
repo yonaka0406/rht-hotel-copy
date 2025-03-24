@@ -193,7 +193,7 @@
         const room = selectedHotelRooms.value.find(r => r.room_number * 1 === roomNumber * 1);
         if(room){return room.room_id;}
 
-        console.log('Unknown room number:', roomNumber);
+        // console.log('Unknown room number:', roomNumber);
         return null;
     };
     const getPlanId = (planName) => {        
@@ -201,33 +201,44 @@
             planName.includes("素") ||
             planName === "シングル(喫煙)" ||
             planName === "シングル(禁煙)" ||
+            planName === "喫煙シングル2" ||
+            planName === "禁煙シングル（冬季）" ||
+            planName === "喫煙シングル（冬季）" ||
+            planName === "ツイン" ||
+            planName === "ツイン(禁煙)" ||
+            planName === "和室禁煙" ||
+            planName === "和室喫煙" ||
+            planName === "和室シングル(禁煙)" ||
+            planName === "和洋ツイン(禁煙)" ||
             planName === "キャンセル料"
         ){return 1;}
-        if(planName.includes("2食")){return 2;}
-        if(planName.includes("3食")){return 3;}
-        if(planName.includes("荷物")){return 4;}
+        if(planName.includes("朝食")){return 2;}
+        if(planName.includes("2食")){return 3;}
+        if(planName.includes("3食")){return 4;}
+        if(planName.includes("荷物")){return 5;}
         
         console.log('Unknown plan name:', planName);
         return null;        
     };
     const getPaymentTypeId = (paymentType, paymentName) => {
         if(paymentType === '現金'){return 1;}
+        if(paymentType === 'ネットポイント'){return 2;}
+        if(paymentType === '予約金・前受金'){return 3;}
         if(paymentType === 'クレジット'){return 4;}
         if(paymentType === '売掛'){
             if(paymentName.includes("カード")){return 4;}
             else{return 5;}
         }
-        if(paymentType === 'ネットポイント'){return 2;}
+        if(paymentName === '割引'){return 6;}        
         
-        console.log('Unknown payment type:', paymentType);
+        console.log('Unknown payment type:', paymentType, paymentName);
         return null;        
     };
     const getAddonId = (addonName) => {        
-        if(
-            addonName.includes("駐車場")
-        ){return 3;}
         if(addonName.includes("朝食")){return 1;}
         if(addonName.includes("夕食")){return 2;}
+        if(addonName.includes("駐車場")){return 3;}
+        if(addonName.includes("弁当")){return 4;}
         
         console.log('Unknown addon name:', addonName);
         return null;        
@@ -379,20 +390,33 @@
                 );
             });
             // Process details, addons, and payments
-            if (row['分類'] === '宿泊' || row['分類'] === 'キャンセル料') {
+            if (!row['現金売掛区分'] && (row['分類'] === '宿泊' || row['分類'] === 'キャンセル料')) {
                 // Only process when the reservationKey matches
                 if (uniqueReservations.has(reservationKey)) {
                     const currentReservation = uniqueReservations.get(reservationKey);
 
-                    // Add to details
-                    currentReservation.details.push({
-                        date: row['宿泊日'],
-                        roomNumber: row['部屋番号'] * 1,
-                        numberOfPeople: row['数量'],
-                        planName: row['商品名漢字'],
-                        price: row['単価'],
-                        cancelled: row['分類'] === 'キャンセル料',                        
-                    });
+                    if(row['商品名漢字'] !== '割引'){
+                        // Add to details
+                        currentReservation.details.push({
+                            date: row['宿泊日'],
+                            roomNumber: row['部屋番号'] * 1,
+                            numberOfPeople: row['数量'],
+                            planName: row['商品名漢字'],
+                            price: row['単価'],
+                            cancelled: row['分類'] === 'キャンセル料',                        
+                        });
+                    }
+                    // Add to payments
+                    if(row['商品名漢字'] === '割引'){
+                        currentReservation.payments.push({
+                            date: row['計上日'],
+                            roomNumber: row['部屋番号'] * 1,
+                            payer: row['会社名漢字'] || row['顧客名漢字'],
+                            type: row['現金売掛区分'],
+                            name: row['商品名漢字'],
+                            value: row['単価'],
+                        });
+                    }                    
 
                     // Add to addons (only if parking is used)
                     if(row['駐車場利用台数'] > 0){
@@ -404,7 +428,7 @@
                             price: row['単価']
                         });
                     }
-                }
+                }                
             }
             if (row['現金売掛区分'] && row['現金売掛区分'].trim() !== '') {
                 // Add to payments
@@ -661,7 +685,54 @@
             }
         });
     };
-    const addReservations = async (data) => {        
+    const addReservations = async (data) => {
+        // Validation
+        let hasErrors = false;
+        let errorMessage = "";
+        // Check reservation_details room_id and plans_global_id
+        for (const detail of data.reservation_details) {
+            if (detail.room_id === null) {
+                hasErrors = true;
+                errorMessage = `すべての予約詳細には部屋IDが必要です。予約番号：${detail.予約番号}を確認してください。`;
+                break;
+            }
+            if (detail.plans_global_id === null) {
+                hasErrors = true;
+                errorMessage = `すべての予約詳細にはプランIDが必要です。予約番号：${detail.予約番号}を確認してください。`;
+                break;
+            }
+        }
+        // Check reservation_payments.payment_type_id
+        if (!hasErrors) {            
+            for (const payment of data.reservation_payments) {
+                if (payment.payment_type_id === null) {
+                    hasErrors = true;
+                    errorMessage = `すべての予約支払いには支払いタイプIDが必要です。予約番号：${payment.予約番号}を確認してください。`;
+                    break;
+                }
+            }
+        }
+        // Check reservation_addons.addons_global_id
+        if (!hasErrors) {
+            for (const addon of data.reservation_payments) {
+                if (addon.addons_global_id === null) {
+                    hasErrors = true;
+                    errorMessage = `すべての予約アドオンにはアドオンIDが必要です。予約番号：${addon.予約番号}を確認してください。`;
+                    break;
+                }
+            }
+        }
+        if (hasErrors) {
+            // Show error toast
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: errorMessage,
+                life: 5000, // Increased life for error messages
+            });
+            return; // Stop the database action
+        }
+
         await yadomasterAddClients(data.clients);
         await yadomasterAddReservations(data.reservations);
         await yadomasterAddReservationDetails(data.reservation_details);

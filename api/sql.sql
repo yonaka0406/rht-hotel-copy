@@ -280,9 +280,10 @@ CREATE TABLE plans_global (
 INSERT INTO plans_global (id, name, description, created_by)
 VALUES
     (1, '素泊まり', '', 1),
-    (2, '2食', '', 1),
-    (3, '3食', '', 1),
-    (4, '荷物キープ', '', 1);
+    (2, '1食', '', 1),
+    (3, '2食', '', 1),
+    (4, '3食', '', 1),
+    (5, '荷物キープ', '', 1);
 
 CREATE TABLE plans_hotel (
     id SERIAL,
@@ -336,7 +337,8 @@ INSERT INTO addons_global (id, name, description, price, created_by)
 VALUES
     (1, '朝食', '', 0, 1),
     (2, '夕食', '', 0, 1),
-    (3, '駐車場', '', 0, 1);
+    (3, '駐車場', '', 0, 1),
+    (4, 'お弁当', '', 0, 1);
 
 CREATE TABLE addons_hotel (
     id SERIAL,    
@@ -488,7 +490,7 @@ CREATE TABLE payment_types (
     hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
     name TEXT NOT NULL,
     description TEXT,     
-    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point')) NOT NULL DEFAULT 'cash',
+    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
     visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
@@ -502,6 +504,13 @@ VALUES
     (3, '事前振り込み', 'wire', 1),
     (4, 'クレジットカード', 'credit', 1),
     (5, '請求書', 'bill', 1);
+    (6, '割引', 'discount', 1);
+
+ALTER TABLE payment_types DROP CONSTRAINT payment_types_transaction_check;
+
+ALTER TABLE payment_types 
+ADD CONSTRAINT payment_types_transaction_check 
+CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount'));
 
 --Ainda nao esta certo que vai ser usada
 
