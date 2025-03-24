@@ -94,17 +94,17 @@ const insertYadomasterClients = async (requestId, clients) => {
 
             const query = `
                 INSERT INTO clients (
-                name, name_kana, name_kanji, legal_or_natural_person, gender, 
-                phone, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                id, name, name_kana, name_kanji, legal_or_natural_person, gender, phone, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 RETURNING *;
             `;
             const values = [
+                client.id,
                 name,
                 nameKana,
                 nameKanji,
                 client.legal_or_natural_person,
-                'other',    
+                client.gender,    
                 client.phone,
                 client.created_by
             ];
@@ -170,15 +170,24 @@ const insertYadomasterDetails = async (requestId, details) => {
         for (const detail of details) {
             const query = `
                 INSERT INTO reservation_details (
-                reservation_id, room_id, number_of_people, price, created_by
-                ) VALUES ($1, $2, $3, $4, $5)
+                id, hotel_id, reservation_id, date, room_id, 
+                number_of_people, plans_global_id, plans_hotel_id, price, cancelled, 
+                billable, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING *;
             `;
             const values = [
+                detail.id,
+                detail.hotel_id,
                 detail.reservation_id,
+                detail.date,
                 detail.room_id,
                 detail.number_of_people,
+                detail.plans_global_id,
+                detail.plans_hotel_id,                
                 detail.price,
+                detail.cancelled,
+                detail.billable,
                 detail.created_by,
             ];
             const result = await pool.query(query, values);
@@ -203,14 +212,20 @@ const insertYadomasterPayments = async (requestId, payments) => {
         for (const payment of payments) {
             const query = `
                 INSERT INTO reservation_payments (
-                reservation_id, amount, payment_method, created_by
-                ) VALUES ($1, $2, $3, $4)
+                hotel_id, reservation_id, date, room_id, client_id, 
+                payment_type_id, value, comment, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING *;
             `;
             const values = [
+                payment.hotel_id,
                 payment.reservation_id,
-                payment.amount,
-                payment.payment_method,
+                payment.date,
+                payment.room_id,
+                payment.client_id,
+                payment.payment_type_id,
+                payment.value,
+                payment.comment,
                 payment.created_by,
             ];
             const result = await pool.query(query, values);
@@ -235,13 +250,16 @@ const insertYadomasterAddons = async (requestId, addons) => {
         for (const addon of addons) {
             const query = `
                 INSERT INTO reservation_addons (
-                reservation_id, name, price, created_by
-                ) VALUES ($1, $2, $3, $4)
+                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 RETURNING *;
             `;
             const values = [
-                addon.reservation_id,
-                addon.name,
+                addon.hotel_id,
+                addon.reservation_detail_id,
+                addon.addons_global_id,
+                addon.addons_hotel_id,
+                addon.quantity,
                 addon.price,
                 addon.created_by,
             ];

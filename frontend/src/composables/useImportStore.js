@@ -15,8 +15,8 @@ export function useImportStore() {
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            await response.json();
-            response.status(200).json({ message: 'Data imported' });
+            const data = await response.json();            
+            return data;
             
         } catch (error) {
             console.error('Failed to import data', error);
@@ -37,8 +37,8 @@ export function useImportStore() {
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            await response.json();
-            response.status(200).json({ message: 'Data imported' });
+            const data = await response.json();            
+            return data;
             
         } catch (error) {
             console.error('Failed to import data', error);
@@ -59,8 +59,8 @@ export function useImportStore() {
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            await response.json();
-            response.status(200).json({ message: 'Data imported' });
+            const data = await response.json();            
+            return data;
             
         } catch (error) {
             console.error('Failed to import data', error);
@@ -81,8 +81,8 @@ export function useImportStore() {
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            await response.json();
-            response.status(200).json({ message: 'Data imported' });
+            const data = await response.json();            
+            return data;
             
         } catch (error) {
             console.error('Failed to import data', error);
@@ -103,8 +103,8 @@ export function useImportStore() {
             if (!response.ok) {
                 throw new Error('Failed to import data');
             }
-            await response.json();
-            response.status(200).json({ message: 'Data imported' });
+            const data = await response.json();            
+            return data;
             
         } catch (error) {
             console.error('Failed to import data', error);

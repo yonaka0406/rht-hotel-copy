@@ -208,13 +208,26 @@
         console.log('Unknown plan name:', planName);
         return null;        
     };
-    const getPaymentTypeId = (paymentType) => {
+    const getPaymentTypeId = (paymentType, paymentName) => {
         if(paymentType === '現金'){return 1;}
         if(paymentType === 'クレジット'){return 4;}
-        if(paymentType === '売掛'){return 5;}
+        if(paymentType === '売掛'){
+            if(paymentName.includes("カード")){return 4;}
+            else{return 5;}
+        }
         if(paymentType === 'ネットポイント'){return 2;}
         
         console.log('Unknown payment type:', paymentType);
+        return null;        
+    };
+    const getAddonId = (addonName) => {        
+        if(
+            addonName.includes("駐車場")
+        ){return 3;}
+        if(addonName.includes("朝食")){return 1;}
+        if(addonName.includes("夕食")){return 2;}
+        
+        console.log('Unknown addon name:', addonName);
         return null;        
     };
     const isLegalPerson = (name) => {
@@ -505,10 +518,9 @@
                 const detailId = uuidv4();
 
                 reservation_details.push({
-                    id: uuidv4(),
+                    id: detailId,
                     hotel_id: selectedHotelId.value,
-                    reservation_id: reservationId,
-                    payer_client_id: null,
+                    reservation_id: reservationId,                    
                     date: detail.date,
                     room_id: getRoomId(detail.roomNumber),
                     plans_global_id: getPlanId(detail.planName) || null,
@@ -530,7 +542,7 @@
                     id: uuidv4(),
                     hotel_id: selectedHotelId.value,
                     reservation_detail_id: detailsMap.get(`${addon.roomNumber}-${addon.date}`),
-                    addons_global_id: null,
+                    addons_global_id: getAddonId(addon.name),
                     addons_hotel_id: null,
                     quantity: addon.quantity,
                     price: 0,                    
@@ -548,7 +560,7 @@
                     date: payment.date,
                     room_id: getRoomId(payment.roomNumber),
                     client_id: payerId.value,
-                    payment_type_id: getPaymentTypeId(payment.type),
+                    payment_type_id: getPaymentTypeId(payment.type, payment.name),
                     value: payment.value,
                     comment: payment.name,                    
                     created_by: 1,                    
@@ -592,6 +604,16 @@
                 if (payment.payment_type_id === null) {
                     hasErrors = true;
                     errorMessage = `すべての予約支払いには支払いタイプIDが必要です。予約番号：${payment.予約番号}を確認してください。`;
+                    break;
+                }
+            }
+        }
+        // Check reservation_addons.addons_global_id
+        if (!hasErrors) {
+            for (const addon of yadomasterReservationsSQL.value.reservation_payments) {
+                if (addon.addons_global_id === null) {
+                    hasErrors = true;
+                    errorMessage = `すべての予約アドオンにはアドオンIDが必要です。予約番号：${addon.予約番号}を確認してください。`;
                     break;
                 }
             }
