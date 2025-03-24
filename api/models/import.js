@@ -130,9 +130,9 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         for (const reservation of reservations) {
             const query = `
                 INSERT INTO reservations (
-                id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, type, agent, comment, 
+                id, hotel_id, reservation_client_id, check_in, check_in_time, check_out, number_of_people, status, type, agent, comment, 
                 created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING *;
             `;
             const values = [
@@ -140,6 +140,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
                 reservation.hotel_id,
                 reservation.reservation_client_id,
                 reservation.check_in,
+                reservation.check_in_time,
                 reservation.check_out,
                 reservation.number_of_people,
                 reservation.status,

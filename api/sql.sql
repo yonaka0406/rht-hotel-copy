@@ -370,7 +370,9 @@ CREATE TABLE reservations (
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel    
     reservation_client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- Reference to the client representing the company    
     check_in DATE NOT NULL,
+    check_in_time TIME DEFAULT '16:00',
     check_out DATE NOT NULL,  
+    check_out_time TIME DEFAULT '10:00',
     number_of_people INT NOT NULL,  
     status TEXT CHECK (status IN ('hold', 'provisory', 'confirmed', 'checked_in', 'checked_out', 'cancelled', 'block')) NOT NULL DEFAULT 'hold',
     type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
@@ -385,6 +387,10 @@ CREATE TABLE reservations (
 
 ALTER TABLE reservations
 ADD COLUMN agent TEXT NULL;
+ALTER TABLE reservations 
+ADD COLUMN check_in_time TIME DEFAULT '16:00',
+ADD COLUMN check_out_time TIME DEFAULT '10:00';
+
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),

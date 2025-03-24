@@ -313,6 +313,7 @@
             const reservationNumber = row['予約番号'] * 1;
             const checkInDate = row['チェックイン日'];
             const checkOutDate = row['チェックアウト日'];
+            const checkInTime = row['チェックイン予定時間'];
             const stayDate = row['宿泊日'];
             const payerName = row['会社名漢字'] || row['顧客名漢字'];
             const bookerName = row['団体名'] || row['顧客名漢字'] || row['会社名漢字'];
@@ -337,6 +338,7 @@
                     予約番号: reservationNumber,
                     チェックイン日: checkInDate,
                     チェックアウト日: checkOutDate,
+                    checkInTime: checkInTime,                    
                     min宿泊日: stayDate, // Initialize
                     max宿泊日: stayDate, // Initialize
                     hasAllDates: false, // Initialize
@@ -503,6 +505,7 @@
                 reservation_client_id: clientId,  // Function to fetch client ID
                 check_in: reservation.チェックイン日,
                 check_out: reservation.チェックアウト日,
+                check_in_time: reservation.checkInTime,
                 number_of_people: reservation.numberOfPeople,
                 status: 'confirmed',  // Default to hold
                 type: reservation.type,

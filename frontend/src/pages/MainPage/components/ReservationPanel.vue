@@ -43,12 +43,23 @@
             </span>
         </div>   
         <div class="field flex flex-col">
-            <div class="grid grid-cols-4">                
+            <div class="grid grid-cols-4 flex items-center">
                 <p class="font-bold">チェックイン：</p>
-                <span>　{{ reservationInfo.check_in }} <i class="pi pi-arrow-down-right ml-1"></i></span>
-                <span class="col-span-2"></span>
+                <span>
+                    <i class="pi pi-arrow-down-right mr-1"></i>{{ reservationInfo.check_in }}
+                </span>
+                <div class="col-span-2">
+                    <i class="pi pi-clock mx-1"></i>
+                    <DatePicker id="datepicker-timeonly" v-model="checkInTime" @update:modelValue="checkInChange" timeOnly style="width: 80px;" />
+                </div>
                 <p class="font-bold">チェックアウト：</p>
-                <span>　{{ reservationInfo.check_out }} <i class="pi pi-arrow-up-right ml-1"></i></span>                
+                <span>
+                    <i class="pi pi-arrow-up-right mr-1"></i>{{ reservationInfo.check_out }}
+                </span>
+                <div class="col-span-2">
+                    <i class="pi pi-clock mx-1"></i>
+                    <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange" timeOnly style="width: 80px;" />
+                </div>
             </div>   
             <div class="flex items-start justify-between mr-2 mt-2">
                 <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />
@@ -476,7 +487,7 @@
 
     //Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment } = useReservationStore();
+    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     
@@ -492,6 +503,17 @@
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
+    };
+    const formatTime = (time) => {
+        if (!time) return "";
+        // Check if time is already a Date object
+        if (time instanceof Date) {
+            return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // If time is a string
+        const date = new Date(`1970-01-01T${time}`);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     // Computed
@@ -529,7 +551,9 @@
             default:
                 return '不明';
         }
-    });    
+    });
+    const checkInTime = ref(null);
+    const checkOutTime = ref(null);    
     const groupedRooms = computed(() => {
         if (!reservationInfo.value) return [];
 
@@ -720,6 +744,16 @@
             }
         });
     };
+
+    // Check-in and Check-out
+    const checkInChange = async (event) => {        
+        await setReservationTime('in', reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, formatTime(event));
+        toast.add({ severity: 'success', summary: 'Success', detail: `チェックイン時刻を${formatTime(event)}に更新されました。`, life: 3000 });
+    }
+    const checkOutChange = async (event) => {
+        await setReservationTime('out', reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, formatTime(event));
+        toast.add({ severity: 'success', summary: 'Success', detail: `チェックアウト時刻を${formatTime(event)}に更新されました。`, life: 3000 });
+    }
 
     // Comment update
     const handleKeydown = (event) => {
@@ -1015,6 +1049,9 @@
         
         reservationTypeSelected.value = reservationInfo.value.type;
         selectedClient.value = reservationInfo.value.client_id;
+
+        checkInTime.value = formatTime(reservationInfo.value.check_in_time);
+        checkOutTime.value = formatTime(reservationInfo.value.check_out_time);
 
         console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
     });

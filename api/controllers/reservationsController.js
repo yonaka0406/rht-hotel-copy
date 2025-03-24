@@ -1,7 +1,7 @@
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment,
-  updateReservationDetail, updateReservationStatus, updateReservationComment, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan,
+  updateReservationDetail, updateReservationStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
@@ -793,6 +793,28 @@ const editReservationComment = async (req, res) => {
     console.error('Error updating reservation comment:', err);
     res.status(500).json({ error: 'Failed to update reservation comment' });
   }
+};
+const editReservationTime = async (req, res) => {
+  const { id } = req.params;
+  const { hotelId, indicator, time } = req.body;
+  const updated_by = req.user.id;
+
+  try {
+    // Call the function to update reservation comment in the database
+    const updatedReservation = await updateReservationTime(req.requestId, {
+      id,
+      hotelId,
+      indicator,
+      time,
+      updated_by,
+    });
+
+    // Respond with the updated reservation details
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating reservation time:', err);
+    res.status(500).json({ error: 'Failed to update reservation time' });
+  }
 }
 
 const editReservationType = async (req, res) => {
@@ -926,4 +948,4 @@ const delReservationPayment = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationComment, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };
+  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };

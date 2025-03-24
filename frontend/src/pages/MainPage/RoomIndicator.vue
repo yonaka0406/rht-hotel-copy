@@ -60,9 +60,30 @@
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
                       <span>予約を追加</span> 
                     </div>
-                    <div v-if="room.plan_name">
-                      <span class="p-1 rounded-lg" :style="{ backgroundColor: `${room.plan_color}` }">{{ room.plan_name }}</span>
-                    </div>                
+                    <div v-if="group.title === '本日チェックイン'" class="flex items-center gap-2">
+                      <div>
+                        <span>
+                          <i class="pi pi-clock mr-1"></i>
+                          {{ formatTime(room.check_in_time) }}
+                        </span>
+                      </div>
+                      <div v-if="room.plan_name">
+                        <span class="p-1 rounded-lg" :style="{ backgroundColor: room.plan_color }">{{ room.plan_name }}</span>
+                      </div>
+                    </div>
+                    <div v-else-if="group.title === '本日チェックアウト'" class="flex items-center gap-2">
+                      <div>
+                        <span>
+                          <i class="pi pi-clock mr-1"></i>
+                          {{ formatTime(room.check_out_time) }}
+                        </span>
+                      </div>                      
+                    </div>
+                    <div v-else>
+                      <div v-if="room.plan_name">
+                        <span class="p-1 rounded-lg" :style="{ backgroundColor: `${room.plan_color}` }">{{ room.plan_name }}</span>
+                      </div>  
+                    </div>
                   </div>
                 </div>
                 <div v-else>
@@ -155,6 +176,11 @@
       const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
       const parsedDate = new Date(date);
       return `${parsedDate.toLocaleDateString(undefined, options)}`;
+  };
+  const formatTime = (time) => {
+      if (!time) return "";
+      const date = new Date(`1970-01-01T${time}`);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   const selectedDate = ref(new Date());

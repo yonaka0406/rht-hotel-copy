@@ -131,7 +131,9 @@ const selectReservation = async (requestId, id) => {
       ,clients.id as client_id
       ,COALESCE(clients.name_kanji, clients.name) as client_name
       ,reservations.check_in
-      ,reservations.check_out
+      ,reservations.check_in_time
+      ,reservations.check_out      
+      ,reservations.check_out_time
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status   
       ,reservations.type  
@@ -480,7 +482,9 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,reservations.reservation_client_id
       ,COALESCE(r_client.name_kanji, r_client.name) as client_name
       ,reservations.check_in
+      ,reservations.check_in_time
       ,reservations.check_out
+      ,reservations.check_out_time
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status	  
       --,reservation_details.id as reservation_details_id
@@ -984,6 +988,47 @@ const updateReservationComment = async (requestId, reservationData) => {
     `;
     const values = [
       comment,    
+      updated_by,
+      id,
+      hotelId,
+    ];
+    const result = await pool.query(query, values);    
+    return result.rows[0];
+
+  } catch (error) {
+    console.error('Error updating reservation detail:', err);
+    throw new Error('Database error');
+  }
+};
+const updateReservationTime = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
+  const { id, hotelId, indicator, time, updated_by } = reservationData;
+  
+  
+  try {
+    let query = '';
+    if(indicator === 'in'){
+      query = `
+        UPDATE reservations
+        SET
+          check_in_time = $1,          
+          updated_by = $2          
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+      `;
+    }else if(indicator === 'out'){
+      query = `
+        UPDATE reservations
+        SET
+          check_out_time = $1,          
+          updated_by = $2          
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+      `;
+    }    
+    
+    const values = [
+      time,    
       updated_by,
       id,
       hotelId,
@@ -1828,6 +1873,7 @@ module.exports = {
     updateReservationDetail,
     updateReservationStatus,
     updateReservationComment,
+    updateReservationTime,
     updateReservationType,
     updateReservationResponsible,
     updateRoomByCalendar,
