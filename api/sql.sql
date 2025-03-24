@@ -277,6 +277,13 @@ CREATE TABLE plans_global (
     UNIQUE (name)
 );
 
+INSERT INTO plans_global (id, name, description, created_by)
+VALUES
+    (1, '素泊まり', '', 1),
+    (2, '2食', '', 1),
+    (3, '3食', '', 1),
+    (4, '荷物キープ', '', 1);
+
 CREATE TABLE plans_hotel (
     id SERIAL,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -324,6 +331,12 @@ CREATE TABLE addons_global (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name) -- Ensure global add-ons have unique names
 );
+
+INSERT INTO addons_global (id, name, description, price, created_by)
+VALUES
+    (1, '朝食', '', 0, 1),
+    (2, '夕食', '', 0, 1),
+    (3, '駐車場', '', 0, 1);
 
 CREATE TABLE addons_hotel (
     id SERIAL,    
@@ -482,6 +495,13 @@ CREATE TABLE payment_types (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name)
 );
+INSERT INTO payment_types (id, name, transaction, created_by)
+VALUES
+    (1, '現金', 'cash', 1),
+    (2, 'ネットポイント', 'point', 1),
+    (3, '事前振り込み', 'wire', 1),
+    (4, 'クレジットカード', 'credit', 1),
+    (5, '請求書', 'bill', 1);
 
 --Ainda nao esta certo que vai ser usada
 

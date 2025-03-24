@@ -200,9 +200,11 @@
         if(
             planName.includes("素") ||
             planName === "シングル(喫煙)" ||
-            planName === "シングル(禁煙)"
+            planName === "シングル(禁煙)" ||
+            planName === "キャンセル料"
         ){return 1;}
-        if(planName.includes("2食")){return 3;}
+        if(planName.includes("2食")){return 2;}
+        if(planName.includes("3食")){return 3;}
         if(planName.includes("荷物")){return 4;}
         
         console.log('Unknown plan name:', planName);
@@ -377,7 +379,7 @@
                 );
             });
             // Process details, addons, and payments
-            if (row['分類'] === '宿泊') {
+            if (row['分類'] === '宿泊' || row['分類'] === 'キャンセル料') {
                 // Only process when the reservationKey matches
                 if (uniqueReservations.has(reservationKey)) {
                     const currentReservation = uniqueReservations.get(reservationKey);
@@ -388,7 +390,8 @@
                         roomNumber: row['部屋番号'] * 1,
                         numberOfPeople: row['数量'],
                         planName: row['商品名漢字'],
-                        price: row['単価']
+                        price: row['単価'],
+                        cancelled: row['分類'] === 'キャンセル料',                        
                     });
 
                     // Add to addons (only if parking is used)
@@ -417,7 +420,7 @@
                     });
                 }
             }else {
-                if(row['分類'] !== '宿泊'){
+                if(row['分類'] !== '宿泊' && row['分類'] !== 'キャンセル料'){
                     // Add to addons
                     if (uniqueReservations.has(reservationKey)) {
                         const currentReservation = uniqueReservations.get(reservationKey);
@@ -530,7 +533,7 @@
                     plans_hotel_id: null,
                     number_of_people: detail.numberOfPeople,
                     price: detail.price || null,
-                    cancelled: null,
+                    cancelled: detail.cancelled ? uuidv4() : null,
                     billable: true,                    
                     created_by: 1,                    
                     予約番号: reservation.予約番号,
