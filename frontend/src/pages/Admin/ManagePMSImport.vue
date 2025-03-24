@@ -193,7 +193,7 @@
         const room = selectedHotelRooms.value.find(r => r.room_number * 1 === roomNumber * 1);
         if(room){return room.room_id;}
 
-        // console.log('Unknown room number:', roomNumber);
+        console.log('Unknown room number:', roomNumber);
         return null;
     };
     const getPlanId = (planName) => {        
@@ -329,8 +329,8 @@
             const checkInTime = row['チェックイン予定時間'];
             const stayDate = row['宿泊日'];
             const payerName = row['会社名漢字'] || row['顧客名漢字'];
-            const bookerName = row['団体名'] || row['顧客名漢字'] || row['会社名漢字'];
-            const bookerTel = row['電話番号'];
+            const bookerName = row['団体名'] || row['顧客名漢字'] || row['会社名漢字'];            
+            const bookerTel = row['電話番号'] ? row['電話番号'].toString().replace(/\D/g, '').replace(/^0+/, '') : '';
             const numberOfPeople = row['大人男'] * 1 + row['大人女'] * 1 + row['子供Ａ'] * 1 + row['子供Ｂ'] * 1 + row['子供Ｃ'] * 1 + row['子供Ｄ'] * 1 + row['子供Ｅ'] * 1 + row['子供Ｆ'] * 1;
             const type = row['NET予約番号'] ? (row['NET予約番号'].startsWith('TY') ? 'web' : 'ota') : 'default';
             const agentName = row['エージェント名'];
@@ -733,11 +733,34 @@
             return; // Stop the database action
         }
 
-        await yadomasterAddClients(data.clients);
-        await yadomasterAddReservations(data.reservations);
-        await yadomasterAddReservationDetails(data.reservation_details);
-        await yadomasterAddReservationPayments(data.reservation_payments);
-        await yadomasterAddReservationAddons(data.reservation_addons);        
+        const chunkArray = (arr, size) => {
+            return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+                arr.slice(i * size, i * size + size)
+            );
+        };
+
+        // Example: Split `clients` into smaller chunks
+        const clientChunks = chunkArray(data.clients, 200);
+        const reservationChunks = chunkArray(data.reservations, 200);
+        const reservationDetailChunks = chunkArray(data.reservation_details, 200);
+        const reservationPaymentChunks = chunkArray(data.reservation_payments, 200);
+        const reservationAddonChunks = chunkArray(data.reservation_addons, 200);
+
+        for (const chunk of clientChunks) {
+            await yadomasterAddClients(chunk);
+        }
+        for (const chunk of reservationChunks) {
+            await yadomasterAddReservations(chunk);
+        }
+        for (const chunk of reservationDetailChunks) {
+            await yadomasterAddReservationDetails(chunk);
+        }
+        for (const chunk of reservationPaymentChunks) {
+            await yadomasterAddReservationPayments(chunk);
+        }
+        for (const chunk of reservationAddonChunks) {
+            await yadomasterAddReservationAddons(chunk);
+        }
     }
 
     // Dialog
