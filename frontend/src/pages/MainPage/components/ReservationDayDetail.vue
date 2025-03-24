@@ -231,9 +231,9 @@
     const addonOptions = ref(null);
     const selectedAddonOption = ref(null);
     const updatePlanAddOns = async (event) => { 
-        console.log('Selected Plan:', event.value);           
+        // console.log('Selected Plan:', event.value);           
         const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
-        console.log('selectedPlanObject',selectedPlanObject)
+        // console.log('selectedPlanObject',selectedPlanObject)
         if (selectedPlan.value) {
             const gid = selectedPlanObject.plans_global_id ?? 0;
             const hid = selectedPlanObject.plans_hotel_id ?? 0;
@@ -267,13 +267,13 @@
             return
         }
 
-        console.log('selectedAddonOption in select:', selectedAddonOption.value);
+        // console.log('selectedAddonOption in select:', selectedAddonOption.value);
 
         const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
-        console.log('foundAddon:',foundAddon);
+        // console.log('foundAddon:',foundAddon);
         const isHotelAddon = foundAddon.id.startsWith('H');
-        console.log('selectedAddon:',selectedAddon.value);
-        console.log('selectedAddonOption:', selectedAddonOption.value);            
+        // console.log('selectedAddon:',selectedAddon.value);
+        // console.log('selectedAddonOption:', selectedAddonOption.value);            
         selectedAddon.value.push({
             addons_global_id: isHotelAddon ? null : foundAddon.id,
             addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
@@ -296,7 +296,7 @@
         const plans_hotel_id = hotel || 0; 
         const price = planTotalRate.value || 0;
 
-        console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
+        // console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
 
         await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, plans_global_id, plans_hotel_id, price);
 
@@ -308,7 +308,7 @@
             price: addon.price
         }));
 
-        console.log('addonDataArray:', addonDataArray);
+        // console.log('addonDataArray:', addonDataArray);
                     
         await setReservationAddons(props.reservation_details.id, addonDataArray);
 
@@ -323,7 +323,7 @@
     const numberOfPeopleToMove = ref(0);
     const filteredRooms = ref(null);
     const saveRoom = async () => {
-        console.log('targetRoom', targetRoom.value.value);
+        // console.log('targetRoom', targetRoom.value.value);
         await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
 
         const data = await fetchReservationDetail(props.reservation_details.id);
@@ -337,7 +337,7 @@
     const selectedClients = ref(null);
         
     onMounted(async() => {   
-        console.log('onMounted ReservationDayDetail:', props.reservation_details);                 
+        // console.log('onMounted ReservationDayDetail:', props.reservation_details);                 
         const data = await fetchReservationDetail(props.reservation_details.id);
         reservationDetail.value = data.reservation[0];
 
@@ -365,7 +365,7 @@
         planTotalRate.value = props.reservation_details.plan_total_price;
         
         addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
-        console.log('addonOptions:', addonOptions.value);
+        // console.log('addonOptions:', addonOptions.value);
 
         // Room
         numberOfPeopleToMove.value = props.reservation_details.number_of_people;
@@ -386,7 +386,7 @@
     // Watcher
     watch(addons, (newValue, oldValue) => {
         if (newValue !== oldValue) {
-            console.log('addons changed:', newValue);            
+            // console.log('addons changed:', newValue);            
             selectedAddon.value = newValue.map(addon => ({
                 ...addon,
                 quantity: reservationDetail.value.number_of_people

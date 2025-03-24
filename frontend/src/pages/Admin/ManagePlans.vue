@@ -468,7 +468,7 @@
       const filteredHotelPlans = computed(() => {
         if (selectedHotel.value) {
           const filtered = hotelPlans.value.filter(plan => plan.hotel_id === selectedHotel.value.id);
-          console.log('Filtered Hotel:', filtered);
+          // console.log('Filtered Hotel:', filtered);
           return filtered;
         }
         return [];
@@ -807,10 +807,10 @@
       onMounted(fetchHotelsPlans);
 
       watch(editGlobalPlan, (newVal, oldVal) => {
-         console.log('editGlobalPlan changed:', newVal);
+         // console.log('editGlobalPlan changed:', newVal);
       }, { deep: true });
       watch(editHotelPlan, (newVal, oldVal) => {
-         console.log('editHotelPlan changed:', newVal);
+         // console.log('editHotelPlan changed:', newVal);
       }, { deep: true });
    
       return {

@@ -332,7 +332,7 @@
     const showDrawer = ref(false);
     const drawerProps = ref({});
     const mergeClients = async (oldId) => {
-        console.log('Old Client ID:', oldId);
+        // console.log('Old Client ID:', oldId);
 
         // Find the corresponding `earliest.id` in `duplicatePairs`
         const pair = duplicatePairs.value.find(pair => 
@@ -345,7 +345,7 @@
         }
 
         const newClientId = pair.earliest.id;
-        console.log('New Client ID:', newClientId);
+        // console.log('New Client ID:', newClientId);
         
         // Open drawer component and pass both IDs as props
         showDrawer.value = true;

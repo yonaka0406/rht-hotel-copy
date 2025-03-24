@@ -541,7 +541,7 @@
         fetchADR();
     }, { deep: true });  
     watch(selectedHotelId, async (newValue, oldValue) => {         
-        console.log('selectedHotelId changed:',newValue) ;
+        // console.log('selectedHotelId changed:',newValue) ;
         await fetchHeatMapData();        
         fetchLineChartData();
         fetchRevPAR();

@@ -326,7 +326,7 @@
 
       // Functions
       function onCellEditComplete(event) {
-        console.log('onCellEditComplete event triggered.');
+        // console.log('onCellEditComplete event triggered.');
         const { data, newValue, field } = event;
         if (field) {
           data[field] = newValue;
@@ -687,15 +687,15 @@
       };
 
       watch(roomTypes, (newVal, oldVal) => {
-        console.log('room type changed:', newVal);
+        // console.log('room type changed:', newVal);
         
       });
       watch(rooms, (newVal, oldVal) => {
-        console.log('room changed:', newVal);
+        // console.log('room changed:', newVal);
         
       });
       watch(newRoom, (newVal, oldVal) => {
-        console.log('room changed:', newVal);
+        // console.log('room changed:', newVal);
         
       });
           

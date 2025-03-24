@@ -433,7 +433,7 @@
     };
     const openDrawer = (event) => {    
         selectedReservation.value = event.data;    
-        console.log('selectedReservation:',selectedReservation.value)        ;
+        // console.log('selectedReservation:',selectedReservation.value)        ;
         drawerVisible.value = true;
     };
 

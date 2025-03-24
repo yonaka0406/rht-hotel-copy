@@ -565,7 +565,7 @@
     if (dragMode.value === 'roomByDay') {
       if (reservedRoomsMap.value[key]) {
           const index = selectedRoomByDay.value.findIndex(item => item.key === key);
-          console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
+          // console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
           if (index === -1) {
               if (selectedRoomByDay.value.length === 0 || isContiguous(selectedRoomByDay.value, key)) {
                   selectedRoomByDay.value.push({ key: key, reservation: reservedRoomsMap.value[key] });
@@ -573,13 +573,13 @@
                   selectedRoomByDay.value = [{ key: key, reservation: reservedRoomsMap.value[key] }];
               }
           } else if (index !== -1) { 
-              console.log('splice');
+              // console.log('splice');
               selectedRoomByDay.value.splice(index, 1);
           } 
       } else {        
           if (selectedRoomByDay.value.length > 0) {   
-            console.log(selectedRoomByDay.value[0].reservation.room_number)
-            console.log('areSelectedDatesAvailableInRoom', areSelectedDatesAvailableInRoom(room.room_id));
+            // console.log(selectedRoomByDay.value[0].reservation.room_number)
+            // console.log('areSelectedDatesAvailableInRoom', areSelectedDatesAvailableInRoom(room.room_id));
             formattedMessage.value = `
               <b>${selectedRoomByDay.value[0].reservation.room_number}号室</b>の予約を<br/>
               <b>${room.room_number}号室</b>に移動しますか?<br/>
@@ -614,7 +614,7 @@
             });              
           }
       }
-      console.log('handleCellClick:', selectedRoomByDay.value);
+      // console.log('handleCellClick:', selectedRoomByDay.value);
   }
   };
   const handleDragStart = (event, roomId, date) => {
@@ -626,13 +626,13 @@
     }
   };
   const handleDrop = (event, roomId, date) => {
-    console.log('handleDrop')
+    // console.log('handleDrop')
     if (dragMode.value === 'reservation') {
       onDrop(event, roomId, date);
     } else if (dragMode.value === 'roomByDay') {
       if (selectedRoomByDay.value.length > 0) {
         // API call to move selected dates
-        console.log('API call to move dates:', selectedRoomByDay.value, 'to room:', roomId);
+        // console.log('API call to move dates:', selectedRoomByDay.value, 'to room:', roomId);
         selectedRoomByDay.value = [];
       }
     } else if (dragMode.value === 'reorganizeRooms') {
@@ -765,7 +765,7 @@
     return true;
   };
   const startDrag = (event, roomId, date) => {
-    console.log('startDrag')
+    // console.log('startDrag')
     const reservation = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms');
     if (reservation.reservation_id) {
       draggingReservation.value = true;
@@ -866,7 +866,7 @@
   const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
   const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null }); 
   const onDragStart = async (event, roomId, date) => {
-    console.log('onDragStart')
+    // console.log('onDragStart')
     dragFrom.value = null;
     
     const reservation_id = fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id;
@@ -883,7 +883,7 @@
 
       const reservationData = await fetchReservation(reservation_id);    
       
-      console.log('dragFrom',dragFrom.value)
+      // console.log('dragFrom',dragFrom.value)
     }else{
       return;
     }        
@@ -1086,7 +1086,7 @@
     socket.value.on('tableUpdate', async (data) => {
       // Prevent fetching if bulk update is in progress
       if (isUpdating.value) {
-          console.log('Skipping fetchReservation because update is still running');
+          // console.log('Skipping fetchReservation because update is still running');
           return;
       }
       // Update the reservations data in your component
@@ -1148,13 +1148,13 @@
   }, { immediate: true });
   watch(drawerVisible, async (newVal, oldVal) => {
     if (newVal === false) {          
-      console.log('Edit drawer became false');
+      // console.log('Edit drawer became false');
       isUpdating.value = false;
       await fetchReservations();
     }
   });
   watch(centerDate, async (newVal, oldVal) => {
-    console.log("centerDate changed:",newVal);
+    // console.log("centerDate changed:",newVal);
     isLoading.value = true;
     
     const today = newVal;

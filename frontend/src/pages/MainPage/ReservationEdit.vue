@@ -96,10 +96,10 @@
         socket.value.on('tableUpdate', async (data) => {
             // Prevent fetching if bulk update is in progress
             if (reservationIsUpdating.value) {
-                console.log('Skipping fetchReservation because update is still running');
+                // console.log('Skipping fetchReservation because update is still running');
                 return;
             }
-            console.log('Reservation updated detected in ReservationEdit');
+            // console.log('Reservation updated detected in ReservationEdit');
             // Web Socket fetchReservation                
             await fetchReservation(reservationId.value);
                 reservation_details.value = reservationDetails.value.reservation;
@@ -134,7 +134,7 @@
     });
     watch(reservationId, async (newVal, oldVal) => {
         if(oldVal && newVal !== oldVal){
-            console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
+            // console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
             await fetchReservation(newVal);
                 reservation_details.value = reservationDetails.value.reservation;
             const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);

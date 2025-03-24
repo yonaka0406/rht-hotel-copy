@@ -497,9 +497,9 @@
             maxDateRange.value = new Date(datesResult.latestCheckOut);
         }
 
-        console.log('reservationDetails start:', reservationDetails.value);
-        console.log('selectedRoom:',selectedRoom.value);
-        console.log('minDateRange:', minDateRange.value,'maxDateRange:', maxDateRange.value);
+        // console.log('reservationDetails start:', reservationDetails.value);
+        // console.log('selectedRoom:',selectedRoom.value);
+        // console.log('minDateRange:', minDateRange.value,'maxDateRange:', maxDateRange.value);
     });
 
     // Watch

@@ -1053,7 +1053,7 @@
         checkInTime.value = formatTime(reservationInfo.value.check_in_time);
         checkOutTime.value = formatTime(reservationInfo.value.check_out_time);
 
-        console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
+        // console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
     });
 
     // Watcher

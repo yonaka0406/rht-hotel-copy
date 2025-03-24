@@ -239,7 +239,7 @@
     };      
     const onClientSelect = (event) => {
       if (event.value) {
-        console.log('onClientSelect event:',event.value);
+        // console.log('onClientSelect event:',event.value);
         const selectedClient = event.value;
         isClientSelected.value = true;
         
@@ -254,7 +254,7 @@
         resetClient();
       }
       
-      console.log('onClientSelect client:',client.value);
+      // console.log('onClientSelect client:',client.value);
     };
   
     const saveClient = async () => {
@@ -276,7 +276,7 @@
     };
     const onClientChange = async (event) => {
       if(!event.value.id){
-        console.log('onClientChange event:',event.value);
+        // console.log('onClientChange event:',event.value);
         isClientSelected.value = false;
       
         const clientName = await fetchClientNameConversion(event.value);      
@@ -349,7 +349,7 @@
     // Watcher    
     watch(() => clientDetails.value.legal_or_natural_person,
       (newValue) => {
-        console.log('watch clientDetails.value.legal_or_natural_person')
+        // console.log('watch clientDetails.value.legal_or_natural_person')
         if (newValue === 'legal') {
           //console.log('Changed to other');
           clientDetails.value.gender = 'other';

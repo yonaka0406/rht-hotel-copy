@@ -187,8 +187,8 @@
 
   // Computed
   const roomGroups = computed(() => {
-    console.log('reservedRoomsDayView:', reservedRoomsDayView.value);
-    console.log('selectedHotelRooms:', selectedHotelRooms.value);
+    // console.log('reservedRoomsDayView:', reservedRoomsDayView.value);
+    // console.log('selectedHotelRooms:', selectedHotelRooms.value);
 
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
@@ -200,7 +200,7 @@
       reservedRoomsDayView.value?.reservations            
         ?.map((res) => res.room_id) || []
     );
-    console.log('reservedRoomIds:',reservedRoomIds)
+    // console.log('reservedRoomIds:',reservedRoomIds)
 
     const checkInToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
       const checkInDate = new Date(room.check_in);
@@ -269,7 +269,7 @@
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100' },
     ];
 
-    console.log('roomGroups:', result);
+    // console.log('roomGroups:', result);
     return result;
 
   });
@@ -300,9 +300,9 @@
   onMounted(async () => {
     
     isLoading.value = true;
-    console.log('onMounted of RoomIndicator', selectedHotelId.value, today);
-    console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
-    console.log('onMounted of selectedDate', selectedDate.value);        
+    // console.log('onMounted of RoomIndicator', selectedHotelId.value, today);
+    // console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
+    // console.log('onMounted of selectedDate', selectedDate.value);        
 
     // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -320,7 +320,7 @@
     socket.value.on('tableUpdate', async (data) => {
       // Prevent fetching if bulk update is in progress
       if (isUpdating.value) {
-          console.log('Skipping fetchReservation because update is still running');
+          // console.log('Skipping fetchReservation because update is still running');
           return;
       }
 

@@ -676,7 +676,7 @@
                 return
             }
 
-            console.log('selectedAddon before:',selectedAddon.value);
+            // console.log('selectedAddon before:',selectedAddon.value);
 
             const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);            
             const isHotelAddon = foundAddon.id.startsWith('H');
@@ -691,7 +691,7 @@
             
             selectedAddonOption.value = '';
 
-            console.log('selectedAddon after:',selectedAddon.value);
+            // console.log('selectedAddon after:',selectedAddon.value);
         };
         const deleteAddon = (addon) => {
             const index = selectedAddon.value.indexOf(addon);
@@ -824,7 +824,7 @@
                 guests.value[guestIndex].isClientSelected = true;               
             }
 
-            console.log('onClientSelect guests:', guests.value);
+            // console.log('onClientSelect guests:', guests.value);
         };
         const onClientChange = (rowData) => {
             // Find the guest in the guests array that was just selected
@@ -835,7 +835,7 @@
                 guests.value[guestIndex].isClientSelected = false;
             }
 
-            console.log('onClientChange guests:', guests.value);
+            // console.log('onClientChange guests:', guests.value);
         };
         const applyGuestChanges = async () => {
             const guestsWithId = guests.value.filter(guest => guest.id !== null);
@@ -906,7 +906,7 @@
                     };
                 });
 
-                console.log('applyGuestChanges:',reservationInfo.value.reservation_id, dataToUpdate[0]);
+                // console.log('applyGuestChanges:',reservationInfo.value.reservation_id, dataToUpdate[0]);
 
                 
                 

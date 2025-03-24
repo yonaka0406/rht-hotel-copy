@@ -411,7 +411,7 @@
     };      
     const onClientSelect = (event) => {
       if (event.value) {
-        console.log('onClientSelect event:',event.value);
+        // console.log('onClientSelect event:',event.value);
         const selectedClient = event.value;
         isClientSelected.value = true;
                 
@@ -423,11 +423,11 @@
         resetClient();
       }
       
-      console.log('onClientSelect client:',client.value);
+      // console.log('onClientSelect client:',client.value);
     };
     const onClientChange = async (event) => {
         if(!event.value.id){
-            console.log('onClientChange event:',event.value);
+            // console.log('onClientChange event:',event.value);
             isClientSelected.value = false;      
             newPayment.value.payerClientId = null;
         }
@@ -488,7 +488,7 @@
     });
 
     watch(remainingBalance, async (newVal, oldVal) =>{
-        console.log('watch remainingBalance', oldVal, newVal);
+        // console.log('watch remainingBalance', oldVal, newVal);
 
         const price = pricePerRoom.value[newPayment.value.room_id] || 0;
         const payment = paymentPerRoom.value[newPayment.value.room_id] || 0;

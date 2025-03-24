@@ -48,7 +48,7 @@ const updatePaymentTypeVisibility = async (requestId, id, visible, userId) => {
 
   try {
       const result = await pool.query(query, values);
-      console.log('updatePaymentTypeVisibility:', result.rows);
+      // console.log('updatePaymentTypeVisibility:', result.rows);
       return result.rows[0];
   } catch (err) {
       console.error('Error:', err);

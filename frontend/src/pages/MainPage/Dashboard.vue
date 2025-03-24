@@ -303,7 +303,7 @@
             
             nextTick(() => {                    
                 barChartOption.value = generateBarChartOptions();
-                console.log('barChartOption:',barChartOption.value);
+                // console.log('barChartOption:',barChartOption.value);
             });                
         };
         const generateBarChartOptions = () => ({
@@ -464,7 +464,7 @@
                     series.push(createSeriesItem(key, 'Addon', countData, dateArray));
                 });
 
-                console.log('series:',series);
+                // console.log('series:',series);
                                 
                 barStackChartData.value.series = series;
             }
@@ -572,7 +572,7 @@
             await fetchHotel();
             await fetchReservationListView(selectedHotelId.value, startDate.value, endDate.value);
             tableLoading.value = false;
-                console.log('from watch reservationList', reservationList.value);
+                // console.log('from watch reservationList', reservationList.value);
             await fetchBarChartData();
             await fetchBarStackChartData();
             await fetchGaugeChartData();
