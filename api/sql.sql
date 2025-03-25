@@ -503,7 +503,7 @@ VALUES
     (2, 'ネットポイント', 'point', 1),
     (3, '事前振り込み', 'wire', 1),
     (4, 'クレジットカード', 'credit', 1),
-    (5, '請求書', 'bill', 1);
+    (5, '請求書', 'bill', 1),
     (6, '割引', 'discount', 1);
 
 ALTER TABLE payment_types DROP CONSTRAINT payment_types_transaction_check;
@@ -541,3 +541,142 @@ CREATE TABLE xml_exchanges (
 
 INSERT INTO xml_exchanges (reservation_id, ota_name, xml_request, status)
 VALUES (123, 'Booking.com', '<xml>...</xml>', 'pending');
+--------------------------------------------------------------------
+--Imported clients, delete duplicates
+WITH duplicate_clients AS (
+  SELECT 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    array_agg(id) AS duplicate_ids
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+  GROUP BY name, name_kana, name_kanji, phone
+  HAVING COUNT(*) > 1
+),
+-- For each duplicate group, assign row numbers to identify which one to keep
+ranked_clients AS (
+  SELECT 
+    id, 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    ROW_NUMBER() OVER (PARTITION BY name, name_kana, name_kanji, phone ORDER BY created_at) AS row_num
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+)
+-- Now update the related tables
+UPDATE reservations
+SET reservation_client_id = (
+  SELECT id FROM ranked_clients
+  WHERE ranked_clients.id = ANY(duplicate_clients.duplicate_ids)
+  AND ranked_clients.row_num = 1 -- Keep the first row only
+  LIMIT 1
+)
+FROM duplicate_clients
+WHERE reservation_client_id = ANY(duplicate_clients.duplicate_ids);
+--------------------------------------------------------------------
+--Imported clients, delete duplicates
+WITH duplicate_clients AS (
+  SELECT 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    array_agg(id) AS duplicate_ids
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+  GROUP BY name, name_kana, name_kanji, phone
+  HAVING COUNT(*) > 1
+),
+-- For each duplicate group, assign row numbers to identify which one to keep
+ranked_clients AS (
+  SELECT 
+    id, 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    ROW_NUMBER() OVER (PARTITION BY name, name_kana, name_kanji, phone ORDER BY created_at) AS row_num
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+)
+UPDATE reservation_clients
+SET client_id = (
+  SELECT id FROM ranked_clients
+  WHERE ranked_clients.id = ANY(duplicate_clients.duplicate_ids)
+  AND ranked_clients.row_num = 1 -- Keep the first row only
+  LIMIT 1
+)
+FROM duplicate_clients
+WHERE client_id = ANY(duplicate_clients.duplicate_ids);
+--------------------------------------------------------------------
+--Imported clients, delete duplicates
+WITH duplicate_clients AS (
+  SELECT 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    array_agg(id) AS duplicate_ids
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+  GROUP BY name, name_kana, name_kanji, phone
+  HAVING COUNT(*) > 1
+),
+-- For each duplicate group, assign row numbers to identify which one to keep
+ranked_clients AS (
+  SELECT 
+    id, 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    ROW_NUMBER() OVER (PARTITION BY name, name_kana, name_kanji, phone ORDER BY created_at) AS row_num
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+)
+UPDATE reservation_payments
+SET client_id = (
+  SELECT id FROM ranked_clients
+  WHERE ranked_clients.id = ANY(duplicate_clients.duplicate_ids)
+  AND ranked_clients.row_num = 1 -- Keep the first row only
+  LIMIT 1
+)
+FROM duplicate_clients
+WHERE client_id = ANY(duplicate_clients.duplicate_ids);
+--------------------------------------------------------------------
+--Imported clients, delete duplicates
+WITH duplicate_clients AS (
+  SELECT 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    array_agg(id) AS duplicate_ids
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+  GROUP BY name, name_kana, name_kanji, phone
+  HAVING COUNT(*) > 1
+),
+-- For each duplicate group, assign row numbers to identify which one to keep
+ranked_clients AS (
+  SELECT 
+    id, 
+    name, 
+    name_kana, 
+    name_kanji, 
+    phone, 
+    ROW_NUMBER() OVER (PARTITION BY name, name_kana, name_kanji, phone ORDER BY created_at) AS row_num
+  FROM clients
+  WHERE created_at >= '2025-03-25'
+)
+-- Delete the duplicates except the first one
+DELETE FROM clients
+WHERE id IN (
+  SELECT id FROM ranked_clients
+  WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
+);
+
