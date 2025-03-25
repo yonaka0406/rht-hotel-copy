@@ -186,20 +186,21 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
       GROUP BY hotel_id
     )
     SELECT
-      COUNT(reservation_details.room_id) as room_count,
-      (roomTotal.total_rooms * roomTotal.last_day) as available_rooms
+      COUNT(CASE WHEN reservations.status = 'block' THEN NULL ELSE reservation_details.room_id END) as room_count,
+      (roomTotal.total_rooms * roomTotal.last_day) - COUNT(CASE WHEN reservations.status = 'block' AND rooms.for_sale = TRUE then 1 ELSE NULL END) as available_rooms,  
+      COUNT(CASE WHEN reservations.status = 'block' AND rooms.for_sale = TRUE then 1 ELSE NULL END) as blocked_rooms,
+      (roomTotal.total_rooms * roomTotal.last_day) as total_rooms
     FROM 
       reservations
-      ,reservation_details
+      JOIN reservation_details ON reservation_details.hotel_id = reservations.hotel_id AND reservation_details.reservation_id = reservations.id 
+      JOIN rooms ON reservation_details.room_id = rooms.id
       JOIN roomTotal ON reservation_details.hotel_id = roomTotal.hotel_id
     WHERE
       reservation_details.hotel_id = $2
       AND DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $1::DATE)
       AND reservation_details.cancelled IS NULL
       AND reservations.type <> 'employee'
-      AND reservations.status NOT IN ('hold', 'block')
-      AND reservation_details.reservation_id = reservations.id
-      AND reservation_details.hotel_id = reservations.hotel_id
+      AND reservations.status NOT IN ('hold')      
     GROUP BY roomTotal.total_rooms, roomTotal.last_day;
   `;
 
