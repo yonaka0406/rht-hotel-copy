@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, 
     createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment,
-    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
+    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/reservation/available-rooms', authMiddleware, getAvailableRooms);
@@ -22,6 +22,7 @@ router.post('/reservation/move/room', authMiddleware, alterReservationRoom);
 router.post('/reservation/payment/add', authMiddleware, createReservationPayment);
 router.post('/reservation/update/details', authMiddleware, createReservationDetails);
 router.put('/reservation/update/details/:id', authMiddleware, editReservationDetail);
+router.put('/reservation/update/detail/status/:id', authMiddleware, editReservationDetailStatus);
 router.put('/reservation/update/guest/:id', authMiddleware, editReservationGuests);
 router.put('/reservation/update/plan/:id', authMiddleware, editReservationPlan);
 router.put('/reservation/update/addon/:id', authMiddleware, editReservationAddon);

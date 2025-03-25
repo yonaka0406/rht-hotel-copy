@@ -577,11 +577,17 @@
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
+        
+        // Check if the room is different
         if (data.isDifferentRoom) {
             return {
                 backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1) 0px, rgba(0, 0, 0, 0.1) 10px, transparent 10px, transparent 20px)'
             }           
         }
+        if (data.cancelled) {
+            return { color: 'red' };
+        }
+        // Check if the day is a weekend
         if (day === 6) {
             return { backgroundColor: '#edf3f9' };
         }

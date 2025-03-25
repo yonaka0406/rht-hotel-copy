@@ -128,6 +128,7 @@ const selectReservation = async (requestId, id) => {
       reservation_details.id
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
+      ,reservation_details.cancelled
       ,clients.id as client_id
       ,COALESCE(clients.name_kanji, clients.name) as client_name
       ,reservations.check_in
@@ -964,6 +965,49 @@ const updateReservationStatus = async (requestId, reservationData) => {
 
       await pool.query(queryFour, valuesFour);
     }
+
+    return result.rows[0];
+  } catch (err) {
+      console.error('Error updating reservation detail:', err);
+      throw new Error('Database error');
+  }
+};
+const updateReservationDetailStatus = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
+  const { id, hotel_id, status, updated_by } = reservationData;
+
+  try {
+    let query = '';
+    const values = [            
+      updated_by,
+      id,
+      hotel_id,
+    ];
+    // Fill cancelled
+    if(status==='cancelled'){
+      query = `
+          UPDATE reservation_details
+          SET
+            cancelled = gen_random_uuid()
+            ,billable = TRUE
+            ,updated_by = $1          
+          WHERE id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+    }
+    if(status==='recovered'){
+      query = `
+          UPDATE reservation_details
+          SET
+            cancelled = NULL
+            ,billable = TRUE
+            ,updated_by = $1          
+          WHERE id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+    }
+
+    const result = await pool.query(query, values);
 
     return result.rows[0];
   } catch (err) {
@@ -1872,6 +1916,7 @@ module.exports = {
     insertReservationPayment,
     updateReservationDetail,
     updateReservationStatus,
+    updateReservationDetailStatus,
     updateReservationComment,
     updateReservationTime,
     updateReservationType,

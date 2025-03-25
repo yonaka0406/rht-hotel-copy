@@ -13,6 +13,7 @@
                             <Tab value="0">プラン</Tab>
                             <Tab value="1">部屋移動</Tab>
                             <Tab value="2">宿泊者</Tab>
+                            <Tab value="3">キャンセル</Tab>
                         </TabList>
                         <TabPanels>
                             <!-- Tab 1: Change Plan and Addon -->
@@ -172,6 +173,18 @@
                                     </DataTable>
                                 </div>
                             </TabPanel>
+                            <!-- Tab 4: Cancel -->
+                             <TabPanel value="3">
+                                <div class="mb-3">
+                                    <p>当日をキャンセルすると、キャンセル料としてプランの料金が請求されます。</p>
+                                </div>
+                                <div v-if="!reservationCancelled" class="flex justify-center items-center">                                    
+                                    <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="dayCancel" />
+                                </div>
+                                <div v-else class="flex justify-center items-center">                                    
+                                    <Button label="復活" icon="pi pi-history" class="p-button-warn" @click="dayRecover" />
+                                </div>
+                            </TabPanel>
                         </TabPanels>
                     </Tabs>
                 </div>
@@ -206,7 +219,7 @@
 
     // Stores    
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom } = useReservationStore();
+    const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom, setReservationDetailStatus } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate } = usePlansStore();
     import { useClientStore } from '@/composables/useClientStore';
@@ -336,10 +349,30 @@
     // Clients
     const selectedClients = ref(null);
         
+    
+
+    // Cancel
+    const reservationCancelled = ref(false);
+    const dayCancel = async () => {        
+        await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled');
+
+        reservationCancelled.value = true;
+
+        toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+    };
+    const dayRecover = async () => {        
+        await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');
+
+        reservationCancelled.value = false;
+
+        toast.add({ severity: 'success', summary: 'Success', detail: '予約が復活されました。', life: 3000 });
+    };
+
     onMounted(async() => {   
         // console.log('onMounted ReservationDayDetail:', props.reservation_details);                 
         const data = await fetchReservationDetail(props.reservation_details.id);
-        reservationDetail.value = data.reservation[0];
+        reservationDetail.value = data.reservation[0];        
+        reservationCancelled.value = props.reservation_details.cancelled ? true : false;        
 
         // Header
         drawerHeader.value = props.reservation_details.date + '：' + props.reservation_details.room_number + '号室 ' + props.reservation_details.room_type_name;
@@ -382,6 +415,7 @@
             value: room.room_id,
         }));
     });
+    
 
     // Watcher
     watch(addons, (newValue, oldValue) => {

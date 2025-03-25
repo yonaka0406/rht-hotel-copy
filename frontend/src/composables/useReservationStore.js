@@ -132,6 +132,29 @@ export function useReservationStore() {
             console.error('Error updating reservation status:', error);
         }
     };
+    const setReservationDetailStatus = async (detail_id, hotel_id, status) => {
+        // console.log('From Reservation Store => setReservationDetailStatus:',status);
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/reservation/update/detail/status/${detail_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotel_id, status })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation status');
+            }
+
+            setReservationIsUpdating(false);
+        } catch (error) {
+            console.error('Error updating reservation status:', error);
+        }
+    };
     const setReservationType = async (type) => {            
         // console.log('From Reservation Store => setReservationType:',status);            
         try {
@@ -894,6 +917,7 @@ export function useReservationStore() {
         fetchReservationClientIds,
         setReservationId,
         setReservationStatus,
+        setReservationDetailStatus,
         setReservationType,
         setReservationClient,
         setReservationPlan,
