@@ -198,13 +198,13 @@
                     roundCap: true,
                     clip: false,
                     itemStyle: {
-                    borderWidth: 1,
-                    borderColor: '#464646'
+                        borderWidth: 1,
+                        borderColor: '#464646'
                     }
                 },
                 axisLine: {
                     lineStyle: {
-                    width: 40
+                        width: 40
                     }
                 },
                 splitLine: {
@@ -529,9 +529,10 @@
             }else(gaugeData.value[0].value = 0)
             
             // Get the month from startDate.value
-            const gaugeName_0 = new Date(startDate.value).getMonth() + 1;
-            const gaugeName_1 = new Date(startDate.value).getMonth() + 2;
-            const gaugeName_2 = new Date(startDate.value).getMonth() + 3;
+            const currentMonth = new Date(startDate.value).getMonth() + 1; 
+            const gaugeName_0 = currentMonth;
+            const gaugeName_1 = currentMonth % 12 + 1;
+            const gaugeName_2 = (currentMonth + 1) % 12 + 1;
             
             gaugeData.value[0].name = gaugeName_2 + '月';
             gaugeData.value[1].name = gaugeName_1 + '月';
