@@ -131,26 +131,30 @@
     </Card>
 </template>
 <script setup>
+    // Vue
     import { ref, onMounted, watch } from 'vue';
     import { useRoute } from 'vue-router';
-    import { useClientStore } from '@/composables/useClientStore';
-    import { useToast } from 'primevue/usetoast';
-    import { Card, FloatLabel, InputText, DatePicker, SelectButton, RadioButton, Button } from 'primevue';  
-
     const route = useRoute();
-    const toast = useToast();
+
+    // Stores
+    import { useClientStore } from '@/composables/useClientStore';
     const { selectedClient, fetchClient, updateClientInfoCRM } = useClientStore();
+
+    // Primevue
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
+    import { Card, FloatLabel, InputText, DatePicker, SelectButton, RadioButton, Button } from 'primevue';
+    
+    // Client
     const clientId = ref(route.params.clientId);
     const client = ref({
         legal_or_natural_person: 'natural',
     });
     const loadingBasicInfo = ref(false);
-
     const personTypeOptions = [
         { label: '法人', value: 'legal' },
         { label: '個人', value: 'natural' },
     ];
-
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const isValidEmail = ref(true);
     const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
@@ -188,7 +192,7 @@
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
     };
-
+    
     const saveClient = async () => {
 
         if(client.value.date_of_birth) { 
@@ -207,11 +211,8 @@
         if(client.value.phone && !isValidPhone.value) {
             toast.add({ severity: 'error', summary: 'Error', detail: '有効な電話番号を入力してください。', life: 3000 });
             return;
-        }
-
-        
-        
-        console.log("Client to save:", client.value);
+        }        
+        // console.log("Client to save:", client.value);
 
         await updateClientInfoCRM(client.value.id, client.value);
         

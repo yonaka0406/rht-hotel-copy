@@ -135,6 +135,7 @@ CREATE TABLE clients (
     email TEXT, -- Nullable
     phone TEXT, -- Nullable
     fax TEXT, -- Fax number for the client
+    client_group_id UUID DEFAULT NULL REFERENCES client_group(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
@@ -264,6 +265,18 @@ CREATE TABLE addresses (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
+CREATE TABLE client_group (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by INT REFERENCES users(id),
+  updated_by INT DEFAULT NULL REFERENCES users(id)
+);
+
+ALTER TABLE clients 
+ADD COLUMN client_group_id UUID DEFAULT NULL REFERENCES client_group(id);
 
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    

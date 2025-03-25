@@ -180,7 +180,7 @@ export function useClientStore() {
             }
         
             const updatedClient = await response.json();
-            console.log('From Client Store => updateClientInfoCRM updatedClient:', updatedClient);
+            // console.log('From Client Store => updateClientInfoCRM updatedClient:', updatedClient);
             selectedClient.value = updatedClient;
         } catch (error) {
             console.error('Failed to update client', error);
