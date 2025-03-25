@@ -40,19 +40,20 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
         await pool.query(partitionQuery);
       };
 
-      // Create partitions for all related tables
-      await Promise.all([
-        createPartition('room_types'),
-        createPartition('rooms'),
-        createPartition('room_inventory'),
-        createPartition('reservations'),
-        createPartition('reservation_details'),
-        createPartition('reservation_addons'), 
-        createPartition('reservation_clients'),
-        createPartition('reservation_payments'),
-        createPartition('plans_hotel'),        
-        createPartition('addons_hotel')
-      ]);
+      const createPartitionsSequentially = async () => {
+        await createPartition('room_types');
+        await createPartition('rooms');
+        await createPartition('room_inventory');
+        await createPartition('reservations');
+        await createPartition('reservation_details');
+        await createPartition('reservation_addons');
+        await createPartition('reservation_clients');
+        await createPartition('reservation_payments');
+        await createPartition('plans_hotel');
+        await createPartition('addons_hotel');
+      };
+
+      await createPartitionsSequentially();
 
       // Commit transaction
       await client.query('COMMIT');
