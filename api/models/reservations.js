@@ -129,6 +129,7 @@ const selectReservation = async (requestId, id) => {
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
       ,reservation_details.cancelled
+      ,reservation_details.billable
       ,clients.id as client_id
       ,COALESCE(clients.name_kanji, clients.name) as client_name
       ,reservations.check_in
@@ -889,10 +890,18 @@ const updateReservationStatus = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotel_id, status, updated_by } = reservationData;
 
-  try {
+  let resStatus = status;
+  let type = '';
+  if (status === 'full-fee') {
+    resStatus = 'cancelled';
+    type = 'full-fee';
+  }
 
+  try {
+    let query = '';
+    let values = '';
     // Update status
-    const query = `
+    query = `
         UPDATE reservations
         SET
           status = $1,          
@@ -900,17 +909,18 @@ const updateReservationStatus = async (requestId, reservationData) => {
         WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
     `;
-    const values = [
-      status,    
+    values = [
+      resStatus,    
       updated_by,
       id,
       hotel_id,
     ];
     const result = await pool.query(query, values);
-
+    
     // Fill cancelled
-    if(status==='cancelled'){
-      const queryTwo = `
+    if(resStatus==='cancelled' && type !== 'full-fee'){
+      console.log('Cancelled with billable false');
+      query = `
           UPDATE reservation_details
           SET
             cancelled = gen_random_uuid()
@@ -919,18 +929,32 @@ const updateReservationStatus = async (requestId, reservationData) => {
           WHERE reservation_id = $2::UUID AND hotel_id = $3
           RETURNING *;
       `;
-      const valuesTwo = [            
+      values = [            
         updated_by,
         id,
         hotel_id,
       ];
-
-      await pool.query(queryTwo, valuesTwo);
     }
-
+    if(resStatus==='cancelled' && type === 'full-fee'){
+      console.log('Cancelled with billable true');
+      query = `
+          UPDATE reservation_details
+          SET
+            cancelled = gen_random_uuid()
+            ,billable = TRUE
+            ,updated_by = $1          
+          WHERE reservation_id = $2::UUID AND hotel_id = $3
+          RETURNING *;
+      `;
+      values = [            
+        updated_by,
+        id,
+        hotel_id,
+      ];
+    }
     // Set billable true
-    if(status==='confirmed'){
-      const queryThree = `
+    if(resStatus==='confirmed'){
+      query = `
           UPDATE reservation_details
           SET
             cancelled = NULL
@@ -939,17 +963,15 @@ const updateReservationStatus = async (requestId, reservationData) => {
           WHERE reservation_id = $2::UUID AND hotel_id = $3
           RETURNING *;
       `;
-      const valuesThree = [            
+      values = [            
         updated_by,
         id,
         hotel_id,
       ];
-
-      await pool.query(queryThree, valuesThree);
     }
     // Set billable false
-    if(status==='provisory'){
-      const queryFour = `
+    if(resStatus==='provisory'){
+      query = `
           UPDATE reservation_details
           SET            
             billable = FALSE
@@ -957,14 +979,14 @@ const updateReservationStatus = async (requestId, reservationData) => {
           WHERE reservation_id = $2::UUID AND hotel_id = $3
           RETURNING *;
       `;
-      const valuesFour = [            
+      values = [            
         updated_by,
         id,
         hotel_id,
       ];
-
-      await pool.query(queryFour, valuesFour);
     }
+
+    await pool.query(query, values);
 
     return result.rows[0];
   } catch (err) {

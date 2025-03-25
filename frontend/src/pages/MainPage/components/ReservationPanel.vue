@@ -139,7 +139,7 @@
                         label="キャンセル" 
                         severity="contrast"
                         :disabled="!allRoomsHavePlan"
-                        @click="updateReservationStatus('cancelled')"
+                        @click="handleCancel"
                     /> 
                 </div>
                 <div v-if="reservationStatus === 'キャンセル'" class="field flex flex-col">
@@ -163,6 +163,22 @@
             </div>
         </div>
     </div>
+
+    <!-- Cancel Date Dialog -->
+    <Dialog v-model:visible="showDateDialog" header="日付を選択" modal>
+        <p>何一からキャンセル料が発生しますか？</p>
+        <DatePicker v-model="cancelStartDate" 
+            showIcon fluid iconDisplay="input"
+            showOnFocus
+            :minDate="cancelMinDate || undefined"
+            :maxDate="cancelMaxDate || undefined"
+            dateFormat="yy-mm-dd"
+        />
+        <template #footer>
+            <Button label="全日" severity="warn" icon="pi pi-calendar-times" @click="updateReservationStatus('cancelled', 'full-fee')" />
+            <Button label="キャンセル適用" icon="pi pi-check" @click="confirmPartialCancel" />
+        </template>
+    </Dialog>
 
     <!-- Change Client Dialog -->
     <Dialog 
@@ -467,11 +483,11 @@
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
+    const confirmCancel = useConfirm();
     const confirmRecovery = useConfirm();
     import { 
         Card, Divider, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
         Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column
-
      } from 'primevue';
 
     const props = defineProps({
@@ -487,7 +503,7 @@
 
     //Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setReservationId, setReservationType, setReservationStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
+    const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
     
@@ -604,7 +620,20 @@
     };
 
     // Status Buttons
-    const updateReservationStatus = async (status) => {        
+    const showDateDialog = ref(false);
+    const cancelStartDate = ref(null);
+    const cancelMinDate = ref(null);
+    const cancelMaxDate = ref(null);
+    const cancelledIds = computed(() => {
+        return props.reservation_details
+            .filter(detail => new Date(detail.date) >= cancelStartDate.value) // Filter by date >= cancelStartDate
+            .map(detail => ({
+                id: detail.id,
+                hotel_id: detail.hotel_id,
+                date: detail.date
+            }));
+    });
+    const updateReservationStatus = async (status, type = null) => {        
         if (!allRoomsHavePlan.value) {                                
             toast.add({ 
                 severity: 'warn', 
@@ -614,6 +643,7 @@
             return; 
         }
         
+        // Check if reservation is being recovered from cancellation
         if(reservationStatus.value === 'キャンセル'){            
             // Check availability for each detail in groupedRooms
             let allRoomsAvailable = true;
@@ -700,12 +730,22 @@
                 }
             });
         }else{
-            try {
-                await setReservationStatus(status);
-            } catch (error) {
-                console.error('Error updating and fetching reservation:', error);            
+            if(!type){
+                try {
+                    await setReservationStatus(status);
+                } catch (error) {
+                    console.error('Error updating and fetching reservation:', error);            
+                }
+            } else{
+                try {
+                    await setReservationStatus(type);
+                } catch (error) {
+                    console.error('Error updating and fetching reservation:', error);            
+                }
             }
         } 
+
+        showDateDialog.value = false;
         
     };
     const deleteReservation = () => {
@@ -743,6 +783,33 @@
                 });
             }
         });
+    };
+    const handleCancel = () => {
+        confirmCancel.require({
+            message: 'キャンセルの種類を選択してください。',
+            header: 'キャンセル確認',
+            icon: 'pi pi-exclamation-triangle',            
+            accept: () => updateReservationStatus('cancelled'),
+            acceptLabel: 'キャンセル料無し',
+            acceptClass: 'p-button-success',
+            acceptIcon: 'pi pi-check',            
+            reject: () => showDateDialog.value = true,
+            rejectLabel: 'キャンセル料発生',
+            rejectClass: 'p-button-danger',
+            rejectIcon: 'pi pi-calendar'
+        });
+    };
+    const confirmPartialCancel = async() => {
+        if (cancelStartDate.value) {
+            
+            await updateReservationStatus('cancelled');            
+            
+           for (const cancelledDetail of cancelledIds.value) {                
+                await setReservationDetailStatus(cancelledDetail.id, cancelledDetail.hotel_id, 'cancelled');
+            }
+
+            showDateDialog.value = false;
+        }        
     };
 
     // Check-in and Check-out
@@ -914,141 +981,146 @@
         }
     };
     
-        // Tab Apply Plan
-        const daysOfWeek = [
-            { label: '月曜日', value: 'mon' },
-            { label: '火曜日', value: 'tue' },
-            { label: '水曜日', value: 'wed' },
-            { label: '木曜日', value: 'thu' },
-            { label: '金曜日', value: 'fri' },
-            { label: '土曜日', value: 'sat' },
-            { label: '日曜日', value: 'sun' },
-        ];
-        const selectedDays = ref(daysOfWeek);
-        const selectedPlan = ref(null);
-        const selectedAddon = ref([]);
-        const addonOptions = ref(null);
-        const selectedAddonOption = ref(null);        
-        const updatePlanAddOns = async () => {
-            if (selectedPlan.value) {                
-                const gid = selectedPlan.value?.plans_global_id ?? 0;
-                const hid = selectedPlan.value?.plans_hotel_id ?? 0;
-                const hotel_id = reservationInfo.value.hotel_id ?? 0;
+    // Tab Apply Plan
+    const daysOfWeek = [
+        { label: '月曜日', value: 'mon' },
+        { label: '火曜日', value: 'tue' },
+        { label: '水曜日', value: 'wed' },
+        { label: '木曜日', value: 'thu' },
+        { label: '金曜日', value: 'fri' },
+        { label: '土曜日', value: 'sat' },
+        { label: '日曜日', value: 'sun' },
+    ];
+    const selectedDays = ref(daysOfWeek);
+    const selectedPlan = ref(null);
+    const selectedAddon = ref([]);
+    const addonOptions = ref(null);
+    const selectedAddonOption = ref(null);        
+    const updatePlanAddOns = async () => {
+        if (selectedPlan.value) {                
+            const gid = selectedPlan.value?.plans_global_id ?? 0;
+            const hid = selectedPlan.value?.plans_hotel_id ?? 0;
+            const hotel_id = reservationInfo.value.hotel_id ?? 0;
 
-                try {
-                    // Fetch add-ons from the store
-                    await fetchPlanAddons(gid, hid, hotel_id);                    
-                } catch (error) {
-                    console.error('Failed to fetch plan add-ons:', error);
-                    addons.value = [];                    
-                }
-            }
-        };
-        const generateAddonPreview = () => {
-            // Check
-            if(!selectedAddonOption.value){
-                toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
-                return
-            }
-            
-            const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
-            const isHotelAddon = foundAddon.id.startsWith('H');            
-            selectedAddon.value.push({
-                addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,                
-                addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
-                hotel_id: foundAddon.hotel_id,
-                name: foundAddon.name,
-                price: foundAddon.price,
-                quantity: 1,                
-            });   
-            
-            selectedAddonOption.value = '';
-        };
-        const deleteAddon = (addon) => {
-            const index = selectedAddon.value.indexOf(addon);
-            if (index !== -1) {
-                selectedAddon.value.splice(index, 1);
-            }
-        };
-        const applyPlanChangesToAll = async () => {        
             try {
-                groupedRooms.value.every(async (room) =>{
-                    const roomId = room.room_id;            
-                    await setRoomPlan(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value);
-                });
-
-                closeReservationBulkEditDialog();
-
-                // Provide feedback to the user
-                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
-                
+                // Fetch add-ons from the store
+                await fetchPlanAddons(gid, hid, hotel_id);                    
             } catch (error) {
-                console.error('Failed to apply changes:', error);                
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+                console.error('Failed to fetch plan add-ons:', error);
+                addons.value = [];                    
             }
-        };
+        }
+    };
+    const generateAddonPreview = () => {
+        // Check
+        if(!selectedAddonOption.value){
+            toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
+            return
+        }
+        
+        const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
+        const isHotelAddon = foundAddon.id.startsWith('H');            
+        selectedAddon.value.push({
+            addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,                
+            addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
+            hotel_id: foundAddon.hotel_id,
+            name: foundAddon.name,
+            price: foundAddon.price,
+            quantity: 1,                
+        });   
+        
+        selectedAddonOption.value = '';
+    };
+    const deleteAddon = (addon) => {
+        const index = selectedAddon.value.indexOf(addon);
+        if (index !== -1) {
+            selectedAddon.value.splice(index, 1);
+        }
+    };
+    const applyPlanChangesToAll = async () => {        
+        try {
+            groupedRooms.value.every(async (room) =>{
+                const roomId = room.room_id;            
+                await setRoomPlan(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value);
+            });
 
-        // Tab Modify Period
-        const newCheckIn = ref(null);
-        const newCheckOut = ref(null);
-        const minCheckIn = ref(null);
-        const maxCheckOut = ref(null);
-        const roomsAvailableChanges = ref([]);
-        const applyDateChangesToAll = async () => {            
-            // Checks            
-            if (!newCheckIn.value) {
-                toast.add({
-                    severity: 'warn',
-                    summary: 'Warning',
-                    detail: `チェックイン日を指定してください。`,
-                    life: 3000
-                });
-                return;
-            }
-            if (!newCheckOut.value) {
-                toast.add({
-                    severity: 'warn',
-                    summary: 'Warning',
-                    detail: `チェックアウト日を指定してください。`,
-                    life: 3000
-                });
-                return;
-            }
-            if (newCheckOut.value <= newCheckIn.value) {
-                toast.add({
-                    severity: 'warn',
-                    summary: 'Warning',
-                    detail: `チェックアウト日がチェックイン日以前になっています。`,
-                    life: 3000
-                });
-                return;
-            }
-
-            const new_check_in = formatDate(new Date(newCheckIn.value));
-            const new_check_out = formatDate(new Date(newCheckOut.value));
-
-            for (const room of roomsAvailableChanges.value) {
-                
-                const id = room.roomValues.details[0].reservation_id;
-                const old_check_in = room.roomValues.details[0].check_in;
-                const old_check_out = room.roomValues.details[0].check_out;
-                const old_room_id = room.roomId;
-                const new_room_id = room.roomId;
-                const number_of_people = room.roomValues.details[0].number_of_people;
-                
-                await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
-            }
-            
             closeReservationBulkEditDialog();
 
-            toast.add({ severity: 'success', summary: 'Success', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });  
+            // Provide feedback to the user
+            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
             
-        };
+        } catch (error) {
+            console.error('Failed to apply changes:', error);                
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+        }
+    };
+
+    // Tab Modify Period
+    const newCheckIn = ref(null);
+    const newCheckOut = ref(null);
+    const minCheckIn = ref(null);
+    const maxCheckOut = ref(null);
+    const roomsAvailableChanges = ref([]);
+    const applyDateChangesToAll = async () => {            
+        // Checks            
+        if (!newCheckIn.value) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: `チェックイン日を指定してください。`,
+                life: 3000
+            });
+            return;
+        }
+        if (!newCheckOut.value) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: `チェックアウト日を指定してください。`,
+                life: 3000
+            });
+            return;
+        }
+        if (newCheckOut.value <= newCheckIn.value) {
+            toast.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: `チェックアウト日がチェックイン日以前になっています。`,
+                life: 3000
+            });
+            return;
+        }
+
+        const new_check_in = formatDate(new Date(newCheckIn.value));
+        const new_check_out = formatDate(new Date(newCheckOut.value));
+
+        for (const room of roomsAvailableChanges.value) {
+            
+            const id = room.roomValues.details[0].reservation_id;
+            const old_check_in = room.roomValues.details[0].check_in;
+            const old_check_out = room.roomValues.details[0].check_out;
+            const old_room_id = room.roomId;
+            const new_room_id = room.roomId;
+            const number_of_people = room.roomValues.details[0].number_of_people;
+            
+            await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'bulk');
+        }
+        
+        closeReservationBulkEditDialog();
+
+        toast.add({ severity: 'success', summary: 'Success', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });  
+        
+    };
 
     onMounted(async () => {
         
         reservationTypeSelected.value = reservationInfo.value.type;
         selectedClient.value = reservationInfo.value.client_id;
+        cancelStartDate.value = new Date(reservationInfo.value.check_in);
+        cancelMinDate.value = new Date(reservationInfo.value.check_in);
+        const checkOutDate = new Date(reservationInfo.value.check_out);
+        checkOutDate.setDate(checkOutDate.getDate() - 1);
+        cancelMaxDate.value = checkOutDate;
 
         checkInTime.value = formatTime(reservationInfo.value.check_in_time);
         checkOutTime.value = formatTime(reservationInfo.value.check_out_time);

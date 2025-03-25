@@ -584,7 +584,10 @@
                 backgroundImage: 'repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1) 0px, rgba(0, 0, 0, 0.1) 10px, transparent 10px, transparent 20px)'
             }           
         }
-        if (data.cancelled) {
+        if (data.cancelled && data.billable) {
+            return { color: 'red', backgroundColor: '#f3dada' };
+        }
+        if (data.cancelled && !data.billable) {
             return { color: 'red' };
         }
         // Check if the day is a weekend

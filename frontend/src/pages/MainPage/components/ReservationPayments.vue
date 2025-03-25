@@ -251,17 +251,25 @@
     });
     const totalPrice = computed(() => {
         if (!props.reservation_details) return 0;
-
-        return props.reservation_details.reduce((sum, room) => sum + (room.price * 1 || 0), 0);
+        
+        return props.reservation_details.reduce((sum, room) => {
+            // Only include billable rooms in the sum
+            if (room.billable) {
+                sum += room.price * 1 || 0;
+            }
+            return sum;
+        }, 0);
     });
     const pricePerRoom = computed(() => {
         if (!props.reservation_details) return [];
 
         return props.reservation_details.reduce((acc, room) => {
-            if (!acc[room.room_id]) {
-            acc[room.room_id] = 0;
+            if (room.billable) { // Only include billable rooms
+                if (!acc[room.room_id]) {
+                    acc[room.room_id] = 0;
+                }
+                acc[room.room_id] += room.price * 1 || 0;
             }
-            acc[room.room_id] += room.price * 1 || 0;
             return acc;
         }, {});
     });
