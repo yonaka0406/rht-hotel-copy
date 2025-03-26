@@ -1,9 +1,9 @@
 <template>
     <div class="p-4">
-        <h2 class="text-xl font-bold mb-4">Client Merge</h2>
+        <h2 class="text-xl font-bold mb-4">顧客合流</h2>
   
         <Card class="p-4 border-2 border-blue-500">
-            <template #title>Merged Result</template>
+            <template #title>合流結果選択</template>
             <template #content>
                 <div v-if="mergedClient">
                     <div class="mb-2">
@@ -166,7 +166,7 @@
     if (props.oldID) {
       const response = await fetchClient(props.oldID);
       if (response && response.client) {
-        oldClient.value = response.client;
+        oldClient.value = response.client.client;
         if(oldClient.value.date_of_birth){
             oldClient.value.date_of_birth = formatDate(new Date(oldClient.value.date_of_birth));
         } 
@@ -178,7 +178,7 @@
     if (props.newID) {
       const response = await fetchClient(props.newID);
       if (response && response.client) {
-        newClient.value = response.client;
+        newClient.value = response.client.client;
         if(newClient.value.date_of_birth){
             newClient.value.date_of_birth = formatDate(new Date(newClient.value.date_of_birth));
         } 
