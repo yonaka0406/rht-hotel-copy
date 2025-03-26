@@ -251,16 +251,17 @@ FROM (
 
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    client_id UUID REFERENCES clients(id) ON DELETE CASCADE, -- Link to the clients table
-    address_name TEXT, -- Name or label for the address (e.g., "Headquarters", "Tokyo Subsidiary")
-    representative_name TEXT, -- Representative for the address location (e.g., office manager, branch head)
-    street TEXT NOT NULL,
-    city TEXT NOT NULL,
-    postal_code TEXT NOT NULL,
-    country TEXT NOT NULL,
-    phone TEXT, -- Phone number for the address
-    fax TEXT, -- Fax number for the address
-    email TEXT, -- Email for the address (could be a general address-specific email)
+    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+    address_name TEXT,
+    representative_name TEXT,
+    street TEXT,
+    state TEXT,
+    city TEXT,
+    postal_code TEXT,
+    country TEXT,
+    phone TEXT,
+    fax TEXT,
+    email TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)

@@ -7,7 +7,9 @@
           </Tab>
           <Tab value="1" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">住所</span>
-            <Badge value="2" />
+            <Badge>
+              {{ addressCount }}
+            </Badge>
           </Tab>
           <Tab value="2" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">変更履歴</span>
@@ -30,30 +32,30 @@
   </template>
   
   <script setup>
-    import { ref, onMounted } from 'vue';
+    // Vue
+    import { ref, computed, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
+    const route = useRoute();
+    
     import ClientBasicInfo from './components/ClientBasicInfo.vue';
     import ClientAddresses from './components/ClientAddresses.vue';
     import ClientEditHistory from './components/ClientEditHistory.vue';
+
+    // Stores
     import { useClientStore } from '@/composables/useClientStore';
+    const { selectedClient, selectedClientAddress, fetchClient } = useClientStore();
+
+    // Primevue
     import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
     import { Badge } from 'primevue';
-  
-    const route = useRoute();
-    const { selectedClient, fetchClient } = useClientStore();
+    
     const clientId = ref(route.params.clientId);
-    const loadingBasicInfo = ref(false);
-  /*
-    onMounted(async () => {        
-        try {
-          console.log("Client id:", clientId.value);
-          loadingBasicInfo.value = true;
-          await fetchClient(clientId.value);
-          loadingBasicInfo.value = false;
-          console.log("Selected client:", selectedClient.value);
-        } catch (error) {
-          console.error("Error fetching client data:", error);      
-        }
+    const loadingBasicInfo = ref(false);    
+    const addressCount = computed(() => {
+      if (!selectedClientAddress.value) {
+          return 0;
+      }
+
+      return Object.keys(selectedClientAddress.value).length; 
     });
-  */
   </script>

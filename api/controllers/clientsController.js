@@ -1,4 +1,4 @@
-const { processNameString, getAllClients, selectClient, getTotalClientsCount, addClientByName, addNewClient, editClient, editClientFull, selectClientReservations, deleteClient } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 
 // GET
@@ -97,6 +97,18 @@ const createClient = async (req, res) => {
     res.status(500).json({ error: 'Failed to create client' });
   }
 };
+const createAddress = async (req, res) => {
+  const addressFields = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const newAddress = await addNewAddress(req.requestId, user_id, addressFields);
+    res.json(newAddress); 
+  } catch (err) {
+    console.error('Error creating client address:', err);
+    res.status(500).json({ error: 'Failed to create client address' });
+  }
+};
 
 // PUT
 const updateClient = async (req, res) => {
@@ -112,7 +124,6 @@ const updateClient = async (req, res) => {
     res.status(500).json({ error: 'Failed to update client' });
   }
 };
-
 const updateClientFull = async (req, res) => {
   const clientId = req.params.id;
   const updatedFields = req.body;
@@ -125,7 +136,20 @@ const updateClientFull = async (req, res) => {
     console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
-}
+};
+const updateAddress = async (req, res) => {
+  const addressId = req.params.id;
+  const updatedFields = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const updatedClient = await editAddress(req.requestId, addressId, updatedFields, user_id);
+    res.json(updatedClient);
+  } catch (err) {
+    console.error('Error updating address:', err);
+    res.status(500).json({ error: 'Failed to update address' });
+  }
+};
 
 const mergeClients = async (req, res) => {
   const newClientId = req.params.nid;
@@ -142,7 +166,21 @@ const mergeClients = async (req, res) => {
   console.error('Error updating client:', err);
     res.status(500).json({ error: 'Failed to update client' });
   }
-}
+};
+
+// DELETE
+const removeAddress = async (req, res) => {
+  const addressId = req.params.id;  
+  const user_id = req.user.id;
+
+  try {
+    await deleteAddress(req.requestId, addressId, user_id);
+    res.json({message: 'Address deleted.'});
+  } catch (err) {
+    console.error('Error deleting address:', err);
+    res.status(500).json({ error: 'Failed to delete address' });
+  }
+};
 
 module.exports = { 
   getClients, 
@@ -151,7 +189,10 @@ module.exports = {
   getClientReservations,
   createClientBasic, 
   createClient, 
+  createAddress,
+  removeAddress,
   updateClient,
   updateClientFull,
+  updateAddress,
   mergeClients,
 };

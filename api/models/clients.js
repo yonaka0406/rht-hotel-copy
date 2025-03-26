@@ -125,19 +125,27 @@ const getTotalClientsCount = async (requestId) => {
 
 const selectClient = async (requestId, clientId) => {
   const pool = getPool(requestId);
-  const query = `
-    SELECT * 
-    FROM clients 
+  const clientQuery = `
+    SELECT * FROM clients 
     WHERE id = $1
+  `;
+  const addressQuery = `
+    SELECT *
+    FROM addresses
+    WHERE client_id = $1
   `;
   const values = [clientId];
 
   try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the selected client
+    const clientResult = await pool.query(clientQuery, values);
+    const addressResult = await pool.query(addressQuery, values);
+    return {
+      client: clientResult.rows[0],
+      addresses: addressResult.rows,
+    };
   }
   catch (err) {
-    console.error('Error selecting client:', err);
+    console.error('Error selecting client and addresses:', err);
     throw new Error('Database error');
   }
 };
@@ -214,6 +222,44 @@ const addNewClient = async (requestId, user_id, client) => {
     throw new Error('Database error');
   }
 };
+const addNewAddress = async (requestId, user_id, address) => {  
+  const pool = getPool(requestId);
+  if(!address.address_name){
+    throw new Error('Address name is required');
+  }
+  
+  const query = `
+    INSERT INTO addresses (
+      client_id, address_name, representative_name, street, state, 
+      city, postal_code, country, phone, fax, 
+      email, created_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    RETURNING *;
+  `;
+
+  const values = [
+    address.client_id,
+    address.address_name,
+    address.representative_name,    
+    address.street,
+    address.state,
+    address.city,
+    address.postal_code,
+    address.country,
+    address.phone,
+    address.fax,
+    address.email,
+    user_id
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error adding client address:', err);
+    throw new Error('Database error');
+  }
+}; 
 
 const editClient = async (requestId, clientId, updatedFields, user_id) => {
   const pool = getPool(requestId);
@@ -294,6 +340,49 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
   }
 };
 
+const editAddress = async (requestId, addressId, updatedFields, user_id) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE addresses SET
+      address_name = $1,
+      representative_name = $2,
+      street = $3,
+      state = $4,
+      city = $5,
+      postal_code = $6,
+      country = $7,      
+      phone = $8, 
+      fax = $9, 
+      email = $10, 
+      updated_by = $11
+    WHERE id = $12
+    RETURNING *;
+  `;
+
+  const values = [
+    updatedFields.address_name,
+    updatedFields.representative_name,
+    updatedFields.street,
+    updatedFields.state,
+    updatedFields.city,
+    updatedFields.postal_code,
+    updatedFields.country,
+    updatedFields.phone,
+    updatedFields.fax,
+    updatedFields.email,
+    user_id,
+    addressId
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;    
+  } catch (err) {
+    console.error('Error updating address:', err);
+    throw err;
+  }
+};
+
 const selectClientReservations = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const query = `
@@ -352,6 +441,26 @@ const deleteClient = async (requestId, clientId, updatedBy) => {
   }
 };
 
+const deleteAddress = async (requestId, addressId, updatedBy) => {
+  const pool = getPool(requestId);
+  const query = format(`
+    -- Set the updated_by value in a session variable
+    SET SESSION "my_app.user_id" = %L;
+
+    DELETE FROM addresses
+    WHERE id = %L
+    RETURNING *;
+  `, updatedBy, addressId);
+
+  try {
+    const result = await pool.query(query);    
+    return result.rowCount;
+  } catch (err) {
+    console.error('Error deleting address:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   processNameString,
   getAllClients,
@@ -359,8 +468,11 @@ module.exports = {
   selectClient,
   addClientByName,
   addNewClient,
+  addNewAddress,
   editClient,
   editClientFull,
+  editAddress,
   selectClientReservations,
   deleteClient,
+  deleteAddress,
 };

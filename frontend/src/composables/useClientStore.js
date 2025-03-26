@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 const clients = ref([]);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
+const selectedClientAddress = ref(null);
 
 export function useClientStore() {
     
@@ -65,9 +66,14 @@ export function useClientStore() {
                 },
             });
             
-            selectedClient.value = await response.json();
-            return selectedClient.value;
-            
+            const result = await response.json();
+            selectedClient.value = result.client;
+            selectedClientAddress.value = result.client.addresses;
+            console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
+            return {
+                client: selectedClient.value,
+                addresses: selectedClientAddress.value,
+            };            
         } catch (error) {
             console.error('Failed to fetch hotel rooms', error);
         }
@@ -139,6 +145,51 @@ export function useClientStore() {
           throw error;
         }
     };
+    const createAddress = async (addressFields) => {        
+        try {
+          const authToken = localStorage.getItem('authToken');
+          const response = await fetch('/api/client/address/new', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(addressFields),
+          });
+      
+          if (!response.ok) {
+            throw new Error('Failed to create client');
+          }
+      
+          const newClient = await response.json();          
+          return newClient;
+        } catch (error) {
+          console.error('Failed to create client', error);
+          throw error;
+        }
+    };
+    const removeAddress = async (id) => {        
+        try {
+          const authToken = localStorage.getItem('authToken');
+          const response = await fetch(`/api/client/address/del/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },            
+          });
+      
+          if (!response.ok) {
+            throw new Error('Failed to delete address');
+          }
+      
+          const deleteAddress = await response.json();          
+          return deleteAddress;
+        } catch (error) {
+          console.error('Failed to create client', error);
+          throw error;
+        }
+    };
 
     const updateClientInfo = async (client_id, updatedFields) => {
         try {
@@ -162,7 +213,6 @@ export function useClientStore() {
             console.error('Failed to update client', error);
         }
     };
-
     const updateClientInfoCRM = async (client_id, updatedFields) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -186,7 +236,28 @@ export function useClientStore() {
             console.error('Failed to update client', error);
         }
     };
-
+    const updateAddress = async (address_id, updatedFields) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/address/update/${address_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updatedFields),
+            });
+        
+            if (!response.ok) {
+            throw new Error('Failed to update address');
+            }
+        
+            const editedData = await response.json();   
+            return editedData;         
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
+    };
     const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -214,14 +285,18 @@ export function useClientStore() {
         clients,
         clientsIsLoading,
         selectedClient,
+        selectedClientAddress,
         setClientsIsLoading,
         fetchClients,
         fetchClient,
         fetchClientNameConversion,
         fetchClientReservations,
         createClient,
+        createAddress,
+        removeAddress,
         updateClientInfo,
         updateClientInfoCRM,
+        updateAddress,
         mergeClientsCRM,
     };
 }
