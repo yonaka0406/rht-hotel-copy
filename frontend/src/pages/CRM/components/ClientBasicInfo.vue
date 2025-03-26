@@ -114,7 +114,7 @@
                                 fluid
                             />
                             <label>FAX</label>
-                            <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
+                            <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
                         </div>                            
                     </div>
