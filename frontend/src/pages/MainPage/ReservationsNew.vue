@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="p-2">
     <Card>
       <template #content>
         <div class="flex items-center justify-between mb-2">
