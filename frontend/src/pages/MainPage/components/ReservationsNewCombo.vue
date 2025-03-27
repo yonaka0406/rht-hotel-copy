@@ -197,7 +197,7 @@
                     v-model="reservationDetails.email"
                     :pattern="emailPattern"
                     :class="{'p-invalid': !isValidEmail}"
-                    @input="validateEmail"
+                    @input="validateEmail(reservationDetails.email)"
                     fluid 
                     :disabled="isClientSelected"
                 />
@@ -213,7 +213,7 @@
                     v-model="reservationDetails.phone"
                     :pattern="phonePattern"
                     :class="{'p-invalid': !isValidPhone}"
-                    @input="validatePhone"
+                    @input="validatePhone(reservationDetails.phone)"
                     fluid
                     :disabled="isClientSelected"
 
@@ -390,9 +390,7 @@
         const hotelId = selectedHotelId.value;
         const startDate = formatDate(comboRow.value.check_in);
         const endDate = formatDate(comboRow.value.check_out);
-        await fetchAvailableRooms(hotelId, startDate, endDate);
-        console.log('availableRooms:', availableRooms.value);      
-        console.log('numberOfNights:', numberOfNights.value);
+        await fetchAvailableRooms(hotelId, startDate, endDate);        
     };
     const onDateChange = async () => {
         reservationCombos.value.forEach(combo => {
@@ -400,11 +398,10 @@
             combo.check_out = comboRow.value.check_out;
         });
         await checkDates();
-        validateCombos();
-        console.log('countOfRoomTypes:',countOfRoomTypes.value)
+        validateCombos();        
     };
     const addReservationCombo = () => {
-        console.log('addReservationCombo:',comboRow.value);
+        // console.log('addReservationCombo:',comboRow.value);
         const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
         reservationCombos.value.push({
             ...comboRow.value,
@@ -430,22 +427,22 @@
 
         const consolidatedCombos = {};
         reservationCombos.value.forEach(combo => {
-        if (!consolidatedCombos[combo.room_type_id]) {
-            consolidatedCombos[combo.room_type_id] = {
-            room_type_id: combo.room_type_id,
-            room_type_name: combo.room_type_name,
-            totalRooms: 0,
-            totalPeople: 0,
-            roomCapacities: [], // Store room capacity for each room
-            };
-        }
-        consolidatedCombos[combo.room_type_id].totalRooms += combo.number_of_rooms;
-        consolidatedCombos[combo.room_type_id].totalPeople += combo.number_of_people;
-        for (let i = 0; i < combo.number_of_rooms; i++) {
-            consolidatedCombos[combo.room_type_id].roomCapacities.push(
-            rooms.value.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
-            );
-        }
+            if (!consolidatedCombos[combo.room_type_id]) {
+                consolidatedCombos[combo.room_type_id] = {
+                room_type_id: combo.room_type_id,
+                room_type_name: combo.room_type_name,
+                totalRooms: 0,
+                totalPeople: 0,
+                roomCapacities: [], // Store room capacity for each room
+                };
+            }
+            consolidatedCombos[combo.room_type_id].totalRooms += combo.number_of_rooms;
+            consolidatedCombos[combo.room_type_id].totalPeople += combo.number_of_people;
+            for (let i = 0; i < combo.number_of_rooms; i++) {
+                consolidatedCombos[combo.room_type_id].roomCapacities.push(
+                rooms.value.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
+                );
+            }
         });
 
         // Check if there are enough rooms
@@ -527,8 +524,7 @@
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const isValidEmail = ref(true);
     const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
-    const isValidPhone = ref(true);
-    const isValidFAX = ref(true);
+    const isValidPhone = ref(true);    
     const isClientSelected = ref(false);
     const selectedClient = ref(null);
     const client = ref({});
@@ -537,8 +533,7 @@
         reservationDetails.value.check_in = formatDate(reservationCombos.value[0].check_in);
         reservationDetails.value.check_out = formatDate(reservationCombos.value[0].check_out);
         reservationDetails.value.number_of_nights = calcDateDiff(reservationCombos.value[0].check_in, reservationCombos.value[0].check_out);
-        dialogVisible.value = true;
-        console.log('reservationDetails:',reservationDetails.value);
+        dialogVisible.value = true;        
     };
     const closeDialog = () => {
         dialogVisible.value = false; 
@@ -569,19 +564,31 @@
         // Update the name field (optional, as it's already handled by v-model)
         reservationDetails.value.name = selectedClient.value.name_kanji || selectedClient.value.name;
     };
+    const normalizeKana = (str) => {
+        if (!str) return '';
+        let normalizedStr = str.normalize('NFKC');
+        
+        // Convert Hiragana to Katakana
+        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
+        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        );
+        // Convert half-width Katakana to full-width Katakana
+        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
+        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        );
+        
+        return normalizedStr;
+    };
     const validateEmail = (email) => {
         isValidEmail.value = emailPattern.test(email);
     };
     const validatePhone = (phone) => {
         isValidPhone.value = phonePattern.test(phone);
-    };
-    const validateFAX = (fax) => {
-        isValidFAX.value = phonePattern.test(fax);
-    };
+    };    
     const submitReservation = async () => {
         // Validate email and phone
-        validateEmail();
-        validatePhone();
+        validateEmail(reservationDetails.value.email);
+        validatePhone(reservationDetails.value.phone);        
 
         // Check if either email or phone is filled
         if (!reservationDetails.value.email && !reservationDetails.value.phone) {
@@ -595,24 +602,34 @@
         }
         // Check for valid email format
         if (reservationDetails.value.email && !isValidEmail.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効なメールアドレスを入力してください。',
-            life: 3000,
-        });
-        return;
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効なメールアドレスを入力してください。',
+                life: 3000,
+            });
+            return;
         }
         // Check for valid phone format
         if (reservationDetails.value.phone && !isValidPhone.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効な電話番号を入力してください。',
-            life: 3000,
-        });
-        return;
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効な電話番号を入力してください。',
+                life: 3000,
+            });
+            return;
         }
+        
+        console.log(reservationDetails.value, reservationCombos.value);
+
+        //reservationCombos.value = [];
+        //closeDialog();
+    };
+    const goToEditReservationPage = async (reservation_id) => {                
+        await setReservationId(reservation_id);
+                    
+        router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
     };
 
     onMounted(async () => {  
@@ -622,6 +639,16 @@
         
         comboRow.value.room_type_id = roomTypes.value[0].room_type_id;        
         reservationDetails.value.hotel_id = selectedHotelId.value;
+
+        if(clients.value.length === 0) {
+            setClientsIsLoading(true);
+            const clientsTotalPages = fetchClients(1);
+            // Fetch clients for all pages
+            for (let page = 2; page <= clientsTotalPages; page++) {
+                fetchClients(page);
+            }
+            setClientsIsLoading(false);            
+        }
     });
 
     watch(() => comboRow.value.number_of_rooms,
