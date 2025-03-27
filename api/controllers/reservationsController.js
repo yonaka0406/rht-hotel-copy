@@ -326,7 +326,7 @@ const createHoldReservationCombo = async (req, res) => {
   const { header, combo } = req.body;
   const user_id = req.user.id;
 
-  console.log(`[${req.requestId}] Received request to create reservation combo:`, { header, combo });
+  // console.log(`[${req.requestId}] Received request to create reservation combo:`, { header, combo });
 
   const dateRange = [];
   let currentDate = new Date(header.check_in);
@@ -363,8 +363,8 @@ const createHoldReservationCombo = async (req, res) => {
       check_in: header.check_in,
       check_out: header.check_out,
       number_of_people: header.number_of_people,
-      user_id,
-      user_id
+      created_by: user_id,
+      updated_by: user_id
     };
 
     // Add the reservation to the database
@@ -384,57 +384,104 @@ const createHoldReservationCombo = async (req, res) => {
       console.log(`[${req.requestId}] Processing room type: ${roomCombo.room_type_name}, total rooms: ${roomCombo.totalRooms}, total people: ${roomCombo.totalPeople}`);
       console.log(`[${req.requestId}] Filtered available rooms for type ${roomCombo.room_type_name}:`, availableRoomsFiltered);
 
+      // Sort available rooms by capacity (ascending)
+      availableRoomsFiltered.sort((a, b) => a.capacity - b.capacity);
 
-      while (assignedRoomsCount < roomCombo.totalRooms && (remainingPeople > 0 || assignedRoomsCount < roomCombo.totalRooms)) {
-        let bestRoom = null;
+      // Select initial rooms
+      const selectedRooms = availableRoomsFiltered.slice(0, roomCombo.totalRooms);
 
-        // Prioritize rooms with the highest capacity
-        for (const room of availableRoomsFiltered) {
-          if (!bestRoom || room.capacity > bestRoom.capacity) {
-              bestRoom = room;
-          }
-        }
-
-        if (!bestRoom) {
-            console.log(`[${req.requestId}] No suitable room found for room type: ${roomCombo.room_type_name}`);
-            break;
-        }       
-
-        const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
-        if (roomCombo.totalRooms - assignedRoomsCount === 1 && peopleAssigned < 1) {
-          return res.status(400).json({ error: `Not enough capacity to assign people to rooms for room type: ${roomCombo.room_type_name}` });
-        }
-        
-        remainingPeople -= peopleAssigned;
-        assignedRoomsCount++;
-        roomsAssigned.push(bestRoom.room_id);
-
-        console.log(`[${req.requestId}] Assigned room ${bestRoom.room_id} (capacity: ${bestRoom.capacity}), people assigned: ${peopleAssigned}, remaining people: ${remainingPeople}`);
-
-
-        dateRange.forEach((date) => {
-          reservationDetails.push({
-            reservation_id: newReservation.id,
-            hotel_id: header.hotel_id,
-            room_id: bestRoom.room_id,
-            date: formatDate(date),
-            plans_global_id: null,
-            plans_hotel_id: null,
-            number_of_people: peopleAssigned,
-            price: 0,
-            created_by: user_id,
-            updated_by: user_id,
-          });
-        });
-
-        availableRoomsFiltered = availableRoomsFiltered.filter(room => room.room_id !== bestRoom.room_id);
-      }
-
-      if (assignedRoomsCount < roomCombo.totalRooms) {
+      if (selectedRooms.length < roomCombo.totalRooms) {
           return res.status(400).json({ error: `Not enough rooms available for room type: ${roomCombo.room_type_name}` });
       }
 
-      if(remainingPeople > 0){
+      // Assign one person to each room initially
+      for (const room of selectedRooms) {
+        if (remainingPeople > 0) {
+            assignedRoomsCount++;
+            roomsAssigned.push(room.room_id);
+
+            console.log(`[${req.requestId}] Assigned room ${room.room_id} (capacity: ${room.capacity}), people assigned: 1, remaining people: ${remainingPeople - 1}`);
+
+            dateRange.forEach((date) => {
+                reservationDetails.push({
+                    reservation_id: newReservation.id,
+                    hotel_id: header.hotel_id,
+                    room_id: room.room_id,
+                    date: formatDate(date),
+                    plans_global_id: null,
+                    plans_hotel_id: null,
+                    number_of_people: 1,
+                    price: 0,
+                    created_by: user_id,
+                    updated_by: user_id,
+                });
+            });
+            remainingPeople -= 1;
+        }
+      }
+
+      // Assign remaining people to rooms
+      if (remainingPeople > 0) {
+        for (const room of selectedRooms) {
+            if (remainingPeople > 0) {
+                const peopleAssigned = Math.min(remainingPeople, room.capacity - 1); // Subtract 1 as one person is already assigned
+                remainingPeople -= peopleAssigned;
+
+                console.log(`[${req.requestId}] Assigned additional ${peopleAssigned} people to room ${room.room_id} (capacity: ${room.capacity}), remaining people: ${remainingPeople}`);
+
+                dateRange.forEach((date) => {
+                    // Update reservation details with the additional people
+                    const detailIndex = reservationDetails.findIndex(detail => detail.room_id === room.room_id && detail.reservation_id === newReservation.id);
+                    if(detailIndex !== -1){
+                        reservationDetails[detailIndex].number_of_people += peopleAssigned;
+                    }
+
+                });
+            }
+        }
+      }
+      
+      // Adjust rooms if needed
+      if (remainingPeople > 0) {
+          // Replace rooms with higher capacity if possible
+          for (let i = 0; i < selectedRooms.length && remainingPeople > 0; i++) {
+              const currentRoom = selectedRooms[i];
+              const higherCapacityRooms = availableRoomsFiltered.filter(
+                  room => room.capacity > currentRoom.capacity && !selectedRooms.includes(room)
+              );
+
+              if (higherCapacityRooms.length > 0) {
+                  const bestHigherCapacityRoom = higherCapacityRooms.reduce(
+                      (prev, curr) => (curr.capacity > prev.capacity ? curr : prev),
+                      higherCapacityRooms[0]
+                  );
+
+                  const peopleAssigned = Math.min(remainingPeople, bestHigherCapacityRoom.capacity - currentRoom.capacity);
+                  remainingPeople -= peopleAssigned;
+
+                  // Replace the room
+                  selectedRooms[i] = bestHigherCapacityRoom;
+                  roomsAssigned[i] = bestHigherCapacityRoom.room_id;
+
+                  console.log(`[${req.requestId}] Replaced room ${currentRoom.room_id} with ${bestHigherCapacityRoom.room_id} (capacity: ${bestHigherCapacityRoom.capacity}), people assigned: ${peopleAssigned}, remaining people: ${remainingPeople}`);
+
+                  dateRange.forEach((date) => {
+                      // Update reservation details with the new room
+                      const detailIndex = reservationDetails.findIndex(detail => detail.room_id === currentRoom.room_id && detail.reservation_id === newReservation.id);
+                      if(detailIndex !== -1){
+                          reservationDetails[detailIndex].room_id = bestHigherCapacityRoom.room_id;
+                          reservationDetails[detailIndex].number_of_people += peopleAssigned;
+                      }
+
+                  });
+
+                  // Remove the replaced room from available rooms
+                  availableRoomsFiltered = availableRoomsFiltered.filter(room => room.room_id !== bestHigherCapacityRoom.room_id);
+              }
+          }
+      }
+
+      if (remainingPeople > 0) {
           return res.status(400).json({ error: `Not enough capacity to assign people to rooms for room type: ${roomCombo.room_type_name}` });
       }
     }
