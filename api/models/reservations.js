@@ -693,7 +693,7 @@ const addReservationHold = async (requestId, reservation) => {
     const result = await pool.query(query, values);
     return result.rows[0]; // Return the inserted client
   } catch (err) {
-    console.error('Error adding client:', err);
+    console.error('Error adding reservation hold:', err);
     throw new Error('Database error');
   }
 }

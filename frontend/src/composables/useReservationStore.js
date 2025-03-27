@@ -883,6 +883,31 @@ export function useReservationStore() {
         }
     };
 
+    const createHoldReservationCombo = async(header, combo) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/add/hold-combo`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ header, combo })
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to create hold reservation from combo.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error creating hold reservation from combo:', error);
+            throw error;
+        }
+    };
+
     // Watchers
     watch(reservedRooms, (newValue, oldValue) => {
         if (newValue !== oldValue) {
@@ -928,7 +953,7 @@ export function useReservationStore() {
         setReservationComment,
         setReservationTime,
         setRoomPlan,
-        setRoomGuests,
+        setRoomGuests,        
         changeReservationRoomGuestNumber,        
         fetchReservation,
         fetchReservationDetail,
@@ -943,5 +968,6 @@ export function useReservationStore() {
         deleteHoldReservation,
         deleteReservationRoom,
         deleteReservationPayment,     
+        createHoldReservationCombo,
     };
 }

@@ -127,7 +127,7 @@
                         </Column>
                     </DataTable>
                 </template>
-            </Card>      
+            </Card>
         </Panel>
 
         <!-- Dialog -->
@@ -281,7 +281,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted, nextTick } from 'vue';
+    import { ref, computed, watch, onMounted } from 'vue';
     import { useRouter } from 'vue-router';
     const router = useRouter();
 
@@ -296,7 +296,7 @@
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
+    const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
 
     // Helper function
     const formatDate = (date) => {
@@ -420,26 +420,30 @@
     const consolidatedCombos = computed(() => {
         const consolidated = {};
         if (reservationCombos.value) {
-        reservationCombos.value.forEach(combo => {
-            if (!consolidated[combo.room_type_id]) {
-            consolidated[combo.room_type_id] = {
-                room_type_id: combo.room_type_id,
-                room_type_name: combo.room_type_name,
-                totalRooms: 0,
-                totalPeople: 0,
-                roomCapacities: [],
-            };
-            }
-            consolidated[combo.room_type_id].totalRooms += combo.number_of_rooms;
-            consolidated[combo.room_type_id].totalPeople += combo.number_of_people;
-            for (let i = 0; i < combo.number_of_rooms; i++) {
-            consolidated[combo.room_type_id].roomCapacities.push(
-                availableRooms.value?.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
-            );
-            }
-        });
+            reservationCombos.value.forEach(combo => {
+                if (!consolidated[combo.room_type_id]) {
+                consolidated[combo.room_type_id] = {
+                    room_type_id: combo.room_type_id,
+                    room_type_name: combo.room_type_name,
+                    totalRooms: 0,
+                    totalPeople: 0,
+                    roomCapacities: [],
+                };
+                }
+                consolidated[combo.room_type_id].totalRooms += combo.number_of_rooms;
+                consolidated[combo.room_type_id].totalPeople += combo.number_of_people;
+                for (let i = 0; i < combo.number_of_rooms; i++) {
+                consolidated[combo.room_type_id].roomCapacities.push(
+                    availableRooms.value?.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
+                );
+                }
+            });            
         }
+        
         return consolidated;
+    });
+    const totalPeople = computed(() => {
+        return Object.values(consolidatedCombos.value).reduce((sum, combo) => sum + combo.totalPeople, 0);
     });
     const deleteCombo = (combo) => {
         reservationCombos.value = reservationCombos.value.filter(c => c !== combo);
@@ -623,9 +627,12 @@
         }
         
         console.log(reservationDetails.value, consolidatedCombos.value);
-
-        //reservationCombos.value = [];
-        //closeDialog();
+        const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);        
+        await fetchMyHoldReservations();
+        await goToEditReservationPage(reservation.reservation.id); 
+        reservationCombos.value = [];
+        closeDialog();
+        
     };
     const goToEditReservationPage = async (reservation_id) => {                
         await setReservationId(reservation_id);
@@ -657,6 +664,19 @@
             if (comboRow.value.number_of_people < newRooms) {
                 comboRow.value.number_of_people = newRooms;
             }
+        }
+    );
+    watch(totalPeople, (newTotal) => {
+        reservationDetails.value.number_of_people = newTotal;
+    });
+    watch(() => selectedHotelId.value,
+        async(newId) => {
+            await fetchHotels();
+            await fetchHotel();  
+            await checkDates();
+            
+            comboRow.value.room_type_id = roomTypes.value[0].room_type_id;        
+            reservationDetails.value.hotel_id = selectedHotelId.value;
         }
     );
 </script>

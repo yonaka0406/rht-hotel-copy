@@ -322,6 +322,139 @@ const createReservationHold = async (req, res) => {
 
 };
 
+const createHoldReservationCombo = async (req, res) => {
+  const { header, combo } = req.body;
+  const user_id = req.user.id;
+
+  console.log(`[${req.requestId}] Received request to create reservation combo:`, { header, combo });
+
+  const dateRange = [];
+  let currentDate = new Date(header.check_in);
+  while (currentDate < new Date(header.check_out)) {
+    dateRange.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  try {
+    let finalClientId = header.client_id;
+
+    // Check if client_id is null
+    if (!header.client_id) {
+      // Create the client if no client_id is provided
+      const clientData = {
+        name: header.name,
+        legal_or_natural_person: header.legal_or_natural_person,
+        gender: header.gender,
+        email: header.email,
+        phone: header.phone,
+        user_id,
+        user_id,
+      };
+
+      // Add new client and get the created client's id
+      const newClient = await addClientByName(req.requestId, clientData);
+      finalClientId = newClient.id; // Use the newly created client's id
+    }
+
+    // Add the reservation with the final client_id
+    const reservationData = {
+      hotel_id: header.hotel_id,
+      reservation_client_id: finalClientId,
+      check_in: header.check_in,
+      check_out: header.check_out,
+      number_of_people: header.number_of_people,
+      user_id,
+      user_id
+    };
+
+    // Add the reservation to the database
+    const newReservation = await addReservationHold(req.requestId, reservationData);
+    // Get available rooms for the reservation period
+    const availableRooms = await selectAvailableRooms(req.requestId, header.hotel_id, header.check_in, header.check_out);
+    
+    const reservationDetails = [];
+        
+    for (const roomTypeId in combo) {
+      const roomCombo = combo[roomTypeId];
+      let remainingPeople = roomCombo.totalPeople;
+      let availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === roomCombo.room_type_id);
+      let assignedRoomsCount = 0;
+      const roomsAssigned = [];
+
+      console.log(`[${req.requestId}] Processing room type: ${roomCombo.room_type_name}, total rooms: ${roomCombo.totalRooms}, total people: ${roomCombo.totalPeople}`);
+      console.log(`[${req.requestId}] Filtered available rooms for type ${roomCombo.room_type_name}:`, availableRoomsFiltered);
+
+
+      while (assignedRoomsCount < roomCombo.totalRooms && (remainingPeople > 0 || assignedRoomsCount < roomCombo.totalRooms)) {
+        let bestRoom = null;
+
+        // Prioritize rooms with the highest capacity
+        for (const room of availableRoomsFiltered) {
+          if (!bestRoom || room.capacity > bestRoom.capacity) {
+              bestRoom = room;
+          }
+        }
+
+        if (!bestRoom) {
+            console.log(`[${req.requestId}] No suitable room found for room type: ${roomCombo.room_type_name}`);
+            break;
+        }       
+
+        const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
+        if (roomCombo.totalRooms - assignedRoomsCount === 1 && peopleAssigned < 1) {
+          return res.status(400).json({ error: `Not enough capacity to assign people to rooms for room type: ${roomCombo.room_type_name}` });
+        }
+        
+        remainingPeople -= peopleAssigned;
+        assignedRoomsCount++;
+        roomsAssigned.push(bestRoom.room_id);
+
+        console.log(`[${req.requestId}] Assigned room ${bestRoom.room_id} (capacity: ${bestRoom.capacity}), people assigned: ${peopleAssigned}, remaining people: ${remainingPeople}`);
+
+
+        dateRange.forEach((date) => {
+          reservationDetails.push({
+            reservation_id: newReservation.id,
+            hotel_id: header.hotel_id,
+            room_id: bestRoom.room_id,
+            date: formatDate(date),
+            plans_global_id: null,
+            plans_hotel_id: null,
+            number_of_people: peopleAssigned,
+            price: 0,
+            created_by: user_id,
+            updated_by: user_id,
+          });
+        });
+
+        availableRoomsFiltered = availableRoomsFiltered.filter(room => room.room_id !== bestRoom.room_id);
+      }
+
+      if (assignedRoomsCount < roomCombo.totalRooms) {
+          return res.status(400).json({ error: `Not enough rooms available for room type: ${roomCombo.room_type_name}` });
+      }
+
+      if(remainingPeople > 0){
+          return res.status(400).json({ error: `Not enough capacity to assign people to rooms for room type: ${roomCombo.room_type_name}` });
+      }
+    }
+
+    // Add reservation details to the database
+    for (const detail of reservationDetails) {
+      await addReservationDetail(req.requestId, detail);
+    }
+
+    res.status(201).json({
+      reservation: newReservation,
+      reservationDetails,
+    });
+    
+  } catch (err) {
+    console.error('Error creating reservation:', err);
+    res.status(500).json({ error: 'Failed to create reservation' });
+  }
+};
+
 const createReservationDetails = async (req, res) => {
   const {
     ogm_id,
@@ -969,4 +1102,4 @@ const delReservationPayment = async (req, res) => {
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };
