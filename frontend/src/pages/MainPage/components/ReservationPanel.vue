@@ -98,7 +98,14 @@
                 </template>
             </div>
         </div>
-        <div class="field flex flex-col col-span-2">                        
+        <div class="field flex flex-col col-span-2 relative">
+            <div class="absolute top-0 right-0">
+                <Button
+                    icon="pi pi-history"
+                    class="p-button-rounded p-button-text"
+                    @click="showHistoryDialog"
+                />
+            </div>                     
             <div class="grid grid-cols-4 gap-x-6">
                 <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
@@ -149,17 +156,15 @@
                         raised
                         @click="updateReservationStatus('confirmed')"
                     /> 
-                </div>
-                
+                </div>                
                 <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
                     <Button 
                         label="保留中予約を削除" 
                         severity="danger"
                         fluid
                         @click="deleteReservation"
-                    />
-                    <ConfirmPopup />
-                </div>                 
+                    />                    
+                </div>
             </div>
         </div>
     </div>
@@ -468,6 +473,20 @@
             <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeReservationBulkEditDialog" />                
         </template>            
     </Dialog>
+
+    <!-- Reservation Edit History -->
+    <Dialog
+      v-model:visible="historyDialogVisible"
+      header="編集履歴"
+      :modal="true"
+      :dismissableMask="true"
+      :style="{ width: '80vw' }"
+    >
+    <ReservationHistory 
+        v-if="props.reservation_id"
+        :reservation_id="props.reservation_id"        
+    />
+    </Dialog>
 </template>
 
 <script setup>
@@ -477,6 +496,7 @@
     const router = useRouter();
 
     import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
+    import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
     
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -979,6 +999,12 @@
                 });                
             });            
         }
+    };
+
+    // Dialog: History
+    const historyDialogVisible = ref(false);
+    const showHistoryDialog = () => {  
+      historyDialogVisible.value = true;
     };
     
     // Tab Apply Plan
