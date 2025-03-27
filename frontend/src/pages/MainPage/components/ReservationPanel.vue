@@ -482,7 +482,7 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
-    const confirm = useConfirm();
+    const confirmDelete = useConfirm();
     const confirmCancel = useConfirm();
     const confirmRecovery = useConfirm();
     import { 
@@ -751,7 +751,7 @@
     const deleteReservation = () => {
         const reservation_id = reservationInfo.value.reservation_id;
 
-        confirm.require({
+        confirmDelete.require({
             message: `保留中予約を削除してもよろしいですか?`,
             header: 'Delete Confirmation',                    
             icon: 'pi pi-info-circle',
