@@ -417,37 +417,40 @@
     // Table
     const reservationCombos = ref([]);
     const validationErrors = ref([]);
+    const consolidatedCombos = computed(() => {
+        const consolidated = {};
+        if (reservationCombos.value) {
+        reservationCombos.value.forEach(combo => {
+            if (!consolidated[combo.room_type_id]) {
+            consolidated[combo.room_type_id] = {
+                room_type_id: combo.room_type_id,
+                room_type_name: combo.room_type_name,
+                totalRooms: 0,
+                totalPeople: 0,
+                roomCapacities: [],
+            };
+            }
+            consolidated[combo.room_type_id].totalRooms += combo.number_of_rooms;
+            consolidated[combo.room_type_id].totalPeople += combo.number_of_people;
+            for (let i = 0; i < combo.number_of_rooms; i++) {
+            consolidated[combo.room_type_id].roomCapacities.push(
+                availableRooms.value?.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
+            );
+            }
+        });
+        }
+        return consolidated;
+    });
     const deleteCombo = (combo) => {
         reservationCombos.value = reservationCombos.value.filter(c => c !== combo);
         validateCombos();
     };
     const validateCombos = () => {
         validationErrors.value = [];
-        const rooms = ref(availableRooms.value ? [...availableRooms.value] : []); // Create a copy of availableRooms
+        const rooms = ref(availableRooms.value ? [...availableRooms.value] : []);
 
-        const consolidatedCombos = {};
-        reservationCombos.value.forEach(combo => {
-            if (!consolidatedCombos[combo.room_type_id]) {
-                consolidatedCombos[combo.room_type_id] = {
-                room_type_id: combo.room_type_id,
-                room_type_name: combo.room_type_name,
-                totalRooms: 0,
-                totalPeople: 0,
-                roomCapacities: [], // Store room capacity for each room
-                };
-            }
-            consolidatedCombos[combo.room_type_id].totalRooms += combo.number_of_rooms;
-            consolidatedCombos[combo.room_type_id].totalPeople += combo.number_of_people;
-            for (let i = 0; i < combo.number_of_rooms; i++) {
-                consolidatedCombos[combo.room_type_id].roomCapacities.push(
-                rooms.value.find(room => room.room_type_id === combo.room_type_id)?.capacity || 0
-                );
-            }
-        });
-
-        // Check if there are enough rooms
-        for (const roomTypeId in consolidatedCombos) {
-        const combo = consolidatedCombos[roomTypeId];
+        for (const roomTypeId in consolidatedCombos.value) {
+        const combo = consolidatedCombos.value[roomTypeId];
         let availableRoomCount = 0;
         let availableCapacity = 0;
         const availableRoomsForCapacity = [];
@@ -463,8 +466,7 @@
         if (combo.totalRooms > availableRoomCount) {
             validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
         } else {
-            // Check if people fit within individual room capacities
-            const sortedRoomCapacities = combo.roomCapacities.slice().sort((a, b) => b - a); // Sort in descending order
+            const sortedRoomCapacities = combo.roomCapacities.slice().sort((a, b) => b - a);
             const sortedAvailableCapacities = availableRoomsForCapacity.slice().sort((a, b) => b - a);
 
             let peopleRemaining = combo.totalPeople;
@@ -478,20 +480,19 @@
             }
         }
 
-        // Update row styles based on validation
         reservationCombos.value.forEach(individualCombo => {
             if (individualCombo.room_type_id === combo.room_type_id) {
-                let peopleRemaining = combo.totalPeople;
-                for (let i = 0; i < combo.roomCapacities.length; i++) {
+            let peopleRemaining = combo.totalPeople;
+            for (let i = 0; i < combo.roomCapacities.length; i++) {
                 if (peopleRemaining > 0) {
-                    peopleRemaining -= availableRoomsForCapacity[i] || 0;
+                peopleRemaining -= availableRoomsForCapacity[i] || 0;
                 }
-                }
-                if(combo.totalRooms > availableRoomCount || peopleRemaining > 0){
-                    individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
-                } else {
-                    individualCombo.rowStyle = {};
-                }
+            }
+            if (combo.totalRooms > availableRoomCount || peopleRemaining > 0) {
+                individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
+            } else {
+                individualCombo.rowStyle = {};
+            }
             }
         });
         }
@@ -621,7 +622,7 @@
             return;
         }
         
-        console.log(reservationDetails.value, reservationCombos.value);
+        console.log(reservationDetails.value, consolidatedCombos.value);
 
         //reservationCombos.value = [];
         //closeDialog();
