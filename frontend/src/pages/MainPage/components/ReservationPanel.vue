@@ -480,12 +480,12 @@
       header="編集履歴"
       :modal="true"
       :dismissableMask="true"
-      :style="{ width: '80vw' }"
+      :style="{ width: '80vw', 'max-height': '80vh', 'overflow-y': 'auto' }"
     >
-    <ReservationHistory 
-        v-if="props.reservation_id"
-        :reservation_id="props.reservation_id"        
-    />
+        <ReservationHistory 
+            v-if="props.reservation_id"
+            :reservation_id="props.reservation_id"        
+        />
     </Dialog>
 </template>
 

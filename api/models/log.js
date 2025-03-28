@@ -1,12 +1,12 @@
 const { getPool } = require('../config/database');
 
-const selectReservationHistory = async (id) => {
+const selectReservationHistory = async (requestId, id) => {
     const pool = getPool(requestId);
     const query = `
         SELECT
             lr.log_time,
             u.name,
-            jsonb_object_agg(change_details.key, change_details.new_value) AS changed_fields
+            jsonb_object_agg(change_details.key, jsonb_build_object('from', old_details.old_value, 'to', change_details.new_value)) AS changed_fields
         FROM
             logs_reservation lr
         JOIN
@@ -20,8 +20,37 @@ const selectReservationHistory = async (id) => {
             AND change_details.new_value IS DISTINCT FROM old_details.old_value
         GROUP BY
             lr.log_time, u.name
+
+        UNION ALL
+
+        SELECT
+            lr.log_time,
+            u.name,
+            jsonb_build_object('insert', 'INSERT') AS changed_fields
+        FROM
+            logs_reservation lr
+        JOIN
+            users u ON lr.user_id = u.id
+        WHERE
+            lr.record_id = $1
+            AND lr.action = 'INSERT'
+
+        UNION ALL
+
+        SELECT
+            lr.log_time,
+            u.name,
+            jsonb_build_object('delete', 'DELETE') AS changed_fields
+        FROM
+            logs_reservation lr
+        JOIN
+            users u ON lr.user_id = u.id
+        WHERE
+            lr.record_id = $1
+            AND lr.action = 'DELETE'
+
         ORDER BY
-            lr.log_time DESC;
+            log_time DESC;
     `;
     const values = [id];
     try {
