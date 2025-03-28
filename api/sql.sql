@@ -543,14 +543,406 @@ CREATE TABLE parking_spots (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE xml_exchanges (
+CREATE TABLE xml_templates (
     id SERIAL PRIMARY KEY,
-    reservation_id INT REFERENCES reservations(id) ON DELETE CASCADE,
-    ota_name TEXT NOT NULL,
-    xml_request TEXT NOT NULL,
-    xml_response TEXT,
-    status TEXT CHECK (status IN ('pending', 'success', 'error')) NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    name TEXT UNIQUE NOT NULL,
+    template XML NOT NULL
+);
+
+INSERT INTO xml_templates (name, template) VALUES 
+('NetRoomTypeMasterSearchService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc1002.pmsfc10.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <extractionCondition>
+               <extractionProcedureCode>{{extractionProcedureCode}}</extractionProcedureCode>
+            </extractionCondition>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetStockSearchService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc2002.pmsfc20.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <extractionCondition>
+               <extractionProcedure>{{extractionProcedure}}</extractionProcedure>
+               <searchDurationFrom>{{searchDurationFrom}}</searchDurationFrom>
+               <searchDurationTo>{{searchDurationTo}}</searchDurationTo>
+            </extractionCondition>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetStockAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc3002.pmsfc30.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <remainingCount>{{remainingCount}}</remainingCount>
+               <salesStatus>{{salesStatus}}</salesStatus>
+               <requestId>{{requestId}}</requestId>
+            </adjustmentTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetStockAdjustmentResponseResendService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc3004.pmsfc30.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <resendTarget>
+               <requestId>{{requestId}}</requestId>
+            </resendTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetPlanMasterSearchR2Service', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc1005.pmsfc10.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <extractionCondition>
+               <extractionProcedureCode>{{extractionProcedureCode}}</extractionProcedureCode>
+            </extractionCondition>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetPriceAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4001.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <priceRange1>{{priceRange1}}</priceRange1>
+               <salesStatus>{{salesStatus}}</salesStatus>
+               <requestId>{{requestId}}</requestId>
+            </adjustmentTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetPriceAdjustmentResponseResendService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4002.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <resendTarget>
+               <requestId>{{requestId}}</requestId>
+            </resendTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('BookingInfoOutputService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc5001.pmsfc50.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <outputTarget>
+               <systemCode>1</systemCode>
+            </outputTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('OutputCompleteService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc5002.pmsfc50.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <outputTarget>
+               <systemCode>{{systemCode}}</systemCode>
+               <outputId>{{outputId}}</outputId>
+            </outputTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('PlanSaleSituationSearchService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc6001.pmsfc60.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <extractionCondition>
+               <extractionProcedureCode>{{extractionProcedureCode}}</extractionProcedureCode>
+               <searchDurationFrom>{{searchDurationFrom}}</searchDurationFrom>
+               <searchDurationTo>{{searchDurationTo}}</searchDurationTo>
+               <planGroupCode>{{planGroupCode}}</planGroupCode>
+            </extractionCondition>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetStockBulkAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc3005.pmsfc30.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <adjustmentDate>{{adjustmentDate1}}</adjustmentDate>
+               <remainingCount>{{remainingCount1}}</remainingCount>
+               <salesStatus>{{salesStatus1}}</salesStatus>
+               <PMSOutputRmTypeCode>{{PMSOutputRmTypeCode1}}</PMSOutputRmTypeCode>
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <remainingCount>{{remainingCount2}}</remainingCount>
+               <salesStatus>{{salesStatus2}}</salesStatus>
+               <PMSOutputRmTypeCode>{{PMSOutputRmTypeCode2}}</PMSOutputRmTypeCode>
+            </adjustmentTarget>
+            <requestId>{{requestId}}</requestId>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetStockBulkAdjustmentResponseResendService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc3006.pmsfc30.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <resendTarget>
+               <requestId>{{requestId}}</requestId>
+            </resendTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetPriceBulkAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4003.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>3</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode1}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate1}}</adjustmentDate>
+               <priceRange1>{{priceRange1_1}}</priceRange1>
+               <salesStatus>1</salesStatus>
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>3</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode2}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <priceRange1>{{priceRange1_2}}</priceRange1>
+               <salesStatus>1</salesStatus>
+            </adjustmentTarget>
+            <requestId>{{requestId}}</requestId>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetPriceBulkAdjustmentResponseResendService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4004.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <resendTarget>
+               <requestId>{{requestId}}</requestId>
+            </resendTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetRestrictionAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4011.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <minLOS>{{minLOS}}</minLOS>
+               <maxLOS>{{maxLOS}}</maxLOS>
+               <cta>{{cta}}</cta>
+               <ctd>{{ctd}}</ctd>
+            </adjustmentTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('NetRestrictionBulkAdjustmentService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc4013.pmsfc40.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode1}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode1}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate1}}</adjustmentDate>
+               <minLOS>{{minLOS1}}</minLOS>
+               <maxLOS>{{maxLOS1}}</maxLOS>
+               <cta>{{cta1}}</cta>
+               <ctd>{{ctd1}}</ctd>
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode2}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <minLOS>{{minLOS2}}</minLOS>
+               <maxLOS>{{maxLOS2}}</maxLOS>
+               <cta>{{cta2}}</cta>
+               <ctd>{{ctd2}}</ctd>
+            </adjustmentTarget>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>'),
+('RestrictionSearchService', 
+'<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pms="http://pmsfc6011.pmsfc60.pms.lincoln.seanuts.co.jp/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <pms:execute>
+         <arg0>
+            <commonRequest>
+               <systemId>{{systemId}}</systemId>
+               <pmsUserId>{{pmsUserId}}</pmsUserId>
+               <pmsPassword>{{pmsPassword}}</pmsPassword>
+            </commonRequest>
+            <extractionCondition>
+               <extractionProcedureCode>{{extractionProcedureCode}}</extractionProcedureCode>
+               <searchDurationFrom>{{searchDurationFrom}}</searchDurationFrom>
+               <searchDurationTo>{{searchDurationTo}}</searchDurationTo>
+               <planGroupCode>{{planGroupCode}}</planGroupCode>
+            </extractionCondition>
+         </arg0>
+      </pms:execute>
+   </soapenv:Body>
+</soapenv:Envelope>');
+
+CREATE TABLE xml_responses (
+    id SERIAL PRIMARY KEY,
+    request_id INT REFERENCES some_request_table(id),
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    response XML NOT NULL
 );
 
 INSERT INTO xml_exchanges (reservation_id, ota_name, xml_request, status)
