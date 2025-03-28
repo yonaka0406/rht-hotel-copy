@@ -940,13 +940,12 @@ INSERT INTO xml_templates (name, template) VALUES
 
 CREATE TABLE xml_responses (
     id SERIAL PRIMARY KEY,
-    request_id INT REFERENCES some_request_table(id),
+    name TEXT NOT NULL,
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     response XML NOT NULL
 );
 
-INSERT INTO xml_exchanges (reservation_id, ota_name, xml_request, status)
-VALUES (123, 'Booking.com', '<xml>...</xml>', 'pending');
+
 --------------------------------------------------------------------
 --Imported clients, delete duplicates
 WITH duplicate_clients AS (
