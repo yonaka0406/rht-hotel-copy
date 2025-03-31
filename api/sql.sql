@@ -279,6 +279,23 @@ CREATE TABLE client_group (
 ALTER TABLE clients 
 ADD COLUMN client_group_id UUID DEFAULT NULL REFERENCES client_group(id);
 
+CREATE TABLE tax_info (
+   id SERIAL PRIMARY KEY,
+   name TEXT NOT NULL,
+   description TEXT,
+   percentage DECIMAL(10,4) NOT NULL,
+   visible BOOLEAN DEFAULT true,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   updated_by INT DEFAULT NULL REFERENCES users(id),
+   UNIQUE (name)
+);
+INSERT INTO tax_info (name, percentage, created_by)
+VALUES
+    ('非課税', 0, 1),
+    ('課税8%', 0.08, 1),
+    ('課税10%', 0.10, 1);
+
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    
     name TEXT NOT NULL,
