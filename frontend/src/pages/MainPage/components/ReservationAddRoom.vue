@@ -82,7 +82,7 @@
                         <AutoComplete
                             v-model="client"
                             :suggestions="filteredClients"
-                            optionLabel="name"
+                            optionLabel="display_name"
                             @complete="filterClients"
                             field="id"                
                             @option-select="onClientSelect"
@@ -392,6 +392,8 @@
 
         // Update the name field (optional, as it's already handled by v-model)
         reservationDetails.value.name = selectedClient.value.name_kanji || selectedClient.value.name;
+
+        client.value = { display_name: reservationDetails.value.name_kanji || reservationDetails.value.name };
     };
     const submitReservation = async () => {
         // Validate email and phone
