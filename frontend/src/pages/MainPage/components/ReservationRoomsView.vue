@@ -710,7 +710,7 @@
         };
         const applyPlanChanges = async () => {
             try {               
-                await setRoomPlan(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value);
+                await setRoomPlan(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value, selectedDays.value);
                         
                 closeRoomEditDialog();
     

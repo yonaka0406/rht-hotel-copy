@@ -383,7 +383,8 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
       reservation_details.id,
       reservation_details.hotel_id,
       reservation_details.room_id,
-      reservation_details.reservation_id      
+      reservation_details.reservation_id,
+      reservation_details.date    
     FROM
       reservation_details
     WHERE
@@ -1697,10 +1698,10 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
   } 
 };
 
-const updateReservationRoomPlan = async (requestId, reservationId, hotelId, roomId, plan, addons, user_id) => {
+const updateReservationRoomPlan = async (requestId, reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
-
+  
   try {
     await client.query('BEGIN');
     
@@ -1708,7 +1709,14 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
     await client.query(setSessionQuery);
 
-    const detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
+    let detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);    
+    const validDays = daysOfTheWeek.map(d => d.value);    
+    // Filter detailsArray to keep only dates that match daysOfTheWeek
+    detailsArray = detailsArray.filter(detail => {
+      const detailDate = detail.date; // Convert string date to Date object      
+      const dayOfWeek = detailDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();      
+      return validDays.includes(dayOfWeek);
+    });
 
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {

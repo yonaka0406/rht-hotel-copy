@@ -384,7 +384,7 @@ export function useReservationStore() {
     };
 
     // Bulk Update
-    const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons) => {
+    const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons, daysOfTheWeek) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -395,7 +395,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ plan, addons })
+                body: JSON.stringify({ plan, addons, daysOfTheWeek })
             });
 
             if (!response.ok) {

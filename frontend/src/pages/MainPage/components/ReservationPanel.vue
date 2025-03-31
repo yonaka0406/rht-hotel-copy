@@ -1067,7 +1067,7 @@
         try {
             groupedRooms.value.every(async (room) =>{
                 const roomId = room.room_id;            
-                await setRoomPlan(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value);
+                await setRoomPlan(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value, selectedDays.value);
             });
 
             closeReservationBulkEditDialog();
