@@ -27,7 +27,8 @@
               :showIcon="true" 
               iconDisplay="input" 
               dateFormat="yy-mm-dd"
-              :selectOtherMonths="true"              
+              :selectOtherMonths="true"
+              :minDate="minCheckOutDate"
               fluid           
               @update:model-value="onDateChange"
             />
@@ -307,8 +308,9 @@
   
   // Form
   const inDate = ref(new Date());
-  const outDate = ref(new Date(inDate.value));
-    outDate.value.setDate(inDate.value.getDate() + 1);  
+  const outDate = ref(new Date(inDate.value));  
+    outDate.value.setDate(inDate.value.getDate() + 1);
+  const minCheckOutDate = ref(outDate.value);
   const centralDate = ref(new Date());
   const roomDataCache = ref(new Map());
   const generateDateRangeArray = ref([]);
@@ -481,10 +483,13 @@
     // Set central date
     if (inDate.value && outDate.value) {         
       centralDate.value = new Date(Math.min(inDate.value.getTime(), outDate.value.getTime()));
-    } else {
-      
     }
 
+    minCheckOutDate.value = new Date(inDate.value);
+    minCheckOutDate.value.setDate(inDate.value.getDate() + 1);
+    if (new Date(outDate.value) < minCheckOutDate.value) {
+      outDate.value = new Date(minCheckOutDate.value);
+    }
     // Reset date-related data
     roomDataCache.value = new Map();
     generateDateRangeArray.value = [];

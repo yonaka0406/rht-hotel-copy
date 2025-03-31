@@ -26,7 +26,8 @@
                                 :showIcon="true" 
                                 iconDisplay="input" 
                                 dateFormat="yy-mm-dd"
-                                :selectOtherMonths="true"              
+                                :selectOtherMonths="true"
+                                :minDate="minCheckOutDate"
                                 fluid           
                                 @update:model-value="onDateChange"
                             />
@@ -242,7 +243,7 @@
                 <InputText 
                     v-model="reservationDetails.check_out" 
                     type="date" 
-                    variant="filled" 
+                    variant="filled"                    
                     fluid 
                     disabled
                 />
@@ -323,7 +324,8 @@
     // Form
     const inDate = ref(new Date());
     const outDate = ref(new Date(inDate.value));
-        outDate.value.setDate(inDate.value.getDate() + 1);   
+        outDate.value.setDate(inDate.value.getDate() + 1);
+    const minCheckOutDate = ref(outDate.value);
     const numberOfNights = computed(() => {
         if (comboRow.value.check_in && comboRow.value.check_out) {
             return calcDateDiff(comboRow.value.check_in, comboRow.value.check_out);
@@ -393,12 +395,18 @@
         await fetchAvailableRooms(hotelId, startDate, endDate);        
     };
     const onDateChange = async () => {
+        minCheckOutDate.value = new Date(comboRow.value.check_in);
+        minCheckOutDate.value.setDate(comboRow.value.check_in.getDate() + 1);
+        if (new Date(comboRow.value.check_out) < minCheckOutDate.value) {
+            comboRow.value.check_out = new Date(minCheckOutDate.value);
+        }
+
         reservationCombos.value.forEach(combo => {
             combo.check_in = comboRow.value.check_in;
             combo.check_out = comboRow.value.check_out;
         });
         await checkDates();
-        validateCombos();        
+        validateCombos();
     };
     const addReservationCombo = () => {
         // console.log('addReservationCombo:',comboRow.value);

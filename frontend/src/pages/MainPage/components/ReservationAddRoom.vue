@@ -16,6 +16,7 @@
                                 iconDisplay="input" 
                                 dateFormat="yy-mm-dd"
                                 :selectOtherMonths="true"
+                                @update:model-value="onDateChange"
                                 fluid
                             />
                             <label>チェックイン</label>
@@ -31,6 +32,7 @@
                                 iconDisplay="input" 
                                 dateFormat="yy-mm-dd"
                                 :selectOtherMonths="true"
+                                @update:model-value="onOutDateChange"
                                 fluid
                             />
                             <label>チェックアウト</label>
@@ -275,6 +277,18 @@
         }
         return 0;
     });
+    const onDateChange = () => {        
+        if (tomorrow.value < today.value){
+            tomorrow.value = new Date(today.value);
+            tomorrow.value.setDate(today.value.getDate() + 1);            
+        }        
+    };
+    const onOutDateChange = () => {        
+        if (today.value > tomorrow.value){
+            today.value = new Date(tomorrow.value);
+            today.value.setDate(tomorrow.value.getDate() - 1);            
+        }        
+    };
     
     // Dialog    
     const dialogVisible = ref(false);
