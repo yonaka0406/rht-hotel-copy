@@ -308,13 +308,13 @@ CREATE TABLE plans_global (
     UNIQUE (name)
 );
 
-INSERT INTO plans_global (id, name, description, created_by)
+INSERT INTO plans_global (name, description, created_by)
 VALUES
-    (1, '素泊まり', '', 1),
-    (2, '1食', '', 1),
-    (3, '2食', '', 1),
-    (4, '3食', '', 1),
-    (5, '荷物キープ', '', 1);
+    ('素泊まり', '', 1),
+    ('1食', '', 1),
+    ('2食', '', 1),
+    ('3食', '', 1),
+    ('荷物キープ', '', 1);
 
 CREATE TABLE plans_hotel (
     id SERIAL,
@@ -354,22 +354,32 @@ CREATE TABLE plans_rates (
 
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL, -- Name of the add-on (e.g., Breakfast, Dinner, etc.)
-    description TEXT, -- Optional description
-    price DECIMAL NOT NULL, -- Price of the add-on service
+    name TEXT NOT NULL,
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+    description TEXT,
+    price DECIMAL NOT NULL,
+    tax_type_id INT REFERENCES tax_info(id),
+    tax_rate DECIMAL(12,4),
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
     visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
-    UNIQUE (name) -- Ensure global add-ons have unique names
+    UNIQUE (name)
 );
 
-INSERT INTO addons_global (id, name, description, price, created_by)
+ALTER TABLE addons_global
+ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
+ADD COLUMN tax_rate DECIMAL(12,4),
+ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
+
+INSERT INTO addons_global (name, description, price, created_by)
 VALUES
-    (1, '朝食', '', 0, 1),
-    (2, '夕食', '', 0, 1),
-    (3, '駐車場', '', 0, 1),
-    (4, 'お弁当', '', 0, 1);
+    ('朝食', '', 0, 1),
+    ('夕食', '', 0, 1),
+    ('駐車場', '', 0, 1),
+    ('お弁当', '', 0, 1);
 
 CREATE TABLE addons_hotel (
     id SERIAL,    

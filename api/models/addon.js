@@ -139,14 +139,14 @@ const getHotelAddonById = async (requestId, hotel_id, id) => {
 };
 
 // Add entry
-const newGlobalAddon = async (requestId, name, description, price, created_by, updated_by) => {
+const newGlobalAddon = async (requestId, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by) => {
     const pool = getPool(requestId);
     const query = `
-        INSERT INTO addons_global (name, description, price, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO addons_global (name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *;
     `;
-    const values = [name, description, price, created_by, updated_by];
+    const values = [name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by];
 
     try {
         const result = await pool.query(query, values);
@@ -157,14 +157,14 @@ const newGlobalAddon = async (requestId, name, description, price, created_by, u
     }
 };
 
-const newHotelAddon = async (requestId, hotel_id, name, description, price, created_by, updated_by, addons_global_id) => {
+const newHotelAddon = async (requestId, hotel_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by, addons_global_id) => {
     const pool = getPool(requestId);
     const query = `
-        INSERT INTO addons_hotel (hotel_id, addons_global_id, name, description, price, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO addons_hotel (hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *;
     `;
-    const values = [hotel_id, addons_global_id, name, description, price, created_by, updated_by];
+    const values = [hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, created_by, updated_by];
 
     try {
         const result = await pool.query(query, values);
@@ -176,15 +176,23 @@ const newHotelAddon = async (requestId, hotel_id, name, description, price, crea
 };
 
 // Update entry
-const updateGlobalAddon = async (requestId, id, name, description, price, visible, updated_by) => {
+const updateGlobalAddon = async (requestId, id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by) => {
     const pool = getPool(requestId);
     const query = `
         UPDATE addons_global
-        SET name = $1, description = $2, price = $3, visible = $4, updated_by = $5
-        WHERE id = $6
+        SET 
+            name = $1, 
+            description = $2, 
+            addon_type = $3,
+            price = $4,
+            tax_type_id = $5,
+            tax_rate = $6,
+            visible = $7, 
+            updated_by = $8
+        WHERE id = $9
         RETURNING *;
     `;
-    const values = [name, description, price, visible, updated_by, id];
+    const values = [name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, id];
 
     try {
         const result = await pool.query(query, values);
@@ -195,15 +203,24 @@ const updateGlobalAddon = async (requestId, id, name, description, price, visibl
     }
 };
 
-const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name, description, price, visible, updated_by) => {
+const updateHotelAddon = async (requestId, id, hotel_id, addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by) => {
     const pool = getPool(requestId);
     const query = `
         UPDATE addons_hotel
-        SET addons_global_id = $1, name = $2, description = $3, price = $4, visible = $5, updated_by = $6 
-        WHERE hotel_id = $7 AND id = $8
+        SET 
+            addons_global_id = $1, 
+            name = $2,
+            description = $3,
+            addon_type = $4, 
+            price = $5, 
+            tax_type_id = $6, 
+            tax_rate = $7, 
+            visible = $8, 
+            updated_by = $9 
+        WHERE hotel_id = $10 AND id = $11
         RETURNING *;
     `;
-    const values = [addons_global_id, name, description, price, visible, updated_by, hotel_id, id];
+    const values = [addons_global_id, name, description, addon_type, price, tax_type_id, tax_rate, visible, updated_by, hotel_id, id];
 
     try {
         const result = await pool.query(query, values);
