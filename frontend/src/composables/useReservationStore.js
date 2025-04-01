@@ -224,7 +224,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ hotel_id, gid, hid, price })
+                body: JSON.stringify({ hotel_id, gid, hid, plan_name, plan_type, price })
             });
 
             if (!response.ok) {

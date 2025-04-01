@@ -294,6 +294,8 @@ const createReservationHold = async (req, res) => {
           date: formatDate(date),
           plans_global_id: null,
           plans_hotel_id: null,
+          plan_name: null,
+          plan_type: 'per_room',
           number_of_people: peopleAssigned,
           price: 0,
           created_by,
@@ -410,6 +412,8 @@ const createHoldReservationCombo = async (req, res) => {
                     date: formatDate(date),
                     plans_global_id: null,
                     plans_hotel_id: null,
+                    plan_name: null,
+                    plan_type: 'per_room',
                     number_of_people: 1,
                     price: 0,
                     created_by: user_id,
@@ -511,6 +515,8 @@ const createReservationDetails = async (req, res) => {
     room_id,
     plans_global_id,
     plans_hotel_id,
+    plan_name,
+    plan_type,
     number_of_people,
     price,    
     addons,
@@ -527,6 +533,8 @@ const createReservationDetails = async (req, res) => {
       room_id,
       plans_global_id,
       plans_hotel_id,
+      plan_name,
+      plan_type,
       number_of_people,
       price,
       created_by,
@@ -731,6 +739,8 @@ const editReservationDetail = async (req, res) => {
     ,room_id
     ,plans_global_id
     ,plans_hotel_id
+    ,plan_name 
+    ,plan_type
     ,number_of_people
     ,price
     ,addons 
@@ -780,6 +790,8 @@ const editReservationDetail = async (req, res) => {
         room_id,
         plans_global_id,
         plans_hotel_id,
+        plan_name, 
+        plan_type,
         number_of_people,
         price: calcPrice.value,
         updated_by,          
@@ -897,11 +909,11 @@ const editReservationGuests = async (req, res) => {
 
 const editReservationPlan = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, gid, hid, price } = req.body;
+  const { hotel_id, gid, hid, plan_name, plan_type, price } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, gid, hid, price, user_id);
+    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, gid, hid, plan_name, plan_type, price, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);

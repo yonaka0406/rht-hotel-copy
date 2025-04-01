@@ -313,7 +313,7 @@
 
         // console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
 
-        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, plans_global_id, plans_hotel_id, price);
+        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, plans_global_id, plans_hotel_id, plan_name, plan_type, price);
 
         const addonDataArray = selectedAddon.value.map(addon => ({
             hotel_id: props.reservation_details.hotel_id,  
