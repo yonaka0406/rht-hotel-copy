@@ -396,6 +396,12 @@ CREATE TABLE addons_hotel (
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
 
+ALTER TABLE addons_hotel
+ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
+ADD COLUMN tax_rate DECIMAL(12,4),
+ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
+
 CREATE TABLE plan_addons (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE,
