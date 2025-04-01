@@ -28,7 +28,7 @@
                                                         v-model="selectedPlan"
                                                         :options="plans"
                                                         optionLabel="name"
-                                                        optionValue="plan_key"                                                         
+                                                        optionValue="plan_key"   
                                                         fluid                           
                                                         @change="updatePlanAddOns"
                                                     />
@@ -70,7 +70,7 @@
                                                         <Select
                                                             v-model="selectedAddonOption"
                                                             :options="addonOptions"
-                                                            optionLabel="name"       
+                                                            optionLabel="addon_name"       
                                                             showClear 
                                                             fluid                             
                                                         />
@@ -85,7 +85,7 @@
                                             <Divider />
                                             <div class="field mt-6">
                                                 <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                                    <Column field="name" header="アドオン名" style="width:40%" />                        
+                                                    <Column field="addon_name" header="アドオン名" style="width:40%" />                        
                                                     <Column field="quantity" header="数量">
                                                         <template #body="slotProps">
                                                             <InputNumber 
@@ -282,19 +282,21 @@
 
         // console.log('selectedAddonOption in select:', selectedAddonOption.value);
 
-        const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);
-        // console.log('foundAddon:',foundAddon);
+        const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);        
         const isHotelAddon = foundAddon.id.startsWith('H');
         // console.log('selectedAddon:',selectedAddon.value);
         // console.log('selectedAddonOption:', selectedAddonOption.value);            
         selectedAddon.value.push({
             addons_global_id: isHotelAddon ? null : foundAddon.id,
             addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
-            hotel_id: foundAddon.hotel_id,
-            name: foundAddon.name,
+            hotel_id: foundAddon.hotel_id,            
+            addon_name: foundAddon.addon_name,
             price: foundAddon.price,
             quantity: reservationDetail.value.number_of_people,
-        });            
+            tax_type_id: foundAddon.tax_type_id,
+            tax_rate: foundAddon.tax_rate
+        });  
+        console.log('generateAddonPreview', selectedAddon.value)          
     };
     const deleteAddon = (addon) => {
         const index = selectedAddon.value.indexOf(addon);
@@ -317,8 +319,11 @@
             hotel_id: props.reservation_details.hotel_id,  
             addons_global_id: addon.addons_global_id,
             addons_hotel_id: addon.addons_hotel_id,
+            addon_name: addon.addon_name,
             quantity: addon.quantity,
-            price: addon.price
+            price: addon.price,
+            tax_type_id: addon.tax_type_id,
+            tax_rate: addon.tax_rate
         }));
 
         // console.log('addonDataArray:', addonDataArray);
@@ -385,6 +390,7 @@
         selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
             ...addon,
         }));
+        console.log('OnMounted selectedAddon', selectedAddon.value)
         selectedClients.value = props.reservation_details.reservation_clients.map(client => ({
             ...client,
             display_name: client.name_kanji

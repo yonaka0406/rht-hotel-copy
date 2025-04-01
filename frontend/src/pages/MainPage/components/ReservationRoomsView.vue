@@ -68,7 +68,7 @@
                                 <DataTable :value="slotProps.data.reservation_addons" size="small">
                                     <Column header="アドオン" sortable>
                                         <template #body="addonSlotProps">
-                                            {{ addonSlotProps.data.name || '' }}
+                                            {{ addonSlotProps.data.addon_name || '' }}
                                         </template>
                                     </Column>
                                     <Column header="数量" sortable>
@@ -156,7 +156,7 @@
                                         <FloatLabel>
                                             <Select v-model="selectedAddonOption"
                                                 :options="addonOptions"
-                                                optionLabel="name"
+                                                optionLabel="addon_name"
                                                 optionValue="id"
                                                 showClear 
                                                 fluid                             
@@ -172,7 +172,7 @@
                                 <Divider />
                                 <div class="field mt-6">
                                     <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                        <Column field="name" header="アドオン名" style="width:40%" />
+                                        <Column field="addon_name" header="アドオン名" style="width:40%" />
                                         <Column field="quantity" header="数量">
                                             <template #body="slotProps">
                                                 <InputNumber 
@@ -693,9 +693,11 @@
                 addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,                
                 addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
                 hotel_id: foundAddon.hotel_id,
-                name: foundAddon.name,
+                addon_name: foundAddon.addon_name,
                 price: foundAddon.price,
-                quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1,                
+                quantity: selectedGroup.value ? selectedGroup.value.details[0].number_of_people : 1,
+                tax_type_id: foundAddon.tax_type_id,
+                tax_rate: foundAddon.tax_rate
             });   
             
             selectedAddonOption.value = '';

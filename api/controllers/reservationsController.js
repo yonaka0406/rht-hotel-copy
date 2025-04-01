@@ -553,8 +553,11 @@ const createReservationDetails = async (req, res) => {
               reservation_detail_id: newReservationAddon.id,
               addons_global_id: addon.addons_global_id,
               addons_hotel_id: addon.addons_hotel_id,
+              addon_name: addon.addon_name,
               quantity: addon.quantity,
               price: addon.price,
+              tax_type_id: addon.tax_type_id,
+              tax_rate: addon.tax_rate,
               created_by: updated_by, 
               updated_by, 
           })
@@ -582,8 +585,11 @@ const createReservationAddons = async (req, res) => {
     reservation_detail_id,
     addons_global_id,
     addons_hotel_id,
+    addon_name,
     quantity,
-    price,    
+    price,
+    tax_type_id,
+    tax_rate,
   } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
@@ -595,8 +601,11 @@ const createReservationAddons = async (req, res) => {
       reservation_detail_id,
       addons_global_id,
       addons_hotel_id,
+      addon_name,
       quantity,
       price,
+      tax_type_id,
+      tax_rate,
       created_by,
       updated_by
     };
@@ -717,7 +726,15 @@ const createReservationPayment = async (req, res) => {
 // PUT
 const editReservationDetail = async (req, res) => {  
   const { id } = req.params;
-  const { hotel_id, room_id, plans_global_id, plans_hotel_id, number_of_people, price, addons } = req.body;
+  const { 
+    hotel_id
+    ,room_id
+    ,plans_global_id
+    ,plans_hotel_id
+    ,number_of_people
+    ,price
+    ,addons 
+  } = req.body;
   const updated_by = req.user.id; 
 
   const { validate: uuidValidate } = require('uuid');
@@ -782,8 +799,11 @@ const editReservationDetail = async (req, res) => {
                 reservation_detail_id: updatedReservation.id,
                 addons_global_id: addon.addons_global_id,
                 addons_hotel_id: addon.addons_hotel_id,
+                addon_name: addon.addon_name,
                 quantity: addon.quantity,
                 price: addon.price,
+                tax_type_id: addon.tax_type_id,
+                tax_rate: addon.tax_rate,
                 created_by: updated_by, 
                 updated_by, 
             })

@@ -193,16 +193,12 @@ const selectReservation = async (requestId, id) => {
                   'addon_id', ra.id,
                   'addons_global_id', ra.addons_global_id,
                   'addons_hotel_id', ra.addons_hotel_id,
-                  'name', COALESCE(ah.name, ag.name), -- Prefer hotel-specific name, fallback to global
+                  'addon_name', ra.addon_name,
                   'quantity', ra.quantity,
                   'price', ra.price
               )
           ) AS addons_json
-        FROM reservation_addons ra
-          LEFT JOIN addons_hotel ah 
-	        ON ra.addons_hotel_id = ah.id AND ra.hotel_id = ah.hotel_id
-          LEFT JOIN addons_global ag 
-	        ON ra.addons_global_id = ag.id
+        FROM reservation_addons ra          
         GROUP BY
           reservation_detail_id
       ) ra ON reservation_details.id = ra.reservation_detail_id
@@ -332,17 +328,12 @@ const selectReservationDetail = async (requestId, id) => {
 		            'addon_id', ra.id,
                 'addons_global_id', ra.addons_global_id,
 					      'addons_hotel_id', ra.addons_hotel_id,
-		            'name', COALESCE(ah.name, ag.name), -- Prefer hotel-specific name, fallback to global
+		            'addon_name', ra.addon_name,
 		            'quantity', ra.quantity,
 		            'price', ra.price
 		        )
 		    ) AS addons_json
-		FROM reservation_addons ra
-		LEFT JOIN addons_hotel ah 
-		    ON ra.addons_hotel_id = ah.id 
-		    AND ra.hotel_id = ah.hotel_id
-		LEFT JOIN addons_global ag 
-		    ON ra.addons_global_id = ag.id
+		FROM reservation_addons ra		
 		GROUP BY ra.reservation_detail_id
       ) ra ON reservation_details.id = ra.reservation_detail_id
       LEFT JOIN (
@@ -731,11 +722,12 @@ const addReservationDetail = async (requestId, reservationDetail) => {
 };
 
 const addReservationAddon = async (requestId, reservationAddon) => {
+  // console.log('addReservationAddon:',reservationAddon)
   const pool = getPool(requestId);  
   const query = `
     INSERT INTO reservation_addons (
-      hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *;
   `;
 
@@ -744,8 +736,11 @@ const addReservationAddon = async (requestId, reservationAddon) => {
     reservationAddon.reservation_detail_id,
     reservationAddon.addons_global_id,
     reservationAddon.addons_hotel_id,
+    reservationAddon.addon_name,
     reservationAddon.quantity,
     reservationAddon.price,
+    reservationAddon.tax_type_id,
+    reservationAddon.tax_rate,
     reservationAddon.created_by,
     reservationAddon.updated_by
   ];
@@ -1598,8 +1593,11 @@ const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
           reservation_detail_id: id,
           addons_global_id: addon.addons_global_id,
           addons_hotel_id: addon.addons_hotel_id,
+          addon_name: addon.addon_name,
           quantity: addon.quantity,
           price: addon.price,
+          tax_type_id: addon.tax_type_id,
+          tax_rate: addon.tax_rate,
           created_by: user_id, 
           updated_by: user_id, 
       })

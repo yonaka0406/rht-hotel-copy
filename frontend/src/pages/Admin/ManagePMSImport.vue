@@ -243,6 +243,15 @@
         console.log('Unknown addon name:', addonName);
         return null;        
     };
+    const getAddonType = (addonName) => {        
+        if(addonName.includes("朝食")){return 'breakfast';}
+        if(addonName.includes("夕食")){return 'dinner';}
+        if(addonName.includes("駐車場")){return 'other';}
+        if(addonName.includes("弁当")){return 'other';}
+        
+        console.log('Unknown addon type:', addonName);
+        return null;        
+    };    
     const isLegalPerson = (name) => {
         if(name.includes('株式会社')){return true;}
         if(name.includes('会社')){return true;}
@@ -574,6 +583,8 @@
                     reservation_detail_id: detailsMap.get(`${addon.roomNumber}-${addon.date}`),
                     addons_global_id: getAddonId(addon.name),
                     addons_hotel_id: null,
+                    addon_name: addon.name,
+                    addon_type: getAddonType(addon.name),
                     quantity: addon.quantity,
                     price: 0,                    
                     created_by: 1,                    

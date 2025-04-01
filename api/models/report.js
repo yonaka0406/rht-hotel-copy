@@ -114,20 +114,12 @@ const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart
     SELECT 
       reservation_details.date
       ,COALESCE(reservation_addons.addons_global_id::TEXT, '') || 'h' || COALESCE(reservation_addons.addons_hotel_id::TEXT, '') AS key
-      ,COALESCE(addons_hotel.name, addons_global.name) AS name
+      ,reservation_addons.addon_name
       ,SUM(reservation_addons.quantity) AS quantity
-      
     FROM  
       reservations
       ,reservation_details
       ,reservation_addons
-        LEFT JOIN
-      addons_global
-        ON reservation_addons.addons_global_id = addons_global.id
-      LEFT JOIN
-      addons_hotel
-        ON reservation_addons.hotel_id = addons_hotel.hotel_id AND reservation_addons.addons_hotel_id = addons_hotel.id
-      
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
@@ -142,7 +134,7 @@ const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart
       reservation_details.date
       ,reservation_addons.addons_global_id
       ,reservation_addons.addons_hotel_id
-      ,addons_hotel.name, addons_global.name  
+      ,reservation_addons.addon_name
       
     ORDER BY 1, 2
   `;
@@ -507,7 +499,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
       ELSE reservation_details.price * reservation_details.number_of_people END
       ) AS plan_price
-      ,COALESCE(addons_hotel.name, addons_global.name) AS addon_name  
+      ,reservation_addons.addon_name
       ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
       ,COALESCE(reservation_addons.price,0) AS addon_price
       ,(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_value
@@ -558,13 +550,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
         ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
         LEFT JOIN
       reservation_addons
-        ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id		
-        LEFT JOIN
-      addons_global
-        ON reservation_addons.addons_global_id = addons_global.id
-        LEFT JOIN
-      addons_hotel
-        ON reservation_addons.hotel_id = addons_hotel.hotel_id AND reservation_addons.addons_hotel_id = addons_hotel.id
+        ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
         
     WHERE      
       reservations.hotel_id = $1
@@ -578,7 +564,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       AND rooms.room_type_id = room_types.id
     ORDER BY 
       reservations.check_in, reservation_details.reservation_id, rooms.room_number, 
-      reservation_details.date, addons_hotel.name, addons_global.name, reservation_addons.price DESC
+      reservation_details.date, reservation_addons.addon_name, reservation_addons.price DESC
   `;
   const values = [hotelId, dateStart, dateEnd]
 

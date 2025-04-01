@@ -6,7 +6,7 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
     const query = `        
         SELECT 
             pa.*
-            ,COALESCE(ag.name, ah.name) AS name            
+            ,COALESCE(ag.name, ah.name) AS addon_name            
             ,tax_info.name as tax_type            
         FROM 
             plan_addons AS pa
@@ -22,7 +22,7 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
         WHERE
             (pa.plans_global_id = $1 AND pa.plans_hotel_id IS NULL) OR             
             (pa.plans_hotel_id = $2 AND pa.hotel_id = $3 AND pa.plans_global_id IS NULL)
-        ORDER BY name ASC
+        ORDER BY addon_name ASC
     `;
 
     try {        

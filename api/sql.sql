@@ -521,8 +521,13 @@ CREATE TABLE reservation_addons (
     reservation_detail_id UUID NOT NULL,
     addons_global_id INT REFERENCES addons_global(id),
     addons_hotel_id INT,
+    addon_name TEXT,
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
     quantity INT NOT NULL DEFAULT 1, 
     price DECIMAL NOT NULL,
+    tax_type_id INT REFERENCES tax_info(id),
+    tax_rate DECIMAL(12,4),
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -530,6 +535,13 @@ CREATE TABLE reservation_addons (
     FOREIGN KEY (reservation_detail_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
 	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_addons
+ADD COLUMN addon_name TEXT,
+ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
+ADD COLUMN tax_rate DECIMAL(12,4),
+ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),

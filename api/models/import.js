@@ -251,8 +251,8 @@ const insertYadomasterAddons = async (requestId, addons) => {
         for (const addon of addons) {
             const query = `
                 INSERT INTO reservation_addons (
-                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, quantity, price, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, tax_type_id, tax_rate, quantity, price, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, 3, 0.1, $7, $8, $9)
                 RETURNING *;
             `;
             const values = [
@@ -260,6 +260,8 @@ const insertYadomasterAddons = async (requestId, addons) => {
                 addon.reservation_detail_id,
                 addon.addons_global_id,
                 addon.addons_hotel_id,
+                addon.addon_name,
+                addon.addon_type,
                 addon.quantity,
                 addon.price,
                 addon.created_by,
