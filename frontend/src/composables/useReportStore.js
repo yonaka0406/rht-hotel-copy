@@ -141,7 +141,6 @@ export function useReportStore() {
             toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
         }
     };
-
     const exportReservationDetails = async(hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -171,6 +170,36 @@ export function useReportStore() {
             console.error("エクスポートエラー:", error);
             toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
         }
+    };    
+    const exportMealCount = async(hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/download/res/meals/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (!response.ok) {
+                throw new Error("Failed to fetch CSV");
+            }
+
+            const blob = await response.blob();
+            const dlURL = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = dlURL;
+            link.setAttribute("download", "meal_count.xlsx");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }
     };
 
     return {
@@ -181,5 +210,6 @@ export function useReportStore() {
         fetchReservationListView,
         exportReservationList,
         exportReservationDetails,
+        exportMealCount,
     };
 }

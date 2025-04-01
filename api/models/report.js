@@ -62,7 +62,6 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
     throw new Error('Database error');
   }
 };
-
 const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
@@ -109,7 +108,6 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
     throw new Error('Database error');
   }
 };
-
 const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
@@ -158,7 +156,6 @@ const selectCountReservationDetailsAddons = async (requestId, hotelId, dateStart
     throw new Error('Database error');
   }
 };
-
 const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => {
   const pool = getPool(requestId);
   const date = new Date(refDate);
@@ -214,7 +211,6 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
     throw new Error('Database error');
   }
 };
-
 const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
@@ -481,7 +477,6 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
     throw new Error('Database error');
   }
 };
-
 const selectExportReservationDetails = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
@@ -595,6 +590,51 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
     throw new Error('Database error');
   }
 };
+const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      hotels.name as hotel_name
+      ,CASE 
+        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' 
+        THEN reservation_details.date + INTERVAL '1 day'
+        ELSE reservation_details.date
+      END AS meal_date,
+      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' THEN reservation_addons.quantity ELSE 0 END) AS breakfast,
+      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'lunch' THEN reservation_addons.quantity ELSE 0 END) AS lunch,
+      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'dinner' THEN reservation_addons.quantity ELSE 0 END) AS dinner
+    FROM 
+      hotels
+        JOIN
+      reservation_details
+        ON hotels.id = reservation_details.hotel_id
+        JOIN reservation_addons
+        ON reservation_details.hotel_id = reservation_addons.hotel_id 
+      AND reservation_details.id = reservation_addons.reservation_detail_id	
+        LEFT JOIN addons_global
+      ON reservation_addons.addons_global_id = addons_global.id
+        LEFT JOIN addons_hotel
+        ON reservation_addons.hotel_id = addons_hotel.hotel_id 
+      AND reservation_addons.addons_hotel_id = addons_hotel.id
+    WHERE
+      COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN ('breakfast', 'lunch', 'dinner')
+      AND reservation_details.hotel_id = $1
+      AND reservation_details.date BETWEEN $2 AND $3 
+    GROUP BY 
+      hotels.name    
+      ,meal_date
+    ORDER BY meal_date;
+  `;
+  const values = [hotelId, dateStart, dateEnd]
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
 
 module.exports = {
   selectCountReservation,
@@ -604,4 +644,5 @@ module.exports = {
   selectReservationListView,
   selectExportReservationList,
   selectExportReservationDetails,
+  selectExportMealCount,
 };

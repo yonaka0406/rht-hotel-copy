@@ -250,7 +250,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails } = useReportStore();
+    const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails, exportMealCount } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -439,10 +439,8 @@
 
     // Export
     const exportOptions = ref([
-        { label: "予約の詳細をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportReservationDetails() },
-        /*
-        { label: "請求書データをエクスポート", icon: "pi pi-file-pdf", command: () => exportInvoices() },
-         */
+        { label: "予約の詳細をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportReservationDetails() },        
+        { label: "食事件数をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportMealCount() },        
     ]);
     const splitButtonExportReservations = async () => {
         try {
@@ -463,7 +461,17 @@
             console.error("エクスポートエラー:", error);
             toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
         }        
-    };    
+    };
+    const splitButtonExportMealCount = async () => {
+        try {
+            await exportMealCount(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));            
+
+            toast.add({ severity: "success", summary: "成功", detail: "食事件数をエクスポートしました", life: 3000 });
+        } catch (error) {
+            console.error("エクスポートエラー:", error);
+            toast.add({ severity: "error", summary: "エラー", detail: "エクスポートに失敗しました", life: 3000 });
+        }        
+    };
 
     onMounted(async () => {
         await fetchHotels();

@@ -1,5 +1,6 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails, selectExportMealCount } = require('../models/report');
 const { format } = require("@fast-csv/format");
+const ExcelJS = require("exceljs");
 
 // Helper
 const formatDate = (date) => {
@@ -75,7 +76,6 @@ const getCountReservation = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 const getCountReservationDetails = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
@@ -121,7 +121,6 @@ const getCountReservationDetails = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 const getOccupationByPeriod = async (req, res) => {
   const period = req.params.period;
   const hotelId = req.params.hid;
@@ -140,7 +139,6 @@ const getOccupationByPeriod = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 const getReservationListView = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
@@ -158,7 +156,7 @@ const getReservationListView = async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 const getExportReservationList = async (req, res) => {
   const hotelId = req.params.hid;
@@ -215,7 +213,6 @@ const getExportReservationList = async (req, res) => {
     res.status(500).send("Error generating CSV");
   }
 };
-
 const getExportReservationDetails = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
@@ -312,6 +309,125 @@ const getExportReservationDetails = async (req, res) => {
     res.status(500).send("Error generating CSV");
   }
 };
+const getExportMealCount = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const result = await selectExportMealCount(req.requestId, hotelId, startDate, endDate); 
+    
+    if (!result || result.length === 0) {
+      return res.status(404).send("No data available for the given dates.");
+    }
+
+    // Create a new Excel workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("食事件数");
+
+    // Configure print settings
+    worksheet.pageSetup = {
+      fitToWidth: 1, // Fit to one page width
+      fitToHeight: 0, // Allow multiple pages in height if needed
+      paperSize: 9, // A4 paper size (ExcelJS uses numeric codes)
+      orientation: "landscape", // Optional: Set to "portrait" if needed
+      margins: {
+        left: 0.3, right: 0.3,
+        top: 0.5, bottom: 0.5,
+        header: 0.2, footer: 0.2
+      }
+    };    
+    worksheet.views = [{ showGridLines: false }];
+
+    const hotelName = result[0].hotel_name || "ホテル";
+    worksheet.mergeCells("A1:D1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = `${hotelName} の食事件数`;
+    titleCell.font = { bold: true, size: 14 };
+    titleCell.alignment = { horizontal: "center", vertical: "middle" };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D3D3D3" } };
+
+    // Add timestamp in cell A2
+    const timeStamp = new Date().toLocaleString("ja-JP", { // Format date for Japan
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit"
+    });
+    const timeCell = worksheet.getCell("A2");
+    timeCell.value = `リスト作成日時：${timeStamp}`;
+    timeCell.font = { color: { argb: "BABABA" }, bold: true, size: 9 };
+    timeCell.alignment = { horizontal: "left", vertical: "middle" };
+
+    // Headers in Row 3
+    const headerRow = worksheet.getRow(3);
+    headerRow.values = ["提供日", "朝食", "昼食", "夕食"];
+    headerRow.font = { bold: true };
+    headerRow.alignment = { horizontal: "center", vertical: "middle" };
+    
+    // Add bottom border to headers
+    headerRow.eachCell((cell) => {
+      cell.border = {
+        bottom: { style: "thin", color: { argb: "000000" } }, // Thick black bottom border
+      };
+    });
+
+    // Set column widths and formats
+    worksheet.columns = [      
+      { key: "meal_date", width: 15 },
+      { key: "breakfast", width: 15, style: { numFmt: "0" } },
+      { key: "lunch", width: 15, style: { numFmt: "0" } },
+      { key: "dinner", width: 15, style: { numFmt: "0" } },
+    ];
+
+    // Add data rows starting from row 4
+    result.forEach((reservation, index) => {
+      const row = worksheet.addRow({
+        meal_date: new Date(formatDate(reservation.meal_date)), // Ensure date format        
+        breakfast: reservation.breakfast * 1,
+        lunch: reservation.lunch * 1,
+        dinner: reservation.dinner * 1,
+      });
+      row.alignment = { horizontal: "center", vertical: "middle" };
+      // Apply alternating row colors (striped effect)
+      if (index % 2 === 0) {
+        row.eachCell((cell) => {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "F2F2F2" }, // Light gray for even rows
+          };
+        });
+      }
+
+      // Center align and add right border to column A (meal_date)
+      const mealDateCell = row.getCell(1);
+      mealDateCell.alignment = { horizontal: "center" };
+      mealDateCell.border = {
+        right: { style: "thin", color: { argb: "000000" } }, // Thin right border
+      };
+    });
+
+    // Auto-fit columns
+    worksheet.columns.forEach((column) => {
+      let maxLength = 0;
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const cellValue = cell.value ? cell.value.toString() : "";
+        maxLength = Math.max(maxLength, cellValue.length);
+      });
+      column.width = maxLength + 2; // Add some padding
+    });
+
+    // Set headers for download
+    res.setHeader("Content-Disposition", "attachment; filename=meal_count.xlsx");
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+    // Write workbook to response
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("Error generating Excel:", err);
+    res.status(500).send("Error generating Excel");
+  }
+};
 
 module.exports = { 
   getCountReservation,
@@ -320,4 +436,5 @@ module.exports = {
   getReservationListView,
   getExportReservationList,
   getExportReservationDetails,
+  getExportMealCount,
 };
