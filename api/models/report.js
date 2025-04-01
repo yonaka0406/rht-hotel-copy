@@ -606,8 +606,11 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
     FROM 
       hotels
         JOIN
+      reservations
+        ON hotels.id = reservations.hotel_id
+        JOIN
       reservation_details
-        ON hotels.id = reservation_details.hotel_id
+        ON reservations.hotel_id = reservation_details.hotel_id AND reservations.id = reservation_details.reservation_id
         JOIN reservation_addons
         ON reservation_details.hotel_id = reservation_addons.hotel_id 
       AND reservation_details.id = reservation_addons.reservation_detail_id	
@@ -618,6 +621,8 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
       AND reservation_addons.addons_hotel_id = addons_hotel.id
     WHERE
       COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN ('breakfast', 'lunch', 'dinner')
+      AND reservations.status NOT In ('hold', 'provisory', 'cancelled', 'block')
+      AND reservation_details.cancelled IS NULL
       AND reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3 
     GROUP BY 
