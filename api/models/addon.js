@@ -36,51 +36,70 @@ const getAddons = async (requestId, hotel_id) => {
         query = `
             SELECT 
                 NULL as hotel_id, 
-                id::TEXT as id, 
+                addons_global.id::TEXT as id, 
                 NULL AS addons_hotel_id,
-				id AS addons_global_id,
-                name, 
-                description, 
-                price
-            FROM addons_global 
-            WHERE visible = TRUE
-            ORDER BY visible DESC, name ASC
+                addons_global.id AS addons_global_id,
+                addons_global.name,
+                addons_global.addon_type,
+                addons_global.description, 
+                addons_global.price,
+                addons_global.tax_type_id,
+                tax_info.name as tax_type,
+                addons_global.tax_rate,
+                addons_global.net_price	
+            FROM addons_global, tax_info
+            WHERE addons_global.visible = TRUE AND addons_global.tax_type_id = tax_info.id
+            ORDER BY addons_global.visible DESC, addons_global.name ASC
         `;
     } else {    
         query = `
             SELECT 
-                hotel_id, 
-                CASE WHEN hotel_id IS NULL THEN id::TEXT ELSE 'H' || id::TEXT END as id,
-                addons_hotel_id,
-				addons_global_id,
-                name, 
-                description, 
-                price
-            FROM (
-                SELECT 
-                    COALESCE(hotel.id, global.id) AS id,
-                    hotel.id AS addons_hotel_id,
-					global.id AS addons_global_id,
-                    COALESCE(hotel.name, global.name) AS name,
-                    COALESCE(hotel.description, global.description) AS description,
-                    COALESCE(hotel.price, global.price) AS price,
-                    COALESCE(hotel.visible, global.visible) AS visible,
-                    COALESCE(hotel.created_at, global.created_at) AS created_at,
-                    COALESCE(hotel.created_by, global.created_by) AS created_by,
-                    COALESCE(hotel.updated_by, global.updated_by) AS updated_by,
-                    hotel.hotel_id
-                FROM 
-                    addons_global AS global
-                FULL OUTER JOIN 
-                    addons_hotel AS hotel
-                ON 
-                    global.id = hotel.addons_global_id
-                WHERE 
-                    (hotel.hotel_id = $1 OR hotel.hotel_id IS NULL)
+                ALL_DATA.hotel_id, 
+                CASE WHEN ALL_DATA.hotel_id IS NULL THEN ALL_DATA.id::TEXT ELSE 'H' || ALL_DATA.id::TEXT END as id,
+                ALL_DATA.addons_hotel_id,
+				ALL_DATA.addons_global_id,
+                ALL_DATA.name, 
+                ALL_DATA.addon_type, 
+                ALL_DATA.description, 
+                ALL_DATA.price,
+                ALL_DATA.tax_type_id,
+                tax_info.name as tax_type, 
+                ALL_DATA.tax_rate, 
+                ALL_DATA.net_price
+            FROM 
+                (
+                    SELECT 
+                        COALESCE(hotel.id, global.id) AS id,
+                        hotel.id AS addons_hotel_id,
+                        global.id AS addons_global_id,
+                        COALESCE(hotel.name, global.name) AS name,
+                        COALESCE(hotel.addon_type, global.addon_type) AS addon_type,
+                        COALESCE(hotel.description, global.description) AS description,
+                        COALESCE(hotel.price, global.price) AS price,
+                        COALESCE(hotel.tax_type_id, global.tax_type_id) AS tax_type_id,
+                        COALESCE(hotel.tax_rate, global.tax_rate) AS tax_rate,
+                        COALESCE(hotel.net_price, global.net_price) AS net_price,
+                        COALESCE(hotel.visible, global.visible) AS visible,
+                        COALESCE(hotel.created_at, global.created_at) AS created_at,
+                        COALESCE(hotel.created_by, global.created_by) AS created_by,
+                        COALESCE(hotel.updated_by, global.updated_by) AS updated_by,
+                        hotel.hotel_id
+                    FROM 
+                        addons_global AS global
+                    FULL OUTER JOIN 
+                        addons_hotel AS hotel
+                    ON 
+                        global.id = hotel.addons_global_id
+                    WHERE 
+                        (hotel.hotel_id = $1 OR hotel.hotel_id IS NULL)
                 ) AS ALL_DATA
-            WHERE visible = TRUE
+                    JOIN
+                tax_info
+                    ON ALL_DATA.tax_type_id = tax_info.id
+            WHERE 
+                ALL_DATA.visible = TRUE
             ORDER BY 
-            name ASC;
+                ALL_DATA.name ASC;
         `;
         values = [hotel_id];
     }
@@ -93,8 +112,6 @@ const getAddons = async (requestId, hotel_id) => {
         throw new Error('Database error');
     }
 };
-
-
 const getAllHotelAddons = async (requestId, hotel_id) => {
     const pool = getPool(requestId);
     const query = 'SELECT * FROM addons_hotel WHERE hotel_id = $1 ORDER BY visible DESC, name ASC';

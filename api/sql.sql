@@ -386,8 +386,12 @@ CREATE TABLE addons_hotel (
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     addons_global_id INT REFERENCES addons_global(id) ON DELETE SET NULL,
     name TEXT NOT NULL, -- Name of the add-on (e.g., Breakfast, Dinner, etc.)
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
     description TEXT, -- Optional description
     price DECIMAL NOT NULL, -- Price of the add-on service
+    tax_type_id INT REFERENCES tax_info(id),
+    tax_rate DECIMAL(12,4),
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
     visible BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
@@ -409,9 +413,13 @@ CREATE TABLE plan_addons (
     plans_hotel_id INT,
     addons_global_id INT REFERENCES addons_global(id) ON DELETE CASCADE,
     addons_hotel_id INT,
-    price DECIMAL(10, 2) NOT NULL, -- Add the price column, ensuring non-null values
-    date_start DATE NOT NULL, -- Start of the applicable rate
-    date_end DATE DEFAULT NULL, -- End of the applicable rate (NULL = no end date)
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+    price DECIMAL(10, 2) NOT NULL,
+    tax_type_id INT REFERENCES tax_info(id),
+    tax_rate DECIMAL(12,4),
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+    date_start DATE NOT NULL,
+    date_end DATE DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),    
@@ -426,6 +434,12 @@ CREATE TABLE plan_addons (
         (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
     )
 );
+
+ALTER TABLE plan_addons
+ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
+ADD COLUMN tax_rate DECIMAL(12,4),
+ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),

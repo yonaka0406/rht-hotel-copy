@@ -31,13 +31,7 @@ const getPlanAddon = async (req, res) => {
 // POST create a new plan addon
 const createNewPlanAddon = async (req, res) => {
     const planAddon = {
-        hotel_id: req.body.hotel_id,
-        plans_global_id: req.body.plans_global_id,
-        plans_hotel_id: req.body.plans_hotel_id,
-        addons_id: req.body.addons_id,
-        price: req.body.price,
-        date_start: req.body.date_start,
-        date_end: req.body.date_end,
+        ...req.body,        
         created_by: req.user.id,
         updated_by: req.user.id
     };

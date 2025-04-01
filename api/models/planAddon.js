@@ -4,16 +4,22 @@ const { getPool } = require('../config/database');
 const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
     const pool = getPool(requestId);
     const query = `        
-        SELECT pa.*, COALESCE(ag.name, ah.name) AS name
+        SELECT 
+            pa.*
+            ,COALESCE(ag.name, ah.name) AS name            
+            ,tax_info.name as tax_type            
         FROM 
             plan_addons AS pa
+                JOIN
+            tax_info
+                ON pa.tax_type_id = tax_info.id
                 LEFT OUTER JOIN
             addons_global AS ag
                 ON pa.addons_global_id = ag.id
                 LEFT OUTER JOIN
             addons_hotel AS ah
                 ON pa.addons_hotel_id = ah.id
-        WHERE 
+        WHERE
             (pa.plans_global_id = $1 AND pa.plans_hotel_id IS NULL) OR             
             (pa.plans_hotel_id = $2 AND pa.hotel_id = $3 AND pa.plans_global_id IS NULL)
         ORDER BY name ASC
@@ -31,7 +37,6 @@ const getAllPlanAddons = async (requestId, plans_global_id, plans_hotel_id, hote
         throw new Error('Database error');
     }
 };
-
 // Get plan_addon by ID
 const getPlanAddonById = async (requestId, id) => {
     const pool = getPool(requestId);
@@ -48,16 +53,15 @@ const getPlanAddonById = async (requestId, id) => {
         throw err;
     }
 };
-
 // Create a new plan_addon
 const createPlanAddon = async (requestId, planAddon) => {
     const pool = getPool(requestId);
+    console.log('createPlanAddon:', planAddon)
     let hotel_id = null;
     let plans_global_id = null;
     let plans_hotel_id = null;
     let addons_hotel_id = null;
-    let addons_global_id = null;
-    
+    let addons_global_id = null;    
 
     if (planAddon.addons_id && typeof planAddon.addons_id === 'string') {
         if (planAddon.addons_id.startsWith('H')) {
@@ -94,12 +98,15 @@ const createPlanAddon = async (requestId, planAddon) => {
             plans_hotel_id, 
             addons_global_id, 
             addons_hotel_id, 
+            addon_type,
             price, 
+            tax_type_id,
+            tax_rate,
             date_start, 
             date_end, 
             created_by,
             updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
     `;
 
@@ -109,7 +116,10 @@ const createPlanAddon = async (requestId, planAddon) => {
         plans_hotel_id,
         addons_global_id,
         addons_hotel_id,
+        planAddon.addon_type,
         planAddon.price,
+        planAddon.tax_type_id,
+        planAddon.tax_rate,
         planAddon.date_start,
         planAddon.date_end,
         planAddon.created_by,
