@@ -124,6 +124,15 @@ CREATE TABLE room_inventory (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
+CREATE TABLE client_group (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT,
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_by INT REFERENCES users(id),
+  updated_by INT DEFAULT NULL REFERENCES users(id)
+);
+
 CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    
     name TEXT NOT NULL DEFAULT 'TBD', -- Placeholder until check-in    
@@ -267,18 +276,6 @@ CREATE TABLE addresses (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
-CREATE TABLE client_group (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT,
-  comment TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_by INT REFERENCES users(id),
-  updated_by INT DEFAULT NULL REFERENCES users(id)
-);
-
-ALTER TABLE clients 
-ADD COLUMN client_group_id UUID DEFAULT NULL REFERENCES client_group(id);
-
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,
    name TEXT NOT NULL,
@@ -361,17 +358,6 @@ CREATE TABLE plans_rates (
     )
 );
 
-ALTER TABLE plans_rates
-ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
-ADD COLUMN tax_rate DECIMAL(12,4),
-ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (
-    CASE 
-        WHEN adjustment_type IN ('base_rate', 'flat_fee') 
-        THEN FLOOR(adjustment_value / (1 + tax_rate)) 
-        ELSE NULL 
-    END
-) STORED;
-
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -387,12 +373,6 @@ CREATE TABLE addons_global (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name)
 );
-
-ALTER TABLE addons_global
-ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
-ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
-ADD COLUMN tax_rate DECIMAL(12,4),
-ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 INSERT INTO addons_global (name, description, price, created_by)
 VALUES
@@ -419,12 +399,6 @@ CREATE TABLE addons_hotel (
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE addons_hotel
-ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
-ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
-ADD COLUMN tax_rate DECIMAL(12,4),
-ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 CREATE TABLE plan_addons (
     id SERIAL PRIMARY KEY,
@@ -454,12 +428,6 @@ CREATE TABLE plan_addons (
         (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
     )
 );
-
-ALTER TABLE plan_addons
-ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
-ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
-ADD COLUMN tax_rate DECIMAL(12,4),
-ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),
@@ -505,11 +473,6 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_details
-ADD COLUMN plan_name TEXT,
-ADD COLUMN plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room';
-
-
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
@@ -530,13 +493,6 @@ CREATE TABLE reservation_addons (
     FOREIGN KEY (reservation_detail_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
 	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE reservation_addons
-ADD COLUMN addon_name TEXT,
-ADD COLUMN addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
-ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
-ADD COLUMN tax_rate DECIMAL(12,4),
-ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED;
 
 CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),
@@ -585,20 +541,14 @@ CREATE TABLE payment_types (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name)
 );
-INSERT INTO payment_types (id, name, transaction, created_by)
+INSERT INTO payment_types (name, transaction, created_by)
 VALUES
-    (1, '現金', 'cash', 1),
-    (2, 'ネットポイント', 'point', 1),
-    (3, '事前振り込み', 'wire', 1),
-    (4, 'クレジットカード', 'credit', 1),
-    (5, '請求書', 'bill', 1),
-    (6, '割引', 'discount', 1);
-
-ALTER TABLE payment_types DROP CONSTRAINT payment_types_transaction_check;
-
-ALTER TABLE payment_types 
-ADD CONSTRAINT payment_types_transaction_check 
-CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount'));
+    ('現金', 'cash', 1),
+    ('ネットポイント', 'point', 1),
+    ('事前振り込み', 'wire', 1),
+    ('クレジットカード', 'credit', 1),
+    ('請求書', 'bill', 1),
+    ('割引', 'discount', 1);
 
 --Ainda nao esta certo que vai ser usada
 
