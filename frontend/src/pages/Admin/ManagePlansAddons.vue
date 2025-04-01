@@ -306,18 +306,6 @@
         const taxRate = Number(targetAddon.tax_rate);
         return Math.floor(price / (1 + taxRate));
     });
-    const selectAddons = computed({
-        get() {
-            return newAddon.value.addons_hotel_id ? null : newAddon.value.addons_global_id;
-        },
-        set(value) {
-            if (newAddon.value.addons_hotel_id) {
-            newAddon.value.addons_hotel_id = value;
-            } else {
-            newAddon.value.addons_global_id = value;
-            }
-        },
-    });
     const showAddonDialog = ref(false);
     const showEditAddonDialog = ref(false);
     const newAddonReset = () => {

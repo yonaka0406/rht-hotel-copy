@@ -337,7 +337,16 @@ CREATE TABLE plans_rates (
     plans_global_id INT REFERENCES plans_global(id) ON DELETE CASCADE,
     plans_hotel_id INT,
     adjustment_type TEXT CHECK (adjustment_type IN ('base_rate', 'percentage', 'flat_fee')) NOT NULL,  -- Type of adjustment
-    adjustment_value DECIMAL(10, 2) NOT NULL,  -- The value of the adjustment (e.g., 10% or $20)
+    adjustment_value DECIMAL(10, 2) NOT NULL,
+    tax_type_id INT REFERENCES tax_info(id),
+    tax_rate DECIMAL(12,4),
+    net_price NUMERIC(12,0) GENERATED ALWAYS AS (
+         CASE 
+            WHEN adjustment_type IN ('base_rate', 'flat_fee') 
+            THEN FLOOR(adjustment_value / (1 + tax_rate)) 
+            ELSE NULL 
+         END
+    ) STORED;
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
     condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
@@ -351,6 +360,17 @@ CREATE TABLE plans_rates (
         (plans_global_id IS NULL AND plans_hotel_id IS NOT NULL)
     )
 );
+
+ALTER TABLE plans_rates
+ADD COLUMN tax_type_id INT REFERENCES tax_info(id),
+ADD COLUMN tax_rate DECIMAL(12,4),
+ADD COLUMN net_price NUMERIC(12,0) GENERATED ALWAYS AS (
+    CASE 
+        WHEN adjustment_type IN ('base_rate', 'flat_fee') 
+        THEN FLOOR(adjustment_value / (1 + tax_rate)) 
+        ELSE NULL 
+    END
+) STORED;
 
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,

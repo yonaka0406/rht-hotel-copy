@@ -151,13 +151,15 @@ const createPlansRate = async (requestId, plansRate) => {
             plans_hotel_id, 
             adjustment_type, 
             adjustment_value, 
+            tax_type_id,
+            tax_rate,
             condition_type, 
             condition_value, 
             date_start, 
             date_end, 
             created_by,
             updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
     `;
 
@@ -167,6 +169,8 @@ const createPlansRate = async (requestId, plansRate) => {
         plansRate.plans_hotel_id,
         plansRate.adjustment_type,
         plansRate.adjustment_value,
+        plansRate.tax_type_id,
+        plansRate.tax_rate,
         plansRate.condition_type,
         plansRate.condition_value,
         plansRate.date_start,
@@ -195,12 +199,14 @@ const updatePlansRate = async (requestId, id, plansRate) => {
             plans_hotel_id = $3,
             adjustment_type = $4,
             adjustment_value = $5,
-            condition_type = $6,
-            condition_value = $7,
-            date_start = $8,
-            date_end = $9,
-            updated_by = $10
-        WHERE id = $11
+            tax_type_id = $6,
+            tax_rate = $7,
+            condition_type = $8,
+            condition_value = $9,
+            date_start = $10,
+            date_end = $11,
+            updated_by = $12
+        WHERE id = $13
         RETURNING *
     `;
 
@@ -210,6 +216,8 @@ const updatePlansRate = async (requestId, id, plansRate) => {
         plansRate.plans_hotel_id,
         plansRate.adjustment_type,
         plansRate.adjustment_value,
+        plansRate.tax_type_id,
+        plansRate.tax_rate,
         plansRate.condition_type,
         plansRate.condition_value,
         plansRate.date_start,

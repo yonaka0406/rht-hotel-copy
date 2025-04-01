@@ -51,15 +51,7 @@ const getPlanRateByDay = async (req, res) => {
 // POST create a new plan rate
 const createNewPlanRate = async (req, res) => {
     const planRate = {
-        hotel_id: req.body.hotel_id,
-        plans_global_id: req.body.plans_global_id,
-        plans_hotel_id: req.body.plans_hotel_id,
-        adjustment_type: req.body.adjustment_type,
-        adjustment_value: req.body.adjustment_value,
-        condition_type: req.body.condition_type,
-        condition_value: req.body.condition_value,
-        date_start: req.body.date_start,
-        date_end: req.body.date_end,
+        ...req.body,        
         created_by: req.user.id,
         updated_by: req.user.id        
     };
@@ -77,15 +69,7 @@ const createNewPlanRate = async (req, res) => {
 const updateExistingPlanRate = async (req, res) => {
     const rateId = parseInt(req.params.id);
     const planRate = {
-        hotel_id: req.body.hotel_id,
-        plans_global_id: req.body.plans_global_id,
-        plans_hotel_id: req.body.plans_hotel_id,
-        adjustment_type: req.body.adjustment_type,
-        adjustment_value: req.body.adjustment_value,
-        condition_type: req.body.condition_type,
-        condition_value: req.body.condition_value,
-        date_start: req.body.date_start,
-        date_end: req.body.date_end,
+        ...req.body,        
         updated_by: req.user.id
     };
 
