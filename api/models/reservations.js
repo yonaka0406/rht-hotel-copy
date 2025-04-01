@@ -150,16 +150,16 @@ const selectReservation = async (requestId, id) => {
       ,rooms.floor
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type
-      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
+      ,reservation_details.plan_type
+      ,reservation_details.plan_name
       ,reservation_details.number_of_people
       ,reservation_details.price AS plan_total_price
 	    ,COALESCE(ra.total_price, 0) AS addon_total_price      
       ,CASE 
-        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price 
+        WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price 
         ELSE reservation_details.price * reservation_details.number_of_people
-        END + COALESCE(ra.total_price, 0) 
-      AS price      
+        END + COALESCE(ra.total_price, 0)
+      AS price
       ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
       ,COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
 
@@ -176,13 +176,7 @@ const selectReservation = async (requestId, id) => {
         ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
         JOIN 
       clients 
-        ON clients.id = reservations.reservation_client_id
-        LEFT JOIN 
-      plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
-        LEFT JOIN 
-      plans_global 
-        ON plans_global.id = reservation_details.plans_global_id
+        ON clients.id = reservations.reservation_client_id        
         LEFT JOIN 
       (
         SELECT
@@ -289,13 +283,13 @@ const selectReservationDetail = async (requestId, id) => {
       rooms.floor,
       reservation_details.plans_global_id,
       reservation_details.plans_hotel_id,
-      COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type,
-      COALESCE(plans_hotel.name, plans_global.name) AS plan_name,
+      reservation_details.plan_type,
+      reservation_details.plan_name,
       reservation_details.number_of_people,
       reservation_details.price AS plan_total_price,
       COALESCE(ra.total_price, 0) AS addon_total_price, 
       CASE 
-        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
+        WHEN reservation_details.plan_type = 'per_room' 
         THEN reservation_details.price 
         ELSE reservation_details.price * reservation_details.number_of_people
       END + COALESCE(ra.total_price, 0) AS price,
@@ -313,12 +307,7 @@ const selectReservationDetail = async (requestId, id) => {
         AND rooms.hotel_id = reservation_details.hotel_id
       JOIN room_types 
         ON room_types.id = rooms.room_type_id 
-        AND room_types.hotel_id = rooms.hotel_id
-      LEFT JOIN plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id 
-        AND plans_hotel.id = reservation_details.plans_hotel_id
-      LEFT JOIN plans_global 
-        ON plans_global.id = reservation_details.plans_global_id
+        AND room_types.hotel_id = rooms.hotel_id      
       LEFT JOIN (
         SELECT
 		    ra.reservation_detail_id,
@@ -494,8 +483,8 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,reservation_details.price
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
-      ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) as plan_type
+      ,reservation_details.plan_name
+      ,reservation_details.plan_type
       ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
       ,rc.clients_json::TEXT
       ,reservation_details.cancelled
@@ -694,8 +683,8 @@ const addReservationDetail = async (requestId, reservationDetail) => {
   const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_details (
-      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *;
   `;
 
@@ -706,6 +695,8 @@ const addReservationDetail = async (requestId, reservationDetail) => {
     reservationDetail.room_id,
     reservationDetail.plans_global_id,
     reservationDetail.plans_hotel_id,
+    reservationDetail.plan_name,
+    reservationDetail.plan_type,
     reservationDetail.number_of_people,
     reservationDetail.price,
     reservationDetail.created_by,
@@ -846,7 +837,7 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
 // Update entry
 const updateReservationDetail = async (requestId, reservationData) => {
   const pool = getPool(requestId);
-  const { id, hotel_id, room_id, plans_global_id, plans_hotel_id, number_of_people, price, updated_by } = reservationData;
+  const { id, hotel_id, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, updated_by } = reservationData;
 
   const query = `
       UPDATE reservation_details
@@ -854,16 +845,20 @@ const updateReservationDetail = async (requestId, reservationData) => {
           room_id = $1,
           plans_global_id = $2,
           plans_hotel_id = $3,
-          number_of_people = $4,
-          price = $5,
-          updated_by = $6          
-      WHERE id = $7::UUID AND hotel_id = $8
+          plan_name = $4,
+          plan_type = $5,
+          number_of_people = $6,
+          price = $7,
+          updated_by = $8
+      WHERE id = $9::UUID AND hotel_id = $10
       RETURNING *;
   `;
   const values = [
     room_id,
     plans_global_id,
     plans_hotel_id,
+    plan_name,
+    plan_type,
     number_of_people,
     price,
     updated_by,
@@ -1287,13 +1282,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     }else{
       // generate_series from new_check_in and new_check_out and add dates
       const insertDetailsQuery = `
-          INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
+          INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by)
           
           SELECT datesList.*
           FROM
             (SELECT DISTINCT hotel_id, $1::uuid as reservation_id, 
               generate_series(($3::DATE)::DATE, ($4::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL)::DATE as series, 
-              $2::integer as room_id, plans_global_id, plans_hotel_id, number_of_people, price, $5::integer as created_by, $5::integer as updated_by
+              $2::integer as room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, $5::integer as created_by, $5::integer as updated_by
               FROM reservation_details
               WHERE reservation_id = $1::uuid AND hotel_id = $6::integer AND room_id = $2::integer) as datesList
           WHERE NOT EXISTS (
@@ -1561,7 +1556,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, gid, hid, price, user_id) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, gid, hid, plan_name, plan_type, price, user_id) => {
   const pool = getPool(requestId);
   const plans_global_id = gid === 0 ? null : gid;
   const plans_hotel_id = hid === 0 ? null : hid;
@@ -1569,14 +1564,16 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, gid, hid, pr
     UPDATE reservation_details
     SET plans_global_id = $1
       ,plans_hotel_id = $2
-      ,price = $3
-      ,updated_by = $4
-    WHERE hotel_id = $5 AND id = $6::uuid
+      ,plan_name = $3
+      ,plan_type = $4
+      ,price = $5
+      ,updated_by = $6
+    WHERE hotel_id = $7 AND id = $8::uuid
     RETURNING *;
   `;  
 
   try {
-    await pool.query(query, [plans_global_id, plans_hotel_id, price, user_id, hotel_id, id]);    
+    await pool.query(query, [plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id]);    
   } catch (err) {
     console.error('Error updating reservation guest:', err);
   } 
@@ -1650,8 +1647,8 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
 
     // Step 1: Copy reservation to new room
     const insertQuery = `
-      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, cancelled, billable, created_by, updated_by)
-      SELECT hotel_id, reservation_id, date, $1, plans_global_id, plans_hotel_id, $2, price, cancelled, billable, $3, $3
+      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, cancelled, billable, created_by, updated_by)
+      SELECT hotel_id, reservation_id, date, $1, plans_global_id, plans_hotel_id, plan_name, plan_type, $2, price, cancelled, billable, $3, $3
       FROM reservation_details
       WHERE reservation_id = $4::uuid AND room_id = $5
       RETURNING *;

@@ -481,13 +481,6 @@ CREATE TABLE reservations (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservations
-ADD COLUMN agent TEXT NULL;
-ALTER TABLE reservations 
-ADD COLUMN check_in_time TIME DEFAULT '16:00',
-ADD COLUMN check_out_time TIME DEFAULT '10:00';
-
-
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
@@ -496,6 +489,8 @@ CREATE TABLE reservation_details (
     room_id INT,
     plans_global_id INT REFERENCES plans_global(id),
     plans_hotel_id INT,
+    plan_name TEXT,
+    plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room',
     number_of_people INT NOT NULL,
     price DECIMAL,
     cancelled UUID DEFAULT NULL,
@@ -511,8 +506,8 @@ CREATE TABLE reservation_details (
 ) PARTITION BY LIST (hotel_id);
 
 ALTER TABLE reservation_details
-ALTER COLUMN billable SET DEFAULT FALSE;
-ALTER TABLE reservation_details DROP COLUMN payer_client_id;
+ADD COLUMN plan_name TEXT,
+ADD COLUMN plan_type TEXT CHECK (plan_type IN ('per_person', 'per_room')) NOT NULL DEFAULT 'per_room';
 
 
 CREATE TABLE reservation_addons (

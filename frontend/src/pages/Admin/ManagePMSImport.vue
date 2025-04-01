@@ -564,6 +564,7 @@
                     room_id: getRoomId(detail.roomNumber),
                     plans_global_id: getPlanId(detail.planName) || null,
                     plans_hotel_id: null,
+                    plan_name: detail.planName,
                     number_of_people: detail.numberOfPeople,
                     price: detail.price || null,
                     cancelled: detail.cancelled ? uuidv4() : null,

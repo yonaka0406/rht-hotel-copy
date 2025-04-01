@@ -172,9 +172,9 @@ const insertYadomasterDetails = async (requestId, details) => {
             const query = `
                 INSERT INTO reservation_details (
                 id, hotel_id, reservation_id, date, room_id, 
-                number_of_people, plans_global_id, plans_hotel_id, price, cancelled, 
+                number_of_people, plans_global_id, plans_hotel_id, plan_name, price, cancelled, 
                 billable, created_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 RETURNING *;
             `;
             const values = [
@@ -185,7 +185,8 @@ const insertYadomasterDetails = async (requestId, details) => {
                 detail.room_id,
                 detail.number_of_people,
                 detail.plans_global_id,
-                detail.plans_hotel_id,                
+                detail.plans_hotel_id,
+                detail.plan_name,
                 detail.price,
                 detail.cancelled,
                 detail.billable,

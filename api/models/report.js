@@ -68,19 +68,13 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
     SELECT 
       reservation_details.date
       ,COALESCE(reservation_details.plans_global_id::TEXT, '') || 'h' || COALESCE(reservation_details.plans_hotel_id::TEXT, '') AS key
-      ,COALESCE(plans_hotel.name, plans_global.name,'未設定') AS name
-      ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type
-      ,SUM(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN 1
+      ,COALESCE(reservation_details.plan_name, '未設定') AS name
+      ,reservation_details.plan_type
+      ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN 1
         ELSE reservation_details.number_of_people END) AS quantity
     FROM
       reservations
-      ,reservation_details
-        LEFT JOIN
-      plans_global
-        ON reservation_details.plans_global_id = plans_global.id
-      LEFT JOIN
-      plans_hotel
-        ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+      ,reservation_details        
       
     WHERE
       reservation_details.hotel_id = $1
@@ -94,8 +88,8 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
       reservation_details.date
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,plans_hotel.name, plans_global.name
-      ,plans_hotel.plan_type, plans_global.plan_type
+      ,reservation_details.plan_name
+      ,reservation_details.plan_type
     ORDER BY 1, 2  
   `;
   const values = [hotelId, dateStart, dateEnd]
@@ -237,7 +231,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
-                CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+                CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
                 ELSE reservation_details.price * reservation_details.number_of_people END
               ELSE 0 END
           ) AS plan_price
@@ -246,13 +240,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
               ELSE 0 END
           ) AS addon_price
         FROM
-          reservation_details
-            LEFT JOIN
-          plans_global
-            ON reservation_details.plans_global_id = plans_global.id
-            LEFT JOIN
-          plans_hotel
-            ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+          reservation_details            
             LEFT JOIN
           reservation_addons
             ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
@@ -367,20 +355,14 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
-              CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
+              CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
               ELSE reservation_details.price * reservation_details.number_of_people END
               ELSE 0 END
           ) AS plan_price
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN reservation_addons.price ELSE 0 END) AS addon_price
 
         FROM
-          reservation_details
-            LEFT JOIN
-          plans_global
-            ON reservation_details.plans_global_id = plans_global.id
-            LEFT JOIN
-          plans_hotel
-            ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+          reservation_details            
             LEFT JOIN
           (
             SELECT
@@ -494,10 +476,10 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,rooms.for_sale
       ,room_types.name AS room_type_name
       ,reservation_details.number_of_people
-      ,COALESCE(plans_hotel.plan_type, plans_global.plan_type) AS plan_type
-      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
-      ,(CASE WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' THEN reservation_details.price
-      ELSE reservation_details.price * reservation_details.number_of_people END
+      ,reservation_details.plan_type
+      ,reservation_details.plan_name
+      ,(CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
+        ELSE reservation_details.price * reservation_details.number_of_people END
       ) AS plan_price
       ,reservation_addons.addon_name
       ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
@@ -541,13 +523,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.type
           ,clients.name_kanji, clients.name, clients.name_kana
       ) AS reservations
-      ,reservation_details
-        LEFT JOIN
-      plans_global
-        ON reservation_details.plans_global_id = plans_global.id
-        LEFT JOIN
-      plans_hotel
-        ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+      ,reservation_details        
         LEFT JOIN
       reservation_addons
         ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
