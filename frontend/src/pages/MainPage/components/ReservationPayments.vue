@@ -251,11 +251,25 @@
     });
     const totalPrice = computed(() => {
         if (!props.reservation_details) return 0;
-        
-        return props.reservation_details.reduce((sum, room) => {
-            // Only include billable rooms in the sum
+
+        const detailsCopy = [...props.reservation_details];
+
+        console.log('detailsCopy', detailsCopy);
+
+        return detailsCopy.reduce((sum, room) => {
             if (room.billable) {
-                sum += room.price * 1 || 0;
+                const price = parseFloat(room.price);
+                console.log('Room Price:', price);
+                if (isNaN(price)) {
+                    console.error('Invalid price:', room.price);
+                    return sum; // Skip this room
+                }
+                if (!isNaN(price)) {
+                    const roundedPrice = parseFloat(price.toFixed(2));
+                    console.log('Rounded Price:', roundedPrice);
+                    sum += roundedPrice;
+                    console.log('Current Sum:', sum);
+                }
             }
             return sum;
         }, 0);
@@ -446,7 +460,7 @@
     }; 
 
     onMounted( async () => {   
-        // console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
+        console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
         
         await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel();

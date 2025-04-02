@@ -1298,13 +1298,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     }else{
       // generate_series from new_check_in and new_check_out and add dates
       const insertDetailsQuery = `
-          INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by)
+          INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by)
           
           SELECT datesList.*
           FROM
             (SELECT DISTINCT hotel_id, $1::uuid as reservation_id, 
               generate_series(($3::DATE)::DATE, ($4::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL)::DATE as series, 
-              $2::integer as room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, $5::integer as created_by, $5::integer as updated_by
+              $2::integer as room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, $5::integer as created_by, $5::integer as updated_by
               FROM reservation_details
               WHERE reservation_id = $1::uuid AND hotel_id = $6::integer AND room_id = $2::integer) as datesList
           WHERE NOT EXISTS (
@@ -1363,6 +1363,8 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     // console.log('Updated reservations table with new check_in and check_out.');
 
     await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by);
+
+    /* recalculate addons as well!? */
 
     await client.query('COMMIT');
     // console.log('Transaction updateRoomByCalendar committed successfully.');    

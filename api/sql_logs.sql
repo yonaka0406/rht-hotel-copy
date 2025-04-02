@@ -284,5 +284,10 @@
     AFTER INSERT OR UPDATE OR DELETE ON reservation_payments
     FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();  
 
+    -- For the `reservation_rates` table
+    CREATE TRIGGER log_reservation_rates_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON reservation_rates
+    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
+
 
 
