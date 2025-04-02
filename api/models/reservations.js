@@ -1362,7 +1362,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     await pool.query(updateReservationQuery, updateReservationValues);
     // console.log('Updated reservations table with new check_in and check_out.');
 
-    await recalculatePlanPrice(newReservationId, hotel_id, new_room_id, updated_by);
+    await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by);
 
     await client.query('COMMIT');
     // console.log('Transaction updateRoomByCalendar committed successfully.');    
@@ -1817,7 +1817,7 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
       const { id } = detail;
 
       // 1. Update Plan      
-      await updateReservationDetailPlan(requestId, id, hotelId, plan, 0, [], user_id);
+      await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
 
       // 2. Update Addons
       await updateReservationDetailAddon(requestId, id, addons, user_id);
