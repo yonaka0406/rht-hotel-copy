@@ -13,8 +13,7 @@
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
                 dataKey="id"                
                 stripedRows
-                @row-dblclick="openDrawer"
-                selectionMode="single"
+                @row-dblclick="openDrawer"                
                 removableSort
                 v-model:expandedRows="expandedRows"
                 :rowExpansion="true"
@@ -44,9 +43,9 @@
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
                 <Column expander header="詳細" style="width: 1%;"/>                
-                <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+                <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
                 
-                <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">                    
+                <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
                     <template #filter="{ filterModel, filterCallback }">                        
                         <Select 
                             v-model="filterModel.value" 
@@ -177,7 +176,7 @@
                 :reservation_id="selectedReservation.id"                       
             />
         </Drawer>
-        <Drawer v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '33vh'}">
+        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '33vh'}">
             <template #header><span class="text-lg font-bold">選択された予約の詳細</span></template>
             <div class="grid grid-cols-2 gap-4">
                 <Card>
@@ -287,19 +286,24 @@
     const selectedReservations = ref([]);
     const drawerSelectVisible = ref(false);
     const totalPrice = computed(() => {
+        if(!selectedReservations){ return 0;}
         return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.price || 0), 0);
     });
     const totalPayments = computed(() => {
+        if(!selectedReservations){ return 0;}
         return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.payments || 0), 0);
     });
     const totalBalance = computed(() => {
+        if(!selectedReservations){ return 0;}
         return selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.price || 0) - (reservation.payments || 0)), 0);
     });
     const totalPeopleNights = computed(() => {
+        if(!selectedReservations){ return 0;}
         const formattedTotalPeopleNights = selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.number_of_people || 0) * (reservation.number_of_nights || 0)), 0);
         return formattedTotalPeopleNights.toLocaleString();
     });
     const totalPeople = computed(() => {
+        if(!selectedReservations){ return 0;}
         return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.number_of_people || 0), 0);
     });
 
