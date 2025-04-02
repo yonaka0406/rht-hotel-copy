@@ -1721,8 +1721,7 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     const updatePromises = detailsArray.map(async (detail) => {
       const { id } = detail;
 
-      // 1. Update Plan
-      console.log('updateReservationRoomPlan plan:',plan)
+      // 1. Update Plan      
       await updateReservationDetailPlan(requestId, id, hotelId, plan, 0, user_id);
 
       // 2. Update Addons
