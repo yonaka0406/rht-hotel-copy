@@ -909,11 +909,11 @@ const editReservationGuests = async (req, res) => {
 
 const editReservationPlan = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, gid, hid, plan_name, plan_type, price } = req.body;
+  const { hotel_id, plan, price } = req.body;
   const user_id = req.user.id;
 
   try {
-    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, gid, hid, plan_name, plan_type, price, user_id);
+    const updatedReservation = await updateReservationDetailPlan(req.requestId, id, hotel_id, plan, price, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);

@@ -245,7 +245,9 @@
     const selectedAddonOption = ref(null);
     const updatePlanAddOns = async (event) => { 
         // console.log('Selected Plan:', event.value);           
-        const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);            
+        const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);   
+        console.log('updatePlanAddOns selectedPlanObject', selectedPlanObject)         
+            
         // console.log('selectedPlanObject',selectedPlanObject)
         if (selectedPlan.value) {
             const gid = selectedPlanObject.plans_global_id ?? 0;
@@ -308,12 +310,16 @@
         const plan_key = selectedPlan.value;
         const [global, hotel] = plan_key.split('h').map(Number);
         const plans_global_id = global || 0;
-        const plans_hotel_id = hotel || 0; 
+        const plans_hotel_id = hotel || 0;         
         const price = planTotalRate.value || 0;
 
-        // console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'price:',price);
+        const selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
+        const plan_name = selectedPlanObject.name;
+        const plan_type = selectedPlanObject.plan_type;
 
-        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, plans_global_id, plans_hotel_id, plan_name, plan_type, price);
+        console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'plan_name',plan_name,'plan_type',plan_type,'price:',price);
+
+        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, price);
 
         const addonDataArray = selectedAddon.value.map(addon => ({
             hotel_id: props.reservation_details.hotel_id,  

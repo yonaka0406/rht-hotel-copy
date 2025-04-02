@@ -16,7 +16,7 @@
                         <DataTable :value="filteredCurrentConditions">
                             <Column field="date_start" header="開始"></Column>
                             <Column field="date_end" header="終了"></Column>    
-                            <Column field="name" header="アドオン"></Column>
+                            <Column field="addon_name" header="アドオン"></Column>
                             <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
@@ -40,7 +40,7 @@
                         <DataTable :value="filteredFutureConditions">
                             <Column field="date_start" header="開始"></Column>
                             <Column field="date_end" header="終了"></Column>    
-                            <Column field="name" header="アドオン"></Column>
+                            <Column field="addon_name" header="アドオン"></Column>
                             <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
@@ -64,7 +64,7 @@
                         <DataTable :value="filteredPastConditions">
                             <Column field="date_start" header="開始"></Column>
                             <Column field="date_end" header="終了"></Column>    
-                            <Column field="name" header="アドオン"></Column>
+                            <Column field="addon_name" header="アドオン"></Column>
                             <Column field="price" header="価格">
                                 <template #body="slotProps">
                                     {{ formatNumber(slotProps.data.price, 'currency') }}
@@ -92,7 +92,7 @@
                             <Select v-model="newAddon.addons_id" 
                                 id="AddonSelectEdit"                                
                                 :options="allAddons"
-                                optionLabel="name"
+                                optionLabel="addon_name"
                                 optionValue="id"
                                 placeholder="アドオンを選択する"
                                 filter 
@@ -167,7 +167,7 @@
                 <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
                     <div class="col-span-2">
                         <FloatLabel>
-                            <InputText v-model="editAddon.name"
+                            <InputText v-model="editAddon.addon_name"
                                 disabled
                                 fluid
                             />

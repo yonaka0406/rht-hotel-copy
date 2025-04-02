@@ -1556,10 +1556,14 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, gid, hid, plan_name, plan_type, price, user_id) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, price, user_id) => {
   const pool = getPool(requestId);
-  const plans_global_id = gid === 0 ? null : gid;
-  const plans_hotel_id = hid === 0 ? null : hid;
+       
+  const plans_global_id = plan.plans_global_id === 0 ? null : plan.plans_global_id;
+  const plans_hotel_id = plan.plans_hotel_id === 0 ? null : plan.plans_hotel_id;
+  const plan_name = plan.name;
+  const plan_type = plan.plan_type;
+
   const query = `
     UPDATE reservation_details
     SET plans_global_id = $1
@@ -1718,7 +1722,8 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
       const { id } = detail;
 
       // 1. Update Plan
-      await updateReservationDetailPlan(requestId, id, hotelId, plan.plans_global_id, plan.plans_hotel_id, plan.price, user_id);
+      console.log('updateReservationRoomPlan plan:',plan)
+      await updateReservationDetailPlan(requestId, id, hotelId, plan, 0, user_id);
 
       // 2. Update Addons
       await updateReservationDetailAddon(requestId, id, addons, user_id);
