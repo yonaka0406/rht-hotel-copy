@@ -10,6 +10,8 @@
         ip_address INET -- IP address of the user who made the change
     );
 
+    CREATE INDEX idx_logs_user_record_id ON logs_user(record_id);
+
     CREATE OR REPLACE FUNCTION log_user_changes()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -60,6 +62,8 @@
         changes JSONB, -- Changes made to the record    
         ip_address INET -- IP address of the user who made the change
     );
+
+    CREATE INDEX idx_logs_hotel_record_id ON logs_hotel(record_id);
 
     CREATE OR REPLACE FUNCTION log_hotel_changes()
     RETURNS TRIGGER AS $$
@@ -112,6 +116,8 @@
         changes JSONB, -- Changes made to the record    
         ip_address INET -- IP address of the user who made the change
     );
+
+    CREATE INDEX idx_logs_hotel_plans_record_id ON logs_hotel_plans(record_id);
 
     CREATE OR REPLACE FUNCTION log_hotel_plans_changes()
     RETURNS TRIGGER AS $$
@@ -170,6 +176,8 @@
         ip_address INET -- IP address of the user who made the change
     );
 
+    CREATE INDEX idx_logs_hotel_addons_record_id ON logs_hotel_addons(record_id);
+
     CREATE OR REPLACE FUNCTION log_hotel_addons_changes()
     RETURNS TRIGGER AS $$
     BEGIN
@@ -215,7 +223,9 @@
         record_id UUID NOT NULL, -- ID of the affected record
         changes JSONB, -- Changes made to the record    
         ip_address INET -- IP address of the user who made the change
-    ); 
+    );
+
+    CREATE INDEX idx_logs_reservation_record_id ON logs_reservation(record_id);
 
     CREATE OR REPLACE FUNCTION log_reservations_changes()
     RETURNS TRIGGER AS $$

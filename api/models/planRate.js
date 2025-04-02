@@ -31,7 +31,7 @@ const isValidCondition = (row, date) => {
         }
 
         case 'day_of_week': {
-            const targetDay = targetDate.toLocaleString('en-US', { weekday: 'short' }).toLowerCase(); // Get day of the week
+            const targetDay = targetDate.toLocaleString('en-US', { weekday: 'long' }).toLowerCase(); // Get day of the week
             // console.log('Target Day:', targetDay);
             const match = parsedCondition.includes(targetDay);
             // console.log('Condition Check (Day):', match);
@@ -135,6 +135,46 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         const finalPrice = priceWithPercentage + flatFee;
         // console.log('Calculated price:',finalPrice);
         return finalPrice;
+    } catch (err) {
+        console.error('Error calculating price:', err);
+        throw new Error('Database error');
+    }
+};
+const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
+    const pool = getPool(requestId);
+    const query = `        
+        SELECT 
+            adjustment_type,
+            condition_type,
+            condition_value,
+            tax_type_id,
+            tax_rate,
+            SUM(adjustment_value) AS adjustment_value
+        FROM plans_rates
+        WHERE 
+            (
+                $4 BETWEEN date_start AND COALESCE(date_end, $4)  -- Date is within the range
+                OR ($4 >= date_start AND date_end IS NULL)  -- Date is after the start date and no end date
+            )
+            AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
+            OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id, tax_rate
+        ORDER BY adjustment_type
+    `;
+    const values = [
+        plans_global_id || null,
+        plans_hotel_id || null,
+        hotel_id,
+        date,
+    ];
+
+    try {
+        const result = await pool.query(query, values);  
+        
+        // Filter results using isValidCondition
+        const filteredRates = result.rows.filter(row => isValidCondition(row, date));
+              
+        return filteredRates;
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
@@ -259,6 +299,7 @@ module.exports = {
     getAllPlansRates,
     getPlansRateById,
     getPriceForReservation,
+    getRatesForTheDay,
     createPlansRate,
     updatePlansRate,
     deletePlansRate    

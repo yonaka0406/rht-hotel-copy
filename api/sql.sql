@@ -503,7 +503,7 @@ CREATE TABLE reservation_clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE    
+    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
 CREATE TABLE reservation_payments (
@@ -523,9 +523,26 @@ CREATE TABLE reservation_payments (
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
+CREATE TABLE reservation_rates (
+   id UUID DEFAULT gen_random_uuid(),
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   reservation_details_id UUID NOT NULL,
+   adjustment_type TEXT CHECK (adjustment_type IN ('base_rate', 'percentage', 'flat_fee')) DEFAULT 'base_rate',
+   adjustment_value DECIMAL(10, 2) NOT NULL,
+   tax_type_id INT REFERENCES tax_info(id),
+   tax_rate DECIMAL(12,4),
+   price NUMERIC(12,0) NOT NULL,
+   net_price NUMERIC(12,0) GENERATED ALWAYS AS (FLOOR(price / (1 + tax_rate))) STORED,
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   updated_by INT DEFAULT NULL REFERENCES users(id),
+   PRIMARY KEY (hotel_id, id),
+   FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
+) PARTITION BY LIST (hotel_id);
+
 /*ATENCAO: ADICIONAR TABELA A QUERY DA PARTITION
-CREATE TABLE reservation_payments_7 
-PARTITION OF reservation_payments 
+CREATE TABLE reservation_rates_7 
+PARTITION OF reservation_rates 
 FOR VALUES IN (7)
 */
 

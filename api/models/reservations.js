@@ -1,6 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
-const { getPriceForReservation } = require('../models/planRate');
+const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
 
 // Helper
 const formatDate = (date) => {
@@ -294,7 +294,8 @@ const selectReservationDetail = async (requestId, id) => {
         ELSE reservation_details.price * reservation_details.number_of_people
       END + COALESCE(ra.total_price, 0) AS price,
       COALESCE(rc.clients_json, '[]'::json) AS reservation_clients,
-      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
+      COALESCE(ra.addons_json, '[]'::json) AS reservation_addons,
+      COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
     FROM
       reservation_details
       JOIN reservations 
@@ -309,39 +310,54 @@ const selectReservationDetail = async (requestId, id) => {
         ON room_types.id = rooms.room_type_id 
         AND room_types.hotel_id = rooms.hotel_id      
       LEFT JOIN (
-        SELECT
-		    ra.reservation_detail_id,
-		    SUM(ra.price * ra.quantity) AS total_price,
-		    JSON_AGG(
-		        JSON_BUILD_OBJECT(
-		            'addon_id', ra.id,
-                'addons_global_id', ra.addons_global_id,
-					      'addons_hotel_id', ra.addons_hotel_id,
-		            'addon_name', ra.addon_name,
-		            'quantity', ra.quantity,
-		            'price', ra.price
-		        )
-		    ) AS addons_json
-		FROM reservation_addons ra		
-		GROUP BY ra.reservation_detail_id
-      ) ra ON reservation_details.id = ra.reservation_detail_id
+          SELECT
+            ra.reservation_detail_id,
+            SUM(ra.price * ra.quantity) AS total_price,
+            JSON_AGG(
+                JSON_BUILD_OBJECT(
+                    'addon_id', ra.id,
+                    'addons_global_id', ra.addons_global_id,
+                    'addons_hotel_id', ra.addons_hotel_id,
+                    'addon_name', ra.addon_name,
+                    'quantity', ra.quantity,
+                    'price', ra.price
+                )
+            ) AS addons_json
+          FROM reservation_addons ra		
+          GROUP BY ra.reservation_detail_id
+        ) ra ON reservation_details.id = ra.reservation_detail_id
       LEFT JOIN (
-        SELECT 
-          rc.reservation_details_id,
-          JSON_AGG(
-            JSON_BUILD_OBJECT(
-              'client_id', rc.client_id,
-              'name', c.name,
-              'name_kana', c.name_kana,
-              'name_kanji', c.name_kanji,
-              'email', c.email,
-              'phone', c.phone
-            )
-          ) AS clients_json
-        FROM reservation_clients rc
-        JOIN clients c ON rc.client_id = c.id
-        GROUP BY rc.reservation_details_id
-      ) rc ON rc.reservation_details_id = reservation_details.id
+          SELECT 
+            rc.reservation_details_id,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'client_id', rc.client_id,
+                'name', c.name,
+                'name_kana', c.name_kana,
+                'name_kanji', c.name_kanji,
+                'email', c.email,
+                'phone', c.phone
+              )
+            ) AS clients_json
+          FROM reservation_clients rc
+          JOIN clients c ON rc.client_id = c.id
+          GROUP BY rc.reservation_details_id
+        ) rc ON rc.reservation_details_id = reservation_details.id
+      LEFT JOIN (
+          SELECT 
+            rr.reservation_details_id,
+            JSON_AGG(
+              JSON_BUILD_OBJECT(
+                'adjustment_type', rr.adjustment_type,
+                'adjustment_value', rr.adjustment_value,
+                'tax_type_id', rr.tax_type_id,
+                'tax_rate', rr.tax_rate,
+                'price', rr.price              
+              )
+            ) AS rates_json
+          FROM reservation_rates rr        
+          GROUP BY rr.reservation_details_id
+        ) rr ON rr.reservation_details_id = reservation_details.id
     WHERE reservation_details.id = $1
   `;
 
@@ -1346,7 +1362,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     await pool.query(updateReservationQuery, updateReservationValues);
     // console.log('Updated reservations table with new check_in and check_out.');
 
-    await recalculatePlanPrice(newReservationId, hotel_id, new_room_id);
+    await recalculatePlanPrice(newReservationId, hotel_id, new_room_id, updated_by);
 
     await client.query('COMMIT');
     // console.log('Transaction updateRoomByCalendar committed successfully.');    
@@ -1556,15 +1572,16 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   
 };
 
-const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, price, user_id) => {
+const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id) => {
   const pool = getPool(requestId);
+  const client = await pool.connect();
        
   const plans_global_id = plan.plans_global_id === 0 ? null : plan.plans_global_id;
   const plans_hotel_id = plan.plans_hotel_id === 0 ? null : plan.plans_hotel_id;
   const plan_name = plan.name;
   const plan_type = plan.plan_type;
 
-  const query = `
+  const updateReservationDetailsQuery = `
     UPDATE reservation_details
     SET plans_global_id = $1
       ,plans_hotel_id = $2
@@ -1577,10 +1594,88 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, price,
   `;  
 
   try {
-    await pool.query(query, [plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id]);    
+    await client.query('BEGIN');
+
+    // Set session user_id
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
+    await client.query(setSessionQuery);
+
+    // Update reservation_details
+    await client.query(updateReservationDetailsQuery, [
+      plans_global_id,
+      plans_hotel_id,
+      plan_name,
+      plan_type,
+      price,
+      user_id,
+      hotel_id,
+      id,
+    ]);
+
+    if (rates && rates.length > 0) {
+      // Delete existing rates
+      const deleteRatesQuery = `
+        DELETE FROM reservation_rates WHERE reservation_details_id = $1;
+      `;
+      await client.query(deleteRatesQuery, [id]);
+
+      const aggregatedRates = {};
+      let baseRate = 0;
+
+      // Aggregate rates by adjustment_type and tax_type_id
+      rates.forEach((rate) => {
+        const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
+        if (!aggregatedRates[key]) {
+          aggregatedRates[key] = {
+            adjustment_type: rate.adjustment_type,
+            tax_type_id: rate.tax_type_id,
+            tax_rate: rate.tax_rate,
+            adjustment_value: 0,
+          };
+        }
+        aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value);
+        if (rate.adjustment_type === 'base_rate') {
+          baseRate += parseFloat(rate.adjustment_value);
+        }
+      });
+
+      // Insert aggregated rates
+      for (const key in aggregatedRates) {
+        const rate = aggregatedRates[key];
+        let price = 0;
+
+        if (rate.adjustment_type === 'base_rate') {
+          price = rate.adjustment_value;
+        } else if (rate.adjustment_type === 'percentage') {
+          price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
+        } else if (rate.adjustment_type === 'flat_fee') {
+          price = rate.adjustment_value;
+        }
+
+        const insertRateQuery = `
+          INSERT INTO reservation_rates (
+            hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
+            tax_type_id, tax_rate, price, created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *;
+        `;
+
+        await client.query(
+          insertRateQuery, 
+          [hotel_id, id, rate.adjustment_type, rate.adjustment_value,
+          rate.tax_type_id, rate.tax_rate, price, user_id]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
   } catch (err) {
-    console.error('Error updating reservation guest:', err);
-  } 
+    await client.query('ROLLBACK');
+    console.error('Error updating reservation detail plan:', err);
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
@@ -1722,7 +1817,7 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
       const { id } = detail;
 
       // 1. Update Plan      
-      await updateReservationDetailPlan(requestId, id, hotelId, plan, 0, user_id);
+      await updateReservationDetailPlan(requestId, id, hotelId, plan, 0, [], user_id);
 
       // 2. Update Addons
       await updateReservationDetailAddon(requestId, id, addons, user_id);
@@ -1732,7 +1827,7 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     await Promise.all(updatePromises);
 
     // 3. Recalculate Price after updating plans and addons
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId);
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id);
 
     await client.query('COMMIT');
 
@@ -1746,10 +1841,16 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
   }
 };
 
-const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id) => {
+const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
+    await client.query(setSessionQuery);
+
     // Fetch the reservation details based on reservation_id, hotel_id, and room_id
     const detailsQuery = `
       SELECT id, plans_global_id, plans_hotel_id, hotel_id, date
@@ -1761,22 +1862,64 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 
     // Update the reservation details with promise
     const dtlUpdatePromises = detailsArray.map(async ({ id, plans_global_id, plans_hotel_id, hotel_id, date }) => {
-      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formatDate(new Date(date)));
-      // console.log('newPrice calculated:', newPrice);
-
+      const formattedDate = formatDate(new Date(date));
+      // Fetch new price
+      const newPrice = await getPriceForReservation(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);   
+      
+      // Update reservation_details
       const dtlUpdateQuery = `
         UPDATE reservation_details
         SET price = $1
         WHERE id = $2
         RETURNING *;
+      `;      
+      await pool.query(dtlUpdateQuery, [newPrice, id]);
+
+      // Delete existing rates for this reservation_details_id
+      const deleteRatesQuery = `
+        DELETE FROM reservation_rates WHERE reservation_details_id = $1;
       `;
-      return pool.query(dtlUpdateQuery, [newPrice, id]);
+      await pool.query(deleteRatesQuery, [id]);
+
+      // Fetch new rates
+      const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
+
+      // Insert new rates into reservation_rates
+      let baseRate = 0;
+      const rateInsertPromises = newrates.map(async (rate) => {
+        let price = 0;
+        if (rate.adjustment_type === 'base_rate') {
+          price = rate.adjustment_value;
+          baseRate += parseFloat(rate.adjustment_value);
+        }
+        if (rate.adjustment_type === 'percentage') {
+          price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
+        }
+        if (rate.adjustment_type === 'flat_fee') {
+          price = rate.adjustment_value;          
+        }
+        const rateInsertQuery = `
+          INSERT INTO reservation_rates (
+            hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
+            tax_type_id, tax_rate, price, created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *;
+        `;
+        return pool.query(rateInsertQuery, [
+          hotel_id, id, rate.adjustment_type, rate.adjustment_value,
+          rate.tax_type_id, rate.tax_rate, price, user_id
+        ]);               
+      });
+      await Promise.all(rateInsertPromises);
     });
 
-    // Wait for all promises to resolve
-    const updatedDetails = await Promise.all(dtlUpdatePromises);
-    return updatedDetails;
+    // Wait for all updates to complete
+    await Promise.all(dtlUpdatePromises);
+    await client.query('COMMIT');
+
+    return { success: true };
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error recalculating plan price:', error);
     throw error;
   } finally {

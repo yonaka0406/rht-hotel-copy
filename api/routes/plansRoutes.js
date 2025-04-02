@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getGlobalPlans, getHotelsPlans, getHotelPlans, fetchAllHotelPlans, 
     createGlobalPlan, createHotelPlan, editGlobalPlan, editHotelPlan } = require('../controllers/plansController');
-const { getPlanRates, getPlanRate, getPlanRateByDay, createNewPlanRate, updateExistingPlanRate, deletePlanRate } = require('../controllers/plansRateController');
+const { getPlanRates, getPlanRate, getPlanRateByDay, getPlanRatesByDay, createNewPlanRate, updateExistingPlanRate, deletePlanRate } = require('../controllers/plansRateController');
 const { getPlanAddons, getPlanAddon, createNewPlanAddon, updateExistingPlanAddon, deleteExistingPlanAddon } = require('../controllers/plansAddonController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
@@ -24,6 +24,7 @@ router.get('/plans/all/:hotel_id', authMiddleware, fetchAllHotelPlans);
 router.get('/plans/:gid/:hid/:hotel_id/rates', authMiddleware, getPlanRates);
 router.get('/plans/rates/:id', authMiddleware, getPlanRate);
 router.get('/plan/rate/:gid/:hid/:hotel_id/:date', authMiddleware, getPlanRateByDay);
+router.get('/plan/rate-detail/:gid/:hid/:hotel_id/:date', authMiddleware, getPlanRatesByDay);
 router.post('/plans/:planId/rates', authMiddleware_manageDB, createNewPlanRate);
 router.put('/plans/rates/:id', authMiddleware_manageDB, updateExistingPlanRate);
 //router.delete('/plans/rates/:id', authMiddleware_manageDB, deletePlanRate);

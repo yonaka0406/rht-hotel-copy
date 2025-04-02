@@ -213,7 +213,7 @@ export function useReservationStore() {
             console.error('Error updating reservation client:', error);
         }
     };
-    const setReservationPlan = async (detail_id, hotel_id, plan, price) => {            
+    const setReservationPlan = async (detail_id, hotel_id, plan, rates, price) => {            
         // console.log('From Reservation Store => setReservationPlan');
         try {
             const authToken = localStorage.getItem('authToken');
@@ -224,7 +224,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ hotel_id, plan, price })
+                body: JSON.stringify({ hotel_id, plan, rates, price })
             });
 
             if (!response.ok) {

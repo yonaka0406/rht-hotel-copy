@@ -424,7 +424,7 @@
         :closable="true"
         :modal="true"
         :breakpoints="{ '960px': '75vw', '640px': '100vw' }"
-        style="width: 50vw"
+        style="width: 70vw"
     >
         <ReservationDayDetail                
             :reservation_details="reservation_details_day"            

@@ -52,12 +52,88 @@
                                                     <FloatLabel>
                                                         <InputNumber
                                                             v-model="planTotalRate"
+                                                            disabled
                                                             fluid
                                                         >
                                                         </InputNumber>
                                                         <label>プラン料金</label>
                                                     </FloatLabel>
                                                 </div>
+                                            </div>
+                                            <Divider />
+                                            <form @submit.prevent="addRate">
+                                                <div class="grid grid-cols-2 gap-1">
+                                                    <div class="field mt-6">
+                                                        <FloatLabel>
+                                                            <Select
+                                                                v-model="newRate.adjustment_type"
+                                                                :options="adjustmentTypes"
+                                                                optionLabel="label" 
+                                                                optionValue="id"
+                                                                fluid
+                                                            />
+                                                            <label>料金種類</label>
+                                                        </FloatLabel>
+                                                    </div>
+                                                    <div class="field mt-6">
+                                                        <FloatLabel>
+                                                            <Select
+                                                                v-model="newRate.tax_type_id"
+                                                                :options="taxTypes"
+                                                                optionLabel="name" 
+                                                                optionValue="id"
+                                                                fluid
+                                                            />
+                                                            <label>税区分</label>
+                                                        </FloatLabel>
+                                                    </div>
+                                                    <div class="field mt-6 col-span-2 flex justify-center">
+                                                        <Button label="追加" type="submit" />
+                                                    </div>                                                
+                                                </div>
+                                            </form>
+                                            <Divider />
+                                            <div class="field mt-6">
+                                                <DataTable :value="selectedRates" class="p-datatable-sm">
+                                                    <Column header="料金種類" style="width:40%">
+                                                        <template #body="slotProps">
+                                                            {{ defineRateType(slotProps.data.adjustment_type) }}
+                                                            <Select 
+                                                                v-model="slotProps.data.tax_type_id" 
+                                                                :options="taxTypes"
+                                                                optionLabel="name" 
+                                                                optionValue="id"
+                                                                @change="updateTaxRate(slotProps.data)"
+                                                                fluid
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="数値">
+                                                        <template #body="slotProps">
+                                                            <InputNumber 
+                                                                v-model="slotProps.data.adjustment_value" 
+                                                                :min="0" 
+                                                                placeholder="数値を記入"
+                                                                @update:modelValue="recalculatePrice(slotProps.data)"
+                                                                fluid
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                    <Column header="税込金額">
+                                                        <template #body="slotProps">
+                                                            {{ formatCurrency(slotProps.data.price) }}
+                                                        </template>                                                        
+                                                    </Column>
+                                                    <Column header="操作">
+                                                        <template #body="slotProps">
+                                                            <Button                                       
+                                                            icon="pi pi-trash"
+                                                            class="p-button-text p-button-danger p-button-sm"
+                                                            @click="deleteRate(slotProps.data)" 
+                                                            />
+                                                        </template>
+                                                    </Column>
+                                                </DataTable>
                                             </div>
                                         </template>
                                     </Card>
@@ -221,7 +297,9 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { availableRooms, fetchReservationDetail, fetchAvailableRooms, setReservationPlan, setReservationAddons, setReservationRoom, setReservationDetailStatus } = useReservationStore();
     import { usePlansStore } from '@/composables/usePlansStore';
-    const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate } = usePlansStore();
+    const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPlanRate, fetchPlanRates } = usePlansStore();
+    import { useSettingsStore } from '@/composables/useSettingsStore';
+    const { taxTypes, fetchTaxTypes } = useSettingsStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients } = useClientStore();
 
@@ -231,22 +309,89 @@
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
-    };  
+    };
+    const formatCurrency = (value) => {
+        if (value == null) return '';
+        return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+    };
 
     const drawerHeader = ref('Loading...');
     const reservationDetail = ref(null);
 
     // Plan
     const selectedPlan = ref(null);
+    const newRate = ref({
+        tax_type_id: 3,
+        adjustment_type: 'base_rate',
+    });
+    const selectedRates = ref(null);
     const planBillType = ref(null);
     const planTotalRate = ref(0);
+    const adjustmentTypes = ref([
+        { id: 'base_rate', label: '基本料金' },
+        { id: 'percentage', label: 'パーセント' },
+        { id: 'flat_fee', label: '定額料金' },
+    ]);
+      
+    const defineRateType = (type) => {
+        if(type === 'base_rate'){
+            return '基本料金'
+        }
+        if(type === 'percentage'){
+            return 'パーセント'
+        }
+        if(type === 'flat_fee'){
+            return '定額料金'
+        }
+        return '未設定'
+    };
+    const updateTaxRate = (tax) => {
+        const selectedTax = taxTypes.value.find(t => t.id === tax.tax_type_id);
+        tax.tax_rate = selectedTax ? selectedTax.percentage : 0;
+    };
+    const recalculatePrice = (rate) => {
+        // Find baseRate
+        planTotalRate.value = planTotalRate.value - rate.price;
+        let baseRate = selectedRates.value
+            .filter(r => r.adjustment_type === 'base_rate')
+            .reduce((sum, r) => sum + parseFloat(r.adjustment_value), 0);
+
+        // Update the price for the changed rate
+        if (rate.adjustment_type === 'percentage') {
+            rate.price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
+        } else {
+            rate.price = rate.adjustment_value;
+        }
+        planTotalRate.value = planTotalRate.value + rate.price;
+    };
+    const addRate = () => {
+        if (newRate.value.adjustment_type && newRate.value.tax_type_id) {
+            const selectedTax = taxTypes.value.find(t => t.id === newRate.value.tax_type_id);
+
+            selectedRates.value.push({
+                adjustment_type: newRate.value.adjustment_type,
+                tax_type_id: newRate.value.tax_type_id,
+                tax_rate: selectedTax ? selectedTax.percentage : 0,
+                adjustment_value: 0,
+                price: 0,
+            });
+        } else{
+            console.error("Please select both adjustment type and tax type");
+        }
+    };
+    const deleteRate = (rate) => {
+        const index = selectedRates.value.indexOf(rate);
+        if (index !== -1) {
+            selectedRates.value.splice(index, 1);
+        }
+    };
+    // Addons
     const selectedAddon = ref(null);
     const addonOptions = ref(null);
-    const selectedAddonOption = ref(null);
+    const selectedAddonOption = ref(null);  
     const updatePlanAddOns = async (event) => { 
         // console.log('Selected Plan:', event.value);           
         const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);   
-        console.log('updatePlanAddOns selectedPlanObject', selectedPlanObject)         
             
         // console.log('selectedPlanObject',selectedPlanObject)
         if (selectedPlan.value) {
@@ -256,8 +401,22 @@
 
             try {
                 await fetchPlanAddons(gid, hid, hotel_id);
-                planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);                    
+                planTotalRate.value = await fetchPlanRate(gid, hid, hotel_id, reservationDetail.value.date);
                 reservationDetail.value.plan_total_price = planTotalRate.value;
+                
+                // Calculate price in rates
+                selectedRates.value = await fetchPlanRates(gid, hid, hotel_id, reservationDetail.value.date);
+                let baseRate = selectedRates.value
+                    .filter(rate => rate.adjustment_type === 'base_rate')
+                    .reduce((sum, rate) => sum + parseFloat(rate.adjustment_value), 0);
+                selectedRates.value = selectedRates.value.map(rate => {
+                    if (rate.adjustment_type === 'percentage') {
+                        rate.price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
+                    } else {
+                        rate.price = rate.adjustment_value;
+                    }
+                    return rate;
+                });                
 
                 const gidFixed = gid === 0 ? null : gid;
                 const hidFixed = hid === 0 ? null : hid;                    
@@ -307,6 +466,8 @@
         }
     };
     const savePlan = async () => {
+        //console.log('savePlan:', selectedRates.value);
+        
         const plan_key = selectedPlan.value;
         const [global, hotel] = plan_key.split('h').map(Number);
         const plans_global_id = global || 0;
@@ -319,7 +480,7 @@
 
         console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'plan_name',plan_name,'plan_type',plan_type,'price:',price);
 
-        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, price);
+        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
 
         const addonDataArray = selectedAddon.value.map(addon => ({
             hotel_id: props.reservation_details.hotel_id,  
@@ -380,7 +541,7 @@
     };
 
     onMounted(async() => {   
-        // console.log('onMounted ReservationDayDetail:', props.reservation_details);                 
+        // console.log('onMounted ReservationDayDetail:', props.reservation_details);
         const data = await fetchReservationDetail(props.reservation_details.id);
         reservationDetail.value = data.reservation[0];        
         reservationCancelled.value = props.reservation_details.cancelled ? true : false;        
@@ -389,14 +550,19 @@
         drawerHeader.value = props.reservation_details.date + '：' + props.reservation_details.room_number + '号室 ' + props.reservation_details.room_type_name;
         selectedPlan.value = (props.reservation_details.plans_global_id ?? '') + 'h' + (props.reservation_details.plans_hotel_id ?? '');
 
-        // Plans
-        await fetchPlansForHotel(props.reservation_details.hotel_id);
-        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
-
+        await fetchTaxTypes();
+        // Current Plan
+        selectedRates.value = reservationDetail.value.reservation_rates.map(rate => ({
+            ...rate,
+        }));
         selectedAddon.value = reservationDetail.value.reservation_addons.map(addon => ({
             ...addon,
         }));
-        console.log('OnMounted selectedAddon', selectedAddon.value)
+
+        // Fetch Options
+        await fetchPlansForHotel(props.reservation_details.hotel_id);
+        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
+        
         selectedClients.value = props.reservation_details.reservation_clients.map(client => ({
             ...client,
             display_name: client.name_kanji
@@ -429,7 +595,7 @@
     });
     
 
-    // Watcher
+    // Watcher    
     watch(addons, (newValue, oldValue) => {
         if (newValue !== oldValue) {
             // console.log('addons changed:', newValue);            
