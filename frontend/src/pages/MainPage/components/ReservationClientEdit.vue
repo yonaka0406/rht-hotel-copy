@@ -261,12 +261,12 @@
       if (isClientSelected.value) {
         
         !clientDetails.value.date_of_birth ? formatDate(new Date(clientDetails.value.date_of_birth)): null;
-        //console.log('saveClient:',clientDetails.value);
+        // console.log('saveClient:',clientDetails.value);
         await updateClientInfo(clientDetails.value.id, clientDetails.value);
         await setReservationClient(clientDetails.value.id);          
         toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
       } else {
-        //console.log('newClient:',clientDetails.value);
+        // console.log('newClient:',clientDetails.value);
         const newClient = await createClient(clientDetails.value);
         // console.log(newClient);
         // console.log('New client id:', newClient.id);
@@ -351,7 +351,7 @@
       (newValue) => {
         // console.log('watch clientDetails.value.legal_or_natural_person')
         if (newValue === 'legal') {
-          //console.log('Changed to other');
+          // console.log('Changed to other');
           clientDetails.value.gender = 'other';
         } 
         if (newValue === 'natural' && clientDetails.value.id == null){

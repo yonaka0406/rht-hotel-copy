@@ -254,21 +254,21 @@
 
         const detailsCopy = [...props.reservation_details];
 
-        console.log('detailsCopy', detailsCopy);
+        // console.log('detailsCopy', detailsCopy);
 
         return detailsCopy.reduce((sum, room) => {
             if (room.billable) {
                 const price = parseFloat(room.price);
-                console.log('Room Price:', price);
+                // console.log('Room Price:', price);
                 if (isNaN(price)) {
                     console.error('Invalid price:', room.price);
                     return sum; // Skip this room
                 }
                 if (!isNaN(price)) {
                     const roundedPrice = parseFloat(price.toFixed(2));
-                    console.log('Rounded Price:', roundedPrice);
+                    // console.log('Rounded Price:', roundedPrice);
                     sum += roundedPrice;
-                    console.log('Current Sum:', sum);
+                    // console.log('Current Sum:', sum);
                 }
             }
             return sum;
@@ -423,7 +423,7 @@
     const client = ref({});
     const filteredClients = ref([]);
     const filterClients = (event) => {
-        console.log(event)
+        // console.log(event)
       const query = event.query.toLowerCase();
       filteredClients.value = clients.value.filter((client) =>
         (client.name && client.name.toLowerCase().includes(query)) ||
@@ -460,7 +460,7 @@
     }; 
 
     onMounted( async () => {   
-        console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
+        // console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
         
         await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel();

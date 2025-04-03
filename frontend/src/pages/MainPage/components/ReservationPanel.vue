@@ -683,7 +683,7 @@
                         const results = await getAvailableDatesForChange(hotelId, roomId, checkIn, checkOut);
                         if (!results) {
                             allRoomsAvailable = false;
-                            console.log(`Room ${roomId} on ${checkIn} is not available (no results).`);
+                            // console.log(`Room ${roomId} on ${checkIn} is not available (no results).`);
                             break;
                         }
 
@@ -701,7 +701,7 @@
                         }
                         if (!isAvailable) {
                             allRoomsAvailable = false;
-                            console.log(`Room ${roomId} on ${checkIn} is not in available range.`);
+                            // console.log(`Room ${roomId} on ${checkIn} is not in available range.`);
                             break;
                         }
                     } catch (error) {

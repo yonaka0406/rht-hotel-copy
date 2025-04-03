@@ -457,7 +457,7 @@
             tax_type_id: foundAddon.tax_type_id,
             tax_rate: foundAddon.tax_rate
         });  
-        console.log('generateAddonPreview', selectedAddon.value)          
+        // console.log('generateAddonPreview', selectedAddon.value)          
     };
     const deleteAddon = (addon) => {
         const index = selectedAddon.value.indexOf(addon);
@@ -478,7 +478,7 @@
         const plan_name = selectedPlanObject.name;
         const plan_type = selectedPlanObject.plan_type;
 
-        console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'plan_name',plan_name,'plan_type',plan_type,'price:',price);
+        // console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'plan_name',plan_name,'plan_type',plan_type,'price:',price);
 
         await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
 

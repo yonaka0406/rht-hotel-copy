@@ -514,7 +514,7 @@
     
     const formattedGroupDetails = (details) => {
         // Before matchingGroupDetails this function was used
-        console.log(details)
+        // console.log(details)
         return details.map((item) => ({
             ...item,
             price: formatCurrency(item.price),
@@ -757,7 +757,7 @@
                 roomIdOld: selectedGroup.value.room_id,
                 roomIdNew: targetRoom.value.value,
             }
-            console.log(data);            
+            // console.log(data);            
             await moveReservationRoom(data);
             closeRoomEditDialog();
 
@@ -967,7 +967,7 @@
         const minCheckIn = ref(null);
         const maxCheckOut = ref(null);
         const applyDateChanges = async () => {
-            console.log(newCheckIn.value, newCheckOut.value);
+            // console.log(newCheckIn.value, newCheckOut.value);
             // Checks            
             if (!newCheckIn.value) {
                 toast.add({
@@ -1110,7 +1110,7 @@
     // Watcher
     watch(addons, (newValue, oldValue) => {
         if (newValue !== oldValue) {
-            //console.log('addons changed:', newValue);
+            // console.log('addons changed:', newValue);
             
             // Add a 'quantity' field with default value 1 to each add-on
             selectedAddon.value = newValue.map(addon => ({

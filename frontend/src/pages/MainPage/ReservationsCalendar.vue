@@ -317,7 +317,7 @@
       }
 
       if(!startDate && !endDate){
-        console.log('Dates undefined');
+        // console.log('Dates undefined');
         return
       }
 
@@ -637,7 +637,7 @@
       }
     } else if (dragMode.value === 'reorganizeRooms') {
       const key = `${draggingRoomId.value}_${draggingDate.value}`;
-      console.log(key)
+      // console.log(key)
       if (tempReservationsMap.value[key]) {
           // Update the reservation in tempReservations
           const reservation = tempReservationsMap.value[key];
@@ -678,7 +678,7 @@
           updatedDates.forEach(updatedDate => {
               tempReservations.value = tempReservations.value.map(innerItem => {
                   if (innerItem.room_id === roomId && formatDate(new Date(innerItem.date)) === updatedDate && !updatedReservationIds.has(innerItem.reservation_id)) {
-                      console.log("Should move", innerItem.client_name, 'from', innerItem.room_id, 'to', draggingRoomId.value);
+                      // console.log("Should move", innerItem.client_name, 'from', innerItem.room_id, 'to', draggingRoomId.value);
                       const swappedItem = { ...innerItem, room_id: draggingRoomId.value };
 
                       // Remove existing item in tempRoomData if it already exists
@@ -714,7 +714,7 @@
   };
   const applyReorganization = async () => {    
     
-    console.log("Updated Reservations:", tempRoomData.value);
+    // console.log("Updated Reservations:", tempRoomData.value);
     await setCalendarFreeChange(tempRoomData.value);
     
     // Reset
@@ -1080,7 +1080,7 @@
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
     socket.value.on('connect', () => {
-      console.log('Connected to server');
+      // console.log('Connected to server');
     });
 
     socket.value.on('tableUpdate', async (data) => {
@@ -1172,7 +1172,7 @@
     selectedRoomByDay.value = [];
     tempRoomData.value = [];
     await fetchReservations();
-    console.log(newVal);
+    // console.log(newVal);
   }) 
 
 </script>

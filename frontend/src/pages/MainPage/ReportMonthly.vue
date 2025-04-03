@@ -533,7 +533,7 @@
     });
 
     watch(selectedMonth, async (newValue, oldValue) => {
-        console.log('selectedMonth changed', newValue);
+        // console.log('selectedMonth changed', newValue);
         // console.log('startDate', startDate.value,'endDate', endDate.value);        
         await fetchHeatMapData();
         fetchLineChartData();

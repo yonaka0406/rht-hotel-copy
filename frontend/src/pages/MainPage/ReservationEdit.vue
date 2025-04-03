@@ -84,13 +84,13 @@
             reservation_payments.value = pmtData.payments;
 
             reservationStatus.value = reservation_details.value[0].status;
-            console.log(reservationStatus.value)
+            // console.log(reservationStatus.value)
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
         socket.value.on('connect', () => {
-            console.log('Connected to server');
+            // console.log('Connected to server');
         });
 
         socket.value.on('tableUpdate', async (data) => {

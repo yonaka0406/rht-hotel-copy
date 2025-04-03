@@ -663,7 +663,7 @@
         showAdjustmentDialog.value = true;
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
-        console.log('openEditAdjustmentDialog', adjustmentData)
+        // console.log('openEditAdjustmentDialog', adjustmentData)
         // Populate the editAdjustment with the selected row data
         editAdjustment.value = { ...adjustmentData };
 

@@ -565,7 +565,7 @@
         // Get selected client object from the event
         selectedClient.value = event.value;
         isClientSelected.value = true;
-        //console.log('Selected Client:', selectedClient.value);        
+        // console.log('Selected Client:', selectedClient.value);        
 
         // Update reservationDetails with the selected client's information
         reservationDetails.value.client_id = selectedClient.value.id;
@@ -636,7 +636,7 @@
             return;
         }
         
-        console.log(reservationDetails.value, consolidatedCombos.value);
+        // console.log(reservationDetails.value, consolidatedCombos.value);
         const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);        
         await fetchMyHoldReservations();
         await goToEditReservationPage(reservation.reservation.id); 

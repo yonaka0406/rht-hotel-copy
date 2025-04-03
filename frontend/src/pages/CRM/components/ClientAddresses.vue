@@ -168,10 +168,10 @@
     });    
     const addresses = computed(() => {
         if (!selectedClientAddress.value || selectedClientAddress.value.length === 0) {
-            console.log('addresses computed selectedClientAddress null')
+            // console.log('addresses computed selectedClientAddress null')
             return null;
         }
-        console.log('addresses computed', selectedClientAddress.value)
+        // console.log('addresses computed', selectedClientAddress.value)
         
         return selectedClientAddress.value;
     });  
@@ -326,7 +326,7 @@
         addressDialogVisible.value = true;
     };
     const saveAddress = async () => {
-        console.log('Saving address:', editedAddress.value);
+        // console.log('Saving address:', editedAddress.value);
         if(!editedAddress.value.address_name) {
             toast.add({ severity: 'error', summary: 'Error', detail: '住所名を入力してください。', life: 3000 });
             return;
@@ -349,7 +349,7 @@
         addressDialogVisible.value = false;
     };
     const confirmDelete = async (address) => {
-        console.log('Deleting address:', address);
+        // console.log('Deleting address:', address);
         confirm.require({
             message: `「"${address.address_name}」"を削除してもよろしいですか?`,
             header: 'Delete Confirmation',                    

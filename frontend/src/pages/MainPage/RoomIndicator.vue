@@ -308,13 +308,13 @@
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
     socket.value.on('connect', () => {
-      console.log('Connected to server');
+      // console.log('Connected to server');
     });
     socket.value.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
+      // console.error('Socket connection error:', err);
     });
     socket.value.on('connect_timeout', () => {
-      console.error('Socket connection timeout');
+      // console.error('Socket connection timeout');
     });
     
     socket.value.on('tableUpdate', async (data) => {
@@ -339,7 +339,7 @@
   onUnmounted(() => {
     // Close the Socket.IO connection when the component is unmounted
     if (socket.value) {
-      console.log('Disconnected from the server.');
+      // console.log('Disconnected from the server.');
       socket.value.disconnect();
     }
   });

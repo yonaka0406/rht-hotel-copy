@@ -334,7 +334,7 @@
     const onAddonChange = () => {                
         const selectedAddon = allAddons.value.find(addon => addon.id === newAddon.value.addons_id);        
         if (selectedAddon) {
-            console.log('onAddonChange',selectedAddon)
+            // console.log('onAddonChange',selectedAddon)
             newAddon.value.addon_type = selectedAddon.addon_type;
             newAddon.value.price = selectedAddon.price;
             newAddon.value.tax_type_id = selectedAddon.tax_type_id;
@@ -484,7 +484,7 @@
         const selectedDateObj = new Date(selectedDate);
         selectedDateObj.setHours(0, 0, 0, 0);
 
-        console.log(planAddons.value)
+        // console.log(planAddons.value)
 
         return planAddons.value
             .filter(condition => {                    
@@ -530,7 +530,7 @@
             });
     });
     const sendFilteredConditions = () => {
-        console.log("Sending filtered conditions:", filteredCurrentConditions.value);
+        // console.log("Sending filtered conditions:", filteredCurrentConditions.value);
         emit('update-filtered-conditions', filteredCurrentConditions.value);
     };
 

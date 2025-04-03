@@ -133,7 +133,7 @@
                 const response = await fetchClient(clientId);
                 clientMap[clientId] = response.client.client.name_kanji || response.client.client.name;
             }
-            console.log('clientMap:',clientMap);
+            // console.log('clientMap:',clientMap);
 
             // Replace client IDs with names in reservationLog
             reservationLog.value = reservationLog.value.map(log => {
@@ -156,7 +156,7 @@
         loading.value = true;
 
         await fetchReservationHistory(props.reservation_id);
-        console.log('reservationLog:', reservationLog.value);
+        // console.log('reservationLog:', reservationLog.value);
 
         const clientIds = new Set();
         reservationLog.value.forEach(log => {
