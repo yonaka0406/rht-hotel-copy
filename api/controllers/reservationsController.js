@@ -383,8 +383,8 @@ const createHoldReservationCombo = async (req, res) => {
       let assignedRoomsCount = 0;
       const roomsAssigned = [];
 
-      console.log(`[${req.requestId}] Processing room type: ${roomCombo.room_type_name}, total rooms: ${roomCombo.totalRooms}, total people: ${roomCombo.totalPeople}`);
-      console.log(`[${req.requestId}] Filtered available rooms for type ${roomCombo.room_type_name}:`, availableRoomsFiltered);
+      // console.log(`[${req.requestId}] Processing room type: ${roomCombo.room_type_name}, total rooms: ${roomCombo.totalRooms}, total people: ${roomCombo.totalPeople}`);
+      // console.log(`[${req.requestId}] Filtered available rooms for type ${roomCombo.room_type_name}:`, availableRoomsFiltered);
 
       // Sort available rooms by capacity (ascending)
       availableRoomsFiltered.sort((a, b) => a.capacity - b.capacity);
@@ -402,7 +402,7 @@ const createHoldReservationCombo = async (req, res) => {
             assignedRoomsCount++;
             roomsAssigned.push(room.room_id);
 
-            console.log(`[${req.requestId}] Assigned room ${room.room_id} (capacity: ${room.capacity}), people assigned: 1, remaining people: ${remainingPeople - 1}`);
+            // console.log(`[${req.requestId}] Assigned room ${room.room_id} (capacity: ${room.capacity}), people assigned: 1, remaining people: ${remainingPeople - 1}`);
 
             dateRange.forEach((date) => {
                 reservationDetails.push({
@@ -431,7 +431,7 @@ const createHoldReservationCombo = async (req, res) => {
                 const peopleAssigned = Math.min(remainingPeople, room.capacity - 1); // Subtract 1 as one person is already assigned
                 remainingPeople -= peopleAssigned;
 
-                console.log(`[${req.requestId}] Assigned additional ${peopleAssigned} people to room ${room.room_id} (capacity: ${room.capacity}), remaining people: ${remainingPeople}`);
+                // console.log(`[${req.requestId}] Assigned additional ${peopleAssigned} people to room ${room.room_id} (capacity: ${room.capacity}), remaining people: ${remainingPeople}`);
 
                 dateRange.forEach((date) => {
                     // Update reservation details with the additional people
@@ -467,7 +467,7 @@ const createHoldReservationCombo = async (req, res) => {
                   selectedRooms[i] = bestHigherCapacityRoom;
                   roomsAssigned[i] = bestHigherCapacityRoom.room_id;
 
-                  console.log(`[${req.requestId}] Replaced room ${currentRoom.room_id} with ${bestHigherCapacityRoom.room_id} (capacity: ${bestHigherCapacityRoom.capacity}), people assigned: ${peopleAssigned}, remaining people: ${remainingPeople}`);
+                  // console.log(`[${req.requestId}] Replaced room ${currentRoom.room_id} with ${bestHigherCapacityRoom.room_id} (capacity: ${bestHigherCapacityRoom.capacity}), people assigned: ${peopleAssigned}, remaining people: ${remainingPeople}`);
 
                   dateRange.forEach((date) => {
                       // Update reservation details with the new room
