@@ -227,20 +227,28 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
         SELECT 
           reservation_details.hotel_id
           ,reservation_details.reservation_id
-          ,rc.clients_json::TEXT
-          ,rpc.clients_json::TEXT AS payers_json
-          ,COALESCE(rp.payment,0) as payment
-          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
-                CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
-                ELSE reservation_details.price * reservation_details.number_of_people END
-              ELSE 0 END
+          ,rc.clients_json::TEXT AS clients_json
+          ,rpc.clients_json::TEXT AS payers_json          
+          ,COALESCE(rp.payment,0) as payment          
+          ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.rates_price
+            ELSE rr.rates_price * reservation_details.number_of_people END              
           ) AS plan_price
-          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN
+          ,SUM(CASE WHEN reservation_details.billable = TRUE AND reservation_details.cancelled IS NULL THEN
                   COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)
               ELSE 0 END
           ) AS addon_price
         FROM
-          reservation_details            
+          reservation_details 
+            LEFT JOIN 
+          (
+            SELECT 
+              rr.reservation_details_id
+              ,SUM(rr.price) AS rates_price              
+            FROM reservation_rates rr, reservation_details rd
+            WHERE rr.reservation_details_id = rd.id AND rd.billable = TRUE 
+			        AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+            GROUP BY rr.reservation_details_id
+          ) rr ON rr.reservation_details_id = reservation_details.id           
             LEFT JOIN
           reservation_addons
             ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
@@ -296,7 +304,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
           reservation_details.hotel_id
           ,reservation_details.reservation_id
           ,rc.clients_json::TEXT
-          ,rpc.clients_json::TEXT
+          ,rpc.clients_json::TEXT          
           ,rp.payment
       ) AS details
     WHERE

@@ -38,16 +38,16 @@
             </div>
             <div class="flex flex-wrap gap-2">
                 <div>
-                    <Button type="button" label="人数" icon="pi pi-user" :badge="reservationInfo.reservation_number_of_people" severity="contrast" badgeSeverity="contrast" outlined />
+                    <Button type="button" label="人数" icon="pi pi-user" :badge="String(reservationInfo.reservation_number_of_people)" severity="contrast" badgeSeverity="contrast" outlined />
                 </div>
                 <div>
-                    <Button type="button" label="部屋数" icon="pi pi-box" :badge="groupedRooms.length" severity="contrast" badgeSeverity="contrast" outlined />
+                    <Button type="button" label="部屋数" icon="pi pi-box" :badge="String(groupedRooms.length)" severity="contrast" badgeSeverity="contrast" outlined />
                 </div>
                 <div>
-                    <Button type="button" label="泊数" icon="pi pi-calendar-minus" :badge="numberOfNights" severity="contrast" badgeSeverity="contrast" outlined />
+                    <Button type="button" label="泊数" icon="pi pi-calendar-minus" :badge="String(numberOfNights)" severity="contrast" badgeSeverity="contrast" outlined />
                 </div>
                 <div>
-                    <Button type="button" label="総泊数" icon="pi pi-calendar" :badge="numberOfNightsTotal" severity="contrast" badgeSeverity="contrast" outlined />
+                    <Button type="button" label="総泊数" icon="pi pi-calendar" :badge="String(numberOfNightsTotal)" severity="contrast" badgeSeverity="contrast" outlined />
                 </div>                
             </div>
         </div>   

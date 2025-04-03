@@ -252,38 +252,55 @@
     const totalPrice = computed(() => {
         if (!props.reservation_details) return 0;
 
-        const detailsCopy = [...props.reservation_details];
-
-        // console.log('detailsCopy', detailsCopy);
-
-        return detailsCopy.reduce((sum, room) => {
-            if (room.billable) {
-                const price = parseFloat(room.price);
-                // console.log('Room Price:', price);
-                if (isNaN(price)) {
-                    console.error('Invalid price:', room.price);
-                    return sum; // Skip this room
-                }
-                if (!isNaN(price)) {
-                    const roundedPrice = parseFloat(price.toFixed(2));
-                    // console.log('Rounded Price:', roundedPrice);
-                    sum += roundedPrice;
-                    // console.log('Current Sum:', sum);
-                }
+        return props.reservation_details.reduce((sum, day) => {
+            if (!day.billable) {
+                return sum;
             }
-            return sum;
+            const ratesToSum = day.reservation_rates?.filter(rate => 
+                day.cancelled === null || rate.adjustment_type === "base_rate"
+            ) || [];
+            const totalRoomRate = ratesToSum.reduce((roomSum, rate) => {
+                const price = parseFloat(rate.price);
+                return !isNaN(price) ? roomSum + parseFloat(price.toFixed(2)) : roomSum;
+            }, 0);
+
+            // Sum reservation_addons only if cancelled is null
+            const addonsToSum = day.cancelled === null ? day.reservation_addons || [] : [];
+            const totalAddons = addonsToSum.reduce((addonSum, addon) => {
+                const price = parseFloat(addon.price);
+                return !isNaN(price) ? addonSum + parseFloat(price.toFixed(2)) : addonSum;
+            }, 0);
+
+            return sum + totalRoomRate + totalAddons;           
         }, 0);
     });
     const pricePerRoom = computed(() => {
         if (!props.reservation_details) return [];
 
         return props.reservation_details.reduce((acc, room) => {
-            if (room.billable) { // Only include billable rooms
-                if (!acc[room.room_id]) {
-                    acc[room.room_id] = 0;
-                }
-                acc[room.room_id] += room.price * 1 || 0;
+            if (!room.billable) return acc;
+
+            if (!acc[room.room_id]) {
+                acc[room.room_id] = 0;
             }
+
+            // Sum reservation_rates
+            const ratesToSum = room.reservation_rates?.filter(rate => 
+                room.cancelled === null || rate.adjustment_type === "base_rate"
+            ) || [];
+            const totalRoomRate = ratesToSum.reduce((roomSum, rate) => {
+                const price = parseFloat(rate.price);
+                return !isNaN(price) ? roomSum + parseFloat(price.toFixed(2)) : roomSum;
+            }, 0);
+
+            // Sum reservation_addons only if cancelled is null
+            const addonsToSum = room.cancelled === null ? room.reservation_addons || [] : [];
+            const totalAddons = addonsToSum.reduce((addonSum, addon) => {
+                const price = parseFloat(addon.price);
+                return !isNaN(price) ? addonSum + parseFloat(price.toFixed(2)) : addonSum;
+            }, 0);
+
+            acc[room.room_id] += totalRoomRate + totalAddons;
             return acc;
         }, {});
     });
@@ -460,7 +477,7 @@
     }; 
 
     onMounted( async () => {   
-        // console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
+        console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
         
         await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel();

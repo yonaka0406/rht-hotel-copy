@@ -162,6 +162,7 @@ const selectReservation = async (requestId, id) => {
       AS price
       ,COALESCE(rc.clients_json, '[]'::json) AS reservation_clients
       ,COALESCE(ra.addons_json, '[]'::json) AS reservation_addons
+      ,COALESCE(rr.rates_json, '[]'::json) AS reservation_rates
 
     FROM
       rooms
@@ -214,7 +215,22 @@ const selectReservation = async (requestId, id) => {
         JOIN clients c ON rc.client_id = c.id
         GROUP BY rc.reservation_details_id
       ) rc ON rc.reservation_details_id = reservation_details.id
-       
+        LEFT JOIN 
+      (
+        SELECT 
+          rr.reservation_details_id,
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'adjustment_type', rr.adjustment_type,
+              'adjustment_value', rr.adjustment_value,
+              'tax_type_id', rr.tax_type_id,
+              'tax_rate', rr.tax_rate,
+              'price', rr.price              
+            )
+          ) AS rates_json
+        FROM reservation_rates rr        
+        GROUP BY rr.reservation_details_id
+      ) rr ON rr.reservation_details_id = reservation_details.id
 
     WHERE
       reservations.id = $1
