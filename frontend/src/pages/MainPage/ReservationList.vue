@@ -33,7 +33,7 @@
                         <!-- Export -->
                         <SplitButton 
                             label="エクスポート" 
-                            icon="pi pi-download"
+                            icon="pi pi-file-export"
                             severity="help"
                             class="ml-4"
                             @click="splitButtonExportReservations"
@@ -443,7 +443,7 @@
 
     // Export
     const exportOptions = ref([
-        { label: "予約の詳細をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportReservationDetails() },        
+        { label: "予約の詳細をエクスポート", icon: "pi pi-file", command: () => splitButtonExportReservationDetails() },        
         { label: "食事件数をエクスポート", icon: "pi pi-file-excel", command: () => splitButtonExportMealCount() },        
     ]);
     const splitButtonExportReservations = async () => {

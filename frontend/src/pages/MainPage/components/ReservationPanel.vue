@@ -36,11 +36,20 @@
             <div v-else>
                 <p class="font-bold mb-8">宿泊者：</p>
             </div>
-            <span>
-                人数：{{ reservationInfo.reservation_number_of_people }}
-                <i class="pi pi-user ml-1 mr-1"></i>                 
-                部屋数：{{ groupedRooms.length }} <i class="pi pi-box ml-1"></i>                
-            </span>
+            <div class="flex flex-wrap gap-2">
+                <div>
+                    <Button type="button" label="人数" icon="pi pi-user" :badge="reservationInfo.reservation_number_of_people" severity="contrast" badgeSeverity="contrast" outlined />
+                </div>
+                <div>
+                    <Button type="button" label="部屋数" icon="pi pi-box" :badge="groupedRooms.length" severity="contrast" badgeSeverity="contrast" outlined />
+                </div>
+                <div>
+                    <Button type="button" label="泊数" icon="pi pi-calendar-minus" :badge="numberOfNights" severity="contrast" badgeSeverity="contrast" outlined />
+                </div>
+                <div>
+                    <Button type="button" label="総泊数" icon="pi pi-calendar" :badge="numberOfNightsTotal" severity="contrast" badgeSeverity="contrast" outlined />
+                </div>                
+            </div>
         </div>   
         <div class="field flex flex-col">
             <div class="grid grid-cols-4 flex items-center">
@@ -506,7 +515,7 @@
     const confirmCancel = useConfirm();
     const confirmRecovery = useConfirm();
     import { 
-        Card, Divider, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
+        Card, Divider, Badge, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ConfirmPopup,
         Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column
      } from 'primevue';
 
@@ -623,6 +632,8 @@
         );
     };
 
+    const numberOfNights = ref(0);
+    const numberOfNightsTotal = ref(0);
     // Reservation Type
     const updateReservationType = async () => {
         // Add your logic here to update the reservation type in the database
@@ -1153,7 +1164,8 @@
         checkInTime.value = formatTime(reservationInfo.value.check_in_time);
         checkOutTime.value = formatTime(reservationInfo.value.check_out_time);
 
-        // console.log('onMounted ReservationPanel reservationInfo:', reservationInfo.value);        
+        numberOfNights.value = (new Date(reservationInfo.value.check_out) - new Date(reservationInfo.value.check_in)) / (1000 * 60 * 60 * 24);
+        numberOfNightsTotal.value = reservationInfo.value.reservation_number_of_people * numberOfNights.value;        
     });
 
     // Watcher
