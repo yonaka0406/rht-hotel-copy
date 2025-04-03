@@ -45,7 +45,9 @@
                             </Fieldset>
                         </div>    
                         <div class="flex justify-center items-center col-span-6">
-                            <span class="text-4xl justify-center font-bold">{{ lineChartSumData[lineChartSumData.length - 1].toLocaleString('ja-JP') }} 円</span>
+                            <span class="text-4xl justify-center font-bold">
+                                {{ lineChartSumData?.length ? lineChartSumData[lineChartSumData.length - 1].toLocaleString('ja-JP') + ' 円' : '0 円' }}
+                            </span>
                         </div>
                         <div class="col-span-6">
                             <Fieldset legend="ADR" :toggleable="true" collapsed>                        
