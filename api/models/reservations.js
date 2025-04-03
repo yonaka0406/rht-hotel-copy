@@ -1181,7 +1181,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
   const shiftDirection = new_check_in >= old_check_in? 'DESC': 'ASC'; 
 
   const client = await pool.connect();
-  console.log("Before release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+  // console.log("Before release:", pool.totalCount, pool.idleCount, pool.waitingCount);
 
   try {
     // console.log('Starting transaction for room ',old_room_id,'check-in:',new_check_in,'check out:', new_check_out);
@@ -1306,15 +1306,16 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               generate_series(($3::DATE)::DATE, ($4::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL)::DATE as series, 
               $2::integer as room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, $5::integer as created_by, $5::integer as updated_by
               FROM reservation_details
-              WHERE reservation_id = $1::uuid AND hotel_id = $6::integer AND room_id = $2::integer) as datesList
+              WHERE reservation_id = $1::uuid AND hotel_id = $6::integer AND room_id = $2::integer
+            ) as datesList
           WHERE NOT EXISTS (
-            SELECT 1 FROM reservation_details rd WHERE datesList.hotel_id = rd.hotel_id AND datesList.reservation_id = rd.reservation_id AND datesList.room_id = rd.room_id
-            AND datesList.series = rd.date )
-
-          ORDER BY datesList.series          
+              SELECT 1 FROM reservation_details rd WHERE datesList.hotel_id = rd.hotel_id AND datesList.reservation_id = rd.reservation_id AND datesList.room_id = rd.room_id
+              AND datesList.series = rd.date 
+            )
+          ORDER BY datesList.series
+          RETURNING hotel_id, id, plans_global_id, plans_hotel_id
         ;
-      `;
-  
+      `;  
       const insertDetailsValues = [
         newReservationId, // New or existing reservation ID
         new_room_id,
@@ -1322,12 +1323,44 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         new_check_out,        
         updated_by,
         hotel_id
-      ];
-      // console.log('Executing Query insertDetailsValues:', insertDetailsQuery);
-      // console.log('With Values:', insertDetailsValues);
+      ];      
+      const insertedDetails = await pool.query(insertDetailsQuery, insertDetailsValues);
+      const newReservationDetails = insertedDetails.rows;
       
-      await pool.query(insertDetailsQuery, insertDetailsValues);
-      // console.log('Inserted new reservation_details rows for extra days.');
+      // Insert into reservation_clients using the returned details
+      const insertClientsQuery = `
+        INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
+        SELECT $1, $2, client_id, $3, $3
+        FROM reservation_clients 
+        WHERE reservation_details_id = (
+            SELECT id FROM reservation_details 
+            WHERE reservation_id = $4 
+              AND hotel_id = $5 
+              AND room_id = $6 
+            LIMIT 1
+      );`;
+      const insertAddonsQuery = `
+        INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
+        SELECT $1, $2, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, $3, $3
+        FROM reservation_addons 
+        WHERE reservation_detail_id = (
+            SELECT id FROM reservation_details 
+            WHERE reservation_id = $4 
+              AND hotel_id = $5 
+              AND room_id = $6               
+              AND (plans_global_id IS NOT DISTINCT FROM $7)
+              AND (plans_hotel_id IS NOT DISTINCT FROM $8)
+            LIMIT 1
+          )        
+      ;`;
+      const insertPromises = newReservationDetails.map(detail => {        
+        return Promise.all([
+            pool.query(insertClientsQuery, [detail.hotel_id, detail.id, updated_by, newReservationId, hotel_id, new_room_id]),
+            pool.query(insertAddonsQuery, [detail.hotel_id, detail.id, updated_by, newReservationId, hotel_id, new_room_id, detail.plans_global_id, detail.plans_hotel_id])
+        ]);
+      });
+      // Execute all insertions in parallel
+      await Promise.all(insertPromises);
 
       // Delete old dates beyond new_check_out
       const deleteOutdatedCheckOut = `
