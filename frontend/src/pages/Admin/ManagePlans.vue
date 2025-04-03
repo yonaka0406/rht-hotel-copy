@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-      <Panel header="Plans">
+      <Panel header="プラン">
         <Tabs 
           :value="activeTab"
           @update:value="onTabChange"
@@ -179,6 +179,10 @@
             </TabPanel>
           </TabPanels>
         </Tabs>
+      </Panel>
+
+      <Panel header="プランパターン" class="mt-4">
+        <ManagePlansPatterns />
       </Panel>
 
       <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
@@ -377,95 +381,72 @@
     </div>
 </template>
   
-<script>
+<script setup>
   // Vue
-  import { defineAsyncComponent, ref, computed, watch, onMounted } from 'vue';
+  import { ref, computed, watch, onMounted } from 'vue';
+
+  import ManagePlansRates from '@/pages/Admin/ManagePlansRates.vue';
+  import ManagePlansPatterns from '@/pages/Admin/ManagePlansPatterns.vue';
   
   // Primevue
   import { useToast } from 'primevue/usetoast';
-  import { Panel, Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue'
-  import { DataTable, Column } from 'primevue'
-  import { InputText, InputNumber, ColorPicker, InputMask, Textarea, Select, SelectButton, Button, FloatLabel, Badge } from 'primevue'
+  const toast = useToast();
+  import { Panel, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
+    FloatLabel, InputText, ColorPicker, Textarea, Select, SelectButton, Button, Badge } from 'primevue'  
+    
+  // Tabs
+  const activeTab = ref(0);
+  const hotels = ref([]);
+  const selectedHotel = ref(null);
+  const globalPlans = ref([]);
+  const hotelPlans = ref([]); 
+  const loading = ref(false);
+  const error = ref(null);     
 
-  export default {
-    name: "ManagePlans",
-    components: {
-      ManagePlansRates: defineAsyncComponent({
-        loader: () => import('./ManagePlansRates.vue'),
-        loadingComponent: {
-          template: `<div>Loading...</div>`,
-        },
-      }),
-      Panel,
-      Card,
-      Tabs,
-      TabList,
-      Tab,
-      TabPanels,
-      TabPanel,
-      DataTable,
-      Column,
-      Button,
-      Badge,
-      Dialog,
-      InputText,      
-      InputNumber,
-      ColorPicker,
-      InputMask,
-      Textarea,
-      Select,
-      SelectButton,
-      FloatLabel,      
-    },
-    setup() {
-      const toast = useToast();
-      const activeTab = ref(0);
-      const hotels = ref([]);
-      const selectedHotel = ref(null);
-      const globalPlans = ref([]);
-      const hotelPlans = ref([]);      
+  // Global Dialog
+  const newGlobalPlan = ref({ 
+    name: '', 
+    description: '', 
+    plan_type: 'per_room',
+    colorHEX: 'D3D3D3'
+  });
+  const editGlobalPlan = ref({ 
+    id: null, 
+    name: '', 
+    description: '',
+    colorHEX: 'D3D3D3'
+  });
+  const showGlobalDialog = ref(false);
+  const showEditGlobalDialog = ref(false);
 
-      const showGlobalDialog = ref(false);
-      const showEditGlobalDialog = ref(false);
-      const newGlobalPlan = ref({ 
-        name: '', 
-        description: '', 
-        plan_type: 'per_room',
-        colorHEX: 'D3D3D3'
-      });
-      const editGlobalPlan = ref({ 
-        id: null, 
-        name: '', 
-        description: '',
-        colorHEX: 'D3D3D3'
-      });
 
-      const showHotelDialog = ref(false);
-      const showEditHotelDialog = ref(false);
-      const newHotelPlan = ref({ 
-        hotel_id: null,
-        name: '', 
-        description: '', 
-        plan_type: 'per_room',
-        colorHEX: 'D3D3D3',
-        plans_global_id: null 
-      });
-      const editHotelPlan = ref({ 
-        id: null, 
-        hotel_id: null,
-        plans_global_id: null,
-        name: '', 
-        description: '',
-        colorHEX: 'D3D3D3'
-      });
+  // Hotel Dialog
+  const newHotelPlan = ref({ 
+    hotel_id: null,
+    name: '', 
+    description: '', 
+    plan_type: 'per_room',
+    colorHEX: 'D3D3D3',
+    plans_global_id: null 
+  });
+  const editHotelPlan = ref({ 
+    id: null, 
+    hotel_id: null,
+    plans_global_id: null,
+    name: '', 
+    description: '',
+    colorHEX: 'D3D3D3'
+  });
+  const showHotelDialog = ref(false);
+  const showEditHotelDialog = ref(false);      
+      
       
       const sb_options = ref([
         { label: '部屋', value: 'per_room' },
         { label: '１人当たり', value: 'per_person' },
       ]);      
 
-      const loading = ref(false);
-      const error = ref(null);
+      
 
       const filteredHotelPlans = computed(() => {
         if (selectedHotel.value) {
@@ -813,39 +794,6 @@
       }, { deep: true });
       watch(editHotelPlan, (newVal, oldVal) => {
          // console.log('editHotelPlan changed:', newVal);
-      }, { deep: true });
-   
-      return {
-        activeTab,
-        hotels,
-        selectedHotel,
-        globalPlans,
-        hotelPlans,        
-        showGlobalDialog,        
-        showEditGlobalDialog,
-        newGlobalPlan,
-        editGlobalPlan,
-        showHotelDialog,
-        showEditHotelDialog,
-        newHotelPlan,
-        editHotelPlan,
-        sb_options,        
-        filteredHotelPlans,
-        saveGlobalPlan,
-        openEditGlobalPlan,
-        updateGlobalPlan,
-        saveHotelPlan,
-        openEditHotelDialog,
-        updateHotelPlan,
-        getPlansCount,
-        onTabChange,
-        selectHotel,
-        showGlobalRatePanel,
-        showHotelRatePanel,
-        selectedPlan,        
-        switchEditGlobalPlanRate,
-        switchEditHotelPlanRate,
-      }
-    }
-  }
+      }, { deep: true });   
+      
 </script>
