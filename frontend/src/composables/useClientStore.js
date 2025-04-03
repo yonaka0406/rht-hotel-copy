@@ -69,7 +69,7 @@ export function useClientStore() {
             const result = await response.json();
             selectedClient.value = result.client;
             selectedClientAddress.value = result.client.addresses;
-            // console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
+            console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
             return {
                 client: selectedClient.value,
                 addresses: selectedClientAddress.value,

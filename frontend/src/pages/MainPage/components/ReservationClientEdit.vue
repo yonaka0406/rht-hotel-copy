@@ -9,9 +9,9 @@
         </template>
         <template #content>                    
           <form @submit.prevent="saveClient">
-            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+            <div class="grid xs:grid-cols-1 grid-cols-3 gap-2 gap-y-6 pt-6">
                 <!-- Name of the person making the reservation -->
-                <div class="col-span-2 mb-6">
+                <div class="col-span-3 mb-6">
                     <FloatLabel>              
                         <AutoComplete
                             v-model="client"
@@ -62,13 +62,14 @@
                             :showIcon="true" 
                             iconDisplay="input"                      
                             dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true"                 
+                            :selectOtherMonths="true" 
+                            placeholder="生年月日・設立日"                
                             fluid 
                         />
                     </FloatLabel>                        
                 </div>
                 <!-- Type of person (Legal or Natural) -->
-                <div class="field col-6">
+                <div class="field flex justify-center">
                     <SelectButton v-model="clientDetails.legal_or_natural_person" 
                         :options="personTypeOptions" 
                         option-label="label" 
@@ -130,13 +131,23 @@
                       <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                     </FloatLabel>
                 </div>
-                <!-- Save button -->                
-                <div v-if="isClientSelected" class="field col-span-2 flex justify-center items-center">
-                    <Button label="保存" severity="info" type="submit" />
+                <div class="col-span-3">
+                  <Divider />
+                
+                  <ClientAddresses v-if="isClientSelected" :addresses="null" />
                 </div>
-                <div v-else class="field col-span-2 flex justify-center items-center">
-                    <Button label="新規" severity="success" type="submit" />
-                </div>                
+                <div class="col-span-3">
+                  <Divider />
+                </div>
+                <div class="col-span-3">
+                  <!-- Save button -->                
+                  <div v-if="isClientSelected" class="field col-span-2 flex justify-center items-center">
+                      <Button label="保存" severity="info" type="submit" />
+                  </div>
+                  <div v-else class="field col-span-2 flex justify-center items-center">
+                      <Button label="新規" severity="success" type="submit" />
+                  </div>
+                </div>
             </div>
           </form>
         </template>
@@ -155,14 +166,16 @@
         },        
     });
 
+    import ClientAddresses from '@/pages/CRM/components/ClientAddresses.vue';
+
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();    
-    import { Card, FloatLabel, InputText, DatePicker, SelectButton, AutoComplete, RadioButton, Button } from 'primevue';
+    import { Card, Divider, FloatLabel, InputText, DatePicker, SelectButton, AutoComplete, RadioButton, Button } from 'primevue';
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients, fetchClients, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
+    const { clients, selectedClientAddress, fetchClients, fetchClient, setClientsIsLoading, fetchClientNameConversion, createClient, updateClientInfo } = useClientStore();
     import { useReservationStore } from '@/composables/useReservationStore';
     const { setReservationClient } = useReservationStore();
 
@@ -237,10 +250,13 @@
         (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
       );
     };      
-    const onClientSelect = (event) => {
+    const onClientSelect = async (event) => {
       if (event.value) {
         // console.log('onClientSelect event:',event.value);
         const selectedClient = event.value;
+        await fetchClient(event.value.id);
+
+        // isClientSelected is true after fetchClient
         isClientSelected.value = true;
         
         clientDetails.value = {
@@ -329,6 +345,7 @@
       }
 
       if (props.client_id) {
+        await fetchClient(props.client_id);
         selectedClient.value = clients.value.find((client) => client.id === props.client_id);
         if (selectedClient) {
           clientDetails.value = { 

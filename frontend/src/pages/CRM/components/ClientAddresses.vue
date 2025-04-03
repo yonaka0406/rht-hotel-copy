@@ -156,7 +156,8 @@
         FloatLabel, InputText, Select, Button, Dialog, ConfirmPopup } from 'primevue';
 
     const loading = ref(false);
-    const clientId = ref(route.params.clientId);    
+    const clientId = ref(route.params.clientId || selectedClient.value.client.id);
+        
     const clientName = computed(() => {
         if (!selectedClient.value || selectedClient.value.length === 0) {
             return null;
@@ -376,7 +377,9 @@
         await fetchClient(clientId.value);
     };
     
-    onMounted(async () => {        
-        
+    onMounted(async () => 
+    {
+        // console.log('ClientAddresses onMounted:', clientId.value);
+        await fetchClient(clientId.value);        
     });
 </script>

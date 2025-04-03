@@ -24,6 +24,9 @@ const processNameString = async (nameString) => {
   if (!nameString) {
     throw new Error('processNameString: nameString is required');
   }
+  if (typeof nameString !== 'string') {
+    throw new Error(`processNameString: Expected a string but ${nameString} is ${typeof nameString}`);
+  }
 
   const kanjiRegex = /[\u4E00-\u9FAF]/; // Kanji
   const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Kana
@@ -81,7 +84,7 @@ const processNameString = async (nameString) => {
   //console.log([name, nameKana, nameKanji]);
 
   return { name, nameKana, nameKanji };
-}
+};
 
 // Return all clients
 const getAllClients = async (requestId, limit, offset) => {

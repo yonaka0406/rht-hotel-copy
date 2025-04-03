@@ -200,7 +200,7 @@
         :header="'顧客変更'" 
         :closable="true"
         :modal="true"
-        :style="{ width: '600px' }"
+        :style="{ width: '60vw' }"
     >
         <ReservationClientEdit
             v-if="selectedClient"

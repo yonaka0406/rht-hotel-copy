@@ -40,7 +40,7 @@ const getConvertedName = async (req, res) => {
     return res.status(400).json({ error: 'getConvertedName: name is required' });
   }
   try {
-    const convertedName = await processNameString(req.requestId, name);
+    const convertedName = await processNameString(name);
     res.json(convertedName);
   } catch (error) {
     console.error('Error getting clients:', error);
