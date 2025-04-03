@@ -293,6 +293,17 @@ VALUES
     ('課税8%', 0.08, 1),
     ('課税10%', 0.10, 1);
 
+CREATE TABLE plan_templates (
+    id SERIAL PRIMARY KEY,
+    hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE NULL,
+    name TEXT NOT NULL,
+    template JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    UNIQUE (hotel_id, name)
+);
+
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    
     name TEXT NOT NULL,
