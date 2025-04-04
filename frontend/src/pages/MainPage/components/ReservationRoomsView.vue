@@ -122,33 +122,62 @@
                         <Card class="mb-2">
                             <template #title>プラン</template>
                             <template #content>
-                                <div class="field mt-8">
-                                    <FloatLabel>
-                                        <Select v-model="selectedPlan"
-                                            id="bulk-plan"
-                                            :options="plans"
-                                            optionLabel="name"
-                                            showClear 
-                                            fluid                           
-                                            @change="updatePlanAddOns"
-                                        />
-                                        <label for="bulk-plan">プラン選択</label>
-                                    </FloatLabel>
+                                <!-- Plan manual selection -->
+                                <div v-if="!isPatternInput">
+                                    <div class="grid grid-cols-6 mt-8">
+                                        <div class="col-span-4 mr-2">                                            
+                                            <FloatLabel>
+                                                <Select v-model="selectedPlan"
+                                                    id="bulk-plan"
+                                                    :options="plans"
+                                                    optionLabel="name"
+                                                    showClear 
+                                                    fluid                           
+                                                    @change="updatePlanAddOns"
+                                                />
+                                                <label for="bulk-plan">プラン選択</label>
+                                            </FloatLabel>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <ToggleButton v-model="isPatternInput" :onLabel="'パターン'" :offLabel="'手動入力'" fluid />
+                                        </div>
+                                    </div>                                    
+                                    <div class="field mt-6">
+                                        <FloatLabel>
+                                            <MultiSelect v-model="selectedDays"
+                                                :options="daysOfWeek"
+                                                optionLabel="label"
+                                                fluid                            
+                                                :maxSelectedLabels="3"
+                                            />
+                                            <label>曜日</label>
+                                        </FloatLabel>
+                                    </div>
                                 </div>
-                                <div class="field mt-6">
-                                    <FloatLabel>
-                                        <MultiSelect v-model="selectedDays"
-                                            :options="daysOfWeek"
-                                            optionLabel="label"
-                                            fluid                            
-                                            :maxSelectedLabels="3"
-                                        />
-                                        <label>曜日</label>
-                                    </FloatLabel>
+                                <!-- Plan pattern selection -->
+                                <div v-if="isPatternInput">                
+                                    <div class="grid grid-cols-6 mt-8">
+                                        <div class="col-span-4 mr-2">                                            
+                                            <FloatLabel>
+                                                <Select v-model="selectedPattern"
+                                                    id="bulk-pattern"
+                                                    :options="patterns"
+                                                    optionLabel="name"
+                                                    optionValue="id"                                                     
+                                                    fluid
+                                                    @change="updatePattern"
+                                                />
+                                                <label for="bulk-pattern">パターン選択</label>
+                                            </FloatLabel>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <ToggleButton v-model="isPatternInput" :onLabel="'パターン'" :offLabel="'手動入力'" fluid />
+                                        </div>
+                                    </div>  
                                 </div>
                             </template>
                         </Card>
-                        <Card>
+                        <Card v-if="!isPatternInput">
                             <template #title>アドオン</template>
                             <template #content>
                                 <div class="grid grid-cols-4">
@@ -450,13 +479,13 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, Button } from 'primevue';
+    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button } from 'primevue';
 
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
     const { setRoomPlan, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();  
     import { usePlansStore } from '@/composables/usePlansStore';
-    const { plans, addons, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons } = usePlansStore();
+    const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
@@ -649,6 +678,7 @@
     const selectedGroup = ref(null);
         
         // Tab Apply Plan
+        const isPatternInput = ref(false);
         const daysOfWeek = [
             { label: '月曜日', value: 'mon' },
             { label: '火曜日', value: 'tue' },
@@ -661,8 +691,22 @@
         const selectedDays = ref(daysOfWeek);
         const selectedPlan = ref(null);
         const selectedAddon = ref([]);
+        const selectedPattern = ref(null);
+        const selectedPatternDetails = ref(null);
         const addonOptions = ref(null);
         const selectedAddonOption = ref(null);
+        const updatePattern = async () => {
+            console.log('updatePattern:', selectedPattern.value);    
+            if (selectedPattern.value !== null) {
+                // Assuming patterns are an array and each pattern has an id and details to fetch
+                const selectedPatternData = patterns.value.find(pattern => pattern.id === selectedPattern.value);
+                
+                // Update the selectedPatternDetails with the corresponding data
+                selectedPatternDetails.value = selectedPatternData;
+
+                console.log('Pattern details:', selectedPatternDetails.value);
+            }            
+        };
         const updatePlanAddOns = async () => {
             if (selectedPlan.value) {                
                 const gid = selectedPlan.value?.plans_global_id ?? 0;
@@ -1021,6 +1065,7 @@
 
         await fetchAvailableRooms(hotelId, startDate, endDate);
         await fetchPlansForHotel(hotelId);
+        await fetchPatternsForHotel(hotelId);
         // Addons
         addonOptions.value = await fetchAllAddons(hotelId);        
         selectedGroup.value = group;

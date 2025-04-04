@@ -90,7 +90,24 @@ const getAllHotelPatterns = async (requestId) => {
         throw new Error('Database error');
     }
 };
+const getAllPatternsByHotel = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT * FROM plan_templates WHERE hotel_id = $1
+        UNION ALL
+        SELECT * FROM plan_templates WHERE hotel_id IS NULL
+        ORDER BY hotel_id, name            
+    `;
+    const values = [hotel_id];
 
+    try {
+        const result = await pool.query(query, values);    
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving hotel plans:', err);
+        throw new Error('Database error');
+    }
+};
 
 // Return one
 const getGlobalPlanById = async (requestId, id) => {
@@ -236,6 +253,7 @@ module.exports = {
     getAllPlansByHotel,
     getAllGlobalPatterns,
     getAllHotelPatterns,
+    getAllPatternsByHotel,
     getGlobalPlanById,
     getHotelPlanById,
     newGlobalPlan,

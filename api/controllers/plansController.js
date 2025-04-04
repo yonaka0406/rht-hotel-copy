@@ -1,4 +1,4 @@
-const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllGlobalPatterns, getAllHotelPatterns, 
+const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllPatternsByHotel, getAllGlobalPatterns, getAllHotelPatterns, 
     newGlobalPlan, newHotelPlan, newPlanPattern, updateGlobalPlan, updateHotelPlan, updatePlanPattern } = require('../models/plan');
 
 // GET
@@ -64,6 +64,21 @@ const getHotelPatterns = async (req, res) => {
     try {
         const patterns = await getAllHotelPatterns(req.requestId);
         res.json(patterns);
+    } catch (error) {
+        console.error('Error getting hotel patterns:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+const fetchAllHotelPatterns = async (req, res) => {
+    const hotel_id = parseInt(req.params.hotel_id);
+
+    if (!hotel_id) {
+        return res.status(400).json({ error: 'Hotel ID is required' });
+    }
+
+    try {
+        const Plans = await getAllPatternsByHotel(req.requestId, hotel_id);
+        res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel patterns:', error);
         res.status(500).json({ error: error.message });
@@ -167,6 +182,7 @@ module.exports = {
     fetchAllHotelPlans,
     getGlobalPatterns,
     getHotelPatterns,
+    fetchAllHotelPatterns,
     createGlobalPlan,
     createHotelPlan,
     createPlanPattern,

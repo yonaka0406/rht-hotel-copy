@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getGlobalPlans, getHotelsPlans, getHotelPlans, fetchAllHotelPlans, 
-    createGlobalPlan, createHotelPlan, editGlobalPlan, editHotelPlan, getGlobalPatterns, getHotelPatterns, createPlanPattern, editPlanPattern } = require('../controllers/plansController');
+    createGlobalPlan, createHotelPlan, editGlobalPlan, editHotelPlan, getGlobalPatterns, getHotelPatterns, fetchAllHotelPatterns, createPlanPattern, editPlanPattern } = require('../controllers/plansController');
 const { getPlanRates, getPlanRate, getPlanRateByDay, getPlanRatesByDay, createNewPlanRate, updateExistingPlanRate, deletePlanRate } = require('../controllers/plansRateController');
 const { getPlanAddons, getPlanAddon, createNewPlanAddon, updateExistingPlanAddon, deleteExistingPlanAddon } = require('../controllers/plansAddonController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
@@ -39,6 +39,7 @@ router.put('/plans/addons/:id', authMiddleware_manageDB, updateExistingPlanAddon
 // Global Plans routes
 router.get('/plans/patterns/global', authMiddleware, getGlobalPatterns);
 router.get('/plans/patterns/hotel', authMiddleware, getHotelPatterns);
+router.get('/plans/patterns/all/:hotel_id', authMiddleware, fetchAllHotelPatterns);
 router.post('/plans/patterns', authMiddleware_manageDB, createPlanPattern);
 router.put('/plans/patterns/:id', authMiddleware_manageDB, editPlanPattern);
 

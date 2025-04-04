@@ -265,6 +265,23 @@ export function usePlansStore() {
             console.error('Failed to fetch hotel patterns', error);
         }
     };
+    const fetchPatternsForHotel = async (hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/patterns/all/${hotel_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            patterns.value = await response.json();             
+            
+        } catch (error) {
+            console.error('Failed to fetch hotel patterns', error);
+        }
+    };
     const createPlanPattern = async (data) => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -323,6 +340,7 @@ export function usePlansStore() {
         fetchPlanRates,
         fetchGlobalPatterns,
         fetchHotelPatterns,
+        fetchPatternsForHotel,
         createPlanPattern,
         updatePlanPattern,
     };
