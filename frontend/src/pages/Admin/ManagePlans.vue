@@ -263,7 +263,7 @@
           </FloatLabel>
         </div>
         <template #footer>
-          <Button label="保存" icon="pi pi-check" @click="updateGlobalPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="保存" icon="pi pi-check" @click="updateGlobal" class="p-button-success p-button-text p-button-sm" />
           <Button label="閉じる" icon="pi pi-times" @click="showEditGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" />
         </template>
       </Dialog>
@@ -387,21 +387,43 @@
 
   import ManagePlansRates from '@/pages/Admin/ManagePlansRates.vue';
   import ManagePlansPatterns from '@/pages/Admin/ManagePlansPatterns.vue';
+
+  // Stores
+  import { useHotelStore } from '@/composables/useHotelStore';
+  const { hotels, fetchHotels } = useHotelStore();
+  import { usePlansStore } from '@/composables/usePlansStore';
+  const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan } = usePlansStore();
   
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
   import { Panel, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column,
     FloatLabel, InputText, ColorPicker, Textarea, Select, SelectButton, Button, Badge } from 'primevue'  
+
+  // Helper
+  const isEmptyObject = (obj) => {
+    return Object.keys(obj).length === 0 && obj.constructor === Object;
+  };
     
   // Tabs
-  const activeTab = ref(0);
-  const hotels = ref([]);
+  const activeTab = ref(0);  
   const selectedHotel = ref(null);
   const globalPlans = ref([]);
   const hotelPlans = ref([]); 
   const loading = ref(false);
-  const error = ref(null);     
+  const error = ref(null);  
+  const sb_options = ref([
+    { label: '部屋', value: 'per_room' },
+    { label: '１人当たり', value: 'per_person' },
+  ]);
+  const onTabChange = (newTabValue) => {
+    activeTab.value = newTabValue; // Update activeTab value when tab changes
+  };
+  const selectHotel = (hotel) => {
+    //console.log('Selected Hotel:', hotel);
+    selectedHotel.value = hotel; 
+    activeTab.value = 2;        
+  };
 
   // Global Dialog
   const newGlobalPlan = ref({ 
@@ -418,7 +440,80 @@
   });
   const showGlobalDialog = ref(false);
   const showEditGlobalDialog = ref(false);
+  const openEditGlobalPlan = async (data) => {
+    editGlobalPlan.value = { 
+      ...data
+      ,colorHEX: data.color.replace('#', '')
+    };
+    showEditGlobalDialog.value = true;
+  };
+  const saveGlobalPlan = async () => {
+    // Check for duplicate keys
+    const PlanSet = new Set();
+    for (const plan of globalPlans.value) {
+      PlanSet.add(plan.name);
+      if (PlanSet.has(newGlobalPlan.name)) {
+        toast.add({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Plan name must be unique', life: 3000 
+        });
+        return;
+      }
+    }
 
+    try {      
+      await createGlobalPlan(newGlobalPlan.value);
+      await fetchPlansGlobal();
+      globalPlans.value = plans.value;
+      showGlobalDialog.value = false;
+      newGlobalPlan.value = { 
+        name: '', 
+        description: '', 
+        plan_type: 'per_room',
+        colorHEX: 'D3D3D3' 
+      };
+      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン追加されました。', life: 3000 });
+    } catch (err) {
+      console.error('Error saving global plan:', err);
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global plan', life: 3000 });
+    }
+  };
+  const updateGlobal = async () => {            
+    // Filter out the current id from globalPlans
+    const filteredPlans = globalPlans.value.filter(plan => plan.id !== editGlobalPlan.value.id);
+
+    // Check for duplicate keys
+    const PlanSet = new Set();
+    for (const plan of filteredPlans) {
+      PlanSet.add(plan.name);
+      if (PlanSet.has(editGlobalPlan.name)) {
+        toast.add({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Plan name must be unique', life: 3000 
+        });
+        return;
+      }
+    }
+
+    try {
+      await updateGlobalPlan(editGlobalPlan.value.id, editGlobalPlan.value);
+      await fetchPlansGlobal();
+      globalPlans.value = plans.value;
+      showEditGlobalDialog.value = false;
+      editGlobalPlan.value = { 
+        id: null, 
+        name: '', 
+        description: '',
+        colorHEX: 'D3D3D3'            
+      };
+      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン更新されました。', life: 3000 });
+    } catch (err) {
+      console.error('Error updating global plan:', err);
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global plan', life: 3000 });
+    }
+  };
 
   // Hotel Dialog
   const newHotelPlan = ref({ 
@@ -438,362 +533,164 @@
     colorHEX: 'D3D3D3'
   });
   const showHotelDialog = ref(false);
-  const showEditHotelDialog = ref(false);      
-      
-      
-      const sb_options = ref([
-        { label: '部屋', value: 'per_room' },
-        { label: '１人当たり', value: 'per_person' },
-      ]);      
+  const showEditHotelDialog = ref(false);
+  const filteredHotelPlans = computed(() => {
+    if (selectedHotel.value) {
+      const filtered = hotelPlans.value.filter(plan => plan.hotel_id === selectedHotel.value.id);
+      // console.log('Filtered Hotel:', filtered);
+      return filtered;
+    }
+    return [];
+  });
+  const getPlansCount = (hotel_id) => {
+    return hotelPlans.value.filter(plan => plan.hotel_id === hotel_id).length;
+  };
+  const openEditHotelDialog = async (data) => {
+    editHotelPlan.value = { 
+      ...data
+      ,colorHEX: data.color.replace('#', '')
+    };
+    showEditHotelDialog.value = true;
+  };
+  const saveHotelPlan = async () => {
+    newHotelPlan.value.hotel_id = selectedHotel.value.id;            
 
-      
-
-      const filteredHotelPlans = computed(() => {
-        if (selectedHotel.value) {
-          const filtered = hotelPlans.value.filter(plan => plan.hotel_id === selectedHotel.value.id);
-          // console.log('Filtered Hotel:', filtered);
-          return filtered;
-        }
-        return [];
+    // Check for duplicate keys
+    const PlanSet = new Set();
+    const newPlanKey = `${newHotelPlan.value.name}-${newHotelPlan.value.hotel_id}`;
+    for (const plan of hotelPlans.value) {
+      const planKey = `${plan.name}-${plan.hotel_id}`;
+      PlanSet.add(planKey);              
+      if (PlanSet.has(newPlanKey)) {
+        toast.add({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Plan name must be unique for the selected hotel', life: 3000 
+        });
+        return;
+      }
+    }
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`/api/plans/hotel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ...newHotelPlan.value })
       });
-
-      const fetchGlobalPlans = async () => {
-        loading.value = true            
-        try {
-          const authToken = localStorage.getItem('authToken')
-          const response = await fetch('/api/plans/global', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          const data = await response.json()
-          globalPlans.value = data
-          //console.log('Fetched Global:', globalPlans.value);
-        } catch (err) {
-          console.error('Error fetching global plans:', err)
-          error.value = err.message || 'Failed to fetch global plans'
-        } finally {
-          loading.value = false
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      hotelPlans.value.push(data);
+      showHotelDialog.value = false;
+      newHotelPlan.value = { 
+        hotel_id: null, 
+        name: '', 
+        description: '', 
+        plan_type: 'per_room',
+        colorHEX: 'D3D3D3', 
+        plans_global_id: null 
       };
+      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン追加されました。', life: 3000 });
+    } catch (err) {
+      console.error('Error saving hotel plan:', err);
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel plan', life: 3000 });
+    }
+  };
+  const updateHotelPlan = async () => {
+    editHotelPlan.value.hotel_id = selectedHotel.value.id;
+    
+    // Filter out the current id from hotelPlans
+    const filteredPlans = hotelPlans.value.filter(plan => plan.id !== editHotelPlan.value.id);
 
-      const fetchHotels = async () => {
-        try {
-          const authToken = localStorage.getItem('authToken')
-          const response = await fetch('/api/hotel-list', {
-            method: 'GET',            
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-            },
-          });
-          hotels.value = await response.json();
-          //console.log('Fetched Hotels:', hotels.value);
-        } catch (error) {
-          toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Failed to fetch hotels', life: 3000 
-          });
-        }
+    // Check for duplicate keys
+    const PlanSet = new Set();
+    const newPlanKey = `${editHotelPlan.value.name}-${editHotelPlan.value.hotel_id}`;
+    for (const plan of filteredPlans) {
+      const planKey = `${plan.name}-${plan.hotel_id}`;
+      PlanSet.add(planKey);              
+      if (PlanSet.has(newPlanKey)) {
+        toast.add({ 
+          severity: 'error', 
+          summary: 'Error', 
+          detail: 'Plan name must be unique for the selected hotel', life: 3000 
+        });
+        return;
+      }
+    }
+
+    try {
+      const authToken = localStorage.getItem('authToken');
+      const response = await fetch(`/api/plans/hotel/${editHotelPlan.value.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(editHotelPlan.value)
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      const index = hotelPlans.value.findIndex(plan => plan.id === data.id);
+      if (index !== -1) {
+        hotelPlans.value[index] = data;
+      }
+      showEditHotelDialog.value = false;
+      editHotelPlan.value = { 
+        id: null, 
+        hotel_id: null,
+        plans_global_id: null,
+        name: '', 
+        description: '',
+        colorHEX: 'D3D3D3'
       };
-
-      const fetchHotelsPlans = async () => {
-        loading.value = true
-        try {
-          const authToken = localStorage.getItem('authToken')
-          const response = await fetch('/api/plans/hotel', {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          const data = await response.json()
-          hotelPlans.value = data
-          //console.log('Fetched Hotel Plans:', hotelPlans.value);
-        } catch (err) {
-          console.error('Error fetching hotel plans:', err)
-          error.value = err.message || 'Failed to fetch hotel plans'
-        } finally {
-          loading.value = false
-        }
-      };
-
-      const saveGlobalPlan = async () => {
-        // Check for duplicate keys
-        const PlanSet = new Set();
-        for (const plan of globalPlans.value) {
-          PlanSet.add(plan.name);
-          if (PlanSet.has(newGlobalPlan.name)) {
-            toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Plan name must be unique', life: 3000 
-            });
-            return;
-          }
-        }
-
-        try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch('/api/plans/global', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newGlobalPlan.value)
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          globalPlans.value.push(data);
-          showGlobalDialog.value = false;
-          newGlobalPlan.value = { 
-            name: '', 
-            description: '', 
-            plan_type: 'per_room',
-            colorHEX: 'D3D3D3' 
-          };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン追加されました。', life: 3000 });
-        } catch (err) {
-          console.error('Error saving global plan:', err);
-          toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global plan', life: 3000 });
-        }
-      };
-
-      const openEditGlobalPlan = async (data) => {
-        editGlobalPlan.value = { 
-          ...data
-          ,colorHEX: data.color.replace('#', '')
-        };
-        showEditGlobalDialog.value = true;
-      };
-
-      const updateGlobalPlan = async () => {            
-        // Filter out the current id from globalPlans
-        const filteredPlans = globalPlans.value.filter(plan => plan.id !== editGlobalPlan.value.id);
-
-        // Check for duplicate keys
-        const PlanSet = new Set();
-        for (const plan of filteredPlans) {
-          PlanSet.add(plan.name);
-          if (PlanSet.has(editGlobalPlan.name)) {
-            toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Plan name must be unique', life: 3000 
-            });
-            return;
-          }
-        }
-
-        try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch(`/api/plans/global/${editGlobalPlan.value.id}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(editGlobalPlan.value)
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          const index = globalPlans.value.findIndex(plan => plan.id === data.id);
-          if (index !== -1) {
-            globalPlans.value[index] = data;
-          }
-          showEditGlobalDialog.value = false;
-          editGlobalPlan.value = { 
-            id: null, 
-            name: '', 
-            description: '',
-            colorHEX: 'D3D3D3'            
-          };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン更新されました。', life: 3000 });
-        } catch (err) {
-          console.error('Error updating global plan:', err);
-          toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global plan', life: 3000 });
-        }
-      };
-
-      const saveHotelPlan = async () => {
-        newHotelPlan.value.hotel_id = selectedHotel.value.id;            
-
-        // Check for duplicate keys
-        const PlanSet = new Set();
-        const newPlanKey = `${newHotelPlan.value.name}-${newHotelPlan.value.hotel_id}`;
-        for (const plan of hotelPlans.value) {
-          const planKey = `${plan.name}-${plan.hotel_id}`;
-          PlanSet.add(planKey);              
-          if (PlanSet.has(newPlanKey)) {
-            toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Plan name must be unique for the selected hotel', life: 3000 
-            });
-            return;
-          }
-        }
-        try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch(`/api/plans/hotel`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ ...newHotelPlan.value })
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          hotelPlans.value.push(data);
-          showHotelDialog.value = false;
-          newHotelPlan.value = { 
-            hotel_id: null, 
-            name: '', 
-            description: '', 
-            plan_type: 'per_room',
-            colorHEX: 'D3D3D3', 
-            plans_global_id: null 
-          };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン追加されました。', life: 3000 });
-        } catch (err) {
-          console.error('Error saving hotel plan:', err);
-          toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel plan', life: 3000 });
-        }
-      };
-
-      const openEditHotelDialog = async (data) => {
-        editHotelPlan.value = { 
-          ...data
-          ,colorHEX: data.color.replace('#', '')
-        };
-        showEditHotelDialog.value = true;
-      };
-
-      const updateHotelPlan = async () => {
-        editHotelPlan.value.hotel_id = selectedHotel.value.id;
-        
-        // Filter out the current id from hotelPlans
-        const filteredPlans = hotelPlans.value.filter(plan => plan.id !== editHotelPlan.value.id);
-
-        // Check for duplicate keys
-        const PlanSet = new Set();
-        const newPlanKey = `${editHotelPlan.value.name}-${editHotelPlan.value.hotel_id}`;
-        for (const plan of filteredPlans) {
-          const planKey = `${plan.name}-${plan.hotel_id}`;
-          PlanSet.add(planKey);              
-          if (PlanSet.has(newPlanKey)) {
-            toast.add({ 
-              severity: 'error', 
-              summary: 'Error', 
-              detail: 'Plan name must be unique for the selected hotel', life: 3000 
-            });
-            return;
-          }
-        }
-
-        try {
-          const authToken = localStorage.getItem('authToken');
-          const response = await fetch(`/api/plans/hotel/${editHotelPlan.value.id}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(editHotelPlan.value)
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const data = await response.json();
-          const index = hotelPlans.value.findIndex(plan => plan.id === data.id);
-          if (index !== -1) {
-            hotelPlans.value[index] = data;
-          }
-          showEditHotelDialog.value = false;
-          editHotelPlan.value = { 
-            id: null, 
-            hotel_id: null,
-            plans_global_id: null,
-            name: '', 
-            description: '',
-            colorHEX: 'D3D3D3'
-          };
-          toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン更新されました。', life: 3000 });
-        } catch (err) {
-          console.error('Error updating hotel plan:', err);
-          toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel plan', life: 3000 });
-        }
-      };
-
-      const getPlansCount = (hotel_id) => {
-        return hotelPlans.value.filter(plan => plan.hotel_id === hotel_id).length;
-      };
-
-      const onTabChange = (newTabValue) => {
-        activeTab.value = newTabValue; // Update activeTab value when tab changes
-      };
-
-      const selectHotel = (hotel) => {
-        //console.log('Selected Hotel:', hotel);
-        selectedHotel.value = hotel; 
-        activeTab.value = 2;        
-      };
-
-      const showGlobalRatePanel = ref(false);
-      const showHotelRatePanel = ref(false);
-      const selectedPlan = ref({});   
+      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン更新されました。', life: 3000 });
+    } catch (err) {
+      console.error('Error updating hotel plan:', err);
+      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel plan', life: 3000 });
+    }
+  };
       
-      const isEmptyObject = (obj) => {
-        return Object.keys(obj).length === 0 && obj.constructor === Object;
-      };
+  // Rates
+  const showGlobalRatePanel = ref(false);
+  const showHotelRatePanel = ref(false);
+  const selectedPlan = ref({});
+  const switchEditGlobalPlanRate = (plan, context = 'global') => {
+    if (plan === null || isEmptyObject(plan)) {
+      showGlobalRatePanel.value = false;
+      selectedPlan.value = {};
+    } else {
+      showGlobalRatePanel.value = true;          
+      selectedPlan.value = { ...plan, context };
+    }
+  };
+  const switchEditHotelPlanRate = (plan, context = 'hotel') => {
+    if (plan === null || isEmptyObject(plan)) {
+      showHotelRatePanel.value = false;
+      selectedPlan.value = {};
+    } else {
+      showHotelRatePanel.value = true;          
+      selectedPlan.value = { ...plan, context };
+    }
+  };
 
-      const switchEditGlobalPlanRate = (plan, context = 'global') => {
-        if (plan === null || isEmptyObject(plan)) {
-          showGlobalRatePanel.value = false;
-          selectedPlan.value = {};
-        } else {
-          showGlobalRatePanel.value = true;          
-          selectedPlan.value = { ...plan, context };
-        }
-      };
+  onMounted(async () => {
+    loading.value = true
 
-      const switchEditHotelPlanRate = (plan, context = 'hotel') => {
-        if (plan === null || isEmptyObject(plan)) {
-          showHotelRatePanel.value = false;
-          selectedPlan.value = {};
-        } else {
-          showHotelRatePanel.value = true;          
-          selectedPlan.value = { ...plan, context };
-        }
-      };
+    await fetchPlansGlobal();
+      globalPlans.value = plans.value;
+    await fetchPlansHotel();
+      hotelPlans.value = plans.value;
+    await fetchHotels();
 
-      onMounted(fetchGlobalPlans);
-      onMounted(fetchHotels);
-      onMounted(fetchHotelsPlans);
+    loading.value = false
+    // console.log('onMounted ManagePlans:', globalPlans.value);
+    // console.log('onMounted ManagePlans:', hotelPlans.value);
 
-      watch(editGlobalPlan, (newVal, oldVal) => {
-         // console.log('editGlobalPlan changed:', newVal);
-      }, { deep: true });
-      watch(editHotelPlan, (newVal, oldVal) => {
-         // console.log('editHotelPlan changed:', newVal);
-      }, { deep: true });   
-      
+  });
 </script>

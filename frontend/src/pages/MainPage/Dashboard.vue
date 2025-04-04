@@ -96,8 +96,10 @@
     import { DataTable, Column } from 'primevue';
     import { Select, AutoComplete, DatePicker, Button } from 'primevue';
 
-    import { useReportStore } from '@/composables/useReportStore';    
+    import { useReportStore } from '@/composables/useReportStore';
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
+    const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
 
     import * as echarts from 'echarts/core';
@@ -126,8 +128,8 @@
         UniversalTransition
     ]);
 
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
-    const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+    
+    
 
     // Charts
         const chartKey = ref(0);

@@ -1,4 +1,4 @@
-const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, 
+const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllGlobalPatterns, 
     newGlobalPlan, newHotelPlan, updateGlobalPlan, updateHotelPlan } = require('../models/plan');
 
 // GET
@@ -11,7 +11,6 @@ const getGlobalPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 const getHotelsPlans = async (req, res) => {
     try {
         const Plans = await getAllHotelsPlans(req.requestId);
@@ -21,7 +20,6 @@ const getHotelsPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 const getHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
 
@@ -37,7 +35,6 @@ const getHotelPlans = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 const fetchAllHotelPlans = async (req, res) => {
     const hotel_id = parseInt(req.params.hotel_id);
 
@@ -50,6 +47,16 @@ const fetchAllHotelPlans = async (req, res) => {
         res.json(Plans);
     } catch (error) {
         console.error('Error getting hotel Plans:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const getGlobalPatterns = async (req, res) => {
+    try {
+        const patterns = await getAllGlobalPatterns(req.requestId);
+        res.json(patterns);
+    } catch (error) {
+        console.error('Error getting global Plans:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -70,7 +77,6 @@ const createGlobalPlan = async (req, res) => {
         res.status(500).json({ error: 'Failed to create global Plan' });
     }
 };
-
 const createHotelPlan = async (req, res) => {
     const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
     const created_by = req.user.id;
@@ -89,6 +95,7 @@ const createHotelPlan = async (req, res) => {
 
 // PUT
 const editGlobalPlan = async (req, res) => {
+    console.log('editGlobalPlan:', req.body);
     const { id } = req.params;
     const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
@@ -103,7 +110,6 @@ const editGlobalPlan = async (req, res) => {
         res.status(500).json({ error: 'Failed to update global Plan' });
     }
 };
-
 const editHotelPlan = async (req, res) => {
     const { id } = req.params;
     const { hotel_id, plans_global_id, name, description, plan_type, colorHEX } = req.body;
@@ -125,6 +131,7 @@ module.exports = {
     getHotelsPlans,
     getHotelPlans,
     fetchAllHotelPlans,
+    getGlobalPatterns,
     createGlobalPlan,
     createHotelPlan,
     editGlobalPlan,

@@ -2,9 +2,51 @@ import { ref, watch } from 'vue';
 
 const plans = ref([]);
 const addons = ref([]);
+const patterns = ref([]);
 
 export function usePlansStore() {
 
+    // Plans
+    const fetchPlansGlobal = async () => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/global`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            plans.value = await response.json();
+            plans.value = plans.value.map(plan => ({
+                ...plan,
+                plan_key: (plan.id ?? '') + 'h'
+            }));
+        } catch (error) {
+            console.error('Failed to fetch global plans', error);
+        }
+    };
+    const fetchPlansHotel = async () => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/hotel`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            plans.value = await response.json();
+            plans.value = plans.value.map(plan => ({
+                ...plan,
+                plan_key: (plan.plans_global_id ?? '') + 'h' + (plan.id ?? '')
+            }));
+        } catch (error) {
+            console.error('Failed to fetch global plans', error);
+        }
+    };
     const fetchPlansForHotel = async (hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -28,7 +70,50 @@ export function usePlansStore() {
             console.error('Failed to fetch hotel plans', error);
         }
     };
+    const createGlobalPlan = async (data) => {
+        console.log('Create global plan:', data);
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/global', {
+                method: 'POST',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch hotel plans', error);
+        }
+    };
+    const updateGlobalPlan = async (id, data) => {
+        console.log('Update global plan:', id, data);
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/global/${id}`, {
+                method: 'PUT',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch hotel plans', error);
+        }
+    };
 
+    // Addons
     const fetchPlanAddons = async (gid, hid, hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -47,7 +132,6 @@ export function usePlansStore() {
             console.error('Failed to fetch plan addons', error);
         }
     };
-
     const fetchAllAddons = async (hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken')
@@ -71,6 +155,7 @@ export function usePlansStore() {
         }
     };
 
+    // Rates
     const fetchPlanRate = async (gid, hid, hotel_id, date) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -109,13 +194,37 @@ export function usePlansStore() {
         }
     };
 
+    // Patterns
+    const fetchGlobalPatterns = async () => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/patterns/global`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            patterns.value = await response.json();            
+        } catch (error) {
+            console.error('Failed to fetch global patterns', error);
+        }
+    };
+
     return {
-        plans,      
-        addons,  
-        fetchPlansForHotel, 
+        plans,
+        addons,
+        patterns,
+        fetchPlansGlobal,
+        fetchPlansHotel,
+        fetchPlansForHotel,
+        createGlobalPlan,
+        updateGlobalPlan,
         fetchPlanAddons,
         fetchAllAddons,
         fetchPlanRate,
         fetchPlanRates,
+        fetchGlobalPatterns,
     };
 }
