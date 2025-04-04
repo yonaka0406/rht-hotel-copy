@@ -1,5 +1,5 @@
-const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllGlobalPatterns, 
-    newGlobalPlan, newHotelPlan, updateGlobalPlan, updateHotelPlan } = require('../models/plan');
+const { getAllGlobalPlans, getAllHotelsPlans, getAllHotelPlans, getAllPlansByHotel, getAllGlobalPatterns, getAllHotelPatterns, 
+    newGlobalPlan, newHotelPlan, newPlanPattern, updateGlobalPlan, updateHotelPlan, updatePlanPattern } = require('../models/plan');
 
 // GET
 const getGlobalPlans = async (req, res) => {
@@ -56,10 +56,20 @@ const getGlobalPatterns = async (req, res) => {
         const patterns = await getAllGlobalPatterns(req.requestId);
         res.json(patterns);
     } catch (error) {
-        console.error('Error getting global Plans:', error);
+        console.error('Error getting global patterns:', error);
         res.status(500).json({ error: error.message });
     }
 };
+const getHotelPatterns = async (req, res) => {
+    try {
+        const patterns = await getAllHotelPatterns(req.requestId);
+        res.json(patterns);
+    } catch (error) {
+        console.error('Error getting hotel patterns:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 
 // POST
 const createGlobalPlan = async (req, res) => {
@@ -92,10 +102,21 @@ const createHotelPlan = async (req, res) => {
         res.status(500).json({ error: 'Failed to create hotel Plan' });
     }
 };
+const createPlanPattern = async (req, res) => {
+    const { hotel_id, name, template } = req.body;
+    const user_id = req.user.id;    
+
+    try {
+        const newData = await newPlanPattern(req.requestId, hotel_id, name, template, user_id);
+        res.json(newData);
+    } catch (err) {
+        console.error('Error creating plan pattern:', err);
+        res.status(500).json({ error: 'Failed to create plan pattern' });
+    }
+};
 
 // PUT
-const editGlobalPlan = async (req, res) => {
-    console.log('editGlobalPlan:', req.body);
+const editGlobalPlan = async (req, res) => {    
     const { id } = req.params;
     const { name, description, plan_type, colorHEX } = req.body;
     const updated_by = req.user.id;
@@ -125,6 +146,19 @@ const editHotelPlan = async (req, res) => {
         res.status(500).json({ error: 'Failed to update hotel Plan' });
     }
 };
+const editPlanPattern = async (req, res) => {
+    const { id } = req.params;
+    const { name, template } = req.body;
+    const user_id = req.user.id;    
+
+    try {
+        const newData = await updatePlanPattern(req.requestId, id, name, template, user_id);
+        res.json(newData);
+    } catch (err) {
+        console.error('Error edit global pattern:', err);
+        res.status(500).json({ error: 'Failed to edit global pattern' });
+    }
+};
 
 module.exports = {
     getGlobalPlans,
@@ -132,8 +166,11 @@ module.exports = {
     getHotelPlans,
     fetchAllHotelPlans,
     getGlobalPatterns,
+    getHotelPatterns,
     createGlobalPlan,
     createHotelPlan,
+    createPlanPattern,
     editGlobalPlan,
     editHotelPlan,
+    editPlanPattern,
 };

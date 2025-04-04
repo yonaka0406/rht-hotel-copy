@@ -249,6 +249,62 @@ export function usePlansStore() {
             console.error('Failed to fetch global patterns', error);
         }
     };
+    const fetchHotelPatterns = async () => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/patterns/hotel`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            patterns.value = await response.json();            
+        } catch (error) {
+            console.error('Failed to fetch hotel patterns', error);
+        }
+    };
+    const createPlanPattern = async (data) => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/patterns', {
+                method: 'POST',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to create plan pattern', error);
+        }
+    };
+    const updatePlanPattern = async (id, data) => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/patterns/${id}`, {
+                method: 'PUT',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to update plan pattern', error);
+        }
+    };
 
     return {
         plans,
@@ -266,5 +322,8 @@ export function usePlansStore() {
         fetchPlanRate,
         fetchPlanRates,
         fetchGlobalPatterns,
+        fetchHotelPatterns,
+        createPlanPattern,
+        updatePlanPattern,
     };
 }
