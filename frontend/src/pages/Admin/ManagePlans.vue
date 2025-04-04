@@ -374,7 +374,7 @@
           /> 
         </div>
         <template #footer>
-          <Button label="保存" icon="pi pi-check" @click="updateHotelPlan" class="p-button-success p-button-text p-button-sm" />
+          <Button label="保存" icon="pi pi-check" @click="updateHotel" class="p-button-success p-button-text p-button-sm" />
           <Button label="閉じる" icon="pi pi-times" @click="showEditHotelDialog = false" class="p-button-danger p-button-text p-button-sm" />
         </template>
       </Dialog>
@@ -392,7 +392,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { hotels, fetchHotels } = useHotelStore();
   import { usePlansStore } from '@/composables/usePlansStore';
-  const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan } = usePlansStore();
+  const { plans, fetchPlansGlobal, fetchPlansHotel, createGlobalPlan, updateGlobalPlan, createHotelPlan, updateHotelPlan } = usePlansStore();
   
   // Primevue
   import { useToast } from 'primevue/usetoast';
@@ -571,20 +571,9 @@
       }
     }
     try {
-      const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`/api/plans/hotel`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ ...newHotelPlan.value })
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      hotelPlans.value.push(data);
+      await createHotelPlan(newHotelPlan.value);
+      await fetchPlansHotel();
+      hotelPlans.value = plans.value;      
       showHotelDialog.value = false;
       newHotelPlan.value = { 
         hotel_id: null, 
@@ -600,7 +589,7 @@
       toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel plan', life: 3000 });
     }
   };
-  const updateHotelPlan = async () => {
+  const updateHotel = async () => {
     editHotelPlan.value.hotel_id = selectedHotel.value.id;
     
     // Filter out the current id from hotelPlans
@@ -623,23 +612,9 @@
     }
 
     try {
-      const authToken = localStorage.getItem('authToken');
-      const response = await fetch(`/api/plans/hotel/${editHotelPlan.value.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(editHotelPlan.value)
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      const index = hotelPlans.value.findIndex(plan => plan.id === data.id);
-      if (index !== -1) {
-        hotelPlans.value[index] = data;
-      }
+      await updateHotelPlan(editHotelPlan.value.id, editHotelPlan.value);
+      await fetchPlansHotel();
+      hotelPlans.value = plans.value;
       showEditHotelDialog.value = false;
       editHotelPlan.value = { 
         id: null, 

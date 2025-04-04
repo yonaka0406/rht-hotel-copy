@@ -70,8 +70,7 @@ export function usePlansStore() {
             console.error('Failed to fetch hotel plans', error);
         }
     };
-    const createGlobalPlan = async (data) => {
-        console.log('Create global plan:', data);
+    const createGlobalPlan = async (data) => {        
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch('/api/plans/global', {
@@ -91,11 +90,50 @@ export function usePlansStore() {
             console.error('Failed to fetch hotel plans', error);
         }
     };
-    const updateGlobalPlan = async (id, data) => {
-        console.log('Update global plan:', id, data);
+    const updateGlobalPlan = async (id, data) => {        
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/global/${id}`, {
+                method: 'PUT',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch hotel plans', error);
+        }
+    };
+    const createHotelPlan = async (data) => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/plans/hotel', {
+                method: 'POST',
+                headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch hotel plans', error);
+        }
+    };
+    const updateHotelPlan = async (id, data) => {        
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/plans/hotel/${id}`, {
                 method: 'PUT',
                 headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -221,6 +259,8 @@ export function usePlansStore() {
         fetchPlansForHotel,
         createGlobalPlan,
         updateGlobalPlan,
+        createHotelPlan,
+        updateHotelPlan,
         fetchPlanAddons,
         fetchAllAddons,
         fetchPlanRate,
