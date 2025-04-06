@@ -97,15 +97,23 @@
                                                 <DataTable :value="selectedRates" class="p-datatable-sm">
                                                     <Column header="料金種類" style="width:40%">
                                                         <template #body="slotProps">
-                                                            {{ defineRateType(slotProps.data.adjustment_type) }}
-                                                            <Select 
-                                                                v-model="slotProps.data.tax_type_id" 
-                                                                :options="taxTypes"
-                                                                optionLabel="name" 
-                                                                optionValue="id"
-                                                                @change="updateTaxRate(slotProps.data)"
-                                                                fluid
-                                                            />
+                                                            <div class="grid grid-cols-3">
+                                                                <div class="flex items-center">                        
+                                                                    <Badge :severity="slotProps.data.adjustment_type === 'percentage' ? 'info' : slotProps.data.adjustment_type === 'flat_rate' ? 'secondary' : ''">
+                                                                        {{ defineRateType(slotProps.data.adjustment_type) }}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div class="col-span-2">
+                                                                    <Select 
+                                                                        v-model="slotProps.data.tax_type_id" 
+                                                                        :options="taxTypes"
+                                                                        optionLabel="name" 
+                                                                        optionValue="id"
+                                                                        @change="updateTaxRate(slotProps.data)"
+                                                                        fluid
+                                                                    />
+                                                                </div>
+                                                            </div>
                                                         </template>
                                                     </Column>
                                                     <Column header="数値">
@@ -290,8 +298,7 @@
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
-    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Button, Divider } from 'primevue';
-    import { FloatLabel, Select, InputText, InputNumber } from 'primevue';
+    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider } from 'primevue';    
 
     // Stores    
     import { useReservationStore } from '@/composables/useReservationStore';
