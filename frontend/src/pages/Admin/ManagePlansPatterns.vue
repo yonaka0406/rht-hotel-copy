@@ -48,6 +48,17 @@
             <TabPanel value="1">
                 <DataTable :value="hotels">
                     <Column field="name" header="名称"></Column>
+                    <Column>
+                        <template #header>
+                            <span class="font-bold">パターンカウント</span>
+                        </template>
+                        <template #body="slotProps">
+                            <Badge 
+                                :value="getPatternCount(slotProps.data.id)"
+                                severity="secondary"
+                            ></Badge>
+                        </template>
+                    </Column>
                     <Column header="操作">
                         <template #body="slotProps">
                             <Button 
@@ -73,7 +84,7 @@
                   ></Button>
                 </div>
                 <DataTable :value="hotelPatterns">
-                    <Column field="name" header="名称"></Column>
+                    <Column field="name" header="名称"></Column>                    
                     <Column headerClass="text-center">
                         <template #header>
                         <span class="font-bold text-center w-full block">操作</span>
@@ -232,7 +243,7 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, Dialog,
-        FloatLabel, InputText, Select, Button
+        FloatLabel, InputText, Select, Button, Badge
      } from 'primevue'
 
     // Stores
@@ -426,6 +437,11 @@
     const editHotelPattern = ref(null);
     const showHotelDialog = ref(false);
     const showEditHotelDialog = ref(false);
+    const getPatternCount = (hotel_id) => {
+        console.log('getPatternCount hotel_id:', hotel_id);
+        console.log('getPatternCount allHotelPatterns:', allHotelPatterns.value);
+        return allHotelPatterns.value.filter(pattern => pattern.hotel_id === hotel_id).length;
+    };
     const newHotelPatternReset = (hotel_id) => {
         newHotelPattern.value = { 
             hotel_id: hotel_id,
