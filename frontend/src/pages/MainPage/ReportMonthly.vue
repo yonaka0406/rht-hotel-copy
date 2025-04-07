@@ -106,9 +106,9 @@
     import { Card, DatePicker, Fieldset } from 'primevue';
 
     // Stores
-    import { useReportStore } from '@/composables/useReportStore';    
-    import { useHotelStore } from '@/composables/useHotelStore';
+    import { useReportStore } from '@/composables/useReportStore';
     const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
+    import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
     // Page Setting

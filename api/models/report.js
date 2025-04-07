@@ -7,22 +7,30 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
     SELECT 
       reservation_details.date
       ,roomTotal.total_rooms
-      ,COUNT(reservation_details.room_id) as room_count
-      ,SUM(reservation_details.number_of_people) AS people_sum
-      ,SUM(CASE 
-        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
-        THEN reservation_details.price 
-        ELSE reservation_details.price * reservation_details.number_of_people
-      END + COALESCE(ra.total_price, 0)) AS price
+      ,COUNT(
+        CASE WHEN reservation_details.cancelled IS NULL THEN reservation_details.room_id
+        ELSE NULL END) as room_count
+      ,SUM(
+        CASE WHEN reservation_details.cancelled IS NULL THEN reservation_details.number_of_people
+        ELSE 0 END) AS people_sum
+      ,SUM(
+        CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price 
+        ELSE rr.price * reservation_details.number_of_people END 
+        + COALESCE(ra.total_price, 0)) AS price
     FROM
       reservations
       ,reservation_details
-        LEFT JOIN 
-      plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
-        LEFT JOIN 
-      plans_global 
-        ON plans_global.id = reservation_details.plans_global_id
+        LEFT JOIN
+      (
+        SELECT 
+          rr.reservation_details_id
+          ,SUM(rr.price) as price
+        FROM
+          reservation_rates rr
+        GROUP BY 
+          rr.reservation_details_id
+      ) rr
+        ON reservation_details.id = rr.reservation_details_id
         LEFT JOIN 
       (
         SELECT
@@ -33,18 +41,46 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       ) ra 
         ON reservation_details.id = ra.reservation_detail_id
       ,(
-        SELECT hotel_id, COUNT(*) as total_rooms
-        FROM rooms
-        WHERE for_sale = true AND hotel_id = $1
-        GROUP BY hotel_id
+        SELECT 
+          res.hotel_id, res.date, (room.total_rooms - res.count) as total_rooms
+	      FROM
+          ( 
+            SELECT 
+              rd.hotel_id, rd.date, COUNT(CASE WHEN r.status = 'block' THEN rd.room_id ELSE NULL END) 
+            FROM 
+              reservations r 
+                JOIN
+              reservation_details rd 
+                ON rd.reservation_id = r.id
+                AND rd.hotel_id = r.hotel_id
+                JOIN
+              rooms ON rd.room_id = rooms.id
+            WHERE 
+              r.hotel_id = $1 AND rd.date BETWEEN $2 AND $3
+              AND rd.billable = TRUE
+              AND r.type <> 'employee'
+              AND r.status NOT IN ('hold', 'block')
+              AND rooms.for_sale = true
+              
+            GROUP BY rd.hotel_id, rd.date
+          ) res
+            LEFT JOIN
+          (
+            SELECT r.hotel_id, COUNT(r.*) as total_rooms
+            FROM rooms r
+            WHERE r.for_sale = true AND r.hotel_id = $1
+            GROUP BY r.hotel_id
+          ) room
+            ON res.hotel_id = room.hotel_id
       ) AS roomTotal
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
-      AND reservation_details.cancelled IS NULL
+      AND reservation_details.billable = TRUE
       AND reservations.type <> 'employee'
       AND reservations.status NOT IN ('hold', 'block')
       AND reservation_details.hotel_id = roomTotal.hotel_id
+      AND reservation_details.date = roomTotal.date
       AND reservation_details.reservation_id = reservations.id
       AND reservation_details.hotel_id = reservations.hotel_id
     GROUP BY
@@ -363,14 +399,27 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
-              CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
-              ELSE reservation_details.price * reservation_details.number_of_people END
+              CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price
+              ELSE rr.price * reservation_details.number_of_people END
               ELSE 0 END
           ) AS plan_price
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN reservation_addons.price ELSE 0 END) AS addon_price
 
         FROM
-          reservation_details            
+          reservation_details
+            LEFT JOIN
+          (
+            SELECT 
+              rr.reservation_details_id
+              ,SUM(rr.price) as price
+            FROM
+              reservation_rates rr, reservation_details rd
+            WHERE rd.id = rr.reservation_details_id AND rd.billable = TRUE
+            AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+            GROUP BY 
+              rr.reservation_details_id
+          ) rr
+            ON reservation_details.id = rr.reservation_details_id
             LEFT JOIN
           (
             SELECT
@@ -486,8 +535,8 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,reservation_details.number_of_people
       ,reservation_details.plan_type
       ,reservation_details.plan_name
-      ,(CASE WHEN reservation_details.plan_type = 'per_room' THEN reservation_details.price
-        ELSE reservation_details.price * reservation_details.number_of_people END
+      ,(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price
+        ELSE rr.price * reservation_details.number_of_people END
       ) AS plan_price
       ,reservation_addons.addon_name
       ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
@@ -531,7 +580,19 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.type
           ,clients.name_kanji, clients.name, clients.name_kana
       ) AS reservations
-      ,reservation_details        
+      ,reservation_details
+        LEFT JOIN
+      (
+        SELECT 
+          rr.reservation_details_id
+          ,SUM(rr.price) as price
+        FROM
+          reservation_rates rr, reservation_details rd
+        WHERE rd.id = rr.reservation_details_id AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+        GROUP BY 
+          rr.reservation_details_id
+      ) rr
+        ON reservation_details.id = rr.reservation_details_id
         LEFT JOIN
       reservation_addons
         ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
