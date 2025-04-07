@@ -409,6 +409,31 @@ export function useReservationStore() {
             console.error('Error updating reservation:', error);
         }
     };
+    const setRoomPattern = async (hotelId, roomId, reservationId, pattern) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Assuming you have an API endpoint to update the reservation
+            const response = await fetch(`/api/reservation/update/room/pattern/${hotelId}/${roomId}/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ pattern })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update reservation');
+            }
+
+            setReservationIsUpdating(false);
+
+            return 'Updated reservation plan.';
+        } catch (error) {
+            console.error('Error updating reservation:', error);
+        }
+    };
     const setRoomGuests = async (reservationId, dataToUpdate) => {
         try {
             setReservationIsUpdating(true);
@@ -953,6 +978,7 @@ export function useReservationStore() {
         setReservationComment,
         setReservationTime,
         setRoomPlan,
+        setRoomPattern,
         setRoomGuests,        
         changeReservationRoomGuestNumber,        
         fetchReservation,

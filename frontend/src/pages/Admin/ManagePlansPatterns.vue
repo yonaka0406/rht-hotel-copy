@@ -258,15 +258,15 @@
         activeTab.value = newTabValue;
     };
     const daysOfWeek = ref([ 
-        { label: '月曜日', value: 'Mon' }, 
-        { label: '火曜日', value: 'Tue' }, 
-        { label: '水曜日', value: 'Wed' }, 
-        { label: '木曜日', value: 'Thu' }, 
-        { label: '金曜日', value: 'Fri' }, 
-        { label: '土曜日', value: 'Sat' }, 
-        { label: '日曜日', value: 'Sun' } 
+        { label: '月曜日', value: 'mon' }, 
+        { label: '火曜日', value: 'tue' }, 
+        { label: '水曜日', value: 'wed' }, 
+        { label: '木曜日', value: 'thu' }, 
+        { label: '金曜日', value: 'fri' }, 
+        { label: '土曜日', value: 'sat' }, 
+        { label: '日曜日', value: 'sun' } 
     ]);
-    const dayPlanSelections = ref({ Mon: null, Tue: null, Wed: null, Thu: null, Fri: null, Sat: null, Sun: null });
+    const dayPlanSelections = ref({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
 
     // Tabs Global
     const globalPatterns = ref([]);

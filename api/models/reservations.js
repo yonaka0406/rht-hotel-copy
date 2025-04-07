@@ -1,5 +1,7 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
+const { getPlanByKey } = require('../models/plan');
+const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
 
 // Helper
@@ -396,7 +398,8 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
       reservation_details.hotel_id,
       reservation_details.room_id,
       reservation_details.reservation_id,
-      reservation_details.date    
+      reservation_details.date,
+      reservation_details.number_of_people
     FROM
       reservation_details
     WHERE
@@ -1891,6 +1894,58 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
+const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    
+    // Set session
+    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
+    await client.query(setSessionQuery);
+
+    const detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
+
+    // Update the reservation details with promise
+    const updatePromises = detailsArray.map(async (detail) => {
+      const { id, date, number_of_people } = detail;
+
+      const detailDate = new Date(date);
+      const dayOfWeek = detailDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+      
+      const plan = await getPlanByKey(requestId, hotelId, pattern[dayOfWeek]);
+      const addons = await getAllPlanAddons(requestId, plan.plans_global_id, plan.plans_hotel_id, hotelId);
+      if (addons && Array.isArray(addons)) {
+        addons.forEach(addon => {
+            addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
+        });
+      }
+
+      // 1. Update Plan
+      await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+
+      // 2. Update Addons
+      await updateReservationDetailAddon(requestId, id, addons, user_id);
+
+    });
+
+    await Promise.all(updatePromises);
+
+    // 3. Recalculate Price after updating plans and addons
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id);
+
+    await client.query('COMMIT');
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating room plan:', error);
+    throw error;
+  } finally {
+    client.release();
+    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+  }
+};
 
 const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id) => {
   const pool = getPool(requestId);
@@ -2155,6 +2210,7 @@ module.exports = {
     updateReservationRoom,
     updateReservationRoomWithCreate,
     updateReservationRoomPlan,
+    updateReservationRoomPattern,
     deleteHoldReservationById,
     deleteReservationAddonsByDetailId,
     deleteReservationClientsByDetailId,

@@ -162,18 +162,46 @@
                                                 <Select v-model="selectedPattern"
                                                     id="bulk-pattern"
                                                     :options="patterns"
-                                                    optionLabel="name"
-                                                    optionValue="id"                                                     
                                                     fluid
                                                     @change="updatePattern"
-                                                />
+                                                >
+                                                    <template #value="slotProps">
+                                                        <div v-if="slotProps.value">
+                                                            <div class="mr-2">{{ slotProps.value.name }} </div>
+                                                            <Badge severity="secondary">{{ slotProps.value.template_type === 'global' ? 'グローバル' : 'ホテル' }}</Badge>
+                                                        </div>
+                                                        <div v-else>
+                                                            パターン選択
+                                                        </div>
+                                                    </template>
+                                                    <template #option="slotProps">
+                                                        <div class="flex items-center">
+                                                            <div class="mr-2">{{ slotProps.option.name }} </div>
+                                                            <Badge severity="secondary">{{ slotProps.option.template_type === 'global' ? 'グローバル' : 'ホテル' }}</Badge>
+                                                        </div>
+                                                    </template>
+                                                </Select>
                                                 <label for="bulk-pattern">パターン選択</label>
                                             </FloatLabel>
                                         </div>
                                         <div class="col-span-2">
                                             <ToggleButton v-model="isPatternInput" :onLabel="'パターン'" :offLabel="'手動入力'" fluid />
                                         </div>
-                                    </div>  
+                                        <div v-for="day in daysOfWeek" :key="day.value" class="col-span-3 mt-4 mr-2">
+                                            <div class="mt-4 mr-2">
+                                                <FloatLabel>
+                                                    <Select
+                                                        v-model="dayPlanSelections[day.value]"
+                                                        :options="plans"
+                                                        optionLabel="name"
+                                                        optionValue="plan_key"
+                                                        class="w-full"
+                                                    />
+                                                    <label class="font-semibold mb-1 block">{{ day.label }}</label>
+                                                </FloatLabel>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </template>
                         </Card>
@@ -437,7 +465,9 @@
         
         </div>
         <template #footer>
-            <Button v-if="tabsRoomEditDialog === 0" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+            <Button v-if="tabsRoomEditDialog === 0 && !isPatternInput" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPlanChanges" />
+            <Button v-if="tabsRoomEditDialog === 0 && isPatternInput" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyPatternChanges" />
+            
             <Button v-if="tabsRoomEditDialog === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
             <Button v-if="tabsRoomEditDialog === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
             <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
@@ -479,11 +509,11 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button } from 'primevue';
+    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels,TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge } from 'primevue';
 
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { setRoomPlan, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();  
+    const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();  
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
     import { useClientStore } from '@/composables/useClientStore';
@@ -688,26 +718,32 @@
             { label: '土曜日', value: 'sat' },
             { label: '日曜日', value: 'sun' },
         ];
+        const dayPlanSelections = ref({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
         const selectedDays = ref(daysOfWeek);
         const selectedPlan = ref(null);
-        const selectedAddon = ref([]);
         const selectedPattern = ref(null);
         const selectedPatternDetails = ref(null);
+        const selectedAddon = ref([]);
         const addonOptions = ref(null);
         const selectedAddonOption = ref(null);
         const updatePattern = async () => {
-            console.log('updatePattern:', selectedPattern.value);    
+                        
             if (selectedPattern.value !== null) {
-                // Assuming patterns are an array and each pattern has an id and details to fetch
-                const selectedPatternData = patterns.value.find(pattern => pattern.id === selectedPattern.value);
-                
                 // Update the selectedPatternDetails with the corresponding data
-                selectedPatternDetails.value = selectedPatternData;
-
-                console.log('Pattern details:', selectedPatternDetails.value);
+                selectedPatternDetails.value = selectedPattern.value;
+                
+                // Populate dayPlanSelections based on template
+                for (const day of daysOfWeek) {
+                    const templateEntry = selectedPatternDetails.value.template?.[day.value];
+                    if (templateEntry && templateEntry.plan_key && plans.value.some(plan => plan.plan_key === templateEntry.plan_key)) {
+                        dayPlanSelections.value[day.value] = templateEntry.plan_key;
+                    } else {                        
+                        dayPlanSelections.value[day.value] = null;
+                    }
+                }
             }            
         };
-        const updatePlanAddOns = async () => {
+        const updatePlanAddOns = async () => {            
             if (selectedPlan.value) {                
                 const gid = selectedPlan.value?.plans_global_id ?? 0;
                 const hid = selectedPlan.value?.plans_hotel_id ?? 0;
@@ -757,6 +793,26 @@
         const applyPlanChanges = async () => {
             try {               
                 await setRoomPlan(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value, selectedDays.value);
+                        
+                closeRoomEditDialog();
+    
+                // Provide feedback to the user
+                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                
+            } catch (error) {
+                console.error('Failed to apply changes:', error);                
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+            }
+        };
+        const applyPatternChanges = async () => {
+            try {                
+                const hasAtLeastOnePlan = Object.values(dayPlanSelections.value).some(v => v !== null);
+                if (!hasAtLeastOnePlan) {
+                    toast.add({ severity: 'error', summary: 'エラー', detail: '少なくとも1日はプランを設定してください', life: 3000 });
+                    return;
+                }
+
+                await setRoomPattern(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, dayPlanSelections.value);
                         
                 closeRoomEditDialog();
     

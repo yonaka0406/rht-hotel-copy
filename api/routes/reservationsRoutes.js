@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, 
     createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment,
-    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
+    editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/reservation/available-rooms', authMiddleware, getAvailableRooms);
@@ -29,6 +29,7 @@ router.put('/reservation/update/plan/:id', authMiddleware, editReservationPlan);
 router.put('/reservation/update/addon/:id', authMiddleware, editReservationAddon);
 router.put('/reservation/update/room/:id', authMiddleware, editReservationRoom);
 router.put('/reservation/update/room/plan/:hid/:rid/:id', authMiddleware, editReservationRoomPlan);
+router.put('/reservation/update/room/pattern/:hid/:rid/:id', authMiddleware, editReservationRoomPattern);
 router.put('/reservation/update/status/:id', authMiddleware, editReservationStatus);
 router.put('/reservation/update/comment/:id', authMiddleware, editReservationComment);
 router.put('/reservation/update/time/:id', authMiddleware, editReservationTime);

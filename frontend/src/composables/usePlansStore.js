@@ -244,7 +244,7 @@ export function usePlansStore() {
                 },
             });
             
-            patterns.value = await response.json();            
+            patterns.value = await response.json();
         } catch (error) {
             console.error('Failed to fetch global patterns', error);
         }

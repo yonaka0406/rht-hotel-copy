@@ -68,7 +68,7 @@ const getAllPlansByHotel = async (requestId, hotel_id) => {
 
 const getAllGlobalPatterns = async (requestId) => {
     const pool = getPool(requestId);
-    const query = `SELECT * FROM plan_templates WHERE hotel_id IS NULL ORDER BY name ASC`;
+    const query = `SELECT *, 'global' as template_type FROM plan_templates WHERE hotel_id IS NULL ORDER BY name ASC`;
     
     try {
         const result = await pool.query(query);
@@ -80,7 +80,7 @@ const getAllGlobalPatterns = async (requestId) => {
 };
 const getAllHotelPatterns = async (requestId) => {
     const pool = getPool(requestId);
-    const query = `SELECT * FROM plan_templates WHERE hotel_id IS NOT NULL ORDER BY name ASC`;
+    const query = `SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id IS NOT NULL ORDER BY name ASC`;
     
     try {
         const result = await pool.query(query);
@@ -92,10 +92,10 @@ const getAllHotelPatterns = async (requestId) => {
 };
 const getAllPatternsByHotel = async (requestId, hotel_id) => {
     const pool = getPool(requestId);
-    const query = `
-        SELECT * FROM plan_templates WHERE hotel_id = $1
+    const query = `        
+        SELECT *, 'global' as template_type FROM plan_templates WHERE hotel_id IS NULL
         UNION ALL
-        SELECT * FROM plan_templates WHERE hotel_id IS NULL
+        SELECT *, 'hotel' as template_type FROM plan_templates WHERE hotel_id = $1
         ORDER BY hotel_id, name            
     `;
     const values = [hotel_id];
@@ -110,6 +110,66 @@ const getAllPatternsByHotel = async (requestId, hotel_id) => {
 };
 
 // Return one
+const getPlanByKey = async (requestId, hotel_id, plan_key) => {
+    if (!plan_key) {
+        return {
+            plans_global_id: null,
+            plans_hotel_id: null,
+            name: '',
+            plan_type: 'per_room'
+        };
+    }
+
+    const parts = plan_key.split('h');
+    console.log('plan_key:', plan_key, 'parts:', parts , 'part 0:', parts[0], 'part 1:', parts[1]);
+
+    if (!parts[0] && parts[1]) {                
+        const hotelPlanId = parseInt(parts[1]);
+
+        try {            
+            const hotelPlan = await getHotelPlanById(requestId, hotel_id, hotelPlanId);
+
+            if (hotelPlan) {
+                console.log('getPlanByKey hotelPlan:', hotelPlan);
+                return {
+                    plans_global_id: hotelPlan.plans_global_id,
+                    plans_hotel_id: hotelPlanId,
+                    name: hotelPlan.name,
+                    plan_type: hotelPlan.plan_type
+                };
+            }
+        } catch (err) {
+            console.error('Error in getPlanByKey:', err);
+            throw err; // Re-throw the error to be handled upstream
+        }
+    } else if (parts[0] && !parts[1]) {        
+        const globalId = parseInt(parts[0]);
+
+        try {
+            const globalPlan = await getGlobalPlanById(requestId, globalId);
+            if (globalPlan) {
+                console.log('getPlanByKey globalPlan:', globalPlan);
+                return {
+                    plans_global_id: globalId,
+                    plans_hotel_id: null,
+                    name: globalPlan.name,
+                    plan_type: globalPlan.plan_type
+                };
+            }
+        } catch (err) {
+            console.error('Error in getPlanByKey:', err);
+            throw err;
+        }
+    }
+
+    // If none of the formats match, return the default null values.
+    return {
+        plans_global_id: null,
+        plans_hotel_id: null,
+        name: '',
+        plan_type: 'per_room'
+    };
+}
 const getGlobalPlanById = async (requestId, id) => {
     const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_global WHERE id = $1';
@@ -254,6 +314,7 @@ module.exports = {
     getAllGlobalPatterns,
     getAllHotelPatterns,
     getAllPatternsByHotel,
+    getPlanByKey,
     getGlobalPlanById,
     getHotelPlanById,
     newGlobalPlan,
