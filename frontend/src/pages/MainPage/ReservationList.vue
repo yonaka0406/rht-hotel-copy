@@ -1,5 +1,5 @@
 <template>
-    <Panel>        
+    <Panel class="m-2">        
         <div>
             <DataTable
                 v-model:filters="filters"
@@ -13,7 +13,7 @@
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
                 dataKey="id"                
                 stripedRows
-                @row-dblclick="openDrawer"                
+                @row-dblclick="openDrawer"
                 removableSort
                 v-model:expandedRows="expandedRows"
                 :rowExpansion="true"
@@ -286,16 +286,32 @@
     const selectedReservations = ref([]);
     const drawerSelectVisible = ref(false);
     const totalPrice = computed(() => {
-        if(!selectedReservations){ return 0;}
-        return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.price || 0), 0);
+        if(!selectedReservations){ return 0;}        
+        return selectedReservations.value.reduce((sum, reservation) => {
+            const price = Number(reservation.price);
+            if (!isNaN(price)) {
+                return sum + price;
+            } else {
+                console.warn(`Invalid price encountered: ${reservation.price}`);
+                return sum;
+            }
+        }, 0);
     });
     const totalPayments = computed(() => {
         if(!selectedReservations){ return 0;}
-        return selectedReservations.value.reduce((sum, reservation) => sum + (reservation.payments || 0), 0);
+        return selectedReservations.value.reduce((sum, reservation) => {
+            const payment = Number(reservation.payment);
+            if (!isNaN(payment)) {
+                return sum + payment;
+            } else {
+                console.warn(`Invalid payment encountered: ${reservation.payment}`);
+                return sum;
+            }
+        }, 0);        
     });
     const totalBalance = computed(() => {
         if(!selectedReservations){ return 0;}
-        return selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.price || 0) - (reservation.payments || 0)), 0);
+        return selectedReservations.value.reduce((sum, reservation) => sum + ((reservation.price || 0) - (reservation.payment || 0)), 0);
     });
     const totalPeopleNights = computed(() => {
         if(!selectedReservations){ return 0;}
@@ -494,6 +510,7 @@
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){
             drawerSelectVisible.value = newValue.length > 0;
+            //console.log('watch selectedReservations:', newValue)
         }
     });
 
