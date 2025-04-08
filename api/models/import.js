@@ -279,6 +279,41 @@ const insertYadomasterAddons = async (requestId, addons) => {
         throw new Error('Database error during reservation addons insertion (transaction rolled back)');
     }
 };
+const insertYadomasterRates = async (requestId, rates) => {
+    const pool = getPool(requestId);
+    const insertedRates = [];
+  
+    try {
+        await pool.query('BEGIN');
+
+        for (const rate of rates) {
+            const query = `
+                INSERT INTO reservation_rates (
+                hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING *;
+            `;
+            const values = [
+                rate.hotel_id,
+                rate.reservation_details_id,
+                rate.adjustment_value,
+                rate.tax_type_id,
+                rate.tax_rate,
+                rate.price,
+                rate.created_by,
+            ];
+            const result = await pool.query(query, values);
+            insertedRates.push(result.rows[0]);
+        }
+
+        await pool.query('COMMIT');
+        return insertedRates;
+    } catch (err) {
+        await pool.query('ROLLBACK'); 
+        console.error('Error adding reservation rates (transaction rolled back):', err);
+        throw new Error('Database error during reservation rates insertion (transaction rolled back)');
+    }
+};
 
 module.exports = {
     insertYadomasterClients,
@@ -286,4 +321,5 @@ module.exports = {
     insertYadomasterDetails,
     insertYadomasterPayments,
     insertYadomasterAddons,
+    insertYadomasterRates,
   };

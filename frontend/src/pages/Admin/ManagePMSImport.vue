@@ -163,7 +163,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, setHotelId } = useHotelStore();
     import { useImportStore } from '@/composables/useImportStore';
-    const { yadomasterAddClients, yadomasterAddReservations, yadomasterAddReservationDetails, yadomasterAddReservationPayments, yadomasterAddReservationAddons } = useImportStore();
+    const { yadomasterAddClients, yadomasterAddReservations, yadomasterAddReservationDetails, yadomasterAddReservationPayments, yadomasterAddReservationAddons, yadomasterAddReservationRates } = useImportStore();
         
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -497,6 +497,7 @@
                 reservation_details: [],
                 reservation_addons: [],                
                 reservation_payments: [],                
+                reservation_rates: [],
             };
         }
 
@@ -505,6 +506,7 @@
         const reservation_details = [];
         const reservation_addons = [];        
         const reservation_payments = [];
+        const reservation_rates = [];
 
         yadomasterReservations.value.toImport.map(reservation => {
             // Common fields
@@ -573,6 +575,19 @@
                     予約番号: reservation.予約番号,
                 });
 
+                //reservation_rates table
+                reservation_rates.push({
+                    hotel_id: selectedHotelId.value,
+                    reservation_details_id: detailId,
+                    adjustment_type: 'base_rate',
+                    adjustment_value: detail.price || null,
+                    tax_type_id: 3,
+                    tax_rate: 0.1,
+                    price: detail.price || null,
+                    created_by: 1,                    
+                    予約番号: reservation.予約番号,
+                });
+
                 detailsMap.set(`${detail.roomNumber}-${detail.date}`, detailId);
             });
 
@@ -617,6 +632,7 @@
             reservation_details,
             reservation_payments,
             reservation_addons,
+            reservation_rates,
         };
 
     });
@@ -757,6 +773,7 @@
         const reservationDetailChunks = chunkArray(data.reservation_details, 200);
         const reservationPaymentChunks = chunkArray(data.reservation_payments, 200);
         const reservationAddonChunks = chunkArray(data.reservation_addons, 200);
+        const reservationRateChunks = chunkArray(data.reservation_rates, 200);
 
         for (const chunk of clientChunks) {
             await yadomasterAddClients(chunk);
@@ -773,6 +790,9 @@
         for (const chunk of reservationAddonChunks) {
             await yadomasterAddReservationAddons(chunk);
         }
+        for (const chunk of reservationRateChunks) {
+            await yadomasterAddReservationRates(chunk);
+        }        
     }
 
     // Dialog
