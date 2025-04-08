@@ -190,8 +190,7 @@
                     },
                     {
                         key: 'reservations',
-                        label: '予約',
-                        icon: 'pi pi-fw pi-calendar',
+                        label: '予約',                        
                         items: [
                             { 
                                 key: 'reservationsNew',
@@ -217,6 +216,19 @@
                                 command: () => {
                                     router.push('/reservations/list');
                                 },                                
+                            },
+                        ],
+                    },
+                    {
+                        key: 'billing',
+                        label: '請求',                        
+                        items: [                            
+                            { 
+                                label: '請求書',
+                                icon: 'pi pi-fw pi-file',
+                                command: () => {
+                                    router.push('/billing/invoices');
+                                },
                             },
                         ],
                     },
