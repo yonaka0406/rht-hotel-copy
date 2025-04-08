@@ -269,9 +269,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
           ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.rates_price
             ELSE rr.rates_price * reservation_details.number_of_people END              
           ) AS plan_price
-          ,SUM(CASE WHEN reservation_details.billable = TRUE AND reservation_details.cancelled IS NULL THEN
-                  COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)
-              ELSE 0 END
+          ,SUM(CASE WHEN reservation_details.billable = TRUE AND reservation_details.   cancelled IS NULL THEN COALESCE(ra.addon_sum,0) ELSE 0 END
           ) AS addon_price
         FROM
           reservation_details 
@@ -286,8 +284,16 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
             GROUP BY rr.reservation_details_id
           ) rr ON rr.reservation_details_id = reservation_details.id           
             LEFT JOIN
-          reservation_addons
-            ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+          (
+            SELECT 
+              ra.hotel_id
+              ,ra.reservation_detail_id
+              ,SUM(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) as addon_sum
+            FROM reservation_addons ra
+            GROUP BY ra.hotel_id, ra.reservation_detail_id
+          )
+          ra
+            ON reservation_details.hotel_id = ra.hotel_id AND reservation_details.id = ra.reservation_detail_id
             LEFT JOIN 
           (
             SELECT 

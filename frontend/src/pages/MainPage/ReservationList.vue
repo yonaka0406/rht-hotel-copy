@@ -25,9 +25,9 @@
                     <div class="mb-4 flex justify-end items-center">                        
                         <span class="font-bold mr-4">滞在期間選択：</span>
                         <label class="mr-2">開始日:</label>
-                        <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" />
+                        <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
                         <label class="ml-4 mr-2">終了日:</label>
-                        <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" />
+                        <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
 
                         <!-- Export -->
