@@ -38,7 +38,7 @@ export function useXMLStore() {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/xml',
+                    'Content-Type': 'text/xml',
                 },
                 body: xml,
             });

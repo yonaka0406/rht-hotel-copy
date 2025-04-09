@@ -17,7 +17,7 @@ const getXMLTemplate = async (req, res) => {
 // POST
 const postXMLResponse = async (req, res) => {
     const { name } = req.params;
-    const { xml } = req.body;
+    const xml = req.body;
 
     console.log('postXMLResponse', req.params, req.body);
 
@@ -35,14 +35,14 @@ const postXMLResponse = async (req, res) => {
 const submitXMLTemplate = async (req, res) => {
     console.log('submitXMLTemplate', req.params, req.body);
     const { name } = req.params;
-    const { xml } = req.body;
+    const xml = req.body;
     
     try {        
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {                
-                'Content-Type': 'application/xml',
+                'Content-Type': 'text/xml',
             },
             body: xml,
         });
