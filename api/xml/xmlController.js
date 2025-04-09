@@ -17,7 +17,7 @@ const getXMLTemplate = async (req, res) => {
 const getXMLRecentResponses = async (req, res) => {
     try {
         const responses = await selectXMLRecentResponses(req.requestId);
-        res.send(responses);
+        res.json(responses);        
     } catch (error) {
         console.error('Error getting xml responses:', error);
         res.status(500).json({ error: error.message });

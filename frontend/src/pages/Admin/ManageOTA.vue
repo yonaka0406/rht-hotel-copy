@@ -60,14 +60,23 @@
               :rows="15"
               :rowsPerPageOptions="[15, 25, 50]"
               :showGridlines="true"
-            >
-              <Column field="received_at"></Column>
-              
+            >              
+              <Column field="received_at" header="受信日時">                
+                <template #body="slotProps">
+                  {{ formatDateTime(slotProps.data.received_at) }}
+                </template>
+              </Column>
+              <Column header="ステータス">
+                <template #body="slotProps">
+                  {{ slotProps.data.status }}
+                </template>
+              </Column>
+              <Column field="name" header="リクエスト名"></Column>              
+              <Column header="表示"></Column>
             </DataTable>
           </AccordionContent>
         </AccordionPanel>
-      </Accordion>
-      
+      </Accordion>      
     </Panel>
   </div>
 </template>
@@ -79,9 +88,22 @@
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
   const { template, responses, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
-
+  
   // Primevue
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Button, DataTable, Column } from 'primevue';
+
+  // Helper
+  const formatDateTime = (dateString) => {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ja-JP', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+      });
+  };
       
   const templateName = ref('');
   const editableFields = ref([]);

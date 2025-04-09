@@ -1,7 +1,7 @@
 import { ref, watch } from 'vue';
 
 const template = ref(null);
-const responses = ref(null);
+const responses = ref([]);
 
 export function useXMLStore() {
         
@@ -40,7 +40,7 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.text();
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
@@ -49,7 +49,7 @@ export function useXMLStore() {
             responses.value = data;
             
         } catch (error) {
-            responses.value = null;
+            responses.value = [];
             console.error('Failed to fetch data', error);
         }
     };

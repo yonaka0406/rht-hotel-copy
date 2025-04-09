@@ -129,12 +129,34 @@ const selectXMLRecentResponses = async (requestId) => {
             "SELECT * FROM xml_responses ORDER BY received_at DESC LIMIT 50"
         );
 
-        return result.rows;
-        
+        const rows = result.rows;        
+        const parser = new xml2js.Parser({ explicitArray: false });
+        const parsedRows = await Promise.all(rows.map(async (row) => {
+            let status = '不明';
+            try {
+                const parsedResponse = await parser.parseStringPromise(row.response);
+                // Extract status
+                status = parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['commonResponse']['isSuccess'] === 'true' ? '成功' : 'エラー';                
+                
+                return { 
+                    received_at: row.received_at, 
+                    name: row.name, 
+                    status: status, 
+                    response: parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return'] 
+                };
+            } catch (parseError) {
+                console.error('Error parsing XML:', parseError);
+                return { received_at: row.received_at, name: row.name, status: status, response: null, parseError: parseError.message };                
+            }
+        }));
+
+        return parsedRows;        
+
     } catch (error) {
-        
+        console.error('Database query error:', error);
+        throw error;
     }
-}
+};
 
 module.exports = { 
     insertXMLResponse,
