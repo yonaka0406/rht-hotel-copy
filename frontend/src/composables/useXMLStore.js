@@ -30,6 +30,7 @@ export function useXMLStore() {
     };
 
     const insertXMLResponse = async(name, xml) => {
+        console.log('insertXMLResponse', name, xml);
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/xml/response/${name}`;
