@@ -88,6 +88,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use(express.raw({ type: 'text/xml' }));
 
 // Make config available to route handlers
 app.use((req, res, next) => {
