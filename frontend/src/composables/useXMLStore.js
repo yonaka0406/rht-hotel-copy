@@ -43,11 +43,18 @@ export function useXMLStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to post data');
+                const errorText = await response.text();
+                console.error('API Error:', response.status, response.statusText, errorText);
+                throw new Error(`Failed to post data: ${response.status} ${response.statusText} ${errorText}`);
             }
+
+            const responseData = await response.json(); // Parse the JSON response from postXMLResponse
+            console.log('XML response saved successfully', responseData);
+            return responseData;
             
         } catch (error) {
             console.error('Failed to post data', error);
+            throw error;
         }
     };   
 

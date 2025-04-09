@@ -19,6 +19,8 @@ const postXMLResponse = async (req, res) => {
     const { name } = req.params;
     const { xml } = req.body;
 
+    console.log('postXMLResponse', req.params, req.body);
+
     try {
         const responseXml = await submitXMLTemplate(req, res); // Call submitXMLTemplate
         console.log('XML response added successfully', responseXml);
@@ -31,7 +33,7 @@ const postXMLResponse = async (req, res) => {
 
 // Lincoln
 const submitXMLTemplate = async (req, res) => {
-    console.log('submitXMLTemplate api', req.params, req.body);
+    console.log('submitXMLTemplate', req.params, req.body);
     const { name } = req.params;
     const { xml } = req.body;
     
