@@ -16,10 +16,11 @@ const getXMLTemplate = async (req, res) => {
 
 // POST
 const postXMLResponse = async (req, res) => {
-    const { name, xml } = req.params;
+    const { name } = req.params;
+    const { xml } = req.body;
 
     try {
-        const responseXml = await submitXMLTemplate(req, res, name, xml); // Call submitXMLTemplate
+        const responseXml = await submitXMLTemplate(req, res); // Call submitXMLTemplate
         console.log('XML response added successfully', responseXml);
         res.json({ response: 'XML response added successfully', data: responseXml });
     } catch (error) {
@@ -29,9 +30,10 @@ const postXMLResponse = async (req, res) => {
 };
 
 // Lincoln
-const submitXMLTemplate = async (req, res, name, xml) => {
+const submitXMLTemplate = async (req, res) => {
     console.log('submitXMLTemplate api', req.params, req.body);
-    console.log('submitXMLTemplate var', name, xml);
+    const { name } = req.params;
+    const { xml } = req.body;
     
     try {        
         const url = `${process.env.XML_REQUEST_URL}${name}`;
@@ -43,8 +45,9 @@ const submitXMLTemplate = async (req, res, name, xml) => {
             body: xml,
         });
         if (!response.ok) {
-            console.error('Error submitting XML template:', response.statusText);
-            throw new Error('Failed to submit XML template');
+            const errorText = await response.text(); // Get the error response body
+            console.error('API Error:', response.status, response.statusText, errorText); // Log detailed error
+            throw new Error(`Failed to submit XML template: ${response.status} ${response.statusText} ${errorText}`);
         }
 
         // Save the response using insertXMLResponse
