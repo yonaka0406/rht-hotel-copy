@@ -20,7 +20,7 @@ const postXMLResponse = async (req, res) => {
 
     try {
         const responseXml = await submitXMLTemplate(req, res, name, xml); // Call submitXMLTemplate
-        console.log('XML response added successfully');
+        console.log('XML response added successfully', responseXml);
         res.json({ response: 'XML response added successfully', data: responseXml });
     } catch (error) {
         console.error('Error getting xml template:', error);
@@ -42,6 +42,7 @@ const submitXMLTemplate = async (req, res, name, xml) => {
             body: xml,
         });
         if (!response.ok) {
+            console.error('Error submitting XML template:', response.statusText);
             throw new Error('Failed to submit XML template');
         }
 
