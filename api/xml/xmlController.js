@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { selectXMLTemplate, insertXMLResponse } = require('../xml/xmlModel');
 
 // GET
@@ -16,17 +17,45 @@ const getXMLTemplate = async (req, res) => {
 // POST
 const postXMLResponse = async (req, res) => {
     const { name, xml } = req.params;
-    
+
     try {
-        const response = await insertXMLResponse(req.requestId, name, xml);
-        res.json({response: 'XML response added successfully', data: response});
+        const responseXml = await submitXMLTemplate(req, res); // Call submitXMLTemplate
+        res.json({ response: 'XML response added successfully', data: responseXml });
     } catch (error) {
         console.error('Error getting xml template:', error);
         res.status(500).json({ error: error.message });
     }
 };
 
+// Lincoln
+const submitXMLTemplate = async (req, res) => {
+    console.log('submitXMLTemplate', req.params);
+    const { name, xml } = req.params;
+
+    try {        
+        const url = `${process.env.XML_REQUEST_URL}${name}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {                
+                'Content-Type': 'application/xml',
+            },
+            body: xml,
+        });
+        if (!response.ok) {
+            throw new Error('Failed to submit XML template');
+        }
+
+        // Save the response using insertXMLResponse
+        const responseXml = await response.text();
+        await insertXMLResponse(req.requestId, name, responseXml);
+        return responseXml;        
+    } catch (error) {    
+        console.error('Failed to submit XML template', error);
+    } 
+};
+
 module.exports = {
     getXMLTemplate,
-    postXMLResponse,    
+    postXMLResponse,
+    submitXMLTemplate,
 };
