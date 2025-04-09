@@ -90,14 +90,13 @@ const processXMLResponse = async (requestId, id) => {
     }
 };
 
-const selectXMLNetStockSearchService = async (requestId, params) => {
+const selectXMLTemplate = async (requestId, name) => {
     try {
         const pool = getPool(requestId);
-        const { extractionProcedure, searchFrom, searchTo } = params;
-
+        
         const result = await pool.query(
             "SELECT template FROM xml_templates WHERE name = $1",
-            ["NetStockSearchService"]
+            [name]
         );
 
         if (result.rows.length === 0) {
@@ -114,10 +113,7 @@ const selectXMLNetStockSearchService = async (requestId, params) => {
         // Replace placeholders
         xml = xml.replace("{{systemId}}", process.env.XML_SYSTEM_ID)
                  .replace("{{pmsUserId}}", process.env.XML_USER_ID)
-                 .replace("{{pmsPassword}}", process.env.XML_PASSWORD)
-                 .replace("{{extractionProcedure}}", extractionProcedure)
-                 .replace("{{searchDurationFrom}}", searchFrom)
-                 .replace("{{searchDurationTo}}", searchTo);
+                 .replace("{{pmsPassword}}", process.env.XML_PASSWORD)                 
 
         return xml;
     } catch (error) {
@@ -129,5 +125,5 @@ const selectXMLNetStockSearchService = async (requestId, params) => {
 module.exports = { 
     insertXMLResponse,
     processXMLResponse,
-    selectXMLNetStockSearchService,
+    selectXMLTemplate,
 };

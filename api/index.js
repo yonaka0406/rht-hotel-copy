@@ -110,6 +110,7 @@ const billingRoutes = require('./routes/billingRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
+const xmlRoutes = require('./xml/xmlRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -125,6 +126,7 @@ app.use('/api', billingRoutes);
 app.use('/api', settingsRoutes);
 app.use('/api', importRoutes);
 app.use('/api', logRoutes);
+app.use('/api', xmlRoutes);
 
 // Connect to PostgreSQL database
 const listenClient = new Pool({
