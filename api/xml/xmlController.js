@@ -19,7 +19,8 @@ const postXMLResponse = async (req, res) => {
     const { name, xml } = req.params;
 
     try {
-        const responseXml = await submitXMLTemplate(req, res); // Call submitXMLTemplate
+        const responseXml = await submitXMLTemplate(req, res, name, xml); // Call submitXMLTemplate
+        console.log('XML response added successfully');
         res.json({ response: 'XML response added successfully', data: responseXml });
     } catch (error) {
         console.error('Error getting xml template:', error);
@@ -28,10 +29,9 @@ const postXMLResponse = async (req, res) => {
 };
 
 // Lincoln
-const submitXMLTemplate = async (req, res) => {
+const submitXMLTemplate = async (req, res, name, xml) => {
     console.log('submitXMLTemplate', req.params);
-    const { name, xml } = req.params;
-
+    
     try {        
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -47,6 +47,8 @@ const submitXMLTemplate = async (req, res) => {
 
         // Save the response using insertXMLResponse
         const responseXml = await response.text();
+        console.log('Response XML:', responseXml);
+        console.log('Inserting XML response into database...');
         await insertXMLResponse(req.requestId, name, responseXml);
         return responseXml;        
     } catch (error) {    
