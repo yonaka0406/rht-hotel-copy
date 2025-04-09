@@ -81,11 +81,30 @@ export function useXMLStore() {
         } 
     };
 
+    const testEndpoint = async (url) => {        
+        apiError.value = null;
+        try {
+            const response = await fetch(url, {
+                method: 'HEAD', // HEAD requests are faster for checking reachability
+            });
+
+            if (!response.ok) {
+                return false; // API is not reachable
+            }
+            return true; // API is reachable
+        } catch (error) {
+            apiError.value = error.message;
+            console.error('API reachability check failed', error);
+            return false; // API is not reachable
+        }
+    };
+
     return {        
         template,
         apiError,
         fetchXMLTemplate,
         insertXMLResponse,
         submitXMLTemplate,
+        testEndpoint,
     };
 }
