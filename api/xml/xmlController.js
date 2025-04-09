@@ -1,5 +1,4 @@
 require("dotenv").config();
-const xml2js = require('xml2js');
 const { selectXMLTemplate, insertXMLResponse } = require('../xml/xmlModel');
 
 // GET
@@ -18,29 +17,14 @@ const getXMLTemplate = async (req, res) => {
 // POST
 const postXMLResponse = async (req, res) => {
     const { name } = req.params;
-    const xml = req.body;
+    const { xml } = req.body;
 
-    console.log('postXMLResponse', req.params, xml);
+    console.log('postXMLResponse', req.params, req.body);
 
     try {
-        const parser = new xml2js.Parser();
-        parser.parseString(xml, async (err, result) => {
-            if (err) {
-                console.error('Error parsing XML:', err);
-                return res.status(400).json({ error: 'Invalid XML' });
-            }
-            console.log('Parsed XML:', result); // Log the parsed XML
-
-            try {
-                const responseXml = await submitXMLTemplate(req, res, name, xml); // Call submitXMLTemplate
-                console.log('XML response added successfully', responseXml);
-                res.json({ response: 'XML response added successfully', data: responseXml });
-            } catch (error) {
-                console.error('Error in submitXMLTemplate:', error);
-                res.status(500).json({ error: error.message });
-            }
-
-        });        
+        const responseXml = await submitXMLTemplate(req, res); // Call submitXMLTemplate
+        console.log('XML response added successfully', responseXml);
+        res.json({ response: 'XML response added successfully', data: responseXml });
     } catch (error) {
         console.error('Error getting xml template:', error);
         res.status(500).json({ error: error.message });
@@ -48,8 +32,10 @@ const postXMLResponse = async (req, res) => {
 };
 
 // Lincoln
-const submitXMLTemplate = async (req, res, name, xml) => {    
-    console.log('submitXMLTemplate', name, xml);
+const submitXMLTemplate = async (req, res) => {
+    console.log('submitXMLTemplate', req.params, req.body);
+    const { name } = req.params;
+    const { xml } = req.body;
     
     try {        
         const url = `${process.env.XML_REQUEST_URL}${name}`;
