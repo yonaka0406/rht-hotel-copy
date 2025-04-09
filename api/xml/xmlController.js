@@ -30,7 +30,8 @@ const postXMLResponse = async (req, res) => {
 
 // Lincoln
 const submitXMLTemplate = async (req, res, name, xml) => {
-    console.log('submitXMLTemplate', req.params);
+    console.log('submitXMLTemplate api', req.params, req.body);
+    console.log('submitXMLTemplate var', name, xml);
     
     try {        
         const url = `${process.env.XML_REQUEST_URL}${name}`;
