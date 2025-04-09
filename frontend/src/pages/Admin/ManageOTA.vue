@@ -46,27 +46,6 @@
           </div>
         </template>
       </Card>
-
-      <Card class="mt-4">
-        <template #title>
-          エンドポイントテスト
-        </template>
-        <template #content>
-          <form id="testEndpointForm" @submit.prevent="submitTest">
-            <div class="grid grid-cols-6 gap-4 mt-6">              
-              <div class="p-field col-span-5">
-                <FloatLabel>
-                  <label for="endpoint">エンドポイント</label>
-                  <InputText id="endpoint" v-model="endpointURL" fluid />
-                </FloatLabel>
-              </div>
-              <div class="p-field">
-                <Button label="テスト" type="submit" />
-              </div>              
-            </div>
-          </form>
-        </template>
-      </Card>
     </Panel>
   </div>
 </template>
@@ -77,7 +56,7 @@
 
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
-  const { template, fetchXMLTemplate, submitXMLTemplate, testEndpoint } = useXMLStore();
+  const { template, fetchXMLTemplate, insertXMLResponse } = useXMLStore();
 
   // Primevue
   import { Panel, Card, FloatLabel, InputText, Button } from 'primevue';
@@ -102,14 +81,8 @@
     });
 
     console.log('Modified Template:', modifiedTemplate);
-    await submitXMLTemplate(templateName.value, modifiedTemplate);
+    await insertXMLResponse(templateName.value, modifiedTemplate);
 
-  };
-
-  // Test
-  const endpointURL = ref('');
-  const submitTest = async () => {    
-    await testEndpoint(endpointURL.value);
   };
 
   watch(template, (newTemplate) => {

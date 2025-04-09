@@ -9,7 +9,5 @@ router.get('/xml/template/:name', authMiddleware_manageDB, getXMLTemplate);
 // POST
 router.post('/xml/response/:name', authMiddleware_manageDB, postXMLResponse);
 
-// Lincoln
-router.post('/xml/ota/:name', submitXMLTemplate);
 
 module.exports = router;
