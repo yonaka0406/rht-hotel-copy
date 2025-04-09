@@ -121,9 +121,24 @@ const selectXMLTemplate = async (requestId, name) => {
         throw error; // Rethrow to be handled by the caller
     }
 };
+const selectXMLRecentResponses = async (requestId) => {
+    const pool = getPool(requestId);
+
+    try {
+        const result = await pool.query(
+            "SELECT * FROM xml_responses ORDER BY received_at DESC LIMIT 50"
+        );
+
+        return result.rows;
+        
+    } catch (error) {
+        
+    }
+}
 
 module.exports = { 
     insertXMLResponse,
     processXMLResponse,
     selectXMLTemplate,
+    selectXMLRecentResponses,
 };

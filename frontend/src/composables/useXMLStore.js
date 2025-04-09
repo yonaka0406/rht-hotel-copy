@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 
 const template = ref(null);
+const responses = ref(null);
 
 export function useXMLStore() {
         
@@ -25,6 +26,30 @@ export function useXMLStore() {
             
         } catch (error) {
             template.value = null;
+            console.error('Failed to fetch data', error);
+        }
+    };
+    const fetchXMLRecentResponses = async(name) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/xml/responses/recent`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,                    
+                },                
+            });
+
+            const data = await response.text();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            
+            responses.value = data;
+            
+        } catch (error) {
+            responses.value = null;
             console.error('Failed to fetch data', error);
         }
     };
@@ -61,7 +86,9 @@ export function useXMLStore() {
 
     return {        
         template,
+        responses,
         fetchXMLTemplate,
+        fetchXMLRecentResponses,
         insertXMLResponse,
     };
 }

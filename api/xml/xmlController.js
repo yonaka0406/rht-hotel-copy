@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, insertXMLResponse } = require('../xml/xmlModel');
+const { selectXMLTemplate, selectXMLRecentResponses, insertXMLResponse } = require('../xml/xmlModel');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -14,6 +14,15 @@ const getXMLTemplate = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+const getXMLRecentResponses = async (req, res) => {
+    try {
+        const responses = await selectXMLRecentResponses(req.requestId);
+        res.send(responses);
+    } catch (error) {
+        console.error('Error getting xml responses:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
 
 // POST
 const postXMLResponse = async (req, res) => {
@@ -46,7 +55,6 @@ const postXMLResponse = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
 // Lincoln
 const submitXMLTemplate = async (req, res, name, xml) => {
     console.log('submitXMLTemplate', name, xml);    
@@ -79,6 +87,7 @@ const submitXMLTemplate = async (req, res, name, xml) => {
 
 module.exports = {
     getXMLTemplate,
+    getXMLRecentResponses,
     postXMLResponse,
     submitXMLTemplate,
 };
