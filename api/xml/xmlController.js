@@ -61,7 +61,7 @@ const submitXMLTemplate = async (req, res, name, xml) => {
     
     try {        
         // Save the request in the database
-        await insertXMLRequest(name, xml);
+        await insertXMLRequest(req.requestId, name, xml);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
