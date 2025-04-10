@@ -15,7 +15,13 @@
                   <div class="p-field">
                     <FloatLabel>
                       <label for="templateName">テンプレート名</label>
-                      <InputText id="templateName" v-model="templateName" fluid />
+                      <Select id="templateName" v-model="templateName" 
+                      :options="sc_serviceLabels"
+                      optionLabel="label"
+                      optionValue="id"
+                        fluid 
+                      />
+                      <small class="p-error" v-if="templateName">{{ templateName }}</small>
                     </FloatLabel>
                   </div>
                   <div class="p-field">
@@ -53,31 +59,93 @@
         </AccordionPanel>
         <AccordionPanel value="1">
           <AccordionHeader>最新のサイトコントローラーの応答</AccordionHeader>
-          <AccordionContent>
+          <AccordionContent class="mt-4">
             <DataTable
               :value="responses"
               :paginator="true"
               :rows="15"
-              :rowsPerPageOptions="[15, 25, 50]"
-              :showGridlines="true"
+              :rowsPerPageOptions="[15, 25, 50]"              
             >              
               <Column field="received_at" header="受信日時">                
                 <template #body="slotProps">
                   {{ formatDateTime(slotProps.data.received_at) }}
+                  <Badge
+                    v-if="slotProps.data.status === '成功'"
+                    severity="success"
+                    class="ml-2"
+                    icon="pi pi-check"
+                  >
+                    {{ slotProps.data.status }}
+                  </Badge>
+                  <Badge
+                    v-else-if="slotProps.data.status === 'エラー'"
+                    severity="danger"
+                    class="ml-2"
+                    icon="pi pi-times"                    
+                  >
+                    {{ slotProps.data.status }}
+                  </Badge>
                 </template>
-              </Column>
-              <Column header="ステータス">
+              </Column>              
+              <Column field="name" header="リクエスト名">
                 <template #body="slotProps">
-                  {{ slotProps.data.status }}
+                  <p>{{ fetchServiceName(slotProps.data.name) }}</p>
+                  <p><small>{{ slotProps.data.name }}</small></p>
                 </template>
+              </Column>              
+              <Column header="表示">
+                  <template #body="slotProps">
+                      <Button
+                          icon="pi pi-eye"
+                          class="p-button-rounded p-button-text"
+                          @click="showResponseDetails(slotProps.data)"
+                      />
+                  </template>
               </Column>
-              <Column field="name" header="リクエスト名"></Column>              
-              <Column header="表示"></Column>
             </DataTable>
           </AccordionContent>
         </AccordionPanel>
       </Accordion>      
     </Panel>
+
+    <Dialog
+        v-model:visible="displayDialog"
+        :header="selectedResponse ? fetchServiceName(selectedResponse.name) : '応答詳細'"
+        :modal="true"
+        :style="{ width: '50vw' }"
+    >      
+      <div v-for="(field, index) in dialogContent" :key="index" class="p-field mt-6">
+        <FloatLabel>
+          <label :for="`field-${index}`">{{ field.label }}</label>
+          <div v-if="isObject(field.value)">
+            <Divider />
+            <div class="grid grid-cols-2 mt-6">
+              <div v-for="(value, key) in field.value" :key="key" class="grid grid-cols-2 mt-6">
+                  <FloatLabel>
+                    <label :for="`${field.label}-${key}`">{{ key }}</label>
+                    <InputText
+                      :id="`${field.label}-${key}`"
+                      v-model="field.value[key]"
+                      fluid
+                    />
+                    <span>object</span>
+                  </FloatLabel>              
+              </div>
+            </div>            
+          </div>
+          <InputText
+            v-else
+            :id="`field-${index}`"
+            v-model="field.value"
+            fluid
+          />
+          <span>Not object</span>
+        </FloatLabel>
+      </div>
+      <template #footer>
+        {{ formatDateTime(selectedResponse.received_at) }}
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -87,10 +155,10 @@
 
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
-  const { template, responses, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
+  const { template, responses, sc_serviceLabels, fetchServiceName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
   
   // Primevue
-  import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Button, DataTable, Column } from 'primevue';
+  import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Textarea, Select, Button, DataTable, Column, Badge, Dialog, Divider } from 'primevue';
 
   // Helper
   const formatDateTime = (dateString) => {
@@ -104,14 +172,13 @@
           second: '2-digit'
       });
   };
-      
+  const isObject = (value) => {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  };
+  
+  // Template
   const templateName = ref('');
-  const editableFields = ref([]);
-  const editedTemplate = reactive({
-    extractionProcedure: '',
-    searchDurationFrom: '',
-    searchDurationTo: '',
-  });
+  const editableFields = ref([]);  
   const fetchTemplate = async () => {
     await fetchXMLTemplate(templateName.value);
   };
@@ -128,9 +195,89 @@
     await insertXMLResponse(templateName.value, modifiedTemplate);
   };
 
+  // Dialog
+  const displayDialog = ref(false);
+  const selectedResponse = ref(null);
+  const dialogContent = ref('');
+  const showResponseDetails = (response) => {
+    selectedResponse.value = response;
+    getDialogContent(selectedResponse.value.response);
+    displayDialog.value = true;
+  };
+  const getDialogContent = (response) => {
+      if (!response) dialogContent.value = '';
+      
+      // Check if the response is an error or success
+      if (response.commonResponse?.isSuccess === 'true') {
+        const successData = { ...response };
+        delete successData.commonResponse;
+        dialogContent.value = getSuccessContent(successData);        
+      } else {
+        dialogContent.value = getErrorContent(response.commonResponse);
+      }    
+      
+      console.log('getDialogContent result:', dialogContent.value);
+  };
+  const getErrorContent = (response) => {    
+      return [
+        { label: 'エラーコード', value: response.failureReason },
+        { label: 'エラーメッセージ', value: response.errorDescription }
+      ];
+  };
+  const getSuccessContent = (response) => {
+    if(!response){
+      return [{label: 'Success', value: 'Operation successful, but no data to display.'}]
+    }
+    const resultArray = [];
+
+    for (const key in response) {
+      if (Array.isArray(response[key])) {
+        if (response[key].length > 0 && Array.isArray(response[key][0])) {
+          // Handle array of arrays
+          response[key].forEach((innerArray, index) => {
+            innerArray.forEach((value, innerIndex) => {
+              if (typeof value === 'object' && value !== null) {
+                resultArray.push({
+                  label: `${key} - Item ${index + 1} - Field ${innerIndex + 1}`,
+                  value: value,
+                });
+              } else {
+                resultArray.push({
+                  label: `${key} - Item ${index + 1} - Field ${innerIndex + 1}`,
+                  value: String(value),
+                });
+              }
+            });
+          });
+        } else {
+          // Handle single array
+          response[key].forEach((value, index) => {
+            if (typeof value === 'object' && value !== null) {
+              resultArray.push({
+                label: `${key} - Item ${index + 1}`,
+                value: value,
+              });
+            } else {
+              resultArray.push({
+                label: `${key} - Item ${index + 1}`,
+                value: String(value),
+              });
+            }
+          });
+        }
+      }
+    }
+
+    if (resultArray.length === 0) {
+      return [{ label: 'Success', value: 'Operation successful, but no array data to display.' }];
+    }
+
+    return resultArray;
+  };
+
+
   onMounted(async () => {
-    await fetchXMLRecentResponses();    
-    console.log('fetchXMLRecentResponses', responses.value);
+    await fetchXMLRecentResponses();
   });
 
   watch(template, (newTemplate) => {
