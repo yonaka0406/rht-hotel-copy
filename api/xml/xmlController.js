@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, selectXMLRecentResponses, insertXMLResponse } = require('../xml/xmlModel');
+const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse } = require('../xml/xmlModel');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -60,6 +60,9 @@ const submitXMLTemplate = async (req, res, name, xml) => {
     console.log('submitXMLTemplate', name, xml);    
     
     try {        
+        // Save the request in the database
+        await insertXMLRequest(name, xml);
+
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
             method: 'POST',
@@ -80,7 +83,7 @@ const submitXMLTemplate = async (req, res, name, xml) => {
         console.log('Inserting XML response into database...');
         await insertXMLResponse(req.requestId, name, responseXml);
         return responseXml;        
-    } catch (error) {    
+    } catch (error) {
         console.error('Failed to submit XML template', error);
     } 
 };

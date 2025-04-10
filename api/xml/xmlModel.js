@@ -9,6 +9,20 @@ XML_USER_ID=P2823341
 XML_PASSWORD=g?Z+yy5U5!LR
 XML_REQUEST_URL=https://www.tl-lincoln.net/pmsservice/V1/
 */
+const insertXMLRequest = async (requestId, name, xml) => {
+    try {
+        const pool = getPool(requestId);
+        const result = await pool.query(
+            "INSERT INTO xml_requests(name, request) VALUES($1, $2) RETURNING *",
+            [name, xml]
+        );
+
+        return result.rows;
+    } catch (error) {
+        console.error("Error adding XML request:", error.message);
+        throw error;
+    }
+};
 const insertXMLResponse = async (requestId, name, xml) => {
     try {
         const pool = getPool(requestId);
@@ -23,6 +37,7 @@ const insertXMLResponse = async (requestId, name, xml) => {
         throw error;
     }
 };
+
 
 const processXMLResponse = async (requestId, id) => {
     try {
@@ -159,6 +174,7 @@ const selectXMLRecentResponses = async (requestId) => {
 };
 
 module.exports = { 
+    insertXMLRequest,
     insertXMLResponse,
     processXMLResponse,
     selectXMLTemplate,

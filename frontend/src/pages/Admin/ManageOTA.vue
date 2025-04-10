@@ -37,10 +37,10 @@
               </template>
               <template #content>
                 <div v-if="template">            
-                  <div class="grid grid-cols-4 gap-4 mt-6">
-                    <div v-for="(field, index) in editableFields" :key="index" class="p-field">
+                  <div class="grid grid-cols-4 gap-4">
+                    <div v-for="(field, index) in editableFields" :key="index" class="p-field mt-4">
                       <FloatLabel>
-                        <label :for="`field-${index}`">{{ field.label }}</label>
+                        <label :for="`field-${index}`">{{ fetchFieldName(field.label) }}</label>
                         <InputText :id="`field-${index}`" v-model="field.value" fluid />
                       </FloatLabel>
                     </div>
@@ -114,34 +114,9 @@
         :modal="true"
         :style="{ width: '50vw' }"
     >      
-      <div v-for="(field, index) in dialogContent" :key="index" class="p-field mt-6">
-        <FloatLabel>
-          <label :for="`field-${index}`">{{ field.label }}</label>
-          <div v-if="isObject(field.value)">
-            <Divider />
-            <div class="grid grid-cols-2 mt-6">
-              <div v-for="(value, key) in field.value" :key="key" class="grid grid-cols-2 mt-6">
-                  <FloatLabel>
-                    <label :for="`${field.label}-${key}`">{{ key }}</label>
-                    <InputText
-                      :id="`${field.label}-${key}`"
-                      v-model="field.value[key]"
-                      fluid
-                    />
-                    <span>object</span>
-                  </FloatLabel>              
-              </div>
-            </div>            
-          </div>
-          <InputText
-            v-else
-            :id="`field-${index}`"
-            v-model="field.value"
-            fluid
-          />
-          <span>Not object</span>
-        </FloatLabel>
-      </div>
+      <pre>
+        {{ dialogContent }}
+      </pre>
       <template #footer>
         {{ formatDateTime(selectedResponse.received_at) }}
       </template>
@@ -155,7 +130,7 @@
 
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
-  const { template, responses, sc_serviceLabels, fetchServiceName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
+  const { template, responses, sc_serviceLabels, sc_fieldLabels, fetchServiceName, fetchFieldName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
   
   // Primevue
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Textarea, Select, Button, DataTable, Column, Badge, Dialog, Divider } from 'primevue';
@@ -199,6 +174,28 @@
   const displayDialog = ref(false);
   const selectedResponse = ref(null);
   const dialogContent = ref('');
+  const flattenObject = (obj, labelPrefix) => {
+  const result = [];
+  const stack = [{ obj, prefix: labelPrefix }];
+
+  while (stack.length > 0) {
+      const { obj: currentObj, prefix: currentPrefix } = stack.pop();
+
+      for (const key in currentObj) {
+        if (isObject(currentObj[key])) {
+          stack.push({ obj: currentObj[key], prefix: `${currentPrefix}-${key}` });
+        } else {
+          result.push({
+            label: currentPrefix,
+            key,
+            value: currentObj[key],
+          });
+        }
+      }
+    }
+
+    return result;
+  };
   const showResponseDetails = (response) => {
     selectedResponse.value = response;
     getDialogContent(selectedResponse.value.response);
@@ -218,63 +215,37 @@
       
       console.log('getDialogContent result:', dialogContent.value);
   };
-  const getErrorContent = (response) => {    
-      return [
-        { label: 'エラーコード', value: response.failureReason },
-        { label: 'エラーメッセージ', value: response.errorDescription }
-      ];
+  const getErrorContent = (response) => {
+    const translatedResponse = {};
+    for (const key in response) {
+      translatedResponse[fetchFieldName(key)] = response[key];
+    }
+    return translatedResponse;
   };
   const getSuccessContent = (response) => {
-    if(!response){
-      return [{label: 'Success', value: 'Operation successful, but no data to display.'}]
+  if (!response) {
+    return [{ label: 'Success', value: 'Operation successful, but no data to display.' }];
+  }
+  const translatedResponse = {};
+  for (const key in response) {
+    translatedResponse[fetchFieldName(key)] = translateValue(response[key]);
+  }
+  return translatedResponse;
+};
+
+const translateValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(item => translateValue(item));
+  }
+  if (typeof value === 'object' && value !== null) {
+    const translatedObj = {};
+    for (const key in value) {
+      translatedObj[fetchFieldName(key)] = translateValue(value[key]);
     }
-    const resultArray = [];
-
-    for (const key in response) {
-      if (Array.isArray(response[key])) {
-        if (response[key].length > 0 && Array.isArray(response[key][0])) {
-          // Handle array of arrays
-          response[key].forEach((innerArray, index) => {
-            innerArray.forEach((value, innerIndex) => {
-              if (typeof value === 'object' && value !== null) {
-                resultArray.push({
-                  label: `${key} - Item ${index + 1} - Field ${innerIndex + 1}`,
-                  value: value,
-                });
-              } else {
-                resultArray.push({
-                  label: `${key} - Item ${index + 1} - Field ${innerIndex + 1}`,
-                  value: String(value),
-                });
-              }
-            });
-          });
-        } else {
-          // Handle single array
-          response[key].forEach((value, index) => {
-            if (typeof value === 'object' && value !== null) {
-              resultArray.push({
-                label: `${key} - Item ${index + 1}`,
-                value: value,
-              });
-            } else {
-              resultArray.push({
-                label: `${key} - Item ${index + 1}`,
-                value: String(value),
-              });
-            }
-          });
-        }
-      }
-    }
-
-    if (resultArray.length === 0) {
-      return [{ label: 'Success', value: 'Operation successful, but no array data to display.' }];
-    }
-
-    return resultArray;
-  };
-
+    return translatedObj;
+  }
+  return value;
+};
 
   onMounted(async () => {
     await fetchXMLRecentResponses();

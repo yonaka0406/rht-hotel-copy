@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 const template = ref(null);
 const responses = ref([]);
 
-export const sc_serviceLabels = ref([
+const sc_serviceLabels = ref([
     { id: "NetRoomTypeMasterSearchService", label: "部屋タイプマスタ検索(ネット販売)" },
     { id: "NetStockSearchService", label: "在庫状況照会(ネット販売)" },
     { id: "NetStockAdjustmentService", label: "在庫調整(ネット販売)" },
@@ -28,11 +28,51 @@ export const sc_serviceLabels = ref([
     { id: "OutputCompleteService", label: "予約出力_完了反映" }
 ]);
 
+const sc_fieldLabels = ref([
+    { id: "agtCode", label: "販売先コード" },
+    { id: "adjustmentDate", label: "調整日付" },
+    { id: "adjustmentDate1", label: "調整日付" },
+    { id: "adjustmentProcedureCode", label: "調整方法" },
+    { id: "adjustmentResult", label: "調整結果" },    
+    { id: "errorDescription", label: "エラー内容" },
+    { id: "extractionProcedureCode", label: "抽出方法" },
+    { id: "failureReason", label: "失敗理由" },
+    { id: "isStockAdjustable", label: "在庫調整操作可否" },
+    { id: "isSuccess", label: "成功状態" },
+    { id: "lincolnUseFlag", label: "リンカーン上で扱うフラグ" },
+    { id: "netAgtRmTypeCode", label: "ネット販売先室タイプコード" },
+    { id: "netAgtRmTypeDailyStockList", label: "ネット販売先室タイプ日別在庫" },    
+    { id: "netAgtRmTypeName", label: "ネット販売先室タイプ名" },
+    { id: "netAgtRmTypeList", label: "ネット販売先室タイプ" },
+    { id: "netRmTypeGroupAndDailyStockStatusList", label: "ネット室タイプグループと在庫状況照会" },    
+    { id: "netRmTypeGroupCode", label: "ネット室タイプグループコード" },
+    { id: "netRmTypeGroupName", label: "ネット室タイプグループ名" },
+    { id: "netRmTypeGroupList", label: "ネット室タイプグループ" },
+    { id: "PMSOutputRmTypeCode", label: "PMS用出力名" },
+    { id: "remainingCount", label: "残室数" },
+    { id: "requestId", label: "要求ID" },
+    { id: "rmTypeCode", label: "室タイプコード" },
+    { id: "rmTypeName", label: "室タイプ名" },
+    { id: "rmTypeList", label: "室タイプ名" },
+    { id: "saleDate", label: "日付" },
+    { id: "salesCount", label: "販売数" },
+    { id: "salesStatus", label: "販売状態" },
+    { id: "searchDurationFrom", label: "照会期間FROM" },
+    { id: "searchDurationTo", label: "照会期間TO" },
+    { id: "tejimaiDayCount", label: "手仕舞い日数" },
+    { id: "tejimaiTime", label: "手仕舞い時刻" },
+    { id: "updateDate", label: "更新日時" },
+  ]);
+
 export function useXMLStore() {
         
     const fetchServiceName = (name) => {
         const service = sc_serviceLabels.value.find(item => item.id === name);
-        return service ? service.label : null;
+        return service ? service.label : name;
+    };
+    const fetchFieldName = (name) => {
+        const service = sc_fieldLabels.value.find(item => item.id === name);
+        return service ? service.label : name;
     };
 
     const fetchXMLTemplate = async(name) => {
@@ -118,7 +158,9 @@ export function useXMLStore() {
         template,
         responses,
         sc_serviceLabels,
+        sc_fieldLabels,
         fetchServiceName,
+        fetchFieldName,
         fetchXMLTemplate,
         fetchXMLRecentResponses,
         insertXMLResponse,        

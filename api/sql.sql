@@ -822,17 +822,17 @@ INSERT INTO xml_templates (name, template) VALUES
             </commonRequest>
             <adjustmentTarget>
                <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
-               <adjustmentDate>{{adjustmentDate1}}</adjustmentDate>
-               <remainingCount>{{remainingCount1}}</remainingCount>
-               <salesStatus>{{salesStatus1}}</salesStatus>
-               <PMSOutputRmTypeCode>{{PMSOutputRmTypeCode1}}</PMSOutputRmTypeCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <remainingCount>{{remainingCount}}</remainingCount>
+               <salesStatus>{{salesStatus}}</salesStatus>               
             </adjustmentTarget>
             <adjustmentTarget>
-               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
                <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
                <remainingCount>{{remainingCount2}}</remainingCount>
-               <salesStatus>{{salesStatus2}}</salesStatus>
-               <PMSOutputRmTypeCode>{{PMSOutputRmTypeCode2}}</PMSOutputRmTypeCode>
+               <salesStatus>{{salesStatus2}}</salesStatus>               
             </adjustmentTarget>
             <requestId>{{requestId}}</requestId>
          </arg0>
@@ -990,6 +990,12 @@ INSERT INTO xml_templates (name, template) VALUES
    </soapenv:Body>
 </soapenv:Envelope>');
 
+CREATE TABLE xml_requests (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    request XML NOT NULL
+);
 CREATE TABLE xml_responses (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
