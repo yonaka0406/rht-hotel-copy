@@ -201,10 +201,57 @@ const selectXMLRecentResponses = async (requestId) => {
     }
 };
 
-module.exports = { 
+const selectTLRoomMaster = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT * 
+        FROM sc_tl_rooms 
+        WHERE hotel_id = $1
+    `;
+    const values = [hotel_id];
+
+    try {
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error finding master by hotel_id:', err);
+        throw new Error('Database error');
+    }
+};
+const insertTLRoomMaster = async (requestId, data) => {
+    const pool = getPool(requestId);
+    try {        
+        const result = await pool.query(
+            `INSERT INTO sc_tl_rooms(hotel_id, room_type_id, rmTypeCode, rmTypeName, netRmTypeGroupCode, netRmTypeGroupName, agtCode, netAgtRmTypeCode, netAgtRmTypeName, isStockAdjustable, lincolnUseFlag) 
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [
+                data.hotel_id,
+                data.room_type_id,
+                data.rmTypeCode,
+                data.rmTypeName,
+                data.netRmTypeGroupCode,
+                data.netRmTypeGroupName,
+                data.agtCode,
+                data.netAgtRmTypeCode,
+                data.netAgtRmTypeName,
+                data.isStockAdjustable,
+                data.lincolnUseFlag,
+            ]
+        );
+
+        return result.rows;
+    } catch (error) {
+        console.error("Error adding XML request:", error.message);
+        throw error;
+    }
+};
+
+module.exports = {
     insertXMLRequest,
     insertXMLResponse,
     processXMLResponse,
     selectXMLTemplate,
     selectXMLRecentResponses,
+    selectTLRoomMaster,
+    insertTLRoomMaster,
 };

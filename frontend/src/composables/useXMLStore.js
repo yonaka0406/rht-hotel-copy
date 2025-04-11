@@ -114,6 +114,8 @@ const sc_fieldLabels = ref([
     { id: "updateDate", label: "更新日時" },
 ]);
 
+const tlRoomMaster = ref(null);
+
 export function useXMLStore() {
         
     const fetchServiceName = (name) => {
@@ -124,6 +126,7 @@ export function useXMLStore() {
         const service = sc_fieldLabels.value.find(item => item.id === name);
         return service ? service.label : name;
     };
+    // XML
     const fetchXMLTemplate = async(hotel_id, name) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -148,7 +151,7 @@ export function useXMLStore() {
             console.error('Failed to fetch data', error);
         }
     };
-    const fetchXMLRecentResponses = async(name) => {
+    const fetchXMLRecentResponses = async() => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/xml/responses/recent`;
@@ -172,7 +175,6 @@ export function useXMLStore() {
             console.error('Failed to fetch data', error);
         }
     };
-
     const insertXMLResponse = async(hotel_id, name, xml) => {
         console.log('insertXMLResponse', name, xml);
         try {
@@ -203,15 +205,43 @@ export function useXMLStore() {
         }
     };
 
+    // Site Controller
+    const fetchTLRoomMaster = async(hotel_id, name) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/sc/tl/${hotel_id}/master/room`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,                    
+                },                
+            });
+
+            const data = await response.text();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            
+            tlRoomMaster.value = data;
+            
+        } catch (error) {
+            tlRoomMaster.value = null;
+            console.error('Failed to fetch data', error);
+        }
+    };
+
     return {        
         template,
         responses,
         sc_serviceLabels,
         sc_fieldLabels,
+        tlRoomMaster,
         fetchServiceName,
         fetchFieldName,
         fetchXMLTemplate,
         fetchXMLRecentResponses,
-        insertXMLResponse,        
+        insertXMLResponse,      
+        fetchTLRoomMaster,  
     };
 }

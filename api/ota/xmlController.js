@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse } = require('../ota/xmlModel');
+const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster } = require('../ota/xmlModel');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -56,6 +56,7 @@ const postXMLResponse = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
 // Lincoln
 const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
     console.log('submitXMLTemplate', name, xml);    
@@ -88,10 +89,33 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         console.error('Failed to submit XML template', error);
     } 
 };
+const getTLRoomMaster = async (req, res) => {
+    const hotel_id = req.params.hotel_id;
 
+    try {
+        const master = await selectTLRoomMaster(req.requestId, hotel_id);
+        res.send(master);
+    } catch (error) {
+        console.error('Error getting TL data:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+const createTLRoomMaster = async (req, res) => {    
+    const data = req.body;
+    
+    try {
+        const master = await insertTLRoomMaster(req.requestId, data);
+        res.json(master);
+    } catch (err) {
+        console.error('Error creating master:', err);
+        res.status(500).json({ error: 'Failed to create master' });
+    }
+};
 module.exports = {
     getXMLTemplate,
     getXMLRecentResponses,
     postXMLResponse,
     submitXMLTemplate,
+    getTLRoomMaster,
+    createTLRoomMaster,
 };

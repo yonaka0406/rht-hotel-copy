@@ -5,7 +5,25 @@
         <AccordionPanel value="0">
           <AccordionHeader>サイトコントローラー</AccordionHeader>
           <AccordionContent>
-            <div class="grid grid-cols-4 gap-4 mt-4">
+            <div class="flex items-center grid grid-cols-4 mt-4">
+              <div class="p-field">
+                ホテルを選択してください。
+              </div>
+              <div class="p-field">
+                <Select
+                  name="hotel"
+                  v-model="selectedHotelId"
+                  :options="hotels"
+                  optionLabel="name" 
+                  optionValue="id"
+                  :virtualScrollerOptions="{ itemSize: 38 }"
+                  class="w-48"
+                  placeholder="ホテル選択"
+                  filter
+                />
+              </div>
+            </div>
+            <div v-if="hasSiteController" class="grid grid-cols-4 gap-4 mt-4">
               <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaRoomMaster')">ネット室マスター</Button>
             </div>
           </AccordionContent>
@@ -97,6 +115,7 @@
                     <Button label="テンプレート取得" @click="fetchTemplate" />
                   </div>
                   <div class="p-field"></div>
+                  <div v-if="!hasSiteController" class="col-span-4"><span class="text-red-500">選択中ホテルはサイトコントローラー連携情報がありません。</span></div>
                 </div>
               </template>
             </Card>
@@ -133,7 +152,7 @@
           <Button severity="secondary" @click="openSiteControllerDetail()">戻る</Button>  
         </div>
 
-        <component :is="activeComponent" />
+        <component :is="activeComponent" :hotel_id="selectedHotelId" />
 
       </div>
     </Panel>
@@ -162,7 +181,7 @@
   import { useXMLStore } from '@/composables/useXMLStore';
   const { template, responses, sc_serviceLabels, fetchServiceName, fetchFieldName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { hotels, fetchHotels } = useHotelStore();
+  const { hotels, fetchHotels, fetchHotelSiteController } = useHotelStore();
   
   // Primevue
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
@@ -182,6 +201,7 @@
   
   // Template
   const selectedHotelId = ref(null);
+  const hasSiteController = ref(false);
   const templateName = ref('');
   const editableFields = ref([]);  
   const fetchTemplate = async () => {
@@ -288,6 +308,14 @@
     } else {
       editableFields.value = [];
     }
+  });
+
+  watch(selectedHotelId, async (newHotelId) => {
+    if (!newHotelId) return
+
+    const result = await fetchHotelSiteController(newHotelId)
+
+    hasSiteController.value = result && result.length > 0;    
   });
       
 </script>
