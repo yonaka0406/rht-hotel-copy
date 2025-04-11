@@ -11,7 +11,7 @@
             <Button 
               icon="pi pi-pencil" 
               class="p-button-text p-button-sm" 
-              @click="editHotel(slotProps.data)"
+              @click="selectHotelData(slotProps.data)"
               v-tooltip="'ホテル編集'"
             />
             <Button 
@@ -71,18 +71,59 @@
           <div class="flex flex-col">
             <label for="facility_type" class="font-medium mb-2 block">施設区分</label>
             <InputText id="facility_type" v-model="selectedHotel.facility_type" disabled />              
-          </div>          
+          </div>
+          <div class="flex flex-col">
+            <label for="open_date" class="font-medium mb-2 block">オープン日</label>
+            <DatePicker id="open_date" v-model="selectedHotel.open_date" dateFormat="yy-mm-dd" disabled  />              
+          </div>               
         </div>
       </template>
     </Card>
     <Divider />
     <Card>
       <template #content>
-        <Datatable
-        >
-          <Column>
+        <h2 class="text-xl font-bold mb-2">サイトコントローラー連携情報</h2>
+        
+        <div class="grid grid-cols-7 gap-2 mb-4">
+          <div class="col-span-2 mt-6">
+            <FloatLabel>
+              <InputText v-model="siteControllerNewEntry.name" fluid disabled />
+              <label>サイトコントローラー名</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-2 mt-6">            
+            <FloatLabel>
+              <InputText v-model="siteControllerNewEntry.user_id" fluid />
+              <label>ユーザー</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-2 mt-6">            
+            <FloatLabel>
+              <InputText v-model="siteControllerNewEntry.password" fluid />
+              <label>パスワード</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-1 flex justify-center items-center mt-6">
+            <Button @click="siteControllerAddEntry">追加</Button>            
+          </div>
+        </div>
+        
+        <DataTable :value="siteController" class="p-datatable-sm">
+          <Column field="name" header="サイトコントローラー名" />
+          <Column field="user_id" header="ユーザー" />
+          <Column field="password" header="パスワード" />
+          <Column header="操作">
+            <template #body="slotProps">
+              <Button 
+                @click="siteControllerDeleteEntry(slotProps.index)" 
+                severity="danger" 
+                size="sm"
+                icon="pi pi-trash" 
+                outlined
+              />
+            </template>
           </Column>
-        </Datatable>
+        </DataTable>
       </template>
     </Card>
     <template #footer>
@@ -291,20 +332,14 @@
 
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { hotels, fetchHotels } = useHotelStore();
+  const { hotels, fetchHotels, fetchHotelSiteController, editHotel, editHotelSiteController } = useHotelStore();
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Panel, Dialog, Card, DataTable, Column, Textarea, InputText, InputNumber, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider} from 'primevue';
+  import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider} from 'primevue';
     
   const authToken = localStorage.getItem('authToken');
-
-  // Helper
-  const formatCurrency = (value) => {
-    if (value == null) return '';
-    return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
-  }
 
   // Functions
   function onCellEditComplete(event) {
@@ -317,23 +352,61 @@
   };
 
   // Hotels  
-  const dialogVisible = ref(false);  
-  const editHotel = (hotel) => {
+  const siteController = ref(null);
+  const siteControllerNewEntry = ref({
+    hotel_id: '',
+    name: 'TL-リンカーン',
+    user_id: '',
+    password: ''
+  })
+  const dialogVisible = ref(false); 
+  const siteControllerReset = () => {
+    siteController.value = [{
+      hotel_id: null,
+      name: null,
+      user_id: null,
+      password:  null,
+    }]
+  };
+  const siteControllerAddEntry = () => {
+    if (siteControllerNewEntry.value.name && siteControllerNewEntry.value.user_id && siteControllerNewEntry.value.password) {
+      siteController.value.push({ ...siteControllerNewEntry.value })
+      siteControllerNewEntry.value.name = 'TL-リンカーン';
+      siteControllerNewEntry.value.user_id = '';
+      siteControllerNewEntry.value.password = '';
+    }
+  };
+  const siteControllerDeleteEntry = (index) => {
+    siteController.value.splice(index, 1)
+  }
+  const selectHotelData = async (hotel) => {    
     selectedHotel.value = { ...hotel };
     selectedHotel.value.facility_type = selectedHotel.value.facility_type === 'New' ? '新築' : '中古';
+    selectedHotel.value.open_date = new Date(selectedHotel.value.open_date);
+
+    siteControllerReset();
+    siteController.value = await fetchHotelSiteController(selectedHotel.value.id);
+    siteControllerNewEntry.value.hotel_id = selectedHotel.value.id;
+
     dialogVisible.value = true;
   };
   const saveHotel = async () => {
+    const names = siteController.value.map(item => item.name)
+    const hasDuplicate = names.length !== new Set(names).size
+
+    if (hasDuplicate) {
+      toast.add({ 
+        severity: 'error', 
+        summary: 'エラー', 
+        detail: 'サイトコントローラー二重登録はできません。', 
+        life: 3000 
+      })
+      return
+    }
+
     try {
-      const response = await fetch(`/api/hotel/${selectedHotel.value.id}`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(selectedHotel.value),
-      });
-      if (!response.ok) throw new Error('Failed to save hotel');
+      await editHotel(selectedHotel.value.id, selectedHotel.value);
+      await editHotelSiteController(selectedHotel.value.id, siteController.value);
       await fetchHotels();
       dialogVisible.value = false;
       toast.add({ severity: 'success', summary: 'Success', detail: 'ホテル更新されました。', life: 3000 });
@@ -651,7 +724,7 @@
         toast.add({ 
           severity: 'success', 
           summary: 'Success', 
-          detail: '部屋タイプ作成されました。', 
+          detail: '部屋作成されました。', 
           life: 3000 
         });
         roomDialog.value = false;
@@ -659,7 +732,7 @@
         roomsDialogVisible.value = true;            
       } else {
         console.error(`Failed to create room ${newRoomType.name}`);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room type', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room', life: 3000 });
       }
     } catch (error) {
       console.error('Error creating room:', error);

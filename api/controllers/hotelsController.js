@@ -1,5 +1,5 @@
 const { getPool } = require('../config/database');
-const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
+const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
@@ -190,16 +190,42 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
       res.status(500).json({ error: error.message });
     }
   };
+  const fetchHotelSiteController = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const hotel = await getHotelSiteController(req.requestId, id);
+      res.json(hotel);
+    } catch (error) {
+      console.error('Error getting hotels:', error);
+      res.status(500).json({ error: error.message });
+    }
+  };
 
 
 // PUT
   const editHotel = async (req, res) => {
     const { id } = req.params;
-    const { formal_name, name, email, phone_number, latitude, longitude } = req.body;
+    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude } = req.body;
     const updated_by = req.user.id;
 
     try {
-      const updatedHotel = await updateHotel(req.requestId, id, formal_name, name, email, phone_number, latitude, longitude, updated_by);
+      const updatedHotel = await updateHotel(req.requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, updated_by);
+      if (!updatedHotel) {
+        return res.status(404).json({ message: 'Hotel not found' });
+      }
+      res.status(200).json(updatedHotel);
+    } catch (error) {
+      console.error('Error updating hotel:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  };
+  const editHotelSiteController = async (req, res) => {
+    const { id } = req.params;
+    const data = req.body;    
+
+    try {
+      const updatedHotel = await updateHotelSiteController(req.requestId, id, data);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }
@@ -273,4 +299,18 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
     }
   };
 
-module.exports = { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editRoomType, editRoom, editHotelCalendar, getHotelRooms, getBlockedRooms, editBlockedRooms };
+module.exports = { 
+  hotels, 
+  roomTypeCreate, 
+  roomCreate, 
+  getHotels, 
+  editHotel, 
+  editHotelSiteController,
+  editRoomType, 
+  editRoom, 
+  editHotelCalendar, 
+  getHotelRooms, 
+  getBlockedRooms, 
+  fetchHotelSiteController, 
+  editBlockedRooms 
+};

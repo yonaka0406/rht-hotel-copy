@@ -12,7 +12,7 @@ export function useHotelStore() {
         selectedHotelId.value = id;
     };
 
-    // Fetch the list of hotels
+    // Hotel
     const fetchHotels = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -37,8 +37,6 @@ export function useHotelStore() {
             console.error('Failed to fetch hotels', error);
         }
     };
-    
-    // Fetch data for the selected hotel
     const fetchHotel = async () => {
         
         if (hotels.value.length > 0 && !selectedHotelId.value) {
@@ -68,7 +66,66 @@ export function useHotelStore() {
             console.error('Failed to fetch hotel rooms', error);
         }
     };
+    const fetchHotelSiteController = async (hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-ota/${hotel_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            const result = await response.json();
 
+            return result;
+        } catch (error) {
+            console.error('Failed to fetch hotel site controller info', error);
+        }
+    };
+    const editHotel = async (hotel_id, data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel/${hotel_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error('Failed to save hotel');
+
+            const result = await response.json();
+            return result;
+            
+        } catch (error) {
+            console.error('Failed to edit hotel', error);
+        }
+    };
+    const editHotelSiteController = async (hotel_id, data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-ota/${hotel_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error('Failed to save hotel site controller');
+
+            const result = await response.json();
+            return result;
+            
+        } catch (error) {
+            console.error('Failed to edit hotel', error);
+        }
+    };
+
+    // Room
     const fetchBlockedRooms = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -87,8 +144,9 @@ export function useHotelStore() {
         } catch (error) {
             console.error('Failed to fetch hotels info', error);
         }
-    };    
+    };
 
+    // Calendar
     const applyCalendarSettings = async (hotelId, startDate, endDate, roomIds, comment) => {
         const authToken = localStorage.getItem('authToken');
 
@@ -148,6 +206,9 @@ export function useHotelStore() {
         setHotelId,
         fetchHotels,
         fetchHotel,
+        fetchHotelSiteController,
+        editHotel,
+        editHotelSiteController,
         fetchBlockedRooms,
         applyCalendarSettings,
         removeCalendarSettings,
