@@ -52,6 +52,8 @@ const { getAllHotels, findHotelById, updateHotel, updateRoomType, updateRoom, up
         await createPartition('reservation_rates');        
         await createPartition('plans_hotel');
         await createPartition('addons_hotel');
+        await createPartition('xml_requests');
+        await createPartition('xml_responses');
       };
 
       await createPartitionsSequentially();

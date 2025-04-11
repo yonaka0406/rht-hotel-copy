@@ -48,7 +48,7 @@
                   <div class="mt-4 mb-4">
                     <Button label="リクエスト送信" @click="submitTemplate" />
                   </div>
-                  <pre class="xml-display">{{ template }}</pre>
+                  <!--<pre class="xml-display">{{ template }}</pre>-->
                 </div>
                 <div v-else>
                   <p>テンプレート無し</p>
@@ -168,6 +168,7 @@
 
     console.log('Modified Template:', modifiedTemplate);
     await insertXMLResponse(templateName.value, modifiedTemplate);
+    await fetchXMLRecentResponses();
   };
 
   // Dialog

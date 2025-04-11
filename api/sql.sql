@@ -595,8 +595,21 @@ CREATE TABLE parking_spots (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+
+-- OTA / Site Controller
+
+CREATE TABLE sc_user_info (
+    hotel_id INT NOT NULL REFERENCES hotels(id),
+    name TEXT NOT NULL,
+    system_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    password TEXT NOT NULL,
+    request_url TEXT NOT NULL,
+    PRIMARY KEY (hotel_id, name)
+);
+
 CREATE TABLE xml_templates (
-    id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,    
     name TEXT UNIQUE NOT NULL,
     template XML NOT NULL
 );
@@ -779,7 +792,7 @@ INSERT INTO xml_templates (name, template) VALUES
                <pmsPassword>{{pmsPassword}}</pmsPassword>
             </commonRequest>
             <outputTarget>
-               <systemCode>{{systemCode}}</systemCode>
+               <systemCode>1</systemCode>
                <outputId>{{outputId}}</outputId>
             </outputTarget>
          </arg0>
@@ -871,18 +884,18 @@ INSERT INTO xml_templates (name, template) VALUES
                <pmsPassword>{{pmsPassword}}</pmsPassword>
             </commonRequest>
             <adjustmentTarget>
-               <adjustmentProcedureCode>3</adjustmentProcedureCode>
-               <planGroupCode>{{planGroupCode1}}</planGroupCode>
-               <adjustmentDate>{{adjustmentDate1}}</adjustmentDate>
-               <priceRange1>{{priceRange1_1}}</priceRange1>
-               <salesStatus>1</salesStatus>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <priceRange1>{{priceRange1}}</priceRange1>
+               <salesStatus>{{salesStatus}}</salesStatus>
             </adjustmentTarget>
             <adjustmentTarget>
-               <adjustmentProcedureCode>3</adjustmentProcedureCode>
-               <planGroupCode>{{planGroupCode2}}</planGroupCode>
-               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode_2}}</adjustmentProcedureCode>
+               <planGroupCode>{{planGroupCode_2}}</planGroupCode>
+               <adjustmentDate>{{adjustmentDate_2}}</adjustmentDate>
                <priceRange1>{{priceRange1_2}}</priceRange1>
-               <salesStatus>1</salesStatus>
+               <salesStatus>{{salesStatus_2}}</salesStatus>
             </adjustmentTarget>
             <requestId>{{requestId}}</requestId>
          </arg0>
@@ -991,18 +1004,27 @@ INSERT INTO xml_templates (name, template) VALUES
 </soapenv:Envelope>');
 
 CREATE TABLE xml_requests (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    request XML NOT NULL
-);
+   id SERIAL,
+   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+   name TEXT NOT NULL,
+   sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   request XML NOT NULL,
+   PRIMARY KEY (id, hotel_id)
+) PARTITION BY LIST (hotel_id);
 CREATE TABLE xml_responses (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    response XML NOT NULL
-);
+   id SERIAL,
+   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+   name TEXT NOT NULL,
+   received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   response XML NOT NULL,
+   PRIMARY KEY (id, hotel_id)   
+) PARTITION BY LIST (hotel_id);
 
+TRUNCATE TABLE xml_requests RESTART IDENTITY;
+TRUNCATE TABLE xml_responses RESTART IDENTITY;
+
+CREATE TABLE xml_responses_hotel_1 PARTITION OF xml_responses
+FOR VALUES IN (1);
 
 --------------------------------------------------------------------
 --Imported clients, delete duplicates
