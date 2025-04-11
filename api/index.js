@@ -111,7 +111,7 @@ const billingRoutes = require('./routes/billingRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
-const xmlRoutes = require('./xml/xmlRoutes');
+const xmlRoutes = require('./ota/xmlRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path

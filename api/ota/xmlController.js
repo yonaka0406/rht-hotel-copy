@@ -1,13 +1,14 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse } = require('../xml/xmlModel');
+const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse } = require('../ota/xmlModel');
 
 // GET
 const getXMLTemplate = async (req, res) => {
+    const hotel_id = req.params.hotel_id;
     const name = req.params.name;
     
     try {
-        const template = await selectXMLTemplate(req.requestId, name);
+        const template = await selectXMLTemplate(req.requestId, hotel_id, name);
         res.send(template);
     } catch (error) {
         console.error('Error getting xml template:', error);
@@ -25,8 +26,8 @@ const getXMLRecentResponses = async (req, res) => {
 }
 
 // POST
-const postXMLResponse = async (req, res) => {
-    const { name } = req.params;
+const postXMLResponse = async (req, res) => {    
+    const { hotel_id, name } = req.params;
     const xml = req.body.toString('utf8');
 
     console.log('postXMLResponse', req.params, xml);
@@ -41,7 +42,7 @@ const postXMLResponse = async (req, res) => {
             console.log('Parsed XML:', result);
 
             try {
-                const responseXml = await submitXMLTemplate(req, res, name, xml);
+                const responseXml = await submitXMLTemplate(req, res, hotel_id, name, xml);
                 console.log('XML response added successfully', responseXml);
                 res.json({ response: 'XML response added successfully', data: responseXml });
             } catch (error) {
@@ -56,12 +57,12 @@ const postXMLResponse = async (req, res) => {
     }
 };
 // Lincoln
-const submitXMLTemplate = async (req, res, name, xml) => {
+const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
     console.log('submitXMLTemplate', name, xml);    
     
     try {        
         // Save the request in the database
-        await insertXMLRequest(req.requestId, name, xml);
+        await insertXMLRequest(req.requestId, hotel_id, name, xml);
 
         const url = `${process.env.XML_REQUEST_URL}${name}`;
         const response = await fetch(url, {
@@ -81,7 +82,7 @@ const submitXMLTemplate = async (req, res, name, xml) => {
         const responseXml = await response.text();
         console.log('Response XML:', responseXml);
         console.log('Inserting XML response into database...');
-        await insertXMLResponse(req.requestId, name, responseXml);
+        await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
         return responseXml;        
     } catch (error) {
         console.error('Failed to submit XML template', error);

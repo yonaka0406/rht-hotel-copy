@@ -9,12 +9,12 @@ XML_USER_ID=P2823341
 XML_PASSWORD=g?Z+yy5U5!LR
 XML_REQUEST_URL=https://www.tl-lincoln.net/pmsservice/V1/
 */
-const insertXMLRequest = async (requestId, name, xml) => {
+const insertXMLRequest = async (requestId, hotel_id, name, xml) => {
     try {
         const pool = getPool(requestId);
         const result = await pool.query(
-            "INSERT INTO xml_requests(name, request) VALUES($1, $2) RETURNING *",
-            [name, xml]
+            "INSERT INTO xml_requests(hotel_id, name, request) VALUES($1, $2, $3) RETURNING *",
+            [hotel_id, name, xml]
         );
 
         return result.rows;
@@ -23,12 +23,12 @@ const insertXMLRequest = async (requestId, name, xml) => {
         throw error;
     }
 };
-const insertXMLResponse = async (requestId, name, xml) => {
+const insertXMLResponse = async (requestId, hotel_id, name, xml) => {
     try {
         const pool = getPool(requestId);
         const result = await pool.query(
-            "INSERT INTO xml_responses(name, response) VALUES($1, $2) RETURNING *",
-            [name, xml]
+            "INSERT INTO xml_responses(hotel_id, name, response) VALUES($1, $2, $3) RETURNING *",
+            [hotel_id, name, xml]
         );
 
         return result.rows;
@@ -38,12 +38,11 @@ const insertXMLResponse = async (requestId, name, xml) => {
     }
 };
 
-
 const processXMLResponse = async (requestId, id) => {
     try {
         const pool = getPool(requestId);
         // 1. Retrieve the id response from xml_responses        
-        const res = await pool.query('SELECT id, name, response FROM xml_responses WHERE id = $1', [id]);
+        const res = await pool.query('SELECT * FROM xml_responses WHERE id = $1', [id]);
         if (res.rows.length === 0) {
             console.log('No XML responses found.');
             return;
@@ -105,7 +104,7 @@ const processXMLResponse = async (requestId, id) => {
     }
 };
 
-const selectXMLTemplate = async (requestId, name) => {
+const selectXMLTemplate = async (requestId, hotel_id, name) => {
     try {
         const pool = getPool(requestId);
         
@@ -113,22 +112,31 @@ const selectXMLTemplate = async (requestId, name) => {
             "SELECT template FROM xml_templates WHERE name = $1",
             [name]
         );
-
         if (result.rows.length === 0) {
             throw new Error("XML template not found in database.");
+        }
+
+        const login = await pool.query(
+            `SELECT user_id, password 
+                FROM sc_user_info 
+                WHERE hotel_id = $1 AND name = 'TL-リンカーン'
+            `, [hotel_id]
+        );
+        if (login.rows.length === 0) {
+            throw new Error("Site Controller login info not found in database.");
         }
 
         let xml = result.rows[0].template;
 
         // Validate environment variables
-        if (!process.env.XML_SYSTEM_ID || !process.env.XML_USER_ID || !process.env.XML_PASSWORD) {
+        if (!process.env.XML_SYSTEM_ID || !process.env.XML_REQUEST_URL) {
             throw new Error("Missing required environment variables in .env file.");
         }
 
         // Replace placeholders
         xml = xml.replace("{{systemId}}", process.env.XML_SYSTEM_ID)
-                 .replace("{{pmsUserId}}", process.env.XML_USER_ID)
-                 .replace("{{pmsPassword}}", process.env.XML_PASSWORD)                 
+                 .replace("{{pmsUserId}}", login.rows[0].user_id)
+                 .replace("{{pmsPassword}}", login.rows[0].password)
 
         return xml;
     } catch (error) {
@@ -141,7 +149,15 @@ const selectXMLRecentResponses = async (requestId) => {
 
     try {
         const result = await pool.query(
-            "SELECT * FROM xml_responses ORDER BY received_at DESC LIMIT 50"
+            `
+                SELECT xml_responses.*, hotels.formal_name as hotel_formal_name, hotels.name as hotel_name
+                FROM 
+                    xml_responses 
+                        LEFT JOIN
+                    hotels
+                        ON xml_responses.hotel_id = hotels.id
+                ORDER BY received_at DESC LIMIT 50
+            `
         );
 
         const rows = result.rows;        
@@ -154,6 +170,9 @@ const selectXMLRecentResponses = async (requestId) => {
                 status = parsedResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['commonResponse']['isSuccess'] === 'true' ? '成功' : 'エラー';                
                 
                 return { 
+                    hotel_id: row.hotel_id,
+                    hotel_formal_name: row.hotel_formal_name,
+                    hotel_name: row.hotel_name,
                     received_at: row.received_at, 
                     name: row.name, 
                     status: status, 
@@ -161,7 +180,16 @@ const selectXMLRecentResponses = async (requestId) => {
                 };
             } catch (parseError) {
                 console.error('Error parsing XML:', parseError);
-                return { received_at: row.received_at, name: row.name, status: status, response: null, parseError: parseError.message };                
+                return { 
+                    hotel_id: row.hotel_id,
+                    hotel_formal_name: row.hotel_formal_name,
+                    hotel_name: row.hotel_name,
+                    received_at: row.received_at, 
+                    name: row.name, 
+                    status: status, 
+                    response: null, 
+                    parseError: parseError.message 
+                };                
             }
         }));
 
