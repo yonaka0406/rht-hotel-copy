@@ -600,12 +600,26 @@ CREATE TABLE parking_spots (
 
 CREATE TABLE sc_user_info (
     hotel_id INT NOT NULL REFERENCES hotels(id),
-    name TEXT NOT NULL,
-    system_id TEXT NOT NULL,
+    name TEXT NOT NULL,    
     user_id TEXT NOT NULL,
-    password TEXT NOT NULL,
-    request_url TEXT NOT NULL,
+    password TEXT NOT NULL,    
     PRIMARY KEY (hotel_id, name)
+);
+
+CREATE TABLE sc_tl_rooms (
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   room_type_id INT NOT NULL,    
+   
+   rmTypeCode TEXT NOT NULL, --室タイプコード
+   rmTypeName TEXT, --室タイプ名
+   netRmTypeGroupCode TEXT NOT NULL, --ネット室タイプグループコード
+   netRmTypeGroupName TEXT, --ネット室タイプグループ名
+   agtCode TEXT, --販売先コード
+   netAgtRmTypeCode TEXT, --ネット販売先室タイプコード
+   netAgtRmTypeName TEXT, --ネット販売先室タイプ名
+   isStockAdjustable TEXT, --在庫調整操作可否
+   lincolnUseFlag TEXT, --リンカーン上で扱うフラグ
+   FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 );
 
 CREATE TABLE xml_templates (

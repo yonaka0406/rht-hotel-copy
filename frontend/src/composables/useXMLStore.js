@@ -27,7 +27,6 @@ const sc_serviceLabels = ref([
     { id: "BookingInfoOutputService", label: "予約出力" },
     { id: "OutputCompleteService", label: "予約出力_完了反映" }
 ]);
-
 const sc_fieldLabels = ref([
     { id: "adjustmentDate", label: "調整日付" },    
     { id: "adjustmentProcedureCode", label: "調整方法" },
@@ -113,7 +112,7 @@ const sc_fieldLabels = ref([
     { id: "tejimaiDayCount", label: "手仕舞い日数" },
     { id: "tejimaiTime", label: "手仕舞い時刻" },
     { id: "updateDate", label: "更新日時" },
-  ]);
+]);
 
 export function useXMLStore() {
         
@@ -125,11 +124,10 @@ export function useXMLStore() {
         const service = sc_fieldLabels.value.find(item => item.id === name);
         return service ? service.label : name;
     };
-
-    const fetchXMLTemplate = async(name) => {
+    const fetchXMLTemplate = async(hotel_id, name) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/xml/template/${name}`;
+            const url = `/api/xml/template/${hotel_id}/${name}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -175,11 +173,11 @@ export function useXMLStore() {
         }
     };
 
-    const insertXMLResponse = async(name, xml) => {
+    const insertXMLResponse = async(hotel_id, name, xml) => {
         console.log('insertXMLResponse', name, xml);
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/xml/response/${name}`;
+            const url = `/api/xml/response/${hotel_id}/${name}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -203,7 +201,7 @@ export function useXMLStore() {
             console.error('Failed to post data', error);
             throw error;
         }
-    };   
+    };
 
     return {        
         template,

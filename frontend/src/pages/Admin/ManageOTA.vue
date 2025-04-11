@@ -1,8 +1,65 @@
 <template>
   <div class="p-4">
     <Panel header="OTAやり取り管理">
-      <Accordion value="0">
+      <Accordion value="0" v-if="!isSiteController">
         <AccordionPanel value="0">
+          <AccordionHeader>サイトコントローラー</AccordionHeader>
+          <AccordionContent>
+            <div class="grid grid-cols-4 gap-4 mt-4">
+              <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaRoomMaster')">ネット室マスター</Button>
+            </div>
+          </AccordionContent>
+        </AccordionPanel>
+        <AccordionPanel value="1">
+          <AccordionHeader>最新のサイトコントローラーの応答</AccordionHeader>
+          <AccordionContent class="mt-4">
+            <DataTable
+              :value="responses"
+              :paginator="true"
+              :rows="15"
+              :rowsPerPageOptions="[15, 25, 50]"              
+            >              
+              <Column field="received_at" header="受信日時">                
+                <template #body="slotProps">
+                  {{ formatDateTime(slotProps.data.received_at) }}
+                  <Badge
+                    v-if="slotProps.data.status === '成功'"
+                    severity="success"
+                    class="ml-2"
+                    icon="pi pi-check"
+                  >
+                    {{ slotProps.data.status }}
+                  </Badge>
+                  <Badge
+                    v-else-if="slotProps.data.status === 'エラー'"
+                    severity="danger"
+                    class="ml-2"
+                    icon="pi pi-times"                    
+                  >
+                    {{ slotProps.data.status }}
+                  </Badge>
+                </template>
+              </Column>              
+              <Column field="name" header="リクエスト名">
+                <template #body="slotProps">
+                  <p>{{ fetchServiceName(slotProps.data.name) }}</p>
+                  <p><small>{{ slotProps.data.name }}</small></p>
+                </template>
+              </Column>              
+              <Column field="hotel_name" header="ホテル名"></Column>
+              <Column header="表示">
+                  <template #body="slotProps">
+                      <Button
+                          icon="pi pi-eye"
+                          class="p-button-rounded p-button-text"
+                          @click="showResponseDetails(slotProps.data)"
+                      />
+                  </template>
+              </Column>
+            </DataTable>
+          </AccordionContent>
+        </AccordionPanel>
+        <AccordionPanel value="2">
           <AccordionHeader>XML手動操作</AccordionHeader>
           <AccordionContent>
             <Card class="mt-4">
@@ -11,7 +68,19 @@
               </template>
               <template #content>
                 <div class="grid grid-cols-4 gap-4">
-                  <div class="p-field"></div>
+                  <div class="p-field">
+                    <Select
+                      name="hotel"
+                      v-model="selectedHotelId"
+                      :options="hotels"
+                      optionLabel="name" 
+                      optionValue="id"
+                      :virtualScrollerOptions="{ itemSize: 38 }"
+                      class="w-48"
+                      placeholder="ホテル選択"
+                      filter
+                    />
+                  </div>
                   <div class="p-field">
                     <FloatLabel>
                       <label for="templateName">テンプレート名</label>
@@ -56,56 +125,17 @@
               </template>
             </Card>
           </AccordionContent>
-        </AccordionPanel>
-        <AccordionPanel value="1">
-          <AccordionHeader>最新のサイトコントローラーの応答</AccordionHeader>
-          <AccordionContent class="mt-4">
-            <DataTable
-              :value="responses"
-              :paginator="true"
-              :rows="15"
-              :rowsPerPageOptions="[15, 25, 50]"              
-            >              
-              <Column field="received_at" header="受信日時">                
-                <template #body="slotProps">
-                  {{ formatDateTime(slotProps.data.received_at) }}
-                  <Badge
-                    v-if="slotProps.data.status === '成功'"
-                    severity="success"
-                    class="ml-2"
-                    icon="pi pi-check"
-                  >
-                    {{ slotProps.data.status }}
-                  </Badge>
-                  <Badge
-                    v-else-if="slotProps.data.status === 'エラー'"
-                    severity="danger"
-                    class="ml-2"
-                    icon="pi pi-times"                    
-                  >
-                    {{ slotProps.data.status }}
-                  </Badge>
-                </template>
-              </Column>              
-              <Column field="name" header="リクエスト名">
-                <template #body="slotProps">
-                  <p>{{ fetchServiceName(slotProps.data.name) }}</p>
-                  <p><small>{{ slotProps.data.name }}</small></p>
-                </template>
-              </Column>              
-              <Column header="表示">
-                  <template #body="slotProps">
-                      <Button
-                          icon="pi pi-eye"
-                          class="p-button-rounded p-button-text"
-                          @click="showResponseDetails(slotProps.data)"
-                      />
-                  </template>
-              </Column>
-            </DataTable>
-          </AccordionContent>
-        </AccordionPanel>
-      </Accordion>      
+        </AccordionPanel>        
+      </Accordion>
+      
+      <div v-else>
+        <div class="flex justify-end">
+          <Button severity="secondary" @click="openSiteControllerDetail()">戻る</Button>  
+        </div>
+
+        <component :is="activeComponent" />
+
+      </div>
     </Panel>
 
     <Dialog
@@ -126,14 +156,16 @@
 
 <script setup>
   // Vue
-  import { ref, reactive, watch, onMounted } from 'vue';
+  import { ref, shallowRef, watch, onMounted } from 'vue';
 
   // Stores
   import { useXMLStore } from '@/composables/useXMLStore';
-  const { template, responses, sc_serviceLabels, sc_fieldLabels, fetchServiceName, fetchFieldName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
+  const { template, responses, sc_serviceLabels, fetchServiceName, fetchFieldName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
+  import { useHotelStore } from '@/composables/useHotelStore';
+  const { hotels, fetchHotels } = useHotelStore();
   
   // Primevue
-  import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Textarea, Select, Button, DataTable, Column, Badge, Dialog, Divider } from 'primevue';
+  import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
 
   // Helper
   const formatDateTime = (dateString) => {
@@ -147,15 +179,13 @@
           second: '2-digit'
       });
   };
-  const isObject = (value) => {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
-  };
   
   // Template
+  const selectedHotelId = ref(null);
   const templateName = ref('');
   const editableFields = ref([]);  
   const fetchTemplate = async () => {
-    await fetchXMLTemplate(templateName.value);
+    await fetchXMLTemplate(selectedHotelId.value, templateName.value);
   };
   const submitTemplate = async () => {
     let modifiedTemplate = template.value;
@@ -167,36 +197,30 @@
     });
 
     console.log('Modified Template:', modifiedTemplate);
-    await insertXMLResponse(templateName.value, modifiedTemplate);
+    await insertXMLResponse(selectedHotelId.value, templateName.value, modifiedTemplate);
     await fetchXMLRecentResponses();
+  };
+
+  // Site Controller data
+  const isSiteController = ref(false);
+  const activeComponent = shallowRef(null)
+  const openSiteControllerDetail = async (name) => {
+    if (!name) {
+      isSiteController.value = false;
+      activeComponent.value = null;
+      return;
+    }
+    isSiteController.value = true;
+    console.log('openSiteControllerDetail', name);
+
+    // Dynamic import
+    activeComponent.value = (await import(`@/pages/Admin/OTA/${name}.vue`)).default;
   };
 
   // Dialog
   const displayDialog = ref(false);
   const selectedResponse = ref(null);
-  const dialogContent = ref('');
-  const flattenObject = (obj, labelPrefix) => {
-  const result = [];
-  const stack = [{ obj, prefix: labelPrefix }];
-
-  while (stack.length > 0) {
-      const { obj: currentObj, prefix: currentPrefix } = stack.pop();
-
-      for (const key in currentObj) {
-        if (isObject(currentObj[key])) {
-          stack.push({ obj: currentObj[key], prefix: `${currentPrefix}-${key}` });
-        } else {
-          result.push({
-            label: currentPrefix,
-            key,
-            value: currentObj[key],
-          });
-        }
-      }
-    }
-
-    return result;
-  };
+  const dialogContent = ref('');  
   const showResponseDetails = (response) => {
     selectedResponse.value = response;
     getDialogContent(selectedResponse.value.response);
@@ -224,34 +248,34 @@
     return translatedResponse;
   };
   const getSuccessContent = (response) => {
-  if (!response) {
-    return [{ label: 'Success', value: 'Operation successful, but no data to display.' }];
-  }
-  const translatedResponse = {};
-  for (const key in response) {
-    translatedResponse[fetchFieldName(key)] = translateValue(response[key]);
-  }
-  return translatedResponse;
-};
-
-const translateValue = (value) => {
-  if (Array.isArray(value)) {
-    return value.map(item => translateValue(item));
-  }
-  if (typeof value === 'object' && value !== null) {
-    const translatedObj = {};
-    for (const key in value) {
-      translatedObj[fetchFieldName(key)] = translateValue(value[key]);
+    if (!response) {
+      return [{ label: 'Success', value: 'Operation successful, but no data to display.' }];
     }
-    return translatedObj;
-  }
-  return value;
-};
+    const translatedResponse = {};
+    for (const key in response) {
+      translatedResponse[fetchFieldName(key)] = translateValue(response[key]);
+    }
+    return translatedResponse;
+  };
+  const translateValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.map(item => translateValue(item));
+    }
+    if (typeof value === 'object' && value !== null) {
+      const translatedObj = {};
+      for (const key in value) {
+        translatedObj[fetchFieldName(key)] = translateValue(value[key]);
+      }
+      return translatedObj;
+    }
+    return value;
+  };
 
   onMounted(async () => {
+    await fetchHotels();
     await fetchXMLRecentResponses();
   });
-
+  
   watch(template, (newTemplate) => {
     if (newTemplate) {
       // Extract editable fields from the template using regex for {{ }}
