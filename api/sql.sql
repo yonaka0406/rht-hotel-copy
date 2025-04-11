@@ -608,8 +608,7 @@ CREATE TABLE sc_user_info (
 
 CREATE TABLE sc_tl_rooms (
    hotel_id INT NOT NULL REFERENCES hotels(id),
-   room_type_id INT NOT NULL,    
-   
+   room_type_id INT NULL,
    rmTypeCode TEXT NOT NULL, --室タイプコード
    rmTypeName TEXT, --室タイプ名
    netRmTypeGroupCode TEXT NOT NULL, --ネット室タイプグループコード
