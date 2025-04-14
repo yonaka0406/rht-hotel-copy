@@ -134,6 +134,7 @@
         const rooms = [];
 
         const processRoomType = (rmType) => ({
+            hotel_id: props.hotel_id,
             rmtypecode: rmType.rmTypeCode,
             rmtypename: rmType.rmTypeName,
         });
@@ -159,7 +160,7 @@
         const processAgtRoom = (agtRoom, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
             if (room) {
-                room.agtCode = agtRoom.agtCode;
+                room.agtcode = agtRoom.agtCode;
                 room.netagtrmtypecode = agtRoom.netAgtRmTypeCode;
                 room.netagtrmtypename = agtRoom.netAgtRmTypeName;
                 room.isstockadjustable = agtRoom.isStockAdjustable;
