@@ -86,7 +86,15 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
 
         // Parse the XML response using xml2js
-        const parsedJson = await parseXmlToJson(responseXml);
+        const parsedJson = new Promise((resolve, reject) => {
+            xml2js.parseString(responseXml, { explicitArray: false }, (err, result) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(result);
+                }
+            });
+        });
         return parsedJson;        
     } catch (error) {
         console.error('Failed to submit XML template', error);
