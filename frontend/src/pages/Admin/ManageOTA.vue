@@ -258,7 +258,7 @@
         delete successData.commonResponse;
         dialogContent.value = getSuccessContent(successData);        
       } else {
-        dialogContent.value = getErrorContent(response.commonResponse);
+        dialogContent.value = getErrorContent(response);
       }    
       
       console.log('getDialogContent result:', dialogContent.value);
@@ -266,7 +266,7 @@
   const getErrorContent = (response) => {
     const translatedResponse = {};
     for (const key in response) {
-      translatedResponse[fetchFieldName(key)] = response[key];
+      translatedResponse[fetchFieldName(key)] = translateValue(response[key]);
     }
     return translatedResponse;
   };
