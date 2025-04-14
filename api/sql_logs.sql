@@ -232,6 +232,7 @@
 
     DECLARE
         _user_id INT;
+        _log_id INT;
     
     BEGIN
          -- Get the user ID from the temporary variable only for DELETE operations
@@ -254,7 +255,12 @@
                 ) -- Log only changes for updates
             END,
             inet_client_addr() -- Get the IP address of the client
-        );
+        )
+        RETURNING id INTO _log_id;
+
+        -- Notify any listeners with the new log ID
+        PERFORM pg_notify('reservation_log_inserted', _log_id::text);
+
         RETURN NULL;
     END;
     $$ LANGUAGE plpgsql;
@@ -288,6 +294,3 @@
     CREATE TRIGGER log_reservation_rates_trigger
     AFTER INSERT OR UPDATE OR DELETE ON reservation_rates
     FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
-
-
-

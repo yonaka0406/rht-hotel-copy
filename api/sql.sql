@@ -112,18 +112,6 @@ CREATE TABLE rooms (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-CREATE TABLE room_inventory (
-    id SERIAL,
-    hotel_id INT NOT NULL REFERENCES hotels(id),
-    room_type_id INT NOT NULL,
-    date DATE NOT NULL,  
-    quantity INT NOT NULL CHECK (quantity >= 0), -- Number of reservations
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (hotel_id, id),
-    UNIQUE (hotel_id, room_type_id, date), -- Ensures one record per room type per day
-    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
-) PARTITION BY LIST (hotel_id);
-
 CREATE TABLE client_group (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT,
@@ -595,6 +583,34 @@ CREATE TABLE parking_spots (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- VIEW
+
+CREATE OR REPLACE VIEW vw_room_inventory AS
+WITH roomTotal AS (
+    SELECT
+        hotel_id,
+        room_type_id,
+        COUNT(*) as total_rooms
+    FROM rooms
+    WHERE for_sale = true
+    GROUP BY hotel_id, room_type_id
+)
+SELECT
+    rd.hotel_id,
+    rd.date,
+    r.room_type_id,
+	sc.netrmtypegroupcode,
+    rt.name as room_type_name,
+    roomTotal.total_rooms,
+    COUNT(rd.date) as room_count
+FROM
+    reservation_details rd
+    JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
+    JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
+	LEFT JOIN sc_tl_rooms sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
+    JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
+WHERE rd.cancelled IS NULL
+GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
 
 -- OTA / Site Controller
 
