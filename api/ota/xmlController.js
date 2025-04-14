@@ -142,11 +142,15 @@ const updateInventoryMultipleDays = async (req, res) => {
     const currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0); // Set time to midnight for comparison
 
+    console.log('currentDate', currentDate)
+
     inventory = inventory.filter((item) => {
         const itemDate = new Date(item.date);
         itemDate.setHours(0, 0, 0, 0); // Set time to midnight for comparison
         return itemDate >= currentDate;
     });
+
+    console.log('inventory', inventory)
 
     const processInventoryBatch = async (batch) => {
         let adjustmentTargetXml = '';
