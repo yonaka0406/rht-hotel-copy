@@ -165,6 +165,7 @@ const listenForTableChanges = async () => {
 
       let response = null;
 
+      console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
       response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
         method: 'GET',
         headers: {
@@ -183,6 +184,7 @@ const listenForTableChanges = async () => {
         });
         const inventory = await response.json();
         
+        console.log('reservation_log_inserted is a reservation with changes in date', data);
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
