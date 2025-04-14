@@ -238,7 +238,8 @@ const updateInventoryMultipleDays = async (req, res) => {
     const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
 
-    if (filteredInventory.length > 1 || exceeds30Days) {
+    console.log('filteredInventory length', filteredInventory.length);
+    if (filteredInventory.length > 1 || exceeds30Days) {        
         const batchSize = 2;
         for (let i = 0; i < filteredInventory.length; i += batchSize) {
             const batch = filteredInventory.slice(i, i + batchSize);
