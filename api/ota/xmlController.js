@@ -145,8 +145,9 @@ const updateInventoryMultipleDays = async (req, res) => {
     console.log('currentDate', currentDate)
 
     inventory = inventory.filter((item) => {
-        const itemDate = new Date(item.date);
+        const itemDate = new Date(item.date);        
         itemDate.setHours(0, 0, 0, 0); // Set time to midnight for comparison
+        console.log('itemDate', itemDate);
         return itemDate >= currentDate;
     });
 
