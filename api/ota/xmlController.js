@@ -218,6 +218,8 @@ const updateInventoryMultipleDays = async (req, res) => {
         console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
         try {
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+            await delay(1000); // 1-second pause
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
         } catch (error) {
             
