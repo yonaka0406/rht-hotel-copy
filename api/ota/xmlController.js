@@ -138,8 +138,6 @@ const updateInventoryMultipleDays = async (req, res) => {
     }
     console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
-    const soapBodyTemplate = template.body;
-
     const processInventoryBatch = async (batch) => {
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -162,7 +160,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             adjustmentTargetXml += target;
         });
 
-        let xmlBody = soapBodyTemplate.replace(
+        let xmlBody = template.replace(
             `<adjustmentTarget>
                <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
                <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
@@ -181,12 +179,10 @@ const updateInventoryMultipleDays = async (req, res) => {
         );
         xmlBody = xmlBody.replace('{{requestId}}', log_id);
 
-        const fullXML = template.header + xmlBody + template.footer;
-
-        console.log('updateInventoryMultipleDays fullXML:', fullXML);
+        console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
         try {
-            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, fullXML);
+            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
         } catch (error) {
             
         }
