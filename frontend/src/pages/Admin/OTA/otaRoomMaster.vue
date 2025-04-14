@@ -64,8 +64,8 @@
     const roomMaster = ref(null);
     const roomTypes = ref(null);
     const saveRoomMaster = async (data) => {
-        // Filter out items with null netRmTypeGroupCode        
-        const filteredData = data.filter(item => item.netrmtypegroupcode !== null);
+        // Filter out items with null netRmTypeGroupCode
+        const filteredData = data.filter(item => item.netrmtypegroupcode != null);
 
         // Validation for duplicate
         const groupRoomTypeCheck = new Set();
