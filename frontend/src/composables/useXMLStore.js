@@ -217,7 +217,7 @@ export function useXMLStore() {
                 },                
             });
 
-            const data = await response.text();
+            const data = await response.json();
 
             if (!response.ok) {
                 throw new Error('Failed to fetch data');
