@@ -182,7 +182,7 @@
   import { useXMLStore } from '@/composables/useXMLStore';
   const { template, responses, sc_serviceLabels, fetchServiceName, fetchFieldName, fetchXMLTemplate, fetchXMLRecentResponses, insertXMLResponse } = useXMLStore();
   import { useHotelStore } from '@/composables/useHotelStore';
-  const { hotels, fetchHotels, fetchHotelSiteController } = useHotelStore();
+  const { hotels, setHotelId, fetchHotels, fetchHotelSiteController } = useHotelStore();
   
   // Primevue
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
@@ -232,6 +232,7 @@
       activeComponent.value = null;
       return;
     }
+    await setHotelId(selectedHotelId.value);
     isSiteController.value = true;
     selectedService.value = display;    
 
