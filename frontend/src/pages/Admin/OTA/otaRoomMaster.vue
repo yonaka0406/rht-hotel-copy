@@ -127,12 +127,21 @@
         const netRmTypeGroupList = returnData.netRmTypeGroupList;
         const netAgtRmTypeList = returnData.netAgtRmTypeList;
 
+        console.log('rmTypeList', rmTypeList);
+        console.log('netRmTypeGroupList', netRmTypeGroupList);
+        console.log('netAgtRmTypeList', netAgtRmTypeList);
+
         const rooms = [];
 
         const processRoomType = (rmType) => ({
             rmtypecode: rmType.rmTypeCode,
             rmtypename: rmType.rmTypeName,
         });
+        if (Array.isArray(rmTypeList)) {
+            rmTypeList.forEach((rmType) => rooms.push(processRoomType(rmType)));
+        } else if (rmTypeList) {
+            rooms.push(processRoomType(rmTypeList));
+        }
 
         const processGroup = (group, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === group.rmTypeCode);
@@ -141,6 +150,11 @@
                 room.netrmtypegroupname = group.netRmTypeGroupName;
             }
         };
+        if (Array.isArray(netRmTypeGroupList)) {
+            netRmTypeGroupList.forEach((group) => processGroup(group, rooms));
+        } else if (netRmTypeGroupList) {
+            processGroup(netRmTypeGroupList, rooms);
+        }
 
         const processAgtRoom = (agtRoom, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netagtrmtypecode === agtRoom.netAgtRmTypeCode);
@@ -152,19 +166,6 @@
                 room.lincolnuseflag = agtRoom.lincolnUseFlag;
             }
         };
-
-        if (Array.isArray(rmTypeList)) {
-            rmTypeList.forEach((rmType) => rooms.push(processRoomType(rmType)));
-        } else if (rmTypeList) {
-            rooms.push(processRoomType(rmTypeList));
-        }
-
-        if (Array.isArray(netRmTypeGroupList)) {
-            netRmTypeGroupList.forEach((group) => processGroup(group, rooms));
-        } else if (netRmTypeGroupList) {
-            processGroup(netRmTypeGroupList, rooms);
-        }
-
         if (Array.isArray(netAgtRmTypeList)) {
             netAgtRmTypeList.forEach((agtRoom) => processAgtRoom(agtRoom, rooms));
         } else if (netAgtRmTypeList) {
