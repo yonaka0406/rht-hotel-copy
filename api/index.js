@@ -159,8 +159,7 @@ const listenForTableChanges = async () => {
         ioHttps.emit('tableUpdate', 'Reservation update detected');
       }
     }
-    if (msg.channel === 'reservation_log_inserted') {
-      console.log('reservation_log_inserted trigger')
+    if (msg.channel === 'reservation_log_inserted') {      
       const logId = parseInt(msg.payload, 10);
 
       let response = null;
@@ -174,17 +173,17 @@ const listenForTableChanges = async () => {
       });
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
-        console.log('reservation_log_inserted is a reservation with changes in date', data);
 
+        console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           }
         });
-        const inventory = await response.json();
-        
-        console.log('reservation_log_inserted is a reservation with changes in date', data);
+        const inventory = await response.json();        
+
+        console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId);
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
