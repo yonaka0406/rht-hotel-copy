@@ -157,7 +157,7 @@
         }
 
         const processAgtRoom = (agtRoom, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netagtrmtypecode === agtRoom.netAgtRmTypeCode);
+            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
             if (room) {
                 room.agtCode = agtRoom.agtCode;
                 room.netagtrmtypecode = agtRoom.netAgtRmTypeCode;
