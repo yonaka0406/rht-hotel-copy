@@ -65,19 +65,33 @@
     const roomTypes = ref(null);
     const saveRoomMaster = async (data) => {
         // Validation for duplicate
-        const duplicateCheck = new Set();
+        const groupRoomTypeCheck = new Set();
+        const roomTypeCheck = new Set();
         for (const item of data) {
-            const key = `${item.netRmTypeGroupCode}-${item.room_type_id}`;
-            if (duplicateCheck.has(key)) {
+            const groupRoomTypeKey = `${item.netRmTypeGroupCode}-${item.room_type_id}`;
+            const roomTypeKey = `${item.room_type_id}`;
+            if (groupRoomTypeCheck.has(groupRoomTypeKey)) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: `ネット室タイプグループとPMSの部屋タイプ重複されています。`,
+                life: 5000,
+            });
+            return;
+            }
+
+            if (roomTypeCheck.has(roomTypeKey)) {
                 toast.add({
-                    severity: 'error',
-                    summary: 'エラー',
-                    detail: `ネット室タイプグループとPMSの部屋タイプ重複されている。`,
-                    life: 5000,
+                severity: 'error',
+                summary: 'エラー',
+                detail: `PMSの部屋タイプ重複されています。`,
+                life: 5000,
                 });
                 return;
             }
-            duplicateCheck.add(key);
+
+            groupRoomTypeCheck.add(groupRoomTypeKey);
+            roomTypeCheck.add(roomTypeKey);
         }
 
         try {
