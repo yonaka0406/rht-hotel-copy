@@ -59,7 +59,7 @@ const postXMLResponse = async (req, res) => {
 
 // Lincoln
 const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
-    console.log('submitXMLTemplate', name, xml);    
+    // console.log('submitXMLTemplate', name, xml);    
     
     try {        
         // Save the request in the database
