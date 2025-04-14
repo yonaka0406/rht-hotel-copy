@@ -183,7 +183,7 @@ const listenForTableChanges = async () => {
         });
         const inventory = await response.json();        
 
-        console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId);
+        console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
