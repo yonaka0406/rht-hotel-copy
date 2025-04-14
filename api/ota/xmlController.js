@@ -139,11 +139,28 @@ const updateInventoryMultipleDays = async (req, res) => {
     console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
     // Filter out entries older than the current date
-    const currentDate = new Date();
-    
-    console.log('currentDate:', currentDate);    
+    const currentDate = new Date();    
+    currentDate.setUTCHours(0, 0, 0, 0);
 
-    console.log('inventory', inventory)
+    console.log('currentDate (UTC):', currentDate);
+    
+    let filteredInventory = inventory;
+
+    filteredInventory = inventory.filter((item) => {
+        const parsedDate = new Date(item.date + 'Z'); // Append 'Z' to indicate UTC
+        const itemDate = new Date(Date.UTC(
+            parsedDate.getUTCFullYear(),
+            parsedDate.getUTCMonth(),
+            parsedDate.getUTCDate(),
+            0, 0, 0, 0
+        ));
+
+        console.log('item.date (original):', item.date);        
+        console.log('itemDate (UTC midnight):', itemDate);
+
+        return itemDate >= currentDate;
+    });
+    console.log('filteredInventory', filteredInventory)
 
     const processInventoryBatch = async (batch) => {
         let adjustmentTargetXml = '';
