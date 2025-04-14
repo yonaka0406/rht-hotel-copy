@@ -139,30 +139,28 @@ const updateInventoryMultipleDays = async (req, res) => {
     console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
     // Filter out entries older than the current date
-    const currentDate = new Date();
-    currentDate.setUTCHours(0, 0, 0, 0);
+    const currentDate = (() => {
+        const date = new Date();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    })();    
 
-    console.log('currentDate (UTC):', currentDate);
+    console.log('currentDate:', currentDate);
 
     let filteredInventory = inventory.filter((item) => {
-    const parsedDate = new Date(item.date + 'Z'); // Append 'Z' to indicate UTC
+        const itemDate = (() => {
+            const date = new Date(item.date);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}${month}${day}`;
+        })();
 
-    const itemDate = new Date(
-        Date.UTC(
-        parsedDate.getUTCFullYear(),
-        parsedDate.getUTCMonth(),
-        parsedDate.getUTCDate(),
-        0,
-        0,
-        0,
-        0
-        )
-    );
+        console.log('itemDate:', itemDate, itemDate >= currentDate);
 
-    console.log('item.date (original):', item.date);
-    console.log('itemDate (UTC midnight):', itemDate);
-
-    return itemDate >= currentDate;
+        return itemDate >= currentDate;
     });
 
     console.log('filteredInventory', filteredInventory);
@@ -173,7 +171,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             const adjustmentDate = (() => {
                 const date = new Date(item.date);
                 const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+                const month = String(date.getMonth() + 1).padStart(2, '0');
                 const day = String(date.getDate()).padStart(2, '0');
                 return `${year}${month}${day}`;
             })();
