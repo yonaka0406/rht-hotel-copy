@@ -1,5 +1,5 @@
 const { getPool } = require('../config/database');
-const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
+const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
@@ -168,6 +168,17 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       res.status(500).json({ error: error.message });
     }
   };
+  const getHotelRoomTypes = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+      const hotels = await getAllHotelRoomTypesById(req.requestId, id);
+      res.json(hotels);
+    } catch (error) {
+      console.error('Error getting hotel room types:', error);
+      res.status(500).json({ error: error.message });
+    }
+  };
   const getHotelRooms = async (req, res) => {
     const { id } = req.params;
 
@@ -303,7 +314,8 @@ module.exports = {
   hotels, 
   roomTypeCreate, 
   roomCreate, 
-  getHotels, 
+  getHotels,
+  getHotelRoomTypes,
   editHotel, 
   editHotelSiteController,
   editRoomType, 

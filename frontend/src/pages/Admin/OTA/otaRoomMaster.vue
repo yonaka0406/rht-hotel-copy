@@ -7,40 +7,34 @@
                 </div>
             </template>
             <template #content>
-                <DataTable :value="roomMaster">
-                    <Column field="rmTypeCode">
-                        <template #header>{{ fetchFieldName('rmTypeCode') }}</template>
-                    </Column>
-                    <Column field="rmTypeName">
+                <DataTable :value="roomMaster">                    
+                    <Column field="rmtypename">
                         <template #header>{{ fetchFieldName('rmTypeName') }}</template>
-                    </Column>
-                    <Column field="netRmTypeGroupCode">
-                        <template #header>{{ fetchFieldName('netRmTypeGroupCode') }}</template>
-                    </Column>
-                    <Column field="netRmTypeGroupName">
+                    </Column>                    
+                    <Column field="netrmtypegroupname">
                         <template #header>{{ fetchFieldName('netRmTypeGroupName') }}</template>
-                    </Column>
-                    <Column field="agtCode">
-                        <template #header>{{ fetchFieldName('agtCode') }}</template>
-                    </Column>
-                    <Column field="netAgtRmTypeCode">
-                        <template #header>{{ fetchFieldName('netAgtRmTypeCode') }}</template>
-                    </Column>
-                    <Column field="netAgtRmTypeName">
+                    </Column>                                        
+                    <Column field="netagtrmtypename">
                         <template #header>{{ fetchFieldName('netAgtRmTypeName') }}</template>
                     </Column>                    
                     <Column header="Link to Room Type">
-                        <template #default="slotProps">
-                        <Select v-model="slotProps.data.room_type_id">
-                            <option v-for="type in roomTypes" :key="type.id" :value="type.id">
-                            {{ type.name }}
-                            </option>
-                        </Select>
-                        </template>
+                        <template #body="slotProps">
+                            <Select                             
+                                v-model="slotProps.data.room_type_id" 
+                                :options="roomTypes"
+                                optionLabel="name" 
+                                optionValue="id" 
+                            >                            
+                            </Select>
+                        </template>                        
                     </Column>                    
                 </DataTable>
+                <div class="mt-4">
+                    <Button label="保存" severity="info" @click="saveRoomMaster(roomMaster)" />
+                </div>
+                
             </template>
-            <Button label="保存" severity="info" @click="saveRoom(roomMaster)" />
+            
         </Card>
     </div>
 </template>
@@ -57,13 +51,49 @@
 
     // Stores
     import { useXMLStore } from '@/composables/useXMLStore';
-    const { template, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLRoomMaster, insertTLRoomMaster } = useXMLStore();
-
+    const { template, tlRoomMaster, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLRoomMaster, insertTLRoomMaster } = useXMLStore();
+    import { useHotelStore } from '@/composables/useHotelStore';
+    const { fetchHotelRoomTypes } = useHotelStore();
+    
     // Primevue
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
     import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
 
     // Master data
     const roomMaster = ref(null);
+    const roomTypes = ref(null);
+    const saveRoomMaster = async (data) => {
+        // Validation for duplicate
+        const duplicateCheck = new Set();
+        for (const item of data) {
+            const key = `${item.netRmTypeGroupCode}-${item.room_type_id}`;
+            if (duplicateCheck.has(key)) {
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: `ネット室タイプグループとPMSの部屋タイプ重複されている。`,
+                    life: 5000,
+                });
+                return;
+            }
+            duplicateCheck.add(key);
+        }
+
+        try {
+            await insertTLRoomMaster(data);
+            toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
+        } catch (error) {
+            console.error('Failed to save room master:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'Error',
+                detail: 'Failed to save room master',
+                life: 3000,
+            });
+        }
+
+    };
 
     // Template    
     const templateName = 'NetRoomTypeMasterSearchService';
@@ -74,14 +104,20 @@
         modifiedTemplate.value = template.value.replace(
             `{{extractionProcedureCode}}`,
             extractionProcedureCode
-        );  
-        
-        if (!roomMaster.value) {
-            console.log('roomMaster is empty');
-            const xmlResponse = await insertXMLResponse(props.hotel_id, templateName, modifiedTemplate.value);
-            console.log('xmlResponse', xmlResponse.data);
-            roomMaster.value = parseXmlResponse(xmlResponse.data);
-            console.log('fetchTemplate roomMaster', roomMaster.value)
+        );
+
+        const xmlResponse = await insertXMLResponse(props.hotel_id, templateName, modifiedTemplate.value);
+        roomMaster.value = parseXmlResponse(xmlResponse.data);
+
+        if (tlRoomMaster.value && roomMaster.value) {
+            roomMaster.value.forEach((room) => {
+                const matchingTLRoom = tlRoomMaster.value.find(
+                    (tlRoom) => tlRoom.rmtypecode === room.rmtypecode && tlRoom.netrmtypegroupcode === room.netrmtypegroupcode
+                );
+                if (matchingTLRoom) {
+                    room.room_type_id = matchingTLRoom.room_type_id;
+                }
+            });            
         }
     };
     const parseXmlResponse = (data) => {
@@ -139,10 +175,12 @@
     };
          
 
-    onMounted(async () => {
-        roomMaster.value = await fetchTLRoomMaster(props.hotel_id);
-
-        console.log('roomMaster', roomMaster.value)
+    onMounted(async () => {        
+        await fetchTLRoomMaster(props.hotel_id);
+        roomTypes.value = await fetchHotelRoomTypes(props.hotel_id);        
+        roomMaster.value = tlRoomMaster.value;
+        console.log('onMounted roomMaster', roomMaster.value);
+        console.log('onMounted roomTypes', roomTypes.value);
     });
 
 </script>

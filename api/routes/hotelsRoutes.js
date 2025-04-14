@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { hotels, roomTypeCreate, roomCreate, getHotels, editHotel, editHotelSiteController, editRoomType, editRoom, editHotelCalendar, getHotelRooms, fetchHotelSiteController, getBlockedRooms, editBlockedRooms } = require('../controllers/hotelsController');
+const { hotels, roomTypeCreate, roomCreate, getHotels, getHotelRoomTypes, editHotel, editHotelSiteController, editRoomType, editRoom, editHotelCalendar, getHotelRooms, fetchHotelSiteController, getBlockedRooms, editBlockedRooms } = require('../controllers/hotelsController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 router.get('/hotel-list', authMiddleware, getHotels);
+router.get('/hotel-room-types/:id', authMiddleware, getHotelRoomTypes);
 router.get('/hotel-rooms/:id', authMiddleware, getHotelRooms);
 router.get('/hotel-ota/:id', authMiddleware, fetchHotelSiteController);
 router.get('/hotel-calendar/blocked/:id', authMiddleware, getBlockedRooms);

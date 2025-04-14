@@ -126,6 +126,23 @@ export function useHotelStore() {
     };
 
     // Room
+    const fetchHotelRoomTypes = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-room-types/${selectedHotelId.value}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            const result = await response.json();
+            return result;                        
+        } catch (error) {
+            console.error('Failed to fetch hotels info', error);
+        }
+    };    
     const fetchBlockedRooms = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -209,6 +226,7 @@ export function useHotelStore() {
         fetchHotelSiteController,
         editHotel,
         editHotelSiteController,
+        fetchHotelRoomTypes,
         fetchBlockedRooms,
         applyCalendarSettings,
         removeCalendarSettings,

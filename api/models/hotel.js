@@ -282,7 +282,19 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
   }
 };
 
-// Get rooms by hotel id
+const getAllHotelRoomTypesById = async (requestId, id) => {
+  const pool = getPool(requestId);
+  const query = 'SELECT * FROM room_types WHERE hotel_id = $1 ORDER By name';
+  const values = [id];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error finding by hotel id:', err);
+    throw new Error('Database error');
+  }
+};
 const getAllRoomsByHotelId = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = 'SELECT hotels.*, room_types.id as room_type_id, room_types.name as room_type_name, room_types.description as room_type_description, rooms.id as room_id, rooms.floor as room_floor, rooms.room_number, rooms.capacity as room_capacity, rooms.for_sale as room_for_sale_idc, rooms.smoking as room_smoking_idc FROM hotels JOIN room_types ON hotels.id = room_types.hotel_id LEFT JOIN rooms ON room_types.id = rooms.room_type_id WHERE hotels.id = $1 ORDER BY room_types.id, rooms.floor, rooms.room_number ASC';
@@ -308,5 +320,6 @@ module.exports = {
   updateHotelCalendar,
   selectBlockedRooms,
   deleteBlockedRooms,
+  getAllHotelRoomTypesById,
   getAllRoomsByHotelId,
 };
