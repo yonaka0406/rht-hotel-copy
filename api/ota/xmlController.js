@@ -23,7 +23,7 @@ const getXMLRecentResponses = async (req, res) => {
         console.error('Error getting xml responses:', error);
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 // POST
 const postXMLResponse = async (req, res) => {    
@@ -140,25 +140,8 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     // Filter out entries older than the current date
     const currentDate = new Date();
-    currentDate.setUTCHours(0, 0, 0, 0);
-
-    console.log('currentDate (UTC):', currentDate);
-
-    inventory = inventory.filter((item) => {
-        const parsedDate = new Date(item.date + 'Z'); // Append 'Z' to indicate UTC
-        const itemDate = new Date(Date.UTC(
-            parsedDate.getUTCFullYear(),
-            parsedDate.getUTCMonth(),
-            parsedDate.getUTCDate(),
-            0, 0, 0, 0
-        ));
-
-        console.log('item.date (original):', item.date);
-        console.log('parsedDate (UTC):', parsedDate);
-        console.log('itemDate (UTC midnight):', itemDate);
-
-        return itemDate >= currentDate;
-    });
+    
+    console.log('currentDate:', currentDate);    
 
     console.log('inventory', inventory)
 
