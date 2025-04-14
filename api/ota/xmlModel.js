@@ -220,29 +220,47 @@ const selectTLRoomMaster = async (requestId, hotel_id) => {
 };
 const insertTLRoomMaster = async (requestId, data) => {
     const pool = getPool(requestId);
-    try {        
-        const result = await pool.query(
-            `INSERT INTO sc_tl_rooms(hotel_id, room_type_id, rmTypeCode, rmTypeName, netRmTypeGroupCode, netRmTypeGroupName, agtCode, netAgtRmTypeCode, netAgtRmTypeName, isStockAdjustable, lincolnUseFlag) 
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [
-                data.hotel_id,
-                data.room_type_id,
-                data.rmTypeCode,
-                data.rmTypeName,
-                data.netRmTypeGroupCode,
-                data.netRmTypeGroupName,
-                data.agtCode,
-                data.netAgtRmTypeCode,
-                data.netAgtRmTypeName,
-                data.isStockAdjustable,
-                data.lincolnUseFlag,
-            ]
-        );
+    const client = await pool.connect();
 
-        return result.rows;
+    console.log('insertTLRoomMaster', data)
+
+    try {
+        await client.query('BEGIN');
+
+        // Delete existing records for the hotel_id
+        await pool.query('DELETE FROM sc_tl_rooms WHERE hotel_id = $1', [data[0].hotel_id]);
+
+        // Insert the new records
+        const results = [];
+        for (const item of data) {
+            const result = await client.query(
+                `INSERT INTO sc_tl_rooms(hotel_id, room_type_id, rmTypeCode, rmTypeName, netRmTypeGroupCode, netRmTypeGroupName, agtCode, netAgtRmTypeCode, netAgtRmTypeName, isStockAdjustable, lincolnUseFlag) 
+                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+                [
+                    item.hotel_id,
+                    item.room_type_id,
+                    item.rmtypecode,
+                    item.rmtypename,
+                    item.netrmtypegroupcode,
+                    item.netrmtypegroupname,
+                    item.agtcode,
+                    item.netagtrmtypecode,
+                    item.netagtrmtypename,
+                    item.isstockadjustable,
+                    item.lincolnuseflag,
+                ]
+            );
+            results.push(result.rows[0]);
+        };
+
+        await client.query('COMMIT');
+        return results;
     } catch (error) {
-        console.error("Error adding XML request:", error.message);
+        await client.query('ROLLBACK');
+        console.error('Error adding room master:', error.message);
         throw error;
+    } finally {
+        client.release();
     }
 };
 
