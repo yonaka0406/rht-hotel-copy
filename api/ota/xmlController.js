@@ -207,7 +207,13 @@ const updateInventoryMultipleDays = async (req, res) => {
             </adjustmentTarget>`,
             adjustmentTargetXml
         );
-        xmlBody = xmlBody.replace('{{requestId}}', log_id + (batch_no / 100));
+
+        let requestId = log_id + (batch_no / 100);
+        requestId = requestId.toString();
+        if (requestId.length > 8) {
+            requestId = requestId.slice(-8); // keep the last 8 characters
+        }
+        xmlBody = xmlBody.replace('{{requestId}}', requestId);
 
         console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
