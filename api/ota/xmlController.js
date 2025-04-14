@@ -235,17 +235,17 @@ const updateInventoryMultipleDays = async (req, res) => {
         return daysDiff > 30;
     };
 
-    const { minDate, maxDate } = getInventoryDateRange(inventory);
+    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
 
-    if (inventory.length > 1000 || exceeds30Days) {
+    if (filteredInventory.length > 1000 || exceeds30Days) {
         const batchSize = 30;
-        for (let i = 0; i < inventory.length; i += batchSize) {
-            const batch = inventory.slice(i, i + batchSize);
+        for (let i = 0; i < filteredInventory.length; i += batchSize) {
+            const batch = filteredInventory.slice(i, i + batchSize);
             await processInventoryBatch(batch);
         }
     } else {
-        await processInventoryBatch(inventory);
+        await processInventoryBatch(filteredInventory);
     }
 
     res.status(200).send({ message: 'Inventory update processed.' });                
