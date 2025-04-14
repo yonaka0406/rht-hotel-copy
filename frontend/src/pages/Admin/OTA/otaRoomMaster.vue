@@ -75,15 +75,69 @@
             `{{extractionProcedureCode}}`,
             extractionProcedureCode
         );  
-
-        if (!roomMaster.value) {
-            console.log('roomMaster is empty')
-            const xmlResponse = await insertXMLResponse(props.hotel_id, templateName, modifiedTemplate.value);
-            console.log('xmlResponse', xmlResponse)
-        }      
         
-
+        if (!roomMaster.value) {
+            console.log('roomMaster is empty');
+            const xmlResponse = await insertXMLResponse(props.hotel_id, templateName, modifiedTemplate.value);
+            console.log('xmlResponse', xmlResponse.data);
+            roomMaster.value = parseXmlResponse(xmlResponse.data);
+            console.log('fetchTemplate roomMaster', roomMaster.value)
+        }
     };
+    const parseXmlResponse = (data) => {
+        const returnData = data['S:Envelope']['S:Body']['ns2:executeResponse']['return'];
+
+        const rmTypeList = returnData.rmTypeList;
+        const netRmTypeGroupList = returnData.netRmTypeGroupList;
+        const netAgtRmTypeList = returnData.netAgtRmTypeList;
+
+        const rooms = [];
+
+        const processRoomType = (rmType) => ({
+            rmTypeCode: rmType.rmTypeCode,
+            rmTypeName: rmType.rmTypeName,
+        });
+
+        const processGroup = (group, roomsArray) => {
+            const room = roomsArray.find((r) => r.rmTypeCode === group.rmTypeCode);
+            if (room) {
+            room.netRmTypeGroupCode = group.netRmTypeGroupCode;
+            room.netRmTypeGroupName = group.netRmTypeGroupName;
+            }
+        };
+
+        const processAgtRoom = (agtRoom, roomsArray) => {
+            const room = roomsArray.find((r) => r.rmTypeCode === agtRoom.rmTypeCode);
+            if (room) {
+            room.agtCode = agtRoom.agtCode;
+            room.netAgtRmTypeCode = agtRoom.netAgtRmTypeCode;
+            room.netAgtRmTypeName = agtRoom.netAgtRmTypeName;
+            room.isStockAdjustable = agtRoom.isStockAdjustable;
+            room.lincolnUseFlag = agtRoom.lincolnUseFlag;
+            }
+        };
+
+        if (Array.isArray(rmTypeList)) {
+            rmTypeList.forEach((rmType) => rooms.push(processRoomType(rmType)));
+        } else if (rmTypeList) {
+            rooms.push(processRoomType(rmTypeList));
+        }
+
+        if (Array.isArray(netRmTypeGroupList)) {
+            netRmTypeGroupList.forEach((group) => processGroup(group, rooms));
+        } else if (netRmTypeGroupList) {
+            processGroup(netRmTypeGroupList, rooms);
+        }
+
+        if (Array.isArray(netAgtRmTypeList)) {
+            netAgtRmTypeList.forEach((agtRoom) => processAgtRoom(agtRoom, rooms));
+        } else if (netAgtRmTypeList) {
+            processAgtRoom(netAgtRmTypeList, rooms);
+        }
+
+        return rooms;
+    };
+         
 
     onMounted(async () => {
         roomMaster.value = await fetchTLRoomMaster(props.hotel_id);
@@ -92,3 +146,4 @@
     });
 
 </script>
+
