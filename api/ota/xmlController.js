@@ -138,13 +138,26 @@ const updateInventoryMultipleDays = async (req, res) => {
     }
     console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
+    // Filter out entries older than the current date
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set time to midnight for comparison
+
+    inventory = inventory.filter((item) => {
+        const itemDate = new Date(item.date);
+        itemDate.setHours(0, 0, 0, 0); // Set time to midnight for comparison
+        return itemDate >= currentDate;
+    });
+
     const processInventoryBatch = async (batch) => {
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
-            const adjustmentDate = new Date(item.date)
-                .toISOString()
-                .slice(0, 10)
-                .replace(/-/g, ''); // Format to YYYYMMDD
+            const adjustmentDate = (() => {
+                const date = new Date(item.date);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}${month}${day}`;
+            })();
             let remainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
             remainingCount = remainingCount < 0 ? 0 : remainingCount;
 
