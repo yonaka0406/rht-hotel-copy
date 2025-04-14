@@ -142,12 +142,21 @@ const updateInventoryMultipleDays = async (req, res) => {
     const currentDate = new Date();
     currentDate.setUTCHours(0, 0, 0, 0);
 
-    console.log('currentDate', currentDate)
+    console.log('currentDate (UTC):', currentDate);
 
     inventory = inventory.filter((item) => {
-        const itemDate = new Date(item.date);        
-        itemDate.setUTCHours(0, 0, 0, 0);
-        console.log('itemDate', itemDate);
+        const parsedDate = new Date(item.date);
+        const itemDate = new Date(Date.UTC(
+            parsedDate.getUTCFullYear(),
+            parsedDate.getUTCMonth(),
+            parsedDate.getUTCDate(),
+            0, 0, 0, 0
+        ));
+
+        console.log('item.date (original):', item.date);
+        console.log('parsedDate (local):', parsedDate);
+        console.log('itemDate (UTC midnight):', itemDate);
+
         return itemDate >= currentDate;
     });
 
