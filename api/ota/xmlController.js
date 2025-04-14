@@ -145,7 +145,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     console.log('currentDate (UTC):', currentDate);
 
     inventory = inventory.filter((item) => {
-        const parsedDate = new Date(item.date);
+        const parsedDate = new Date(item.date + 'Z'); // Append 'Z' to indicate UTC
         const itemDate = new Date(Date.UTC(
             parsedDate.getUTCFullYear(),
             parsedDate.getUTCMonth(),
@@ -154,7 +154,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         ));
 
         console.log('item.date (original):', item.date);
-        console.log('parsedDate (local):', parsedDate);
+        console.log('parsedDate (UTC):', parsedDate);
         console.log('itemDate (UTC midnight):', itemDate);
 
         return itemDate >= currentDate;
