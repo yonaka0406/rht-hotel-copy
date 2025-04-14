@@ -165,7 +165,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     console.log('filteredInventory', filteredInventory);
 
-    const processInventoryBatch = async (batch) => {
+    const processInventoryBatch = async (batch, batch_no) => {
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
             const adjustmentDate = (() => {
@@ -207,7 +207,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             </adjustmentTarget>`,
             adjustmentTargetXml
         );
-        xmlBody = xmlBody.replace('{{requestId}}', log_id);
+        xmlBody = xmlBody.replace('{{requestId}}', log_id + (batch_no / 100));
 
         console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
@@ -238,14 +238,14 @@ const updateInventoryMultipleDays = async (req, res) => {
     const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
 
-    if (filteredInventory.length > 1000 || exceeds30Days) {
-        const batchSize = 30;
+    if (filteredInventory.length > 1 || exceeds30Days) {
+        const batchSize = 2;
         for (let i = 0; i < filteredInventory.length; i += batchSize) {
             const batch = filteredInventory.slice(i, i + batchSize);
-            await processInventoryBatch(batch);
+            await processInventoryBatch(batch, i);
         }
     } else {
-        await processInventoryBatch(filteredInventory);
+        await processInventoryBatch(filteredInventory, 0);
     }
 
     res.status(200).send({ message: 'Inventory update processed.' });                
