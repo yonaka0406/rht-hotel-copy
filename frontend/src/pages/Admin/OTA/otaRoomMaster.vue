@@ -64,10 +64,13 @@
     const roomMaster = ref(null);
     const roomTypes = ref(null);
     const saveRoomMaster = async (data) => {
+        // Filter out items with null netRmTypeGroupCode        
+        const filteredData = data.filter(item => item.netrmtypegroupcode !== null);
+
         // Validation for duplicate
         const groupRoomTypeCheck = new Set();
         const roomTypeCheck = new Set();
-        for (const item of data) {
+        for (const item of filteredData) {
             const groupRoomTypeKey = `${item.netRmTypeGroupCode}-${item.room_type_id}`;
             const roomTypeKey = `${item.room_type_id}`;
             if (groupRoomTypeCheck.has(groupRoomTypeKey)) {
@@ -95,7 +98,7 @@
         }
 
         try {
-            await insertTLRoomMaster(data);
+            await insertTLRoomMaster(filteredData);
             toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
         } catch (error) {
             console.error('Failed to save room master:', error);
