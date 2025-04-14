@@ -206,7 +206,7 @@ export function useXMLStore() {
     };
 
     // Site Controller
-    const fetchTLRoomMaster = async(hotel_id, name) => {
+    const fetchTLRoomMaster = async(hotel_id) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/sc/tl/${hotel_id}/master/room`;
@@ -230,6 +230,31 @@ export function useXMLStore() {
             console.error('Failed to fetch data', error);
         }
     };
+    const insertTLRoomMaster = async (roomData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/sc/tl/master/room`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(roomData),
+            });
+        
+            const data = await response.json();
+        
+            if (!response.ok) {
+                throw new Error('Failed to create room master');
+            }
+        
+            return data;
+        } catch (error) {
+            console.error('Failed to create room master', error);
+            throw error; // Re-throw the error for handling in the component
+        }
+    };
 
     return {        
         template,
@@ -242,6 +267,7 @@ export function useXMLStore() {
         fetchXMLTemplate,
         fetchXMLRecentResponses,
         insertXMLResponse,      
-        fetchTLRoomMaster,  
+        fetchTLRoomMaster,
+        insertTLRoomMaster,
     };
 }

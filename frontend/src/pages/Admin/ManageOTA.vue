@@ -24,7 +24,7 @@
               </div>
             </div>
             <div v-if="hasSiteController" class="grid grid-cols-4 gap-4 mt-4">
-              <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaRoomMaster')">ネット室マスター</Button>
+              <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaRoomMaster', 'ネット室マスター')">ネット室マスター</Button>
             </div>
           </AccordionContent>
         </AccordionPanel>
@@ -147,10 +147,11 @@
         </AccordionPanel>        
       </Accordion>
       
-      <div v-else>
-        <div class="flex justify-end">
-          <Button severity="secondary" @click="openSiteControllerDetail()">戻る</Button>  
-        </div>
+      <div v-else>        
+        <div class="flex justify-center items-center grid grid-cols-4">
+          <div class="col-span-3"><span class="font-bold">{{ selectedService }}</span></div>                    
+          <div class="flex justify-end mr-4"><Button severity="secondary" @click="openSiteControllerDetail()">戻る</Button></div>
+        </div>      
 
         <component :is="activeComponent" :hotel_id="selectedHotelId" />
 
@@ -223,15 +224,16 @@
 
   // Site Controller data
   const isSiteController = ref(false);
+  const selectedService = ref(null);
   const activeComponent = shallowRef(null)
-  const openSiteControllerDetail = async (name) => {
+  const openSiteControllerDetail = async (name, display) => {
     if (!name) {
       isSiteController.value = false;
       activeComponent.value = null;
       return;
     }
     isSiteController.value = true;
-    console.log('openSiteControllerDetail', name);
+    selectedService.value = display;    
 
     // Dynamic import
     activeComponent.value = (await import(`@/pages/Admin/OTA/${name}.vue`)).default;
