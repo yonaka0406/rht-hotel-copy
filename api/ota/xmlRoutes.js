@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getXMLTemplate, getXMLRecentResponses, postXMLResponse, submitXMLTemplate, getTLRoomMaster, createTLRoomMaster } = require('../ota/xmlController');
+const { getXMLTemplate, getXMLRecentResponses, postXMLResponse, submitXMLTemplate, getTLRoomMaster, createTLRoomMaster, updateInventoryMultipleDays } = require('../ota/xmlController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 // GET
@@ -12,5 +12,7 @@ router.get('/sc/tl/:hotel_id/master/room', authMiddleware_manageDB, getTLRoomMas
 router.post('/xml/response/:hotel_id/:name', authMiddleware_manageDB, postXMLResponse);
 router.post('/sc/tl/master/room', authMiddleware_manageDB, createTLRoomMaster);
 
+// Internal route
+router.post('/sc/tl/inventory/multiple/:hotel_id/:log_id', updateInventoryMultipleDays);
 
 module.exports = router;

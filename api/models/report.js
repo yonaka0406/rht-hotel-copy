@@ -678,6 +678,24 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
   }
 };
 
+const selectReservationsInventory = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+      SELECT *
+      FROM vw_room_inventory
+      WHERE hotel_id = $1 AND date BETWEEN $2 AND $3
+      ORDER BY date, room_type_id
+  `;
+  const values = [hotelId, startDate, endDate];
+  try {
+      const result = await pool.query(query, values);           
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving logs:', err);
+      throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -687,4 +705,5 @@ module.exports = {
   selectExportReservationList,
   selectExportReservationDetails,
   selectExportMealCount,
+  selectReservationsInventory,
 };

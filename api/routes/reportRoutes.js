@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getExportReservationList, getExportReservationDetails, getExportMealCount } = require('../controllers/reportController');
+const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory } = require('../controllers/reportController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageUsers } = require('../middleware/authMiddleware');
 
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
@@ -10,5 +10,8 @@ router.get('/report/res/list/:hid/:sdate/:edate', authMiddleware, getReservation
 router.get('/report/download/res/list/:hid/:sdate/:edate', authMiddleware, getExportReservationList);
 router.get('/report/download/res/dtl/:hid/:sdate/:edate', authMiddleware, getExportReservationDetails);
 router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getExportMealCount);
+
+// Internal route
+router.get('/report/res/inventory/:hid/:sdate/:edate', getReservationsInventory);
 
 module.exports = router;

@@ -122,6 +122,105 @@ const createTLRoomMaster = async (req, res) => {
         res.status(500).json({ error: 'Failed to create master' });
     }
 };
+
+const updateInventoryMultipleDays = async (req, res) => {
+    const hotel_id = req.params.hotel_id;
+    const log_id = req.params.log_id;
+    const inventory = req.body;
+
+    const name = 'NetStockBulkAdjustmentService';
+
+    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+    if (!template) {
+        return res.status(500).send({ error: 'XML template not found.' });
+    }
+
+    const soapBodyTemplate = template.body;
+    const processInventoryBatch = async (batch) => {
+        let adjustmentTargetXml = '';
+        batch.forEach((item) => {
+            const adjustmentDate = new Date(item.date)
+                .toISOString()
+                .slice(0, 10)
+                .replace(/-/g, ''); // Format to YYYYMMDD
+            let remainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+            remainingCount = remainingCount < 0 ? 0 : remainingCount;
+
+            let target = `
+                <adjustmentTarget>
+                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
+                    <netRmTypeGroupCode>${item.netrmtypegroupcode}</netRmTypeGroupCode>
+                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
+                    <remainingCount>${remainingCount}</remainingCount>
+                    <salesStatus>3</salesStatus>
+                </adjustmentTarget>
+            `;
+            adjustmentTargetXml += target;
+        });
+
+        let xmlBody = soapBodyTemplate.replace(
+            `<adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <remainingCount>{{remainingCount}}</remainingCount>
+               <salesStatus>{{salesStatus}}</salesStatus>               
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <remainingCount>{{remainingCount2}}</remainingCount>
+               <salesStatus>{{salesStatus2}}</salesStatus>               
+            </adjustmentTarget>`,
+            adjustmentTargetXml
+        );
+        xmlBody = xmlBody.replace('{{requestId}}', log_id);
+
+        const fullXML = template.header + xmlBody + template.footer;
+
+        try {
+            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, fullXML);
+        } catch (error) {
+            
+        }
+        
+    };
+
+    const getInventoryDateRange = (inventory) => {
+        if (inventory.length === 0) return { minDate: null, maxDate: null };
+
+        const dates = inventory.map((item) => new Date(item.date));
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+
+        return { minDate, maxDate };
+    };
+    const dateRangeExceeds30Days = (minDate, maxDate) => {
+        if (!minDate || !maxDate) return false;
+
+        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        return daysDiff > 30;
+    };
+
+    const { minDate, maxDate } = getInventoryDateRange(inventory);
+    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
+
+    if (inventory.length > 1000 || exceeds30Days) {
+        const batchSize = 1000;
+        for (let i = 0; i < inventory.length; i += batchSize) {
+            const batch = inventory.slice(i, i + batchSize);
+            await processInventoryBatch(batch);
+        }
+    } else {
+        await processInventoryBatch(inventory);
+    }
+
+    res.status(200).send({ message: 'Inventory update processed.' });                
+
+};
+
 module.exports = {
     getXMLTemplate,
     getXMLRecentResponses,
@@ -129,4 +228,5 @@ module.exports = {
     submitXMLTemplate,
     getTLRoomMaster,
     createTLRoomMaster,
+    updateInventoryMultipleDays,
 };

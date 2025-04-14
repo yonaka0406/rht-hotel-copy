@@ -1,4 +1,4 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails, selectExportMealCount } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory } = require('../models/report');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
 
@@ -429,6 +429,25 @@ const getExportMealCount = async (req, res) => {
   }
 };
 
+const getReservationsInventory = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+  
+  try {    
+    const data = await selectReservationsInventory(req.requestId, hotelId, startDate, endDate);    
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
+    }  
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = { 
   getCountReservation,
   getCountReservationDetails,
@@ -437,4 +456,5 @@ module.exports = {
   getExportReservationList,
   getExportReservationDetails,
   getExportMealCount,
+  getReservationsInventory,
 };

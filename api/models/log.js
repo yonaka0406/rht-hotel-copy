@@ -62,6 +62,61 @@ const selectReservationHistory = async (requestId, id) => {
     }
 };
 
+const selectReservationInventoryChange = async (requestId, id) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT
+            id,
+            action,
+            table_name,        
+            CASE
+                WHEN action != 'UPDATE' THEN changes->>'check_in'
+                ELSE LEAST(
+                changes->'old'->>'check_in',
+                changes->'new'->>'check_in'
+                )
+            END AS check_in, -- Unified check_in
+            CASE
+                WHEN action != 'UPDATE' THEN changes->>'check_out'
+                ELSE GREATEST(
+                changes->'old'->>'check_out',
+                changes->'new'->>'check_out'
+                )
+            END AS check_out, -- Unified check_out
+            CASE
+                WHEN action != 'UPDATE' THEN (changes->>'hotel_id')::int
+                ELSE (changes->'new'->>'hotel_id')::int
+            END AS hotel_id -- Unified hotel_id
+
+        FROM public.logs_reservation
+        WHERE 
+            id = $1
+            AND table_name LIKE 'reservations_%'
+            AND LENGTH(table_name) <= LENGTH('reservations_') + 3
+            AND 
+            (
+                action != 'UPDATE' OR (
+                    action = 'UPDATE' AND (
+                        changes->'old'->>'check_in' IS DISTINCT FROM changes->'new'->>'check_in' OR
+                        changes->'old'->>'check_out' IS DISTINCT FROM changes->'new'->>'check_out' OR
+                        (changes->'old'->>'hotel_id')::int IS DISTINCT FROM (changes->'new'->>'hotel_id')::int
+                    )
+                )
+            )
+        ;
+
+    `;
+    const values = [id];
+    try {
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error retrieving logs:', err);
+        throw new Error('Database error');
+    }
+};
+
 module.exports = {
-    selectReservationHistory,    
-  };
+    selectReservationHistory,
+    selectReservationInventoryChange,    
+};
