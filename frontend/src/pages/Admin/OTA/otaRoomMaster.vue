@@ -130,26 +130,26 @@
         const rooms = [];
 
         const processRoomType = (rmType) => ({
-            rmTypeCode: rmType.rmTypeCode,
-            rmTypeName: rmType.rmTypeName,
+            rmtypecode: rmType.rmTypeCode,
+            rmtypename: rmType.rmTypeName,
         });
 
         const processGroup = (group, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmTypeCode === group.rmTypeCode);
+            const room = roomsArray.find((r) => r.rmtypecode === group.rmTypeCode);
             if (room) {
-            room.netRmTypeGroupCode = group.netRmTypeGroupCode;
-            room.netRmTypeGroupName = group.netRmTypeGroupName;
+                room.netrmtypegroupcode = group.netRmTypeGroupCode;
+                room.netrmtypegroupname = group.netRmTypeGroupName;
             }
         };
 
         const processAgtRoom = (agtRoom, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmTypeCode === agtRoom.rmTypeCode);
+            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netagtrmtypecode === agtRoom.netAgtRmTypeCode);
             if (room) {
-            room.agtCode = agtRoom.agtCode;
-            room.netAgtRmTypeCode = agtRoom.netAgtRmTypeCode;
-            room.netAgtRmTypeName = agtRoom.netAgtRmTypeName;
-            room.isStockAdjustable = agtRoom.isStockAdjustable;
-            room.lincolnUseFlag = agtRoom.lincolnUseFlag;
+                room.agtCode = agtRoom.agtCode;
+                room.netagtrmtypecode = agtRoom.netAgtRmTypeCode;
+                room.netagtrmtypename = agtRoom.netAgtRmTypeName;
+                room.isstockadjustable = agtRoom.isStockAdjustable;
+                room.lincolnuseflag = agtRoom.lincolnUseFlag;
             }
         };
 
