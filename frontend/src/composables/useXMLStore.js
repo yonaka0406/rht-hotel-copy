@@ -196,7 +196,7 @@ export function useXMLStore() {
             }
 
             const responseData = await response.json(); // Parse the JSON response from postXMLResponse
-            console.log('XML response saved successfully', responseData);
+            // console.log('XML response saved successfully', responseData);
             return responseData;
             
         } catch (error) {
