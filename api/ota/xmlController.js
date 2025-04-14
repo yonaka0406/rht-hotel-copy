@@ -130,12 +130,16 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const name = 'NetStockBulkAdjustmentService';
 
+    console.log('updateInventoryMultipleDays:', hotel_id, name);
+
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
         return res.status(500).send({ error: 'XML template not found.' });
     }
+    console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
     const soapBodyTemplate = template.body;
+
     const processInventoryBatch = async (batch) => {
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
@@ -179,6 +183,8 @@ const updateInventoryMultipleDays = async (req, res) => {
 
         const fullXML = template.header + xmlBody + template.footer;
 
+        console.log('updateInventoryMultipleDays fullXML:', fullXML);
+
         try {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, fullXML);
         } catch (error) {
@@ -186,7 +192,6 @@ const updateInventoryMultipleDays = async (req, res) => {
         }
         
     };
-
     const getInventoryDateRange = (inventory) => {
         if (inventory.length === 0) return { minDate: null, maxDate: null };
 
@@ -208,7 +213,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
 
     if (inventory.length > 1000 || exceeds30Days) {
-        const batchSize = 1000;
+        const batchSize = 30;
         for (let i = 0; i < inventory.length; i += batchSize) {
             const batch = inventory.slice(i, i + batchSize);
             await processInventoryBatch(batch);
