@@ -4,6 +4,9 @@ const { addClientByName } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
+const { selectTLRoomMaster } = require('../ota/xmlModel');
+
+
 
 // Helper
 const formatDate = (date) => {
@@ -2215,6 +2218,17 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       return 'other';
     }
   };
+  const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
+  console.log('selectTLRoomMaster:', roomMaster);
+  const selectRoomTypeId = (code) => {
+    const match = roomMaster.find(item => item.netagtrmtypecode === code);
+    return match ? match.room_type_id : null;
+  };
+  const availableRooms = await selectAvailableRooms(requestId, hotel_id, data.BasicInformation.CheckInDate, data.BasicInformation.CheckOutDate);
+  console.log('selectAvailableRooms:', availableRooms);
+  const isRoomAvailable = (room_type_id) => {
+    return availableRooms.some(room => room.room_type_id === room_type_id);
+  };
 
   try {
     await client.query('BEGIN');
@@ -2257,12 +2271,30 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     console.log('addOTAReservation reservations:', values);  
     //const reservation = await pool.query(query, values);
 
-    // Get available rooms for the reservation period
-    const reservationDetails = [];
-    const availableRoomsFiltered = [];
-    const availableRooms = await selectAvailableRooms(requestId, hotel_id, data.BasicInformation.CheckInDate, data.BasicInformation.CheckOutDate);
-    availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
-    console.log('room_type_id is not null. Available Rooms:',availableRoomsFiltered.value);
+    // Get available rooms for the reservation period        
+    const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
+    if (Array.isArray(roomList)) {
+      roomList.forEach(item => {
+        const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
+        const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
+        const available = isRoomAvailable(roomTypeId);
+
+        console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
+        
+        // Optionally assign it back to the item
+        item.room_type_id = roomTypeId;
+        item.isAvailable = available;
+      });
+    } else if (roomList?.RoomInformation) {
+      const netAgtRmTypeCode = roomList.RoomInformation.RoomTypeCode;
+      const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
+      const available = isRoomAvailable(roomTypeId);
+
+      console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
+    
+      roomList.room_type_id = roomTypeId;
+      roomList.isAvailable = available;
+    }
 /*
     query = `
     INSERT INTO reservation_details (
