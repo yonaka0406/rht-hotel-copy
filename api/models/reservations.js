@@ -2183,17 +2183,13 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   let query = '';
   let values = '';  
   
-  let reservationComment = [];
-  if (data?.BasicInformation?.TravelAgencyBookingNumber) {
-    reservationComment.push(`予約番号：${data.BasicInformation.TravelAgencyBookingNumber}；`);
-  }
+  let reservationComment = "";  
   if (data?.BasicInformation?.OtherServiceInformation) {
-    reservationComment.push(`予約備考：${data.BasicInformation.OtherServiceInformation}；`);
+    reservationComment += `予約備考：${data.BasicInformation.OtherServiceInformation}；\n`;
   }
   if (data?.BasicInformation?.SpecificMealCondition) {
-    reservationComment.push(`食事備考：${data.BasicInformation.SpecificMealCondition}；`);
+    reservationComment += `食事備考：${data.BasicInformation.SpecificMealCondition}；\n`;
   }
-  reservationComment.join('\n');  
 
   try {
     await client.query('BEGIN');
