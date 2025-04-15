@@ -150,8 +150,7 @@
 
         const rooms = [];
 
-        const processGroup = (group) => {
-            hotel_id = props.hotel_id;
+        const processGroup = (group) => {            
             netrmtypegroupcode = group.netRmTypeGroupCode;
             netrmtypegroupname = group.netRmTypeGroupName;
             rmtypecode = group.rmTypeCode;            
@@ -164,8 +163,9 @@
 
         const processRoomType = (type, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === type.rmTypeCode);
-            if (room) {                                
-                room.rmtypename = type.rmTypeName;                
+            if (room) {
+                room.hotel_id = props.hotel_id;
+                room.rmtypename = type.rmTypeName;
             }
         };        
         if (Array.isArray(rmTypeList)) {
