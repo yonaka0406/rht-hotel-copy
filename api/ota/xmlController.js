@@ -82,7 +82,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
 
         // Save the response using insertXMLResponse
         const responseXml = await response.text();
-        console.log('Response XML:', responseXml);
+        // console.log('Response XML:', responseXml);
         console.log('Inserting XML response into database...');
         await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
 
@@ -145,8 +145,11 @@ const getOTAReservations = async (req, res) => {
             // Fetch the data
             const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);            
 
+            console.log('getOTAReservations reservations', reservations);
             const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
+            console.log('getOTAReservations executeResponse', executeResponse);
             const bookingInfoList = executeResponse?.bookingInfoList?.bookingInfo;
+            console.log('getOTAReservations bookingInfoList', bookingInfoList);
 
             if (!bookingInfoList) {
                 console.log('No booking information found in the response.');
