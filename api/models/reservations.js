@@ -2183,6 +2183,12 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   let query = '';
   let values = '';
 
+  const reservationComment = `
+    予約番号：${data.BasicInformation.TravelAgencyBookingNumber}；
+    予約備考：${data.BasicInformation.OtherServiceInformation}；
+    食事備考：${data.BasicInformation.SpecificMealCondition}；
+  `;
+
   try {
     await client.query('BEGIN');
 
@@ -2196,17 +2202,18 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     `;
     values = [
       hotel_id,    
-      reservation.reservation_client_id,
+      0,
       data.BasicInformation.CheckInDate,
       data.BasicInformation.CheckInTime,
       data.BasicInformation.CheckOutDate,
       data.BasicInformation.CheckOutTime,
       data.BasicInformation.GrandTotalPaxCount,
-      reservation.agent,
-      reservation.comment,
+      data.SalesOfficeInformation.SalesOfficeCompanyName,
+      reservationComment,
     ];
+    console.log('addOTAReservation reservations', values);
   
-    const reservation = await pool.query(query, values);
+    //const reservation = await pool.query(query, values);
 
     await client.query('COMMIT');
     return { success: true };
