@@ -144,14 +144,14 @@ const getOTAReservations = async (req, res) => {
 
             // Fetch the data
             const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
-            console.log('getOTAReservations reservations', reservations);
+            // console.log('getOTAReservations reservations', reservations);
 
             const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
-            console.log('getOTAReservations executeResponse', executeResponse);
+            // console.log('getOTAReservations executeResponse', executeResponse);
 
             const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
             const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
-            console.log('getOTAReservations bookingInfoList', bookingInfoList);
+            // console.log('getOTAReservations bookingInfoList', bookingInfoList);
 
             if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
                 console.log('No booking information found in the response.');
@@ -179,23 +179,19 @@ const getOTAReservations = async (req, res) => {
                         const allotmentBookingReport = parsedXML?.AllotmentBookingReport;
 
                         if (allotmentBookingReport) {
-                            formattedReservations.push({
-                              reservation_status: allotmentBookingReport?.TransactionType?.DataClassification?.[0] || null,
-                              site_controller_id: allotmentBookingReport?.TransactionType?.DataID?.[0] || null,
-                              ota_company: allotmentBookingReport?.SalesOfficeInformation?.SalesOfficeCompanyName?.[0] || null,
-                              ota_company_code: allotmentBookingReport?.SalesOfficeInformation?.SalesOfficeCode?.[0] || null,
-                              ota_reservation_id: allotmentBookingReport?.BasicInformation?.TravelAgencyBookingNumber?.[0] || null,
-                              booker_kana: allotmentBookingReport?.BasicInformation?.GuestOrGroupNameSingleByte?.[0] || null,
-                              booker_name: allotmentBookingReport?.BasicInformation?.GuestOrGroupNameKanjiName?.[0] || null,
-                              check_in: allotmentBookingReport?.BasicInformation?.CheckInDate?.[0] || null,
-                              check_in_time: allotmentBookingReport?.BasicInformation?.CheckInTime?.[0] || null,
-                              check_out: allotmentBookingReport?.BasicInformation?.CheckOutDate?.[0] || null,
-                              check_out_time: allotmentBookingReport?.BasicInformation?.CheckOutTime?.[0] || null,                              
-                            });
+                            const reservationData = {};
+                            for (const key in allotmentBookingReport) {
+                            if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
+                                reservationData[key] = allotmentBookingReport[key];
+                                if (Array.isArray(reservationData[key]) && reservationData[key].length === 1) {
+                                reservationData[key] = reservationData[key][0];
+                                }
+                            }
+                            }
+                            formattedReservations.push(reservationData);
                           }
                     } catch (parseError) {
-                        console.error('Error parsing infoTravelXML:', parseError);
-                        // Handle the error appropriately, e.g., skip this reservation or log the error
+                        console.error('Error parsing infoTravelXML:', parseError);                        
                     }
                 }
             };        
