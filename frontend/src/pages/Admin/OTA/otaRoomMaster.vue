@@ -69,36 +69,28 @@
 
         console.log('saveRoomMaster', filteredData);
 
-        // Validation for duplicate
-        const groupRoomTypeCheck = new Set();
-        const roomTypeCheck = new Set();
+        // Create a map to track room_type_id to netrmtypegroupcode
+        const roomTypeGroupMap = new Map();
         for (const item of filteredData) {
-            const groupRoomTypeKey = `${item.netRmTypeGroupCode}-${item.room_type_id}`;
-            const roomTypeKey = `${item.room_type_id}`;
-            if (groupRoomTypeCheck.has(groupRoomTypeKey)) {
-            toast.add({
-                severity: 'error',
-                summary: 'エラー',
-                detail: `ネット室タイプグループとPMSの部屋タイプ重複されています。`,
-                life: 5000,
-            });
-            return;
-            }
+            const groupCode = item.netrmtypegroupcode;
+            const roomTypeId = item.room_type_id;
 
-            if (roomTypeCheck.has(roomTypeKey)) {
-                toast.add({
-                severity: 'error',
-                summary: 'エラー',
-                detail: `PMSの部屋タイプ重複されています。`,
-                life: 5000,
-                });
-                return;
+            if (roomTypeGroupMap.has(roomTypeId)) {
+                const existingGroup = roomTypeGroupMap.get(roomTypeId);
+                if (existingGroup !== groupCode) {
+                    toast.add({
+                        severity: 'error',
+                        summary: 'エラー',
+                        detail: `同じPMSの部屋タイプが複数のネット室タイプグループに割り当てられています。`,
+                        life: 5000,
+                    });
+                    return;
+                }
+            } else {
+                roomTypeGroupMap.set(roomTypeId, groupCode);
             }
-
-            groupRoomTypeCheck.add(groupRoomTypeKey);
-            roomTypeCheck.add(roomTypeKey);
         }
-
+       
         try {
             await insertTLRoomMaster(filteredData);
             toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
