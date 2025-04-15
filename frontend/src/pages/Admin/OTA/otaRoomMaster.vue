@@ -151,8 +151,10 @@
         const rooms = [];
 
         const processGroup = (group) => {
+            hotel_id = props.hotel_id;
             netrmtypegroupcode = group.netRmTypeGroupCode;
-            netrmtypegroupname = group.netRmTypeGroupName;            
+            netrmtypegroupname = group.netRmTypeGroupName;
+            rmtypecode = group.rmTypeCode;            
         };
         if (Array.isArray(netRmTypeGroupList)) {
             netRmTypeGroupList.forEach((netRmTypeGroup) => rooms.push(processGroup(netRmTypeGroup)));
@@ -161,10 +163,8 @@
         }
 
         const processRoomType = (type, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
-            if (room) {
-                room.hotel_id = props.hotel_id;
-                room.rmtypecode = type.rmTypeCode;
+            const room = roomsArray.find((r) => r.rmtypecode === type.rmTypeCode);
+            if (room) {                                
                 room.rmtypename = type.rmTypeName;                
             }
         };        
