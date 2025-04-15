@@ -2182,12 +2182,17 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
   let query = '';
   let values = '';
-
-  const reservationComment = `
-    予約番号：${data.BasicInformation.TravelAgencyBookingNumber}；
-    予約備考：${data.BasicInformation.OtherServiceInformation}；
-    食事備考：${data.BasicInformation.SpecificMealCondition}；
-  `;
+  
+  const reservationComment = computed(() => {
+    let commentParts = [];    
+    if (data?.BasicInformation?.OtherServiceInformation) {
+      commentParts.push(`予約備考：${data.BasicInformation.OtherServiceInformation}；`);
+    }
+    if (data?.BasicInformation?.SpecificMealCondition) {
+      commentParts.push(`食事備考：${data.BasicInformation.SpecificMealCondition}；`);
+    }
+    return commentParts.join('\n'); // Or you can use '<br>' for HTML output
+  });
 
   try {
     await client.query('BEGIN');
@@ -2196,8 +2201,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Insert reservations
     query = `
       INSERT INTO reservations (
-        hotel_id, reservation_client_id, check_in, check_in_time, check_out, check_out_time, number_of_people, status, type, agent, comment, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'ota', $8, $9, 1, 1)
+        hotel_id, reservation_client_id, check_in, check_in_time, check_out, check_out_time, number_of_people, status, type, agent, ota_reservation_id, comment, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'ota', $8, $9, $10, 1, 1)
       RETURNING *;
     `;
     values = [
@@ -2209,6 +2214,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       data.BasicInformation.CheckOutTime,
       data.BasicInformation.GrandTotalPaxCount,
       data.SalesOfficeInformation.SalesOfficeCompanyName,
+      data.BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
     console.log('addOTAReservation reservations', values);
