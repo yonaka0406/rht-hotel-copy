@@ -2236,15 +2236,17 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
-  function handleRoomItem(item) {
-    const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
-    const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
-    const available = isRoomAvailable(roomTypeId);
+  function handleRoomItem(item) {    
+    const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
+    const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
+    const available = roomTypeId ? isRoomAvailable(roomTypeId) : false;
   
     console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
     
-    item.room_type_id = roomTypeId;
-    item.isAvailable = available;
+    if (item) {
+      item.room_type_id = roomTypeId;
+      item.isAvailable = available;
+    }
   };
 
   console.log('before BEGIN');
@@ -2294,12 +2296,20 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     //const reservation = await pool.query(query, values);
 
     // Get available rooms for the reservation period
-    console.log('<-- RoomAndGuestList -->');     
-       
+    console.log('<-- RoomAndGuestList -->');  
+
+    if (RoomAndGuestList.RoomInformation) {
+      handleRoomItem(RoomAndGuestList);
+    } else if (typeof RoomAndGuestList === 'object') {
+      Object.values(RoomAndGuestList).forEach(roomItem => {
+        handleRoomItem(roomItem);
+      });
+    }
+      /*
     const items = Object.values(RoomAndGuestList);
     items.forEach(item => handleRoomItem(item));
     console.log('RoomTypeCode is an object with numeric keys', items);    
-
+      */
     console.log('<-- /RoomAndGuestList -->'); 
 /*
     query = `
