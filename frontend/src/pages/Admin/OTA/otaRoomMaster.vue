@@ -155,7 +155,8 @@
         
         if (Array.isArray(netAgtRmTypeList)) {
             netAgtRmTypeList.forEach((item) => {
-                rooms.push({         
+                rooms.push({
+                    hotel_id: props.hotel_id,
                     rmtypecode: item.rmTypeCode,
                     rmtypename: getTypeName(item.rmTypeCode),
                     netrmtypegroupcode: item.netRmTypeGroupCode,
