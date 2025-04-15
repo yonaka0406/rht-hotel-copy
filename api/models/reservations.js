@@ -2167,7 +2167,9 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
-  console.log('addOTAReservation data', data);
+  console.log('addOTAReservation BasicInformation', data.BasicInformation);
+  console.log('addOTAReservation RoomAndGuestInformation', data.RoomAndGuestInformation);
+  console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -2211,8 +2213,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 /*
     query = `
     INSERT INTO reservation_details (
-        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1, 1)
+        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, 1, 1)
       RETURNING *;
     `;
 
@@ -2223,11 +2225,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       reservationDetail.room_id,
       reservationDetail.plans_global_id,
       reservationDetail.plans_hotel_id,
-      reservationDetail.plan_name,
-      reservationDetail.plan_type,
-      reservationDetail.number_of_people,
-      reservationDetail.price,
-      reservationDetail.billable,      
+      data.BasicInformation.PackagePlanName,      
+      data.BasicInformation.GrandTotalPaxCount,
+      data.BasicRateInformation.TotalAccommodationCharge,      
     ];
 
     console.log('addOTAReservation reservation_details', values);
