@@ -1,6 +1,7 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
 const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster } = require('../ota/xmlModel');
+const { getAllHotelSiteController } = require('../models/hotel');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -123,6 +124,52 @@ const createTLRoomMaster = async (req, res) => {
     }
 };
 
+const getOTAReservations = async (req, res) => {
+    const name = 'BookingInfoOutputService';
+
+    try {
+        const hotels = await getAllHotelSiteController(req.requestId);
+        if (!hotels || hotels.length === 0) {
+            return res.status(404).send({ error: 'No hotels found.' });
+        }
+
+        for (const hotel of hotels) {
+            const hotel_id = hotel.hotel_id; 
+
+            const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+            if (!template) {
+                console.warn(`XML template not found for hotel_id: ${hotel_id}`);
+                continue; // Skip to next hotel
+            }
+
+            // Fetch the data
+            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
+            console.log('getOTAReservations reservations', reservations);
+
+            // Send OK to OTA server
+            // await successOTAReservations(req, res, hotel_id);
+        }
+
+        return res.status(200).send({ message: 'Processed all hotels.' });
+    } catch (error) {
+        console.error('Error in getOTAReservations:', error);
+        return res.status(500).send({ error: 'An error occurred while processing hotels.' });
+    }
+
+    
+
+};
+const successOTAReservations = async (req, res, hotel_id) => {
+    const name = 'OutputCompleteService';
+
+    try {
+        const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+        await submitXMLTemplate(req, res, hotel_id, name, template);
+    } catch (error) {        
+        console.error('Error in successOTAReservations:', error);
+        return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
+    }
+};
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
@@ -267,5 +314,7 @@ module.exports = {
     submitXMLTemplate,
     getTLRoomMaster,
     createTLRoomMaster,
+    getOTAReservations,
+    successOTAReservations,
     updateInventoryMultipleDays,
 };

@@ -31,6 +31,22 @@ const getHotelByID = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
+const getAllHotelSiteController = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT sc_user_info.* 
+    FROM sc_user_info 
+    ORDER BY hotel_id
+  `;
+  
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (err) {
+    console.error('Error selecting data:', err);
+    throw new Error('Database error');
+  }
+};
 const getHotelSiteController = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = `
@@ -312,6 +328,7 @@ const getAllRoomsByHotelId = async (requestId, id) => {
 module.exports = {
   getAllHotels,
   getHotelByID,
+  getAllHotelSiteController,
   getHotelSiteController,
   updateHotel,
   updateHotelSiteController,

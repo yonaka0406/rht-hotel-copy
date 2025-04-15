@@ -8,6 +8,7 @@ const socketio = require('socket.io');
 const fs = require('fs');
 const db = require('./config/database');
 const { Pool } = require('pg');
+const { startScheduling } = require('./utils/scheduleUtils');
 
 const app = express();
 app.use(db.setupRequestContext);
@@ -164,7 +165,7 @@ const listenForTableChanges = async () => {
 
       let response = null;
 
-      console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
+      // console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
       response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
         method: 'GET',
         headers: {
@@ -174,7 +175,7 @@ const listenForTableChanges = async () => {
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
 
-        console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
+        // console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
@@ -183,7 +184,7 @@ const listenForTableChanges = async () => {
         });
         const inventory = await response.json();        
 
-        console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
+        // console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
@@ -198,11 +199,11 @@ const listenForTableChanges = async () => {
 
   await client.query('LISTEN logs_reservation_changed');
   await client.query('LISTEN reservation_log_inserted');
-  //console.log('Listening for changes on logs_reservation_changed');
+  // console.log('Listening for changes on logs_reservation_changed');
 
   // Prod database listener
   const prodClient = await prodListenClient.connect();
-  prodClient.on('notification', (msg) => {    
+  prodClient.on('notification', async (msg) => {    
     if (msg.channel === 'logs_reservation_changed') {
       ioHttp.emit('tableUpdate', { 
         message: 'Reservation update detected',
@@ -215,22 +216,43 @@ const listenForTableChanges = async () => {
         });
       }
     }
-    if (msg.channel === 'reservation_log_inserted') {
+    if (msg.channel === 'reservation_log_inserted') {      
       const logId = parseInt(msg.payload, 10);
 
-      const response = fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
+      let response = null;
+
+      // console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
+      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
       });
-      const data = response.json();      
-      if(data){
-        console.log('reservation_log_inserted is a reservation with changes in date')
+      const data = await response.json();
+      if (data && Object.keys(data).length > 0) {
+
+        // console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
+        response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        const inventory = await response.json();        
+
+        // console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
+        response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(inventory),
+        });
+
       }
-      
     }
   });
+  
   await prodClient.query('LISTEN logs_reservation_changed');
   await prodClient.query('LISTEN reservation_log_inserted');
 };
@@ -289,3 +311,6 @@ if (httpsServer) {
     console.log(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
   });
 }
+
+// Start the scheduling
+startScheduling();
