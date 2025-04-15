@@ -67,6 +67,8 @@
         // Filter out items with null netRmTypeGroupCode
         const filteredData = data.filter(item => item.netrmtypegroupcode != null);
 
+        console.log('saveRoomMaster', filteredData);
+
         // Validation for duplicate
         const groupRoomTypeCheck = new Set();
         const roomTypeCheck = new Set();
@@ -144,9 +146,9 @@
         const netRmTypeGroupList = returnData.netRmTypeGroupList;
         const netAgtRmTypeList = returnData.netAgtRmTypeList;
 
-        console.log('rmTypeList', rmTypeList);
-        console.log('netRmTypeGroupList', netRmTypeGroupList);
-        console.log('netAgtRmTypeList', netAgtRmTypeList);
+        // console.log('rmTypeList', rmTypeList);
+        // console.log('netRmTypeGroupList', netRmTypeGroupList);
+        // console.log('netAgtRmTypeList', netAgtRmTypeList);
 
         const getGroupName = (groupCode) => {
             const group = netRmTypeGroupList?.find((g) => g.netRmTypeGroupCode == groupCode);
