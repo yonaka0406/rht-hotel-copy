@@ -2296,17 +2296,19 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Get available rooms for the reservation period
     console.log('<-- RoomAndGuestList -->'); 
     
-    if (Array.isArray(RoomAndGuestList)) {
-      console.log('RoomAndGuestList is an array', RoomAndGuestList);
+    if (Array.isArray(RoomAndGuestList)) {      
       RoomAndGuestList.forEach(item => handleRoomItem(item));
+      console.log('RoomAndGuestList is an array', RoomAndGuestList);
     } else if (typeof RoomAndGuestList === 'object' && RoomAndGuestList !== null) {      
-      const items = Object.values(RoomAndGuestList);      
-      console.log('RoomTypeCode is an object with numeric keys', items);
+      const items = Object.values(RoomAndGuestList);
       items.forEach(item => handleRoomItem(item));
-    } else if (RoomAndGuestList?.RoomInformation) {
-      console.log('RoomAndGuestList is a single object with RoomInformation', RoomAndGuestList);
+      console.log('RoomTypeCode is an object with numeric keys', items);
+    } else if (RoomAndGuestList?.RoomInformation) {      
       handleRoomItem(RoomAndGuestList);
+      console.log('RoomAndGuestList is a single object with RoomInformation', RoomAndGuestList);
     }
+
+    console.log('<-- /RoomAndGuestList -->'); 
 /*
     query = `
     INSERT INTO reservation_details (
