@@ -2,6 +2,7 @@ require("dotenv").config();
 const xml2js = require('xml2js');
 const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
+const { addOTAReservation } = require('../models/reservations');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -162,7 +163,7 @@ const getOTAReservations = async (req, res) => {
             // Process each bookingInfo to parse the inner infoTravelXML
             for (const bookingInfo of Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]) {
                 const infoTravelXML = bookingInfo.infoTravelXML;
-                console.log('getOTAReservations infoTravelXML', infoTravelXML);
+                // console.log('getOTAReservations infoTravelXML', infoTravelXML);
         
                 if (infoTravelXML) {
                     try {
@@ -182,7 +183,7 @@ const getOTAReservations = async (req, res) => {
                             const reservationData = {};
                         
                             function processValue(value, level = 0, keyPath = '') {
-                                console.log(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
+                                // console.log(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
                         
                                 if (typeof value === 'object' && value !== null) {
                                     const innerData = {};
@@ -193,7 +194,7 @@ const getOTAReservations = async (req, res) => {
                                     }
                                     return innerData;
                                 } else if (Array.isArray(value) && value.length === 1) {
-                                    console.log(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
+                                    // console.log(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
                                     return processValue(value[0], level + 1, keyPath + '[0]');
                                 } else {
                                     return value;
@@ -202,9 +203,9 @@ const getOTAReservations = async (req, res) => {
                         
                             for (const key in allotmentBookingReport) {
                                 if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
-                                    console.log(`[Level 0] Starting processing for key: ${key}`);
+                                    // console.log(`[Level 0] Starting processing for key: ${key}`);
                                     reservationData[key] = processValue(allotmentBookingReport[key], 1, key);
-                                    console.log(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
+                                    // console.log(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
                                 }
                             }
                         
@@ -215,9 +216,21 @@ const getOTAReservations = async (req, res) => {
                     }
                 }
             };        
-            console.log('Formatted Reservations:', formattedReservations);
-            console.log('formattedReservations RoomAndGuestInformation:', formattedReservations[0].RoomAndGuestInformation);
-            console.log('formattedReservations RoomAndGuestInformation:', formattedReservations[0].RoomAndGuestInformation[0].RoomAndGuestList);
+            // console.log('Formatted Reservations:', formattedReservations);
+
+            // Call addOTAReservation for each formatted reservation
+            for (const reservation of formattedReservations) {
+                try {
+                    console.log('Type of OTA transaction:', reservation.TransactionType.DataClassification);
+                    if (reservation.TransactionType.DataClassification === 'NewBookReport'){                        
+                        await addOTAReservation(req.requestId, hotel_id, reservation);
+                    }
+                    
+                } catch (dbError) {
+                    console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);                    
+                }
+            }
+            
 
             // Send OK to OTA server
             // await successOTAReservations(req, res, hotel_id);
@@ -228,9 +241,6 @@ const getOTAReservations = async (req, res) => {
         console.error('Error in getOTAReservations:', error);
         return res.status(500).send({ error: 'An error occurred while processing hotels.' });
     }
-
-    
-
 };
 const successOTAReservations = async (req, res, hotel_id) => {
     const name = 'OutputCompleteService';
