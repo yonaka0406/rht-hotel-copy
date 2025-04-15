@@ -2228,7 +2228,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
-
+  console.log('before BEGIN')
   try {
     await client.query('BEGIN');
 
