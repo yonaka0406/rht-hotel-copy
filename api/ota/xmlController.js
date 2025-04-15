@@ -130,13 +130,13 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const name = 'NetStockBulkAdjustmentService';
 
-    console.log('updateInventoryMultipleDays:', hotel_id, name);
+    // console.log('updateInventoryMultipleDays:', hotel_id, name);
 
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
         return res.status(500).send({ error: 'XML template not found.' });
     }
-    console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
+    // console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
 
     // Filter out entries older than the current date
     const currentDate = (() => {
@@ -146,9 +146,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}${month}${day}`;
     })();    
-
-    console.log('currentDate:', currentDate);
-
+    
     let filteredInventory = inventory.filter((item) => {
         const itemDate = (() => {
             const date = new Date(item.date);
@@ -163,7 +161,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         return itemDate >= currentDate;
     });
 
-    console.log('filteredInventory', filteredInventory);
+    // console.log('filteredInventory', filteredInventory);
 
     const processInventoryBatch = async (batch, batch_no) => {
         let adjustmentTargetXml = '';
@@ -215,7 +213,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         }
         xmlBody = xmlBody.replace('{{requestId}}', requestId);
 
-        console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
+        // console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
         try {
             const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -245,10 +243,9 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
-
-    console.log('filteredInventory length', filteredInventory.length);
-    if (filteredInventory.length > 1 || exceeds30Days) {        
-        const batchSize = 2;
+    
+    if (filteredInventory.length > 1000 || exceeds30Days) {        
+        const batchSize = 30;
         for (let i = 0; i < filteredInventory.length; i += batchSize) {
             const batch = filteredInventory.slice(i, i + batchSize);
             await processInventoryBatch(batch, i);
