@@ -164,24 +164,41 @@ const getOTAReservations = async (req, res) => {
                 const infoTravelXML = bookingInfo.infoTravelXML;
         
                 if (infoTravelXML) {
-                try {
-                    const parsedXML = await new Promise((resolve, reject) => {
-                    xml2js.parseString(infoTravelXML, { explicitArray: false }, (err, result) => {
-                        if (err) {
-                        reject(err);
-                        } else {
-                        resolve(result);
-                        }
-                    });
-                    });
-                    parsedReservations.push(parsedXML);
-                } catch (parseError) {
-                    console.error('Error parsing infoTravelXML:', parseError);
-                    // Handle the error appropriately, e.g., skip this reservation or log the error
-                }
+                    try {
+                        const parsedXML = await new Promise((resolve, reject) => {
+                            xml2js.parseString(infoTravelXML, { explicitArray: false }, (err, result) => {
+                                if (err) {
+                                reject(err);
+                                } else {
+                                resolve(result);
+                                }
+                            });
+                        });
+
+                        const allotmentBookingReport = parsedXML?.AllotmentBookingReport;
+
+                        if (allotmentBookingReport) {
+                            formattedReservations.push({
+                              reservation_status: allotmentBookingReport?.TransactionType?.DataClassification?.[0] || null,
+                              site_controller_id: allotmentBookingReport?.TransactionType?.DataID?.[0] || null,
+                              ota_company: allotmentBookingReport?.SalesOfficeInformation?.SalesOfficeCompanyName?.[0] || null,
+                              ota_company_code: allotmentBookingReport?.SalesOfficeInformation?.SalesOfficeCode?.[0] || null,
+                              ota_reservation_id: allotmentBookingReport?.BasicInformation?.TravelAgencyBookingNumber?.[0] || null,
+                              booker_kana: allotmentBookingReport?.BasicInformation?.GuestOrGroupNameSingleByte?.[0] || null,
+                              booker_name: allotmentBookingReport?.BasicInformation?.GuestOrGroupNameKanjiName?.[0] || null,
+                              check_in: allotmentBookingReport?.BasicInformation?.CheckInDate?.[0] || null,
+                              check_in_time: allotmentBookingReport?.BasicInformation?.CheckInTime?.[0] || null,
+                              check_out: allotmentBookingReport?.BasicInformation?.CheckOutDate?.[0] || null,
+                              check_out_time: allotmentBookingReport?.BasicInformation?.CheckOutTime?.[0] || null,                              
+                            });
+                          }
+                    } catch (parseError) {
+                        console.error('Error parsing infoTravelXML:', parseError);
+                        // Handle the error appropriately, e.g., skip this reservation or log the error
+                    }
                 }
             };        
-            console.log('Parsed Reservations:', parsedReservations);
+            console.log('Formatted Reservations:', formattedReservations);
 
             // Send OK to OTA server
             // await successOTAReservations(req, res, hotel_id);
