@@ -2171,9 +2171,18 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
-  console.log('addOTAReservation BasicInformation', data.BasicInformation);  
-  // console.log('addOTAReservation RoomAndGuestList', data.RoomAndGuestInformation.RoomAndGuestList);
-  console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
+  // XML
+  const SalesOfficeInformation = data?.SalesOfficeInformation || {};
+  console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
+  const BasicInformation = data?.BasicInformation || {};
+  console.log('addOTAReservation BasicInformation:', BasicInformation);
+  const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
+  console.log('addOTAReservation Basic:', Basic);
+  const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
+  console.log('addOTAReservation Member:', Member);
+  const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
+  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+
   // Query
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2182,18 +2191,18 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
   // Fields
   const dateRange = [];
-  let currentDate = new Date(data.BasicInformation.CheckInDate);
-  while (currentDate < new Date(data.BasicInformation.CheckOutDate)) {
+  let currentDate = new Date(BasicInformation.CheckInDate);
+  while (currentDate < new Date(BasicInformation.CheckOutDate)) {
     dateRange.push(new Date(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
   }
   
   let reservationComment = "";  
-  if (data?.BasicInformation?.OtherServiceInformation) {
-    reservationComment += `予約備考：${data.BasicInformation.OtherServiceInformation}；\n`;
+  if (BasicInformation?.OtherServiceInformation) {
+    reservationComment += `予約備考：${BasicInformation.OtherServiceInformation}；\n`;
   }
-  if (data?.BasicInformation?.SpecificMealCondition) {
-    reservationComment += `食事備考：${data.BasicInformation.SpecificMealCondition}；\n`;
+  if (BasicInformation?.SpecificMealCondition) {
+    reservationComment += `食事備考：${BasicInformation.SpecificMealCondition}；\n`;
   }
 
   // Helper
@@ -2222,7 +2231,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
-  const availableRooms = await selectAvailableRooms(requestId, hotel_id, data.BasicInformation.CheckInDate, data.BasicInformation.CheckOutDate);
+  const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
   // console.log('selectAvailableRooms:', availableRooms);
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
@@ -2233,14 +2242,16 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     console.log('after BEGIN');
 
+    
+
     // Client info
     const clientData = {
-      name: data.RisaplsInformation.RisaplsCommonInformation.Member.UserName || '',
-      name_kana: data.RisaplsInformation.RisaplsCommonInformation.Member.UserKana || '',
-      legal_or_natural_person: selectNature(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
-      gender: selectGender(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
-      email: data.RisaplsInformation.RisaplsCommonInformation.Basic.Email || '',
-      phone: data.RisaplsInformation.RisaplsCommonInformation.Basic.PhoneNumber || '',
+      name: Member.UserName || BasicInformation.GuestOrGroupNameKanjiName || '',
+      name_kana: BasicInformation.GuestOrGroupNameSingleByte || '',
+      legal_or_natural_person: selectNature(Member.UserGendar || 1),
+      gender: selectGender(Member.UserGendar || '2'),
+      email: Basic.Email || '',
+      phone: Basic.PhoneNumber || '',
       created_by: 1,
       updated_by: 1,
     };    
@@ -2259,13 +2270,13 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     values = [
       hotel_id,    
       reservation_client_id,
-      data.BasicInformation.CheckInDate,
-      data.BasicInformation.CheckInTime,
-      data.BasicInformation.CheckOutDate,
-      data.BasicInformation.CheckOutTime,
-      data.BasicInformation.GrandTotalPaxCount,
-      data.SalesOfficeInformation.SalesOfficeCompanyName,
-      data.BasicInformation.TravelAgencyBookingNumber,
+      BasicInformation.CheckInDate,
+      BasicInformation.CheckInTime,
+      BasicInformation.CheckOutDate,
+      BasicInformation.CheckOutTime,
+      BasicInformation.GrandTotalPaxCount,
+      SalesOfficeInformation.SalesOfficeCompanyName,
+      BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
     console.log('addOTAReservation reservations:', values);  
@@ -2273,11 +2284,11 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     // Get available rooms for the reservation period        
     const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
-    console.log('<-- roomList -->'); 
-    console.log('roomList:', roomList);   
-    if (Array.isArray(roomList)) {
-      console.log('roomList is an array', roomList);
-      roomList.forEach(item => {
+    console.log('<-- RoomAndGuestList -->'); 
+    
+    if (Array.isArray(RoomAndGuestList)) {
+      console.log('RoomAndGuestList is an array', RoomAndGuestList);
+      RoomAndGuestList.forEach(item => {
         const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
         const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
         const available = isRoomAvailable(roomTypeId);
@@ -2288,16 +2299,16 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         item.room_type_id = roomTypeId;
         item.isAvailable = available;
       });
-    } else if (roomList?.RoomInformation) {
-      console.log('roomList is not an array', roomList);
-      const netAgtRmTypeCode = roomList.RoomInformation.RoomTypeCode;
+    } else if (RoomAndGuestList?.RoomInformation) {
+      console.log('RoomAndGuestList is not an array', RoomAndGuestList);
+      const netAgtRmTypeCode = RoomAndGuestList.RoomInformation.RoomTypeCode;
       const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
       const available = isRoomAvailable(roomTypeId);
 
       console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
     
-      roomList.room_type_id = roomTypeId;
-      roomList.isAvailable = available;
+      RoomAndGuestList.room_type_id = roomTypeId;
+      RoomAndGuestList.isAvailable = available;
     }
 /*
     query = `
