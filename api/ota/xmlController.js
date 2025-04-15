@@ -158,10 +158,11 @@ const getOTAReservations = async (req, res) => {
                 return [];
             }
 
-            const parsedReservations = [];
+            const formattedReservations = [];
             // Process each bookingInfo to parse the inner infoTravelXML
             for (const bookingInfo of Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]) {
                 const infoTravelXML = bookingInfo.infoTravelXML;
+                console.log('getOTAReservations infoTravelXML', infoTravelXML);
         
                 if (infoTravelXML) {
                     try {
