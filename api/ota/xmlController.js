@@ -143,8 +143,40 @@ const getOTAReservations = async (req, res) => {
             }
 
             // Fetch the data
-            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
-            console.log('getOTAReservations reservations', reservations);
+            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);            
+
+            const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
+            const bookingInfoList = executeResponse?.bookingInfoList?.bookingInfo;
+
+            if (!bookingInfoList) {
+                console.log('No booking information found in the response.');
+                return [];
+            }
+
+            const parsedReservations = [];
+            // Process each bookingInfo to parse the inner infoTravelXML
+            for (const bookingInfo of Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]) {
+                const infoTravelXML = bookingInfo.infoTravelXML;
+        
+                if (infoTravelXML) {
+                try {
+                    const parsedXML = await new Promise((resolve, reject) => {
+                    xml2js.parseString(infoTravelXML, { explicitArray: false }, (err, result) => {
+                        if (err) {
+                        reject(err);
+                        } else {
+                        resolve(result);
+                        }
+                    });
+                    });
+                    parsedReservations.push(parsedXML);
+                } catch (parseError) {
+                    console.error('Error parsing infoTravelXML:', parseError);
+                    // Handle the error appropriately, e.g., skip this reservation or log the error
+                }
+                }
+            };        
+            console.log('Parsed Reservations:', parsedReservations);
 
             // Send OK to OTA server
             // await successOTAReservations(req, res, hotel_id);
