@@ -144,12 +144,10 @@
         const netRmTypeGroupList = returnData.netRmTypeGroupList;
         const netAgtRmTypeList = returnData.netAgtRmTypeList;
 
-        console.log('rmTypeList', rmTypeList);
-        console.log('netRmTypeGroupList', netRmTypeGroupList);
-        console.log('netAgtRmTypeList', netAgtRmTypeList);
 
         const rooms = [];
 
+        console.log('rmTypeList', rmTypeList);
         const processGroup = (group) => {            
             netrmtypegroupcode = group.netRmTypeGroupCode;
             netrmtypegroupname = group.netRmTypeGroupName;
@@ -163,6 +161,7 @@
 
         console.log('rooms after processGroup', rooms);
 
+        console.log('netRmTypeGroupList', netRmTypeGroupList);        
         const processRoomType = (type, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === type.rmTypeCode);
             if (room) {
@@ -178,6 +177,7 @@
 
         console.log('rooms after processRoomType', rooms);
 
+        console.log('netAgtRmTypeList', netAgtRmTypeList);
         const processAgtRoom = (agtRoom, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
             if (room) {
