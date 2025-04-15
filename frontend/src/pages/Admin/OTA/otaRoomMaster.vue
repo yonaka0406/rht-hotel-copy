@@ -146,22 +146,24 @@
 
 
         const rooms = [];
-
-        console.log('rmTypeList', rmTypeList);
+        
+        console.log('netRmTypeGroupList', netRmTypeGroupList);        
         const processGroup = (group) => {            
-            netrmtypegroupcode = group.netRmTypeGroupCode;
-            netrmtypegroupname = group.netRmTypeGroupName;
-            rmtypecode = group.rmTypeCode;            
+            return {
+                netrmtypegroupcode: group.netRmTypeGroupCode,
+                netrmtypegroupname: group.netRmTypeGroupName,
+                rmtypecode: group.rmTypeCode
+            };
         };
         if (Array.isArray(netRmTypeGroupList)) {
-            netRmTypeGroupList.forEach((netRmTypeGroup) => rooms.push(processGroup(netRmTypeGroup)));
+            netRmTypeGroupList.forEach((group) => rooms.push(processGroup(group)));
         } else if (netRmTypeGroupList) {
             rooms.push(processGroup(netRmTypeGroupList));
         }
 
         console.log('rooms after processGroup', rooms);
 
-        console.log('netRmTypeGroupList', netRmTypeGroupList);        
+        console.log('rmTypeList', rmTypeList);
         const processRoomType = (type, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === type.rmTypeCode);
             if (room) {
