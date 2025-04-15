@@ -144,61 +144,37 @@
         const netRmTypeGroupList = returnData.netRmTypeGroupList;
         const netAgtRmTypeList = returnData.netAgtRmTypeList;
 
+        console.log('rmTypeList', rmTypeList);
+        console.log('netRmTypeGroupList', netRmTypeGroupList);
+        console.log('netAgtRmTypeList', netAgtRmTypeList);
+
+        const getGroupName = (groupCode) => {
+            const group = netRmTypeGroupList?.find((g) => g.netRmTypeGroupCode == groupCode);
+            return group ? group.netRmTypeGroupName : undefined;
+        };
+        const getTypeName = (rmTypeCode) => {
+            const type = rmTypeList?.find((t) => t.rmTypeCode == rmTypeCode);
+            return type ? type.rmTypeName : undefined;
+        };
 
         const rooms = [];
         
-        console.log('netRmTypeGroupList', netRmTypeGroupList);        
-        const processGroup = (group) => {            
-            return {
-                netrmtypegroupcode: group.netRmTypeGroupCode,
-                netrmtypegroupname: group.netRmTypeGroupName,
-                rmtypecode: group.rmTypeCode
-            };
-        };
-        if (Array.isArray(netRmTypeGroupList)) {
-            netRmTypeGroupList.forEach((group) => rooms.push(processGroup(group)));
-        } else if (netRmTypeGroupList) {
-            rooms.push(processGroup(netRmTypeGroupList));
-        }
-
-        console.log('rooms after processGroup', rooms);
-
-        console.log('rmTypeList', rmTypeList);
-        const processRoomType = (type, roomsArray) => {
-            const room = roomsArray.find((r) => String(r.rmtypecode) === String(type.rmTypeCode));
-            if (room) {
-                room.hotel_id = props.hotel_id;
-                room.rmtypename = type.rmTypeName;
-            } else {
-                console.warn('No match for type:', type.rmTypeCode, type.rmTypeName);
-            }
-        };        
-        if (Array.isArray(rmTypeList)) {
-            rmTypeList.forEach((type) => processRoomType(type, rooms));
-        } else if (rmTypeList) {
-            processRoomType(rmTypeList, rooms);
-        }        
-
-        console.log('rooms after processRoomType', rooms);
-
-        console.log('netAgtRmTypeList', netAgtRmTypeList);
-        const processAgtRoom = (agtRoom, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
-            if (room) {
-                room.agtcode = agtRoom.agtCode;
-                room.netagtrmtypecode = agtRoom.netAgtRmTypeCode;
-                room.netagtrmtypename = agtRoom.netAgtRmTypeName;
-                room.isstockadjustable = agtRoom.isStockAdjustable;
-                room.lincolnuseflag = agtRoom.lincolnUseFlag;
-            }
-        };
         if (Array.isArray(netAgtRmTypeList)) {
-            netAgtRmTypeList.forEach((agtRoom) => processAgtRoom(agtRoom, rooms));
-        } else if (netAgtRmTypeList) {
-            processAgtRoom(netAgtRmTypeList, rooms);
+            netAgtRmTypeList.forEach((item) => {
+                rooms.push({         
+                    rmtypecode: item.rmTypeCode,
+                    rmtypename: getTypeName(item.rmTypeCode),
+                    netrmtypegroupcode: item.netRmTypeGroupCode,
+                    netrmtypegroupname: getGroupName(item.netRmTypeGroupCode),
+                    agtcode: item.agtCode,
+                    netagtrmtypecode: item.netAgtRmTypeCode,
+                    netagtrmtypename: item.netAgtRmTypeName,
+                    isstockadjustable: item.isStockAdjustable,
+                    lincolnuseflag: item.lincolnUseFlag,
+                    
+                });
+            });
         }
-
-        console.log('rooms after processAgtRoom', rooms);        
 
         return rooms;
     };
