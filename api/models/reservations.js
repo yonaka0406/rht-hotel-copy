@@ -2208,24 +2208,24 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const selectGender = (code) => {
     // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar
     console.log('selectGender', code);
-    if (code === 0){
+    if (code === '0'){
       return 'male';
     }
-    if (code === 1){
+    if (code === '1'){
       return 'female';
     }
-    if (code === 2){
+    if (code === '2'){
       return 'other';
     }
   };
   const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
-  console.log('selectTLRoomMaster:', roomMaster);
+  // console.log('selectTLRoomMaster:', roomMaster);
   const selectRoomTypeId = (code) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
   const availableRooms = await selectAvailableRooms(requestId, hotel_id, data.BasicInformation.CheckInDate, data.BasicInformation.CheckOutDate);
-  console.log('selectAvailableRooms:', availableRooms);
+  // console.log('selectAvailableRooms:', availableRooms);
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
@@ -2272,8 +2272,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     //const reservation = await pool.query(query, values);
 
     // Get available rooms for the reservation period        
-    const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
-    console.log('roomList:');    
+    const roomList = data?.RoomAndGuestInformation?.RoomAndGuestList;
+    console.log('<-- roomList -->'); 
+    console.log('roomList:', roomList);   
     if (Array.isArray(roomList)) {
       console.log('roomList is an array', roomList);
       roomList.forEach(item => {
