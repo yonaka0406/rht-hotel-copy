@@ -165,10 +165,12 @@
 
         console.log('rmTypeList', rmTypeList);
         const processRoomType = (type, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmtypecode === type.rmTypeCode);
+            const room = roomsArray.find((r) => String(r.rmtypecode) === String(type.rmTypeCode));
             if (room) {
                 room.hotel_id = props.hotel_id;
                 room.rmtypename = type.rmTypeName;
+            } else {
+                console.warn('No match for type:', type.rmTypeCode, type.rmTypeName);
             }
         };        
         if (Array.isArray(rmTypeList)) {
