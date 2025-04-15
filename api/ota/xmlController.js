@@ -216,6 +216,8 @@ const getOTAReservations = async (req, res) => {
                 }
             };        
             console.log('Formatted Reservations:', formattedReservations);
+            console.log('formattedReservations RoomAndGuestInformation:', formattedReservations[0].RoomAndGuestInformation);
+            console.log('formattedReservations RoomAndGuestInformation:', formattedReservations[0].RoomAndGuestInformation[0].RoomAndGuestList);
 
             // Send OK to OTA server
             // await successOTAReservations(req, res, hotel_id);
