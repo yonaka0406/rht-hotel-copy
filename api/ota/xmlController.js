@@ -181,15 +181,29 @@ const getOTAReservations = async (req, res) => {
                         if (allotmentBookingReport) {
                             const reservationData = {};
                             for (const key in allotmentBookingReport) {
-                            if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
-                                reservationData[key] = allotmentBookingReport[key];
-                                if (Array.isArray(reservationData[key]) && reservationData[key].length === 1) {
-                                reservationData[key] = reservationData[key][0];
+                                if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
+                                let value = allotmentBookingReport[key];
+                                if (typeof value === 'object' && value !== null) {
+                                    // If the value is an object, process its inner properties
+                                    const innerData = {};
+                                    for (const innerKey in value) {
+                                    if (Object.hasOwnProperty.call(value, innerKey)) {
+                                        innerData[innerKey] = value[innerKey];
+                                        if (Array.isArray(innerData[innerKey]) && innerData[innerKey].length === 1) {
+                                        innerData[innerKey] = innerData[innerKey][0];
+                                        }
+                                    }
+                                    }
+                                    reservationData[key] = innerData;
+                                } else if (Array.isArray(value) && value.length === 1) {
+                                    reservationData[key] = value[0];
+                                } else {
+                                    reservationData[key] = value;
+                                }
                                 }
                             }
-                            }
                             formattedReservations.push(reservationData);
-                          }
+                        }
                     } catch (parseError) {
                         console.error('Error parsing infoTravelXML:', parseError);                        
                     }
