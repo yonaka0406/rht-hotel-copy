@@ -2173,15 +2173,15 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 const addOTAReservation = async  (requestId, hotel_id, data) => {
   // XML
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
-  console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
+  // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
-  console.log('addOTAReservation BasicInformation:', BasicInformation);
+  // console.log('addOTAReservation BasicInformation:', BasicInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
-  console.log('addOTAReservation Basic:', Basic);
+  // console.log('addOTAReservation Basic:', Basic);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
-  console.log('addOTAReservation Member:', Member);
+  // console.log('addOTAReservation Member:', Member);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
@@ -2236,6 +2236,17 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
+  function handleRoomItem(item) {
+    const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
+    const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
+    const available = isRoomAvailable(roomTypeId);
+  
+    console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
+    
+    item.room_type_id = roomTypeId;
+    item.isAvailable = available;
+  };
+
   console.log('before BEGIN');
   try {
     await client.query('BEGIN');
@@ -2282,33 +2293,19 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     console.log('addOTAReservation reservations:', values);  
     //const reservation = await pool.query(query, values);
 
-    // Get available rooms for the reservation period        
-    const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
+    // Get available rooms for the reservation period
     console.log('<-- RoomAndGuestList -->'); 
     
     if (Array.isArray(RoomAndGuestList)) {
       console.log('RoomAndGuestList is an array', RoomAndGuestList);
-      RoomAndGuestList.forEach(item => {
-        const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
-        const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
-        const available = isRoomAvailable(roomTypeId);
-
-        console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
-        
-        // Optionally assign it back to the item
-        item.room_type_id = roomTypeId;
-        item.isAvailable = available;
-      });
+      RoomAndGuestList.forEach(item => handleRoomItem(item));
+    } else if (typeof RoomAndGuestList === 'object' && RoomAndGuestList !== null) {      
+      const items = Object.values(RoomAndGuestList);      
+      console.log('RoomTypeCode is an object with numeric keys', items);
+      items.forEach(item => handleRoomItem(item));
     } else if (RoomAndGuestList?.RoomInformation) {
-      console.log('RoomAndGuestList is not an array', RoomAndGuestList);
-      const netAgtRmTypeCode = RoomAndGuestList.RoomInformation.RoomTypeCode;
-      const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
-      const available = isRoomAvailable(roomTypeId);
-
-      console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
-    
-      RoomAndGuestList.room_type_id = roomTypeId;
-      RoomAndGuestList.isAvailable = available;
+      console.log('RoomAndGuestList is a single object with RoomInformation', RoomAndGuestList);
+      handleRoomItem(RoomAndGuestList);
     }
 /*
     query = `
