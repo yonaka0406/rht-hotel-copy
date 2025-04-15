@@ -57,7 +57,6 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut) => {
     throw new Error('Database error');
   }
 };
-
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
   const query = `
@@ -122,7 +121,6 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
     throw new Error('Database error');
   }
 };
-
 const selectReservation = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = `
@@ -277,7 +275,6 @@ const selectReservation = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-
 const selectReservationDetail = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = `
@@ -389,7 +386,6 @@ const selectReservationDetail = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-
 const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
@@ -417,7 +413,6 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
     throw new Error('Database error');  
   }
 };
-
 const selectReservationAddons = async (requestId, id) => {
   const pool = getPool(requestId);
   const query = `
@@ -435,7 +430,6 @@ const selectReservationAddons = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -490,7 +484,6 @@ const selectMyHoldReservations = async (requestId, user_id) => {
     throw new Error('Database error');
   }
 };
-
 const selectReservationsToday = async (requestId, hotelId, date) => {
   const pool = getPool(requestId);
   const query = `
@@ -579,8 +572,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
     console.error('Error fetching reservations:', err);
     throw new Error('Database error');
   }
-}
-
+};
 const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn, checkOut) => {
   const pool = getPool(requestId);
   try {
@@ -611,7 +603,6 @@ const selectAvailableDatesForChange = async (requestId, hotelId, roomId, checkIn
     throw error;
   }
 };
-
 const selectReservationClientIds = async(requestId, hotelId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
@@ -648,7 +639,6 @@ const selectReservationClientIds = async(requestId, hotelId, reservationId) => {
     throw new Error('Database error');
   }
 };
-
 const selectReservationPayments = async(requestId, hotelId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
@@ -712,7 +702,7 @@ const addReservationHold = async (requestId, reservation) => {
     console.error('Error adding reservation hold:', err);
     throw new Error('Database error');
   }
-}
+};
 
 const addReservationDetail = async (requestId, reservationDetail) => {
   const pool = getPool(requestId);
@@ -2177,6 +2167,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
+  console.log('addOTAReservation data', data);
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -2217,7 +2208,30 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     console.log('addOTAReservation reservations', values);
   
     //const reservation = await pool.query(query, values);
+/*
+    query = `
+    INSERT INTO reservation_details (
+        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1, 1)
+      RETURNING *;
+    `;
 
+    values = [
+      hotel_id,
+      reservation.id,    
+      reservationDetail.date,
+      reservationDetail.room_id,
+      reservationDetail.plans_global_id,
+      reservationDetail.plans_hotel_id,
+      reservationDetail.plan_name,
+      reservationDetail.plan_type,
+      reservationDetail.number_of_people,
+      reservationDetail.price,
+      reservationDetail.billable,      
+    ];
+
+    console.log('addOTAReservation reservation_details', values);
+*/
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {
