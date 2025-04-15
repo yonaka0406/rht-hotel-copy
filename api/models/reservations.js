@@ -1,5 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
+const { addClientByName } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
@@ -2169,12 +2170,21 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 const addOTAReservation = async  (requestId, hotel_id, data) => {
   console.log('addOTAReservation BasicInformation', data.BasicInformation);
   console.log('addOTAReservation RoomAndGuestInformation', data.RoomAndGuestInformation);
+  console.log('addOTAReservation RoomAndGuestList', data.RoomAndGuestInformation.RoomAndGuestList);
   console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
+  // Query
   const pool = getPool(requestId);
   const client = await pool.connect();
-
   let query = '';
   let values = '';  
+
+  // Fields
+  const dateRange = [];
+  let currentDate = new Date(data.BasicInformation.CheckInDate);
+  while (currentDate < new Date(data.BasicInformation.CheckOutDate)) {
+    dateRange.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
   
   let reservationComment = "";  
   if (data?.BasicInformation?.OtherServiceInformation) {
@@ -2184,9 +2194,46 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     reservationComment += `食事備考：${data.BasicInformation.SpecificMealCondition}；\n`;
   }
 
+  // Helper
+  const selectNature = (code) => {
+    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar    
+    if (code == 2){
+      return 'legal';
+    } else{
+      return 'natural';
+    }
+  };
+  const selectGender = (code) => {
+    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar
+    if (code === 0){
+      return 'male';
+    }
+    if (code === 1){
+      return 'female';
+    }
+    if (code === 2){
+      return 'other';
+    }
+  };
+
   try {
     await client.query('BEGIN');
 
+    // Client info
+    const clientData = {
+      name: data.RisaplsInformation.RisaplsCommonInformation.Member.UserName,
+      name_kana: data.RisaplsInformation.RisaplsCommonInformation.Member.UserKana,
+      legal_or_natural_person: selectNature(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
+      gender: selectGender(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
+      email: data.RisaplsInformation.RisaplsCommonInformation.Basic.Email || '',
+      phone: data.RisaplsInformation.RisaplsCommonInformation.Basic.PhoneNumber || '',
+      created_by: 1,
+      updated_by: 1,
+    };    
+    //const newClient = await addClientByName(req.requestId, clientData);
+    //const reservation_client_id = newClient.id;
+    const reservation_client_id = 0;
+    console.log('addOTAReservation client:', clientData);
 
     // Insert reservations
     query = `
@@ -2197,7 +2244,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     `;
     values = [
       hotel_id,    
-      0,
+      reservation_client_id,
       data.BasicInformation.CheckInDate,
       data.BasicInformation.CheckInTime,
       data.BasicInformation.CheckOutDate,
@@ -2207,9 +2254,15 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       data.BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
-    console.log('addOTAReservation reservations', values);
-  
+    console.log('addOTAReservation reservations:', values);  
     //const reservation = await pool.query(query, values);
+
+    // Get available rooms for the reservation period
+    const reservationDetails = [];
+    const availableRoomsFiltered = [];
+    const availableRooms = await selectAvailableRooms(requestId, hotel_id, data.BasicInformation.CheckInDate, data.BasicInformation.CheckOutDate);
+    availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
+    console.log('room_type_id is not null. Available Rooms:',availableRoomsFiltered.value);
 /*
     query = `
     INSERT INTO reservation_details (
@@ -2222,7 +2275,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       hotel_id,
       reservation.id,    
       reservationDetail.date,
-      reservationDetail.room_id,
+      reservationDetail.room_id, --netAgtRmTypeCode
       reservationDetail.plans_global_id,
       reservationDetail.plans_hotel_id,
       data.BasicInformation.PackagePlanName,      
@@ -2230,7 +2283,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       data.BasicRateInformation.TotalAccommodationCharge,      
     ];
 
-    console.log('addOTAReservation reservation_details', values);
+    console.log('addOTAReservation reservation_details:', values);
 */
     await client.query('COMMIT');
     return { success: true };

@@ -58,7 +58,7 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
+    import { Card, Select, Button, DataTable, Column } from 'primevue';
 
     // Master data
     const roomMaster = ref(null);
