@@ -2173,7 +2173,50 @@ const deleteReservationPayment = async (requestId, id, userId) => {
   } finally {
     client.release();
   }
-}
+};
+
+// OTA
+const addOTAReservation = async  (requestId, hotel_id, data) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  let query = '';
+  let values = '';
+
+  try {
+    await client.query('BEGIN');
+
+
+    // Insert reservations
+    query = `
+      INSERT INTO reservations (
+        hotel_id, reservation_client_id, check_in, check_in_time, check_out, check_out_time, number_of_people, status, type, agent, comment, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'ota', $8, $9, 1, 1)
+      RETURNING *;
+    `;
+    values = [
+      hotel_id,    
+      reservation.reservation_client_id,
+      data.BasicInformation.CheckInDate,
+      data.BasicInformation.CheckInTime,
+      data.BasicInformation.CheckOutDate,
+      data.BasicInformation.CheckOutTime,
+      data.BasicInformation.GrandTotalPaxCount,
+      reservation.agent,
+      reservation.comment,
+    ];
+  
+    const reservation = await pool.query(query, values);
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error:', err);
+  } finally {
+    client.release();
+  }
+};
 
 module.exports = {    
     selectAvailableRooms,
@@ -2216,5 +2259,6 @@ module.exports = {
     deleteReservationClientsByDetailId,
     deleteReservationRoom,
     deleteReservationPayment,
+    addOTAReservation,
 };
 
