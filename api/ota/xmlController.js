@@ -143,15 +143,17 @@ const getOTAReservations = async (req, res) => {
             }
 
             // Fetch the data
-            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);            
-
+            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
             console.log('getOTAReservations reservations', reservations);
+
             const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
             console.log('getOTAReservations executeResponse', executeResponse);
-            const bookingInfoList = executeResponse?.bookingInfoList?.bookingInfo;
+
+            const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
+            const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
             console.log('getOTAReservations bookingInfoList', bookingInfoList);
 
-            if (!bookingInfoList) {
+            if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
                 console.log('No booking information found in the response.');
                 return [];
             }
