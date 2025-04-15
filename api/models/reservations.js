@@ -2181,7 +2181,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
@@ -2294,19 +2294,11 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     //const reservation = await pool.query(query, values);
 
     // Get available rooms for the reservation period
-    console.log('<-- RoomAndGuestList -->'); 
-    
-    if (Array.isArray(RoomAndGuestList)) {      
-      RoomAndGuestList.forEach(item => handleRoomItem(item));
-      console.log('RoomAndGuestList is an array', RoomAndGuestList);
-    } else if (typeof RoomAndGuestList === 'object' && RoomAndGuestList !== null) {      
-      const items = Object.values(RoomAndGuestList);
-      items.forEach(item => handleRoomItem(item));
-      console.log('RoomTypeCode is an object with numeric keys', items);
-    } else if (RoomAndGuestList?.RoomInformation) {      
-      handleRoomItem(RoomAndGuestList);
-      console.log('RoomAndGuestList is a single object with RoomInformation', RoomAndGuestList);
-    }
+    console.log('<-- RoomAndGuestList -->');     
+       
+    const items = Object.values(RoomAndGuestList);
+    items.forEach(item => handleRoomItem(item));
+    console.log('RoomTypeCode is an object with numeric keys', items);    
 
     console.log('<-- /RoomAndGuestList -->'); 
 /*
