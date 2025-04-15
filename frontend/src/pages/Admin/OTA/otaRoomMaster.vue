@@ -69,25 +69,43 @@
 
         console.log('saveRoomMaster', filteredData);
 
-        // Create a map to track room_type_id to netrmtypegroupcode
-        const roomTypeGroupMap = new Map();
+        const groupToRoomMap = new Map();
+        const roomToGroupMap = new Map();
+
         for (const item of filteredData) {
             const groupCode = item.netrmtypegroupcode;
             const roomTypeId = item.room_type_id;
 
-            if (roomTypeGroupMap.has(roomTypeId)) {
-                const existingGroup = roomTypeGroupMap.get(roomTypeId);
-                if (existingGroup !== groupCode) {
+            // Check: netrmtypegroupcode must only map to ONE room_type_id
+            if (groupToRoomMap.has(groupCode)) {
+                const existingRoomType = groupToRoomMap.get(groupCode);
+                if (existingRoomType !== roomTypeId) {
                     toast.add({
                         severity: 'error',
                         summary: 'エラー',
-                        detail: `同じPMSの部屋タイプが複数のネット室タイプグループに割り当てられています。`,
+                        detail: `ネット室タイプグループに複数のPMS部屋タイプが割り当てられています。`,
                         life: 5000,
                     });
                     return;
                 }
             } else {
-                roomTypeGroupMap.set(roomTypeId, groupCode);
+                groupToRoomMap.set(groupCode, roomTypeId);
+            }
+
+            // Check: room_type_id must only map to ONE netrmtypegroupcode
+            if (roomToGroupMap.has(roomTypeId)) {
+                const existingGroupCode = roomToGroupMap.get(roomTypeId);
+                if (existingGroupCode !== groupCode) {
+                    toast.add({
+                        severity: 'error',
+                        summary: 'エラー',
+                        detail: `PMS部屋タイプが複数のネット室タイプグループに割り当てられています。`,
+                        life: 5000,
+                    });
+                    return;
+                }
+            } else {
+                roomToGroupMap.set(roomTypeId, groupCode);
             }
         }
        
