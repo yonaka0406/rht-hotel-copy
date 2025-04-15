@@ -449,6 +449,9 @@ CREATE TABLE reservations (
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
 
+ALTER TABLE reservations
+ADD COLUMN ota_reservation_id TEXT NULL
+
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
@@ -608,7 +611,7 @@ FROM
     reservation_details rd
     JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
     JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
-	LEFT JOIN sc_tl_rooms sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
+	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
     JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
 WHERE rd.cancelled IS NULL
 GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
