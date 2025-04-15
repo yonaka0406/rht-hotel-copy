@@ -150,29 +150,29 @@
 
         const rooms = [];
 
-        const processRoomType = (rmType) => ({
-            hotel_id: props.hotel_id,
-            rmtypecode: rmType.rmTypeCode,
-            rmtypename: rmType.rmTypeName,
-        });
-        if (Array.isArray(rmTypeList)) {
-            rmTypeList.forEach((rmType) => rooms.push(processRoomType(rmType)));
-        } else if (rmTypeList) {
-            rooms.push(processRoomType(rmTypeList));
-        }
-
-        const processGroup = (group, roomsArray) => {
-            const room = roomsArray.find((r) => r.rmtypecode === group.rmTypeCode);
-            if (room) {
-                room.netrmtypegroupcode = group.netRmTypeGroupCode;
-                room.netrmtypegroupname = group.netRmTypeGroupName;
-            }
+        const processGroup = (group) => {
+            netrmtypegroupcode = group.netRmTypeGroupCode;
+            netrmtypegroupname = group.netRmTypeGroupName;            
         };
         if (Array.isArray(netRmTypeGroupList)) {
-            netRmTypeGroupList.forEach((group) => processGroup(group, rooms));
+            netRmTypeGroupList.forEach((netRmTypeGroup) => rooms.push(processGroup(netRmTypeGroup)));
         } else if (netRmTypeGroupList) {
-            processGroup(netRmTypeGroupList, rooms);
+            rooms.push(processGroup(netRmTypeGroupList));
         }
+
+        const processRoomType = (type, roomsArray) => {
+            const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
+            if (room) {
+                room.hotel_id = props.hotel_id;
+                room.rmtypecode = type.rmTypeCode;
+                room.rmtypename = type.rmTypeName;                
+            }
+        };        
+        if (Array.isArray(rmTypeList)) {
+            rmTypeList.forEach((type) => processRoomType(type, rooms));
+        } else if (rmTypeList) {
+            processRoomType(rmTypeList, rooms);
+        }        
 
         const processAgtRoom = (agtRoom, roomsArray) => {
             const room = roomsArray.find((r) => r.rmtypecode === agtRoom.rmTypeCode && r.netrmtypegroupcode === agtRoom.netRmTypeGroupCode);
@@ -189,6 +189,8 @@
         } else if (netAgtRmTypeList) {
             processAgtRoom(netAgtRmTypeList, rooms);
         }
+
+        console.log('rooms', rooms)
 
         return rooms;
     };
