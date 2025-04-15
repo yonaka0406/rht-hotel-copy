@@ -246,9 +246,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     
     if (filteredInventory.length > 1000 || exceeds30Days) {        
         const batchSize = 30;
-        for (let i = 0; i < filteredInventory.length; i += batchSize) {
+        let requestNumber = 0;
+        for (let i = 0; i < filteredInventory.length; i += batchSize) {            
             const batch = filteredInventory.slice(i, i + batchSize);
-            await processInventoryBatch(batch, i);
+            await processInventoryBatch(batch, requestNumber);
+            requestNumber++;
         }
     } else {
         await processInventoryBatch(filteredInventory, 0);
