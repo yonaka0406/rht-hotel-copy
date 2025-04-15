@@ -2206,8 +2206,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     }
   };
   const selectGender = (code) => {
-    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar
-    console.log('selectGender', code);
+    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar    
     if (code === '0'){
       return 'male';
     }
@@ -2272,7 +2271,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     //const reservation = await pool.query(query, values);
 
     // Get available rooms for the reservation period        
-    const roomList = data?.RoomAndGuestInformation?.RoomAndGuestList;
+    const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
     console.log('<-- roomList -->'); 
     console.log('roomList:', roomList);   
     if (Array.isArray(roomList)) {
