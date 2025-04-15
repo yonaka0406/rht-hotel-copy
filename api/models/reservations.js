@@ -2171,10 +2171,9 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
-  console.log('addOTAReservation BasicInformation', data.BasicInformation);
-  console.log('addOTAReservation RoomAndGuestInformation', data.RoomAndGuestInformation);
-  console.log('addOTAReservation RoomAndGuestList', data.RoomAndGuestInformation.RoomAndGuestList);
-  console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
+  console.log('addOTAReservation BasicInformation', data.BasicInformation);  
+  // console.log('addOTAReservation RoomAndGuestList', data.RoomAndGuestInformation.RoomAndGuestList);
+  // console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
   // Query
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2208,6 +2207,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   };
   const selectGender = (code) => {
     // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar
+    console.log('selectGender', code);
     if (code === 0){
       return 'male';
     }
@@ -2273,7 +2273,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     // Get available rooms for the reservation period        
     const roomList = data.RoomAndGuestInformation.RoomAndGuestList;
+    console.log('roomList:');    
     if (Array.isArray(roomList)) {
+      console.log('roomList is an array', roomList);
       roomList.forEach(item => {
         const netAgtRmTypeCode = item.RoomInformation.RoomTypeCode;
         const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
@@ -2286,6 +2288,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         item.isAvailable = available;
       });
     } else if (roomList?.RoomInformation) {
+      console.log('roomList is not an array', roomList);
       const netAgtRmTypeCode = roomList.RoomInformation.RoomTypeCode;
       const roomTypeId = selectRoomTypeId(netAgtRmTypeCode);
       const available = isRoomAvailable(roomTypeId);
