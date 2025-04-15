@@ -2173,7 +2173,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 const addOTAReservation = async  (requestId, hotel_id, data) => {
   console.log('addOTAReservation BasicInformation', data.BasicInformation);  
   // console.log('addOTAReservation RoomAndGuestList', data.RoomAndGuestInformation.RoomAndGuestList);
-  // console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
+  console.log('addOTAReservation RisaplsInformation', data.RisaplsInformation);
   // Query
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2213,9 +2213,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     if (code === '1'){
       return 'female';
     }
-    if (code === '2'){
-      return 'other';
-    }
+    
+    return 'other';    
   };
   const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
   // console.log('selectTLRoomMaster:', roomMaster);
@@ -2228,14 +2227,16 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
-  console.log('before BEGIN')
+  console.log('before BEGIN');
   try {
     await client.query('BEGIN');
 
+    console.log('after BEGIN');
+
     // Client info
     const clientData = {
-      name: data.RisaplsInformation.RisaplsCommonInformation.Member.UserName,
-      name_kana: data.RisaplsInformation.RisaplsCommonInformation.Member.UserKana,
+      name: data.RisaplsInformation.RisaplsCommonInformation.Member.UserName || '',
+      name_kana: data.RisaplsInformation.RisaplsCommonInformation.Member.UserKana || '',
       legal_or_natural_person: selectNature(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
       gender: selectGender(data.RisaplsInformation.RisaplsCommonInformation.Member.UserGendar),
       email: data.RisaplsInformation.RisaplsCommonInformation.Basic.Email || '',
