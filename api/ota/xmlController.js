@@ -180,29 +180,34 @@ const getOTAReservations = async (req, res) => {
 
                         if (allotmentBookingReport) {
                             const reservationData = {};
-
-                            function processValue(value) {
+                        
+                            function processValue(value, level = 0, keyPath = '') {
+                                console.log(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
+                        
                                 if (typeof value === 'object' && value !== null) {
                                     const innerData = {};
                                     for (const innerKey in value) {
-                                    if (Object.hasOwnProperty.call(value, innerKey)) {
-                                        innerData[innerKey] = processValue(value[innerKey]);
-                                    }
+                                        if (Object.hasOwnProperty.call(value, innerKey)) {
+                                            innerData[innerKey] = processValue(value[innerKey], level + 1, keyPath ? `${keyPath}.${innerKey}` : innerKey);
+                                        }
                                     }
                                     return innerData;
                                 } else if (Array.isArray(value) && value.length === 1) {
-                                    return processValue(value[0]);
+                                    console.log(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
+                                    return processValue(value[0], level + 1, keyPath + '[0]');
                                 } else {
                                     return value;
                                 }
                             }
-
+                        
                             for (const key in allotmentBookingReport) {
                                 if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
-                                    reservationData[key] = processValue(allotmentBookingReport[key]);
+                                    console.log(`[Level 0] Starting processing for key: ${key}`);
+                                    reservationData[key] = processValue(allotmentBookingReport[key], 1, key);
+                                    console.log(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
                                 }
                             }
-
+                        
                             formattedReservations.push(reservationData);
                         }
                     } catch (parseError) {
