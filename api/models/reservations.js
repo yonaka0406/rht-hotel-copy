@@ -2181,18 +2181,19 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const client = await pool.connect();
 
   let query = '';
-  let values = '';
+  let values = '';  
   
-  const reservationComment = computed(() => {
-    let commentParts = [];    
-    if (data?.BasicInformation?.OtherServiceInformation) {
-      commentParts.push(`予約備考：${data.BasicInformation.OtherServiceInformation}；`);
-    }
-    if (data?.BasicInformation?.SpecificMealCondition) {
-      commentParts.push(`食事備考：${data.BasicInformation.SpecificMealCondition}；`);
-    }
-    return commentParts.join('\n'); // Or you can use '<br>' for HTML output
-  });
+  let commentParts = [];
+  if (data?.BasicInformation?.TravelAgencyBookingNumber) {
+    commentParts.push(`予約番号：${data.BasicInformation.TravelAgencyBookingNumber}；`);
+  }
+  if (data?.BasicInformation?.OtherServiceInformation) {
+    commentParts.push(`予約備考：${data.BasicInformation.OtherServiceInformation}；`);
+  }
+  if (data?.BasicInformation?.SpecificMealCondition) {
+    commentParts.push(`食事備考：${data.BasicInformation.SpecificMealCondition}；`);
+  }
+  commentParts.join('\n');  
 
   try {
     await client.query('BEGIN');
