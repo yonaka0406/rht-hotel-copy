@@ -2292,8 +2292,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await pool.query(query, values);    
-    console.log('addOTAReservation reservations:', reservation.rows[0]);  
-    
+    console.log('addOTAReservation reservations:', reservation.rows[0]);
+            
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
@@ -2353,7 +2353,12 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       // console.log('addOTAReservation reservation_details:', values);
       // const reservationDetails = {id: 99};
       const reservationDetails = await pool.query(query, values);
-      console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);      
+      console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
+      
+      if (reservationDetails.rows.length === 0) {
+        console.error("Error: Failed to create reservation detail.");
+        throw new Error("Transaction Error: Failed to create reservation detail.");
+      }
 
       query = `
         INSERT INTO reservation_rates (
