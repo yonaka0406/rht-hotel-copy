@@ -2178,6 +2178,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
   // XML
+  console.log('addOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
   // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
@@ -2253,22 +2254,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   try {
     await client.query('BEGIN'); 
     
-    let clientPhone;
-    let clientEmail;
+    let clientPhone = Basic.PhoneNumber;
+    let clientEmail = Basic.Email;    
     
-    if (Basic && typeof Basic === 'object') {
-      // Handle the new RoomRateInformation pattern (object with date keys)
-      const firstKey = Object.keys(Basic)[0];
-      if (firstKey) {
-        clientPhone = Basic[firstKey]?.PhoneNumber;
-        clientEmail = Basic[firstKey]?.Email;
-      }
-    } else {
-      // Handle the original RoomRateInformation pattern
-      clientPhone = Basic?.PhoneNumber;
-      clientEmail = Basic?.Email;
-    } 
-
     // Client info
     const clientData = {
       name: Member.UserName || BasicInformation.GuestOrGroupNameKanjiName || '',
@@ -2282,8 +2270,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     };    
     const newClient = await addClientByName(requestId, clientData);
     const reservationClientId = newClient.id;
-    //const reservationClientId = 88;
-    console.log('addOTAReservation Basic:', Basic)
+    //const reservationClientId = 88;    
     console.log('addOTAReservation client:', clientData);
 
     // Insert reservations
