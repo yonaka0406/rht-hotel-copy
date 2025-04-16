@@ -2313,6 +2313,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         roomDate = item?.RoomRateInformation?.RoomDate;
         totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
       }
+
+      
       
       query = `
         INSERT INTO reservation_details (
@@ -2339,7 +2341,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
           ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
           RETURNING *;
       `;
-      const values = [
+      values = [
         hotel_id,
         reservationDetails.id,
         totalPerRoomRate,
