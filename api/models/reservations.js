@@ -2261,9 +2261,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       created_by: 1,
       updated_by: 1,
     };    
-    //const newClient = await addClientByName(req.requestId, clientData);
-    //const reservationClientId = newClient.id;
-    const reservationClientId = 88;
+    const newClient = await addClientByName(req.requestId, clientData);
+    const reservationClientId = newClient.id;
+    //const reservationClientId = 88;
     console.log('addOTAReservation client:', clientData);
 
     // Insert reservations
@@ -2286,19 +2286,28 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       reservationComment,
     ];
     console.log('addOTAReservation reservations:', values);  
-    //const reservation = await pool.query(query, values);
-    const reservation = {id: 0};
+    const reservation = await pool.query(query, values);
+    // const reservation = {id: 0};
     
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      handleRoomItem(RoomAndGuestList);
+      await handleRoomItem(RoomAndGuestList);
     } else if (typeof RoomAndGuestList === 'object') {
+      for (const roomItem of Object.values(RoomAndGuestList)) {
+        try {
+          await handleRoomItem(roomItem);          
+        } catch (error) {
+          console.error("Error processing room item:", error);          
+        }
+      }
+      /*
       Object.values(RoomAndGuestList).forEach(roomItem => {
-        handleRoomItem(roomItem);
+        await handleRoomItem(roomItem);
       });
+      */
     }
-    function handleRoomItem(item) {    
+    async function handleRoomItem (item) {    
       const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
       const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
       roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
@@ -2319,9 +2328,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         // Handle the original RoomRateInformation pattern
         roomDate = item?.RoomRateInformation?.RoomDate;
         totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
-      }
-
-      
+      }      
       
       query = `
         INSERT INTO reservation_details (
@@ -2339,8 +2346,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         totalPerRoomRate,
       ];  
       console.log('addOTAReservation reservation_details:', values);
-      //const reservationDetails = await pool.query(query, values);
-      const reservationDetails = {id: 99};
+      const reservationDetails = await pool.query(query, values);
+      // const reservationDetails = {id: 99};
 
       query = `
         INSERT INTO reservation_rates (
@@ -2358,8 +2365,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     // Payment
     if(BasicRate.PointsDiscountList){
-      console.log('BasicRate.PointsDiscountList', BasicRate.PointsDiscountList)
-      //await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1)
+      await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
       console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
 
