@@ -2263,7 +2263,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     };    
     //const newClient = await addClientByName(req.requestId, clientData);
     //const reservationClientId = newClient.id;
-    const reservationClientId = 0;
+    const reservationClientId = 88;
     console.log('addOTAReservation client:', clientData);
 
     // Insert reservations
@@ -2357,7 +2357,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     };
 
     // Payment
-    if(BasicRate){
+    if(BasicRate.PointsDiscountList){
+      console.log('BasicRate.PointsDiscountList', BasicRate.PointsDiscountList)
       //await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1)
       console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
