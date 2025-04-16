@@ -162,7 +162,7 @@ const addClientByName = async (requestId, client) => {
 
   finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
   if (client.name_kana) {
-    finalNameKana = client.name_kana
+    finalNameKana = toFullWidthKana(client.name_kana);
   }
 
   const query = `

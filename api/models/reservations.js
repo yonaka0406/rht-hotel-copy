@@ -2256,8 +2256,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     
     // Client info
     const clientData = {
-      name: Member.UserName || BasicInformation.GuestOrGroupNameKanjiName || '',
-      name_kana: BasicInformation.GuestOrGroupNameSingleByte || '',
+      name: Member.UserName.trim() || BasicInformation.GuestOrGroupNameKanjiName.trim() || '',
+      name_kana: BasicInformation.GuestOrGroupNameSingleByte.trim() || '',
       legal_or_natural_person: selectNature(Member.UserGendar || 1),
       gender: selectGender(Member.UserGendar || '2'),
       email: Basic.Email || '',
