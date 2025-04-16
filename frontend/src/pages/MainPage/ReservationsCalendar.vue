@@ -157,11 +157,18 @@
     <ContextMenu ref="cm" :model="contextMenuModel" />
 
     <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":closable="true">
-      <ReservationEdit
-        v-if="reservationId"
-        :reservation_id="reservationId"
-        :room_id="selectedRoom.room_id"        
-      />
+      <div v-if="reservationId">
+        <div class="flex justify-end">
+          <Button @click="goToReservation" severity="info">
+            <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
+          </Button>
+        </div>
+        <ReservationEdit        
+          :reservation_id="reservationId"
+          :room_id="selectedRoom.room_id"        
+        />
+      </div>
+      
       <ReservationAddRoom
         v-else
         :room_id="selectedRoom.room_id"
@@ -183,6 +190,8 @@
 <script setup>
   // Vue
   import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
+  import { useRouter } from 'vue-router';
+  const router = useRouter();
 
   import ReservationEdit from './ReservationEdit.vue';
   import ReservationAddRoom from './components/ReservationAddRoom.vue';
@@ -226,6 +235,9 @@
       const parsedDate = new Date(date);
       return `${parsedDate.toLocaleDateString(undefined, options)}`;
   };
+  const goToReservation = () => {
+    router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
+  }
       
   const isUpdating = ref(false);
   const isLoading = ref(true);
