@@ -2285,9 +2285,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
-    console.log('addOTAReservation reservations:', values);  
-    const reservation = await pool.query(query, values);
-    // const reservation = {id: 0};
+    // console.log('addOTAReservation reservations:', values);  
+    // const reservation = {id: 0};    
+    const reservation = await pool.query(query, values);    
+    console.log('addOTAReservation reservations:', reservation);  
     
     // Get available rooms for the reservation period
     let roomId = null;
@@ -2338,7 +2339,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       `;
       values = [
         hotel_id,
-        reservation.id,    
+        reservation.rows[0].id,    
         roomDate,
         roomId,        
         data.BasicInformation.PackagePlanName,      
@@ -2365,8 +2366,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     // Payment
     if(BasicRate.PointsDiscountList){
-      await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
-      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      await insertReservationPayment(requestId, hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
 
     await client.query('COMMIT');
