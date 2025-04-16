@@ -2178,7 +2178,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 // OTA
 const addOTAReservation = async  (requestId, hotel_id, data) => {
   // XML
-  console.log('addOTAReservation data:', data);
+  // console.log('addOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
   // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
@@ -2188,7 +2188,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
   // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
-  // console.log('addOTAReservation Basic:', Basic);
+  console.log('addOTAReservation Basic:', Basic);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
@@ -2263,8 +2263,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       name_kana: BasicInformation.GuestOrGroupNameSingleByte || '',
       legal_or_natural_person: selectNature(Member.UserGendar || 1),
       gender: selectGender(Member.UserGendar || '2'),
-      email: clientPhone || '',
-      phone: clientEmail || '',
+      email: clientEmail || '',
+      phone: clientPhone || '',
       created_by: 1,
       updated_by: 1,
     };    
