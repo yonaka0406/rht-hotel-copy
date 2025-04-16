@@ -2176,12 +2176,16 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
   // console.log('addOTAReservation BasicInformation:', BasicInformation);
+  const BasicRateInformation = data?.BasicRateInformation || {};
+  console.log('addOTAReservation BasicRateInformation:', BasicRateInformation);
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
-  console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
+  // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
   // console.log('addOTAReservation Basic:', Basic);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
+  const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
+  // console.log('addOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
   console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
@@ -2258,8 +2262,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       updated_by: 1,
     };    
     //const newClient = await addClientByName(req.requestId, clientData);
-    //const reservation_client_id = newClient.id;
-    const reservation_client_id = 0;
+    //const reservationClientId = newClient.id;
+    const reservationClientId = 0;
     console.log('addOTAReservation client:', clientData);
 
     // Insert reservations
@@ -2271,7 +2275,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     `;
     values = [
       hotel_id,    
-      reservation_client_id,
+      reservationClientId,
       BasicInformation.CheckInDate,
       BasicInformation.CheckInTime,
       BasicInformation.CheckOutDate,
@@ -2284,8 +2288,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     console.log('addOTAReservation reservations:', values);  
     //const reservation = await pool.query(query, values);
     const reservation = {id: 0};
-
+    
     // Get available rooms for the reservation period
+    let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
       handleRoomItem(RoomAndGuestList);
     } else if (typeof RoomAndGuestList === 'object') {
@@ -2296,7 +2301,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     function handleRoomItem(item) {    
       const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
       const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
-      const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
+      roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
       if (roomId === null) {
         console.error("Error: No available room ID found for room type:", roomTypeId);
         throw new Error("Transaction Error: No available room found for the selected room type.");
@@ -2350,6 +2355,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       ]; 
       console.log('addOTAReservation reservation_rates:', values);
     };
+
+    // Payment
+    //await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1)
+    console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
 
     await client.query('COMMIT');
     return { success: true };
