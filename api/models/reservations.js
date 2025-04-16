@@ -2236,26 +2236,13 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const isRoomAvailable = (room_type_id) => {
     return availableRooms.some(room => room.room_type_id === room_type_id);
   };
-  function handleRoomItem(item) {    
-    const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
-    const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
-    const available = roomTypeId ? isRoomAvailable(roomTypeId) : false;
-  
-    console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
-    
-    if (item) {
-      item.room_type_id = roomTypeId;
-      item.isAvailable = available;
-    }
+  const findFirstAvailableRoomId = (room_type_id) => {
+    const availableRoom = availableRooms.find(room => room.room_type_id === room_type_id);
+    return availableRoom?.room_id || null;
   };
-
-  console.log('before BEGIN');
+  
   try {
-    await client.query('BEGIN');
-
-    console.log('after BEGIN');
-
-    
+    await client.query('BEGIN');  
 
     // Client info
     const clientData = {
@@ -2294,10 +2281,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     ];
     console.log('addOTAReservation reservations:', values);  
     //const reservation = await pool.query(query, values);
+    const reservation = {id: 0};
 
     // Get available rooms for the reservation period
-    console.log('<-- RoomAndGuestList -->');  
-
     if (RoomAndGuestList.RoomInformation) {
       handleRoomItem(RoomAndGuestList);
     } else if (typeof RoomAndGuestList === 'object') {
@@ -2305,34 +2291,39 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         handleRoomItem(roomItem);
       });
     }
-      /*
-    const items = Object.values(RoomAndGuestList);
-    items.forEach(item => handleRoomItem(item));
-    console.log('RoomTypeCode is an object with numeric keys', items);    
-      */
-    console.log('<-- /RoomAndGuestList -->'); 
-/*
-    query = `
-    INSERT INTO reservation_details (
-        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, 1, 1)
-      RETURNING *;
-    `;
+    function handleRoomItem(item) {    
+      const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
+      const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
+      const available = roomTypeId ? isRoomAvailable(roomTypeId) : false;
+      const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
+      
+    
+      console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
+      
+      if (item) {
+        item.room_type_id = roomTypeId;
+        item.isAvailable = available;
+      }
 
-    values = [
-      hotel_id,
-      reservation.id,    
-      reservationDetail.date,
-      reservationDetail.room_id, --netAgtRmTypeCode
-      reservationDetail.plans_global_id,
-      reservationDetail.plans_hotel_id,
-      data.BasicInformation.PackagePlanName,      
-      data.BasicInformation.GrandTotalPaxCount,
-      data.BasicRateInformation.TotalAccommodationCharge,      
-    ];
+      query = `
+        INSERT INTO reservation_details (
+            hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
+          RETURNING *;
+      `;
+      values = [
+        hotel_id,
+        reservation.id,    
+        item?.RoomRateInformation?.RoomDate,
+        roomId,        
+        data.BasicInformation.PackagePlanName,      
+        item?.RoomInformation?.PerRoomPaxCount,
+        item?.RoomRateInformation?.TotalPerRoomRate,
+      ];
+  
+      console.log('addOTAReservation reservation_details:', values);
+    };
 
-    console.log('addOTAReservation reservation_details:', values);
-*/
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {
