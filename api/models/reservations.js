@@ -2245,16 +2245,28 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   };
   const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
   // console.log('selectAvailableRooms:', availableRooms);
-  const isRoomAvailable = (room_type_id) => {
-    return availableRooms.some(room => room.room_type_id === room_type_id);
-  };
   const findFirstAvailableRoomId = (room_type_id) => {
     const availableRoom = availableRooms.find(room => room.room_type_id === room_type_id);
     return availableRoom?.room_id || null;
   };
   
   try {
-    await client.query('BEGIN');  
+    await client.query('BEGIN'); 
+    
+    let clientPhone;
+    let clientEmail;
+    if (Basic && typeof Basic === 'object') {
+      // Handle the new RoomRateInformation pattern (object with date keys)
+      const firstKey = Object.keys(Basic)[0];
+      if (firstKey) {
+        clientPhone = Basic[firstKey]?.PhoneNumber;
+        clientEmail = Basic[firstKey]?.Email;
+      }
+    } else {
+      // Handle the original RoomRateInformation pattern
+      clientPhone = item?.PhoneNumber;
+      clientEmail = Basic?.Email;
+    } 
 
     // Client info
     const clientData = {
@@ -2262,8 +2274,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       name_kana: BasicInformation.GuestOrGroupNameSingleByte || '',
       legal_or_natural_person: selectNature(Member.UserGendar || 1),
       gender: selectGender(Member.UserGendar || '2'),
-      email: Basic.Email || '',
-      phone: Basic.PhoneNumber || '',
+      email: clientPhone || '',
+      phone: clientEmail || '',
       created_by: 1,
       updated_by: 1,
     };    

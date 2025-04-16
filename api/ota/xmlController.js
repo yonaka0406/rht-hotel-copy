@@ -222,10 +222,15 @@ const getOTAReservations = async (req, res) => {
             for (const reservation of formattedReservations) {
                 try {
                     console.log('Type of OTA transaction:', reservation.TransactionType.DataClassification);
-                    if (reservation.TransactionType.DataClassification === 'NewBookReport'){                        
+                    if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         await addOTAReservation(req.requestId, hotel_id, reservation);
                     }
-                    
+                    if (reservation.TransactionType.DataClassification === 'ModificationReport'){
+
+                    }
+                    if (reservation.TransactionType.DataClassification === 'CancellationReport'){
+
+                    }                      
                 } catch (dbError) {
                     console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);                    
                 }
