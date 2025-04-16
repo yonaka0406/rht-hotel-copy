@@ -2362,7 +2362,9 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         reservationDetails.rows[0].id,
         totalPerRoomRate,
       ]; 
-      console.log('addOTAReservation reservation_rates:', values);
+      // console.log('addOTAReservation reservation_rates:', values);
+      const reservationRates = await pool.query(query, values);
+      console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
     };
 
     // Payment
