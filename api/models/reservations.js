@@ -142,7 +142,9 @@ const selectReservation = async (requestId, id) => {
       ,reservations.check_out_time
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status   
-      ,reservations.type  
+      ,reservations.type
+      ,reservations.agent
+      ,reservations.ota_reservation_id
       ,reservations.comment 
       ,reservation_details.date
       ,rooms.room_type_id
@@ -292,6 +294,10 @@ const selectReservationDetail = async (requestId, id) => {
       reservations.check_out,
       reservations.number_of_people AS reservation_number_of_people,
       reservations.status,  
+      reservations.type,
+      reservations.agent,
+      reservations.ota_reservation_id,
+      reservations.comment,
       reservation_details.date,
       rooms.room_type_id,
       room_types.name AS room_type_name,
