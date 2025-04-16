@@ -2261,7 +2261,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       created_by: 1,
       updated_by: 1,
     };    
-    const newClient = await addClientByName(req.requestId, clientData);
+    const newClient = await addClientByName(requestId, clientData);
     const reservationClientId = newClient.id;
     //const reservationClientId = 88;
     console.log('addOTAReservation client:', clientData);
