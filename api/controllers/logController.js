@@ -15,11 +15,11 @@ const fetchReservationHistory = async (req, res) => {
 const fetchReservationInventoryChange = async (req, res) => {
   const { id } = req.params;
 
-  console.log('fetchReservationInventoryChange controller', id);
+  // console.log('fetchReservationInventoryChange controller', id);
 
   try {
     const logs = await selectReservationInventoryChange(req.requestId, id);
-    console.log('fetchReservationInventoryChange', logs)
+    // console.log('fetchReservationInventoryChange', logs)
     res.json(logs);
   } catch (error) {
     console.error('Error getting hotel rooms:', error);
