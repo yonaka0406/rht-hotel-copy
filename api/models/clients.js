@@ -20,6 +20,15 @@ const transliterateKanaToRomaji = async (kanaString) => {
       .join(' ');
   return romaji
 };
+const toFullWidthKana = (str) => {
+  return str.normalize('NFKC').replace(/[\uFF61-\uFF9F]/g, (char) => {
+      const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
+      return String.fromCharCode(code);
+  });
+};
+const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
+  String.fromCharCode(char.charCodeAt(0) + 0x60)
+);
 const processNameString = async (nameString) => {
   if (!nameString) {
     throw new Error('processNameString: nameString is required');
@@ -32,18 +41,18 @@ const processNameString = async (nameString) => {
   const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Kana
   const halfKanaRegex = /[\uFF65-\uFF9F]/; // Half-width Kana
   const { convertText } = await import('../utils/japaneseUtils.mjs');
-    
+  /*
   const toFullWidthKana = (str) => {
       return str.normalize('NFKC').replace(/[\uFF61-\uFF9F]/g, (char) => {
           const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
           return String.fromCharCode(code);
       });
   };
-
+  
   const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
     String.fromCharCode(char.charCodeAt(0) + 0x60)
   );
-
+  */
   let name = nameString; // Default
   let nameKana = null;
   let nameKanji = null;
