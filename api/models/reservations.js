@@ -2328,9 +2328,23 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         data.BasicInformation.PackagePlanName,      
         item?.RoomInformation?.PerRoomPaxCount,
         totalPerRoomRate,
-      ];
-  
+      ];  
       console.log('addOTAReservation reservation_details:', values);
+      //const reservationDetails = await pool.query(query, values);
+      const reservationDetails = {id: 99};
+
+      query = `
+        INSERT INTO reservation_rates (
+            hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
+          ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
+          RETURNING *;
+      `;
+      const values = [
+        hotel_id,
+        reservationDetails.id,
+        totalPerRoomRate,
+      ]; 
+      console.log('addOTAReservation reservation_rates:', values);
     };
 
     await client.query('COMMIT');
