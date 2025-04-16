@@ -291,7 +291,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             return `${year}${month}${day}`;
         })();
 
-        console.log('itemDate:', itemDate, itemDate >= currentDate);
+        // console.log('itemDate:', itemDate, itemDate >= currentDate);
 
         return itemDate >= currentDate;
     });

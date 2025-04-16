@@ -2297,20 +2297,21 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      await handleRoomItem(RoomAndGuestList);
+      try {
+        await handleRoomItem(RoomAndGuestList);
+      } catch (error) {
+        console.error("Error processing room:", error);     
+        throw error;     
+      }
     } else if (typeof RoomAndGuestList === 'object') {
       for (const roomItem of Object.values(RoomAndGuestList)) {
         try {
           await handleRoomItem(roomItem);          
         } catch (error) {
-          console.error("Error processing room item:", error);          
+          console.error("Error processing room:", error);     
+          throw error;     
         }
       }
-      /*
-      Object.values(RoomAndGuestList).forEach(roomItem => {
-        await handleRoomItem(roomItem);
-      });
-      */
     }
     async function handleRoomItem (item) {    
       const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
