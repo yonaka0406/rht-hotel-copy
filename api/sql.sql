@@ -1056,7 +1056,7 @@ CREATE TABLE xml_responses (
 TRUNCATE TABLE xml_requests RESTART IDENTITY;
 TRUNCATE TABLE xml_responses RESTART IDENTITY;
 
-CREATE TABLE xml_responses_hotel_1 PARTITION OF xml_responses
+CREATE TABLE xml_responses_1 PARTITION OF xml_responses
 FOR VALUES IN (1);
 
 --------------------------------------------------------------------
