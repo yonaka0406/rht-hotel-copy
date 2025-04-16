@@ -2176,6 +2176,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   // console.log('addOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
   const BasicInformation = data?.BasicInformation || {};
   // console.log('addOTAReservation BasicInformation:', BasicInformation);
+  const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
+  console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
   // console.log('addOTAReservation Basic:', Basic);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
