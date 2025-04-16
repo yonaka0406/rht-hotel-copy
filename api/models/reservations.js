@@ -2288,7 +2288,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await pool.query(query, values);    
-    console.log('addOTAReservation reservations:', reservation);  
+    console.log('addOTAReservation reservations:', reservation.rows[0]);  
     
     // Get available rooms for the reservation period
     let roomId = null;
@@ -2346,9 +2346,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         item?.RoomInformation?.PerRoomPaxCount,
         totalPerRoomRate,
       ];  
-      console.log('addOTAReservation reservation_details:', values);
-      const reservationDetails = await pool.query(query, values);
+      // console.log('addOTAReservation reservation_details:', values);
       // const reservationDetails = {id: 99};
+      const reservationDetails = await pool.query(query, values);
+      console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);      
 
       query = `
         INSERT INTO reservation_rates (
@@ -2358,7 +2359,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       `;
       values = [
         hotel_id,
-        reservationDetails.id,
+        reservationDetails.rows[0].id,
         totalPerRoomRate,
       ]; 
       console.log('addOTAReservation reservation_rates:', values);
