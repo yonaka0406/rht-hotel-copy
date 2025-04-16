@@ -63,7 +63,7 @@ const selectReservationHistory = async (requestId, id) => {
 };
 
 const selectReservationInventoryChange = async (requestId, id) => {
-    console.log('selectReservationInventoryChange for id:', id)
+    // console.log('selectReservationInventoryChange for id:', id)
     const pool = getPool(requestId);
     const query = `
         SELECT
@@ -110,7 +110,7 @@ const selectReservationInventoryChange = async (requestId, id) => {
     const values = [id];
     try {
         const result = await pool.query(query, values);
-        console.log('selectReservationInventoryChange result:', result.rows)
+        // console.log('selectReservationInventoryChange result:', result.rows)
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
