@@ -2293,18 +2293,27 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     }
     function handleRoomItem(item) {    
       const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
-      const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
-      const available = roomTypeId ? isRoomAvailable(roomTypeId) : false;
+      const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
       const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
-      
-    
-      console.log(`RoomTypeCode: ${netAgtRmTypeCode}, room_type_id: ${roomTypeId}, available: ${available}`);
-      
-      if (item) {
-        item.room_type_id = roomTypeId;
-        item.isAvailable = available;
+      if (roomId === null) {
+        console.error("Error: No available room ID found for room type:", roomTypeId);
+        throw new Error("Transaction Error: No available room found for the selected room type.");
       }
-
+      let roomDate;
+      let totalPerRoomRate;
+      if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
+        // Handle the new RoomRateInformation pattern (object with date keys)
+        const firstDateKey = Object.keys(item.RoomRateInformation)[0];
+        if (firstDateKey) {
+          roomDate = item.RoomRateInformation[firstDateKey]?.RoomDate;
+          totalPerRoomRate = item.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
+        }
+      } else {
+        // Handle the original RoomRateInformation pattern
+        roomDate = item?.RoomRateInformation?.RoomDate;
+        totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
+      }
+      
       query = `
         INSERT INTO reservation_details (
             hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
@@ -2314,11 +2323,11 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       values = [
         hotel_id,
         reservation.id,    
-        item?.RoomRateInformation?.RoomDate,
+        roomDate,
         roomId,        
         data.BasicInformation.PackagePlanName,      
         item?.RoomInformation?.PerRoomPaxCount,
-        item?.RoomRateInformation?.TotalPerRoomRate,
+        totalPerRoomRate,
       ];
   
       console.log('addOTAReservation reservation_details:', values);
