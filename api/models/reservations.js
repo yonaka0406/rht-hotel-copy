@@ -2188,7 +2188,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
   // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
-  console.log('addOTAReservation Basic:', Basic);
+  // console.log('addOTAReservation Basic:', Basic);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
@@ -2254,17 +2254,14 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   try {
     await client.query('BEGIN'); 
     
-    let clientPhone = Basic.PhoneNumber;
-    let clientEmail = Basic.Email;    
-    
     // Client info
     const clientData = {
       name: Member.UserName || BasicInformation.GuestOrGroupNameKanjiName || '',
       name_kana: BasicInformation.GuestOrGroupNameSingleByte || '',
       legal_or_natural_person: selectNature(Member.UserGendar || 1),
       gender: selectGender(Member.UserGendar || '2'),
-      email: clientEmail || '',
-      phone: clientPhone || '',
+      email: Basic.Email || '',
+      phone: Basic.PhoneNumber || '',
       created_by: 1,
       updated_by: 1,
     };    
