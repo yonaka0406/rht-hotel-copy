@@ -156,7 +156,14 @@ const selectClient = async (requestId, clientId) => {
 // Function to add a new client with minimal info
 const addClientByName = async (requestId, client) => {
   const pool = getPool(requestId);
+  let finalName, finalNameKana, finalNameKanji;
+
   const { name, nameKana, nameKanji } = await processNameString(client.name);
+
+  finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+  if (client.name_kana) {
+    finalNameKana = client.name_kana
+  }
 
   const query = `
     INSERT INTO clients (
@@ -166,9 +173,9 @@ const addClientByName = async (requestId, client) => {
   `;
 
   const values = [
-    name,
-    nameKana,
-    nameKanji,
+    finalName,
+    finalNameKana,
+    finalNameKanji,
     client.legal_or_natural_person,
     client.gender,
     client.email,
