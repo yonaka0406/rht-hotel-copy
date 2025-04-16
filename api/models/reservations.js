@@ -2177,7 +2177,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const BasicInformation = data?.BasicInformation || {};
   // console.log('addOTAReservation BasicInformation:', BasicInformation);
   const BasicRateInformation = data?.BasicRateInformation || {};
-  console.log('addOTAReservation BasicRateInformation:', BasicRateInformation);
+  // console.log('addOTAReservation BasicRateInformation:', BasicRateInformation);
   const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
   // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
@@ -2187,7 +2187,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('addOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
@@ -2357,8 +2357,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     };
 
     // Payment
-    //await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1)
-    console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+    if(BasicRate){
+      //await insertReservationPayment(requestId, hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1)
+      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+    }    
 
     await client.query('COMMIT');
     return { success: true };
