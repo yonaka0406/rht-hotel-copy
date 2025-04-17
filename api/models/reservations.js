@@ -2257,9 +2257,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Client info
     const clientData = {
       name: Member?.UserName?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
-      name_kana: BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
-      legal_or_natural_person: selectNature(Member.UserGendar || 1),
-      gender: selectGender(Member.UserGendar || '2'),
+      name_kana: Member?.UserKana?.trim() || BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
+      date_of_birth: Member?.UserDateOfBirth || null,
+      legal_or_natural_person: selectNature(Member?.UserGendar || 1),
+      gender: selectGender(Member?.UserGendar || '2'),
       email: Basic.Email || '',
       phone: Basic.PhoneNumber || '',
       created_by: 1,
@@ -2275,8 +2276,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     query = `
       INSERT INTO clients (
-        name, name_kana, name_kanji, legal_or_natural_person, gender, email, phone, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
 
@@ -2284,6 +2285,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       finalName,
       finalNameKana,
       finalNameKanji,
+      clientData.date_of_birth,
       clientData.legal_or_natural_person,
       clientData.gender,
       clientData.email,
@@ -2294,7 +2296,34 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     const newClient = await client.query(query, values);
     const reservationClientId = newClient.rows[0].id;
     //const reservationClientId = 88;    
-    console.log('addOTAReservation client:', clientData);
+    console.log('addOTAReservation client:', newClient.rows[0]);
+
+    // Insert address
+    query = `
+      INSERT INTO addresses (
+        client_id, address_name, representative_name, street, state, 
+        city, postal_code, country, phone, fax, 
+        email, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *;
+    `;
+
+    values = [
+      reservationClientId,
+      'OTA登録',
+      finalNameKanji || finalName,
+      Basic.Address || Member.UserAddr || '',
+      '',
+      '',
+      Basic.PostalCode || Member.UserZip || '',
+      '',
+      Basic.PhoneNumber || Member.UserTel || '',
+      '',
+      Basic.Email || Member.UserMailAddr || '',
+      1
+    ];
+    const newAddress = await client.query(query, values);
+    console.log('addOTAReservation addresses:', newAddress.rows[0]);
 
     // Insert reservations
     query = `
@@ -2353,7 +2382,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
         1
       ];
       const reservationPayments = await client.query(query, values);
-      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
     }    
 
     await client.query('COMMIT');
