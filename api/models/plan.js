@@ -47,6 +47,7 @@ const getAllPlansByHotel = async (requestId, hotel_id) => {
             ,COALESCE(ph.name, pg.name) as name
             ,COALESCE(ph.description, pg.description) as description
             ,COALESCE(ph.plan_type, pg.plan_type) as plan_type	
+            ,COALESCE(ph.color, pg.color) as color
         FROM 
             plans_global AS pg 
                 FULL JOIN 

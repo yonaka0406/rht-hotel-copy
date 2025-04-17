@@ -53,7 +53,15 @@
                             {{ slotProps.data.room_number }}                            
                         </template>
                     </Column>                  
-                    <Column field="plan_name" header="プラン" class="text-xs" />
+                    <Column field="plan_name" header="プラン" class="text-xs">
+                        <template #body="slotProps">
+                            <Badge 
+                                :value="slotProps.data.plan_name" 
+                                :style="{ backgroundColor: slotProps.data.plan_color }" 
+                                class="text-white px-2 py-1 rounded-md text-xs"
+                            />                            
+                        </template>
+                    </Column>
                     <Column field="number_of_people" header="人数" class="text-xs" />
                     <Column field="price" header="料金" class="text-xs" />
                     <Column header="詳細">
@@ -613,6 +621,7 @@
                 ...item,
                 price: formatCurrency(item.price),
                 display_date: formatDateWithDay(item.date),
+                plan_color: getPlanColor(item.plans_global_id, item.plans_hotel_id),
             }));
         } 
         
@@ -628,6 +637,7 @@
                         ...dtl,
                         price: formatCurrency(dtl.price),
                         display_date: formatDateWithDay(dtl.date),
+                        plan_color: getPlanColor(dtl.plans_global_id, dtl.plans_hotel_id),
                     });
                 } else {                    
                     for(let detailClients of detailReservationClients){
@@ -639,6 +649,7 @@
                                     ...dtl,
                                     price: formatCurrency(dtl.price),
                                     display_date: formatDateWithDay(dtl.date),
+                                    plan_color: getPlanColor(dtl.plans_global_id, dtl.plans_hotel_id),
                                     isDifferentRoom: true,
                                 });
                                 return[dtl];
@@ -651,8 +662,7 @@
         })        
         return matchingDetails;
     };
-    const expandedRows = ref({}); 
-    
+    const expandedRows = ref({});     
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
@@ -676,6 +686,15 @@
         if (day === 0) {
             return { backgroundColor: '#ededf9' };
         }
+    };
+    const getPlanColor = (plans_global_id, plans_hotel_id) => {        
+        const possibleKeys = [
+            `${plans_global_id ?? ''}h${plans_hotel_id ?? ''}`,
+            `${plans_global_id ?? ''}h`,
+            `h${plans_hotel_id ?? ''}`,
+        ];
+        const plan = plans.value.find(p => possibleKeys.includes(p.plan_key));
+        return plan?.color || "#FFFFFF";
     };
 
     // Computed
@@ -1253,7 +1272,10 @@
     };
     
     onMounted(async () => {
-        // console.log('onMounted RoomView:', props.reservation_details);        
+        console.log('onMounted RoomView:', props.reservation_details);
+        const hotelId = reservationInfo.value.hotel_id;
+        await fetchPlansForHotel(hotelId);
+        console.log('fetchPlansForHotel', plans.value);
     });
 
     // Watcher
