@@ -2299,31 +2299,34 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     console.log('addOTAReservation client:', newClient.rows[0]);
 
     // Insert address
-    query = `
-      INSERT INTO addresses (
-        client_id, address_name, representative_name, street, state, 
-        city, postal_code, country, phone, fax, 
-        email, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      RETURNING *;
-    `;
+    if(Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr){
+      query = `
+        INSERT INTO addresses (
+          client_id, address_name, representative_name, street, state, 
+          city, postal_code, country, phone, fax, 
+          email, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING *;
+      `;
 
-    values = [
-      reservationClientId,
-      'OTA登録',
-      finalNameKanji || finalName,
-      Basic.Address || Member.UserAddr || '',
-      '',
-      '',
-      Basic.PostalCode || Member.UserZip || '',
-      '',
-      Basic.PhoneNumber || Member.UserTel || '',
-      '',
-      Basic.Email || Member.UserMailAddr || '',
-      1
-    ];
-    const newAddress = await client.query(query, values);
-    console.log('addOTAReservation addresses:', newAddress.rows[0]);
+      values = [
+        reservationClientId,
+        'OTA登録',
+        finalNameKanji || finalName,
+        Basic.Address || Member.UserAddr || '',
+        '',
+        '',
+        Basic.PostalCode || Member.UserZip || '',
+        '',
+        Basic.PhoneNumber || Member.UserTel || '',
+        '',
+        Basic.Email || Member.UserMailAddr || '',
+        1
+      ];
+      const newAddress = await client.query(query, values);
+      console.log('addOTAReservation addresses:', newAddress.rows[0]);
+    }
+    
 
     // Insert reservations
     query = `
