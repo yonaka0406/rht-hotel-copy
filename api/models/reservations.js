@@ -2297,81 +2297,13 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      await handleRoomItem(RoomAndGuestList);
+      roomId = await handleRoomItem(RoomAndGuestList);
     } else if (typeof RoomAndGuestList === 'object') {
-      for (const roomItem of Object.values(RoomAndGuestList)) {
-        try {
-          await handleRoomItem(roomItem);          
-        } catch (error) {
-          console.error("Error processing room item:", error);     
-          throw error;     
-        }
+      for (const roomItem of Object.values(RoomAndGuestList)) {        
+        roomId = await handleRoomItem(roomItem);
       }
     }
-    async function handleRoomItem (item) {    
-      const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
-      const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
-      roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
-      if (roomId === null) {
-        console.error("Error: No available room ID found for room type:", roomTypeId);
-        throw new Error("Transaction Error: No available room found for the selected room type.");
-      }
-      let roomDate;
-      let totalPerRoomRate;
-      if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
-        // Handle the new RoomRateInformation pattern (object with date keys)
-        const firstDateKey = Object.keys(item.RoomRateInformation)[0];
-        if (firstDateKey) {
-          roomDate = item.RoomRateInformation[firstDateKey]?.RoomDate;
-          totalPerRoomRate = item.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
-        }
-      } else {
-        // Handle the original RoomRateInformation pattern
-        roomDate = item?.RoomRateInformation?.RoomDate;
-        totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
-      }      
-      
-      query = `
-        INSERT INTO reservation_details (
-            hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
-          RETURNING *;
-      `;
-      values = [
-        hotel_id,
-        reservation.rows[0].id,    
-        roomDate,
-        roomId,        
-        data.BasicInformation.PackagePlanName,      
-        item?.RoomInformation?.PerRoomPaxCount,
-        totalPerRoomRate,
-      ];  
-      // console.log('addOTAReservation reservation_details:', values);
-      // const reservationDetails = {id: 99};
-      const reservationDetails = await pool.query(query, values);
-      console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
-      
-      if (reservationDetails.rows.length === 0) {
-        console.error("Error: Failed to create reservation detail.");
-        throw new Error("Transaction Error: Failed to create reservation detail.");
-      }
-
-      query = `
-        INSERT INTO reservation_rates (
-            hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
-          ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
-          RETURNING *;
-      `;
-      values = [
-        hotel_id,
-        reservationDetails.rows[0].id,
-        totalPerRoomRate,
-      ]; 
-      // console.log('addOTAReservation reservation_rates:', values);
-      const reservationRates = await pool.query(query, values);
-      console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
-    };
-
+    
     // Payment
     if(BasicRate.PointsDiscountList){
       await insertReservationPayment(requestId, hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
@@ -2380,12 +2312,81 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
 
     await client.query('COMMIT');
     return { success: true };
-  } catch (err) {
+  } catch (err) {    
     await client.query('ROLLBACK');
-    console.error('Error:', err);
+    console.error("Transaction failed:", err.message);
+    return { success: false, error: err.message };
   } finally {
     client.release();
   }
+
+  async function handleRoomItem (item, reservationId) {    
+    const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
+    const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
+    const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
+    if (roomId === null) {
+      console.error("Error: No available room ID found for room type:", roomTypeId);
+      throw new Error("Transaction Error: No available room found for the selected room type.");
+    }
+
+    let roomDate;
+    let totalPerRoomRate;
+    if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
+      // Handle the new RoomRateInformation pattern (object with date keys)
+      const firstDateKey = Object.keys(item.RoomRateInformation)[0];
+      if (firstDateKey) {
+        roomDate = item.RoomRateInformation[firstDateKey]?.RoomDate;
+        totalPerRoomRate = item.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
+      }
+    } else {
+      // Handle the original RoomRateInformation pattern
+      roomDate = item?.RoomRateInformation?.RoomDate;
+      totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
+    }      
+    
+    query = `
+      INSERT INTO reservation_details (
+          hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
+        RETURNING *;
+    `;
+    values = [
+      hotel_id,
+      reservationId,    
+      roomDate,
+      roomId,        
+      data.BasicInformation.PackagePlanName,      
+      item?.RoomInformation?.PerRoomPaxCount,
+      totalPerRoomRate,
+    ];  
+    // console.log('addOTAReservation reservation_details:', values);
+    // const reservationDetails = {id: 99};
+    const reservationDetails = await pool.query(query, values);
+    console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
+    
+    if (reservationDetails.rows.length === 0) {
+      console.error("Error: Failed to create reservation detail.");
+      throw new Error("Transaction Error: Failed to create reservation detail.");
+    }
+
+    query = `
+      INSERT INTO reservation_rates (
+          hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
+        ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
+        RETURNING *;
+    `;
+    values = [
+      hotel_id,
+      reservationDetails.rows[0].id,
+      totalPerRoomRate,
+    ]; 
+    // console.log('addOTAReservation reservation_rates:', values);
+    const reservationRates = await pool.query(query, values);
+    console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
+
+    // Return the roomId
+    return roomId;
+  };
 };
 
 module.exports = {    
