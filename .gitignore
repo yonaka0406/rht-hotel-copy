@@ -6,3 +6,4 @@ api/package-lock.json
 frontend/package-lock.json
 api/public/index.html
 frontend/.env.dev
+api/config/client_secret_850891008995-pbqsvk35jd02iuh19439v5l7f2fujp05.apps.googleusercontent.com.json
