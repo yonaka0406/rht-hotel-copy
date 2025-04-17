@@ -65,7 +65,7 @@ const selectReservationHistory = async (requestId, id) => {
 const selectReservationInventoryChange = async (requestId, id) => {
     // console.log('selectReservationInventoryChange for id:', id)
     const pool = getPool(requestId);
-    const query = `
+    const reservationQuery = `
         SELECT
             id,
             action,
@@ -89,7 +89,7 @@ const selectReservationInventoryChange = async (requestId, id) => {
                 ELSE (changes->'new'->>'hotel_id')::int
             END AS hotel_id -- Unified hotel_id
 
-        FROM public.logs_reservation
+        FROM logs_reservation
         WHERE 
             id = $1
             AND table_name LIKE 'reservations_%'
@@ -107,10 +107,46 @@ const selectReservationInventoryChange = async (requestId, id) => {
         ;
 
     `;
+    const detailsQuery = `
+        WITH log_data AS (
+            SELECT
+                lr.id,
+                lr.action,
+                lr.table_name,
+                lr.changes->'old'->>'room_id' AS old_room_id,
+                lr.changes->'new'->>'room_id' AS new_room_id,
+                lr.changes->'new'->>'date' AS log_date,
+                COALESCE((lr.changes->'new'->>'hotel_id')::int, (lr.changes->>'hotel_id')::int) AS hotel_id
+            FROM logs_reservation lr
+            WHERE 
+                lr.id = $1
+                AND lr.table_name LIKE 'reservation_details_%'
+                AND lr.action = 'UPDATE'
+                AND lr.changes->'old'->>'room_id' IS DISTINCT FROM lr.changes->'new'->>'room_id'
+        )
+        SELECT
+            ld.id,
+            ld.action,
+            ld.table_name,
+            ld.log_date AS check_in,
+            ld.log_date AS check_out,
+            ld.hotel_id
+        FROM log_data ld
+        LEFT JOIN rooms old_room ON 
+            old_room.id = ld.old_room_id::int AND 
+            old_room.hotel_id = ld.hotel_id
+        LEFT JOIN rooms new_room ON 
+            new_room.id = ld.new_room_id::int AND 
+            new_room.hotel_id = ld.hotel_id
+        WHERE old_room.room_type_id IS DISTINCT FROM new_room.room_type_id
+    `;
     const values = [id];
     try {
-        const result = await pool.query(query, values);
-        // console.log('selectReservationInventoryChange result:', result.rows)
+        const result = await pool.query(reservationQuery, values);
+        if (result.rows.length === 0) {
+            const detailsResult = await pool.query(detailsQuery, values);
+            return detailsResult.rows;
+        }        
         return result.rows;
     } catch (err) {
         console.error('Error retrieving logs:', err);
