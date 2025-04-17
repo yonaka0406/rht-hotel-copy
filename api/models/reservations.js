@@ -2297,10 +2297,10 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      roomId = await handleRoomItem(RoomAndGuestList);
+      roomId = await handleRoomItem(RoomAndGuestList, reservationClientId);
     } else if (typeof RoomAndGuestList === 'object') {
       for (const roomItem of Object.values(RoomAndGuestList)) {        
-        roomId = await handleRoomItem(roomItem);
+        roomId = await handleRoomItem(roomItem, reservationClientId);
       }
     }
     
