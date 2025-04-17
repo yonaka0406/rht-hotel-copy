@@ -481,6 +481,7 @@ const deleteAddress = async (requestId, addressId, updatedBy) => {
 };
 
 module.exports = {
+  toFullWidthKana,
   processNameString,
   getAllClients,
   getTotalClientsCount,

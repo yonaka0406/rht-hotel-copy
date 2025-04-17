@@ -1,6 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
-const { addClientByName } = require('../models/clients');
+const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
@@ -2264,8 +2264,34 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
       phone: Basic.PhoneNumber || '',
       created_by: 1,
       updated_by: 1,
-    };    
-    const newClient = await addClientByName(requestId, clientData);
+    };
+
+    let finalName, finalNameKana, finalNameKanji;
+    const { name, nameKana, nameKanji } = await processNameString(clientData.name);
+    finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+    if (clientData.name_kana) {
+      finalNameKana = toFullWidthKana(clientData.name_kana);
+    }
+
+    query = `
+      INSERT INTO clients (
+        name, name_kana, name_kanji, legal_or_natural_person, gender, email, phone, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *;
+    `;
+
+    values = [
+      finalName,
+      finalNameKana,
+      finalNameKanji,
+      clientData.legal_or_natural_person,
+      clientData.gender,
+      clientData.email,
+      clientData.phone,
+      clientData.created_by,
+      clientData.updated_by
+    ];  
+    const newClient = await client.query(query, values);
     const reservationClientId = newClient.id;
     //const reservationClientId = 88;    
     console.log('addOTAReservation client:', clientData);
@@ -2291,7 +2317,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     ];
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
-    const reservation = await client.query(query, values);    
+    const reservation = await client.query(query, values);
     const reservationId = reservation.rows[0].id;
     console.log('addOTAReservation reservations:', reservation.rows[0]);
 
@@ -2307,8 +2333,26 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     }
     
     // Payment
-    if(BasicRate.PointsDiscountList){
-      await insertReservationPayment(requestId, hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+    if(BasicRate.PointsDiscountList){      
+      query = `
+        INSERT INTO reservation_payments (
+          hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+        RETURNING *;
+      `;
+
+      values = [
+        hotel_id, 
+        reservation.rows[0].id, 
+        BasicInformation.TravelAgencyBookingDate, 
+        roomId, 
+        reservationClientId, 
+        2, 
+        BasicRate?.PointsDiscountList?.PointsDiscount, 
+        BasicRate?.PointsDiscountList?.PointsDiscountName, 
+        1
+      ];
+      const reservationPayments = await client.query(query, values);
       console.log('addOTAReservation reservation_payments:', hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
 
