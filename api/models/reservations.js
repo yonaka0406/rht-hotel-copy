@@ -2308,8 +2308,8 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     
     // Payment
     if(BasicRate.PointsDiscountList){
-      await insertReservationPayment(requestId, hotel_id, reservationId, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
-      console.log('addOTAReservation reservation_payments:', hotel_id, reservationId, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      await insertReservationPayment(requestId, hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
 
     await client.query('COMMIT');
