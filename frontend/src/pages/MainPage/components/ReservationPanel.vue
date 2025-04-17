@@ -102,13 +102,12 @@
                         @change="updateReservationType"
                     />
                 </template>
-                <template v-if="reservationType === 'OTA' || reservationType === '自社WEB'">
+                <template v-else-if="reservationType === 'OTA' || reservationType === '自社WEB'">
                     <div class="text-left">
                         <Badge class="mr-1" severity="secondary">エージェント（{{ reservationType }}）</Badge>{{ reservationInfo.agent }} <br>
                         <Badge class="mr-1" severity="secondary">予約番号</Badge>{{ reservationInfo.ota_reservation_id }}
                     </div>
-                </template>
-                
+                </template>                
                 <template v-else>
                     <span>{{ reservationType }}</span>
                 </template>
