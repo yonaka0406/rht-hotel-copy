@@ -295,10 +295,16 @@ const updateInventoryMultipleDays = async (req, res) => {
 
         return itemDate >= currentDate;
     });
+    if (filteredInventory.length === 0) {
+        return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
+    }
 
     // console.log('filteredInventory', filteredInventory);
 
     const processInventoryBatch = async (batch, batch_no) => {
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        await delay(1000); // 1-second pause
+
         let adjustmentTargetXml = '';
         batch.forEach((item) => {
             const adjustmentDate = (() => {
@@ -351,8 +357,6 @@ const updateInventoryMultipleDays = async (req, res) => {
         // console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
 
         try {
-            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-            await delay(1000); // 1-second pause
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
         } catch (error) {
             
