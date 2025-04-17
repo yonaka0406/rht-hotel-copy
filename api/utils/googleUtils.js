@@ -3,7 +3,6 @@ const path = require('path');
 const { google } = require('googleapis');
 
 const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
-const fileId = '1xkqZn9yt1VsbbG9WdWiqFRUnkDS2Hhpb9OI_E3zfCLc';
 
 async function authorize() {
   try {
@@ -16,14 +15,20 @@ async function authorize() {
       key.redirect_uris[0]
     );
 
-    const tokens = await client.getToken({
-      scope: 'https://www.googleapis.com/auth/drive.file',
+    const tokenResponse = await client.request({
+      url: 'https://oauth2.googleapis.com/token',
+      method: 'POST',
+      params: {
+        grant_type: 'client_credentials',
+        scope: 'https://www.googleapis.com/auth/drive.file',
+      },
     });
-    client.setCredentials(tokens);
+
+    client.setCredentials(tokenResponse.data);
     return client;
 
   } catch (err) {
-    console.error('Error loading credentials or authorizing:', err);
+    console.error('Error during authorization:', err);
     throw err;
   }
 }
@@ -51,8 +56,9 @@ async function appendDataToSheet(authClient, spreadsheetId, range, values) {
 async function main() {
   try {
     const authClient = await authorize();
+    const fileId = '1xkqZn9yt1VsbbG9WdWiqFRUnkDS2Hhpb9OI_E3zfCLc';
     const range = 'Sheet1!A1'; // The range to append data to
-    const dataToAppend = [['New Booking ID', 'Guest Name', 'Check-in Date'], ['789', 'Alice Brown', '2025-04-25']]; // Example data
+    const dataToAppend = [['Trial Booking', 'Test User', '2025-04-18']]; // Example data
 
     await appendDataToSheet(authClient, fileId, range, dataToAppend);
   } catch (error) {
