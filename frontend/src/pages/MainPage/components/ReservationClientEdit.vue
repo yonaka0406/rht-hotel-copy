@@ -25,12 +25,21 @@
                             fluid
                             required
                         >
-                            <template #option="slotProps">
+                          <template #option="slotProps">
                             <div>
-                                {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
-                                <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                                <p>
+                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
+                                    <i v-else class="pi pi-user"></i>
+                                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+                                </div>
                             </div>
-                            </template>
+                          </template>
                         </AutoComplete>
                         <label>個人氏名　||　法人名称</label>
                     </FloatLabel>
@@ -228,6 +237,17 @@
       
       return normalizedStr;
     };
+    const normalizePhone = (phone) => {
+        if (!phone) return '';
+
+        // Remove all non-numeric characters
+        let normalized = phone.replace(/\D/g, '');
+
+        // Remove leading zeros
+        normalized = normalized.replace(/^0+/, '');
+
+        return normalized;
+    };
     const validateEmail = (email) => {
       isValidEmail.value = emailPattern.test(email);
     };
@@ -244,12 +264,32 @@
     // Autocomplete Filter
     const filterClients = (event) => {
       const query = event.query.toLowerCase();
-      filteredClients.value = clients.value.filter((client) =>
-        (client.name && client.name.toLowerCase().includes(query)) ||
-        (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-        (client.name_kanji && client.name_kanji.toLowerCase().includes(query))
-      );
-    };      
+      const normalizedQuery = normalizePhone(query);
+      const isNumericQuery = /^\d+$/.test(normalizedQuery);
+
+      if (!query || !clients.value || !Array.isArray(clients.value)) {
+          filteredClients.value = [];
+          return;
+      }
+
+      filteredClients.value = clients.value.filter((client) => {
+          // Name filtering (case-insensitive)
+          const matchesName = 
+              (client.name && client.name.toLowerCase().includes(query)) || 
+              (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) || 
+              (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
+          // Phone/Fax filtering (only for numeric queries)
+          const matchesPhoneFax = isNumericQuery &&
+              ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) || 
+              (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
+          // Email filtering (case-insensitive)
+          const matchesEmail = client.email && client.email.toLowerCase().includes(query);
+
+          // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
+
+          return matchesName || matchesPhoneFax || matchesEmail;
+      });
+    };
     const onClientSelect = async (event) => {
       if (event.value) {
         // console.log('onClientSelect event:',event.value);
@@ -295,22 +335,24 @@
         // console.log('onClientChange event:',event.value);
         isClientSelected.value = false;
       
-        const clientName = await fetchClientNameConversion(event.value);      
-                
-        clientDetails.value = {
-          id: null,  
-          name: clientName.name,
-          name_kana: clientName.nameKana,
-          name_kanji: clientName.nameKanji,      
-          full_name_key: '',
-          legal_or_natural_person: 'legal',
-          gender: 'other',
-          date_of_birth: null,
-          email: '',
-          phone: '',
-          fax: '',
-          display_name: '',
-        };
+        if(event.value){
+          const clientName = await fetchClientNameConversion(event.value);      
+          
+          clientDetails.value = {
+            id: null,  
+            name: clientName.name,
+            name_kana: clientName.nameKana,
+            name_kanji: clientName.nameKanji,      
+            full_name_key: '',
+            legal_or_natural_person: 'legal',
+            gender: 'other',
+            date_of_birth: null,
+            email: '',
+            phone: '',
+            fax: '',
+            display_name: '',
+          };
+        }        
       }
     };
     const resetClient = () => {
