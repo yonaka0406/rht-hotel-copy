@@ -2292,22 +2292,24 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
     const reservation = await client.query(query, values);    
+    const reservationId = reservation.rows[0].id;
     console.log('addOTAReservation reservations:', reservation.rows[0]);
+
             
     // Get available rooms for the reservation period
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      roomId = await handleRoomItem(RoomAndGuestList, reservationClientId);
+      roomId = await handleRoomItem(RoomAndGuestList, reservationId);
     } else if (typeof RoomAndGuestList === 'object') {
       for (const roomItem of Object.values(RoomAndGuestList)) {        
-        roomId = await handleRoomItem(roomItem, reservationClientId);
+        roomId = await handleRoomItem(roomItem, reservationId);
       }
     }
     
     // Payment
     if(BasicRate.PointsDiscountList){
-      await insertReservationPayment(requestId, hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
-      console.log('addOTAReservation reservation_payments:', hotel_id, reservation.rows[0].id, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      await insertReservationPayment(requestId, hotel_id, reservationId, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
+      console.log('addOTAReservation reservation_payments:', hotel_id, reservationId, BasicInformation.TravelAgencyBookingDate, roomId, reservationClientId, 2, BasicRate?.PointsDiscountList?.PointsDiscount, BasicRate?.PointsDiscountList?.PointsDiscountName, 1);
     }    
 
     await client.query('COMMIT');
