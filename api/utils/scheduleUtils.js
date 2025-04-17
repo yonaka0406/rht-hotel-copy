@@ -59,7 +59,7 @@ async function fetchAndProcessReservations() {
   
   function startScheduling() {
     // Initial call to start the chain of requests
-    fetchAndProcessReservations();
+    //fetchAndProcessReservations();
   }
   
   module.exports = { startScheduling };
