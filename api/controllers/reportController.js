@@ -489,7 +489,8 @@ const formatDataForSheet = (reservations) => {
     reservation.plan_name || '',  // Handle null values
     reservation.status,
     reservation.type,
-    reservation.agent || ''       // Handle null values
+    reservation.agent || '',       // Handle null values
+    now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) // Add current datetime in JST
   ]);
   
   // Return data rows
