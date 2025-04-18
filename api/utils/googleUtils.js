@@ -165,7 +165,8 @@ async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
                     values: headers,
                 },
             });
-        } catch (error) {
+            console.log('Headers added to new sheet');
+        } catch (err) {
             console.error('Error appending headers:', err);
             throw err;
         }
@@ -174,7 +175,7 @@ async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
     // Break data into batches of 500 rows
     const BATCH_SIZE = 500;
     const totalBatches = Math.ceil(values.length / BATCH_SIZE);
-    
+
     // Process batches with delay between them
     for (let i = 0; i < totalBatches; i++) {
         const startIndex = i * BATCH_SIZE;
