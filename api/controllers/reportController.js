@@ -475,11 +475,7 @@ const getReservationsForGoogle = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-const formatDataForSheet = (reservations) => {
-  // First row is headers
-  const headers = ['Hotel ID', 'Hotel Name', 'Reservation ID', 'Date', 'Room Type', 
-                  'Room Number', 'Client Name', 'Plan Name', 'Status', 'Type', 'Agent'];
-  
+const formatDataForSheet = (reservations) => {  
   // Format each reservation as an array in the same order as headers
   const rows = reservations.map(reservation => [
     reservation.hotel_id,
@@ -497,7 +493,7 @@ const formatDataForSheet = (reservations) => {
   ]);
   
   // Return headers as first row, followed by data rows
-  return [headers, ...rows];
+  return [...rows];
 };
 
 
