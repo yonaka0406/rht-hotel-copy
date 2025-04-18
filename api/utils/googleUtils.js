@@ -3,6 +3,8 @@ const path = require('path');
 const { google } = require('googleapis');
 
 const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
+const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
+
 const redirectUri = 'http://localhost:3000';
 
 async function authorize() {
@@ -16,17 +18,19 @@ async function authorize() {
       redirectUri
     );
 
-    const tokenResponse = await client.request({
-      url: 'https://oauth2.googleapis.com/token',
-      method: 'POST',
-      params: {
-        grant_type: 'client_credentials',
-        scope: 'https://www.googleapis.com/auth/drive.file',
-      },
-    });
-
-    client.setCredentials(tokenResponse.data);
-    return client;
+    try {
+        const refreshTokenData = await fs.readFile(storedRefreshTokenPath);
+        const refreshToken = JSON.parse(refreshTokenData).refresh_token;
+        client.setCredentials({
+            refresh_token: refreshToken,
+        });
+        await client.getAccessToken(); // Forces a refresh if needed
+        return client;
+    } catch (error) {
+        console.error('No refresh token found. You need to obtain one first.');
+        throw new Error('No refresh token');
+        // if no token is available, create a new one?
+    }
 
   } catch (err) {
     console.error('Error during authorization:', err);
