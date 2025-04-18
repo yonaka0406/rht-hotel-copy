@@ -12,7 +12,7 @@ async function authorize() {
     const client = new google.auth.OAuth2(
       key.client_id,
       key.client_secret,
-      key.redirect_uris[0]
+      key.redirect_uris[3]
     );
 
     const tokenResponse = await client.request({
