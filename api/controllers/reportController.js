@@ -490,7 +490,7 @@ const formatDataForSheet = (reservations) => {
     reservation.status,
     reservation.type,
     reservation.agent || '',       // Handle null values
-    now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) // Add current datetime in JST
+    new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) // Add current datetime in JST
   ]);
   
   // Return data rows
