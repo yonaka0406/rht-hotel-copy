@@ -6,7 +6,8 @@ const credentialsPath = path.join(__dirname, '../config/google_sheets_credential
 const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
 
 const redirectUri = 'http://localhost:3000';
-const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng';
+//const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
+const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
 
 async function authorize() {
   try {
