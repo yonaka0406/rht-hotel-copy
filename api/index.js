@@ -185,13 +185,18 @@ const listenForTableChanges = async () => {
         const inventory = await response.json();        
 
         // Update Site Controller
-        response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(inventory),
-        });
+        try {
+          await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(inventory),
+          });
+          // console.log(`Successfully updated site controller for hotel ${data[0].hotel_id}`);
+        } catch (siteControllerError) {
+          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
+        }
 
         // Update Google Sheets
         const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
@@ -249,14 +254,19 @@ const listenForTableChanges = async () => {
         const inventory = await response.json();        
 
         // Update Site Controller
-        response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(inventory),
-        });
-
+        try {
+          await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(inventory),
+          });
+          // console.log(`Successfully updated site controller for hotel ${data[0].hotel_id}`);
+        } catch (siteControllerError) {
+          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
+        }
+        
         // Update Google Sheets
         const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
         response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {

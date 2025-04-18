@@ -9,6 +9,9 @@ const redirectUri = 'http://localhost:3000';
 const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
 //const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
 
+const headers = ['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', 
+    '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント'];
+
 async function authorize() {
   try {
     const credentials = await fs.readFile(credentialsPath);
@@ -109,7 +112,7 @@ async function createSheetInSpreadsheet(authClient, spreadsheetId, sheetName) {
 async function clearSheetData(authClient, spreadsheetId, sheetName) {
     const sheets = google.sheets({ version: 'v4', auth: authClient });
     
-    try {
+    try {        
       // First, get sheet information to find its range
       const response = await sheets.spreadsheets.get({
         spreadsheetId: spreadsheetId,
@@ -131,34 +134,52 @@ async function clearSheetData(authClient, spreadsheetId, sheetName) {
       });
       
       console.log(`Sheet "${sheetName}" cleared successfully`);
+
+      await appendDataToSheet(authClient, spreadsheetId, sheetName, headers)
+
+      console.log(`Sheet "${sheetName}" headers added successfully`);
+
       return clearResponse.data;
     } catch (err) {
       console.error('Error clearing sheet data:', err);
       throw err;
     }
-  }
+}
 
 async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
     // First check if the sheet exists
     const sheetExists = await checkSheetExists(authClient, spreadsheetId, sheetName);
-    
-    // If sheet doesn't exist, create it
-    if (!sheetExists) {
-        await createSheetInSpreadsheet(authClient, spreadsheetId, sheetName);
-    }
-
     const range = `${sheetName}!A1`;
     const sheets = google.sheets({ version: 'v4', auth: authClient });
+    
+    // If sheet doesn't exist, create it and fill the headers
+    if (!sheetExists) {
+        await createSheetInSpreadsheet(authClient, spreadsheetId, sheetName);
+        try {
+            await sheets.spreadsheets.values.append({
+                spreadsheetId: spreadsheetId,
+                range: range,
+                valueInputOption: 'USER_ENTERED',
+                insertDataOption: 'INSERT_ROWS',
+                resource: {
+                    values: headers,
+                },
+            });
+        } catch (error) {
+            console.error('Error appending headers:', err);
+            throw err;
+        }
+    }    
   
     try {
         const response = await sheets.spreadsheets.values.append({
-        spreadsheetId: spreadsheetId,
-        range: range,
-        valueInputOption: 'USER_ENTERED',
-        insertDataOption: 'INSERT_ROWS',
-        resource: {
-            values: values,
-        },
+            spreadsheetId: spreadsheetId,
+            range: range,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            resource: {
+                values: values,
+            },
         });
         console.log('Append response:', response.data);
         return response.data;
