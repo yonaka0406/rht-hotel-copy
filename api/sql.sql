@@ -616,6 +616,36 @@ FROM
 WHERE rd.cancelled IS NULL
 GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
 
+CREATE OR REPLACE VIEW vw_booking_for_google AS
+SELECT
+    h.id AS hotel_id,
+    h.formal_name AS hotel_name,
+    rd.id AS reservation_detail_id,
+    rd.date,
+    rt.name AS room_type_name,
+    rooms.room_number,
+    COALESCE(c.name_kanji, c.name) AS client_name,
+    rd.plan_name,
+    r.status,
+    r.type,
+    r.agent
+FROM
+    hotels h
+      JOIN
+    reservations r ON h.id = r.hotel_id
+      JOIN
+    clients c ON c.id = r.reservation_client_id
+      JOIN
+    reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+      JOIN
+    rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
+      JOIN
+    room_types rt ON rooms.room_type_id = rt.id
+WHERE
+    rd.cancelled IS NULL
+ORDER BY
+    h.id, rd.date, rooms.room_number;
+
 -- OTA / Site Controller
 
 CREATE TABLE sc_user_info (
