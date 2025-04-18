@@ -725,7 +725,7 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
       WHERE
           r.hotel_id = $1
       ORDER BY
-          r.room_number, series::date;
+          series::date, r.room_number;
   `;
   const values = [hotelId, startDate, endDate];
   try {
