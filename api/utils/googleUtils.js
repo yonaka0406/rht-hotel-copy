@@ -3,6 +3,7 @@ const path = require('path');
 const { google } = require('googleapis');
 
 const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
+const redirectUri = 'http://localhost:3000';
 
 async function authorize() {
   try {
@@ -12,7 +13,7 @@ async function authorize() {
     const client = new google.auth.OAuth2(
       key.client_id,
       key.client_secret,
-      key.redirect_uris[3]
+      redirectUri
     );
 
     const tokenResponse = await client.request({
