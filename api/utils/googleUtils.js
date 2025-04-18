@@ -53,15 +53,15 @@ async function createSheet(authClient, title, folderId) {
     });
 
     const spreadsheetId = spreadsheet.data.spreadsheetId;
-
+/*
     // Move the new sheet to the specified folder
     await drive.files.update({
       fileId: spreadsheetId,
       addParents: folderId,
       removeParents: 'root', // Remove from root if it was created there
     });
-
-    console.log(`Spreadsheet created with ID: ${spreadsheetId} in folder: ${folderId}`);
+*/
+    console.log(`Spreadsheet created with ID: ${spreadsheetId}`);
     return spreadsheetId;
   } catch (error) {
     console.error('Error creating spreadsheet:', error);
