@@ -6,6 +6,7 @@ const credentialsPath = path.join(__dirname, '../config/google_sheets_credential
 const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
 
 const redirectUri = 'http://localhost:3000';
+const parentFolderId = '12iQrSGoy6_nduDbF45JdQ-b-HO8krV32';
 
 async function authorize() {
   try {
@@ -38,6 +39,36 @@ async function authorize() {
   }
 }
 
+async function createSheet(authClient, title, folderId) {
+  const sheets = google.sheets({ version: 'v4', auth: authClient });
+  const drive = google.drive({ version: 'v3', auth: authClient });
+
+  try {
+    const spreadsheet = await sheets.spreadsheets.create({
+      resource: {
+        properties: {
+          title: title,
+        },
+      },
+    });
+
+    const spreadsheetId = spreadsheet.data.spreadsheetId;
+
+    // Move the new sheet to the specified folder
+    await drive.files.update({
+      fileId: spreadsheetId,
+      addParents: folderId,
+      removeParents: 'root', // Remove from root if it was created there
+    });
+
+    console.log(`Spreadsheet created with ID: ${spreadsheetId} in folder: ${folderId}`);
+    return spreadsheetId;
+  } catch (error) {
+    console.error('Error creating spreadsheet:', error);
+    throw error;
+  }
+}
+
 async function appendDataToSheet(authClient, spreadsheetId, range, values) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   try {
@@ -61,11 +92,11 @@ async function appendDataToSheet(authClient, spreadsheetId, range, values) {
 async function main() {
   try {
     const authClient = await authorize();
-    const fileId = '1xkqZn9yt1VsbbG9WdWiqFRUnkDS2Hhpb9OI_E3zfCLc';
+    const newSheetId = await createSheet(authClient, 'Hotel PMS Data', parentFolderId);
     const range = 'Sheet1!A1'; // The range to append data to
-    const dataToAppend = [['Trial Booking', 'Test User', '2025-04-18']]; // Example data
+    const dataToAppend = [['New Booking ID', 'Guest Name', 'Check-in Date'], ['1011', 'Sophia Miller', '2025-04-28']]; // Example data
 
-    await appendDataToSheet(authClient, fileId, range, dataToAppend);
+    await appendDataToSheet(authClient, newSheetId, range, dataToAppend);
   } catch (error) {
     console.error('An error occurred:', error);
   }
