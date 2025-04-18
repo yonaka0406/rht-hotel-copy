@@ -6,7 +6,7 @@ const credentialsPath = path.join(__dirname, '../config/google_sheets_credential
 const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
 
 const redirectUri = 'http://localhost:3000';
-const parentFolderId = '12iQrSGoy6_nduDbF45JdQ-b-HO8krV32';
+const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng';
 
 async function authorize() {
   try {
@@ -39,7 +39,7 @@ async function authorize() {
   }
 }
 
-async function createSheet(authClient, title, folderId) {
+async function createSheet(authClient, title) {
   const sheets = google.sheets({ version: 'v4', auth: authClient });
   const drive = google.drive({ version: 'v3', auth: authClient });
 
@@ -92,11 +92,11 @@ async function appendDataToSheet(authClient, spreadsheetId, range, values) {
 async function main() {
   try {
     const authClient = await authorize();
-    const newSheetId = await createSheet(authClient, 'Hotel PMS Data', parentFolderId);
+    //const sheetId = await createSheet(authClient, 'Hotel PMS Data');
     const range = 'Sheet1!A1'; // The range to append data to
     const dataToAppend = [['New Booking ID', 'Guest Name', 'Check-in Date'], ['1011', 'Sophia Miller', '2025-04-28']]; // Example data
 
-    await appendDataToSheet(authClient, newSheetId, range, dataToAppend);
+    await appendDataToSheet(authClient, sheetId, range, dataToAppend);
   } catch (error) {
     console.error('An error occurred:', error);
   }
