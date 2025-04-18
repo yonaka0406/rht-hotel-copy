@@ -466,7 +466,7 @@ const getReservationsForGoogle = async (req, res) => {
     
     const authClient = await authorize();
     const sheetName = `H_${hotelId}`;   
-    console.log('appendDataToSheet', sheetId, sheetName, formattedData);
+    // console.log('appendDataToSheet', sheetId, sheetName, formattedData);
     await appendDataToSheet(authClient, sheetId, sheetName, formattedData);
 
     res.json({success: 'Sheet update request made'});
