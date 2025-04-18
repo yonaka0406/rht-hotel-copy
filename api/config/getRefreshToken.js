@@ -14,7 +14,7 @@ async function getAccessToken() {
     const oAuth2Client = new google.auth.OAuth2(
       key.client_id,
       key.client_secret,
-      key.redirect_uris[0]
+      key.redirect_uris[1]
     );
 
     const authUrl = oAuth2Client.generateAuthUrl({
