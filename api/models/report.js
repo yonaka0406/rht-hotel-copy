@@ -699,10 +699,33 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
   const query = `
-      SELECT *
-      FROM vw_booking_for_google
-      WHERE hotel_id = $1 AND date BETWEEN $2 AND $3
-      ORDER BY date, room_number
+      SELECT
+          r.hotel_id,
+          h.formal_name AS hotel_name,
+          COALESCE(v.reservation_detail_id, NULL) AS reservation_detail_id,
+          series::date AS date,
+          COALESCE(v.room_type_name, NULL) AS room_type_name,
+          r.room_number,
+          COALESCE(v.client_name, NULL) AS client_name,
+          COALESCE(v.plan_name, NULL) AS plan_name,
+          COALESCE(v.status, NULL) AS status,
+          COALESCE(v.type, NULL) AS type,
+          COALESCE(v.agent, NULL) AS agent
+      FROM
+          rooms r
+      JOIN
+          hotels h ON r.hotel_id = h.hotel_id -- Assuming a 'hotels' table
+      CROSS JOIN
+          generate_series($2::date, $3::date, '1 day'::interval) AS series
+      LEFT JOIN
+          vw_booking_for_google v
+          ON r.hotel_id = v.hotel_id
+          AND r.id = v.room_id
+          AND series::date = v.date
+      WHERE
+          r.hotel_id = $1
+      ORDER BY
+          r.room_number, series::date;
   `;
   const values = [hotelId, startDate, endDate];
   try {
