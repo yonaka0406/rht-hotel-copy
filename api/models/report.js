@@ -714,7 +714,7 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
       FROM
           rooms r
       JOIN
-          hotels h ON r.hotel_id = h.hotel_id -- Assuming a 'hotels' table
+          hotels h ON r.hotel_id = h.id
       CROSS JOIN
           generate_series($2::date, $3::date, '1 day'::interval) AS series
       LEFT JOIN
