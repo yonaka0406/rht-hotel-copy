@@ -169,25 +169,54 @@ async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
             console.error('Error appending headers:', err);
             throw err;
         }
-    }    
-  
-    try {
-        const response = await sheets.spreadsheets.values.append({
-            spreadsheetId: spreadsheetId,
-            range: range,
-            valueInputOption: 'USER_ENTERED',
-            insertDataOption: 'INSERT_ROWS',
-            resource: {
-                values: values,
-            },
-        });
-        console.log('Append response:', response.data);
-        return response.data;
-    } catch (err) {
-        console.error('Error appending data:', err);
-        throw err;
+    } 
+    
+    // Break data into batches of 500 rows
+    const BATCH_SIZE = 500;
+    const totalBatches = Math.ceil(values.length / BATCH_SIZE);
+    
+    // Process batches with delay between them
+    for (let i = 0; i < totalBatches; i++) {
+        const startIndex = i * BATCH_SIZE;
+        const endIndex = Math.min(startIndex + BATCH_SIZE, values.length);
+        const batch = values.slice(startIndex, endIndex);
+
+        try {
+            const response = await sheets.spreadsheets.values.append({
+                spreadsheetId: spreadsheetId,
+                range: range,
+                valueInputOption: 'USER_ENTERED',
+                insertDataOption: 'INSERT_ROWS',
+                resource: {
+                    values: batch,
+                },
+            }); 
+            // Add delay between batches, except after the last batch
+            if (i < totalBatches - 1) {
+                // console.log(`Waiting 2 seconds before processing next batch...`);
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+            }
+            
+        } catch (err) {
+            console.error(`Error appending batch ${i+1}/${totalBatches}:`, err);
+            
+            // Implement exponential backoff for rate limit errors
+            if (err.code === 429 || (err.response && err.response.status === 429)) {
+                const retryDelay = 5000; // 5 seconds
+                console.log(`Rate limit hit. Waiting ${retryDelay/1000} seconds before retrying...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+                // Retry the same batch (decrement i to retry)
+                i--;
+                continue;
+            }
+            
+            throw err;
+        }
     }
-}
+
+    console.log(`Successfully appended all ${values.length} rows in ${totalBatches} batches`);
+    return { status: 'success', rowsAppended: values.length };
+};
 
 async function main() {
   try {
