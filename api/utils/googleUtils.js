@@ -6,8 +6,8 @@ const credentialsPath = path.join(__dirname, '../config/google_sheets_credential
 const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
 
 const redirectUri = 'http://localhost:3000';
-//const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
-const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
+const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
+//const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
 
 async function authorize() {
   try {
@@ -106,6 +106,37 @@ async function createSheetInSpreadsheet(authClient, spreadsheetId, sheetName) {
       throw err;
     }
 }
+async function clearSheetData(authClient, spreadsheetId, sheetName) {
+    const sheets = google.sheets({ version: 'v4', auth: authClient });
+    
+    try {
+      // First, get sheet information to find its range
+      const response = await sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId,
+        fields: 'sheets.properties'
+      });
+      
+      // Find the specified sheet
+      const sheet = response.data.sheets.find(s => s.properties.title === sheetName);
+      
+      if (!sheet) {
+        console.log(`Sheet "${sheetName}" not found.`);
+        return;
+      }
+      
+      // Clear all content from the sheet
+      const clearResponse = await sheets.spreadsheets.values.clear({
+        spreadsheetId: spreadsheetId,
+        range: `${sheetName}!A1:Z1000`, // Using a large range to ensure all data is cleared
+      });
+      
+      console.log(`Sheet "${sheetName}" cleared successfully`);
+      return clearResponse.data;
+    } catch (err) {
+      console.error('Error clearing sheet data:', err);
+      throw err;
+    }
+  }
 
 async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
     // First check if the sheet exists
@@ -154,5 +185,6 @@ main();
 
 module.exports = {   
     authorize, 
+    clearSheetData,
     appendDataToSheet,    
 };

@@ -696,6 +696,24 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
   }
 };
 
+const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+      SELECT *
+      FROM vw_booking_for_google
+      WHERE hotel_id = $1 AND date BETWEEN $2 AND $3
+      ORDER BY date, room_number
+  `;
+  const values = [hotelId, startDate, endDate];
+  try {
+      const result = await pool.query(query, values);           
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving data:', err);
+      throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -706,4 +724,5 @@ module.exports = {
   selectExportReservationDetails,
   selectExportMealCount,
   selectReservationsInventory,
+  selectReservationsForGoogle,
 };

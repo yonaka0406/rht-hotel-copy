@@ -1,4 +1,5 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory, selectReservationsForGoogle } = require('../models/report');
+const { authorize, appendDataToSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
 
@@ -448,6 +449,31 @@ const getReservationsInventory = async (req, res) => {
   }
 };
 
+const getReservationsForGoogle = async (req, res) => {
+  const sheetId = req.params.sid;
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {    
+    const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);    
+    
+    if (!dataToAppend || dataToAppend.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
+    }
+    
+    const authClient = await authorize();
+    const sheetName = `H_${hotelId}`;   
+    console.log('appendDataToSheet', sheetId, sheetName, dataToAppend);
+    await appendDataToSheet(authClient, sheetId, sheetName, dataToAppend);
+
+    res.json({success: 'Sheet update request made'});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}
+
 module.exports = { 
   getCountReservation,
   getCountReservationDetails,
@@ -457,4 +483,5 @@ module.exports = {
   getExportReservationDetails,
   getExportMealCount,
   getReservationsInventory,
+  getReservationsForGoogle,
 };

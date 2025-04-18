@@ -192,6 +192,15 @@ const listenForTableChanges = async () => {
           },
           body: JSON.stringify(inventory),
         });
+
+        // Update Google Sheets
+        const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
+        response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
       }
     }
   });
@@ -246,6 +255,15 @@ const listenForTableChanges = async () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(inventory),
+        });
+
+        // Update Google Sheets
+        const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
+        response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
         });
       }
     }
