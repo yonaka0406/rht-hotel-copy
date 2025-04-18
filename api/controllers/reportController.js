@@ -461,18 +461,45 @@ const getReservationsForGoogle = async (req, res) => {
     if (!dataToAppend || dataToAppend.length === 0) {
       return res.status(404).json({ error: 'No data found' });
     }
+
+    const formattedData = formatDataForSheet(dataToAppend);
     
     const authClient = await authorize();
     const sheetName = `H_${hotelId}`;   
-    console.log('appendDataToSheet', sheetId, sheetName, dataToAppend);
-    await appendDataToSheet(authClient, sheetId, sheetName, dataToAppend);
+    console.log('appendDataToSheet', sheetId, sheetName, formattedData);
+    await appendDataToSheet(authClient, sheetId, sheetName, formattedData);
 
     res.json({success: 'Sheet update request made'});
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
+const formatDataForSheet = (reservations) => {
+  // First row is headers
+  const headers = ['Hotel ID', 'Hotel Name', 'Reservation ID', 'Date', 'Room Type', 
+                  'Room Number', 'Client Name', 'Plan Name', 'Status', 'Type', 'Agent'];
+  
+  // Format each reservation as an array in the same order as headers
+  const rows = reservations.map(reservation => [
+    reservation.hotel_id,
+    reservation.hotel_name,
+    reservation.reservation_detail_id,
+    // Format date to be more readable in spreadsheet (adjust format as needed)
+    new Date(reservation.date).toLocaleDateString('ja-JP'),
+    reservation.room_type_name,
+    reservation.room_number,
+    reservation.client_name,
+    reservation.plan_name || '',  // Handle null values
+    reservation.status,
+    reservation.type,
+    reservation.agent || ''       // Handle null values
+  ]);
+  
+  // Return headers as first row, followed by data rows
+  return [headers, ...rows];
+};
+
 
 module.exports = { 
   getCountReservation,
