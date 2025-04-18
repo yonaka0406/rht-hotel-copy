@@ -623,6 +623,7 @@ SELECT
     rd.id AS reservation_detail_id,
     rd.date,
     rt.name AS room_type_name,
+    rd.room_id,
     rooms.room_number,
     COALESCE(c.name_kanji, c.name) AS client_name,
     rd.plan_name,
