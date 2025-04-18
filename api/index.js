@@ -165,7 +165,7 @@ const listenForTableChanges = async () => {
 
       let response = null;
 
-      // console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
+      // Fetch log data to check if inventory has changed
       response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
         method: 'GET',
         headers: {
@@ -175,7 +175,7 @@ const listenForTableChanges = async () => {
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
 
-        // console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
+        // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
@@ -184,7 +184,7 @@ const listenForTableChanges = async () => {
         });
         const inventory = await response.json();        
 
-        // console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
+        // Update Site Controller
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
@@ -192,7 +192,6 @@ const listenForTableChanges = async () => {
           },
           body: JSON.stringify(inventory),
         });
-
       }
     }
   });
@@ -221,7 +220,7 @@ const listenForTableChanges = async () => {
 
       let response = null;
 
-      // console.log('http://localhost:5000/api/log/reservation-inventory/', logId);
+      // Fetch log data to check if inventory has changed
       response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
         method: 'GET',
         headers: {
@@ -231,7 +230,7 @@ const listenForTableChanges = async () => {
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
 
-        // console.log('http://localhost:5000/api/log/reservation-inventory/', data[0].hotel_id, data[0].check_in, data[0].check_out);
+        // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
@@ -240,7 +239,7 @@ const listenForTableChanges = async () => {
         });
         const inventory = await response.json();        
 
-        // console.log('http://localhost:5000/api/sc/tl/inventory/multiple/', data[0].hotel_id, logId, inventory);
+        // Update Site Controller
         response = await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
           method: 'POST',
           headers: {
@@ -248,7 +247,6 @@ const listenForTableChanges = async () => {
           },
           body: JSON.stringify(inventory),
         });
-
       }
     }
   });
