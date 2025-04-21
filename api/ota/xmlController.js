@@ -238,7 +238,7 @@ const getOTAReservations = async (req, res) => {
             
 
             // Send OK to OTA server
-            // await successOTAReservations(req, res, hotel_id);
+            await successOTAReservations(req, res, hotel_id);
         }
 
         return res.status(200).send({ message: 'Processed all hotels.' });
