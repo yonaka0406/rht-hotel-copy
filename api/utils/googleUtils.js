@@ -181,6 +181,8 @@ async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
         const endIndex = Math.min(startIndex + BATCH_SIZE, values.length);
         const batch = values.slice(startIndex, endIndex);
 
+        console.log(`Appending batch ${i+1}/${totalBatches}：`,batch);
+
         try {
             const response = await sheets.spreadsheets.values.append({
                 spreadsheetId: spreadsheetId,
