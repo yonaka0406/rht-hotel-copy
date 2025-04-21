@@ -251,7 +251,7 @@ const successOTAReservations = async (req, res, hotel_id, outputId) => {
     const name = 'OutputCompleteService';
 
     try {
-        const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+        let template = await selectXMLTemplate(req.requestId, hotel_id, name);
         
         template = template.replace("{{outputId}}", outputId);
 
