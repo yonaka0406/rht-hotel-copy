@@ -10,14 +10,14 @@ async function fetchAndProcessReservations() {
         });        
 
         console.log('Reservations processed successfully.');
-/*
+
         response = await fetch(`http://localhost:5000/api/sc/tl/reservations/success/`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             },            
         });
-*/
+
     } catch (error) {
       console.error('Error fetching or processing reservations:', error);
     } finally {
@@ -59,7 +59,7 @@ async function fetchAndProcessReservations() {
   
   function startScheduling() {
     // Initial call to start the chain of requests
-    //fetchAndProcessReservations();
+    fetchAndProcessReservations();
   }
   
   module.exports = { startScheduling };
