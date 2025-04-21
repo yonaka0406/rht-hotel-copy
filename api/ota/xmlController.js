@@ -234,11 +234,11 @@ const getOTAReservations = async (req, res) => {
                 } catch (dbError) {
                     console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);                    
                 }
-            }
-            
+            }            
 
             // Send OK to OTA server
-            await successOTAReservations(req, res, hotel_id);
+            const outputId =  executeResponse?.return?.configurationSettings?.outputId;
+            await successOTAReservations(req, res, hotel_id, outputId);
         }
 
         return res.status(200).send({ message: 'Processed all hotels.' });
@@ -247,11 +247,14 @@ const getOTAReservations = async (req, res) => {
         return res.status(500).send({ error: 'An error occurred while processing hotels.' });
     }
 };
-const successOTAReservations = async (req, res, hotel_id) => {
+const successOTAReservations = async (req, res, hotel_id, outputId) => {
     const name = 'OutputCompleteService';
 
     try {
         const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+        
+        template = template.replace("{{outputId}}", outputId);
+
         await submitXMLTemplate(req, res, hotel_id, name, template);
     } catch (error) {        
         console.error('Error in successOTAReservations:', error);
