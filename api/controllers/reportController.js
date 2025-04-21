@@ -477,21 +477,39 @@ const getReservationsForGoogle = async (req, res) => {
 };
 const formatDataForSheet = (reservations) => {    
   // Format each reservation as an array in the same order as headers
-  const rows = reservations.map(reservation => [
+  const rows = reservations.map(reservation => {
+    let displayCell = '';    
+    if (reservation.status === "hold") {
+      displayCell += "㋭｜";
+    } else if (reservation.status === "provisory") {
+      displayCell += "㋕｜";
+    }
+    if (reservation.client_name) {
+      displayCell += reservation.client_name;
+    }
+    if (reservation.plan_name) {
+      displayCell += "、" + reservation.plan_name;
+    }
+    if (reservation.agent) {
+      displayCell += "、㋔｜" + reservation.agent;
+    } else if (reservation.type === "employee") {
+      displayCell += "、㋛｜";
+    }
+
     reservation.hotel_id,
     reservation.hotel_name,
-    reservation.reservation_detail_id,
-    // Format date to be more readable in spreadsheet (adjust format as needed)
+    reservation.reservation_detail_id,    
     new Date(reservation.date).toLocaleDateString('ja-JP'),
     reservation.room_type_name,
     reservation.room_number,
     reservation.client_name,
-    reservation.plan_name || '',  // Handle null values
+    reservation.plan_name || '',
     reservation.status,
     reservation.type,
-    reservation.agent || '',       // Handle null values
-    new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }) // Add current datetime in JST
-  ]);
+    reservation.agent || '',
+    new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+    displayCell
+  });
   
   // Return data rows
   return [...rows];
