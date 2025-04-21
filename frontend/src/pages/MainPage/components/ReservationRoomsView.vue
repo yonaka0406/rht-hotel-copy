@@ -694,7 +694,7 @@
             `h${plans_hotel_id ?? ''}`,
         ];
         const plan = plans.value.find(p => possibleKeys.includes(p.plan_key));
-        return plan?.color || "#FFFFFF";
+        return plan?.color || "#8f8d8d";
     };
 
     // Computed
