@@ -496,19 +496,21 @@ const formatDataForSheet = (reservations) => {
       displayCell += "、㋛｜";
     }
 
-    reservation.hotel_id,
-    reservation.hotel_name,
-    reservation.reservation_detail_id,    
-    new Date(reservation.date).toLocaleDateString('ja-JP'),
-    reservation.room_type_name,
-    reservation.room_number,
-    reservation.client_name,
-    reservation.plan_name || '',
-    reservation.status,
-    reservation.type,
-    reservation.agent || '',
-    new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    displayCell
+    return [
+      reservation.hotel_id,
+      reservation.hotel_name,
+      reservation.reservation_detail_id,
+      new Date(reservation.date).toLocaleDateString('ja-JP'),
+      reservation.room_type_name,
+      reservation.room_number,
+      reservation.client_name,
+      reservation.plan_name || '',
+      reservation.status,
+      reservation.type,
+      reservation.agent || '',
+      new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+      displayCell
+    ];
   });
   
   // Return data rows
