@@ -166,15 +166,14 @@ const listenForTableChanges = async () => {
       let response = null;
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
+      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
       });
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-
+      const googleData = await response.json();
+      if (googleData && Object.keys(googleData).length > 0) {
         // Update Google Sheets
         const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
         response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
@@ -183,7 +182,17 @@ const listenForTableChanges = async () => {
             'Content-Type': 'application/json',
           }
         });
+      }
 
+      // Fetch log data to check if inventory has changed
+      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/site-controller`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      const data = await response.json();
+      if (data && Object.keys(data).length > 0) {
         // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
@@ -235,15 +244,14 @@ const listenForTableChanges = async () => {
       let response = null;
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}`, {
+      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
       });
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-
+      const googleData = await response.json();
+      if (googleData && Object.keys(googleData).length > 0) {
         // Update Google Sheets
         const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
         response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
@@ -252,7 +260,18 @@ const listenForTableChanges = async () => {
             'Content-Type': 'application/json',
           }
         });
+      }
 
+      // Fetch log data to check if inventory has changed
+      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/site-controller`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      const data = await response.json();
+      if (data && Object.keys(data).length > 0) {
+        
         // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',

@@ -1,4 +1,4 @@
-const { selectReservationHistory, selectReservationInventoryChange } = require('../models/log');
+const { selectReservationHistory, selectReservationInventoryChange, selectReservationGoogleInventoryChange } = require('../models/log');
 
 const fetchReservationHistory = async (req, res) => {
     const { id } = req.params;
@@ -13,14 +13,19 @@ const fetchReservationHistory = async (req, res) => {
 };
 
 const fetchReservationInventoryChange = async (req, res) => {
-  const { id } = req.params;
+  const { id, type } = req.params;  
 
   // console.log('fetchReservationInventoryChange controller', id);
 
   try {
-    const logs = await selectReservationInventoryChange(req.requestId, id);
-    // console.log('fetchReservationInventoryChange', logs)
-    res.json(logs);
+    if (type === 'google') {
+      const logs = await selectReservationGoogleInventoryChange(req.requestId, id);
+      res.json(logs);
+    }
+    if (type === 'site-controller') {
+      const logs = await selectReservationInventoryChange(req.requestId, id);
+      res.json(logs);
+    }    
   } catch (error) {
     console.error('Error getting hotel rooms:', error);
     res.status(500).json({ error: error.message });

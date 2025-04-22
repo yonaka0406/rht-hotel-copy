@@ -6,6 +6,6 @@ const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require
 router.get('/log/reservation/:id', authMiddleware, fetchReservationHistory);
 
 // Internal route
-router.get('/log/reservation-inventory/:id', fetchReservationInventoryChange);
+router.get('/log/reservation-inventory/:id/:type', fetchReservationInventoryChange);
 
 module.exports = router;
