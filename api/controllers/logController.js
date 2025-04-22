@@ -18,12 +18,12 @@ const fetchReservationInventoryChange = async (req, res) => {
   try {
     if (type === 'google') {      
       const logs = await selectReservationGoogleInventoryChange(req.requestId, id);
-      console.log('fetchReservationInventoryChange google', id, logs);
+      // console.log('fetchReservationInventoryChange google', id, logs);
       res.json(logs);      
     }
     if (type === 'site-controller') {      
       const logs = await selectReservationInventoryChange(req.requestId, id);
-      console.log('fetchReservationInventoryChange site-controller', id, logs);
+      // console.log('fetchReservationInventoryChange site-controller', id, logs);
       res.json(logs);
     }    
   } catch (error) {
