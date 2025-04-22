@@ -140,21 +140,29 @@
         <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization">変更適用</Button>        
       </template>
     </Panel>  
-    
-    <div v-if="draggingReservation" class="dragging-reservation" :style="draggingStyle">
-        <div class="dragging-reservation-header">            
-            <p>IN:{{ formatDateMonthDay(draggingCheckIn) }}</p>
-            <p>OUT:{{ formatDateMonthDay(draggingCheckOut) }}</p>             
-        </div>        
+        
+    <div 
+      v-if="reservationCardData.length > 0 && !reservationCardVisible"
+      
+      :style="{ position: 'absolute', right: '3rem', bottom: '5rem' }"
+    >
+      <OverlayBadge :value="reservationCardData.length" severity="danger">    
+        <Button severity="info" @click="reservationCardVisible = true" rounded  >
+          <i class="pi pi-calendar" />
+        </Button>                          
+      </OverlayBadge>
     </div>
-
-    <SpeedDial
-      :model="speedDialModel"
-      direction="left"
-      :style="{ position: 'absolute', right: '3rem', bottom: '2rem' }"
-      :tooltipOptions="{ position: 'top' }"      
-    />
-    <ContextMenu ref="cm" :model="contextMenuModel" />
+    
+    <div       
+      :style="{ position: 'absolute', right: '3rem', bottom: '1rem' }"
+    >
+      <SpeedDial
+        :model="speedDialModel"
+        direction="left"        
+        :tooltipOptions="{ position: 'top' }"      
+      />
+      <ContextMenu ref="cm" :model="contextMenuModel" />
+    </div>
 
     <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":closable="true">
       <div v-if="reservationId">
@@ -174,6 +182,57 @@
         :room_id="selectedRoom.room_id"
         :date="selectedDate"
       />
+    </Drawer>
+
+    <Drawer v-model:visible="reservationCardVisible" 
+      :modal="false"
+      :position="'right'" 
+      :style="{ width: isDrawerExpanded ? '400px' : '100px' }"
+      :closable="false"   
+      @mouseover="expandDrawer"
+      @mouseleave="collapseDrawer"      
+    >
+      <div v-if="reservationCardData.length > 0" class="reservation-card">                
+        <div
+          v-for="reservationGroup in reservationCardData"
+          :key="reservationGroup.reservation_id"          
+          draggable="true"
+          @dragstart="handleCardDragStart($event, reservationGroup)"
+          :class="{ 'expanded': isDrawerExpanded }"
+        >
+          <template v-if="isDrawerExpanded">
+            <Card class="mb-2">
+              <template #content>
+                <div class="flex justify-between mb-2">
+                  <span class="font-bold">お客様名:</span>
+                  <span>{{ reservationGroup.client_name }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                  <span class="font-bold">部屋番号:</span>
+                  <span>{{ reservationGroup.room_number }}</span>
+                </div>          
+                <div class="flex justify-between mb-2">
+                  <span class="font-bold">チェックイン:</span>
+                  <span>{{ formatDate(new Date(reservationGroup.check_in)) }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                  <span class="font-bold">チェックアウト:</span>
+                  <span>{{ formatDate(new Date(reservationGroup.check_out)) }}</span>
+                </div>
+                <div class="mt-4 text-center text-sm text-gray-500">
+                  <i class="pi pi-arrows-alt mr-2"></i>ドラッグしてカレンダーに移動
+                </div>
+              </template>
+            </Card>
+          </template>
+          <template v-else>
+            <Badge severity="info" class="my-2 w-full text-center">
+              <span class="text-xl">{{ reservationGroup.room_number }}</span>
+            </Badge>
+            
+          </template>
+        </div>
+      </div>
     </Drawer>
   </div>
 
@@ -206,7 +265,7 @@
   import { useConfirm } from "primevue/useconfirm";
   const confirm = useConfirm();
   const confirmRoomMode = useConfirm();
-  import { Panel, Drawer, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button } from 'primevue';
+  import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -504,6 +563,29 @@
     }
     
   };
+  // Reservation Drawer  
+  const reservationCardData = ref([]);
+  const selectedCellReservations = ref([]);
+  const reservationCardVisible = ref(false);  
+  const isDrawerExpanded = ref(false);  
+  const showReservationCard = () => {
+    isDrawerExpanded.value = false;
+    reservationCardVisible.value = true;
+  };  
+  const expandDrawer = () => {
+    isDrawerExpanded.value = true;
+    reservationCardVisible.value = true;    
+  };
+
+  const collapseDrawer = () => {
+    isDrawerExpanded.value = false;    
+  };
+  const handleCardDragStart = (event, reservation) => {
+    console.log('handleCardDragStart', reservation);
+    reservationCardVisible.value = false;
+    draggingReservation.value = true;   
+    selectedCellReservations.value = reservation;    
+  };
 
   // Drag & Drop
   const draggingReservation = ref(false);
@@ -532,7 +614,7 @@
     return { minDate: minDate, maxDate: maxDate };
   });
   const tempRoomData = ref([]);
-  const hasChanges = ref(false);
+  const hasChanges = ref(false);  
   const dragMode = ref('reservation');
   const dragModeLabel = computed(() => {
     switch (dragMode.value) {
@@ -574,7 +656,7 @@
     if(dragMode.value === 'reservation'){
       openDrawer(room.room_id, date);
     }
-    if (dragMode.value === 'roomByDay') {
+    else if (dragMode.value === 'roomByDay') {
       if (reservedRoomsMap.value[key]) {
           const index = selectedRoomByDay.value.findIndex(item => item.key === key);
           // console.log('selectedRoomByDay.value.length', selectedRoomByDay.value.length)
@@ -627,7 +709,42 @@
           }
       }
       // console.log('handleCellClick:', selectedRoomByDay.value);
-  }
+    } 
+    else if (dragMode.value === 'reorganizeRooms') {
+      if (tempReservationsMap.value[key]) {
+        // Get the clicked reservation
+        const clickedReservation = tempReservationsMap.value[key];
+        const clickedRoomId = room.room_id;
+
+        // Filter reservations with the same reservation_id and matching room_id
+        const reservationsToMove = tempReservations.value.filter(
+          (item) => item.reservation_id === clickedReservation.reservation_id && item.room_id === clickedRoomId
+        );
+
+        // Create the details object
+        if (reservationsToMove.length > 0) {
+          const { reservation_id, check_in, check_out, client_name, room_number } = reservationsToMove[0];
+          reservationCardData.value.push({
+              reservation_id,
+              check_in,
+              check_out,
+              client_name,
+              room_number,
+              details: reservationsToMove
+          });
+        }
+
+        // Remove the moved reservations from tempReservations
+        tempReservations.value = tempReservations.value.filter(
+          (item) => item.reservation_id !== clickedReservation.reservation_id || item.room_id !== clickedRoomId
+        );
+        hasChanges.value = true;
+
+        showReservationCard();
+
+        console.log('handleCellClick tempReservations:', tempReservations.value);        
+      }
+    }
   };
   const handleDragStart = (event, roomId, date) => {
     if (dragMode.value === 'reservation') {
@@ -649,8 +766,85 @@
       }
     } else if (dragMode.value === 'reorganizeRooms') {
       const key = `${draggingRoomId.value}_${draggingDate.value}`;
-      // console.log(key)
-      if (tempReservationsMap.value[key]) {
+      
+      // Check if this is a drop from the reservation card
+      if (reservationCardData.value && !reservationCardVisible.value) {
+        console.log('handleDrop from the reservation card');
+
+        const reservation = selectedCellReservations.value;        
+        const originalDetails = reservation.details;
+        let minDate = originalDetails.length > 0 ? new Date(originalDetails[0].date) : null;
+        for (let i = 1; i < originalDetails.length; i++) {
+            const currentDate = new Date(originalDetails[i].date);
+            if (currentDate < minDate) {
+                minDate = currentDate;
+            }
+        }
+
+
+        // Check for conflicts before adding to tempReservations
+        let hasConflicts = false;
+        for (const detail of originalDetails) {
+            const detailDate = formatDate(new Date(detail.date));
+            const conflictKey = `${roomId}_${detailDate}`;
+            if (tempReservationsMap.value[conflictKey]) {
+                hasConflicts = true;
+                break;
+            }
+        }
+        console.log('hasConflicts:', hasConflicts);
+        if (!hasConflicts) {
+            originalDetails.forEach(detail => {
+                const updatedDetail = { ...detail };
+                                
+                updatedDetail.room_id = roomId;
+                
+                // Calculate new date based on drop
+                const dateDiff = new Date(date) - new Date(minDate);
+                const newDetailDate = new Date(detail.date);
+                console.log('newDetailDate:', newDetailDate, 'dateDiff:', dateDiff);
+                newDetailDate.setDate(newDetailDate.getDate() + dateDiff / (1000 * 60 * 60 * 24));
+                console.log('newDetailDate:', newDetailDate);
+                updatedDetail.date = formatDate(newDetailDate);
+                updatedDetail.check_in = formatDate(new Date(new Date(updatedDetail.check_in).setDate(new Date(updatedDetail.check_in).getDate() + dateDiff / (1000 * 60 * 60 * 24))));
+                updatedDetail.check_out = formatDate(new Date(new Date(updatedDetail.check_out).setDate(new Date(updatedDetail.check_out).getDate() + dateDiff / (1000 * 60 * 60 * 24))));
+                tempReservations.value.push(updatedDetail);
+                console.log('push tempReservations:', updatedDetail);
+
+                // Remove existing item in tempRoomData if it already exists
+                const existingItemIndex = tempRoomData.value.findIndex(item => item.id === updatedDetail.id);
+                if (existingItemIndex !== -1) {
+                    tempRoomData.value.splice(existingItemIndex, 1); // Remove the existing item
+                }
+
+                // Store changed data
+                tempRoomData.value.push(updatedDetail);
+                
+            });
+            hasChanges.value = true;
+        } else {
+            toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 2000 });
+            setTimeout(() => {
+                reservationCardVisible.value = true;
+            }, 2000);            
+            return;
+        }
+                        
+        // Remove the processed reservation from reservationCardData
+        const reservationIndex = reservationCardData.value.findIndex(
+            (item) => item.reservation_id === reservation.reservation_id && item.room_id === reservation.room_id
+        );
+        if (reservationIndex !== -1) {
+            reservationCardData.value.splice(reservationIndex, 1);
+        }     
+        selectedCellReservations.value = [];
+        if (reservationCardData.value.length === 0) {
+            reservationCardVisible.value = false;
+        } else {
+            reservationCardVisible.value = true;
+        }        
+
+      } else if (tempReservationsMap.value[key]) {
           // Update the reservation in tempReservations
           const reservation = tempReservationsMap.value[key];
           const reservationIdToUpdate = reservation.reservation_id;
@@ -719,9 +913,9 @@
           });
 
           hasChanges.value = true;
-      }
-      
+      }      
     }
+
     removeHighlight();
   };
   const applyReorganization = async () => {    
