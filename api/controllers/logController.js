@@ -16,14 +16,14 @@ const fetchReservationInventoryChange = async (req, res) => {
   const { id, type } = req.params;  
   
   try {
-    if (type === 'google') {
-      console.log('fetchReservationInventoryChange google', id);
+    if (type === 'google') {      
       const logs = await selectReservationGoogleInventoryChange(req.requestId, id);
-      res.json(logs);
+      console.log('fetchReservationInventoryChange google', id, logs);
+      res.json(logs);      
     }
-    if (type === 'site-controller') {
-      console.log('fetchReservationInventoryChange site-controller', id);
+    if (type === 'site-controller') {      
       const logs = await selectReservationInventoryChange(req.requestId, id);
+      console.log('fetchReservationInventoryChange site-controller', id, logs);
       res.json(logs);
     }    
   } catch (error) {
