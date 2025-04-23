@@ -218,27 +218,42 @@ const getOTAReservations = async (req, res) => {
             };        
             // console.log('Formatted Reservations:', formattedReservations);
 
+            let reservationWritten = false;
+
             // Call addOTAReservation for each formatted reservation
             for (const reservation of formattedReservations) {
                 try {
-                    console.log('Type of OTA transaction:', reservation.TransactionType.DataClassification);
+                    const classification = reservation.TransactionType.DataClassification;
+                    console.log('Type of OTA transaction:', classification);
+                    if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
+                        console.error(`Unsupported DataClassification: ${classification}`, reservation);
+                        continue; // Skip this reservation and move on
+                    }
+
                     if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         await addOTAReservation(req.requestId, hotel_id, reservation);
+                        reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'ModificationReport'){
-
+                        // reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'CancellationReport'){
-
+                        // reservationWritten = true;
                     }                      
                 } catch (dbError) {
                     console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);                    
                 }
-            }            
+            }
 
             // Send OK to OTA server
-            const outputId =  executeResponse?.return?.configurationSettings?.outputId;
-            await successOTAReservations(req, res, hotel_id, outputId);
+            if(!reservationWritten) {
+                console.log('No new reservations to write for hotel_id:', hotel_id);
+                continue; // Skip to next hotel
+            }else{
+                const outputId =  executeResponse?.return?.configurationSettings?.outputId;
+                await successOTAReservations(req, res, hotel_id, outputId);
+            }
+            
         }
 
         return res.status(200).send({ message: 'Processed all hotels.' });
