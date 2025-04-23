@@ -17,9 +17,9 @@
                     <Column field="netagtrmtypename">
                         <template #header>{{ fetchFieldName('netAgtRmTypeName') }}</template>
                     </Column>                    
-                    <Column header="Link to Room Type">
+                    <Column header="PMS部屋タイプ紐づけ">
                         <template #body="slotProps">
-                            <Select                             
+                            <Select
                                 v-model="slotProps.data.room_type_id" 
                                 :options="roomTypes"
                                 optionLabel="name" 
