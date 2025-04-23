@@ -2466,6 +2466,356 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     return roomId;
   };
 };
+const editOTAReservation = async  (requestId, hotel_id, data) => {
+  // XML
+  // console.log('editOTAReservation data:', data);
+  const SalesOfficeInformation = data?.SalesOfficeInformation || {};
+  // console.log('editOTAReservation SalesOfficeInformation:', SalesOfficeInformation);
+  const BasicInformation = data?.BasicInformation || {};
+  // console.log('editOTAReservation BasicInformation:', BasicInformation);
+  const BasicRateInformation = data?.BasicRateInformation || {};
+  // console.log('editOTAReservation BasicRateInformation:', BasicRateInformation);
+  const RisaplsCommonInformation = data?.RisaplsInformation?.RisaplsCommonInformation || {};  
+  // console.log('editOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
+  const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
+  // console.log('editOTAReservation Basic:', Basic);
+  const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
+  // console.log('editOTAReservation Member:', Member);
+  const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
+  // console.log('editOTAReservation BasicRate:', BasicRate);
+  const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
+  // console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
+
+  const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
+
+  // Query
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  let query = '';
+  let values = '';  
+
+  // Fields
+  const dateRange = [];
+  let currentDate = new Date(BasicInformation.CheckInDate);
+  while (currentDate < new Date(BasicInformation.CheckOutDate)) {
+    dateRange.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  let reservationComment = "";  
+  if (BasicInformation?.OtherServiceInformation) {
+    reservationComment += `予約備考：${BasicInformation.OtherServiceInformation}；\n`;
+  }
+  if (BasicInformation?.SpecificMealCondition) {
+    reservationComment += `食事備考：${BasicInformation.SpecificMealCondition}；\n`;
+  }
+
+  // Helper
+  const selectNature = (code) => {
+    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar    
+    if (code == 2){
+      return 'legal';
+    } else{
+      return 'natural';
+    }
+  };
+  const selectGender = (code) => {
+    // For RisaplsInformation.RisaplsCommonInformation.Member.UserGendar    
+    if (code === '0'){
+      return 'male';
+    }
+    if (code === '1'){
+      return 'female';
+    }
+    
+    return 'other';    
+  };
+  const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
+  // console.log('selectTLRoomMaster:', roomMaster);
+  const selectRoomTypeId = (code) => {
+    const match = roomMaster.find(item => item.netagtrmtypecode === code);
+    return match ? match.room_type_id : null;
+  };
+  
+  
+  
+  try {
+    await client.query('BEGIN'); 
+
+    // Fetch the existing reservation_id
+    query = `
+        SELECT id
+        FROM reservations
+        WHERE ota_reservation_id = $1 AND hotel_id = $2;
+    `;
+    values = [otaReservationId, hotel_id];
+    const existingReservationResult = await client.query(query, values);
+
+    if (existingReservationResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, error: `Reservation with OTA ID ${otaReservationId} not found.` };
+    }
+
+    const reservationIdToUpdate = existingReservationResult.rows[0].id;
+    const clientIdToUpdate = existingReservationResult.rows[0].reservation_client_id;
+
+    // --- Delete existing reservation details and payments ---    
+    await client.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
+    await client.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
+    
+    // Client info
+    const clientData = {
+      name: Member?.UserName?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
+      name_kana: Member?.UserKana?.trim() || BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
+      date_of_birth: Member?.UserDateOfBirth || null,
+      legal_or_natural_person: selectNature(Member?.UserGendar || 1),
+      gender: selectGender(Member?.UserGendar || '2'),
+      email: Basic.Email || '',
+      phone: Basic.PhoneNumber || '',
+      created_by: 1,
+      updated_by: 1,
+    };
+
+    let finalName, finalNameKana, finalNameKanji;
+    const { name, nameKana, nameKanji } = await processNameString(clientData.name);
+    finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+    if (clientData.name_kana) {
+      finalNameKana = toFullWidthKana(clientData.name_kana);
+    }
+
+    query = `
+      UPDATE clients SET
+        name = $1
+        ,name_kana = $2
+        ,name_kanji = $3
+        ,date_of_birth = $4
+        ,legal_or_natural_person = $5
+        ,gender = $6
+        ,email = $7
+        ,phone = $8   
+        ,updated_by = $9
+      WHERE id = $10
+      RETURNING *;
+    `;
+
+    values = [
+      finalName,
+      finalNameKana,
+      finalNameKanji,
+      clientData.date_of_birth,
+      clientData.legal_or_natural_person,
+      clientData.gender,
+      clientData.email,
+      clientData.phone,      
+      clientData.updated_by,
+      clientIdToUpdate,
+    ];  
+    const newClient = await client.query(query, values);
+    console.log('editOTAReservation client:', newClient.rows[0]);
+
+    // Insert address
+    if(Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr){
+      query = `
+        WITH existing AS (
+          SELECT id FROM addresses WHERE client_id = $1 LIMIT 1
+        ),
+        updated AS (
+          UPDATE addresses SET
+            address_name = $2,
+            representative_name = $3,
+            street = $4,
+            state = $5,
+            city = $6,
+            postal_code = $7,
+            country = $8,
+            phone = $9,
+            fax = $10,
+            email = $11,
+            updated_by = $12
+          WHERE id = (SELECT id FROM existing)
+          RETURNING *
+        ),
+        inserted AS (
+          INSERT INTO addresses (
+              client_id, address_name, representative_name, street,
+              state, city, postal_code, country, phone, fax, email,
+              created_by, updated_by
+          )
+          SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $12
+          WHERE NOT EXISTS (SELECT 1 FROM existing)
+          RETURNING *
+        )
+        SELECT * FROM updated
+        UNION ALL
+        SELECT * FROM inserted;
+
+      `;
+
+      values = [
+        clientIdToUpdate,
+        'OTA登録',
+        finalNameKanji || finalName,
+        Basic.Address || Member.UserAddr || '',
+        '',
+        '',
+        Basic.PostalCode || Member.UserZip || '',
+        '',
+        Basic.PhoneNumber || Member.UserTel || '',
+        '',
+        Basic.Email || Member.UserMailAddr || '',
+        1
+      ];
+      const newAddress = await client.query(query, values);
+      console.log('editOTAReservation addresses:', newAddress.rows[0]);
+    }    
+
+    // Insert reservations
+    query = `
+      UPDATE reservations SET 
+        check_in = $1
+        ,check_in_time = $2
+        ,check_out = $3
+        ,check_out_time = $4
+        ,number_of_people = $5
+        ,status = 'confirmed'              
+        ,comment = $6
+        ,updated_by = 1
+      WHERE id = $7
+      RETURNING *;
+    `;
+    values = [      
+      BasicInformation.CheckInDate,
+      BasicInformation.CheckInTime,
+      BasicInformation.CheckOutDate,
+      BasicInformation.CheckOutTime,
+      BasicInformation.GrandTotalPaxCount,
+      reservationComment,
+      reservationIdToUpdate,
+    ];
+    // console.log('editOTAReservation reservations:', values);  
+    // const reservation = {id: 0};    
+    const reservation = await client.query(query, values);    
+    console.log('editOTAReservation reservations:', reservation.rows[0]);   
+            
+    // Get available rooms for the reservation period
+    let roomId = null;
+    if (RoomAndGuestList.RoomInformation) {
+      roomId = await handleRoomItem(RoomAndGuestList, reservationIdToUpdate);
+    } else if (typeof RoomAndGuestList === 'object') {
+      for (const roomItem of Object.values(RoomAndGuestList)) {        
+        roomId = await handleRoomItem(roomItem, reservationIdToUpdate);
+      }
+    }
+    
+    // Payment
+    if(BasicRate.PointsDiscountList){      
+      query = `
+        INSERT INTO reservation_payments (
+          hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+        RETURNING *;
+      `;
+
+      values = [
+        hotel_id, 
+        reservationIdToUpdate, 
+        BasicInformation.TravelAgencyBookingDate, 
+        roomId, 
+        clientIdToUpdate, 
+        2, 
+        BasicRate?.PointsDiscountList?.PointsDiscount, 
+        BasicRate?.PointsDiscountList?.PointsDiscountName, 
+        1
+      ];
+      const reservationPayments = await client.query(query, values);
+      console.log('editOTAReservation reservation_payments:', reservationPayments.rows[0]);
+    }    
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {    
+    await client.query('ROLLBACK');
+    console.error("Transaction failed:", err.message);
+    return { success: false, error: err.message };
+  } finally {
+    client.release();
+  }
+
+  async function handleRoomItem (item, reservationId) {   
+    const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
+    // console.log('selectAvailableRooms:', availableRooms);
+    const findFirstAvailableRoomId = (room_type_id) => {
+      const availableRoom = availableRooms.find(room => room.room_type_id === room_type_id);
+      return availableRoom?.room_id || null;
+    };
+
+    const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
+    const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
+    const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
+    if (roomId === null) {
+      console.error("Error: No available room ID found for room type:", roomTypeId);
+      throw new Error("Transaction Error: No available room found for the selected room type.");
+    }
+
+    let roomDate;
+    let totalPerRoomRate;
+    if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
+      // Handle the new RoomRateInformation pattern (object with date keys)
+      const firstDateKey = Object.keys(item.RoomRateInformation)[0];
+      if (firstDateKey) {
+        roomDate = item.RoomRateInformation[firstDateKey]?.RoomDate;
+        totalPerRoomRate = item.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
+      }
+    } else {
+      // Handle the original RoomRateInformation pattern
+      roomDate = item?.RoomRateInformation?.RoomDate;
+      totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
+    }      
+    
+    query = `
+      INSERT INTO reservation_details (
+          hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
+        RETURNING *;
+    `;
+    values = [
+      hotel_id,
+      reservationId,    
+      roomDate,
+      roomId,        
+      data.BasicInformation.PackagePlanName,      
+      item?.RoomInformation?.PerRoomPaxCount,
+      totalPerRoomRate,
+    ];  
+    // console.log('editOTAReservation reservation_details:', values);
+    // const reservationDetails = {id: 99};
+    const reservationDetails = await client.query(query, values);
+    console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
+    
+    if (reservationDetails.rows.length === 0) {
+      console.error("Error: Failed to create reservation detail.");
+      throw new Error("Transaction Error: Failed to create reservation detail.");
+    }
+
+    query = `
+      INSERT INTO reservation_rates (
+          hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
+        ) VALUES ($1, $2, $3, 3, 0.1, $3, 1)
+        RETURNING *;
+    `;
+    values = [
+      hotel_id,
+      reservationDetails.rows[0].id,
+      totalPerRoomRate,
+    ]; 
+    // console.log('editOTAReservation reservation_rates:', values);
+    const reservationRates = await client.query(query, values);
+    console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
+
+    // Return the roomId
+    return roomId;
+  };
+};
 
 module.exports = {    
     selectAvailableRooms,
@@ -2509,5 +2859,6 @@ module.exports = {
     deleteReservationRoom,
     deleteReservationPayment,
     addOTAReservation,
+    editOTAReservation,
 };
 

@@ -2,7 +2,7 @@ require("dotenv").config();
 const xml2js = require('xml2js');
 const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
-const { addOTAReservation } = require('../models/reservations');
+const { addOTAReservation, editOTAReservation } = require('../models/reservations');
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -235,6 +235,7 @@ const getOTAReservations = async (req, res) => {
                         reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'ModificationReport'){
+                        await editOTAReservation(req.requestId, hotel_id, reservation);
                         // reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'CancellationReport'){
