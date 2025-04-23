@@ -100,12 +100,17 @@ const selectReservationInventoryChange = async (requestId, id) => {
                     action = 'UPDATE' AND (
                         changes->'old'->>'check_in' IS DISTINCT FROM changes->'new'->>'check_in' OR
                         changes->'old'->>'check_out' IS DISTINCT FROM changes->'new'->>'check_out' OR
-                        (changes->'old'->>'hotel_id')::int IS DISTINCT FROM (changes->'new'->>'hotel_id')::int
+                        (changes->'old'->>'hotel_id')::int IS DISTINCT FROM (changes->'new'->>'hotel_id')::int OR (
+                        changes->'old'->>'status' IS DISTINCT FROM changes->'new'->>'status' AND (
+                                changes->'old'->>'status' = 'cancelled' OR
+                                changes->'new'->>'status' = 'cancelled'
+                            )
+                        )
+
                     )
                 )
             )
         ;
-
     `;
     const detailsQuery = `
         WITH log_data AS (
