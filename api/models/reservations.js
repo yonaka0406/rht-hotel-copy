@@ -2740,8 +2740,6 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     return match ? match.room_type_id : null;
   };
   
-  
-  
   try {
     await client.query('BEGIN'); 
 
@@ -2915,51 +2913,79 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     */
-    let lastAssignedRoomIdForPayment = null;
-    if (RoomAndGuestList && typeof RoomAndGuestList === 'object') {
-        const roomItems = Array.isArray(RoomAndGuestList) ? RoomAndGuestList : Object.values(RoomAndGuestList);
-        console.log("RoomAndGuestList items:", roomItems);
-
-        // Check if the number of room items matches TotalRoomCount
-        if (BasicInformation.TotalRoomCount && roomItems.length !== parseInt(BasicInformation.TotalRoomCount, 10)) {
-              console.warn(`Warning: BasicInformation.TotalRoomCount (${BasicInformation.TotalRoomCount}) does not match the number of items in RoomAndGuestList (${roomItems.length}). Processing ${roomItems.length} rooms.`);
-        }
-
-        for (const roomItem of roomItems) {
-            if (!roomItem || !roomItem.RoomInformation) {
-                  console.warn("Skipping invalid room item in RoomAndGuestList:", roomItem);
-                  continue; // Skip if the item structure is unexpected
-            }
-
-            const netAgtRmTypeCode = roomItem.RoomInformation.RoomTypeCode;
-            const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
-
-            if (!roomTypeId) {
-                console.error("Error: Could not determine Room Type ID for code:", netAgtRmTypeCode);
-                throw new Error(`Transaction Error: Could not determine Room Type ID for code ${netAgtRmTypeCode}.`);
-            }
-
-            // Find the next available room of this type *not already assigned* to this reservation
-            const potentialRoom = availableRooms.find(room =>
-                room.room_type_id === roomTypeId && !assignedRoomIds.has(room.room_id)
-            );
-
-            if (!potentialRoom) {
-                console.error(`Error: No available and unassigned room found for room_type_id: ${roomTypeId}. Already assigned:`, Array.from(assignedRoomIds));
-                throw new Error(`Transaction Error: No available room found for room type ${roomTypeId} for this reservation (needed ${BasicInformation.TotalRoomCount} total, processed ${assignedRoomIds.size} so far).`);
-            }
-
-            const assignedRoomId = potentialRoom.room_id;
-            assignedRoomIds.add(assignedRoomId); // Mark this room ID as used for this reservation
-            lastAssignedRoomIdForPayment = assignedRoomId; // Store the last assigned ID
-
-            // Call handleRoomItem, passing the specific assigned room ID
-            await handleRoomItem(roomItem, reservationIdToUpdate, assignedRoomId, client); // Pass client connection
-        }
-    } else {
-          console.error("Error: RoomAndGuestList is missing or not in expected format:", RoomAndGuestList);
-          throw new Error("Transaction Error: RoomAndGuestList is missing or invalid.");
+    // 1. Validate RoomAndGuestList
+    if (!Array.isArray(RoomAndGuestList) || RoomAndGuestList.length === 0) {
+        throw new Error("Transaction Error: RoomAndGuestList is missing, empty, or not an array.");
     }
+
+    const totalRoomsNeeded = parseInt(BasicInformation.TotalRoomCount, 10);
+    if (isNaN(totalRoomsNeeded) || totalRoomsNeeded <= 0) {
+        console.warn(`Invalid BasicInformation.TotalRoomCount (${BasicInformation.TotalRoomCount}). Assuming 1 room.`);
+        totalRoomsNeeded = 1;
+    }
+    // 2. Determine Check-in Date String (ensure format matches RoomDate)
+    // Assuming both are 'YYYY-MM-DD'. Adjust formatting if necessary.
+    const checkInDate = new Date(BasicInformation.CheckInDate);
+    const checkInDateStr = checkInDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
+    // 3. Filter RoomAndGuestList for the first date
+    const firstDateItems = RoomAndGuestList.filter(item => item?.RoomRateInformation?.RoomDate === checkInDateStr);
+
+    if (firstDateItems.length < totalRoomsNeeded) {
+        console.error(`Error: Expected ${totalRoomsNeeded} room entries for the first date (${checkInDateStr}), but found only ${firstDateItems.length}.`, firstDateItems);
+        throw new Error(`Transaction Error: Mismatch in room count for the first date (${checkInDateStr}). Expected ${totalRoomsNeeded}, found ${firstDateItems.length}.`);
+    }
+      if (firstDateItems.length > totalRoomsNeeded) {
+          console.warn(`Warning: Found ${firstDateItems.length} room entries for the first date (${checkInDateStr}), but TotalRoomCount is ${totalRoomsNeeded}. Using the first ${totalRoomsNeeded} entries for type assignment.`);
+      }
+
+
+    // 4. Assign Distinct Physical Room IDs based on first date types
+    const assignedPhysicalRoomIds = [];
+    const assignedRoomDetails = []; // Optional: Store details about assigned rooms
+    const usedAvailableRoomIds = new Set(); // Track IDs used from the available pool
+
+    console.log(`Assigning ${totalRoomsNeeded} physical room(s) based on types found on ${checkInDateStr}`);
+
+    for (let i = 0; i < totalRoomsNeeded; i++) {
+        const firstDateItem = firstDateItems[i]; // Get the item for the i-th room on the first date
+        const roomTypeCode = firstDateItem?.RoomInformation?.RoomTypeCode;
+
+        if (!roomTypeCode) {
+            throw new Error(`Transaction Error: Missing RoomTypeCode in first-date item index ${i} (conceptual room ${i + 1}).`);
+        }
+
+        // Get the internal room_type_id for this specific room
+        console.log(`Conceptual room ${i + 1}: Finding internal type for TL code ${roomTypeCode}`);
+        const roomTypeId = await selectRoomTypeId(roomTypeCode); // Use await as requested
+        if (!roomTypeId) {
+            throw new Error(`Transaction Error: Could not find internal room_type_id for TL code ${roomTypeCode} (conceptual room ${i + 1}).`);
+        }
+        console.log(`Conceptual room ${i + 1}: Internal type ID ${roomTypeId}`);
+
+
+        // Find an available room of this specific type that hasn't been used yet
+        const potentialRoom = availableRooms.find(room =>
+            room.room_type_id === roomTypeId && !usedAvailableRoomIds.has(room.room_id)
+        );
+
+        if (!potentialRoom) {
+            console.error(`Failed assignment for conceptual room ${i + 1}: No available room of type ${roomTypeId} (TL Code ${roomTypeCode}). Assigned so far:`, assignedPhysicalRoomIds);
+            throw new Error(`Transaction Error: Insufficient distinct available rooms for type ID ${roomTypeId} (TL Code ${roomTypeCode}). Needed for conceptual room ${i + 1}.`);
+        }
+
+        assignedPhysicalRoomIds.push(potentialRoom.room_id);
+        usedAvailableRoomIds.add(potentialRoom.room_id);
+        assignedRoomDetails.push({ conceptualIndex: i, typeCode: roomTypeCode, typeId: roomTypeId, assignedId: potentialRoom.room_id }); // Optional detail logging
+        console.log(`Assigned physical room_id ${potentialRoom.room_id} (Type ID ${roomTypeId}) to conceptual room ${i + 1}`);
+    }
+
+    console.log(`Successfully assigned physical room IDs for reservation ${reservationIdToUpdate}:`, assignedPhysicalRoomIds);
+    console.log('Assignment details:', assignedRoomDetails); // Optional
+
+    // Store one ID for payment reference (e.g., the first one)
+    const paymentReferenceRoomId = assignedPhysicalRoomIds.length > 0 ? assignedPhysicalRoomIds[0] : null;
+
     
     // Payment
     if(BasicRate.PointsDiscountList){      
@@ -2974,7 +3000,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         hotel_id, 
         reservationIdToUpdate, 
         BasicInformation.TravelAgencyBookingDate, 
-        roomId, 
+        paymentReferenceRoomId, //roomId, 
         clientIdToUpdate, 
         2, 
         BasicRate?.PointsDiscountList?.PointsDiscount, 
