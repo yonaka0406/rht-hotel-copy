@@ -2624,12 +2624,12 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
 
     // Calculate total people for this room (repeated here for the fallback case)
-    const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount || 0) +
-                              (item?.RoomInformation?.RoomPaxFemaleCount || 0) +
-                              (item?.RoomInformation?.RoomChildA70Count || 0) +
-                              (item?.RoomInformation?.RoomChildB50Count || 0) +
-                              (item?.RoomInformation?.RoomChildC30Count || 0) +
-                              (item?.RoomInformation?.RoomChildDNoneCount || 0);
+    const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount * 1 || 0) +
+                              (item?.RoomInformation?.RoomPaxFemaleCount * 1 || 0) +
+                              (item?.RoomInformation?.RoomChildA70Count * 1 || 0) +
+                              (item?.RoomInformation?.RoomChildB50Count * 1 || 0) +
+                              (item?.RoomInformation?.RoomChildC30Count * 1 || 0) +
+                              (item?.RoomInformation?.RoomChildDNoneCount * 1 || 0);
 
 
     // Insert ONE reservation_details record (for the fallback/original simple case)
@@ -2801,7 +2801,6 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       WHERE id = $10
       RETURNING *;
     `;
-
     values = [
       finalName,
       finalNameKana,
@@ -3131,12 +3130,12 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
                             totalPerRoomRate = dailyRateInfo.TotalPerRoomRate;
 
                             // Calculate total people for this room (remains the same)
-                            const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount || 0) +
-                                                      (item?.RoomInformation?.RoomPaxFemaleCount || 0) +
-                                                      (item?.RoomInformation?.RoomChildA70Count || 0) +
-                                                      (item?.RoomInformation?.RoomChildB50Count || 0) +
-                                                      (item?.RoomInformation?.RoomChildC30Count || 0) +
-                                                      (item?.RoomInformation?.RoomChildDNoneCount || 0);
+                            const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount * 1 || 0) +
+                                                      (item?.RoomInformation?.RoomPaxFemaleCount * 1 || 0) +
+                                                      (item?.RoomInformation?.RoomChildA70Count * 1 || 0) +
+                                                      (item?.RoomInformation?.RoomChildB50Count * 1 || 0) +
+                                                      (item?.RoomInformation?.RoomChildC30Count * 1 || 0) +
+                                                      (item?.RoomInformation?.RoomChildDNoneCount * 1 || 0);
 
                             // Insert reservation_details for THIS specific date and room
                             let detailQuery = `
