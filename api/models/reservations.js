@@ -2382,7 +2382,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
 
     const physicalRoomAssignments = new Array(numberOfRooms); // Index -> physical room_id
-    const finalAssignments = []; // Will hold the final result objects
+    const reservationDetailsData = [];
+    const reservationRatesData = [];    
 
     // Step 2: Allocate physical rooms for the first night
     console.log(`Allocating ${numberOfRooms} physical rooms based on the first night.`);
@@ -2409,57 +2410,169 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         console.log(`Allocated physical room ${physicalRoomId} to logical room index ${i} (Type: ${roomTypeCode})`);
     }
 
-    // Step 3: Process all items to create the final assignment list
-    console.log("Assigning rooms for all room-nights based on first night allocation.");
-    for (let i = 0; i < RoomAndGuestList.length; i++) {
-        const currentItem = RoomAndGuestList[i];
-        const logicalRoomIndex = i % numberOfRooms; // Determine the logical room index
+    // Step 3: Process Room and Guest List to prepare bulk insert data
+    if (Array.isArray(RoomAndGuestList)) {
+      for (let i = 0; i < RoomAndGuestList.length; i++) {
+          const item = RoomAndGuestList[i];
+          const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
+          const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
+          const physicalRoomId = physicalRoomAssignments[i % numberOfRooms]; // Assign based on the first night's allocation
 
-        const assignedPhysicalRoomId = physicalRoomAssignments[logicalRoomIndex];
+          if (roomTypeId === null || physicalRoomId === undefined) {
+              console.error("Error: Could not determine room type ID or physical room ID for item:", item);
+              throw new Error("Transaction Error: Could not determine room information for an item.");
+          }
 
-        if (!assignedPhysicalRoomId) {
-            // This indicates a programming error if it occurs after the first loop
-            throw new Error(`Internal Logic Error: No physical room assigned to logical room index ${logicalRoomIndex} when processing item ${i}.`);
-        }
+          let roomDate;
+          let totalPerRoomRate;
+          if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
+              // Handle the new RoomRateInformation pattern (object with date keys)
+              const firstDateKey = Object.keys(item.RoomRateInformation)[0];
+              if (firstDateKey) {
+                  roomDate = item.RoomRateInformation[firstDateKey]?.RoomDate;
+                  totalPerRoomRate = item.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
+              }
+          } else {
+              // Handle the original RoomRateInformation pattern
+              roomDate = item?.RoomRateInformation?.RoomDate;
+              totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
+          }
+          const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount || 0) + (item?.RoomInformation?.RoomPaxFemaleCount || 0) + (item?.RoomInformation?.RoomChildA70Count || 0) + (item?.RoomInformation?.RoomChildB50Count || 0) + (item?.RoomInformation?.RoomChildC30Count || 0) + (item?.RoomInformation?.RoomChildDNoneCount || 0);
 
-        // Optional Sanity Check (as before): Compare RoomTypeCodes
-        const firstNightItemTypeCode = RoomAndGuestList[logicalRoomIndex].RoomInformation?.RoomTypeCode;
-        const currentItemTypeCode = currentItem.RoomInformation?.RoomTypeCode;
-        if (firstNightItemTypeCode !== currentItemTypeCode) {
-            console.warn(`Potential Data Inconsistency: RoomTypeCode mismatch for logical room index ${logicalRoomIndex}. Item ${logicalRoomIndex} (first night) has type ${firstNightItemTypeCode}, but item ${i} has type ${currentItemTypeCode}. Using room ${assignedPhysicalRoomId} assigned based on first night.`);
-        }
+          reservationDetailsData.push([
+              hotel_id,
+              reservationId,
+              roomDate,
+              physicalRoomId,
+              data.BasicInformation.PackagePlanName,
+              totalPeopleCount,
+              totalPerRoomRate,
+              true, // billable
+              1,    // created_by
+              1     // updated_by
+          ]);
 
-        // Add details to the final list
-        finalAssignments.push({
-            originalItemIndex: i,
-            logicalRoomIndex: logicalRoomIndex, // Identify which logical room this belongs to
-            assignedPhysicalRoomId: assignedPhysicalRoomId, // The key assignment
-            roomTypeCode: currentItem.RoomInformation?.RoomTypeCode,
-            roomTypeName: currentItem.RoomInformation?.RoomTypeName,
-            date: currentItem.RoomRateInformation?.RoomDate,
-            rate: currentItem.RoomRateInformation?.TotalPerRoomRate,
-            paxCount: currentItem.RoomInformation?.PerRoomPaxCount,
-            malePaxCount: currentItem.RoomInformation?.RoomPaxMaleCount,
-            // ... include other relevant details from currentItem ...
-        });
+          reservationRatesData.push([
+              hotel_id,
+              null, // reservation_details_id will be set after insertion
+              totalPerRoomRate,
+              3,    // tax_type_id
+              0.1,  // tax_rate
+              totalPerRoomRate,
+              1     // created_by
+          ]);
+      }
+    } else if (typeof RoomAndGuestList === 'object') {
+      for (const roomItem of Object.values(RoomAndGuestList)) {
+          const netAgtRmTypeCode = roomItem?.RoomInformation?.RoomTypeCode;
+          const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
+          // For object structure, it's less clear how to map to physical rooms allocated for the first night.
+          // You might need a different logic here based on how the object is structured.
+          // For now, let's assume you want to find a new available room for each item in the object.
+          const physicalRoomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
+
+          if (roomTypeId === null || physicalRoomId === null) {
+              console.error("Error: Could not determine room type ID or find a physical room for item:", roomItem);
+              throw new Error("Transaction Error: Could not determine room information for an item.");
+          }
+
+          let roomDate;
+          let totalPerRoomRate;
+          if (roomItem?.RoomRateInformation && typeof roomItem.RoomRateInformation === 'object' && !roomItem.RoomRateInformation.RoomDate) {
+              const firstDateKey = Object.keys(roomItem.RoomRateInformation)[0];
+              if (firstDateKey) {
+                  roomDate = roomItem.RoomRateInformation[firstDateKey]?.RoomDate;
+                  totalPerRoomRate = roomItem.RoomRateInformation[firstDateKey]?.TotalPerRoomRate;
+              }
+          } else {
+              roomDate = roomItem?.RoomRateInformation?.RoomDate;
+              totalPerRoomRate = roomItem?.RoomRateInformation?.TotalPerRoomRate;
+          }
+          const totalPeopleCount = (roomItem?.RoomInformation?.RoomPaxMaleCount || 0) + (roomItem?.RoomInformation?.RoomPaxFemaleCount || 0) + (roomItem?.RoomInformation?.RoomChildA70Count || 0) + (roomItem?.RoomInformation?.RoomChildB50Count || 0) + (roomItem?.RoomInformation?.RoomChildC30Count || 0) + (roomItem?.RoomInformation?.RoomChildDNoneCount || 0);
+
+          reservationDetailsData.push([
+              hotel_id,
+              reservationId,
+              roomDate,
+              physicalRoomId,
+              data.BasicInformation.PackagePlanName,
+              totalPeopleCount,
+              totalPerRoomRate,
+              true, // billable
+              1,    // created_by
+              1     // updated_by
+          ]);
+
+          reservationRatesData.push([
+              hotel_id,
+              null, // reservation_details_id will be set after insertion
+              totalPerRoomRate,
+              3,    // tax_type_id
+              0.1,  // tax_rate
+              totalPerRoomRate,
+              1     // created_by
+          ]);
+      }
     }
 
-    // --- Post-processing ---
+    console.log('reservationDetailsData', reservationDetailsData);
+    console.log('reservationRatesData', reservationRatesData);
 
-    console.log("Final Room Assignments (processed with date-first order):", finalAssignments);
-    console.log("Physical rooms assigned map (Logical Index -> RoomID):", physicalRoomAssignments);
-    console.log("Set of all assigned Physical Room IDs:", assignedRoomIds);
+    // Step 4: Execute bulk inserts
+    let reservationDetailsResult;
+    if (reservationDetailsData.length > 0) {
+        const detailsQuery = `
+            INSERT INTO reservation_details (
+                hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
+            ) VALUES ${reservationDetailsData.map((_, index) => `($${index * 10 + 1}, $${index * 10 + 2}, $${index * 10 + 3}, $${index * 10 + 4}, $${index * 10 + 5}, $${index * 10 + 6}, $${index * 10 + 7}, $${index * 10 + 8}, $${index * 10 + 9}, $${index * 10 + 10})`).join(', ')}
+            RETURNING id;
+        `;
+        const detailsValues = reservationDetailsData.flat();
+        // console.log('addOTAReservation reservation_details query:', detailsQuery);
+        // console.log('addOTAReservation reservation_details values:', detailsValues);
+        reservationDetailsResult = await dbClient.query(detailsQuery, detailsValues);
+        console.log('addOTAReservation reservation_details result:', reservationDetailsResult.rows);
+
+        if (reservationDetailsResult.rows.length !== reservationDetailsData.length) {
+            console.error("Error: Failed to create all reservation details.");
+            throw new Error("Transaction Error: Failed to create all reservation details.");
+        }
+
+        // Update reservationRatesData with the generated reservation_details_id
+        for (let i = 0; i < reservationRatesData.length; i++) {
+            reservationRatesData[i][1] = reservationDetailsResult.rows[i].id;
+        }
+
+        if (reservationRatesData.length > 0) {
+            const ratesQuery = `
+                INSERT INTO reservation_rates (
+                    hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
+                ) VALUES ${reservationRatesData.map((_, index) => `($${index * 7 + 1}, $${index * 7 + 2}, $${index * 7 + 3}, $${index * 7 + 4}, $${index * 7 + 5}, $${index * 7 + 6}, $${index * 7 + 7})`).join(', ')}
+                RETURNING *;
+            `;
+            const ratesValues = reservationRatesData.flat();
+            // console.log('addOTAReservation reservation_rates query:', ratesQuery);
+            // console.log('addOTAReservation reservation_rates values:', ratesValues);
+            const reservationRatesResult = await dbClient.query(ratesQuery, ratesValues);
+            console.log('addOTAReservation reservation_rates result:', reservationRatesResult.rows);
+
+            if (reservationRatesResult.rows.length !== reservationRatesData.length) {
+                console.error("Error: Failed to create all reservation rates.");
+                throw new Error("Transaction Error: Failed to create all reservation rates.");
+            }
+        }
+    }
 
     /*
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
-      roomId = await handleRoomItem(RoomAndGuestList, reservationId);
+      roomId = await handleRoomItem(RoomAndGuestList, reservationId, physicalRoomAssignments, client);
     } else if (typeof RoomAndGuestList === 'object') {
       for (const roomItem of Object.values(RoomAndGuestList)) {        
         roomId = await handleRoomItem(roomItem, reservationId);
       }
-    }
-    */
+    }      
+    
     // Payment
     if(BasicRate.PointsDiscountList){      
       query = `
@@ -2482,7 +2595,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       ];
       const reservationPayments = await client.query(query, values);
       console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
-    }    
+    }   
+    */ 
 
     await client.query('COMMIT');
     return { success: true };
@@ -2493,8 +2607,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   } finally {
     client.release();
   }
-/*
-  async function handleRoomItem (item, reservationId) {    
+
+  async function handleRoomItem (item, reservationId, roomIds, dbClient) {    
     const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
     const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;      
     const roomId = roomTypeId ? findFirstAvailableRoomId(roomTypeId) : null;
@@ -2537,7 +2651,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     ];  
     // console.log('addOTAReservation reservation_details:', values);
     // const reservationDetails = {id: 99};
-    const reservationDetails = await client.query(query, values);
+    const reservationDetails = await dbClient.query(query, values);
     console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
     
     if (reservationDetails.rows.length === 0) {
@@ -2557,13 +2671,13 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       totalPerRoomRate,
     ]; 
     // console.log('addOTAReservation reservation_rates:', values);
-    const reservationRates = await client.query(query, values);
+    const reservationRates = await dbClient.query(query, values);
     console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
 
     // Return the roomId
     return roomId;
   };
-*/
+
   async function handleRoomItem (item, reservationId, roomId, dbClient) { // Added roomId and dbClient parameters
 
     // --- REMOVED: Room finding logic is now done before calling this function ---
