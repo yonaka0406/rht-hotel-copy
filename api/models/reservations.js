@@ -2176,7 +2176,7 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 };
 
 // OTA
-const addOTAReservation = async  (requestId, hotel_id, data) => {
+const addOTAReservation = async (requestId, hotel_id, data) => {
   // XML
   // console.log('addOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
@@ -2466,7 +2466,7 @@ const addOTAReservation = async  (requestId, hotel_id, data) => {
     return roomId;
   };
 };
-const editOTAReservation = async  (requestId, hotel_id, data) => {
+const editOTAReservation = async (requestId, hotel_id, data) => {
   // XML
   // console.log('editOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
@@ -2680,7 +2680,7 @@ const editOTAReservation = async  (requestId, hotel_id, data) => {
         ,status = 'confirmed'              
         ,comment = $6
         ,updated_by = 1
-      WHERE id = $7
+      WHERE id = $7 AND hotel_id = $8
       RETURNING *;
     `;
     values = [      
@@ -2691,6 +2691,7 @@ const editOTAReservation = async  (requestId, hotel_id, data) => {
       BasicInformation.GrandTotalPaxCount,
       reservationComment,
       reservationIdToUpdate,
+      hotel_id,
     ];
     // console.log('editOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
@@ -2816,6 +2817,77 @@ const editOTAReservation = async  (requestId, hotel_id, data) => {
     return roomId;
   };
 };
+const cancelOTAReservation = async (requestId, hotel_id, data) => {
+  // XML
+  const BasicInformation = data?.BasicInformation || {};
+  const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
+
+  // Query
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  let query = '';
+  let values = '';  
+
+  try {
+    await client.query('BEGIN');
+    
+    // Fetch the existing reservation_id
+    query = `
+        SELECT id
+        FROM reservations
+        WHERE ota_reservation_id = $1 AND hotel_id = $2;
+    `;
+    values = [otaReservationId, hotel_id];
+    const existingReservationResult = await client.query(query, values);
+
+    if (existingReservationResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, error: `Reservation with OTA ID ${otaReservationId} not found.` };
+    }
+
+    const reservationIdToUpdate = existingReservationResult.rows[0].id;
+
+    // Insert reservations
+    query = `
+      UPDATE reservations SET         
+        status = 'cancelled'
+        ,updated_by = 1        
+      WHERE id = $1 AND hotel_id = $2
+      RETURNING *;
+    `;
+    values = [
+      reservationIdToUpdate,
+      hotel_id,
+    ];    
+    const reservation = await client.query(query, values);
+    console.log('cancelOTAReservation reservations:', reservation.rows[0]); 
+
+    query = `
+        UPDATE reservation_details
+        SET
+          cancelled = gen_random_uuid()
+          ,billable = FALSE
+          ,updated_by = 1          
+        WHERE reservation_id = $1::UUID AND hotel_id = $2
+        RETURNING *;
+    `;
+    values = [      
+      reservationIdToUpdate,
+      hotel_id,
+    ];
+    const reservationDetails = await client.query(query, values);
+    console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("Transaction failed:", err.message);
+    return { success: false, error: err.message };
+  } finally {
+    client.release();
+  }
+}
 
 module.exports = {    
     selectAvailableRooms,
@@ -2860,5 +2932,6 @@ module.exports = {
     deleteReservationPayment,
     addOTAReservation,
     editOTAReservation,
+    cancelOTAReservation,
 };
 
