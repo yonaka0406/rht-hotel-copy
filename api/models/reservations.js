@@ -2249,9 +2249,12 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   };
   const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
   const assignedRoomIds = new Set();
-
-  const findFirstAvailableRoomId = (room_type_id) => {
-    const availableRoom = availableRooms.find(room => room.room_type_id === room_type_id);
+  
+  const findFirstAvailableRoomId = (room_type_id) => {    
+    const availableRoom = availableRooms.find(room =>
+      room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
+    );  
+    
     return availableRoom?.room_id || null;
   };
   
@@ -2361,6 +2364,92 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     // Get available rooms for the reservation period
     // With BasicInformation.TotalRoomCount see how multiple rooms are handled
 
+    const numberOfRooms = parseInt(BasicInformation.TotalRoomCount, 10);
+    if (numberOfRooms <= 0) {
+      // Handle case with no rooms or invalid data
+      if (RoomAndGuestList && RoomAndGuestList.length > 0) {
+           throw new Error("Could not determine the number of physical rooms with TotalRoomCount");
+      } else {
+          // No rooms in the list, maybe handle as a valid case?
+          console.log("RoomAndGuestList is empty or numberOfRooms is zero. No rooms to assign.");
+          // return or proceed accordingly based on your application logic
+          return; // Example: exit the function if no rooms
+      }
+    }
+    // Sanity Check: Ensure total items is a multiple of numberOfRooms
+    if (RoomAndGuestList.length % numberOfRooms !== 0) {
+      console.warn(`Data Structure Warning: RoomAndGuestList length (${RoomAndGuestList.length}) is not a multiple of the number of rooms per night (${numberOfRooms}). Assignment logic might be incorrect.`);      
+    }
+
+    const physicalRoomAssignments = new Array(numberOfRooms); // Index -> physical room_id
+    const finalAssignments = []; // Will hold the final result objects
+
+    // Step 2: Allocate physical rooms for the first night
+    console.log(`Allocating ${numberOfRooms} physical rooms based on the first night.`);
+    for (let i = 0; i < numberOfRooms; i++) {
+        const firstNightItem = RoomAndGuestList[i];
+        const roomTypeCode = firstNightItem.RoomInformation?.RoomTypeCode;
+        const room_type_id = selectRoomTypeId(roomTypeCode);
+    
+        if (!room_type_id) {
+            throw new Error(`Cannot map OTA RoomTypeCode '${roomTypeCode}' (from item index ${i}) to an internal room_type_id.`);
+        }
+    
+        const physicalRoomId = findFirstAvailableRoomId(room_type_id);
+    
+        if (!physicalRoomId) {
+            // Critical error - stop processing
+            console.error(`Insufficient availability for Room Type Code ${roomTypeCode} (ID: ${room_type_id}) needed for logical room index ${i} on ${checkInDate}.`);
+            throw new Error(`Could not find an available room for type ${roomTypeCode} required on check-in.`);
+        }
+    
+        // Assign the room
+        assignedRoomIds.add(physicalRoomId);
+        physicalRoomAssignments[i] = physicalRoomId; // Store assignment by logical index
+        console.log(`Allocated physical room ${physicalRoomId} to logical room index ${i} (Type: ${roomTypeCode})`);
+    }
+
+    // Step 3: Process all items to create the final assignment list
+    console.log("Assigning rooms for all room-nights based on first night allocation.");
+    for (let i = 0; i < RoomAndGuestList.length; i++) {
+        const currentItem = RoomAndGuestList[i];
+        const logicalRoomIndex = i % numberOfRooms; // Determine the logical room index
+
+        const assignedPhysicalRoomId = physicalRoomAssignments[logicalRoomIndex];
+
+        if (!assignedPhysicalRoomId) {
+            // This indicates a programming error if it occurs after the first loop
+            throw new Error(`Internal Logic Error: No physical room assigned to logical room index ${logicalRoomIndex} when processing item ${i}.`);
+        }
+
+        // Optional Sanity Check (as before): Compare RoomTypeCodes
+        const firstNightItemTypeCode = RoomAndGuestList[logicalRoomIndex].RoomInformation?.RoomTypeCode;
+        const currentItemTypeCode = currentItem.RoomInformation?.RoomTypeCode;
+        if (firstNightItemTypeCode !== currentItemTypeCode) {
+            console.warn(`Potential Data Inconsistency: RoomTypeCode mismatch for logical room index ${logicalRoomIndex}. Item ${logicalRoomIndex} (first night) has type ${firstNightItemTypeCode}, but item ${i} has type ${currentItemTypeCode}. Using room ${assignedPhysicalRoomId} assigned based on first night.`);
+        }
+
+        // Add details to the final list
+        finalAssignments.push({
+            originalItemIndex: i,
+            logicalRoomIndex: logicalRoomIndex, // Identify which logical room this belongs to
+            assignedPhysicalRoomId: assignedPhysicalRoomId, // The key assignment
+            roomTypeCode: currentItem.RoomInformation?.RoomTypeCode,
+            roomTypeName: currentItem.RoomInformation?.RoomTypeName,
+            date: currentItem.RoomRateInformation?.RoomDate,
+            rate: currentItem.RoomRateInformation?.TotalPerRoomRate,
+            paxCount: currentItem.RoomInformation?.PerRoomPaxCount,
+            malePaxCount: currentItem.RoomInformation?.RoomPaxMaleCount,
+            // ... include other relevant details from currentItem ...
+        });
+    }
+
+    // --- Post-processing ---
+
+    console.log("Final Room Assignments (processed with date-first order):", finalAssignments);
+    console.log("Physical rooms assigned map (Logical Index -> RoomID):", physicalRoomAssignments);
+    console.log("Set of all assigned Physical Room IDs:", assignedRoomIds);
+
     /*
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
@@ -2371,52 +2460,6 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     */
-    let lastAssignedRoomIdForPayment = null;
-    if (RoomAndGuestList && typeof RoomAndGuestList === 'object') {
-        const roomItems = Array.isArray(RoomAndGuestList) ? RoomAndGuestList : Object.values(RoomAndGuestList);
-        console.log("RoomAndGuestList items:", roomItems);
-
-        // Check if the number of room items matches TotalRoomCount
-        if (BasicInformation.TotalRoomCount && roomItems.length !== parseInt(BasicInformation.TotalRoomCount, 10)) {
-              console.warn(`Warning: BasicInformation.TotalRoomCount (${BasicInformation.TotalRoomCount}) does not match the number of items in RoomAndGuestList (${roomItems.length}). Processing ${roomItems.length} rooms.`);
-        }
-
-        for (const roomItem of roomItems) {
-            if (!roomItem || !roomItem.RoomInformation) {
-                  console.warn("Skipping invalid room item in RoomAndGuestList:", roomItem);
-                  continue; // Skip if the item structure is unexpected
-            }
-
-            const netAgtRmTypeCode = roomItem.RoomInformation.RoomTypeCode;
-            const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
-
-            if (!roomTypeId) {
-                console.error("Error: Could not determine Room Type ID for code:", netAgtRmTypeCode);
-                throw new Error(`Transaction Error: Could not determine Room Type ID for code ${netAgtRmTypeCode}.`);
-            }
-
-            // Find the next available room of this type *not already assigned* to this reservation
-            const potentialRoom = availableRooms.find(room =>
-                room.room_type_id === roomTypeId && !assignedRoomIds.has(room.room_id)
-            );
-
-            if (!potentialRoom) {
-                console.error(`Error: No available and unassigned room found for room_type_id: ${roomTypeId}. Already assigned:`, Array.from(assignedRoomIds));
-                throw new Error(`Transaction Error: No available room found for room type ${roomTypeId} for this reservation (needed ${BasicInformation.TotalRoomCount} total, processed ${assignedRoomIds.size} so far).`);
-            }
-
-            const assignedRoomId = potentialRoom.room_id;
-            assignedRoomIds.add(assignedRoomId); // Mark this room ID as used for this reservation
-            lastAssignedRoomIdForPayment = assignedRoomId; // Store the last assigned ID
-
-            // Call handleRoomItem, passing the specific assigned room ID
-            await handleRoomItem(roomItem, reservationId, assignedRoomId, client); // Pass client connection
-        }
-    } else {
-          console.error("Error: RoomAndGuestList is missing or not in expected format:", RoomAndGuestList);
-          throw new Error("Transaction Error: RoomAndGuestList is missing or invalid.");
-    }
-    
     // Payment
     if(BasicRate.PointsDiscountList){      
       query = `
@@ -2430,7 +2473,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         hotel_id, 
         reservation.rows[0].id, 
         BasicInformation.TravelAgencyBookingDate, 
-        lastAssignedRoomIdForPayment, //roomId, 
+        roomId, 
         reservationClientId, 
         2, 
         BasicRate?.PointsDiscountList?.PointsDiscount, 
