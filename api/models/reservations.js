@@ -2194,7 +2194,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('addOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
@@ -2362,8 +2362,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
             
     // Get available rooms for the reservation period
-    // With BasicInformation.TotalRoomCount see how multiple rooms are handled
-
+        
     const numberOfRooms = parseInt(BasicInformation.TotalRoomCount, 10);
     if (numberOfRooms <= 0) {
       // Handle case with no rooms or invalid data
@@ -2410,19 +2409,22 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         console.log(`Allocated physical room ${physicalRoomId} to logical room index ${i} (Type: ${roomTypeCode})`);
     }
 
+    console.log('Step 2 finish: physicalRoomAssignments:', physicalRoomAssignments)
+
     // Step 3: Process Room and Guest List to prepare bulk insert data
     if (Array.isArray(RoomAndGuestList)) {
       for (let i = 0; i < RoomAndGuestList.length; i++) {
           const item = RoomAndGuestList[i];
           const netAgtRmTypeCode = item?.RoomInformation?.RoomTypeCode;
           const roomTypeId = netAgtRmTypeCode ? selectRoomTypeId(netAgtRmTypeCode) : null;
-          const physicalRoomId = physicalRoomAssignments[i % numberOfRooms]; // Assign based on the first night's allocation
-
+          // Assign physical room ID based on the index modulo numberOfRooms
+          const physicalRoomId = physicalRoomAssignments[i % numberOfRooms];
+  
           if (roomTypeId === null || physicalRoomId === undefined) {
               console.error("Error: Could not determine room type ID or physical room ID for item:", item);
               throw new Error("Transaction Error: Could not determine room information for an item.");
           }
-
+  
           let roomDate;
           let totalPerRoomRate;
           if (item?.RoomRateInformation && typeof item.RoomRateInformation === 'object' && !item.RoomRateInformation.RoomDate) {
@@ -2438,12 +2440,12 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
               totalPerRoomRate = item?.RoomRateInformation?.TotalPerRoomRate;
           }
           const totalPeopleCount = (item?.RoomInformation?.RoomPaxMaleCount || 0) + (item?.RoomInformation?.RoomPaxFemaleCount || 0) + (item?.RoomInformation?.RoomChildA70Count || 0) + (item?.RoomInformation?.RoomChildB50Count || 0) + (item?.RoomInformation?.RoomChildC30Count || 0) + (item?.RoomInformation?.RoomChildDNoneCount || 0);
-
+  
           reservationDetailsData.push([
               hotel_id,
               reservationId,
               roomDate,
-              physicalRoomId,
+              physicalRoomId, // Use the assigned physicalRoomId
               data.BasicInformation.PackagePlanName,
               totalPeopleCount,
               totalPerRoomRate,
@@ -2451,7 +2453,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
               1,    // created_by
               1     // updated_by
           ]);
-
+  
           reservationRatesData.push([
               hotel_id,
               null, // reservation_details_id will be set after insertion
@@ -2530,7 +2532,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const detailsValues = reservationDetailsData.flat();
         // console.log('addOTAReservation reservation_details query:', detailsQuery);
         // console.log('addOTAReservation reservation_details values:', detailsValues);
-        reservationDetailsResult = await dbClient.query(detailsQuery, detailsValues);
+        reservationDetailsResult = await client.query(detailsQuery, detailsValues);
         console.log('addOTAReservation reservation_details result:', reservationDetailsResult.rows);
 
         if (reservationDetailsResult.rows.length !== reservationDetailsData.length) {
@@ -2553,7 +2555,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
             const ratesValues = reservationRatesData.flat();
             // console.log('addOTAReservation reservation_rates query:', ratesQuery);
             // console.log('addOTAReservation reservation_rates values:', ratesValues);
-            const reservationRatesResult = await dbClient.query(ratesQuery, ratesValues);
+            const reservationRatesResult = await client.query(ratesQuery, ratesValues);
             console.log('addOTAReservation reservation_rates result:', reservationRatesResult.rows);
 
             if (reservationRatesResult.rows.length !== reservationRatesData.length) {
@@ -2841,7 +2843,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('editOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
 
