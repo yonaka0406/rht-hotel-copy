@@ -2610,7 +2610,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
 
     // Fetch the existing reservation_id
     query = `
-        SELECT id
+        SELECT *
         FROM reservations
         WHERE ota_reservation_id = $1 AND hotel_id = $2;
     `;
