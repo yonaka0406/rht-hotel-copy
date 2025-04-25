@@ -2428,6 +2428,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
 
         if (roomId === null) {
+          console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode}`);
           throw new Error(`Transaction Error: Could not assign room_id for RoomTypeCode: ${netAgtRmTypeCode}. Transaction will be rolled back.`);
         }
 
@@ -2516,9 +2517,16 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
     await client.query('COMMIT');
     return { success: true };
-  } catch (err) {    
-    await client.query('ROLLBACK');
-    console.error("Transaction failed:", err.message);
+  } catch (err) {   
+    console.error("Transaction failed, error message:", err.message);
+    console.error("Full error object:", err); 
+    try {
+      console.log("Attempting to roll back transaction...");
+      await client.query('ROLLBACK');
+      console.log("Transaction successfully rolled back");
+    } catch (rollbackErr) {
+      console.error("Failed to roll back transaction:", rollbackErr);
+    }
     return { success: false, error: err.message };
   } finally {
     client.release();
@@ -2822,7 +2830,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
           console.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
-        console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
+        console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
 
         query = `
           INSERT INTO reservation_rates (
@@ -2837,7 +2845,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         ]; 
         // console.log('editOTAReservation reservation_rates:', values);
         const reservationRates = await client.query(query, values);
-        console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
+        console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
       }
     }
