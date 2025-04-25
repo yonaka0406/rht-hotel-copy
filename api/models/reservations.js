@@ -2616,6 +2616,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     `;
     values = [otaReservationId, hotel_id];
     const existingReservationResult = await client.query(query, values);
+    console.log('editOTAReservation existingReservationResult:', existingReservationResult.rows[0]);
 
     if (existingReservationResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -2624,6 +2625,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
 
     const reservationIdToUpdate = existingReservationResult.rows[0].id;
     const clientIdToUpdate = existingReservationResult.rows[0].reservation_client_id;
+    console.log('editOTAReservation clientIdToUpdate:', clientIdToUpdate);
 
     // --- Delete existing reservation details and payments ---    
     await client.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
