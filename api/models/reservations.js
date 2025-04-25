@@ -2615,8 +2615,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         WHERE ota_reservation_id = $1 AND hotel_id = $2;
     `;
     values = [otaReservationId, hotel_id];
-    const existingReservationResult = await client.query(query, values);
-    console.log('editOTAReservation existingReservationResult:', existingReservationResult.rows[0]);
+    const existingReservationResult = await client.query(query, values);    
 
     if (existingReservationResult.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -2625,8 +2624,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
 
     const reservationIdToUpdate = existingReservationResult.rows[0].id;
     const clientIdToUpdate = existingReservationResult.rows[0].reservation_client_id;
-    console.log('editOTAReservation clientIdToUpdate:', clientIdToUpdate);
-
+    
     // --- Delete existing reservation details and payments ---    
     await client.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
     await client.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
@@ -2689,7 +2687,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       clientIdToUpdate,
     ];  
     const newClient = await client.query(query, values);
-    console.log('editOTAReservation client:', clientIdToUpdate, 'data:', newClient.rows[0]);
+    console.log('editOTAReservation client:', newClient.rows[0]);
 
     // Insert address
     if(Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr){

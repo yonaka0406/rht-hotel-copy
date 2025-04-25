@@ -232,11 +232,11 @@ const getOTAReservations = async (req, res) => {
 
                     if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         await addOTAReservation(req.requestId, hotel_id, reservation);
-                        //reservationWritten = true;
+                        reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'ModificationReport'){
                         await editOTAReservation(req.requestId, hotel_id, reservation);
-                        //reservationWritten = true;
+                        reservationWritten = true;
                     }
                     if (reservation.TransactionType.DataClassification === 'CancellationReport'){
                         await cancelOTAReservation(req.requestId, hotel_id, reservation);
