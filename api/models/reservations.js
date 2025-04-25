@@ -2433,7 +2433,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
           room_id: roomId,
         }));
 
-        assignedRoomIds.push(roomId);
+        assignedRoomIds.add(roomId);
 
       }
     }
@@ -2954,7 +2954,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
           room_id: roomId,
         }));
 
-        assignedRoomIds.push(roomId);
+        assignedRoomIds.add(roomId);
 
       }
     }
