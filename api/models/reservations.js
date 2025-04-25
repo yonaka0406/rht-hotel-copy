@@ -2195,8 +2195,17 @@ async function transformRoomData(roomAndGuestList) {
         }
         output[currentRoomKey()].push({
           RoomDate: date,
-          RoomInformation: entry.RoomInformation,
-          RoomRateInformation: entry.RoomRateInformation,
+          RoomTypeCode: entry.RoomInformation.RoomTypeCode,
+          RoomTypeName: entry.RoomInformation.RoomTypeName,
+          PerRoomPaxCount: entry.RoomInformation.PerRoomPaxCount,
+          RoomPaxMaleCount: entry.RoomInformation.RoomPaxMaleCount || 0,
+          RoomPaxFemaleCount: entry.RoomInformation.RoomPaxFemaleCount || 0,
+          RoomChildA70Count: entry.RoomInformation.RoomChildA70Count || 0,
+          RoomChildB50Count: entry.RoomInformation.RoomChildB50Count || 0,
+          RoomChildC30Count: entry.RoomInformation.RoomChildC30Count || 0,
+          RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
+          RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
+          TotalPerRoomRate: entry.RoomRateInformation.TotalPerRoomRate,
         });
       } else {
         roomCounter++; // Move to the next room when date does not change
@@ -2205,8 +2214,17 @@ async function transformRoomData(roomAndGuestList) {
         }
         output[currentRoomKey()].push({
           RoomDate: date,
-          RoomInformation: entry.RoomInformation,
-          RoomRateInformation: entry.RoomRateInformation,
+          RoomTypeCode: entry.RoomInformation.RoomTypeCode,
+          RoomTypeName: entry.RoomInformation.RoomTypeName,
+          PerRoomPaxCount: entry.RoomInformation.PerRoomPaxCount,
+          RoomPaxMaleCount: entry.RoomInformation.RoomPaxMaleCount || 0,
+          RoomPaxFemaleCount: entry.RoomInformation.RoomPaxFemaleCount || 0,
+          RoomChildA70Count: entry.RoomInformation.RoomChildA70Count || 0,
+          RoomChildB50Count: entry.RoomInformation.RoomChildB50Count || 0,
+          RoomChildC30Count: entry.RoomInformation.RoomChildC30Count || 0,
+          RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
+          RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
+          TotalPerRoomRate: entry.RoomRateInformation.TotalPerRoomRate,
         });
       }
     }
@@ -2232,7 +2250,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('addOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
   console.log('addOTAReservation RoomAndGuestList transformed:', await transformRoomData(RoomAndGuestList));
 
   // Query
@@ -2371,8 +2389,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       ];
       const newAddress = await client.query(query, values);
       console.log('addOTAReservation addresses:', newAddress.rows[0]);
-    }
-    
+    }    
 
     // Insert reservations
     query = `
@@ -2401,7 +2418,25 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
             
     // Get available rooms for the reservation period
+    const roomsArray = await transformRoomData(RoomAndGuestList);
+    const roomsArrayWithID = {};
+    for (const roomKey in roomsArray) {
+      const roomDetailsArray = roomsArray[roomKey];
+      if (roomDetailsArray.length > 0) {
+        const firstRoomInfo = roomDetailsArray[0];
+        const netAgtRmTypeCode = firstRoomInfo.RoomTypeCode;
+        const roomTypeId = netAgtRmTypeCode ? await selectRoomTypeId(netAgtRmTypeCode) : null;
+        const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
 
+        roomsArrayWithID[roomKey] = roomDetailsArray.map(item => ({
+          ...item,
+          room_id: roomId,
+        }));
+
+      }
+    }
+
+    console.log('roomsArrayWithID', roomsArrayWithID);
     
 
     
@@ -2675,9 +2710,8 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('editOTAReservation BasicRate:', BasicRate);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
-  console.log('addOTAReservation RoomAndGuestList transformed:', await transformRoomData(RoomAndGuestList));
-
+  // console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
 
   // Query
@@ -2894,6 +2928,27 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     console.log('editOTAReservation reservations:', reservation.rows[0]);   
             
     // Get available rooms for the reservation period
+
+    const roomsArray = await transformRoomData(RoomAndGuestList);
+    const roomsArrayWithID = {};
+    for (const roomKey in roomsArray) {
+      const roomDetailsArray = roomsArray[roomKey];
+      if (roomDetailsArray.length > 0) {
+        const firstRoomInfo = roomDetailsArray[0];
+        const netAgtRmTypeCode = firstRoomInfo.RoomTypeCode;
+        const roomTypeId = netAgtRmTypeCode ? await selectRoomTypeId(netAgtRmTypeCode) : null;
+        const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
+
+        roomsArrayWithID[roomKey] = roomDetailsArray.map(item => ({
+          ...item,
+          room_id: roomId,
+        }));
+
+      }
+    }
+
+    console.log('roomsArrayWithID', roomsArrayWithID);
+    
     /*
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
