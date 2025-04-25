@@ -2433,6 +2433,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
           room_id: roomId,
         }));
 
+        assignedRoomIds.push(roomId);
+
       }
     }
 
@@ -2791,7 +2793,15 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     await client.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
 
     const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
-    const assignedRoomIds = new Set();
+    const assignedRoomIds = new Set();  
+    
+    const findFirstAvailableRoomId = (room_type_id) => {    
+      const availableRoom = availableRooms.find(room =>
+        room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
+      );  
+      
+      return availableRoom?.room_id || null;
+    };
     
     // Client info
     const clientData = {
@@ -2944,11 +2954,13 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
           room_id: roomId,
         }));
 
+        assignedRoomIds.push(roomId);
+
       }
     }
 
     console.log('roomsArrayWithID', roomsArrayWithID);
-    
+
     /*
     let roomId = null;
     if (RoomAndGuestList.RoomInformation) {
