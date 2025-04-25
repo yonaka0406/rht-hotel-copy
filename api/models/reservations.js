@@ -2178,30 +2178,40 @@ const deleteReservationPayment = async (requestId, id, userId) => {
 // OTA
 async function transformRoomData(roomAndGuestList) {
   const output = {};
-  let oldDate = '';
+  let roomCounter = 0;
+  let currentDate = null;
+  const currentRoomKey = () => `room${roomCounter}`;
+
   for (const key in roomAndGuestList) {
     if (roomAndGuestList.hasOwnProperty(key)) {
       const entry = roomAndGuestList[key];
       const date = entry.RoomRateInformation.RoomDate;
-      let roomKeyNumber = 0;
-      if(oldDate != date){
-        roomKeyNumber = 0;
-      } else{
-        roomKeyNumber++;
-      }
-      const roomKey = `room${parseInt(roomKeyNumber)}`;
-      if (!output[roomKey]) {
-        output[roomKey] = [];
-      }
-      output[roomKey].push({
-        RoomDate: entry.RoomRateInformation.RoomDate,
-        RoomInformation: entry.RoomInformation,
-        RoomRateInformation: entry.RoomRateInformation,
-      });
 
-      oldDate = date;
+      if (date !== currentDate) {  
+        roomCounter = 0;      
+        currentDate = date;
+        if (!output[currentRoomKey()]) {
+          output[currentRoomKey()] = [];
+        }
+        output[currentRoomKey()].push({
+          RoomDate: date,
+          RoomInformation: entry.RoomInformation,
+          RoomRateInformation: entry.RoomRateInformation,
+        });
+      } else {
+        roomCounter++; // Move to the next room when date does not change
+        if (!output[currentRoomKey()]) {
+          output[currentRoomKey()] = []; // Should not be needed after the first entry for a date
+        }
+        output[currentRoomKey()].push({
+          RoomDate: date,
+          RoomInformation: entry.RoomInformation,
+          RoomRateInformation: entry.RoomRateInformation,
+        });
+      }
     }
   }
+
   return output;
 };
 const addOTAReservation = async (requestId, hotel_id, data) => {
