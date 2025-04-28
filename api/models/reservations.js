@@ -2157,6 +2157,69 @@ async function transformRoomData(roomAndGuestList) {
   let currentDate = null;
   const currentRoomKey = () => `room${roomCounter}`;
 
+  if (roomAndGuestList.RoomInformation && roomAndGuestList.RoomRateInformation) {
+    // Handle the case when the input is a single room entry
+    const date = roomAndGuestList.RoomRateInformation.RoomDate;
+    if (!output[currentRoomKey()]) {
+      output[currentRoomKey()] = [];
+    }
+    output[currentRoomKey()].push({
+      RoomDate: date,
+      RoomTypeCode: roomAndGuestList.RoomInformation.RoomTypeCode,
+      RoomTypeName: roomAndGuestList.RoomInformation.RoomTypeName,
+      PlanGroupCode: roomAndGuestList.RoomInformation.PlanGroupCode || '',
+      PerRoomPaxCount: roomAndGuestList.RoomInformation.PerRoomPaxCount,
+      RoomPaxMaleCount: roomAndGuestList.RoomInformation.RoomPaxMaleCount || 0,
+      RoomPaxFemaleCount: roomAndGuestList.RoomInformation.RoomPaxFemaleCount || 0,
+      RoomChildA70Count: roomAndGuestList.RoomInformation.RoomChildA70Count || 0,
+      RoomChildB50Count: roomAndGuestList.RoomInformation.RoomChildB50Count || 0,
+      RoomChildC30Count: roomAndGuestList.RoomInformation.RoomChildC30Count || 0,
+      RoomChildDNoneCount: roomAndGuestList.RoomInformation.RoomChildDNoneCount || 0,
+      TotalPerRoomRate: roomAndGuestList.RoomRateInformation.TotalPerRoomRate,
+    });
+  } else if (Array.isArray(roomAndGuestList)) {
+    // Handle the case when input is an array of room entries
+    for (const entry of roomAndGuestList) {
+      const date = entry.RoomRateInformation.RoomDate;
+      if (date !== currentDate) {  
+        roomCounter = 0;      
+        currentDate = date;
+      } else {
+        roomCounter++;
+      }
+
+      if (!output[currentRoomKey()]) {
+        output[currentRoomKey()] = [];
+      }
+
+      output[currentRoomKey()].push({
+        RoomDate: date,
+        RoomTypeCode: entry.RoomInformation.RoomTypeCode,
+        RoomTypeName: entry.RoomInformation.RoomTypeName,
+        PlanGroupCode: entry.RoomInformation.PlanGroupCode || '',
+        PerRoomPaxCount: entry.RoomInformation.PerRoomPaxCount,
+        RoomPaxMaleCount: entry.RoomInformation.RoomPaxMaleCount || 0,
+        RoomPaxFemaleCount: entry.RoomInformation.RoomPaxFemaleCount || 0,
+        RoomChildA70Count: entry.RoomInformation.RoomChildA70Count || 0,
+        RoomChildB50Count: entry.RoomInformation.RoomChildB50Count || 0,
+        RoomChildC30Count: entry.RoomInformation.RoomChildC30Count || 0,
+        RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
+        TotalPerRoomRate: entry.RoomRateInformation.TotalPerRoomRate,
+      });
+    }
+  } else {
+    // If the input is an object but not in the expected format
+    // Assume it might be an object with multiple entries
+    const entries = Object.values(roomAndGuestList);
+    if (entries.length > 0 && entries[0].RoomInformation) {
+      // Process as if roomAndGuestList is an object containing room entries
+      return await transformRoomData(entries);
+    } else {
+      throw new Error("Invalid data format for roomAndGuestList");
+    }
+  }
+
+/*
   for (const key in roomAndGuestList) {
     if (roomAndGuestList.hasOwnProperty(key)) {
       const entry = roomAndGuestList[key];
@@ -2206,7 +2269,7 @@ async function transformRoomData(roomAndGuestList) {
       }
     }
   }
-
+*/
   return output;
 };
 function translateMealCondition(MealCondition) {
@@ -2462,6 +2525,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
             
     // Get available rooms for the reservation period
     const roomsArray = await transformRoomData(RoomAndGuestList);
+    console.log('addOTAReservation transformRoomData(RoomAndGuestList):', roomsArray);
     const roomsArrayWithID = {};
     for (const roomKey in roomsArray) {
       const roomDetailsArray = roomsArray[roomKey];
