@@ -264,6 +264,63 @@ const insertTLRoomMaster = async (requestId, data) => {
     }
 };
 
+const selectTLPlanMaster = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT * 
+        FROM sc_tl_plans
+        WHERE hotel_id = $1
+    `;
+    const values = [hotel_id];
+
+    try {
+        const result = await pool.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error finding master by hotel_id:', err);
+        throw new Error('Database error');
+    }
+};
+const insertTLPlanMaster = async (requestId, data) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    console.log('insertTLRoomMaster', data)
+
+    try {
+        await client.query('BEGIN');
+
+        // Delete existing records for the hotel_id
+        await pool.query('DELETE FROM sc_tl_plans WHERE hotel_id = $1', [data[0].hotel_id]);
+
+        // Insert the new records
+        const results = [];
+        for (const item of data) {
+            const result = await client.query(
+                `INSERT INTO sc_tl_plans(hotel_id, plans_global_id, plans_hotel_id, planGroupCode, planGroupName) 
+                VALUES($1, $2, $3, $4, $5) RETURNING *`,
+                [
+                    item.hotel_id,
+                    item.plans_global_id,
+                    item.plans_hotel_id,
+                    item.plangroupcode,
+                    item.plangroupname,                    
+                ]
+            );
+            results.push(result.rows[0]);
+        };
+        
+        await client.query('COMMIT');
+        return results;
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error adding plan master:', error.message);
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -272,4 +329,6 @@ module.exports = {
     selectXMLRecentResponses,
     selectTLRoomMaster,
     insertTLRoomMaster,
+    selectTLPlanMaster,
+    insertTLPlanMaster,
 };

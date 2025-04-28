@@ -115,6 +115,7 @@ const sc_fieldLabels = ref([
 ]);
 
 const tlRoomMaster = ref(null);
+const tlPlanMaster = ref(null);
 
 export function useXMLStore() {
         
@@ -255,6 +256,55 @@ export function useXMLStore() {
             throw error; // Re-throw the error for handling in the component
         }
     };
+    const fetchTLPlanMaster = async(hotel_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/sc/tl/${hotel_id}/master/plan`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,                    
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            
+            tlPlanMaster.value = data;
+            
+        } catch (error) {
+            tlPlanMaster.value = null;
+            console.error('Failed to fetch data', error);
+        }
+    };
+    const insertTLPlanMaster = async (planData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/sc/tl/master/plan`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(planData),
+            });
+        
+            const data = await response.json();
+        
+            if (!response.ok) {
+                throw new Error('Failed to create plan master');
+            }
+        
+            return data;
+        } catch (error) {
+            console.error('Failed to create plan master', error);
+            throw error; // Re-throw the error for handling in the component
+        }
+    };
 
     return {        
         template,
@@ -262,6 +312,7 @@ export function useXMLStore() {
         sc_serviceLabels,
         sc_fieldLabels,
         tlRoomMaster,
+        tlPlanMaster,
         fetchServiceName,
         fetchFieldName,
         fetchXMLTemplate,
@@ -269,5 +320,7 @@ export function useXMLStore() {
         insertXMLResponse,      
         fetchTLRoomMaster,
         insertTLRoomMaster,
+        fetchTLPlanMaster,
+        insertTLPlanMaster,
     };
 }

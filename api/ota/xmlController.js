@@ -1,6 +1,6 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster } = require('../ota/xmlModel');
+const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster, selectTLPlanMaster, insertTLPlanMaster } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
 
@@ -118,6 +118,28 @@ const createTLRoomMaster = async (req, res) => {
     
     try {
         const master = await insertTLRoomMaster(req.requestId, data);
+        res.json(master);
+    } catch (err) {
+        console.error('Error creating master:', err);
+        res.status(500).json({ error: 'Failed to create master' });
+    }
+};
+const getTLPlanMaster = async (req, res) => {
+    const hotel_id = req.params.hotel_id;
+
+    try {
+        const master = await selectTLPlanMaster(req.requestId, hotel_id);
+        res.send(master);
+    } catch (error) {
+        console.error('Error getting TL data:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+const createTLPlanMaster = async (req, res) => {    
+    const data = req.body;
+    
+    try {
+        const master = await insertTLPlanMaster(req.requestId, data);
         res.json(master);
     } catch (err) {
         console.error('Error creating master:', err);
@@ -436,6 +458,8 @@ module.exports = {
     submitXMLTemplate,
     getTLRoomMaster,
     createTLRoomMaster,
+    getTLPlanMaster,
+    createTLPlanMaster,
     getOTAReservations,
     successOTAReservations,
     updateInventoryMultipleDays,
