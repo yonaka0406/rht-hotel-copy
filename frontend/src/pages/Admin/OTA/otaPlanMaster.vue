@@ -8,22 +8,15 @@
             </template>
             <template #content>
                 <DataTable :value="planMaster">                    
-                    <Column field="rmtypename">
-                        <template #header>{{ fetchFieldName('rmTypeName') }}</template>
-                    </Column>                    
-                    <Column field="netrmtypegroupname">
-                        <template #header>{{ fetchFieldName('netRmTypeGroupName') }}</template>
-                    </Column>                                        
-                    <Column field="netagtrmtypename">
-                        <template #header>{{ fetchFieldName('netAgtRmTypeName') }}</template>
-                    </Column>                    
-                    <Column header="PMS部屋タイプ紐づけ">
+                    <Column field="plangroupcode" header="プラングループコード"></Column>
+                    <Column field="plangroupname" header="プラングループ名"></Column>
+                    <Column header="PMSプラン紐づけ">
                         <template #body="slotProps">
                             <Select
-                                v-model="slotProps.data.room_type_id" 
-                                :options="roomTypes"
+                                v-model="slotProps.data.plan_key" 
+                                :options="plans"
                                 optionLabel="name" 
-                                optionValue="id" 
+                                optionValue="plan_key" 
                             >                            
                             </Select>
                         </template>                        
@@ -164,7 +157,7 @@
                 plans.push({
                     hotel_id: props.hotel_id,
                     plangroupcode: item.planGroupCode,
-                    plangroupname: getTypeName(item.planGroupName),                                        
+                    plangroupname: item.planGroupName,
                 });
             });
         }
