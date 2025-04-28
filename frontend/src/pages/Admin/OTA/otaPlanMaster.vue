@@ -60,6 +60,7 @@
         // Filter out items with not int planGroupCode        
         const filteredData = data.filter(item => Number.isInteger(item.plangroupcode));
 
+        console.log('savePlanMaster unfiltered', data);
         console.log('savePlanMaster', filteredData);
         return;       
         try {
