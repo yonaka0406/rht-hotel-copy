@@ -2207,15 +2207,46 @@ async function transformRoomData(roomAndGuestList) {
 
   return output;
 };
+async function translateMealCondition(MealCondition) {
+  const mealConditionMap = {
+    '1night2meals': '1泊2食',
+    '1nightBreakfast': '1泊朝食',
+    'WithoutMeal': '食事なし',
+    'Other': 'その他',    
+  }
+  return mealConditionMap[MealCondition] || '未設定';
+}
+async function translateSpecificMealCondition(SpecificMealCondition) {
+  const specificMealConditionMap = {
+    'IncludingBreakfast': '朝食付き',
+    'IncludingDinner': '夕食付き',
+    'IncludingBreakfastAndDinner': '朝夕食付き',    
+    'IncludingLunch': '昼食付き',
+    'IncludingBreakfastAndLunchAndDinner': '3食付き',
+    'None Specified': '指定なし',
+    'IncludingBreakfastAndLunch': '朝昼食付き',
+    'IncludingLunchAndDinner': '昼夕食付き',
+  }
+  return specificMealConditionMap[SpecificMealCondition] || '未設定';
+}
+async function translateTaxServiceFee(TaxServiceFee) {
+  const taxServiceFeeMap = {
+    'IncludingServiceWithOutTax': 'サ込税別',
+    'IncludingServiceAndTax': 'サ込税込',
+    'WithoutSerivceAndTax': 'サ別税別',
+    'WithoutServiceAndIncludingTax': 'サ別税込',    
+  }
+  return taxServiceFeeMap[TaxServiceFee] || '未設定';
+}
 async function translateSettlementDiv(SettlementDiv) {
   const settlementDivMap = {
-    '0': '指定なし',
-    '1': '法人利用',
-    '2': 'カード決済ズミ',
-    '3': '現地払い',
-    '4': 'ツアー会社',
-    '5': '一部清算',
-    '6': 'エージェント清算',
+    0: '指定なし',
+    1: '法人利用',
+    2: 'カード決済ズミ',
+    3: '現地払い',
+    4: 'ツアー会社',
+    5: '一部清算',
+    6: 'エージェント清算',
   }
   return settlementDivMap[SettlementDiv] || '未設定';
 }
@@ -2262,10 +2293,13 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     reservationComment += `予約備考：${BasicInformation.OtherServiceInformation}；\n`;
   }
   if (BasicInformation?.MealCondition) {
-    reservationComment += `食事条件：${BasicInformation.MealCondition}；\n`;
+    reservationComment += `食事条件：${translateMealCondition(BasicInformation.MealCondition)}；\n`;
   }
   if (BasicInformation?.SpecificMealCondition) {
-    reservationComment += `食事備考：${BasicInformation.SpecificMealCondition}；\n`;
+    reservationComment += `食事備考：${translateSpecificMealCondition(BasicInformation.SpecificMealCondition)}；\n`;
+  }
+  if (BasicRateInformation?.TaxServiceFee) {
+    reservationComment += `税サ区分：${translateTaxServiceFee(BasicRateInformation.TaxServiceFee)}；\n`;
   }
 
   // Helper
@@ -2656,10 +2690,13 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     reservationComment += `予約備考：${BasicInformation.OtherServiceInformation}；\n`;
   }
   if (BasicInformation?.MealCondition) {
-    reservationComment += `食事条件：${BasicInformation.MealCondition}；\n`;
+    reservationComment += `食事条件：${translateMealCondition(BasicInformation.MealCondition)}；\n`;
   }
   if (BasicInformation?.SpecificMealCondition) {
-    reservationComment += `食事備考：${BasicInformation.SpecificMealCondition}；\n`;
+    reservationComment += `食事備考：${translateSpecificMealCondition(BasicInformation.SpecificMealCondition)}；\n`;
+  }
+  if (BasicRateInformation?.TaxServiceFee) {
+    reservationComment += `税サ区分：${translateTaxServiceFee(BasicRateInformation.TaxServiceFee)}；\n`;
   }
 
   // Helper
