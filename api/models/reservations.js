@@ -2274,7 +2274,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};  
   // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
