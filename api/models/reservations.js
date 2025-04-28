@@ -2666,6 +2666,10 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
   // console.log('editOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('editOTAReservation BasicRate:', BasicRate);
+  const Extend = data?.RisaplsInformation?.AgentNativeInformation?.Extend || {};  
+  // console.log('addOTAReservation Extend:', Extend);
+  const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};  
+  // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
   // console.log('editOTAReservation RoomAndGuestList:', RoomAndGuestList);
   
