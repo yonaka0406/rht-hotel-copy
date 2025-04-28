@@ -4,7 +4,7 @@ const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
-const { selectTLRoomMaster } = require('../ota/xmlModel');
+const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
 
 
 
@@ -2172,6 +2172,7 @@ async function transformRoomData(roomAndGuestList) {
           RoomDate: date,
           RoomTypeCode: entry.RoomInformation.RoomTypeCode,
           RoomTypeName: entry.RoomInformation.RoomTypeName,
+          PlanGroupCode: entry.RoomInformation.PlanGroupCode,
           PerRoomPaxCount: entry.RoomInformation.PerRoomPaxCount,
           RoomPaxMaleCount: entry.RoomInformation.RoomPaxMaleCount || 0,
           RoomPaxFemaleCount: entry.RoomInformation.RoomPaxFemaleCount || 0,
@@ -2191,6 +2192,7 @@ async function transformRoomData(roomAndGuestList) {
           RoomDate: date,
           RoomTypeCode: entry.RoomInformation.RoomTypeCode,
           RoomTypeName: entry.RoomInformation.RoomTypeName,
+          PlanGroupCode: entry.RoomInformation.PlanGroupCode,
           PerRoomPaxCount: entry.RoomInformation.PerRoomPaxCount,
           RoomPaxMaleCount: entry.RoomInformation.RoomPaxMaleCount || 0,
           RoomPaxFemaleCount: entry.RoomInformation.RoomPaxFemaleCount || 0,
@@ -2328,6 +2330,23 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
+  const planMaster = await selectTLPlanMaster(requestId, hotel_id);
+  // console.log('selectTLPlanMaster:', planMaster);  
+  const selectPlanId = async (code) => {
+    const match = planMaster.find(item => item.plangroupcode == code);
+    if (match) {
+      return {
+        plans_global_id: match.plans_global_id,
+        plans_hotel_id: match.plans_hotel_id,        
+      };
+    } else {
+      return {
+        plans_global_id: null,
+        plans_hotel_id: null,        
+      };
+    }
+  };
+
   const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
   const assignedRoomIds = new Set();
   
@@ -2450,7 +2469,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const firstRoomInfo = roomDetailsArray[0];
         const netAgtRmTypeCode = firstRoomInfo.RoomTypeCode;
         const roomTypeId = netAgtRmTypeCode ? await selectRoomTypeId(netAgtRmTypeCode) : null;
-        const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
+        const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;        
 
         if (roomId === null) {
           console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode}`);
@@ -2471,19 +2490,23 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
 
+        const { plans_global_id, plans_hotel_id } = await selectPlanId(roomDetail.PlanGroupCode);
+
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
         query = `
           INSERT INTO reservation_details (
-              hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
+              hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9 TRUE, 1, 1)
             RETURNING *;
         `;
         values = [
           hotel_id,
           reservationId,    
           roomDetail.RoomDate,
-          roomDetail.room_id,        
+          roomDetail.room_id,          
+          plans_global_id,
+          plans_hotel_id,
           BasicInformation.PackagePlanName,      
           totalPeopleCount,
           roomDetail.TotalPerRoomRate,
@@ -2729,6 +2752,22 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     const match = roomMaster.find(item => item.netagtrmtypecode === code);
     return match ? match.room_type_id : null;
   };
+  const planMaster = await selectTLPlanMaster(requestId, hotel_id);
+  // console.log('selectTLPlanMaster:', planMaster);  
+  const selectPlanId = async (code) => {
+    const match = planMaster.find(item => item.plangroupcode == code);
+    if (match) {
+      return {
+        plans_global_id: match.plans_global_id,
+        plans_hotel_id: match.plans_hotel_id,        
+      };
+    } else {
+      return {
+        plans_global_id: null,
+        plans_hotel_id: null,        
+      };
+    }
+  };
   
   try {
     await client.query('BEGIN'); 
@@ -2930,19 +2969,23 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
 
+        const { plans_global_id, plans_hotel_id } = await selectPlanId(roomDetail.PlanGroupCode);
+
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
         query = `
           INSERT INTO reservation_details (
-              hotel_id, reservation_id, date, room_id, plan_name, number_of_people, price, billable, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, 1, 1)
+              hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9 TRUE, 1, 1)
             RETURNING *;
         `;
         values = [
           hotel_id,
           reservationIdToUpdate,    
           roomDetail.RoomDate,
-          roomDetail.room_id,        
+          roomDetail.room_id, 
+          plans_global_id,
+          plans_hotel_id,       
           BasicInformation.PackagePlanName,      
           totalPeopleCount,
           roomDetail.TotalPerRoomRate,
