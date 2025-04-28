@@ -2539,8 +2539,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
           ];
           
           const reservationPayments = await client.query(query, values);
-          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
-          console.log(`Applied discount of ${discountForThisRoom} to ${roomKey} (room_id: ${roomInfo.room_id})`);
+          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);          
           
           // Reduce remaining discount
           remainingDiscount -= discountForThisRoom;
@@ -2588,8 +2587,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
               ];
               
               const reservationPayments = await client.query(query, values);
-              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
-              console.log(`Applied payment of ${paymentForThisRoom} to ${roomKey} (room_id: ${roomInfo.room_id})`);
+              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);              
               
               // Reduce remaining payment
               remainingPayment -= paymentForThisRoom;
