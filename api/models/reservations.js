@@ -2932,29 +2932,121 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
 
-    // Payment
-    if(BasicRate.PointsDiscountList){      
-      query = `
-        INSERT INTO reservation_payments (
-          hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
-        RETURNING *;
-      `;
+    // Payment    
+    query = `
+      INSERT INTO reservation_payments (
+        hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+      RETURNING *;
+    `;
 
-      values = [
-        hotel_id, 
-        reservationIdToUpdate, 
-        BasicInformation.TravelAgencyBookingDate, 
-        roomsArrayWithID['room0'][0].room_id,
-        clientIdToUpdate, 
-        2, 
-        BasicRate?.PointsDiscountList?.PointsDiscount, 
-        BasicRate?.PointsDiscountList?.PointsDiscountName, 
-        1
-      ];
-      const reservationPayments = await client.query(query, values);
-      console.log('editOTAReservation reservation_payments:', reservationPayments.rows[0]);
-    }    
+    // Helper function to calculate total rate for each room
+    const calculateRoomRates = () => {
+      const roomRates = {};
+      for (const roomKey in roomsArrayWithID) {
+        let totalForRoom = 0;
+        roomsArrayWithID[roomKey].forEach(dayItem => {
+          totalForRoom += parseFloat(dayItem.TotalPerRoomRate || 0);
+        });
+        roomRates[roomKey] = {
+          total: totalForRoom,
+          roomId: roomsArrayWithID[roomKey][0].room_id
+        };
+      }
+      return roomRates;
+    };
+    const roomRates = calculateRoomRates();
+    const totalRoomRates = Object.values(roomRates).reduce((sum, room) => sum + room.total, 0);
+    const sortedRoomKeys = Object.keys(roomRates).sort((a, b) => {
+      return parseInt(a.replace('room', '')) - parseInt(b.replace('room', ''));
+    });
+    
+    // Point discount
+    if(BasicRate.PointsDiscountList){
+      let remainingDiscount = parseFloat(BasicRate?.PointsDiscountList?.PointsDiscount);
+      const discountName = BasicRate?.PointsDiscountList?.PointsDiscountName || 'ポイント割引';
+
+      // Apply discount to each room until fully distributed
+      for (const roomKey of sortedRoomKeys) {
+        if (remainingDiscount <= 0) break;
+        
+        const roomRate = roomRates[roomKey].total;
+        const roomId = roomRates[roomKey].roomId;        
+        
+        // Calculate how much discount to apply to this room
+        const discountForThisRoom = Math.min(roomRate, remainingDiscount);
+        
+        if (discountForThisRoom > 0) {
+          const values = [
+            hotel_id, 
+            reservationIdToUpdate, 
+            BasicInformation.TravelAgencyBookingDate, 
+            roomId,
+            clientIdToUpdate, 
+            2, // Payment type for discount
+            discountForThisRoom, 
+            discountName, 
+            1
+          ];
+          
+          const reservationPayments = await client.query(query, values);
+          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);          
+          
+          // Reduce remaining discount
+          remainingDiscount -= discountForThisRoom;
+        }
+      }
+      
+      // Log if there's any unused discount
+      if (remainingDiscount > 0) {
+        console.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
+      }
+    }
+    // Outstanding balance    
+    if (Extend?.AmountClaimed !== undefined) {
+      const amountClaimed = parseFloat(Extend.AmountClaimed);
+      if (amountClaimed === 0 || (amountClaimed > 0 && amountClaimed !== totalRoomRates)) {
+        let paymentAmount;
+        if (amountClaimed === 0) {          
+          paymentAmount = totalRoomRates;
+        } else {          
+          paymentAmount = totalRoomRates - amountClaimed;
+        }
+
+        if (paymentAmount > 0) {
+          let remainingPayment = paymentAmount;
+          for (const roomKey of sortedRoomKeys) {
+            if (remainingPayment <= 0) break;
+            
+            const roomRate = roomRates[roomKey].total;
+            const roomId = roomRates[roomKey].roomId;        
+            
+            // Calculate how much payment to apply to this room
+            const paymentForThisRoom = Math.min(roomRate, remainingPayment);
+            
+            if (paymentForThisRoom > 0) {
+              const values = [
+                hotel_id, 
+                reservationIdToUpdate, 
+                BasicInformation.TravelAgencyBookingDate, 
+                roomId,
+                clientIdToUpdate, 
+                4, // Credit card
+                paymentForThisRoom, 
+                translateSettlementDiv(Extendmytrip?.SettlementDiv), 
+                1
+              ];
+              
+              const reservationPayments = await client.query(query, values);
+              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);              
+              
+              // Reduce remaining payment
+              remainingPayment -= paymentForThisRoom;
+            }
+          }
+        }
+      }
+    }       
 
     await client.query('COMMIT');
     return { success: true };
