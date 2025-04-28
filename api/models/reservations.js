@@ -2554,12 +2554,13 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     // Outstanding balance    
     if (Extend?.AmountClaimed !== undefined) {
       const amountClaimed = parseFloat(Extend.AmountClaimed);
+      const pointsAmount = parseFloat(Extend.Points) || 0;
       if (amountClaimed === 0 || (amountClaimed > 0 && amountClaimed !== totalRoomRates)) {
         let paymentAmount;
         if (amountClaimed === 0) {          
-          paymentAmount = totalRoomRates;
+          paymentAmount = totalRoomRates - pointsAmount;
         } else {          
-          paymentAmount = totalRoomRates - amountClaimed;
+          paymentAmount = totalRoomRates - amountClaimed - pointsAmount;
         }
 
         if (paymentAmount > 0) {
@@ -3005,12 +3006,13 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     // Outstanding balance    
     if (Extend?.AmountClaimed !== undefined) {
       const amountClaimed = parseFloat(Extend.AmountClaimed);
+      const pointsAmount = parseFloat(Extend.Points) || 0;
       if (amountClaimed === 0 || (amountClaimed > 0 && amountClaimed !== totalRoomRates)) {
         let paymentAmount;
         if (amountClaimed === 0) {          
-          paymentAmount = totalRoomRates;
+          paymentAmount = totalRoomRates - pointsAmount;
         } else {          
-          paymentAmount = totalRoomRates - amountClaimed;
+          paymentAmount = totalRoomRates - amountClaimed - pointsAmount;
         }
 
         if (paymentAmount > 0) {
