@@ -238,9 +238,9 @@ const getOTAReservations = async (req, res) => {
                     }
                     if (reservation.TransactionType.DataClassification === 'ModificationReport'){
                         const editResult = await editOTAReservation(req.requestId, hotel_id, reservation);
-                        if (editResult.success) {
-                            reservationWritten = true;
-                        }
+                        console.log(editResult.success)
+                        reservationWritten = true;
+                        
                     }
                     if (reservation.TransactionType.DataClassification === 'CancellationReport'){
                         const cancelResult = await cancelOTAReservation(req.requestId, hotel_id, reservation);
