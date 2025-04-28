@@ -2329,7 +2329,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
   // console.log('addOTAReservation Basic:', Basic);
   const RoomAndRoomRateInformation  = data?.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation || {};  
-  console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
+  // console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
@@ -2396,8 +2396,10 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     return match ? match.room_type_id : null;
   };
   const planMaster = await selectTLPlanMaster(requestId, hotel_id);
-  // console.log('selectTLPlanMaster:', planMaster);  
+  
   const selectPlanId = async (code) => {
+    console.log('selectTLPlanMaster:', planMaster);  
+    console.log('selectPlanId code:', code);
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
       return {
@@ -2783,6 +2785,8 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
   // console.log('editOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
   // console.log('editOTAReservation Basic:', Basic);
+  const RoomAndRoomRateInformation  = data?.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation || {};  
+  // console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('editOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
