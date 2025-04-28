@@ -2526,8 +2526,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
             
     // Get available rooms for the reservation period
-    const roomsArray = await transformRoomData(RoomAndGuestList);
-    console.log('addOTAReservation transformRoomData(RoomAndGuestList):', roomsArray);
+    const roomsArray = await transformRoomData(RoomAndGuestList);    
     const roomsArrayWithID = {};
     for (const roomKey in roomsArray) {
       const roomDetailsArray = roomsArray[roomKey];
@@ -2552,11 +2551,17 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
 
+    const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
+    const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+    if (addons && Array.isArray(addons)) {
+      addons.forEach(addon => {
+          addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
+      });
+    }
+
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
-      for (const roomDetail of roomDetailsArray) {
-
-        const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
+      for (const roomDetail of roomDetailsArray) {        
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
@@ -2601,6 +2606,33 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const reservationRates = await client.query(query, values);
         console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
 
+        // Insert addon information if addons exist
+        if (addons && Array.isArray(addons) && addons.length > 0) {
+          for (const addon of addons) {
+            query = `
+              INSERT INTO reservation_addons (
+                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              RETURNING *;
+            `;
+            values = [
+              hotel_id,
+              reservationDetailsId,
+              addon.addons_global_id,
+              addon.addons_hotel_id,
+              addon.addon_name,
+              addon.quantity,
+              addon.price,
+              addon.tax_type_id || 3,
+              addon.tax_rate || 0.1,
+              1,
+              1
+            ];
+
+            const reservationAddon = await client.query(query, values);
+            console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+          }
+        }
       }
     }
     
@@ -3030,13 +3062,18 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
+    const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
+    const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+    if (addons && Array.isArray(addons)) {
+      addons.forEach(addon => {
+          addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
+      });
+    }
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
-
-        const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
-
+        
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
         query = `
@@ -3080,6 +3117,33 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         const reservationRates = await client.query(query, values);
         console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
+        // Insert addon information if addons exist
+        if (addons && Array.isArray(addons) && addons.length > 0) {
+          for (const addon of addons) {
+            query = `
+              INSERT INTO reservation_addons (
+                hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, quantity, price, tax_type_id, tax_rate, created_by, updated_by
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              RETURNING *;
+            `;
+            values = [
+              hotel_id,
+              reservationDetailsId,
+              addon.addons_global_id,
+              addon.addons_hotel_id,
+              addon.addon_name,
+              addon.quantity,
+              addon.price,
+              addon.tax_type_id || 3,
+              addon.tax_rate || 0.1,
+              1,
+              1
+            ];
+
+            const reservationAddon = await client.query(query, values);
+            console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+          }
+        }
       }
     }
 
