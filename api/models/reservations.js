@@ -2557,7 +2557,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
     if (addons && Array.isArray(addons)) {
       addons.forEach(addon => {
-          addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
+          // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
+          addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
       });
     }
 
@@ -3070,7 +3071,8 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
     if (addons && Array.isArray(addons)) {
       addons.forEach(addon => {
-          addon.quantity = plan.plan_type === 'per_person' ? number_of_people : 1;
+          // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
+          addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
       });
     }
 
