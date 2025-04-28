@@ -2207,7 +2207,7 @@ async function transformRoomData(roomAndGuestList) {
 
   return output;
 };
-async function translateMealCondition(MealCondition) {
+function translateMealCondition(MealCondition) {
   const mealConditionMap = {
     '1night2meals': '1泊2食',
     '1nightBreakfast': '1泊朝食',
@@ -2216,7 +2216,7 @@ async function translateMealCondition(MealCondition) {
   }
   return mealConditionMap[MealCondition] || '未設定';
 }
-async function translateSpecificMealCondition(SpecificMealCondition) {
+function translateSpecificMealCondition(SpecificMealCondition) {
   const specificMealConditionMap = {
     'IncludingBreakfast': '朝食付き',
     'IncludingDinner': '夕食付き',
@@ -2229,7 +2229,7 @@ async function translateSpecificMealCondition(SpecificMealCondition) {
   }
   return specificMealConditionMap[SpecificMealCondition] || '未設定';
 }
-async function translateTaxServiceFee(TaxServiceFee) {
+function translateTaxServiceFee(TaxServiceFee) {
   const taxServiceFeeMap = {
     'IncludingServiceWithOutTax': 'サ込税別',
     'IncludingServiceAndTax': 'サ込税込',
@@ -2238,7 +2238,7 @@ async function translateTaxServiceFee(TaxServiceFee) {
   }
   return taxServiceFeeMap[TaxServiceFee] || '未設定';
 }
-async function translateSettlementDiv(SettlementDiv) {
+function translateSettlementDiv(SettlementDiv) {
   const settlementDivMap = {
     0: '指定なし',
     1: '法人利用',
