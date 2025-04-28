@@ -173,7 +173,8 @@
     };
          
 
-    onMounted(async () => {        
+    onMounted(async () => {  
+        console.log('onMounted otaPlanMaster hotel_id', props.hotel_id);      
         await fetchtlPlanMaster(props.hotel_id);
         roomTypes.value = await fetchPlansForHotel(props.hotel_id);        
         planMaster.value = tlPlanMaster.value;
