@@ -58,14 +58,22 @@
     const roomTypes = ref(null);
     const savePlanMaster = async (data) => {
         // Filter out items with not int planGroupCode        
-        const filteredData = data.filter(item => Number.isInteger(item.plangroupcode));
+        const filteredData = data.filter(item => Number.isInteger(item.plangroupcode * 1));
+                
+        const updatedFilteredData = filteredData.map(item => {
+            const matchingPlan = plans.value.find(plan => plan.plan_key === item.plan_key);
 
-        console.log('savePlanMaster unfiltered', data);
-        console.log('savePlanMaster', filteredData);
-        return;       
+            return {
+                ...item,
+                plans_global_id: matchingPlan?.plans_global_id || null,
+                plans_hotel_id: matchingPlan?.plans_hotel_id || null,
+                plan_key: matchingPlan?.plan_key || item.plan_key || null, // keep original if not found
+            };
+        });
+        
         try {
-            await insertTLPlanMaster(filteredData);
-            toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
+            await insertTLPlanMaster(updatedFilteredData);
+            toast.add({severity: 'success', summary: '成功', detail: 'プランマスター保存されました。', life: 3000});
         } catch (error) {
             console.error('Failed to save plan master:', error);
             toast.add({
