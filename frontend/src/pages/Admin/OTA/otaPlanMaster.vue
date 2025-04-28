@@ -51,7 +51,7 @@
 
     // Stores
     import { useXMLStore } from '@/composables/useXMLStore';
-    const { template, tlPlanMaster, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchtlPlanMaster, inserttlPlanMaster } = useXMLStore();
+    const { template, tlPlanMaster, fetchServiceName, fetchFieldName, fetchXMLTemplate, insertXMLResponse, fetchTLPlanMaster, insertTLPlanMaster } = useXMLStore();
     import { usePlansStore } from '@/composables/usePlansStore';
     const { plans, fetchPlansForHotel } = usePlansStore();
     
@@ -112,7 +112,7 @@
         }
        
         try {
-            await inserttlPlanMaster(filteredData);
+            await insertTLPlanMaster(filteredData);
             toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
         } catch (error) {
             console.error('Failed to save plan master:', error);
@@ -173,16 +173,16 @@
     };
          
 
-    onMounted(async () => {  
-        console.log('onMounted otaPlanMaster hotel_id', props.hotel_id);
-        await fetchtlPlanMaster(props.hotel_id);
-        console.log('onMounted planMaster', planMaster.value);
-        /*
-        roomTypes.value = await fetchPlansForHotel(props.hotel_id);        
+    onMounted(async () => {
+        await fetchTLPlanMaster(props.hotel_id);
         planMaster.value = tlPlanMaster.value;
+
+        roomTypes.value = await fetchPlansForHotel(props.hotel_id);        
+        
+        console.log('onMounted planMaster', planMaster.value);
         console.log('onMounted plans', plans.value);
         
-        */
+        
     });
 
 </script>
