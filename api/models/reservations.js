@@ -2328,6 +2328,8 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   // console.log('addOTAReservation RisaplsCommonInformation:', RisaplsCommonInformation);
   const Basic = data?.RisaplsInformation?.RisaplsCommonInformation?.Basic || {};  
   // console.log('addOTAReservation Basic:', Basic);
+  const RoomAndRoomRateInformation  = data?.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation || {};  
+  console.log('addOTAReservation RoomAndRoomRateInformation:', RoomAndRoomRateInformation);
   const Member = data?.RisaplsInformation?.RisaplsCommonInformation?.Member || {};
   // console.log('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
@@ -2337,7 +2339,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};  
   // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
-  console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
+  // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
   // Query
   const pool = getPool(requestId);
@@ -2554,14 +2556,14 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
 
-        const { plans_global_id, plans_hotel_id } = await selectPlanId(roomDetail.PlanGroupCode);
+        const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
         query = `
           INSERT INTO reservation_details (
               hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9 TRUE, 1, 1)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, 1, 1)
             RETURNING *;
         `;
         values = [
@@ -3033,14 +3035,14 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
 
-        const { plans_global_id, plans_hotel_id } = await selectPlanId(roomDetail.PlanGroupCode);
+        const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
         query = `
           INSERT INTO reservation_details (
               hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, number_of_people, price, billable, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9 TRUE, 1, 1)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, 1, 1)
             RETURNING *;
         `;
         values = [
