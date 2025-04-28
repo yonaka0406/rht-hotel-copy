@@ -713,7 +713,6 @@ const addReservationHold = async (requestId, reservation) => {
     throw new Error('Database error');
   }
 };
-
 const addReservationDetail = async (requestId, reservationDetail) => {
   const pool = getPool(requestId);
   const query = `
@@ -746,7 +745,6 @@ const addReservationDetail = async (requestId, reservationDetail) => {
     throw new Error('Database error');
   }
 };
-
 const addReservationAddon = async (requestId, reservationAddon) => {
   // console.log('addReservationAddon:',reservationAddon)
   const pool = getPool(requestId);  
@@ -779,7 +777,6 @@ const addReservationAddon = async (requestId, reservationAddon) => {
     throw new Error('Database error');
   }
 };
-
 const addReservationClient = async (requestId, reservationClient) => {
   const pool = getPool(requestId);
   const query = `
@@ -805,7 +802,6 @@ const addReservationClient = async (requestId, reservationClient) => {
     throw new Error('Database error');
   }
 };
-
 const addRoomToReservation = async (requestId, reservationId, numberOfPeople, roomId, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -848,7 +844,6 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-
 const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
   const pool = getPool(requestId);
   const query = `
@@ -911,7 +906,6 @@ const updateReservationDetail = async (requestId, reservationData) => {
       throw new Error('Database error');
   }
 };
-
 const updateReservationStatus = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotel_id, status, updated_by } = reservationData;
@@ -1063,7 +1057,6 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       throw new Error('Database error');
   }
 };
-
 const updateReservationComment = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotelId, comment, updated_by } = reservationData;
@@ -1133,7 +1126,6 @@ const updateReservationTime = async (requestId, reservationData) => {
     throw new Error('Database error');
   }
 };
-
 const updateReservationType = async (requestId, reservationData) => {
   const pool = getPool(requestId);
   const { id, hotel_id, type, updated_by } = reservationData;
@@ -1162,8 +1154,7 @@ const updateReservationType = async (requestId, reservationData) => {
       console.error('Error updating reservation detail:', err);
       throw new Error('Database error');
   }
-}
-
+};
 const updateReservationResponsible = async (requestId, id, updatedFields, user_id) => {  
   const pool = getPool(requestId);
   const query = `
@@ -1189,7 +1180,6 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
       throw new Error('Database error');
   }
 };
-
 const updateRoomByCalendar = async (requestId, roomData) => {
   const pool = getPool(requestId);
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
@@ -1429,7 +1419,6 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }  
 };
-
 const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1469,7 +1458,6 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
   
   
 };
-
 const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated_by) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1565,7 +1553,6 @@ const updateReservationRoomGuestNumber = async (requestId, detailsArray, updated
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-
 const updateReservationGuest = async (requestId, oldValue, newValue) => {  
   const pool = getPool(requestId);
   const query = `
@@ -1587,7 +1574,6 @@ const updateReservationGuest = async (requestId, oldValue, newValue) => {
     console.error('Error updating reservation guest:', err);
   } 
 };
-
 const updateClientInReservation = async (requestId, oldValue, newValue) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1625,7 +1611,6 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   }
   
 };
-
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1731,7 +1716,6 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     client.release();
   }
 };
-
 const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
   
   await deleteReservationAddonsByDetailId(requestId, id, user_id);
@@ -1755,7 +1739,6 @@ const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
   await Promise.all(addOnPromises);
   
 };
-
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {  
   const pool = getPool(requestId);
   const query = `
@@ -1772,7 +1755,6 @@ const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {
     console.error('Error updating reservation guest:', err);
   } 
 };
-
 const updateReservationRoom = async (requestId, reservation_id, room_id_old, room_id_new, user_id) => {  
   const pool = getPool(requestId);
   const query = `
@@ -1791,7 +1773,6 @@ const updateReservationRoom = async (requestId, reservation_id, room_id_old, roo
     console.error('Error updating reservation guest:', err);
   } 
 };
-
 const updateReservationRoomWithCreate = async (requestId, reservation_id, room_id_old, room_id_new, numberOfPeople, user_id) => {  
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1845,7 +1826,6 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
     client.release();
   } 
 };
-
 const updateReservationRoomPlan = async (requestId, reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -1946,7 +1926,6 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-
 const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2054,7 +2033,6 @@ const deleteHoldReservationById = async (requestId, reservation_id, updated_by) 
     throw new Error('Database error');
   }
 };
-
 const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
   const pool = getPool(requestId);
   const query = format(`
@@ -2074,7 +2052,6 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
     throw new Error('Database error');
   }   
 };
-
 const deleteReservationClientsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
   const pool = getPool(requestId);
   const query = format(`
@@ -2094,7 +2071,6 @@ const deleteReservationClientsByDetailId = async (requestId, reservation_detail_
     throw new Error('Database error');
   }   
 };
-
 const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, numberOfPeople, updated_by) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2146,7 +2122,6 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
     console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
-
 const deleteReservationPayment = async (requestId, id, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -2232,6 +2207,18 @@ async function transformRoomData(roomAndGuestList) {
 
   return output;
 };
+async function translateSettlementDiv(SettlementDiv) {
+  const settlementDivMap = {
+    '0': '指定なし',
+    '1': '法人利用',
+    '2': 'カード決済ズミ',
+    '3': '現地払い',
+    '4': 'ツアー会社',
+    '5': '一部清算',
+    '6': 'エージェント清算',
+  }
+  return settlementDivMap[SettlementDiv] || '未設定';
+}
 const addOTAReservation = async (requestId, hotel_id, data) => {
   // XML
   // console.log('addOTAReservation data:', data);
@@ -2249,6 +2236,10 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   // console.log('addOTAReservation Member:', Member);
   const BasicRate = data?.RisaplsInformation?.RisaplsCommonInformation?.BasicRate || {};
   // console.log('addOTAReservation BasicRate:', BasicRate);
+  const Extend = data?.RisaplsInformation?.AgentNativeInformation?.Extend || {};  
+  // console.log('addOTAReservation Extend:', Extend);
+  const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};  
+  // console.log('addOTAReservation Extendmytrip:', Extendmytrip);
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
   // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
@@ -2490,28 +2481,122 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     
-    // Payment
-    if(BasicRate.PointsDiscountList){      
-      query = `
-        INSERT INTO reservation_payments (
-          hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
-        RETURNING *;
-      `;
+    // Payment    
+    query = `
+      INSERT INTO reservation_payments (
+        hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+      RETURNING *;
+    `;
 
-      values = [
-        hotel_id, 
-        reservation.rows[0].id, 
-        BasicInformation.TravelAgencyBookingDate, 
-        roomsArrayWithID['room0'][0].room_id,
-        reservationClientId, 
-        2, 
-        BasicRate?.PointsDiscountList?.PointsDiscount, 
-        BasicRate?.PointsDiscountList?.PointsDiscountName, 
-        1
-      ];
-      const reservationPayments = await client.query(query, values);
-      console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+    // Helper function to calculate total rate for each room
+    const calculateRoomRates = () => {
+      const roomRates = {};
+      for (const roomKey in roomsArrayWithID) {
+        let totalForRoom = 0;
+        roomsArrayWithID[roomKey].forEach(dayItem => {
+          totalForRoom += parseFloat(dayItem.TotalPerRoomRate || 0);
+        });
+        roomRates[roomKey] = {
+          total: totalForRoom,
+          roomId: roomsArrayWithID[roomKey][0].room_id
+        };
+      }
+      return roomRates;
+    };
+    const roomRates = calculateRoomRates();
+    const totalRoomRates = Object.values(roomRates).reduce((sum, room) => sum + room.total, 0);
+    const sortedRoomKeys = Object.keys(roomRates).sort((a, b) => {
+      return parseInt(a.replace('room', '')) - parseInt(b.replace('room', ''));
+    });
+    
+    // Point discount
+    if(BasicRate.PointsDiscountList){
+      let remainingDiscount = parseFloat(BasicRate?.PointsDiscountList?.PointsDiscount);
+      const discountName = BasicRate?.PointsDiscountList?.PointsDiscountName || 'ポイント割引';
+
+      // Apply discount to each room until fully distributed
+      for (const roomKey of sortedRoomKeys) {
+        if (remainingDiscount <= 0) break;
+        
+        const roomRate = roomRates[roomKey].total;
+        const roomId = roomRates[roomKey].roomId;        
+        
+        // Calculate how much discount to apply to this room
+        const discountForThisRoom = Math.min(roomRate, remainingDiscount);
+        
+        if (discountForThisRoom > 0) {
+          const values = [
+            hotel_id, 
+            reservation.rows[0].id, 
+            BasicInformation.TravelAgencyBookingDate, 
+            roomId,
+            reservationClientId, 
+            2, // Payment type for discount
+            discountForThisRoom, 
+            discountName, 
+            1
+          ];
+          
+          const reservationPayments = await client.query(query, values);
+          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+          console.log(`Applied discount of ${discountForThisRoom} to ${roomKey} (room_id: ${roomInfo.room_id})`);
+          
+          // Reduce remaining discount
+          remainingDiscount -= discountForThisRoom;
+        }
+      }
+      
+      // Log if there's any unused discount
+      if (remainingDiscount > 0) {
+        console.warn(`Warning: ${remainingDiscount} discount amount couldn't be applied to any rooms`);
+      }
+    }
+    // Outstanding balance    
+    if (Extend?.AmountClaimed !== undefined) {
+      const amountClaimed = parseFloat(Extend.AmountClaimed);
+      if (amountClaimed === 0 || (amountClaimed > 0 && amountClaimed !== totalRoomRates)) {
+        let paymentAmount;
+        if (amountClaimed === 0) {          
+          paymentAmount = totalRoomRates;
+        } else {          
+          paymentAmount = totalRoomRates - amountClaimed;
+        }
+
+        if (paymentAmount > 0) {
+          let remainingPayment = paymentAmount;
+          for (const roomKey of sortedRoomKeys) {
+            if (remainingPayment <= 0) break;
+            
+            const roomRate = roomRates[roomKey].total;
+            const roomId = roomRates[roomKey].roomId;        
+            
+            // Calculate how much payment to apply to this room
+            const paymentForThisRoom = Math.min(roomRate, remainingPayment);
+            
+            if (paymentForThisRoom > 0) {
+              const values = [
+                hotel_id, 
+                reservation.rows[0].id, 
+                BasicInformation.TravelAgencyBookingDate, 
+                roomId,
+                reservationClientId, 
+                4, // Credit card
+                paymentForThisRoom, 
+                translateSettlementDiv(Extendmytrip?.SettlementDiv), 
+                1
+              ];
+              
+              const reservationPayments = await client.query(query, values);
+              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+              console.log(`Applied payment of ${paymentForThisRoom} to ${roomKey} (room_id: ${roomInfo.room_id})`);
+              
+              // Reduce remaining payment
+              remainingPayment -= paymentForThisRoom;
+            }
+          }
+        }
+      }
     }
 
     await client.query('COMMIT');
