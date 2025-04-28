@@ -297,12 +297,13 @@ const insertTLPlanMaster = async (requestId, data) => {
         const results = [];
         for (const item of data) {
             const result = await client.query(
-                `INSERT INTO sc_tl_plans(hotel_id, plans_global_id, plans_hotel_id, planGroupCode, planGroupName) 
-                VALUES($1, $2, $3, $4, $5) RETURNING *`,
+                `INSERT INTO sc_tl_plans(hotel_id, plans_global_id, plans_hotel_id, plan_key, planGroupCode, planGroupName) 
+                VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
                 [
                     item.hotel_id,
                     item.plans_global_id,
                     item.plans_hotel_id,
+                    item.plan_key,
                     item.plangroupcode,
                     item.plangroupname,                    
                 ]
