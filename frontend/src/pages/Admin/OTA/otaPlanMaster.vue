@@ -57,53 +57,11 @@
     const planMaster = ref(null);
     const roomTypes = ref(null);
     const savePlanMaster = async (data) => {
-        // Filter out items with null netRmTypeGroupCode
-        const filteredData = data.filter(item => item.netrmtypegroupcode != null);
+        // Filter out items with not int planGroupCode        
+        const filteredData = data.filter(item => Number.isInteger(item.plangroupcode));
 
         console.log('savePlanMaster', filteredData);
-
-        return;
-
-        const groupToRoomMap = new Map();
-        const roomToGroupMap = new Map();
-
-        for (const item of filteredData) {
-            const groupCode = item.netrmtypegroupcode;
-            const roomTypeId = item.room_type_id;
-
-            // Check: netrmtypegroupcode must only map to ONE room_type_id
-            if (groupToRoomMap.has(groupCode)) {
-                const existingRoomType = groupToRoomMap.get(groupCode);
-                if (existingRoomType !== roomTypeId) {
-                    toast.add({
-                        severity: 'error',
-                        summary: 'エラー',
-                        detail: `ネット室タイプグループに複数のPMS部屋タイプが割り当てられています。`,
-                        life: 5000,
-                    });
-                    return;
-                }
-            } else {
-                groupToRoomMap.set(groupCode, roomTypeId);
-            }
-
-            // Check: room_type_id must only map to ONE netrmtypegroupcode
-            if (roomToGroupMap.has(roomTypeId)) {
-                const existingGroupCode = roomToGroupMap.get(roomTypeId);
-                if (existingGroupCode !== groupCode) {
-                    toast.add({
-                        severity: 'error',
-                        summary: 'エラー',
-                        detail: `PMS部屋タイプが複数のネット室タイプグループに割り当てられています。`,
-                        life: 5000,
-                    });
-                    return;
-                }
-            } else {
-                roomToGroupMap.set(roomTypeId, groupCode);
-            }
-        }
-       
+        return;       
         try {
             await insertTLPlanMaster(filteredData);
             toast.add({severity: 'success', summary: '成功', detail: 'ネット室マスター保存されました。', life: 3000});
@@ -116,7 +74,6 @@
                 life: 3000,
             });
         }
-
     };
 
     // Template    
