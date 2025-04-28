@@ -177,7 +177,7 @@ export function useXMLStore() {
         }
     };
     const insertXMLResponse = async(hotel_id, name, xml) => {
-        console.log('insertXMLResponse', name, xml);
+        // console.log('insertXMLResponse', name, xml);
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/xml/response/${hotel_id}/${name}`;
