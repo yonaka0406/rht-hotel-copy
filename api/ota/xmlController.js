@@ -232,21 +232,21 @@ const getOTAReservations = async (req, res) => {
 
                     if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         const addResult = await addOTAReservation(req.requestId, hotel_id, reservation);
-                        if (addResult.success) {
-                            reservationWritten = true;
-                        }
+                        console.log(addResult)                        
+                        reservationWritten = true;
+                        
                     }
                     if (reservation.TransactionType.DataClassification === 'ModificationReport'){
                         const editResult = await editOTAReservation(req.requestId, hotel_id, reservation);
-                        console.log(editResult.success)
+                        console.log(editResult)
                         reservationWritten = true;
                         
                     }
                     if (reservation.TransactionType.DataClassification === 'CancellationReport'){
                         const cancelResult = await cancelOTAReservation(req.requestId, hotel_id, reservation);
-                        if (cancelResult.success) {
-                            reservationWritten = true;
-                        }
+                        console.log(cancelResult);                        
+                        reservationWritten = true;
+                        
                     }                      
                 } catch (dbError) {
                     console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);                    
