@@ -2553,18 +2553,34 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
 
-    const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
-    const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
-    if (addons && Array.isArray(addons)) {
-      addons.forEach(addon => {
-          // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
-          addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
-      });
-    }
-
+    const roomRateArray = Array.isArray(RoomAndRoomRateInformation) ? RoomAndRoomRateInformation : [RoomAndRoomRateInformation];
+    console.log('roomRateArray:', roomRateArray);
+        
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
-      for (const roomDetail of roomDetailsArray) {        
+      for (const roomDetail of roomDetailsArray) {
+
+        let plans_global_id = null;
+        let plans_hotel_id = null;
+
+        for (const info of roomRateArray) {
+          const planGroupCode = info?.RoomInformation?.PlanGroupCode;
+          const roomDate = info?.RoomRateInformation?.RoomDate;
+                  
+          if(roomDate === roomDetail.RoomDate){
+            const { plan_gid, plan_hid } = await selectPlanId(planGroupCode);
+            plans_global_id = plan_gid;
+            plans_hotel_id = plan_hid;
+          }
+        }
+
+        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+        if (addons && Array.isArray(addons)) {
+          addons.forEach(addon => {
+              // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
+              addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
+          });
+        }
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
@@ -3067,18 +3083,34 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
-    const { plans_global_id, plans_hotel_id } = await selectPlanId(RoomAndRoomRateInformation?.RoomInformation?.PlanGroupCode);
-    const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
-    if (addons && Array.isArray(addons)) {
-      addons.forEach(addon => {
-          // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
-          addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
-      });
-    }
+    const roomRateArray = Array.isArray(RoomAndRoomRateInformation) ? RoomAndRoomRateInformation : [RoomAndRoomRateInformation];
+    console.log('roomRateArray:', roomRateArray);    
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
       for (const roomDetail of roomDetailsArray) {
+
+        let plans_global_id = null;
+        let plans_hotel_id = null;
+
+        for (const info of roomRateArray) {
+          const planGroupCode = info?.RoomInformation?.PlanGroupCode;
+          const roomDate = info?.RoomRateInformation?.RoomDate;
+                  
+          if(roomDate === roomDetail.RoomDate){
+            const { plan_gid, plan_hid } = await selectPlanId(planGroupCode);
+            plans_global_id = plan_gid;
+            plans_hotel_id = plan_hid;
+          }
+        }
+
+        const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
+        if (addons && Array.isArray(addons)) {
+          addons.forEach(addon => {
+              // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
+              addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
+          });
+        }
         
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
     
