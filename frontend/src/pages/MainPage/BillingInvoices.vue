@@ -1,167 +1,175 @@
 <template>
     <Panel class="m-2">
-        <div>
-            <DataTable
-                v-model:filters="filters"
-                v-model:selection="selectedReservations"
-                filterDisplay="row"
-                :value="filteredReservations"
-                :loading="tableLoading"
-                size="small"
-                :paginator="true"
-                :rows="25"
-                :rowsPerPageOptions="[5, 10, 25, 50, 100]"
-                dataKey="id"                
-                stripedRows
-                @row-dblclick="openDrawer"
-                removableSort
-                v-model:expandedRows="expandedRows"
-                :rowExpansion="true"
-            >
-                <template #header>
-                    <div class="flex justify-between">
-                        <span class="font-bold text-lg mb-4">{{ tableHeader }}</span>
-                    </div>
-                    <div class="mb-4 flex justify-end items-center">                        
-                        <span class="font-bold mr-4">滞在期間選択：</span>
-                        <label class="mr-2">開始日:</label>
-                        <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
-                        <label class="ml-4 mr-2">終了日:</label>
-                        <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
-                        <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
-                    </div>
-                </template>
-                <template #empty> 指定されている期間中では予約ありません。 </template>                
-                <Column expander header="詳細" style="width: 1%;"/>                
-                <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
-                
-                <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel, filterCallback }">                        
-                        <Select 
-                            v-model="filterModel.value" 
-                            :options="statusOptions" 
-                            optionLabel="label"
-                            optionValue="value" 
-                            @change="filterCallback" 
-                            placeholder="選択"
-                            showClear 
-                            fluid
-                        />                        
-                    </template>                    
-                    <template #body="slotProps">
-                        <div class="flex justify-center items-center">
-                            <span v-if="slotProps.data.status === 'hold'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause" v-tooltip="'保留中'"></i></span>
-                            <span v-if="slotProps.data.status === 'provisory'" class="px-2 py-1 rounded-md bg-cyan-200 text-cyan-700"><i class="pi pi-clock" v-tooltip="'仮予約'"></i></span>
-                            <span v-if="slotProps.data.status === 'confirmed'" class="px-2 py-1 rounded-md bg-sky-200 text-sky-700"><i class="pi pi-check-circle" v-tooltip="'確定'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_in'" class="px-2 py-1 rounded-md bg-green-200 text-green-700"><i class="pi pi-user" v-tooltip="'滞在中'"></i></span>
-                            <span v-if="slotProps.data.status === 'checked_out'" class="px-2 py-1 rounded-md bg-purple-200 text-purple-700"><i class="pi pi-sign-out" v-tooltip="'アウト'"></i></span>
-                            <span v-if="slotProps.data.status === 'cancelled'" class="px-2 py-1 rounded-md bg-gray-200 text-gray-700"><i class="pi pi-times" v-tooltip="'キャンセル'"></i></span>
-                        </div>                        
-                    </template>                    
-                </Column>
-                <Column field="booker_name" filterField="booker_name" header="予約者" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
-                        <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
-                    </template>
-                </Column>                
-                <Column field="period_price" header="期間請求額" sortable style="width:1%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-2">
-                            <span class="items-end">{{ formatCurrency(slotProps.data.period_price) }}</span>
-                        </div>                        
-                    </template>                    
-                </Column>
-                <Column header="予約残高" sortable style="width:1%">
-                    <template #body="slotProps">
-                        <div class="grid gap-2">
-                            <div class=" text-right">
-                                {{ formatCurrency(slotProps.data.price - slotProps.data.payment) }}
-                            </div>
-                            <div class="text-xs text-right text-blue-500 flex items-center justify-end" title='予約合計'>
-                                <i class="pi pi-receipt mr-1"></i>
-                                {{ formatCurrency(slotProps.data.price) }}
-                            </div>
-                            <div class="text-xs text-right text-green-500 flex items-center justify-end" title='入金額'>
-                                <i class="pi pi-money-bill mr-1"></i>
-                                {{ formatCurrency(slotProps.data.payment) }}
-                            </div>                            
-                        </div>                        
-                    </template>
-                </Column>                
-                <Column field="check_in" header="チェックイン" sortable style="width:1%">
-                    <template #body="slotProps">                        
-                        <span>{{ formatDateWithDay(slotProps.data.check_in) }}</span>
-                    </template>                    
-                </Column>
-                <Column field="number_of_people" header="宿泊者数" sortable style="width:1%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-4">
-                            <span>{{ slotProps.data.number_of_people }}</span>
+        <div v-if="!isBillingPage">
+            <div>
+                <div class="flex justify-end mr-4"><Button severity="help" @click="setIsBillingPage(true)">請求書作成画面へ</Button></div>
+                <DataTable
+                    v-model:filters="filters"
+                    v-model:selection="selectedReservations"
+                    filterDisplay="row"
+                    :value="filteredReservations"
+                    :loading="tableLoading"
+                    size="small"
+                    :paginator="true"
+                    :rows="25"
+                    :rowsPerPageOptions="[5, 10, 25, 50, 100]"
+                    dataKey="id"                
+                    stripedRows
+                    @row-dblclick="openDrawer"
+                    removableSort
+                    v-model:expandedRows="expandedRows"
+                    :rowExpansion="true"
+                >
+                    <template #header>
+                        <div class="flex justify-between">
+                            <span class="font-bold text-lg mb-4">{{ tableHeader }}</span>
                         </div>
-                    </template> 
-                </Column>
-                <Column field="number_of_nights" header="宿泊日数" sortable style="width:1%">
-                    <template #body="slotProps">
-                        <div class="flex justify-end mr-4">
-                            <span>{{ slotProps.data.number_of_nights }}</span>
+                        <div class="mb-4 flex justify-end items-center">                        
+                            <span class="font-bold mr-4">滞在期間選択：</span>
+                            <label class="mr-2">開始日:</label>
+                            <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
+                            <label class="ml-4 mr-2">終了日:</label>
+                            <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
+                            <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
                         </div>
-                    </template> 
-                </Column>
+                    </template>
+                    <template #empty> 指定されている期間中では予約ありません。 </template>                
+                    <Column expander header="詳細" style="width: 1%;"/>                
+                    <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
+                    
+                    <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
+                        <template #filter="{ filterModel, filterCallback }">                        
+                            <Select 
+                                v-model="filterModel.value" 
+                                :options="statusOptions" 
+                                optionLabel="label"
+                                optionValue="value" 
+                                @change="filterCallback" 
+                                placeholder="選択"
+                                showClear 
+                                fluid
+                            />                        
+                        </template>                    
+                        <template #body="slotProps">
+                            <div class="flex justify-center items-center">
+                                <span v-if="slotProps.data.status === 'hold'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause" v-tooltip="'保留中'"></i></span>
+                                <span v-if="slotProps.data.status === 'provisory'" class="px-2 py-1 rounded-md bg-cyan-200 text-cyan-700"><i class="pi pi-clock" v-tooltip="'仮予約'"></i></span>
+                                <span v-if="slotProps.data.status === 'confirmed'" class="px-2 py-1 rounded-md bg-sky-200 text-sky-700"><i class="pi pi-check-circle" v-tooltip="'確定'"></i></span>
+                                <span v-if="slotProps.data.status === 'checked_in'" class="px-2 py-1 rounded-md bg-green-200 text-green-700"><i class="pi pi-user" v-tooltip="'滞在中'"></i></span>
+                                <span v-if="slotProps.data.status === 'checked_out'" class="px-2 py-1 rounded-md bg-purple-200 text-purple-700"><i class="pi pi-sign-out" v-tooltip="'アウト'"></i></span>
+                                <span v-if="slotProps.data.status === 'cancelled'" class="px-2 py-1 rounded-md bg-gray-200 text-gray-700"><i class="pi pi-times" v-tooltip="'キャンセル'"></i></span>
+                            </div>                        
+                        </template>                    
+                    </Column>
+                    <Column field="booker_name" filterField="booker_name" header="予約者" style="width:1%" :showFilterMenu="false">
+                        <template #filter="{ filterModel }">
+                            <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
+                        </template>
+                    </Column>                
+                    <Column field="period_price" header="期間請求額" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <div class="flex justify-end mr-2">
+                                <span class="items-end">{{ formatCurrency(slotProps.data.period_price) }}</span>
+                            </div>                        
+                        </template>                    
+                    </Column>
+                    <Column header="予約残高" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <div class="grid gap-2">
+                                <div class=" text-right">
+                                    {{ formatCurrency(slotProps.data.price - slotProps.data.payment) }}
+                                </div>
+                                <div class="text-xs text-right text-blue-500 flex items-center justify-end" title='予約合計'>
+                                    <i class="pi pi-receipt mr-1"></i>
+                                    {{ formatCurrency(slotProps.data.price) }}
+                                </div>
+                                <div class="text-xs text-right text-green-500 flex items-center justify-end" title='入金額'>
+                                    <i class="pi pi-money-bill mr-1"></i>
+                                    {{ formatCurrency(slotProps.data.payment) }}
+                                </div>                            
+                            </div>                        
+                        </template>
+                    </Column>                
+                    <Column field="check_in" header="チェックイン" sortable style="width:1%">
+                        <template #body="slotProps">                        
+                            <span>{{ formatDateWithDay(slotProps.data.check_in) }}</span>
+                        </template>                    
+                    </Column>
+                    <Column field="number_of_people" header="宿泊者数" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <div class="flex justify-end mr-4">
+                                <span>{{ slotProps.data.number_of_people }}</span>
+                            </div>
+                        </template> 
+                    </Column>
+                    <Column field="number_of_nights" header="宿泊日数" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <div class="flex justify-end mr-4">
+                                <span>{{ slotProps.data.number_of_nights }}</span>
+                            </div>
+                        </template> 
+                    </Column>
 
-                <template #expansion="slotProps">
-                    <div class="mx-20">
-                        <div v-if="Array.isArray(slotProps.data.merged_clients)">
-                            <DataTable :value="slotProps.data.merged_clients" size="small">
-                                <Column header="氏名・名称" sortable>
-                                    <template #body="clientSlotProps">
-                                        {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name || '' }}
-                                    </template>
-                                </Column>
-                                <Column header="カナ" sortable>
-                                    <template #body="clientSlotProps">
-                                        {{ clientSlotProps.data.name_kana || '' }}
-                                    </template>
-                                </Column>
-                                <Column header="漢字" sortable>
-                                    <template #body="clientSlotProps">
-                                        {{ clientSlotProps.data.name_kanji || '' }}
-                                    </template>
-                                </Column>
-                                <Column header="タグ" sortable>
-                                    <template #body="clientSlotProps">
-                                        <div v-if="clientSlotProps.data.role === 'guest'">
-                                            <Badge value="宿泊者" severity="contrast"/>
-                                        </div>
-                                        <div v-else>
-                                            <Badge value="支払者" severity="info"/>
-                                        </div>
-                                        
-                                    </template>
-                                </Column>
-                            </DataTable>
+                    <template #expansion="slotProps">
+                        <div class="mx-20">
+                            <div v-if="Array.isArray(slotProps.data.merged_clients)">
+                                <DataTable :value="slotProps.data.merged_clients" size="small">
+                                    <Column header="氏名・名称" sortable>
+                                        <template #body="clientSlotProps">
+                                            {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name || '' }}
+                                        </template>
+                                    </Column>
+                                    <Column header="カナ" sortable>
+                                        <template #body="clientSlotProps">
+                                            {{ clientSlotProps.data.name_kana || '' }}
+                                        </template>
+                                    </Column>
+                                    <Column header="漢字" sortable>
+                                        <template #body="clientSlotProps">
+                                            {{ clientSlotProps.data.name_kanji || '' }}
+                                        </template>
+                                    </Column>
+                                    <Column header="タグ" sortable>
+                                        <template #body="clientSlotProps">
+                                            <div v-if="clientSlotProps.data.role === 'guest'">
+                                                <Badge value="宿泊者" severity="contrast"/>
+                                            </div>
+                                            <div v-else>
+                                                <Badge value="支払者" severity="info"/>
+                                            </div>
+                                            
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </div>
+                            <div v-else>
+                                <p>宿泊者データがありません。</p>
+                            </div>
                         </div>
-                        <div v-else>
-                            <p>宿泊者データがありません。</p>
-                        </div>
-                    </div>
-                </template>
-            </DataTable>            
+                    </template>
+                </DataTable>            
+            </div>
+            <div class="flex justify-end mt-4">
+                <Button
+                    severity="info"                
+                    @click="drawerSelectVisible = true"
+                >
+                <OverlayBadge 
+                    :value="selectedReservations.length" 
+                    size="large" 
+                    :position="'top-right'" 
+                    severity="danger"
+                    class="mt-1"
+                >
+                    <i class="pi pi-shopping-cart" style="font-size: 2rem" />
+                </OverlayBadge>
+                </Button>
+            </div>
         </div>
-        <div class="flex justify-end mt-4">
-            <Button
-                severity="info"                
-                @click="drawerSelectVisible = true"
-            >
-            <OverlayBadge 
-                :value="selectedReservations.length" 
-                size="large" 
-                :position="'top-right'" 
-                severity="danger"
-                class="mt-1"
-            >
-                <i class="pi pi-shopping-cart" style="font-size: 2rem" />
-            </OverlayBadge>
-            </Button>
+        <div v-else>            
+            <div class="flex justify-end mr-4"><Button severity="secondary" @click="setIsBillingPage(false)">戻る</Button></div>            
+
+            <component :is="activeComponent" />
         </div>
 
         <Drawer v-model:visible="drawerVisible":modal="true":position="'bottom'":style="{height: '75vh'}":closable="true">
@@ -292,13 +300,12 @@
                     </template>
                 </Column>
             </DataTable>            
-        </Drawer>
-        
+        </Drawer>        
     </Panel> 
 </template>
 <script setup>
     // Vue
-    import { ref, watch, computed, onMounted } from 'vue';
+    import { ref, shallowRef, watch, computed, onMounted } from 'vue';
 
     import ReservationEdit from './ReservationEdit.vue';
 
@@ -338,6 +345,17 @@
         if (value == null) return '';
         return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
     };
+
+    const isBillingPage = ref(false);
+    const setIsBillingPage = async(value) => {
+        if(!value){
+            activeComponent.value = null;
+        }
+        
+        activeComponent.value = (await import(`@/pages/MainPage/components/BillingPage.vue`)).default;
+        isBillingPage.value = value;
+    };
+    const activeComponent = shallowRef(null);
 
     // Load
     const loadTableData = async () => {
@@ -478,6 +496,7 @@
             await addBulkReservationPayment(data);
             
             toast.add({ severity: 'success', summary: '請求書作成', detail: '請求書が各予約に追加されました。', life: 3000 });
+            await applyDateFilters()
             drawerSelectVisible.value = false;
         } else {
             toast.add({ severity: 'warn', summary: '請求先未選択', detail: '請求先を選択してください。', life: 3000 });
