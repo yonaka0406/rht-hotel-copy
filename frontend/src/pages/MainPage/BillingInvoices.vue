@@ -170,7 +170,7 @@
                 :reservation_id="selectedReservation.id"                       
             />
         </Drawer>
-        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '37vh'}">
+        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '37vh'}" :dismissable="false">
             <template #header><span class="text-lg font-bold">選択された予約の詳細</span></template>            
             <div class="grid grid-cols-3 gap-4">
                 <Card>
@@ -202,23 +202,58 @@
                 <template #content>
                     <form @submit.prevent="submitBilling">
                         <div class="grid grid-cols-1">
-                            <p class="mb-1">選択中予約をまとめて請求書作成画面へ移動</p>
-                            <div class="grid grid-cols-2 flex justify-between items-center mb-2">
-                                <span class="font-bold">請求日</span>
-                                <DatePicker 
-                                    v-model="billingForm.date"
-                                    dateFormat="yy-mm-dd"
-                                    placeholder="請求日を選択"
-                                    :selectOtherMonths="true" 
-                                />
+                            <p class="mb-1">選択中予約をまとめて請求書作成</p>
+                            <div class="grid grid-cols-2 flex justify-between items-center mb-2 mt-5">
+                                <FloatLabel>
+                                    <AutoComplete
+                                        v-model="client"
+                                        :suggestions="filteredClients"
+                                        optionLabel="display_name"
+                                        @complete="filterClients"
+                                        field="id"
+                                        @option-select="onClientSelect"                                        
+                                        fluid
+                                        required
+                                    >
+                                        <template #option="slotProps">                                            
+                                            <div>
+                                                <p>
+                                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
+                                                    <i v-else class="pi pi-user"></i>
+                                                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                                                </p>
+                                                <div class="flex items-center gap-2">
+                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+                                                </div>
+                                            </div>                                            
+                                        </template>
+                                    </AutoComplete>
+                                    <label>請求先</label>
+                                </FloatLabel>                                
+                                <FloatLabel>
+                                    <DatePicker 
+                                        v-model="billingForm.date"
+                                        dateFormat="yy-mm-dd"                                        
+                                        :selectOtherMonths="true"   
+                                        class="ml-2"
+                                    />
+                                    <label for="billingForm.date">請求日</label>
+                                </FloatLabel>
                             </div>
-                            <InputText 
-                                v-model="billingForm.details" 
-                                type="text"
-                                placeholder="備考"
-                                class="mb-2"
-                                fluid
-                            />
+                            <div class="mt-4">
+                                <FloatLabel>
+                                    <InputText 
+                                        v-model="billingForm.details" 
+                                        type="text"                                    
+                                        class="mb-2"
+                                        fluid
+                                    />
+                                    <label for="billingForm.details">備考</label>
+                                </FloatLabel>
+                            </div>
                             <Button 
                                 label="まとめ請求"
                                 icon="pi pi-paperclip"
@@ -270,7 +305,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, AutoComplete, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge, FloatLabel } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -278,6 +313,10 @@
     const { billableList, fetchBillableListView } = useBillingStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+    import { useClientStore } from '@/composables/useClientStore';
+    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+    import { useReservationStore } from '@/composables/useReservationStore';
+    const { addBulkReservationPayment } = useReservationStore();
 
     // Helper function
     const formatDate = (date) => {
@@ -331,12 +370,119 @@
         date: null,
         details: null,
         reservations: [],
-    });
+        client: [],
+    });    
+    const selectedClient = ref(null);
+    const client = ref({});
+    const filteredClients = ref([]);
+    const filterClients = (event) => {
+        const query = event.query.toLowerCase();
+        const normalizedQuery = normalizePhone(query);
+        const isNumericQuery = /^\d+$/.test(normalizedQuery);
+
+        if (!query || !clients.value || !Array.isArray(clients.value)) {
+            filteredClients.value = [];
+            return;
+        }
+
+        filteredClients.value = clients.value.filter((client) => {
+            // Name filtering (case-insensitive)
+            const matchesName = 
+                (client.name && client.name.toLowerCase().includes(query)) || 
+                (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) || 
+                (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
+            // Phone/Fax filtering (only for numeric queries)
+            const matchesPhoneFax = isNumericQuery &&
+                ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) || 
+                (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
+            // Email filtering (case-insensitive)
+            const matchesEmail = client.email && client.email.toLowerCase().includes(query);
+
+            // console.log('Client:', client, 'Query:', query, 'matchesName:', matchesName, 'matchesPhoneFax:', matchesPhoneFax, 'isNumericQuery', isNumericQuery, 'matchesEmail:', matchesEmail);
+
+            return matchesName || matchesPhoneFax || matchesEmail;
+        });
+    };
+    const onClientSelect = (event) => {
+        selectedClient.value = event.value;
+        
+        billingForm.value.client = selectedClient.value;        
+
+        client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name };
+        
+    };
+    const normalizeKana = (str) => {
+        if (!str) return '';
+        let normalizedStr = str.normalize('NFKC');
+        
+        // Convert Hiragana to Katakana
+        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
+        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        );
+        // Convert half-width Katakana to full-width Katakana
+        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
+        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        );
+        
+        return normalizedStr;
+    };
+    const normalizePhone = (phone) => {
+        if (!phone) return '';
+
+        // Remove all non-numeric characters
+        let normalized = phone.replace(/\D/g, '');
+
+        // Remove leading zeros
+        normalized = normalized.replace(/^0+/, '');
+
+        return normalized;
+    };
     const deleteReservationFromDrawer = (reservationToDelete) => {
         selectedReservations.value = selectedReservations.value.filter(
             (reservation) => reservation.id !== reservationToDelete.id
         );
     };
+    const submitBilling = async () => {
+        console.log('submitBilling:', billingForm.value.client.id);
+        if (billingForm.value.client && billingForm.value.client.id) {
+            if (!billingForm.value.reservations || billingForm.value.reservations.length === 0) {
+                toast.add({ severity: 'warn', summary: '予約未選択', detail: '請求対象の予約がありません。', life: 3000 });
+                return; 
+            }
+            const clientId = billingForm.value.client.id;
+            const billingDate = formatDate(new Date(billingForm.value.date));
+            const billingDetails = billingForm.value.details;
+
+            const data = billingForm.value.reservations.map(reservation => {
+                if (!reservation || reservation.period_payable <= 0) {
+                    console.warn("Skipping invalid reservation object:", reservation);                    
+                    return null;
+                }
+
+                return {
+                    hotel_id: reservation.hotel_id,
+                    reservation_id: reservation.id,
+                    period_payable: reservation.period_payable,
+                    client_id: clientId,
+                    date: billingDate,
+                    details: billingDetails
+                };
+            }).filter(payload => payload !== null);
+
+            if (data.length === 0) {
+                toast.add({ severity: 'warn', summary: '請求データなし', detail: '有効な請求対象データが見つかりませんでした。', life: 3000 });
+                return;
+            }
+
+            console.log("Data prepared for API:", data);
+            await addBulkReservationPayment(data);
+            
+            toast.add({ severity: 'success', summary: '請求書作成', detail: '請求書が各予約に追加されました。', life: 3000 });
+            drawerSelectVisible.value = false;
+        } else {
+            toast.add({ severity: 'warn', summary: '請求先未選択', detail: '請求先を選択してください。', life: 3000 });
+        }
+    }
 
     // Filters     
     const startDateFilter = ref(new Date(new Date().setDate(new Date().getDate() - 6)));
@@ -408,21 +554,7 @@
     const expandedRows = ref({});    
     const filters = ref({        
         status: { value: null, matchMode: FilterMatchMode.CONTAINS },        
-    });
-    const getVisibleClientNames = (clients) => {
-        const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-        return parsedClients
-            .slice(0, 1)
-            .map(client => client.name_kanji || client.name)
-            .join("\n")
-    };
-    const formatClientNames = (clients) => {
-        const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
-        if (parsedClients.length <= 2) return "";
-        return parsedClients
-            .map(client => client.name_kanji || client.name)
-            .join("\n")
-    };
+    });    
     const openDrawer = (event) => {    
         selectedReservation.value = event.data;    
         // console.log('selectedReservation:',selectedReservation.value)        ;
@@ -432,6 +564,16 @@
     onMounted(async () => {
         await fetchHotels();
         await fetchHotel();
+
+        if(clients.value.length === 0) {
+            setClientsIsLoading(true);
+            const clientsTotalPages = fetchClients(1);
+            // Fetch clients for all pages
+            for (let page = 2; page <= clientsTotalPages; page++) {
+                fetchClients(page);
+            }
+            setClientsIsLoading(false);            
+        }
     });
 
     watch(() => [selectedHotelId.value], // Watch multiple values

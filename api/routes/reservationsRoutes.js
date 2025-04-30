@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, 
-    createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment,
+    createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment,
     editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment } = require('../controllers/reservationsController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
@@ -21,6 +21,7 @@ router.post('/reservation/client', authMiddleware, createReservationClient);
 router.post('/reservation/add/room', authMiddleware, addNewRoomToReservation);
 router.post('/reservation/move/room', authMiddleware, alterReservationRoom);
 router.post('/reservation/payment/add', authMiddleware, createReservationPayment);
+router.post('/reservation/payment/bulk-add', authMiddleware, createBulkReservationPayment);
 router.post('/reservation/update/details', authMiddleware, createReservationDetails);
 router.put('/reservation/update/details/:id', authMiddleware, editReservationDetail);
 router.put('/reservation/update/detail/status/:id', authMiddleware, editReservationDetailStatus);

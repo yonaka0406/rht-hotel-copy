@@ -440,6 +440,80 @@ const selectReservationAddons = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
+const selectReservationBalance = async (requestId, hotelId, reservationId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      details.hotel_id
+      ,details.reservation_id
+      ,details.room_id
+      ,details.total_price
+      ,COALESCE(payments.total_payment, 0) AS total_payment
+      ,COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
+    FROM
+      (
+        SELECT
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,reservation_details.room_id
+          ,SUM(COALESCE(rates_price, 0) + COALESCE(addon_sum,0)) as total_price	
+        FROM
+          reservation_details 
+          LEFT JOIN 
+          (
+            SELECT 
+            rr.reservation_details_id
+            ,SUM(rr.price) AS rates_price
+            FROM reservation_rates rr, reservation_details rd
+            WHERE rr.reservation_details_id = rd.id AND rd.billable = TRUE 
+                AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+            GROUP BY rr.reservation_details_id
+          ) rr ON rr.reservation_details_id = reservation_details.id           
+          LEFT JOIN
+          (
+            SELECT 
+            ra.hotel_id
+            ,ra.reservation_detail_id
+            ,SUM(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) as addon_sum
+            FROM reservation_addons ra
+            GROUP BY ra.hotel_id, ra.reservation_detail_id
+          ) ra
+          ON reservation_details.hotel_id = ra.hotel_id AND reservation_details.id = ra.reservation_detail_id
+        GROUP BY
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,reservation_details.room_id
+      ) AS details
+      LEFT JOIN
+      (
+        SELECT
+          hotel_id
+          ,reservation_id
+          ,room_id
+          ,SUM(value) as total_payment
+        FROM 
+          reservation_payments 
+        GROUP BY
+          hotel_id
+          ,reservation_id
+          ,room_id
+      ) AS payments
+      ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
+
+    WHERE details.hotel_id = $1 AND details.reservation_id = $2
+
+    ORDER BY 1, 2, 6 DESC
+  `;
+
+  const values = [hotelId, reservationId];
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching reservation:', err);
+    throw new Error('Database error');
+  }
+}
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -863,6 +937,61 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
     throw new Error('Database error');
   }
 };
+const insertBulkReservationPayment = async (requestId, data, userId) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Process each reservation in the data array
+    for (const reservation of data) {
+
+      const balanceRows = await selectReservationBalance(requestId, reservation.hotel_id, reservation.reservation_id);
+      let remainingPayment = reservation.period_payable;
+      // Insert payment for each room, distributing the period_payable amount
+      for (const balanceRow of balanceRows) {
+        if (remainingPayment <= 0) break;
+
+        // Cap the payment to the room's balance
+        const roomPayment = Math.min(remainingPayment, balanceRow.balance);
+
+        if (roomPayment > 0) {
+          const query = `
+            INSERT INTO reservation_payments (
+              hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+            RETURNING *;
+          `;
+
+          await client.query(query, [
+            reservation.hotel_id,
+            reservation.reservation_id,
+            reservation.date,
+            balanceRow.room_id,
+            reservation.client_id,
+            5,
+            roomPayment,
+            reservation.details || null,
+            userId
+          ]);
+
+          // Reduce the remaining payment amount
+          remainingPayment -= roomPayment;
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding room to reservation:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+}
+
 
 // Update entry
 const updateReservationDetail = async (requestId, reservationData) => {
@@ -3457,6 +3586,7 @@ module.exports = {
     selectReservation,
     selectReservationDetail,
     selectReservationAddons,
+    selectReservationBalance,
     selectMyHoldReservations,
     selectReservationsToday,
     selectAvailableDatesForChange,
@@ -3468,6 +3598,7 @@ module.exports = {
     addReservationClient,
     addRoomToReservation,
     insertReservationPayment,
+    insertBulkReservationPayment,
     updateReservationDetail,
     updateReservationStatus,
     updateReservationDetailStatus,

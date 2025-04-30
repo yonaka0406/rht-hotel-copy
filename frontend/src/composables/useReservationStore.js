@@ -832,7 +832,31 @@ export function useReservationStore() {
             console.error('Error:', error);
             throw error;
         }
-    }
+    };
+    const addBulkReservationPayment = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/payment/bulk-add/`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });                
+    
+            if (!response.ok) {
+                throw new Error('Failed to add room.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();                
+        } catch (error) {
+            console.error('Error:', error);
+            throw error;
+        }
+    };
 
     // Delete
     const deleteHoldReservation = async (id) => {
@@ -991,6 +1015,7 @@ export function useReservationStore() {
         addRoomToReservation,
         moveReservationRoom,
         addReservationPayment,
+        addBulkReservationPayment,
         deleteHoldReservation,
         deleteReservationRoom,
         deleteReservationPayment,     
