@@ -2551,7 +2551,6 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
-
     let roomRateArray = [];
 
     if (Array.isArray(RoomAndRoomRateInformation)) {
