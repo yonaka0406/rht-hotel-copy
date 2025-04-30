@@ -2571,7 +2571,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         let plans_global_id = null;
         let plans_hotel_id = null;
         
-        for (const info of normalizedArray) {
+        for (const info of roomRateArray) {
           const planGroupCode = info?.RoomInformation?.PlanGroupCode;
           const roomDate = info?.RoomRateInformation?.RoomDate;
         
@@ -3110,7 +3110,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         let plans_global_id = null;
         let plans_hotel_id = null;
 
-        for (const info of normalizedArray) {
+        for (const info of roomRateArray) {
           const planGroupCode = info?.RoomInformation?.PlanGroupCode;
           const roomDate = info?.RoomRateInformation?.RoomDate;
         
