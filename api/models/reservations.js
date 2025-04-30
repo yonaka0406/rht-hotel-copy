@@ -2553,16 +2553,38 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     // console.log('roomsArrayWithID', roomsArrayWithID);
 
     let roomRateArray = [];
+
     if (Array.isArray(RoomAndRoomRateInformation)) {
-      if (RoomAndRoomRateInformation.length === 1 && typeof RoomAndRoomRateInformation[0] === 'object' && RoomAndRoomRateInformation[0] !== null && Object.keys(RoomAndRoomRateInformation[0])[0] === '0') {
-        // If it's a single object with numeric keys
+      // Case 1: Proper array of objects or single object with numeric keys
+      if (
+        RoomAndRoomRateInformation.length === 1 &&
+        typeof RoomAndRoomRateInformation[0] === 'object' &&
+        RoomAndRoomRateInformation[0] !== null &&
+        Object.keys(RoomAndRoomRateInformation[0])[0] === '0'
+      ) {
+        // Unwrap object with numeric keys into an array
         roomRateArray = Object.values(RoomAndRoomRateInformation[0]);
       } else {
-        // Regular array of entries
+        // Already a proper array
         roomRateArray = RoomAndRoomRateInformation;
       }
-    }    
+    } else if (
+      typeof RoomAndRoomRateInformation === 'object' &&
+      RoomAndRoomRateInformation !== null
+    ) {
+      // Case 2: Single object or object with numeric keys
+      const keys = Object.keys(RoomAndRoomRateInformation);
+      if (keys.every(key => /^\d+$/.test(key))) {
+        // All keys are numeric -> convert to array
+        roomRateArray = Object.values(RoomAndRoomRateInformation);
+      } else {
+        // Just a single RoomAndRoomRateInformation object
+        roomRateArray = [RoomAndRoomRateInformation];
+      }
+    }
+
     console.log('roomRateArray:', roomRateArray);
+
         
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
@@ -3092,16 +3114,38 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
     let roomRateArray = [];
+
     if (Array.isArray(RoomAndRoomRateInformation)) {
-      if (RoomAndRoomRateInformation.length === 1 && typeof RoomAndRoomRateInformation[0] === 'object' && RoomAndRoomRateInformation[0] !== null && Object.keys(RoomAndRoomRateInformation[0])[0] === '0') {
-        // If it's a single object with numeric keys
+      // Case 1: Proper array of objects or single object with numeric keys
+      if (
+        RoomAndRoomRateInformation.length === 1 &&
+        typeof RoomAndRoomRateInformation[0] === 'object' &&
+        RoomAndRoomRateInformation[0] !== null &&
+        Object.keys(RoomAndRoomRateInformation[0])[0] === '0'
+      ) {
+        // Unwrap object with numeric keys into an array
         roomRateArray = Object.values(RoomAndRoomRateInformation[0]);
       } else {
-        // Regular array of entries
+        // Already a proper array
         roomRateArray = RoomAndRoomRateInformation;
       }
-    }    
-    console.log('roomRateArray:', roomRateArray);   
+    } else if (
+      typeof RoomAndRoomRateInformation === 'object' &&
+      RoomAndRoomRateInformation !== null
+    ) {
+      // Case 2: Single object or object with numeric keys
+      const keys = Object.keys(RoomAndRoomRateInformation);
+      if (keys.every(key => /^\d+$/.test(key))) {
+        // All keys are numeric -> convert to array
+        roomRateArray = Object.values(RoomAndRoomRateInformation);
+      } else {
+        // Just a single RoomAndRoomRateInformation object
+        roomRateArray = [RoomAndRoomRateInformation];
+      }
+    }
+
+    console.log('roomRateArray:', roomRateArray);
+ 
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
