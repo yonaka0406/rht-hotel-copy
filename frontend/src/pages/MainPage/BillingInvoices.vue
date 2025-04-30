@@ -63,17 +63,7 @@
                     <template #filter="{ filterModel }">
                         <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                     </template>
-                </Column>
-                <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
-                        <InputText v-model="clientsJsonFilter" type="text" placeholder="氏名・名称検索" />
-                    </template>
-                    <template #body="{ data }">
-                        <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
-                            {{ getVisibleClientNames(data.clients_json) }}
-                        </span>
-                    </template>
-                </Column>
+                </Column>                
                 <Column field="period_price" header="期間請求額" sortable style="width:1%">
                     <template #body="slotProps">
                         <div class="flex justify-end mr-2">
@@ -155,8 +145,7 @@
                         </div>
                     </div>
                 </template>
-            </DataTable>
-            
+            </DataTable>            
         </div>
         <div class="flex justify-end mt-4">
             <Button
@@ -168,7 +157,7 @@
                 size="large" 
                 :position="'top-right'" 
                 severity="danger"
-                class="m-1"
+                class="mt-1"
             >
                 <i class="pi pi-shopping-cart" style="font-size: 2rem" />
             </OverlayBadge>
@@ -181,51 +170,90 @@
                 :reservation_id="selectedReservation.id"                       
             />
         </Drawer>
-        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '33vh'}">
+        <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false":position="'right'":style="{width: '37vh'}">
             <template #header><span class="text-lg font-bold">選択された予約の詳細</span></template>            
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <Card>
                     <template #content>
-                    <div class="grid grid-cols-1">
-                        <p class="text-lg font-bold justify-self-center">{{ selectedReservations.length }}件</p>
-                        <p class="justify-self-center">選択された件数</p>
-                    </div>
+                        <div class="grid grid-cols-1">
+                            <p class="text-lg font-bold justify-self-center">{{ selectedReservations.length }}件</p>
+                            <p class="justify-self-center">選択された件数</p>
+                        </div>
                     </template>
                 </Card>
                 <Card>
                     <template #content>
-                    <div class="grid grid-cols-1">
-                        <p class="text-lg font-bold justify-self-center">{{ totalPeople }}人</p>
-                        <p class="justify-self-center">予約人数合計</p>
-                    </div>
+                        <div class="grid grid-cols-1">
+                            <p class="text-lg font-bold justify-self-center">{{ totalPeople }}人</p>
+                            <p class="justify-self-center">予約人数合計</p>
+                        </div>
                     </template>
                 </Card>
                 <Card>
                     <template #content>
-                    <div class="grid grid-cols-1">
-                        <p class="text-lg font-bold justify-self-center">{{ formatCurrency(periodPrice) }}</p>
-                        <p class="justify-self-center">期間予約合計</p>
-                    </div>
+                        <div class="grid grid-cols-1">
+                            <p class="text-lg font-bold justify-self-center">{{ formatCurrency(periodPrice) }}</p>
+                            <p class="justify-self-center">期間予約合計</p>
+                        </div>
                     </template>
-                </Card>
+                </Card>                
             </div>
-            <p class="text-sm my-4">
-                対象期間：{{ formatDateWithDay(startDateFilter) }} ～ {{ formatDateWithDay(endDateFilter) }}
-            </p>
+            <Card>
+                <template #content>
+                    <form @submit.prevent="submitBilling">
+                        <div class="grid grid-cols-1">
+                            <p class="mb-1">選択中予約をまとめて請求書作成画面へ移動</p>
+                            <div class="grid grid-cols-2 flex justify-between items-center mb-2">
+                                <span class="font-bold">請求日</span>
+                                <DatePicker 
+                                    v-model="billingForm.date"
+                                    dateFormat="yy-mm-dd"
+                                    placeholder="請求日を選択"
+                                    :selectOtherMonths="true" 
+                                />
+                            </div>
+                            <InputText 
+                                v-model="billingForm.details" 
+                                type="text"
+                                placeholder="備考"
+                                class="mb-2"
+                                fluid
+                            />
+                            <Button 
+                                label="まとめ請求"
+                                icon="pi pi-paperclip"
+                                type="submit" 
+                            />
+                        </div>
+                    </form>
+                </template>
+            </Card>            
             <DataTable
                 :value="selectedReservations"
+                class="mt-4"
             >
                 <Column field="booker_name" header="予約者"/>
                 
-                <Column header="予約">
+                <Column header="対象期間">
                     <template #body="slotProps">
-                        <p>{{ formatDate(new Date(slotProps.data.check_in)) }} <Badge severity="secondary">イン</Badge></p>
-                        <p>{{ formatDate(new Date(slotProps.data.check_out)) }} <Badge severity="secondary">アウト</Badge></p>
+                        <p>
+                            {{ formatDate(new Date(Math.max(new Date(slotProps.data.period_start), new Date(slotProps.data.check_in)))) }}
+                            <Badge severity="secondary">から</Badge>
+                        </p>
+                        <p>
+                            {{ formatDate(new Date(Math.min(new Date(slotProps.data.period_end), new Date(slotProps.data.check_out)))) }}
+                            <Badge severity="secondary">まで</Badge>
+                        </p>
                     </template>
                 </Column>
                 <Column header="期間予約額">
                     <template #body="slotProps">
-                        <p>{{ formatCurrency(slotProps.data.period_price) }}</p>                        
+                        <p>{{ formatCurrency(slotProps.data.period_payable) }}</p>                        
+                    </template>
+                </Column>
+                <Column header="操作">
+                    <template #body="slotProps">
+                        <Button icon="pi pi-trash" severity="danger" @click="deleteReservationFromDrawer(slotProps.data)" />
                     </template>
                 </Column>
             </DataTable>            
@@ -299,6 +327,16 @@
             }
         }, 0);
     });
+    const billingForm = ref({
+        date: null,
+        details: null,
+        reservations: [],
+    });
+    const deleteReservationFromDrawer = (reservationToDelete) => {
+        selectedReservations.value = selectedReservations.value.filter(
+            (reservation) => reservation.id !== reservationToDelete.id
+        );
+    };
 
     // Filters     
     const startDateFilter = ref(new Date(new Date().setDate(new Date().getDate() - 6)));
@@ -312,11 +350,6 @@
         { label: 'キャンセル', value: 'cancelled' }
     ];
     const clientFilter = ref(null);
-    const clientsJsonFilter = ref(null);
-    const priceFilter = ref(null);
-    const priceFilterCondition = ref("=");
-    const paymentFilter = ref(null);
-    const paymentFilterCondition = ref("=");
     const applyDateFilters = async () => {
         if (startDateFilter.value && endDateFilter.value) {            
             await loadTableData();
@@ -361,17 +394,6 @@
                 return (clientName && clientName.includes(filterClients)) ||
                     (clientNameKana && clientNameKana.includes(filterClients)) ||
                     (clientNameKanji && clientNameKanji.includes(filterClients))                     
-            });
-        }
-        if (clientsJsonFilter.value !== null && clientsJsonFilter.value !== ''){
-            filteredList = filteredList.filter(reservation => {
-                const clients = reservation.clients_json;
-                const filterClients = clientsJsonFilter.value.toLowerCase();
-                return clients.some(client => 
-                    (client.name && client.name.toLowerCase().includes(filterClients)) ||
-                    (client.name_kana && client.name_kana.toLowerCase().includes(filterClients)) ||
-                    (client.name_kanji && client.name_kanji.toLowerCase().includes(filterClients))
-                );                
             });
         }
         
@@ -424,7 +446,10 @@
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){
             drawerSelectVisible.value = newValue.length > 0;
+            billingForm.value.date = endDateFilter.value;
+            billingForm.value.reservations = selectedReservations.value;
             console.log('selectedReservations:', selectedReservations.value);
+            console.log('billingForm:', billingForm.value);
         }
     });
 </script>
