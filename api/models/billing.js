@@ -19,10 +19,14 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         ,details.plan_price		
         ,details.addon_price
         ,(details.plan_price + details.addon_price) AS price
+        ,$2 AS period_start
+        ,$3 AS period_end
         ,details.plan_period_price
         ,details.addon_period_price
         ,(details.plan_period_price + details.addon_period_price) AS period_price
         ,details.payment
+        ,CASE WHEN (details.plan_price + details.addon_price) > details.payment THEN (details.plan_price + details.addon_price - details.payment) ELSE 0 END AS balance
+		    ,GREATEST(0, LEAST((details.plan_period_price + details.addon_period_price), (details.plan_price + details.addon_price - details.payment))) AS period_payable
         ,details.clients_json
         ,details.payers_json
       FROM
@@ -34,8 +38,8 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
             reservation_details.hotel_id
             ,reservation_details.reservation_id
             ,rc.clients_json::TEXT AS clients_json
-            ,rpc.clients_json::TEXT AS payers_json          
-            ,COALESCE(rp.payment,0) as payment          
+            ,rpc.clients_json::TEXT AS payers_json
+            ,COALESCE(rp.payment,0) as payment
             ,SUM(
               CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.rates_price
               ELSE rr.rates_price * reservation_details.number_of_people END              
@@ -105,8 +109,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
                 reservation_payments 
                   JOIN 
                 payment_types 
-                  ON reservation_payments.payment_type_id = payment_types.id
-              WHERE payment_types.transaction <> 'bill'
+                  ON reservation_payments.payment_type_id = payment_types.id              
               GROUP BY reservation_id
             ) rp ON rp.reservation_id = reservation_details.reservation_id
               LEFT JOIN
@@ -141,11 +144,12 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         reservations.hotel_id = $1
         AND reservations.check_out > $2
         AND reservations.check_in <= $3	  
-        AND reservations.status <> 'block'  
+        AND reservations.status not in ('block', 'hold')
         AND reservations.reservation_client_id = booker.id
         AND reservations.id = details.reservation_id
         AND reservations.hotel_id = details.hotel_id
         AND reservations.hotel_id = hotels.id
+        AND (details.plan_price + details.addon_price - details.payment) > 0
       ORDER BY 5, 7;
     `;
     const values = [hotelId, dateStart, dateEnd]
