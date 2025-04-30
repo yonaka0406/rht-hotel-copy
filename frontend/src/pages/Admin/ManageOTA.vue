@@ -226,7 +226,7 @@
   // Site Controller data
   const isSiteController = ref(false);
   const selectedService = ref(null);
-  const activeComponent = shallowRef(null)
+  const activeComponent = shallowRef(null);
   const openSiteControllerDetail = async (name, display) => {
     if (!name) {
       isSiteController.value = false;

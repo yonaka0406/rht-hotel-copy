@@ -62,12 +62,17 @@ const getClientReservations = async (req, res) => {
 
 // POST
 const createClientBasic = async (req, res) => {
-  const { name, legal_or_natural_person, gender, email, phone } = req.body;
+  const { name, name_kana, legal_or_natural_person, gender, email, phone } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
+  if (legal_or_natural_person === 'legal') {
+    gender.value = 'other';
+  }
+
   const client = {
     name,
+    name_kana,
     legal_or_natural_person,
     gender,
     email,

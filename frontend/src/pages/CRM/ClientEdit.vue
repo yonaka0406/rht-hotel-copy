@@ -33,7 +33,7 @@
   
   <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';
+    import { ref, computed, watch, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
     const route = useRoute();
     
@@ -58,4 +58,22 @@
 
       return Object.keys(selectedClientAddress.value).length; 
     });
+
+    // Watch for changes in the route's clientId parameter
+    watch(
+        () => route.params.clientId,
+        async (newClientId) => {
+            if (newClientId) {
+                clientId.value = newClientId;
+                loadingBasicInfo.value = true;
+                try {
+                    await fetchClient(clientId.value);
+                    loadingBasicInfo.value = false;
+                } catch (error) {
+                    console.error("Error fetching client data:", error);
+                    loadingBasicInfo.value = false;
+                }
+            }
+        }
+    );
   </script>

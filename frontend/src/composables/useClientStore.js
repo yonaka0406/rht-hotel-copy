@@ -121,6 +121,29 @@ export function useClientStore() {
         }
     };
     
+    const createBasicClient = async (name, name_kana, legal_or_natural_person, gender, email, phone) => {        
+        try {
+          const authToken = localStorage.getItem('authToken');
+          const response = await fetch('/api/client/basic', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, name_kana, legal_or_natural_person, gender, email, phone }),
+          });
+      
+          if (!response.ok) {
+            throw new Error('Failed to create client');
+          }
+      
+          const newClient = await response.json();                  
+          return newClient;
+        } catch (error) {
+          console.error('Failed to create client', error);
+          throw error;
+        }
+    };
     const createClient = async (clientFields) => {        
         try {
           const authToken = localStorage.getItem('authToken');
@@ -292,6 +315,7 @@ export function useClientStore() {
         fetchClientNameConversion,
         fetchClientReservations,
         createClient,
+        createBasicClient,
         createAddress,
         removeAddress,
         updateClientInfo,
