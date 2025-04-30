@@ -2525,7 +2525,6 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     const reservation = await client.query(query, values);
     const reservationId = reservation.rows[0].id;
     console.log('addOTAReservation reservations:', reservation.rows[0]);
-
             
     // Get available rooms for the reservation period
     const roomsArray = await transformRoomData(RoomAndGuestList);    
@@ -2553,7 +2552,16 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
 
-    const roomRateArray = Array.isArray(RoomAndRoomRateInformation) ? RoomAndRoomRateInformation : [RoomAndRoomRateInformation];
+    let roomRateArray = [];
+    if (Array.isArray(RoomAndRoomRateInformation)) {
+      if (RoomAndRoomRateInformation.length === 1 && typeof RoomAndRoomRateInformation[0] === 'object' && RoomAndRoomRateInformation[0] !== null && Object.keys(RoomAndRoomRateInformation[0])[0] === '0') {
+        // If it's a single object with numeric keys
+        roomRateArray = Object.values(RoomAndRoomRateInformation[0]);
+      } else {
+        // Regular array of entries
+        roomRateArray = RoomAndRoomRateInformation;
+      }
+    }    
     console.log('roomRateArray:', roomRateArray);
         
     for (const roomKey in roomsArrayWithID) {
@@ -2562,13 +2570,13 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
         let plans_global_id = null;
         let plans_hotel_id = null;
-
-        for (const info of roomRateArray) {
+        
+        for (const info of normalizedArray) {
           const planGroupCode = info?.RoomInformation?.PlanGroupCode;
           const roomDate = info?.RoomRateInformation?.RoomDate;
-                  
-          if(roomDate === roomDetail.RoomDate){
-            const { plan_gid, plan_hid } = await selectPlanId(planGroupCode);
+        
+          if (roomDate === roomDetail.RoomDate) {
+            const { plans_global_id: plan_gid, plans_hotel_id: plan_hid } = await selectPlanId(planGroupCode);
             plans_global_id = plan_gid;
             plans_hotel_id = plan_hid;
           }
@@ -3083,8 +3091,17 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
     // console.log('roomsArrayWithID', roomsArrayWithID);
-    const roomRateArray = Array.isArray(RoomAndRoomRateInformation) ? RoomAndRoomRateInformation : [RoomAndRoomRateInformation];
-    console.log('roomRateArray:', roomRateArray);    
+    let roomRateArray = [];
+    if (Array.isArray(RoomAndRoomRateInformation)) {
+      if (RoomAndRoomRateInformation.length === 1 && typeof RoomAndRoomRateInformation[0] === 'object' && RoomAndRoomRateInformation[0] !== null && Object.keys(RoomAndRoomRateInformation[0])[0] === '0') {
+        // If it's a single object with numeric keys
+        roomRateArray = Object.values(RoomAndRoomRateInformation[0]);
+      } else {
+        // Regular array of entries
+        roomRateArray = RoomAndRoomRateInformation;
+      }
+    }    
+    console.log('roomRateArray:', roomRateArray);   
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
@@ -3093,12 +3110,12 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         let plans_global_id = null;
         let plans_hotel_id = null;
 
-        for (const info of roomRateArray) {
+        for (const info of normalizedArray) {
           const planGroupCode = info?.RoomInformation?.PlanGroupCode;
           const roomDate = info?.RoomRateInformation?.RoomDate;
-                  
-          if(roomDate === roomDetail.RoomDate){
-            const { plan_gid, plan_hid } = await selectPlanId(planGroupCode);
+        
+          if (roomDate === roomDetail.RoomDate) {
+            const { plans_global_id: plan_gid, plans_hotel_id: plan_hid } = await selectPlanId(planGroupCode);
             plans_global_id = plan_gid;
             plans_hotel_id = plan_hid;
           }
