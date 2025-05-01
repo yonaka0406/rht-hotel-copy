@@ -161,8 +161,59 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
       console.error('Error retrieving data:', err);
       throw new Error('Database error');
     }
-  };
+};
 
-  module.exports = {    
-    selectBillableListView,    
-  };
+const selectBilledListView = async (requestId, hotelId, month) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      invoices.*
+      ,reservations.check_in
+      ,reservations.check_out
+      ,reservation_payments.reservation_id      
+      ,reservation_payments.room_id
+      ,reservation_payments.value
+      ,reservation_payments.comment
+      ,rooms.room_number
+      ,room_types.name as room_type_name
+      ,clients.name_kanji as client_kanji
+      ,clients.name_kana as client_kana
+      ,clients.name as client_name
+      ,clients.legal_or_natural_person
+    FROM
+      reservations
+        JOIN
+      reservation_payments
+        ON reservation_payments.reservation_id = reservations.id
+        JOIN
+      invoices
+        ON invoices.id = reservation_payments.invoice_id
+        JOIN
+      rooms
+        ON rooms.id = reservation_payments.room_id
+        JOIN
+      room_types
+        ON room_types.id = rooms.room_type_id
+        JOIN
+      clients
+        ON clients.id = reservation_payments.client_id
+    WHERE 
+      invoices.hotel_id = $1  
+      AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
+  ;`;
+  const values = [hotelId, month];
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+
+};
+
+module.exports = {    
+  selectBillableListView,
+  selectBilledListView,
+};

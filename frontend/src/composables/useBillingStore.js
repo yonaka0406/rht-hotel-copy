@@ -36,9 +36,37 @@ export function useBillingStore() {
         }
     };
 
+    const fetchBilledListView = async(hotelId, month) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/billing/res/billed-list/${hotelId}/${month}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            // Convert clients_json field from string to JSON
+            billedList.value = data;
+            
+        } catch (error) {
+            billedList.value = [];
+            console.error('Failed to fetch data', error);
+        }
+    }
+
     return {
         billableList,
         billedList,
-        fetchBillableListView,        
+        fetchBillableListView,
+        fetchBilledListView,
     };
 }
