@@ -2309,6 +2309,35 @@ const deleteReservationPayment = async (requestId, id, userId) => {
     // Set session
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, userId);
     await client.query(setSessionQuery);
+    
+    const reservationPaymentResult = await client.query(`
+        SELECT *
+        FROM reservation_payments
+        WHERE id = $1;
+      `, [id]
+    );
+    const reservationPayment = reservationPaymentResult.rows[0];
+
+    const existingInvoiceResult = await client.query(
+      `
+        SELECT * 
+        FROM reservation_payments
+        WHERE invoice_id = $1 AND hotel_id = $2 AND date = $3 AND client_id = $4;
+      `,
+      [reservationPayment.invoice_id, reservationPayment.hotel_id, reservationPayment.date, reservationPayment.client_id]
+    );    
+    
+    // Delete the invoice if it exists only for this payment
+    if (existingInvoiceResult.rows.length === 1) {
+      const invoiceId = existingInvoiceResult.rows[0].invoice_id;      
+      
+      const deleteInvoiceQuery = `
+        DELETE FROM invoices
+        WHERE id = $1 AND hotel_id = $2
+        RETURNING *;
+      `;
+      await client.query(deleteInvoiceQuery, [invoiceId, reservationPayment.hotel_id]);
+    } 
 
     const deleteQuery = `
       DELETE FROM reservation_payments
