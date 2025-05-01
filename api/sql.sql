@@ -581,6 +581,8 @@ CREATE TABLE invoices (
    client_id UUID NOT NULL REFERENCES clients(id),
    invoice_number TEXT,   
    status TEXT CHECK (status IN ('draft', 'sent', 'paid', 'cancelled')) NOT NULL DEFAULT 'draft',
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, invoice_number)
 ) PARTITION BY LIST (hotel_id);
 
