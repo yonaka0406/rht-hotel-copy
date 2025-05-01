@@ -4,13 +4,13 @@
             <Card class="flex col-span-12">
                 <template #content> 
                     <div class="grid grid-cols-12 gap-4 items-center">
-                        <span class="col-span-4 font-bold">月分：</span>
+                        <span class="col-span-3 font-bold">月分：</span>
                         <DatePicker v-model="selectedMonth" 
                             :showIcon="true" 
                             iconDisplay="input" 
                             dateFormat="yy年mm月"
                             view="month"
-                            class="flex col-span-2"
+                            class="flex col-span-3"
                             fluid                             
                         />                        
                     </div>                    
@@ -46,7 +46,7 @@
                                             icon="pi pi-pencil"
                                             label="編集"
                                             class="p-button-sm"
-                                            @click="openInvoiceEdit(group)"
+                                            @click="openInvoiceDialog(group)"
                                         />
                                     </div>
                                 </div>
@@ -77,11 +77,91 @@
             </Card>
         </div>
     </div>
+
+    <Dialog v-model:visible="displayInvoiceDialog" header="請求書作成" :modal="true">
+        <div class="invoice-form">
+
+            <div class="invoice-header">
+                <div class="field">
+                <label class="font-bold">請求No.:</label>
+                <div>{{ invoiceData.請求No }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">請求日:</label>
+                <div>{{ invoiceData.請求日 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">取引先コード:</label>
+                <div>{{ invoiceData.取引先コード }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">件名:</label>
+                <div>{{ invoiceData.件名 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">お支払期限:</label>
+                <div>{{ invoiceData.お支払期限 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">お振込先:</label>
+                <div>{{ invoiceData.お振込先 }}</div>
+                </div>
+            </div>
+
+            <DataTable :value="invoiceData.items">
+                <Column field="No" header="No."></Column>
+                <Column field="摘要" header="摘要"></Column>
+                <Column field="数量" header="数量"></Column>
+                <Column field="金額" header="金額"></Column>
+            </DataTable>
+
+            <div class="invoice-summary">
+                <div class="field">
+                <label class="font-bold">合計金額:</label>
+                <div>{{ invoiceData.合計金額 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">内消費税:</label>
+                <div>{{ invoiceData.内消費税 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">10%対象:</label>
+                <div>{{ invoiceData['10%対象'] }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">消費税:</label>
+                <div>{{ invoiceData.消費税 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">8%対象:</label>
+                <div>{{ invoiceData['8%対象'] }}</div>
+                </div>
+            </div>
+
+            <div class="accommodation-details">
+                <label class="font-bold">宿泊明細:</label>
+                <div class="field">
+                <label class="font-bold">期間:</label>
+                <div>{{ invoiceData.宿泊明細.期間 }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">人数:</label>
+                <div>{{ invoiceData.宿泊明細['1名'] }}</div>
+                </div>
+                <div class="field">
+                <label class="font-bold">泊数:</label>
+                <div>{{ invoiceData.宿泊明細.泊数 }}</div>
+                </div>
+            </div>
+
+            <Button label="Generate PDF" @click="generatePdf" />
+        </div>
+    </Dialog>
 </template>
 <script setup>
     // Vue
     import { ref, computed, watch, onMounted } from "vue";    
-    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge } from 'primevue';
+    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge, Dialog } from 'primevue';
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
@@ -133,6 +213,7 @@
                 client_kanji: item.client_kanji,
                 client_kana: item.client_kana,
                 legal_or_natural_person: item.legal_or_natural_person,
+                total_people: parseFloat(item.total_people),
                 total_value: parseFloat(item.value),
                 details: [
                     {
@@ -150,23 +231,61 @@
                 ],
             };
             } else {
-            summary[key].total_value += parseFloat(item.value);
-            summary[key].details.push({
-                id: item.id,
-                client_id: item.client_id,
-                date: formatDate(new Date(item.date)),
-                check_in: formatDate(new Date(item.check_in)),
-                check_out: formatDate(new Date(item.check_out)),
-                reservation_id: item.reservation_id,
-                room_type_name: item.room_type_name,
-                room_number: item.room_number,
-                comment: item.comment,
-                value: parseFloat(item.value),
-            });
+                summary[key].total_people += parseFloat(item.total_people);
+                summary[key].total_value += parseFloat(item.value);
+            
+                summary[key].details.push({
+                    id: item.id,
+                    client_id: item.client_id,
+                    date: formatDate(new Date(item.date)),
+                    check_in: formatDate(new Date(item.check_in)),
+                    check_out: formatDate(new Date(item.check_out)),
+                    reservation_id: item.reservation_id,
+                    room_type_name: item.room_type_name,
+                    room_number: item.room_number,
+                    comment: item.comment,
+                    value: parseFloat(item.value),
+                });
             }
         }        
         return Object.values(summary).sort((a, b) => b.total_value - a.total_value);
     });
+
+    // Dialog
+    const displayInvoiceDialog = ref(false);
+    const invoiceData = ref({});
+    const openInvoiceDialog = (data) => {
+        invoiceData.value = {
+            "請求No": data.invoice_number,
+            "請求日": data.date,
+            "取引先コード": data.client_id,
+            "件名": data.client_name,
+            "お支払期限": data.due_date,
+            "お振込先": data.bank_account,
+            "合計金額": data.total_value.toLocaleString() + ' 円',
+            "内消費税": (data.total_value * 0.1).toLocaleString() + ' 円',
+            "10%対象": (data.total_value * 0.1).toLocaleString() + ' 円',
+            "消費税": (data.total_value * 0.1).toLocaleString() + ' 円',
+            "8%対象": (data.total_value * 0.08).toLocaleString() + ' 円',
+            "宿泊明細": {
+                "期間": `${data.check_in}～${data.check_out}`,
+                "1名": data.guest_count,
+                "泊数": data.stay_count,
+            },
+            items: data.details.map((item, index) => ({
+                No: index + 1,
+                摘要: item.comment || '宿泊料金',
+                数量: item.guest_count || 1,
+                金額: item.value.toLocaleString() + ' 円',
+            })),
+        };
+        displayInvoiceDialog.value = true;
+    };
+    const generatePdf = () => {
+        //  Trigger server-side PDF generation
+        console.log('Generate PDF clicked', invoiceData.value);
+    };    
+    
     
     onMounted (async () => {        
         await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
@@ -184,3 +303,27 @@
        
 
 </script>
+<style scoped>
+    .invoice-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    }
+
+    .invoice-header, .invoice-summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 1rem;
+    }
+
+    .field {
+    display: flex;
+    flex-direction: column;
+    }
+
+    .accommodation-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    }
+</style>
