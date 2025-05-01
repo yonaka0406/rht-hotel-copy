@@ -519,12 +519,16 @@ CREATE TABLE reservation_payments (
     payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table
     value DECIMAL,
     comment TEXT,
+    invoice_id UUID DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_payments
+ADD COLUMN invoice_id UUID DEFAULT NULL;
 
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
@@ -569,6 +573,16 @@ VALUES
     ('クレジットカード', 'credit', 1),
     ('請求書', 'bill', 1),
     ('割引', 'discount', 1);
+
+CREATE TABLE invoices (
+   id UUID,
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   date DATE NOT NULL,
+   client_id UUID NOT NULL REFERENCES clients(id),
+   invoice_number TEXT,   
+   status TEXT CHECK (status IN ('draft', 'sent', 'paid', 'cancelled')) NOT NULL DEFAULT 'draft',
+   UNIQUE (id, hotel_id, date, invoice_number)
+) PARTITION BY LIST (hotel_id);
 
 --Ainda nao esta certo que vai ser usada
 

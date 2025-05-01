@@ -49,9 +49,10 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         await createPartition('reservation_addons');
         await createPartition('reservation_clients');
         await createPartition('reservation_payments');
-        await createPartition('reservation_rates');        
+        await createPartition('reservation_rates');
         await createPartition('plans_hotel');
         await createPartition('addons_hotel');
+        await createPartition('invoices');
         await createPartition('xml_requests');
         await createPartition('xml_responses');
       };
