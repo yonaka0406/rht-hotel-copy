@@ -167,7 +167,10 @@
             </div>
         </div>
         <div v-else>            
-            <div class="flex justify-end mr-4"><Button severity="secondary" @click="setIsBillingPage(false)">戻る</Button></div>            
+            <div class="flex justify-between items-center m-4">
+                <h2 class="text-lg font-bold">請求書作成</h2>
+                <Button severity="secondary" @click="setIsBillingPage(false)">戻る</Button>
+            </div>           
 
             <component :is="activeComponent" />
         </div>
