@@ -920,21 +920,57 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 };
 const insertReservationPayment = async (requestId, hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId) => {
   const pool = getPool(requestId);
-  const query = `
-    INSERT INTO reservation_payments (
-      hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
-    RETURNING *;
-  `;
-
-  const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, userId];
+  const client = await pool.connect();
+  let invoiceId = null;
 
   try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the inserted reservation client
+    await client.query('BEGIN');
+
+    if (paymentTypeId === 5) {
+      // Check if an invoice already exists for the given criteria
+      const existingInvoiceResult = await client.query(
+        `
+          SELECT * 
+          FROM invoices
+          WHERE id = $1 AND hotel_id = $2;
+        `,
+        [reservationId, hotelId]
+      );
+
+      if (existingInvoiceResult.rows.length > 0) {
+        invoiceId = existingInvoiceResult.rows[0].id;
+      } else {
+        // Create a new invoice if one doesn't exist
+        const newInvoiceResult = await client.query(
+          `
+          INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
+          VALUES ($1, $2, $3, $4, NULL, $5)
+          RETURNING id;
+          `,
+          [reservationId, hotelId, date, clientId, userId]
+        );
+        invoiceId = newInvoiceResult.rows[0].id;
+      }
+    }
+
+    const query = `
+      INSERT INTO reservation_payments (
+        hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+      RETURNING *;
+    `;
+    const values = [hotelId, reservationId, date, roomId, clientId, paymentTypeId, value, comment, invoiceId, userId];
+
+    const result = await client.query(query, values);
+
+    await client.query('COMMIT');
+    return result.rows[0];
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error adding payment to reservation:', err);
     throw new Error('Database error');
+  } finally {
+    client.release();
   }
 };
 const insertBulkReservationPayment = async (requestId, data, userId) => {
@@ -942,6 +978,17 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+
+    // Insert into invoices table and get the generated UUID
+    const invoiceInsertResult = await client.query(
+      `
+        INSERT INTO invoices (id, hotel_id, date, client_id, invoice_number, created_by)
+        VALUES (gen_random_uuid(), $1, $2, $3, NULL, $4)
+        RETURNING *;
+      `,
+      [data[0].hotel_id, data[0].date, data[0].client_id, userId]
+    );
+    const invoiceId = invoiceInsertResult.rows[0].id;
 
     // Process each reservation in the data array
     for (const reservation of data) {
@@ -958,8 +1005,8 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
         if (roomPayment > 0) {
           const query = `
             INSERT INTO reservation_payments (
-              hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
+              hotel_id, reservation_id, date, room_id, client_id, payment_type_id, value, comment, invoice_id, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
             RETURNING *;
           `;
 
@@ -972,6 +1019,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
             5,
             roomPayment,
             reservation.details || null,
+            invoiceId,
             userId
           ]);
 
@@ -990,7 +1038,7 @@ const insertBulkReservationPayment = async (requestId, data, userId) => {
   } finally {
     client.release();
   }
-}
+};
 
 
 // Update entry
