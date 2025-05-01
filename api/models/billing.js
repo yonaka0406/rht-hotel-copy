@@ -180,8 +180,23 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.name_kana as client_kana
       ,clients.name as client_name
       ,clients.legal_or_natural_person
+      ,details.number_of_people as total_people
+      ,details.date as total_stays
+      ,(
+          SELECT json_agg(rd)
+          FROM reservation_details rd
+          WHERE rd.reservation_id = reservations.id
+            AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+        ) AS reservation_details_json
     FROM
       reservations
+        JOIN
+      (SELECT reservation_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
+        FROM reservation_details 
+      WHERE DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $2::date)
+      GROUP BY reservation_id
+      ) AS details
+        ON details.reservation_id = reservations.id 
         JOIN
       reservation_payments
         ON reservation_payments.reservation_id = reservations.id
