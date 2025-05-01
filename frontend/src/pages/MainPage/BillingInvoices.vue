@@ -496,6 +496,7 @@
             await addBulkReservationPayment(data);
             
             toast.add({ severity: 'success', summary: '請求書作成', detail: '請求書が各予約に追加されました。', life: 3000 });
+            selectedReservations = [];
             await applyDateFilters()
             drawerSelectVisible.value = false;
         } else {
