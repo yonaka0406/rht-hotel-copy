@@ -3503,8 +3503,10 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
 };
 const cancelOTAReservation = async (requestId, hotel_id, data) => {
   // XML
-  const BasicInformation = data?.BasicInformation || {};
+  const BasicInformation = data?.BasicInformation || {};  
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
+  const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};
+  const cancellationCharge = parseInt(Extendmytrip?.CancellationCharge || '0', 10);  
 
   // Query
   const pool = getPool(requestId);
@@ -3562,6 +3564,61 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
     const reservationDetails = await client.query(query, values);
     console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
 
+    if (cancellationCharge > 0) {
+      query = `
+        SELECT id
+        FROM reservation_details
+        WHERE reservation_id = $1::UUID AND hotel_id = $2
+        ORDER BY date DESC
+        LIMIT 1;
+      `;
+      values = [reservationIdToUpdate, hotel_id];
+      const latestReservationDetailResult = await client.query(query, values);
+      
+      if (latestReservationDetailResult.rows.length > 0) {
+        const latestReservationDetailId = latestReservationDetailResult.rows[0].id;
+
+        query = `
+          UPDATE reservation_details
+          SET
+            cancelled = NULL,
+            billable = TRUE,            
+            price = $3,
+            updated_by = 1
+          WHERE id = $1 AND hotel_id = $2
+          RETURNING *;
+        `;
+        values = [
+          latestReservationDetailId,
+          hotel_id,
+          cancellationCharge,
+        ];
+        const firstReservationDetail = await client.query(query, values);
+        console.log('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
+
+        query = `
+          UPDATE reservation_rates
+          SET
+            adjustment_value = $3,
+            tax_type_id = 3,
+            tax_rate = 0.1,
+            price = $3,
+            updated_by = 1
+          WHERE reservation_detail_id = $1 AND hotel_id = $2
+          RETURNING *;
+        `;
+        values = [
+          latestReservationDetailId,
+          hotel_id,
+          cancellationCharge,
+        ];
+        const reservationRates = await client.query(query, values);
+        console.log('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
+      } else {
+        console.warn('No reservation details found to update reservation_rates.');
+      }
+    }
+
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {   
@@ -3578,7 +3635,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
   } finally {
     client.release();
   }
-}
+};
 
 module.exports = {    
     selectAvailableRooms,
