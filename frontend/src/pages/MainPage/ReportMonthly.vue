@@ -15,6 +15,7 @@
                             fluid                             
                         />                        
                     </div>
+                    <span>Implement a toggle to show 単月 and 累計（当年度）</span>
                     
                 </template>
             </Card>            
