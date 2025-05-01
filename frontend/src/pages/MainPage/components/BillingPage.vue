@@ -121,7 +121,7 @@
 
         const summary = {};
         for (const item of billedList.value) {
-            const key = `${item.id}-${item.invoice_number}-${item.date}-${item.status}`;
+            const key = `${item.id}-${item.invoice_number}-${item.date}-${item.client_id}`;
             if (!summary[key]) {
             summary[key] = {
                 id: item.id,
@@ -164,8 +164,8 @@
                 value: parseFloat(item.value),
             });
             }
-        }
-        return Object.values(summary);
+        }        
+        return Object.values(summary).sort((a, b) => b.total_value - a.total_value);
     });
     
     onMounted (async () => {        
