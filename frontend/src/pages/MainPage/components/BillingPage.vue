@@ -146,7 +146,7 @@
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
-    const { billedList, fetchBilledListView } = useBillingStore();
+    const { billedList, fetchBilledListView, generateInvoicePdf } = useBillingStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId } = useHotelStore();
 
@@ -207,6 +207,7 @@
             if (!summary[key]) {
             summary[key] = {
                 id: item.id,
+                hotel_id: item.hotel_id,
                 client_id: item.client_id,
                 invoice_number: item.invoice_number,
                 date: formatDate(new Date(item.date)),
@@ -242,6 +243,7 @@
             
                 summary[key].details.push({
                     id: item.id,
+                    hotel_id: item.hotel_id,
                     client_id: item.client_id,
                     date: formatDate(new Date(item.date)),
                     check_in: formatDate(new Date(item.check_in)),
@@ -266,34 +268,37 @@
         const groupedRates = {};
 
         data.details.forEach(block => {
-        block.rates.forEach(item => {
-            const rate = item.tax_rate;
-            if (!groupedRates[rate]) {
-                groupedRates[rate] = {
-                tax_rate: rate,
-                total_net_price: 0,
-                total_price: 0
-            };
-            }
-            groupedRates[rate].total_net_price += item.total_net_price;
-            groupedRates[rate].total_price += item.total_price;
+            block.rates.forEach(item => {
+                const rate = item.tax_rate;
+                if (!groupedRates[rate]) {
+                    groupedRates[rate] = {
+                        tax_rate: rate,
+                        total_net_price: 0,
+                        total_price: 0
+                    };
+                }
+                groupedRates[rate].total_net_price += item.total_net_price;
+                groupedRates[rate].total_price += item.total_price;
+            });
         });
-});
 
         invoiceData.value = {
+            hotel_id: data.hotel_id,
             invoice_number: data.invoice_number,
             date: data.date,
+            due_date: getAdjustedDueDate(data.date),
             client_id: data.client_id,
-            client_name: data.client_kanji || data.client_name,
-            due_date: getAdjustedDueDate(data.date),            
-            invoice_total_value: data.total_value.toLocaleString() + ' 円',            
+            client_name: data.client_kanji || data.client_name,                        
+            invoice_total_value: data.total_value,
             items: Object.values(groupedRates),            
         };
         displayInvoiceDialog.value = true;
     };
-    const generatePdf = () => {
-        //  Trigger server-side PDF generation
+    const generatePdf = async () => {
+        //  Trigger server-side PDF generation        
         console.log('Generate PDF clicked', invoiceData.value);
+        await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
+        
     };    
     
     
