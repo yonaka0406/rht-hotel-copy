@@ -79,81 +79,62 @@
     </div>
 
     <Dialog v-model:visible="displayInvoiceDialog" header="請求書作成" :modal="true">
-        <div class="invoice-form">
-
-            <div class="invoice-header">
-                <div class="field">
-                <label class="font-bold">請求No.:</label>
-                <div>{{ invoiceData.請求No }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">請求日:</label>
-                <div>{{ invoiceData.請求日 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">取引先コード:</label>
-                <div>{{ invoiceData.取引先コード }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">件名:</label>
-                <div>{{ invoiceData.件名 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">お支払期限:</label>
-                <div>{{ invoiceData.お支払期限 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">お振込先:</label>
-                <div>{{ invoiceData.お振込先 }}</div>
-                </div>
-            </div>
-
-            <DataTable :value="invoiceData.items">
-                <Column field="No" header="No."></Column>
-                <Column field="摘要" header="摘要"></Column>
-                <Column field="数量" header="数量"></Column>
-                <Column field="金額" header="金額"></Column>
-            </DataTable>
-
-            <div class="invoice-summary">
-                <div class="field">
-                <label class="font-bold">合計金額:</label>
-                <div>{{ invoiceData.合計金額 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">内消費税:</label>
-                <div>{{ invoiceData.内消費税 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">10%対象:</label>
-                <div>{{ invoiceData['10%対象'] }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">消費税:</label>
-                <div>{{ invoiceData.消費税 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">8%対象:</label>
-                <div>{{ invoiceData['8%対象'] }}</div>
+        <div class="grid grid-cols-12 gap-4">
+            <!-- Invoice Header-->
+            <div class="col-span-12 mb-4 mx-6">
+                <div class="grid grid-cols-12 gap-2">
+                    <div class="col-span-4 mt-6">                        
+                        <FloatLabel>
+                            <label class="font-bold">請求番号:</label>
+                            <InputText type="text" v-model="invoiceData.invoice_number" fluid />
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-4 mt-6">                        
+                        <FloatLabel>
+                            <label class="font-bold">請求日:</label>
+                            <InputText type="date" v-model="invoiceData.date" fluid />
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-4 mt-6">
+                        <FloatLabel>
+                            <label class="font-bold">支払期限:</label>
+                            <InputText type="date" v-model="invoiceData.due_date" fluid />
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-6 mt-6">                        
+                        <FloatLabel>
+                            <label class="font-bold">取引先番号:</label>
+                            <InputText type="text" v-model="invoiceData.client_id" fluid disabled/>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-6 mt-6">                        
+                        <FloatLabel>
+                            <label class="font-bold">取引先名:</label>
+                            <InputText type="text" v-model="invoiceData.client_name" fluid />
+                        </FloatLabel>
+                    </div>
                 </div>
             </div>
-
-            <div class="accommodation-details">
-                <label class="font-bold">宿泊明細:</label>
-                <div class="field">
-                <label class="font-bold">期間:</label>
-                <div>{{ invoiceData.宿泊明細.期間 }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">人数:</label>
-                <div>{{ invoiceData.宿泊明細['1名'] }}</div>
-                </div>
-                <div class="field">
-                <label class="font-bold">泊数:</label>
-                <div>{{ invoiceData.宿泊明細.泊数 }}</div>
-                </div>
+            <!-- Invoice Details --> 
+            <div class="col-span-12 mb-4 mx-40">
+                <DataTable :value="invoiceData.items">                
+                    <Column field="total_net_price" header="税抜き">
+                        <template #body="slotProps">
+                            <span>{{ slotProps.data.total_net_price.toLocaleString() }} 円</span>                        
+                        </template>
+                    </Column>
+                    <Column header="税率">
+                        <template #body="slotProps">
+                            <span>{{ slotProps.data.tax_rate * 100 }} %</span>
+                        </template>
+                    </Column>
+                    <Column field="total_price" header="税込み">
+                        <template #body="slotProps">
+                            <span>{{ slotProps.data.total_price.toLocaleString() }} 円</span>
+                        </template>                
+                    </Column>
+                </DataTable>
             </div>
-
             <Button label="Generate PDF" @click="generatePdf" />
         </div>
     </Dialog>
@@ -161,7 +142,7 @@
 <script setup>
     // Vue
     import { ref, computed, watch, onMounted } from "vue";    
-    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge, Dialog } from 'primevue';
+    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge, Dialog, FloatLabel, InputText } from 'primevue';
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
@@ -189,6 +170,27 @@
         };
         return statusMap[status] || status;
     };
+    function getAdjustedDueDate(dateStr) {
+        const baseDate = new Date(dateStr);
+        const year = baseDate.getFullYear();
+        const month = baseDate.getMonth();
+
+        // Last day of the next month
+        let dueDate = new Date(year, month + 2, 0);        
+
+        // Adjust if Saturday (6) or Sunday (0)
+        const dayOfWeek = dueDate.getDay();
+        if (dayOfWeek === 6) {
+            // Saturday → add 2 days
+            dueDate.setDate(dueDate.getDate() + 2);
+        } else if (dayOfWeek === 0) {
+            // Sunday → add 1 day
+            dueDate.setDate(dueDate.getDate() + 1);
+        }
+
+        return formatDate(dueDate);
+
+    };
 
     // Page Setting
     const selectedMonth = ref(new Date());
@@ -214,6 +216,7 @@
                 client_kana: item.client_kana,
                 legal_or_natural_person: item.legal_or_natural_person,
                 total_people: parseFloat(item.total_people),
+                total_stays: parseFloat(item.total_stays),
                 total_value: parseFloat(item.value),
                 details: [
                     {
@@ -227,11 +230,14 @@
                         room_number: item.room_number,
                         comment: item.comment,
                         value: parseFloat(item.value),
+                        details: item.reservation_details_json,
+                        rates: item.reservation_rates_json,
                     },
                 ],
             };
             } else {
                 summary[key].total_people += parseFloat(item.total_people);
+                summary[key].total_stays += parseFloat(item.total_stays);
                 summary[key].total_value += parseFloat(item.value);
             
                 summary[key].details.push({
@@ -245,6 +251,8 @@
                     room_number: item.room_number,
                     comment: item.comment,
                     value: parseFloat(item.value),
+                    details: item.reservation_details_json,
+                    rates: item.reservation_rates_json,
                 });
             }
         }        
@@ -255,29 +263,31 @@
     const displayInvoiceDialog = ref(false);
     const invoiceData = ref({});
     const openInvoiceDialog = (data) => {
+        const groupedRates = {};
+
+        data.details.forEach(block => {
+        block.rates.forEach(item => {
+            const rate = item.tax_rate;
+            if (!groupedRates[rate]) {
+                groupedRates[rate] = {
+                tax_rate: rate,
+                total_net_price: 0,
+                total_price: 0
+            };
+            }
+            groupedRates[rate].total_net_price += item.total_net_price;
+            groupedRates[rate].total_price += item.total_price;
+        });
+});
+
         invoiceData.value = {
-            "請求No": data.invoice_number,
-            "請求日": data.date,
-            "取引先コード": data.client_id,
-            "件名": data.client_name,
-            "お支払期限": data.due_date,
-            "お振込先": data.bank_account,
-            "合計金額": data.total_value.toLocaleString() + ' 円',
-            "内消費税": (data.total_value * 0.1).toLocaleString() + ' 円',
-            "10%対象": (data.total_value * 0.1).toLocaleString() + ' 円',
-            "消費税": (data.total_value * 0.1).toLocaleString() + ' 円',
-            "8%対象": (data.total_value * 0.08).toLocaleString() + ' 円',
-            "宿泊明細": {
-                "期間": `${data.check_in}～${data.check_out}`,
-                "1名": data.guest_count,
-                "泊数": data.stay_count,
-            },
-            items: data.details.map((item, index) => ({
-                No: index + 1,
-                摘要: item.comment || '宿泊料金',
-                数量: item.guest_count || 1,
-                金額: item.value.toLocaleString() + ' 円',
-            })),
+            invoice_number: data.invoice_number,
+            date: data.date,
+            client_id: data.client_id,
+            client_name: data.client_kanji || data.client_name,
+            due_date: getAdjustedDueDate(data.date),            
+            invoice_total_value: data.total_value.toLocaleString() + ' 円',            
+            items: Object.values(groupedRates),            
         };
         displayInvoiceDialog.value = true;
     };
@@ -303,27 +313,3 @@
        
 
 </script>
-<style scoped>
-    .invoice-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    }
-
-    .invoice-header, .invoice-summary {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.5rem 1rem;
-    }
-
-    .field {
-    display: flex;
-    flex-direction: column;
-    }
-
-    .accommodation-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    }
-</style>

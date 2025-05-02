@@ -183,23 +183,60 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,details.number_of_people as total_people
       ,details.date as total_stays
       ,(
-          SELECT json_agg(rd)
-          FROM reservation_details rd
-          WHERE rd.reservation_id = reservations.id
-            AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
-        ) AS reservation_details_json
+	      SELECT json_agg(rd)
+	      FROM reservation_details rd
+	      WHERE rd.hotel_id = reservations.hotel_id AND rd.reservation_id = reservations.id AND rd.room_id = reservation_payments.room_id
+	        AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date) AND rd.billable = TRUE
+	    ) AS reservation_details_json
+      ,(
+        SELECT json_agg(taxed_group)
+        FROM (
+          SELECT tax_rate, SUM(total_price) as total_price, SUM(total_net_price) as total_net_price
+          FROM (
+            SELECT 
+              rr.tax_rate,
+              rr.price AS total_price,
+              rr.net_price AS total_net_price
+            FROM 
+              reservation_details rd
+              JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
+            WHERE 
+              rd.hotel_id = reservations.hotel_id
+              AND rd.reservation_id = reservations.id
+              AND rd.room_id = reservation_payments.room_id
+              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.billable = TRUE
+
+            UNION ALL			
+            SELECT 
+              ra.tax_rate,
+              ra.price AS total_price,
+              ra.net_price AS total_net_price
+            FROM 
+              reservation_details rd
+              JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
+            WHERE 
+              rd.hotel_id = reservations.hotel_id
+              AND rd.reservation_id = reservations.id
+              AND rd.room_id = reservation_payments.room_id
+              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.billable = TRUE
+          ) AS inside
+          GROUP BY tax_rate
+        ) AS taxed_group
+      ) AS reservation_rates_json
     FROM
-      reservations
-        JOIN
-      (SELECT reservation_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
-        FROM reservation_details 
-      WHERE DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $2::date)
-      GROUP BY reservation_id
-      ) AS details
-        ON details.reservation_id = reservations.id 
-        JOIN
+      reservations        
+        JOIN		  
       reservation_payments
         ON reservation_payments.reservation_id = reservations.id
+        JOIN
+      (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
+        FROM reservation_details 
+      WHERE DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $2::date) AND billable = TRUE
+      GROUP BY hotel_id, reservation_id, room_id
+      ) AS details
+        ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id 
         JOIN
       invoices
         ON invoices.id = reservation_payments.invoice_id
