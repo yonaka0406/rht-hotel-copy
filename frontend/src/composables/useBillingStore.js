@@ -86,7 +86,7 @@ export function useBillingStore() {
             const pdfUrl = window.URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = pdfUrl;
-            link.setAttribute('download', `invoice-${invoiceNumber}.pdf`); // Use invoiceNumber directly
+            link.setAttribute('download', `invoice-${invoiceNumber}.pdf`);             
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link); // Clean up the DOM

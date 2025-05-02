@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>請求書 - {{ invoice_number }}</title>
+    <style>
+        body {
+            font-family: 'MS Gothic', 'Osaka-mono', monospace, sans-serif; 
+            font-size: 10pt;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            line-height: 1.5;
+        }
+        .invoice-flex-block {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-left: 10px;
+        }
+        .header-block {
+            background-color: rgb(22, 175, 202);
+            color: #fff;
+            padding-top: 15px;
+            margin-top: 10px;
+            margin-bottom: 10px;            
+            margin-right: 10px;
+        }        
+        h1 {
+            text-align: center;
+            font-size: 18pt;
+            margin: 0 0 20px 0;
+            letter-spacing: 3px;
+        }
+        .title-cell {
+            background-color: rgb(168, 217, 226);            
+            font-weight: bold;
+            text-align: center;
+        }
+        .cell-right {
+            text-align: right;            
+        }
+        .table1 {
+            width: 95%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            margin-right: 20px;
+            border: #000 solid 1px;
+        }
+        .table1 td {
+            padding: 5px;
+            border: #000 solid 1px;
+            font-size: 10pt;
+        }        
+        .table2 {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: #000 solid 1px;
+        }
+        .table2 th {
+            padding: 5px;
+            border: #000 solid 1px;
+            font-size: 10pt;
+            background-color: rgb(168, 217, 226);            
+            font-weight: bold;
+            text-align: center;
+        }
+        .table2 td {
+            padding: 5px;
+            border: #000 solid 1px;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-flex-block">
+        <div class="header-block" style="width: 60%;">
+            <h1>請 求 書</h1>
+        </div>
+        <div style="width: 20%; padding-left: 20px;">
+            <p>請求書 No.</p>
+            <p>発行日</p>
+        </div>
+        <div style="width: 20%; text-align: right; padding-right: 10px;">
+            <p>{{ invoice_number }}</p>
+            <p>{{ invoice_date }}</p>
+        </div>
+    </div>   
+
+    <div class="invoice-flex-block">
+        <div style="width: 100%; line-height: 1;">
+            <p>{{ customer_name }} 御中</p>
+            <small>取引先コード: {{ customer_code }}</small>
+        </div>
+    </div>
+
+    <div class="invoice-flex-block">
+        <div style="width: 60%;">
+            <p>下記の通り、ご請求申し上げます。</p>
+            <table class="table1">
+                <tr>
+                    <td class="title-cell">件名</td>
+                    <td>{{ facility_name }} 宿泊料</td>
+                </tr>
+                <tr>
+                    <td class="title-cell">お支払期限</td>
+                    <td>{{ payment_due_date }}</td>
+                </tr>
+                <tr>
+                    <td class="title-cell">お振込先</td>
+                    <td>{{ bank_name }} {{ bank_branch_name }}<br>
+                        {{ bank_account_type }} {{ bank_account_number }}<br>
+                        {{ bank_account_name }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div style="width: 40%; position: relative;">
+            <p>レッドホーストラスト株式会社</p>
+            <div style="line-height: 1;">
+                〒060-0061<br>
+                札幌市中央区南1条西2丁目5番地<br>
+                南一条Kビル8階<br>
+                TEL: 011-206-1831<br>
+                FAX: 050-3606-5764
+            </div>
+            <p>登録番号: T2430001042062</p>
+            <p>担当者: {{ company_contact_person }}</p>            
+            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 0; width: 150px; opacity: 0.7;">
+        </div>
+    </div>
+
+    <div class="invoice-flex-block">
+        <div style="width: 60%;  display: flex; font-size: 12pt; font-weight: bold; border-bottom: 3px double #000;">
+            <div style="width: 50%;">
+                　合計金額
+            </div>
+            <div style="width: 50%;">
+                <span style="font-weight: bold; text-align: right;">¥{{ total_amount }}</span> (税込)
+            </div>            
+        </div>        
+        <div style="width: 40%; font-size: 12pt;"></div>
+    </div>
+
+    <div class="invoice-flex-block" style="margin-top: 20px;">
+        <table class="table2" style="width: 99%;">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>摘要</th>
+                    <th>数量</th>
+                    <th class="price">金額</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ detail_index_1 }}</td>
+                    <td>{{ detail_text_1 }}</td>                    
+                    <td class="cell-right">{{ detail_quantity_1 }}</td>
+                    <td class="cell-right">¥ {{ detail_value_1 }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3" style="text-align: right;">合計金額</td>
+                    <td class="cell-right">¥ {{ details_total_value }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="invoice-flex-block">
+        <div style="width:60%"></div>
+        <div style="width:40%">
+            <table class="table1" style="width: 90%;">
+                <tr>
+                    <td class="title-cell">消費税</td>
+                    <td class="cell-right">¥ {{ total_tax_value }}</td>
+                </tr>
+                <tr>
+                    <td class="title-cell">{{ tax_perc_1 }}％対象</td>
+                    <td class="cell-right">¥ {{ taxable_value_1 }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="invoice-flex-block" style="margin-top: 20px;">
+        <table class="table1" style="width: 99%;">            
+            <tr>
+                <td class="title-cell" style="width: 10%">備考</td>
+                <td>
+                    <p>{{ comments }}</p>
+                    <p>※ 振込手数料は貴社負担にて願います</p>
+                </td>
+            </tr>
+        </table>
+    </div> 
+</body>
+</html>

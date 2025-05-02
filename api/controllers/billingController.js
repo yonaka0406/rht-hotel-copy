@@ -1,5 +1,7 @@
 const { selectBillableListView, selectBilledListView } = require('../models/billing');
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
 const getBillableListView = async (req, res) => {
   const hotelId = req.params.hid;
@@ -41,48 +43,74 @@ const getBilledListView = async (req, res) => {
 const generateInvoice = async (req, res) => {
   const hotelId = req.params.hid;
   const invoiceId = req.params.invoice;
-  const invoiceData = req.body;
-  console.log("Received invoice data:", invoiceData);
+  const invoiceData = req.body;  
+  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');  
+
+  let browser;
 
   try {    
     // Save the invoice data to the database
     //const data = await upsertInvoiceData(req.requestId, hotelId, invoiceId, invoiceData);    
-
-    console.log("Backend: Launching Puppeteer...");
-    const browser = await puppeteer.launch();
+    
+    // Create a browser instance
+    browser = await puppeteer.launch();
     const page = await browser.newPage();
+    page.on('console', msg => {
+      console.log('PAGE LOG:', msg.type(), msg.text());
+    });
 
     //  1. Create HTML content for the PDF
-    const htmlContent = generateInvoiceHTML(invoiceData); 
-    console.log("Backend: HTML content generated:", htmlContent);
-
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    console.log("Backend: Page content set.");
+    const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData); 
+    console.log("generateInvoice:", htmlContent);
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+    
+    /*
+    const imageLoaded = await page.evaluate(selector => {
+        const img = document.querySelector(selector);
+        if (!img) {
+            return 'Image element not found';
+        }
+        return img.complete && img.naturalWidth > 0; //  Check if loaded
+    }, 'img[alt="Company Stamp"]'); //  Use a specific selector
+    
+    console.log('Image loaded:', imageLoaded);
+    
+    if (!imageLoaded) {
+        console.warn('Image might not have loaded correctly.');
+    }
+    */
 
     //  2. Generate PDF
     const pdfBuffer = await page.pdf({
+        //margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+        printBackground: true,
         format: 'A4',
-        printBackground: true
     });
-    console.log("Backend: PDF generated. Buffer length:", pdfBuffer.length);
-
+    
+    // Close the browser instance
     await browser.close();
-    console.log("Backend: Puppeteer closed.");
 
     //  3. Send PDF as a download
-    res.contentType("application/pdf");
-    res.setHeader('Content-Disposition', 'attachment; filename="invoice.pdf"');
-    console.log("Backend: Sending PDF...");
-    res.send(pdfBuffer);
-    console.log("Backend: PDF sent.");
-    
-  } catch (err) {
-    console.error("Error generating PDF:", err);
-    res.status(500).send('Error generating PDF');
+    res.contentType("application/pdf");    
+    res.send(Buffer.from(pdfBuffer));
+  } catch (error) {
+    console.error("Error generating PDF with Puppeteer:", error);
+    res.status(500).send('Error generating blank PDF');
+  } finally {
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
   }
 };
-function generateInvoiceHTML(data) {
-  //  This is a basic example.  You'll need to expand it to match your invoice layout.
+function generateInvoiceHTML(html, data) {
+  const imagePath = path.join(__dirname, '../components/stamp.png');
+  const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
+
+  let modifiedHTML = html;
+
+  modifiedHTML = modifiedHTML.replace(/{{ stamp_image }}/g, imageUrl);
+  
+  return modifiedHTML;
   let itemsHtml = data.items.map(item => `
       <tr>
         <td style="text-align: right;">${(item.tax_rate * 100).toLocaleString()} %</td>
@@ -130,8 +158,51 @@ function generateInvoiceHTML(data) {
   `;
 };
 
+const generateBlankPdfWithAbc = async (req, res) => {
+  let browser;
+  try {
+    // Create a browser instance
+    browser = await puppeteer.launch();
+
+    // Create a new page
+    const page = await browser.newPage();
+
+    //Get HTML content from HTML file
+    const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');
+    await page.setContent(invoiceHTML, { waitUntil: 'domcontentloaded' });
+
+    // To reflect CSS used for screens instead of print
+    await page.emulateMediaType('screen');
+
+    // Downlaod the PDF
+    const pdfBuffer = await page.pdf({
+      path: 'result.pdf',
+      margin: { top: '100px', right: '50px', bottom: '100px', left: '50px' },
+      printBackground: true,
+      format: 'A4',
+    });    
+
+    // Close the browser instance
+    await browser.close();
+
+    res.contentType("application/pdf");    
+    res.send(Buffer.from(pdfBuffer));
+    
+    console.log("Backend: Blank PDF sent (attempt 5).");  
+
+  } catch (error) {
+    console.error("Error generating blank PDF with Puppeteer (attempt 5):", error);
+    res.status(500).send('Error generating blank PDF');
+  } finally {
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
+  }
+};
+
 module.exports = { 
   getBillableListView,
   getBilledListView,
   generateInvoice,
+  generateBlankPdfWithAbc,
 };
