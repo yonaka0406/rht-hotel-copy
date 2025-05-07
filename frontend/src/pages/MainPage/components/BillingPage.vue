@@ -345,12 +345,12 @@
         displayInvoiceDialog.value = true;
     };
     const generatePdf = async () => {
-        isGenerating = true;
+        isGenerating.value = true;
         //  Trigger server-side PDF generation        
         console.log('Generate PDF clicked', invoiceData.value);
         await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
 
-        isGenerating = false;
+        isGenerating.value = false;
         
     };    
     
