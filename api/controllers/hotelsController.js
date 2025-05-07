@@ -218,11 +218,11 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 // PUT
   const editHotel = async (req, res) => {
     const { id } = req.params;
-    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude } = req.body;
+    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name  } = req.body;
     const updated_by = req.user.id;
 
     try {
-      const updatedHotel = await updateHotel(req.requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, updated_by);
+      const updatedHotel = await updateHotel(req.requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, updated_by);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }

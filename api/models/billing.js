@@ -169,6 +169,11 @@ const selectBilledListView = async (requestId, hotelId, month) => {
     SELECT 
       invoices.*
       ,hotels.formal_name as facility_name
+      ,hotels.bank_name
+      ,hotels.bank_branch_name
+      ,hotels.bank_account_type
+      ,hotels.bank_account_number
+      ,hotels.bank_account_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservation_payments.reservation_id      

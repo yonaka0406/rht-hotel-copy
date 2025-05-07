@@ -78,10 +78,22 @@ CREATE TABLE hotels (
     phone_number VARCHAR(20),  -- 施設電話番号 (Facility Phone Number)
     latitude DECIMAL(9, 6),    -- Latitude (coordinates)
     longitude DECIMAL(9, 6),   -- Longitude (coordinates)
+    bank_name TEXT,
+    bank_store_name TEXT,
+    bank_account_type TEXT,
+    bank_account_number TEXT,
+    bank_account_name TEXT,    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
+ALTER TABLE hotels
+   ADD COLUMN bank_name TEXT,
+   ADD COLUMN bank_store_name TEXT,
+   ADD COLUMN bank_account_type TEXT,
+   ADD COLUMN bank_account_number TEXT,
+   ADD COLUMN bank_account_name TEXT;
 
 CREATE TABLE room_types (
     id SERIAL,

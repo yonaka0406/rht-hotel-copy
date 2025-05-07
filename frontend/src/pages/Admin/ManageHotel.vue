@@ -79,7 +79,51 @@
         </div>
       </template>
     </Card>
+
     <Divider />
+    
+    <Card>
+      <template #content>
+        <h2 class="text-xl font-bold mb-2">御振込先情報</h2>
+        
+        <div class="grid grid-cols-12 gap-2 mb-4">
+          <div class="col-span-3 mt-6">
+            <FloatLabel>
+              <InputText v-model="selectedHotel.bank_name" fluid />
+              <label>銀行名</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-3 mt-6">
+            <FloatLabel>
+              <InputText v-model="selectedHotel.bank_branch_name" fluid />
+              <label>支店名</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-2 mt-6">
+            <FloatLabel>
+              <InputText v-model="selectedHotel.bank_account_type" fluid />
+              <label>口座種類</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-3 mt-6">
+            <FloatLabel>
+              <InputText v-model="selectedHotel.bank_account_number" fluid />
+              <label>口座番号</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-6 mt-6">
+            <FloatLabel>
+              <InputText v-model="selectedHotel.bank_account_name" fluid />
+              <label>口座名義</label>
+            </FloatLabel>
+          </div>
+
+        </div>
+      </template>
+    </Card>
+
+    <Divider />
+    
     <Card>
       <template #content>
         <h2 class="text-xl font-bold mb-2">サイトコントローラー連携情報</h2>
@@ -126,6 +170,7 @@
         </DataTable>
       </template>
     </Card>
+
     <template #footer>
       <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
       <Button label="キャンセル" icon="pi pi-times" @click="dialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />        
@@ -352,14 +397,14 @@
   };
 
   // Hotels  
+  const dialogVisible = ref(false); 
   const siteController = ref(null);
   const siteControllerNewEntry = ref({
     hotel_id: '',
     name: 'TL-リンカーン',
     user_id: '',
     password: ''
-  })
-  const dialogVisible = ref(false); 
+  });  
   const siteControllerReset = () => {
     siteController.value = [{
       hotel_id: null,
@@ -378,7 +423,8 @@
   };
   const siteControllerDeleteEntry = (index) => {
     siteController.value.splice(index, 1)
-  }
+  };
+
   const selectHotelData = async (hotel) => {    
     selectedHotel.value = { ...hotel };
     selectedHotel.value.facility_type = selectedHotel.value.facility_type === 'New' ? '新築' : '中古';

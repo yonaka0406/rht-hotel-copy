@@ -64,7 +64,7 @@ const getHotelSiteController = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-const updateHotel = async (requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, updated_by) => {
+const updateHotel = async (requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, updated_by) => {
   const pool = getPool(requestId);
     const query = `
       UPDATE hotels SET 
@@ -76,11 +76,16 @@ const updateHotel = async (requestId, id, formal_name, name, postal_code, addres
         ,phone_number = $6
         ,latitude = $7
         ,longitude = $8
-        ,updated_by = $9 
-      WHERE id = $10
+        ,bank_name = $9
+        ,bank_branch_name = $10
+        ,bank_account_type = $11
+        ,bank_account_number = $12
+        ,bank_account_name = $13
+        ,updated_by = $14
+      WHERE id = $15
       RETURNING *
     `;
-    const values = [formal_name, name, postal_code, address, email, phone_number, latitude, longitude, updated_by, id];
+    const values = [formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, updated_by, id];
   
     try {
       const result = await pool.query(query, values);
