@@ -168,6 +168,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
   const query = `
     SELECT 
       invoices.*
+      ,hotels.formal_name as facility_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservation_payments.reservation_id      
@@ -226,10 +227,13 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
-      reservations        
-        JOIN		  
+      hotels
+	  	JOIN
+      reservations
+	  	ON reservations.hotel_id = hotels.id
+        JOIN
       reservation_payments
-        ON reservation_payments.reservation_id = reservations.id
+        ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
         JOIN
       (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
         FROM reservation_details 

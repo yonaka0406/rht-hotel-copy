@@ -101,7 +101,7 @@
                             <InputText type="date" v-model="invoiceData.due_date" fluid />
                         </FloatLabel>
                     </div>
-                    <div class="col-span-6 mt-6">                        
+                    <div class="col-span-3 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">取引先番号:</label>
                             <InputText type="text" v-model="invoiceData.client_id" fluid disabled/>
@@ -113,8 +113,14 @@
                             <InputText type="text" v-model="invoiceData.client_name" fluid />
                         </FloatLabel>
                     </div>
+                    <div class="col-span-1 mt-6">                        
+                        <FloatLabel>
+                            <label class="font-bold">宿泊数:</label>
+                            <InputText type="number" min="0" v-model="invoiceData.invoice_total_stays" fluid />
+                        </FloatLabel>
+                    </div>
                 </div>
-            </div>
+            </div>           
             <!-- Invoice Details --> 
             <div class="col-span-12 mb-4 mx-40">
                 <DataTable :value="invoiceData.items">                
@@ -135,6 +141,14 @@
                     </Column>
                 </DataTable>
             </div>
+            <!-- Invoice Comments -->
+            <div class="col-span-12 mb-4">
+                <FloatLabel>
+                    <Textarea v-model="invoiceData.comment" rows="3" cols="30" fluid />
+                    <label>備考</label>
+                </FloatLabel>
+                
+            </div>
             <Button label="Generate PDF" @click="generatePdf" />
         </div>
     </Dialog>
@@ -142,7 +156,7 @@
 <script setup>
     // Vue
     import { ref, computed, watch, onMounted } from "vue";    
-    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, DatePicker, Button, Badge, Dialog, FloatLabel, InputText } from 'primevue';
+    import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, FloatLabel, DatePicker, InputText, Textarea, Button, Badge, Dialog } from 'primevue';
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
@@ -208,6 +222,7 @@
             summary[key] = {
                 id: item.id,
                 hotel_id: item.hotel_id,
+                facility_name: item.facility_name,
                 client_id: item.client_id,
                 invoice_number: item.invoice_number,
                 date: formatDate(new Date(item.date)),
@@ -244,6 +259,7 @@
                 summary[key].details.push({
                     id: item.id,
                     hotel_id: item.hotel_id,
+                    facility_name: item.facility_name,
                     client_id: item.client_id,
                     date: formatDate(new Date(item.date)),
                     check_in: formatDate(new Date(item.check_in)),
@@ -265,9 +281,17 @@
     const displayInvoiceDialog = ref(false);
     const invoiceData = ref({});
     const openInvoiceDialog = (data) => {
-        const groupedRates = {};
-
+        console.log('openInvoiceDialog', data)
+        let allRoomComments = '';
+        const groupedRates = {};        
         data.details.forEach(block => {
+            
+            const roomNumber = block.room_number;
+            const comment = block.comment ? block.comment.replace(/\n/g, '<br/>') : '';
+            if (roomNumber) {
+                allRoomComments += `「${roomNumber}号室 IN：${block.check_in} OUT：${block.check_out}」 ${comment}\n`;
+            }
+            
             block.rates.forEach(item => {
                 const rate = item.tax_rate;
                 if (!groupedRates[rate]) {
@@ -276,22 +300,32 @@
                         total_net_price: 0,
                         total_price: 0
                     };
-                }
-                groupedRates[rate].total_net_price += item.total_net_price;
+                }                
                 groupedRates[rate].total_price += item.total_price;
             });
+            
         });
-
+        // Calculate total net price based on total gross price for each rate
+        for (const rate in groupedRates) {
+            const grossTotal = groupedRates[rate].total_price;
+            groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));            
+        }
+        
         invoiceData.value = {
             hotel_id: data.hotel_id,
+            facility_name: data.facility_name,
             invoice_number: data.invoice_number,
             date: data.date,
             due_date: getAdjustedDueDate(data.date),
             client_id: data.client_id,
-            client_name: data.client_kanji || data.client_name,                        
+            client_name: data.client_kanji || data.client_name,
+            invoice_total_stays: data.total_stays,
             invoice_total_value: data.total_value,
-            items: Object.values(groupedRates),            
+            items: Object.values(groupedRates),
+            comment: allRoomComments,
         };
+        console.log('openInvoiceDialog', invoiceData.value);
+
         displayInvoiceDialog.value = true;
     };
     const generatePdf = async () => {

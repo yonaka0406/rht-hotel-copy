@@ -38,6 +38,9 @@
             font-weight: bold;
             text-align: center;
         }
+        .cell-center {
+            text-align: center;            
+        }
         .cell-right {
             text-align: right;            
         }
@@ -128,7 +131,7 @@
             </div>
             <p>登録番号: T2430001042062</p>
             <p>担当者: {{ company_contact_person }}</p>            
-            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 0; width: 150px; opacity: 0.7;">
+            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 0; width: 150px; opacity: 0.4;">
         </div>
     </div>
 
@@ -138,7 +141,7 @@
                 　合計金額
             </div>
             <div style="width: 50%;">
-                <span style="font-weight: bold; text-align: right;">¥{{ total_amount }}</span> (税込)
+                <span style="font-weight: bold; text-align: right;">¥ {{ total_amount }}</span> (税込)
             </div>            
         </div>        
         <div style="width: 40%; font-size: 12pt;"></div>
@@ -155,12 +158,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>{{ detail_index_1 }}</td>
-                    <td>{{ detail_text_1 }}</td>                    
-                    <td class="cell-right">{{ detail_quantity_1 }}</td>
-                    <td class="cell-right">¥ {{ detail_value_1 }}</td>
-                </tr>
+                {{ detail_items }}                
                 <tr class="total-row">
                     <td colspan="3" style="text-align: right;">合計金額</td>
                     <td class="cell-right">¥ {{ details_total_value }}</td>
@@ -177,10 +175,7 @@
                     <td class="title-cell">消費税</td>
                     <td class="cell-right">¥ {{ total_tax_value }}</td>
                 </tr>
-                <tr>
-                    <td class="title-cell">{{ tax_perc_1 }}％対象</td>
-                    <td class="cell-right">¥ {{ taxable_value_1 }}</td>
-                </tr>
+                {{ taxable_details }}                
             </table>
         </div>
     </div>
