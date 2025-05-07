@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.raw({ type: 'text/xml' }));
 //assets for the frontend
-app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, '../components')));
+app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
 // Make config available to route handlers
 app.use((req, res, next) => {
