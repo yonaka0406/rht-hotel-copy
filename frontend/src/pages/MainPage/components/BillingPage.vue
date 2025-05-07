@@ -149,7 +149,7 @@
                 </FloatLabel>
                 
             </div>
-            <Button label="Generate PDF" @click="generatePdf" />
+            <Button v-if="!isGenerating" label="PDF作成" @click="generatePdf" />
         </div>
     </Dialog>
 </template>
@@ -288,6 +288,7 @@
     });
 
     // Dialog
+    const isGenerating = ref(false);
     const displayInvoiceDialog = ref(false);
     const invoiceData = ref({});
     const openInvoiceDialog = (data) => {
@@ -344,9 +345,12 @@
         displayInvoiceDialog.value = true;
     };
     const generatePdf = async () => {
+        isGenerating = true;
         //  Trigger server-side PDF generation        
         console.log('Generate PDF clicked', invoiceData.value);
         await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
+
+        isGenerating = false;
         
     };    
     
