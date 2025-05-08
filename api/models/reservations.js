@@ -2369,6 +2369,10 @@ async function transformRoomData(roomAndGuestList) {
     if (!output[currentRoomKey()]) {
       output[currentRoomKey()] = [];
     }
+    const maleCount = roomAndGuestList.RoomInformation.RoomPaxMaleCount || 0;
+    const femaleCount = roomAndGuestList.RoomInformation.RoomPaxFemaleCount || 0;
+    const perPaxRate = roomAndGuestList.RoomRateInformation.PerPaxRate || 0;
+
     output[currentRoomKey()].push({
       RoomDate: date,
       RoomTypeCode: roomAndGuestList.RoomInformation.RoomTypeCode,
@@ -2381,7 +2385,8 @@ async function transformRoomData(roomAndGuestList) {
       RoomChildB50Count: roomAndGuestList.RoomInformation.RoomChildB50Count || 0,
       RoomChildC30Count: roomAndGuestList.RoomInformation.RoomChildC30Count || 0,
       RoomChildDNoneCount: roomAndGuestList.RoomInformation.RoomChildDNoneCount || 0,
-      TotalPerRoomRate: roomAndGuestList.RoomRateInformation.TotalPerRoomRate,
+      TotalPerRoomRate: roomAndGuestList.RoomRateInformation.TotalPerRoomRate || ((maleCount + femaleCount) * perPaxRate),
+      PerPaxRate: roomAndGuestList.RoomRateInformation.PerPaxRate || 0,
     });
   } else if (Array.isArray(roomAndGuestList)) {
     // Handle the case when input is an array of room entries
@@ -2398,6 +2403,10 @@ async function transformRoomData(roomAndGuestList) {
         output[currentRoomKey()] = [];
       }
 
+      const maleCount = entry.RoomInformation.RoomPaxMaleCount || 0;
+      const femaleCount = entry.RoomInformation.RoomPaxFemaleCount || 0;
+      const perPaxRate = entry.RoomRateInformation.PerPaxRate || 0;
+
       output[currentRoomKey()].push({
         RoomDate: date,
         RoomTypeCode: entry.RoomInformation.RoomTypeCode,
@@ -2410,7 +2419,8 @@ async function transformRoomData(roomAndGuestList) {
         RoomChildB50Count: entry.RoomInformation.RoomChildB50Count || 0,
         RoomChildC30Count: entry.RoomInformation.RoomChildC30Count || 0,
         RoomChildDNoneCount: entry.RoomInformation.RoomChildDNoneCount || 0,
-        TotalPerRoomRate: entry.RoomRateInformation.TotalPerRoomRate,
+        TotalPerRoomRate: entry.RoomRateInformation.TotalPerRoomRate || ((maleCount + femaleCount) * perPaxRate),
+        PerPaxRate: entry.RoomRateInformation.PerPaxRate || 0,
       });
     }
   } else {
