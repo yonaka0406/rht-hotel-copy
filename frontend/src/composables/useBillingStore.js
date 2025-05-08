@@ -78,7 +78,16 @@ export function useBillingStore() {
 
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
-            }     
+            }
+            
+            let invoice_number = invoiceNumber;
+            if (!invoiceNumber) {
+                const date = new Date(invoiceData.date);
+                const year = date.getFullYear() % 100; // last two digits of year
+                const month = date.getMonth() + 1; // getMonth returns 0-11
+                
+                invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+            }
             
             const pdfBlob = await response.blob();
     
@@ -86,7 +95,7 @@ export function useBillingStore() {
             const pdfUrl = window.URL.createObjectURL(pdfBlob);
             const link = document.createElement('a');
             link.href = pdfUrl;
-            link.setAttribute('download', `invoice-${invoiceNumber}.pdf`);             
+            link.setAttribute('download', `請求書-${invoice_number}.pdf`);             
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link); // Clean up the DOM

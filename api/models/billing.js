@@ -162,7 +162,6 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
       throw new Error('Database error');
     }
 };
-
 const selectBilledListView = async (requestId, hotelId, month) => {
   const pool = getPool(requestId);
   const query = `
@@ -179,7 +178,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,reservation_payments.reservation_id      
       ,reservation_payments.room_id
       ,reservation_payments.value
-      ,reservation_payments.comment
+      ,reservation_payments.comment as payment_comment
       ,rooms.room_number
       ,room_types.name as room_type_name
       ,clients.name_kanji as client_kanji
@@ -187,7 +186,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.name as client_name
       ,clients.legal_or_natural_person
       ,details.number_of_people as total_people
-      ,details.date as total_stays
+      ,details.date as stays_count
       ,(
 	      SELECT json_agg(rd)
 	      FROM reservation_details rd
@@ -273,8 +272,59 @@ const selectBilledListView = async (requestId, hotelId, month) => {
   }
 
 };
+const selectMaxInvoiceNumber = async (requestId, hotelId, month) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      MAX(invoices.invoice_number) as last_invoice_number
+    FROM      
+      invoices
+        
+    WHERE 
+      invoices.hotel_id = $1  
+      AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
+  ;`;
+  const values = [hotelId, month];
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+
+const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE invoices SET
+      display_name = $1
+      ,invoice_number = $2
+      ,due_date = $3
+      ,total_stays = $4
+      ,comment = $5
+    WHERE 
+      invoices.id = $6
+      AND invoices.hotel_id = $7
+      AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $8::date)
+      AND client_id = $9
+    RETURNING *
+  ;`;
+  const values = [clientName, invoiceNumber, due_date, total_stays, comment, id, hotelId, date, clientId];
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error updating data:', err);
+    throw new Error('Database error');
+  }
+};
 
 module.exports = {    
   selectBillableListView,
   selectBilledListView,
+  selectMaxInvoiceNumber,
+  updateInvoices,
 };

@@ -593,10 +593,20 @@ CREATE TABLE invoices (
    client_id UUID NOT NULL REFERENCES clients(id),
    invoice_number TEXT,   
    status TEXT CHECK (status IN ('draft', 'sent', 'paid', 'cancelled')) NOT NULL DEFAULT 'draft',
+   display_name TEXT NULL,
+   due_date DATE NULL,
+   total_stays INT NULL,
+   comment TEXT NULL,
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE invoices
+   ADD COLUMN display_name TEXT NULL
+   ADD COLUMN due_date DATE NULL,
+   ADD COLUMN total_stays INT NULL,
+   ADD COLUMN comment TEXT NULL;
 
 --Ainda nao esta certo que vai ser usada
 

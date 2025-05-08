@@ -63,7 +63,7 @@
                                     </Column>    
                                     <Column field="room_type_name" header="部屋タイプ"></Column>
                                     <Column field="room_number" header="部屋番号"></Column>
-                                    <Column field="comment" header="コメント"></Column>
+                                    <Column field="payment_comment" header="コメント"></Column>
                                     <Column header="金額">
                                         <template #body="slotProps">
                                             <span>{{ slotProps.data.value.toLocaleString() }} 円</span>
@@ -86,13 +86,13 @@
                     <div class="col-span-4 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">請求番号:</label>
-                            <InputText type="text" v-model="invoiceData.invoice_number" fluid />
+                            <InputText type="text" v-model="invoiceData.invoice_number" fluid disabled />
                         </FloatLabel>
                     </div>
                     <div class="col-span-4 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">請求日:</label>
-                            <InputText type="date" v-model="invoiceData.date" fluid />
+                            <InputText type="date" v-model="invoiceData.date" fluid disabled />
                         </FloatLabel>
                     </div>
                     <div class="col-span-4 mt-6">
@@ -100,24 +100,27 @@
                             <label class="font-bold">支払期限:</label>
                             <InputText type="date" v-model="invoiceData.due_date" fluid />
                         </FloatLabel>
+                        <small class="ml-1">元データ：{{ invoiceDBData.due_date }}</small>
                     </div>
                     <div class="col-span-3 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">取引先番号:</label>
-                            <InputText type="text" v-model="invoiceData.client_id" fluid disabled/>
+                            <InputText type="text" v-model="invoiceData.client_id" fluid disabled />
                         </FloatLabel>
                     </div>
                     <div class="col-span-6 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">取引先名:</label>
-                            <InputText type="text" v-model="invoiceData.client_name" fluid />
+                            <InputText type="text" :value="invoiceData.client_name" fluid />                            
                         </FloatLabel>
+                        <small class="ml-1">元データ：{{ invoiceDBData.client_name }}</small>
                     </div>
                     <div class="col-span-1 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">宿泊数:</label>
                             <InputText type="number" min="0" v-model="invoiceData.invoice_total_stays" fluid />
                         </FloatLabel>
+                        <small class="ml-1">元データ：{{ invoiceDBData.invoice_total_stays }}</small>
                     </div>
                 </div>
             </div>           
@@ -147,7 +150,7 @@
                     <Textarea v-model="invoiceData.comment" rows="3" cols="30" fluid />
                     <label>備考</label>
                 </FloatLabel>
-                
+                <small class="ml-1">元データ：{{ invoiceDBData.comment }}</small>                
             </div>
             <Button v-if="!isGenerating" label="PDF作成" @click="generatePdf" />
         </div>
@@ -203,13 +206,11 @@
         }
 
         return formatDate(dueDate);
-
     };
 
     // Page Setting
     const selectedMonth = ref(new Date());
     selectedMonth.value.setMonth(selectedMonth.value.getMonth() - 1);
-
     const summarizedBilledList = computed(() => {
         if (!billedList.value) {
             return [];
@@ -237,7 +238,7 @@
                 client_kana: item.client_kana,
                 legal_or_natural_person: item.legal_or_natural_person,
                 total_people: parseFloat(item.total_people),
-                total_stays: parseFloat(item.total_stays),
+                stays_count: parseFloat(item.stays_count),
                 total_value: parseFloat(item.value),
                 details: [
                     {
@@ -249,17 +250,21 @@
                         reservation_id: item.reservation_id,
                         room_type_name: item.room_type_name,
                         room_number: item.room_number,
-                        comment: item.comment,
+                        comment: item.payment_comment,
                         value: parseFloat(item.value),
                         details: item.reservation_details_json,
                         rates: item.reservation_rates_json,
                     },
                 ],
+                display_name: item.display_name,
+                due_date: formatDate(new Date(item.due_date)),
+                total_stays: parseFloat(item.total_stays),
+                comment: item.comment,
             };
             } else {
                 summary[key].total_people += parseFloat(item.total_people);
-                summary[key].total_stays += parseFloat(item.total_stays);
-                summary[key].total_value += parseFloat(item.value);
+                summary[key].stays_count += parseFloat(item.stays_count);
+                summary[key].total_value += parseFloat(item.value);                
             
                 summary[key].details.push({
                     id: item.id,
@@ -277,7 +282,7 @@
                     reservation_id: item.reservation_id,
                     room_type_name: item.room_type_name,
                     room_number: item.room_number,
-                    comment: item.comment,
+                    comment: item.payment_comment,
                     value: parseFloat(item.value),
                     details: item.reservation_details_json,
                     rates: item.reservation_rates_json,
@@ -291,6 +296,7 @@
     const isGenerating = ref(false);
     const displayInvoiceDialog = ref(false);
     const invoiceData = ref({});
+    const invoiceDBData = ref({});
     const openInvoiceDialog = (data) => {
         console.log('openInvoiceDialog', data)
         let allRoomComments = '';
@@ -298,7 +304,7 @@
         data.details.forEach(block => {
             
             const roomNumber = block.room_number;
-            const comment = block.comment ? block.comment.replace(/\n/g, '<br/>') : '';
+            const comment = block.payment_comment ? block.payment_comment.replace(/\n/g, '<br/>') : '';
             if (roomNumber) {
                 allRoomComments += `「${roomNumber}号室 IN：${block.check_in} OUT：${block.check_out}」 ${comment}\n`;
             }
@@ -323,6 +329,26 @@
         }
         
         invoiceData.value = {
+            id: data.id,
+            hotel_id: data.hotel_id,
+            facility_name: data.facility_name,
+            bank_name: data.bank_name,
+            bank_branch_name: data.bank_branch_name,
+            bank_account_type: data.bank_account_type,
+            bank_account_number: data.bank_account_number,
+            bank_account_name: data.bank_account_name,
+            invoice_number: data.invoice_number,
+            date: data.date,
+            due_date: data.due_date,
+            client_id: data.client_id,
+            client_name: data.display_name,
+            invoice_total_stays: data.total_stays,
+            invoice_total_value: data.total_value,
+            items: Object.values(groupedRates),
+            comment: data.comment,
+        };
+        invoiceDBData.value = {
+            id: data.id,
             hotel_id: data.hotel_id,
             facility_name: data.facility_name,
             bank_name: data.bank_name,
@@ -335,12 +361,13 @@
             due_date: getAdjustedDueDate(data.date),
             client_id: data.client_id,
             client_name: data.client_kanji || data.client_name,
-            invoice_total_stays: data.total_stays,
+            invoice_total_stays: data.stays_count,
             invoice_total_value: data.total_value,
             items: Object.values(groupedRates),
             comment: allRoomComments,
         };
-        console.log('openInvoiceDialog', invoiceData.value);
+        console.log('openInvoiceDialog invoiceData', invoiceData.value);
+        console.log('openInvoiceDialog invoiceDBData', invoiceDBData.value);
 
         displayInvoiceDialog.value = true;
     };
@@ -349,15 +376,17 @@
         //  Trigger server-side PDF generation        
         console.log('Generate PDF clicked', invoiceData.value);
         await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
-
-        isGenerating.value = false;
         
+        await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
+        isGenerating.value = false;
+        displayInvoiceDialog.value = false;        
     };    
     
     
     onMounted (async () => {        
         await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
         
+        console.log('billedList', billedList.value);
         console.log("Summarized Billed List:", summarizedBilledList.value);
     });
 

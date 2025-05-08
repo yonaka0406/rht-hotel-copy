@@ -1,4 +1,4 @@
-const { selectBillableListView, selectBilledListView } = require('../models/billing');
+const { selectBillableListView, selectBilledListView, selectMaxInvoiceNumber, updateInvoices } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
@@ -52,7 +52,23 @@ const generateInvoice = async (req, res) => {
 
   try {    
     // Save the invoice data to the database
-    //const data = await upsertInvoiceData(req.requestId, hotelId, invoiceId, invoiceData);  
+    let max_invoice_number = await selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+    console.log('invoice_number', max_invoice_number.last_invoice_number);
+    if (!max_invoice_number.last_invoice_number) {
+      const date = new Date(invoiceData.date);
+      const year = date.getFullYear() % 100; // last two digits of year
+      const month = date.getMonth() + 1; // getMonth returns 0-11
+      
+      max_invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+      
+    } else {
+      max_invoice_number += 1;
+    }
+
+    if (!invoiceData.invoice_number) {
+      invoiceData.invoice_number = max_invoice_number;      
+    }
+    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
     
     const userInfo = await getUsersByID(req.requestId, userId);    
     
@@ -229,51 +245,8 @@ function generateInvoiceHTML(html, data, userName) {
   `;
 };
 
-const generateBlankPdfWithAbc = async (req, res) => {
-  let browser;
-  try {
-    // Create a browser instance
-    browser = await puppeteer.launch();
-
-    // Create a new page
-    const page = await browser.newPage();
-
-    //Get HTML content from HTML file
-    const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');
-    await page.setContent(invoiceHTML, { waitUntil: 'domcontentloaded' });
-
-    // To reflect CSS used for screens instead of print
-    await page.emulateMediaType('screen');
-
-    // Downlaod the PDF
-    const pdfBuffer = await page.pdf({
-      path: 'result.pdf',
-      margin: { top: '100px', right: '50px', bottom: '100px', left: '50px' },
-      printBackground: true,
-      format: 'A4',
-    });    
-
-    // Close the browser instance
-    await browser.close();
-
-    res.contentType("application/pdf");    
-    res.send(Buffer.from(pdfBuffer));
-    
-    console.log("Backend: Blank PDF sent (attempt 5).");  
-
-  } catch (error) {
-    console.error("Error generating blank PDF with Puppeteer (attempt 5):", error);
-    res.status(500).send('Error generating blank PDF');
-  } finally {
-    if (browser) {
-      await browser.close().catch(err => console.error("Error closing browser:", err));
-    }
-  }
-};
-
 module.exports = { 
   getBillableListView,
   getBilledListView,
   generateInvoice,
-  generateBlankPdfWithAbc,
 };
