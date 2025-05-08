@@ -134,21 +134,32 @@ CREATE TABLE client_group (
 );
 
 CREATE TABLE clients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),    
-    name TEXT NOT NULL DEFAULT 'TBD', -- Placeholder until check-in    
-    name_kana TEXT, -- Kana (phonetic) version of first name
-    name_kanji TEXT,  -- Kanji version of last name
-    date_of_birth DATE, -- Client's date of birth (optional)
-    legal_or_natural_person TEXT CHECK (legal_or_natural_person IN ('legal', 'natural')), -- Indicates if the client is a legal entity or a natural person
-    gender TEXT DEFAULT 'other' CHECK (gender IN ('male', 'female', 'other')), -- Client's gender (optional)
-    email TEXT, -- Nullable
-    phone TEXT, -- Nullable
-    fax TEXT, -- Fax number for the client
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id INT NULL,
+    name TEXT NOT NULL DEFAULT 'TBD',
+    name_kana TEXT,
+    name_kanji TEXT,
+    date_of_birth DATE,
+    legal_or_natural_person TEXT CHECK (legal_or_natural_person IN ('legal', 'natural')),
+    gender TEXT DEFAULT 'other' CHECK (gender IN ('male', 'female', 'other')),
+    email TEXT,
+    phone TEXT,
+    fax TEXT,
     client_group_id UUID DEFAULT NULL REFERENCES client_group(id),
+    website TEXT NULL,
+    billing_preference TEXT DEFAULT 'paper' CHECK (billing_preference IN ('paper', 'digital')),
+    comment TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
+ALTER TABLE clients
+   ADD COLUMN customer_id INT NULL,
+   ADD COLUMN website TEXT NULL,
+   ADD COLUMN billing_preference TEXT DEFAULT 'paper' CHECK (billing_preference IN ('paper', 'digital')),
+   ADD COLUMN comment TEXT NULL;
+
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
 VALUES
@@ -180,83 +191,6 @@ FROM (
         floor(random() * 99000)::TEXT AS random_number,
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
-
-
--- Mock data for 'clients' table
-    INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
-    VALUES
-    -- Natural persons with different gender options    
-    ('22222222-2222-2222-2222-222222222222', 'Jane Smith', 'ジェーン・スミス', 'ジェーン氏', '1990-07-25', 'natural', 'female', 'janesmith@example.com', '+9876543210', NULL, 2, NULL),
-    ('33333333-3333-3333-3333-333333333333', 'Alex Taylor', 'アレックス・テイラー', 'アレックス太郎', '2000-01-10', 'natural', 'other', 'alextaylor@example.com', NULL, '+1234509876', 3, 1),
-
-    -- Legal entities
-    ('44444444-4444-4444-4444-444444444444', 'TechCorp', NULL, NULL, NULL, 'legal', NULL, 'info@techcorp.com', '+1234901234', '+1234901235', 1, NULL),
-    ('55555555-5555-5555-5555-555555555555', 'Finance Ltd.', NULL, NULL, NULL, 'legal', NULL, 'contact@financeltd.com', '+9876509876', NULL, 2, NULL),
-
-    -- Clients with minimal data
-    ('66666666-6666-6666-6666-666666666666', 'TBD', NULL, NULL, NULL, 'natural', 'other', NULL, NULL, NULL, 1, NULL),
-    ('77777777-7777-7777-7777-777777777777', 'TBD', NULL, NULL, NULL, 'legal', NULL, NULL, NULL, NULL, 1, NULL),
-
-    -- Clients with updated data
-    ('88888888-8888-8888-8888-888888888888', 'Emily Brown', 'エミリー・ブラウン', 'エミリ茶', '1985-09-30', 'natural', 'female', 'emilybrown@example.com', '+1234987654', NULL, 3, 2),
-    ('99999999-9999-9999-9999-999999999999', 'Global Trade Co.', NULL, NULL, NULL, 'legal', NULL, 'support@globaltrade.com', NULL, '+1234909876', 1, 1),
-
-    -- Unique combinations with edge cases
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Chris Lee', 'クリス・リー', 'クリス李', NULL, 'natural', 'male', 'chrislee@example.com', NULL, NULL, 1, NULL),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'TBD', NULL, NULL, NULL, 'natural', 'other', NULL, NULL, NULL, 1, NULL);
-
-    -- Mock data for 'clients' table with Japanese names
-    INSERT INTO clients (name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
-    VALUES
-    ('Yamada Taro', 'ヤマダ タロウ', '山田 太郎', '1985-06-12', 'natural', 'male', 'yamada.taro@example.com', '+819012345678', '+819012345679', 1, NULL),
-    ('Tanaka Hanako', 'タナカ ハナコ', '田中 花子', '1992-04-20', 'natural', 'female', 'tanaka.hanako@example.com', '+819876543210', NULL, 2, NULL),
-    ('Suzuki Ichiro', 'スズキ イチロウ', '鈴木 一郎', '1978-03-15', 'natural', 'male', 'suzuki.ichiro@example.com', NULL, NULL, 3, 1),
-    ('Kobayashi Sakura', 'コバヤシ サクラ', '小林 桜', '2000-07-10', 'natural', 'female', 'kobayashi.sakura@example.com', '+818012345678', '+818012345679', 1, 2),
-    ('Fujimoto Hiroshi', 'フジモト ヒロシ', '藤本 弘', '1965-11-25', 'natural', 'male', 'fujimoto.hiroshi@example.com', '+817012345678', NULL, 2, NULL),
-    ('Shimizu Akira', 'シミズ アキラ', '清水 明', NULL, 'natural', 'other', 'shimizu.akira@example.com', '+819876543212', '+819876543213', 3, NULL),
-    ('Kato Mai', 'カトウ マイ', '加藤 舞', '1999-02-14', 'natural', 'female', 'kato.mai@example.com', NULL, NULL, 1, 3),
-    ('Nakamura Sota', 'ナカムラ ソウタ', '中村 壮太', '1987-12-01', 'natural', 'male', 'nakamura.sota@example.com', '+819012345676', NULL, 2, NULL),
-    ('Sato Haruki', 'サトウ ハルキ', '佐藤 陽輝', '1995-09-22', 'natural', 'other', 'sato.haruki@example.com', '+818765432109', NULL, 3, 1),
-    ('Matsumoto Yuki', 'マツモト ユキ', '松本 優希', NULL, 'natural', 'female', 'matsumoto.yuki@example.com', NULL, NULL, 1, NULL),
-    ('Ota Takumi', 'オオタ タクミ', '太田 匠', '1980-01-30', 'natural', 'male', 'ota.takumi@example.com', '+819012345670', '+819012345671', 2, NULL),
-    ('Ishikawa Rina', 'イシカワ リナ', '石川 里奈', '2001-08-05', 'natural', 'female', 'ishikawa.rina@example.com', NULL, NULL, 3, 2),
-    ('Hasegawa Kenji', 'ハセガワ ケンジ', '長谷川 健二', '1975-05-14', 'natural', 'male', 'hasegawa.kenji@example.com', '+817654321098', '+817654321099', 1, NULL),
-    ('Yoshida Nao', 'ヨシダ ナオ', '吉田 奈緒', '1990-10-18', 'natural', 'female', 'yoshida.nao@example.com', '+818012345672', NULL, 2, NULL),
-    ('Takeda Sho', 'タケダ ショウ', '武田 翔', NULL, 'natural', 'other', 'takeda.sho@example.com', NULL, '+818765432100', 3, 1);
-
-    -- Mock data for 'clients' table with Japanese companies
-    INSERT INTO clients (name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
-    VALUES
-    -- Companies with full contact information
-    ('Sumitomo Corporation', 'スミトモ コーポレーション', '住友商事', NULL, 'legal', NULL, 'info@sumitomo.co.jp', '+81312345678', '+81312345679', 1, NULL),
-    ('Mitsui & Co., Ltd.', 'ミツイ', '三井物産', NULL, 'legal', NULL, 'contact@mitsui.co.jp', '+81398765432', '+81398765433', 2, NULL),
-    ('SoftBank Group Corp.', 'ソフトバンク', 'ソフトバンクグループ', NULL, 'legal', NULL, 'support@softbank.jp', '+81387654321', '+81387654322', 3, 1),
-    ('Rakuten, Inc.', 'ラクテン', '楽天', NULL, 'legal', NULL, 'help@rakuten.jp', '+81376543210', '+81376543211', 1, 2),
-    ('Toyota Motor Corporation', 'トヨタ', 'トヨタ自動車', NULL, 'legal', NULL, 'contact@toyota.jp', '+81562345678', '+81562345679', 2, NULL),
-
-    -- Companies with partial contact information
-    ('Sony Group Corporation', 'ソニー', 'ソニーグループ', NULL, 'legal', NULL, 'sony@example.jp', '+81354321098', NULL, 3, NULL),
-    ('Nintendo Co., Ltd.', 'ニンテンドウ', '任天堂', NULL, 'legal', NULL, NULL, '+81612345678', '+81612345679', 1, NULL),
-    ('Panasonic Holdings Corporation', 'パナソニック', 'パナソニックホールディングス', NULL, 'legal', NULL, 'support@panasonic.jp', NULL, NULL, 2, 3),
-    ('Shiseido Company, Limited', 'シセイドウ', '資生堂', NULL, 'legal', NULL, NULL, NULL, NULL, 3, 1),
-    ('Hitachi, Ltd.', 'ヒタチ', '日立製作所', NULL, 'legal', NULL, 'info@hitachi.co.jp', '+81234567890', '+81234567891', 1, 2),
-
-    -- Companies with minimal data
-    ('TBD', NULL, NULL, NULL, 'legal', NULL, NULL, NULL, NULL, 2, NULL),
-    ('Kirin Holdings Company, Limited', 'キリン', 'キリンホールディングス', NULL, 'legal', NULL, NULL, '+81365432109', NULL, 3, NULL),
-    ('Nippon Steel Corporation', 'ニッポン スチール', '日本製鉄', NULL, 'legal', NULL, 'support@nipponsteel.jp', '+81343210987', '+81343210988', 1, NULL),
-
-    -- Unique cases
-    ('Dentsu Group Inc.', 'デンツウ', '電通グループ', NULL, 'legal', NULL, 'dentsu@example.com', NULL, '+81356789012', 2, 3),
-    ('Nippon Telegraph and Telephone Corporation', 'エヌティティ', '日本電信電話', NULL, 'legal', NULL, 'ntt@ntt.co.jp', '+81323456789', '+81323456790', 3, NULL),
-    ('Takeda Pharmaceutical Company Limited', 'タケダ', '武田薬品工業', NULL, 'legal', NULL, 'info@takeda.co.jp', '+81334567890', NULL, 1, NULL),
-    ('Seven & I Holdings Co., Ltd.', 'セブンアンドアイ', 'セブン&アイ・ホールディングス', NULL, 'legal', NULL, 'seven@example.co.jp', NULL, '+81345678901', 2, NULL),
-    ('Asahi Group Holdings, Ltd.', 'アサヒ', 'アサヒグループホールディングス', NULL, 'legal', NULL, NULL, NULL, '+81367890123', 3, 1);
-
---https://wanakana.com/ ??
---npm install jisho-api
---npm install kanji-lookup
---npm install japaneasy
 
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

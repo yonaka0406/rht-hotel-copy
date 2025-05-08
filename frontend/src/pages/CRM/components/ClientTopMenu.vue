@@ -106,10 +106,12 @@
                     label: '顧客一覧',
                     route: '/crm/clients/all'
                 },
+                /*
                 {
                     label: '顧客合流',
                     route: '/crm/clients/duplicates'
                 }
+                */
             ]
         },
         {

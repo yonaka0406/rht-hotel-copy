@@ -117,7 +117,6 @@ const getAllClients = async (requestId, limit, offset) => {
     throw new Error('Database error');
   }
 };
-
 const getTotalClientsCount = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
@@ -134,7 +133,6 @@ const getTotalClientsCount = async (requestId) => {
     throw new Error('Database error');
   }
 };
-
 const selectClient = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const clientQuery = `
@@ -155,6 +153,24 @@ const selectClient = async (requestId, clientId) => {
       client: clientResult.rows[0],
       addresses: addressResult.rows,
     };
+  }
+  catch (err) {
+    console.error('Error selecting client and addresses:', err);
+    throw new Error('Database error');
+  }
+};
+const selectCustomerID = async (requestId, clientId, customerId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * FROM clients 
+    WHERE id <> $1 AND customer_id = $2
+  `;  
+  const values = [clientId, customerId];
+
+  try {
+    const result = await pool.query(query, values);
+    
+    return result.rows;
   }
   catch (err) {
     console.error('Error selecting client and addresses:', err);
@@ -201,7 +217,6 @@ const addClientByName = async (requestId, client) => {
     throw new Error('Database error');
   }
 };
-
 const addNewClient = async (requestId, user_id, client) => {  
   const pool = getPool(requestId);
   if(!client.name && !client.name_kana && !client.name_kanji){
@@ -278,7 +293,7 @@ const addNewAddress = async (requestId, user_id, address) => {
     console.error('Error adding client address:', err);
     throw new Error('Database error');
   }
-}; 
+};
 
 const editClient = async (requestId, clientId, updatedFields, user_id) => {
   const pool = getPool(requestId);
@@ -316,7 +331,6 @@ const editClient = async (requestId, clientId, updatedFields, user_id) => {
     throw err;
   }
 };
-
 const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -329,9 +343,13 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
       gender = $6,
       email = $7,
       phone = $8,
-      fax = $9,      
-      updated_by = $10
-    WHERE id = $11
+      fax = $9,
+      customer_id = $10,
+      website = $11,
+      billing_preference = $12,
+      comment = $13,
+      updated_by = $14
+    WHERE id = $15
     RETURNING *;
   `;
 
@@ -344,7 +362,11 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
     updatedFields.gender,
     updatedFields.email,
     updatedFields.phone,
-    updatedFields.fax,    
+    updatedFields.fax,
+    updatedFields.customer_id,
+    updatedFields.website,
+    updatedFields.billing_preference,
+    updatedFields.comment,
     user_id,
     clientId
   ];
@@ -358,7 +380,6 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
     throw err;
   }
 };
-
 const editAddress = async (requestId, addressId, updatedFields, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -401,7 +422,6 @@ const editAddress = async (requestId, addressId, updatedFields, user_id) => {
     throw err;
   }
 };
-
 const selectClientReservations = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const query = `
@@ -459,7 +479,6 @@ const deleteClient = async (requestId, clientId, updatedBy) => {
     throw new Error('Database error');
   }
 };
-
 const deleteAddress = async (requestId, addressId, updatedBy) => {
   const pool = getPool(requestId);
   const query = format(`
@@ -486,6 +505,7 @@ module.exports = {
   getAllClients,
   getTotalClientsCount,
   selectClient,
+  selectCustomerID,
   addClientByName,
   addNewClient,
   addNewAddress,

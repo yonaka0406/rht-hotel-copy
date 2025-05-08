@@ -6,11 +6,10 @@
         <template #subtitle>
             <span></span>
         </template>
-        <template #content>
-    
+        <template #content>    
             <div v-if="client">
                 <form @submit.prevent="saveClient">
-                    <div class="flex grid xs:grid-cols-1 grid-cols-2 xl:grid-cols-3 gap-2 gap-y-6 pt-6">
+                    <div class="flex grid sm:grid-cols-1 grid-cols-2 xl:grid-cols-3 gap-2 gap-y-6 pt-6">
                         <!-- Name of the client -->
                         <div class="field col-6">
                             <FloatLabel>
@@ -116,7 +115,38 @@
                             <label>FAX</label>
                             <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
-                        </div>                            
+                        </div>
+                        <!-- Website URL -->
+                        <div class="field col-4">
+                            <FloatLabel>
+                                <InputText v-model="client.website" fluid />
+                                <label>ウェブサイト</label>
+                            </FloatLabel>
+                        </div>
+                        <!-- Billing preference -->
+                        <div class="field col-4">                            
+                            <SelectButton 
+                                v-model="client.billing_preference" 
+                                :options="billingOptions" 
+                                option-label="label" 
+                                option-value="value"
+                                fluid                        
+                            />                            
+                        </div>
+                        <!-- Customer ID -->
+                        <div class="field col-4">
+                            <FloatLabel>
+                                <InputNumber v-model="client.customer_id" :min="0" fluid />
+                                <label>顧客ID</label>
+                            </FloatLabel>
+                        </div>
+                        <!-- Comment -->
+                        <div class="field col-span-3">
+                            <FloatLabel>
+                                <Textarea v-model="client.comment" fluid />                                
+                                <label>備考</label>
+                            </FloatLabel>
+                        </div>
                     </div>
                     <!-- Save button -->                
                     <div class="flex justify-center items-center mt-3">
@@ -138,12 +168,12 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { selectedClient, fetchClient, updateClientInfoCRM } = useClientStore();
+    const { selectedClient, fetchClient, fetchCustomerID, updateClientInfoCRM } = useClientStore();
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Card, FloatLabel, InputText, DatePicker, SelectButton, RadioButton, Button } from 'primevue';
+    import { Card, FloatLabel, InputText, InputNumber, DatePicker, SelectButton, RadioButton, Textarea, Button } from 'primevue';
     
     // Client
     const clientId = ref(route.params.clientId);
@@ -160,6 +190,10 @@
     const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
     const isValidPhone = ref(true);
     const isValidFAX = ref(true);
+    const billingOptions = [
+        { label: '紙請求', value: 'paper' },
+        { label: '電子請求', value: 'digital' },
+    ];
 
     // Helper
     const normalizeKana = (str) => {
@@ -212,7 +246,12 @@
             toast.add({ severity: 'error', summary: 'Error', detail: '有効な電話番号を入力してください。', life: 3000 });
             return;
         }        
-        // console.log("Client to save:", client.value);
+        const validateCustomerId = await fetchCustomerID(client.value.id, client.value.customer_id);
+
+        if(validateCustomerId.client.length > 0) {
+            toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
+            return;
+        }
 
         await updateClientInfoCRM(client.value.id, client.value);
         

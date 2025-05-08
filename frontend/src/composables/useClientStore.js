@@ -120,6 +120,25 @@ export function useClientStore() {
             console.error('Failed to fetch hotel rooms', error);
         }
     };
+
+    const fetchCustomerID = async (clientId, customerId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/customer-id/${clientId}/${customerId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const client = await response.json();            
+            return client;
+            
+        } catch (error) {
+            console.error('Failed to fetch hotel rooms', error);
+        }
+    };
     
     const createBasicClient = async (name, name_kana, legal_or_natural_person, gender, email, phone) => {        
         try {
@@ -314,6 +333,7 @@ export function useClientStore() {
         fetchClient,
         fetchClientNameConversion,
         fetchClientReservations,
+        fetchCustomerID,
         createClient,
         createBasicClient,
         createAddress,

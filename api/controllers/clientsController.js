@@ -1,4 +1,4 @@
-const { processNameString, getAllClients, selectClient, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, selectCustomerID, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 
 // GET
@@ -58,7 +58,19 @@ const getClientReservations = async (req, res) => {
     console.error('Error getting client:', error);
     res.status(500).json({ error: error.message });
   }
-}
+};
+
+const getCustomerID = async (req, res) => {
+  const { clientId, customerId } = req.params;
+    
+  try{
+    const client = await selectCustomerID(req.requestId, clientId, customerId);
+    res.status(200).json({ client });
+  } catch (error) {
+    console.error('Error getting client:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
 // POST
 const createClientBasic = async (req, res) => {
@@ -192,6 +204,7 @@ module.exports = {
   getClient,
   getConvertedName,
   getClientReservations,
+  getCustomerID,
   createClientBasic, 
   createClient, 
   createAddress,
