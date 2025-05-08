@@ -2369,9 +2369,9 @@ async function transformRoomData(roomAndGuestList) {
     if (!output[currentRoomKey()]) {
       output[currentRoomKey()] = [];
     }
-    const maleCount = roomAndGuestList.RoomInformation.RoomPaxMaleCount || 0;
-    const femaleCount = roomAndGuestList.RoomInformation.RoomPaxFemaleCount || 0;
-    const perPaxRate = roomAndGuestList.RoomRateInformation.PerPaxRate || 0;
+    const maleCount = roomAndGuestList.RoomInformation.RoomPaxMaleCount * 1 || 0;
+    const femaleCount = roomAndGuestList.RoomInformation.RoomPaxFemaleCount * 1 || 0;
+    const perPaxRate = roomAndGuestList.RoomRateInformation.PerPaxRate * 1 || 0;
 
     output[currentRoomKey()].push({
       RoomDate: date,
@@ -2403,9 +2403,9 @@ async function transformRoomData(roomAndGuestList) {
         output[currentRoomKey()] = [];
       }
 
-      const maleCount = entry.RoomInformation.RoomPaxMaleCount || 0;
-      const femaleCount = entry.RoomInformation.RoomPaxFemaleCount || 0;
-      const perPaxRate = entry.RoomRateInformation.PerPaxRate || 0;
+      const maleCount = entry.RoomInformation.RoomPaxMaleCount * 1 || 0;
+      const femaleCount = entry.RoomInformation.RoomPaxFemaleCount * 1 || 0;
+      const perPaxRate = entry.RoomRateInformation.PerPaxRate * 1 || 0;
 
       output[currentRoomKey()].push({
         RoomDate: date,
