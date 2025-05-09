@@ -52,7 +52,7 @@ const getClientReservations = async (req, res) => {
     
   try{
     const client = await selectClientReservations(req.requestId, id);
-    res.status(200).json({ client });
+    res.status(200).json(client);
   } catch (error) {
     console.error('Error getting client:', error);
     res.status(500).json({ error: error.message });

@@ -117,7 +117,8 @@ export function useClientStore() {
                 },
             });
             
-            selectedClient.value = await response.json();
+            const clientReservations = await response.json();
+            return clientReservations;
             
         } catch (error) {
             console.error('Failed to fetch client reservations', error);

@@ -546,27 +546,114 @@ const editClientGroup = async (requestId, clientId, groupId, user_id) => {
 const selectClientReservations = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const query = `
+    WITH unionData AS (
+      SELECT hotel_id, id, MIN(index) AS index
+      FROM (
+        SELECT DISTINCT hotel_id, id, 1 AS index
+        FROM reservations
+        WHERE reservation_client_id = $1
+        
+        UNION ALL
+        
+        SELECT DISTINCT rd.hotel_id, rd.reservation_id, 2
+        FROM reservation_details rd
+        JOIN reservation_clients rc
+          ON rc.hotel_id = rd.hotel_id AND rc.reservation_details_id = rd.id
+        WHERE rc.client_id = $1
+        
+        UNION ALL
+        
+        SELECT DISTINCT hotel_id, reservation_id, 3
+        FROM reservation_payments
+        WHERE client_id = $1
+      ) AS all_union
+      GROUP BY hotel_id, id
+    )
+
     SELECT	
-      COUNT(distinct reservation_details.hotel_id) AS hotel_count
-      ,COUNT(reservation_details.date) as date_count
-      ,SUM(
-        CASE 
-        WHEN COALESCE(plans_hotel.plan_type, plans_global.plan_type) = 'per_room' 
-        THEN reservation_details.price / reservation_details.number_of_people
-        ELSE reservation_details.price END
-        ) AS price_sum	
+      reservations.hotel_id
+      ,hotels.formal_name
+      ,reservations.id 
+      ,reservations.status
+      ,reservations.check_in	
+      ,reservations.check_out
+      ,reservations.type
+      ,reservations.created_at
+      ,details.total_stays
+      ,details.total_people
+      ,CASE unionData.index
+          WHEN 1 THEN details.total_price
+          WHEN 2 THEN details_client.total_price	
+          WHEN 3 THEN payments.payments		
+        END AS total_price
+      ,CASE unionData.index
+          WHEN 1 THEN '予約者'
+          WHEN 2 THEN '宿泊者'
+          WHEN 3 THEN '支払者'
+        END AS client_role
     FROM 
-      reservation_clients
-      ,reservation_details
-      LEFT JOIN plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id 
-        AND plans_hotel.id = reservation_details.plans_hotel_id
-        LEFT JOIN plans_global 
-        ON plans_global.id = reservation_details.plans_global_id
-    WHERE
-      reservation_clients.client_id = $1
-      AND reservation_details.cancelled IS NULL
-      AND reservation_clients.reservation_details_id = reservation_details.id      
+      unionData
+        JOIN 
+      hotels 
+        ON hotels.id = unionData.hotel_id			
+        JOIN 
+      reservations 
+        ON reservations.hotel_id = unionData.hotel_id AND reservations.id = unionData.id
+        JOIN		
+      (
+        SELECT
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,COUNT(reservation_details.id) as total_stays
+          ,SUM(reservation_details.number_of_people) as total_people
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN
+            reservation_details.price + COALESCE(reservation_addons.price, 0)
+            ELSE 0 END
+          ) as total_price
+        FROM
+        reservation_details			
+          LEFT JOIN
+        reservation_addons
+          ON reservation_addons.hotel_id = reservation_details.hotel_id AND reservation_addons.reservation_detail_id = reservation_details.id
+        GROUP BY
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+      ) as details
+        ON details.hotel_id = reservations.hotel_id AND details.reservation_id = reservations.id
+        LEFT JOIN		
+      (
+        SELECT
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+          ,COUNT(reservation_details.id) as total_stays
+          ,SUM(reservation_details.number_of_people) as total_people
+          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN
+            reservation_details.price + COALESCE(reservation_addons.price, 0)
+            ELSE 0 END
+          ) as total_price
+        FROM
+        reservation_details			
+          LEFT JOIN
+        reservation_addons
+          ON reservation_addons.hotel_id = reservation_details.hotel_id AND reservation_addons.reservation_detail_id = reservation_details.id
+          JOIN 
+        reservation_clients
+          ON reservation_clients.hotel_id = reservation_details.hotel_id AND reservation_clients.reservation_details_id = reservation_details.id
+        WHERE reservation_clients.client_id = $1
+        GROUP BY
+          reservation_details.hotel_id
+          ,reservation_details.reservation_id
+      ) as details_client
+        ON details_client.hotel_id = reservations.hotel_id AND details_client.reservation_id = reservations.id
+        LEFT JOIN 
+	    (
+        SELECT hotel_id, reservation_id, SUM(value) as payments FROM reservation_payments 
+	      WHERE client_id = $1
+	      GROUP BY hotel_id, reservation_id
+      ) as payments
+        ON reservations.hotel_id = payments.hotel_id AND reservations.id = payments.reservation_id
+      ORDER BY reservations.check_in DESC
+    ;    
   `;
   const values = [clientId];
 

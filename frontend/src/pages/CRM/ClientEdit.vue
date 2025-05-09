@@ -12,6 +12,9 @@
             </Badge>
           </Tab>
           <Tab value="2" as="div" class="flex items-center gap-2">
+            <span class="font-bold whitespace-nowrap">予約歴</span>
+          </Tab>
+          <Tab value="3" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">変更履歴</span>
           </Tab>
         </TabList>
@@ -24,7 +27,10 @@
             <ClientAddresses :addresses="null" />
           </TabPanel>
           <TabPanel value="2" as="p" class="m-0">
-            <ClientEditHistory :history="null" />
+            <ClientReservationHistory />
+          </TabPanel>
+          <TabPanel value="3" as="p" class="m-0">
+            <ClientEditHistory />
           </TabPanel>
         </TabPanels>
       </Tabs>        
@@ -39,6 +45,7 @@
     
     import ClientBasicInfo from './components/ClientBasicInfo.vue';
     import ClientAddresses from './components/ClientAddresses.vue';
+    import ClientReservationHistory from './components/ClientReservationHistory.vue';
     import ClientEditHistory from './components/ClientEditHistory.vue';
 
     // Stores
