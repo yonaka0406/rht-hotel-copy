@@ -8,6 +8,7 @@
         </template>
         <template #content>    
             <div v-if="client">
+                
                 <form @submit.prevent="saveClient">
                     <div class="flex grid sm:grid-cols-1 grid-cols-2 xl:grid-cols-3 gap-2 gap-y-6 pt-6">
                         <!-- Name of the client -->
@@ -153,12 +154,79 @@
                         <Button label="保存" severity="info" type="submit" />
                     </div>
                 </form>
+
+                <Card class="mt-4">
+                    <template #title>
+                        <small>所属グループ</small>
+                    </template>
+                    <template #content>
+                        <div v-if="client.client_group_id">
+                            
+                            
+                        </div>
+                        <div v-else>
+                            <form @submit.prevent="saveGroup">
+                                <div class="flex grid grid-cols-12 gap-4">                                    
+                                    <div class="col-span-1"></div>
+                                    <Select
+                                        v-model="selectedGroupId"
+                                        :options="groups"
+                                        optionLabel="name" 
+                                        optionValue="id"
+                                        :virtualScrollerOptions="{ itemSize: 38 }"
+                                        fluid
+                                        placeholder="所属グループ選択"
+                                        class="col-span-6"
+                                        filter
+                                    />
+                                    <Button 
+                                        label="グループに追加" 
+                                        class="col-span-2" 
+                                        severity="info"
+                                        type="submit"
+                                    />
+                                    <Button 
+                                        label="新規グループ" 
+                                        class="col-span-2"
+                                        @click="openNewGroup"
+                                    />
+                                </div>
+                            </form>
+                        </div>
+                        
+                    </template>
+                </Card>
+                
             </div>
             <div v-else>
                 <p>Loading...</p>
             </div>
         </template>
     </Card>
+    
+    <Dialog v-model:visible="newGroupDialog" header="新規グループ作成" :modal="true" :style="{ width: '50vw' }">
+        
+            <div>
+                <div class="mt-6">
+                    <FloatLabel>
+                        <label for="groupName" class="font-bold">グループ名</label>
+                        <InputText id="groupName" v-model="newGroupName" class="w-full" required />
+                    </FloatLabel>
+                </div>
+                <div class="mt-6">
+                    <FloatLabel>
+                        <label for="groupComment" class="font-bold">コメント</label>
+                        <Textarea id="groupComment" v-model="newGroupComment" rows="2" fluid />
+                    </FloatLabel>
+                </div>                
+            </div>
+            <template #footer>
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" @click="newGroupDialog = false" />
+                <Button label="作成" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="createNewGroup" />
+            </template>    
+        
+    </Dialog>
+    
 </template>
 <script setup>
     // Vue
@@ -168,12 +236,12 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { selectedClient, fetchClient, fetchCustomerID, updateClientInfoCRM } = useClientStore();
+    const { groups, selectedClient, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups } = useClientStore();
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Card, FloatLabel, InputText, InputNumber, DatePicker, SelectButton, RadioButton, Textarea, Button } from 'primevue';
+    import { Card, Dialog, FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, RadioButton, Textarea, Button } from 'primevue';
     
     // Client
     const clientId = ref(route.params.clientId);
@@ -258,11 +326,41 @@
         toast.add({ severity: 'success', summary: 'Success', detail: '顧客情報が編集されました。', life: 3000 });    
     };
 
+    // Group
+    const selectedGroupId = ref(null);
+    const newGroupDialog = ref(false);
+    const newGroupName = ref('');
+    const newGroupComment = ref('');
+    const saveGroup = async () => {
+        console.log('selectedGroupId', selectedGroupId.value);
+        console.log('clientId', clientId.value);
+    };
+    const openNewGroup = () => {
+        newGroupDialog.value = true;
+    };
+    const createNewGroup = () => {
+  
+        const data = {
+            name: newGroupName.value, 
+            comment: newGroupComment.value,
+            clientId: clientId.value
+        }
+        console.log('createNewGroup', data);
+  
+        newGroupDialog.value = false;
+  
+    };
+
     onMounted(async () => {        
         try {            
             loadingBasicInfo.value = true;
+            
             await fetchClient(clientId.value);
+            await fetchClientGroups();
+            
             client.value = selectedClient.value.client;
+            selectedGroupId.value = client.value.client_group_id;
+
             loadingBasicInfo.value = false;            
         } catch (error) {
             console.error("Error fetching client data:", error);      

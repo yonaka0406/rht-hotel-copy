@@ -1,4 +1,4 @@
-const { processNameString, getAllClients, selectClient, selectCustomerID, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 
 // GET
@@ -47,7 +47,6 @@ const getConvertedName = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 const getClientReservations = async (req, res) => {
   const { id } = req.params;
     
@@ -59,7 +58,6 @@ const getClientReservations = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 const getCustomerID = async (req, res) => {
   const { clientId, customerId } = req.params;
     
@@ -68,6 +66,16 @@ const getCustomerID = async (req, res) => {
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const getClientGroups = async (req, res) => {
+      
+  try{
+    const groups = await selectClientGroups(req.requestId);
+    res.status(200).json(groups);
+  } catch (error) {
+    console.error('Error getting groups:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -120,6 +128,18 @@ const createAddress = async (req, res) => {
 
   try {
     const newAddress = await addNewAddress(req.requestId, user_id, addressFields);
+    res.json(newAddress); 
+  } catch (err) {
+    console.error('Error creating client address:', err);
+    res.status(500).json({ error: 'Failed to create client address' });
+  }
+};
+const createClientGroup = async (req, res) => {
+  const groupFields = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const newAddress = await addClientGroup(req.requestId, user_id, groupFields);
     res.json(newAddress); 
   } catch (err) {
     console.error('Error creating client address:', err);
@@ -205,6 +225,7 @@ module.exports = {
   getConvertedName,
   getClientReservations,
   getCustomerID,
+  getClientGroups,
   createClientBasic, 
   createClient, 
   createAddress,

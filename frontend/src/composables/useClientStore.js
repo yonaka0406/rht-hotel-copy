@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue';
 
+const groups = ref([]);
 const clients = ref([]);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
@@ -102,7 +103,6 @@ export function useClientStore() {
             throw error;
         }
     };
-
     const fetchClientReservations = async (clientId) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -117,10 +117,9 @@ export function useClientStore() {
             selectedClient.value = await response.json();
             
         } catch (error) {
-            console.error('Failed to fetch hotel rooms', error);
+            console.error('Failed to fetch client reservations', error);
         }
     };
-
     const fetchCustomerID = async (clientId, customerId) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -136,7 +135,24 @@ export function useClientStore() {
             return client;
             
         } catch (error) {
-            console.error('Failed to fetch hotel rooms', error);
+            console.error('Failed to fetch customer id', error);
+        }
+    };
+    const fetchClientGroups = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/groups/all`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            groups.value = await response.json();
+            
+        } catch (error) {
+            console.error('Failed to fetch client groups', error);
         }
     };
     
@@ -324,6 +340,7 @@ export function useClientStore() {
     };
 
     return {
+        groups,
         clients,
         clientsIsLoading,
         selectedClient,
@@ -334,6 +351,7 @@ export function useClientStore() {
         fetchClientNameConversion,
         fetchClientReservations,
         fetchCustomerID,
+        fetchClientGroups,
         createClient,
         createBasicClient,
         createAddress,

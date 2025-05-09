@@ -177,6 +177,22 @@ const selectCustomerID = async (requestId, clientId, customerId) => {
     throw new Error('Database error');
   }
 };
+const selectClientGroups = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * 
+    FROM client_group
+    ORDER BY name    
+  `;
+
+  try {
+    const result = await pool.query(query);
+    return result.rows; // Return total count
+  } catch (err) {
+    console.error('Error retrieving client groups:', err);
+    throw new Error('Database error');
+  }
+};
 
 // Function to add a new client with minimal info
 const addClientByName = async (requestId, client) => {
@@ -294,6 +310,58 @@ const addNewAddress = async (requestId, user_id, address) => {
     throw new Error('Database error');
   }
 };
+const addClientGroup = async (requestId, user_id, group) => {  
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  if(!group.name){
+    throw new Error('Group name is required');
+  }
+
+  let query = '';
+  let values = '';
+  
+  try {
+    await client.query('BEGIN');
+
+    query = `
+      INSERT INTO client_group (
+        name, comment, created_by
+      ) VALUES ($1, $2, $3)
+      RETURNING *;
+    `;
+    values = [
+      group.name,
+      group.comment,    
+      user_id
+    ];
+
+    const groupResult = await client.query(query, values);
+    const newGroupId = groupResult.rows[0].id;
+
+    query = `
+      UPDATE clients
+      SET client_group_id = $1
+      WHERE id = $2;
+    `;
+    values = [
+      newGroupId,
+      group.clientId
+    ];
+
+    const clientResult = await client.query(query, values);
+    
+    await client.query('COMMIT');
+    return {success: true};
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding client group and updating client:', err);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+};
 
 const editClient = async (requestId, clientId, updatedFields, user_id) => {
   const pool = getPool(requestId);
@@ -372,8 +440,7 @@ const editClientFull = async (requestId, clientId, updatedFields, user_id) => {
   ];
 
   try {
-    const result = await pool.query(query, values);
-    console.log('editClientFull success');
+    const result = await pool.query(query, values);    
     return result.rows;    
   } catch (err) {
     console.error('Error updating client:', err);
@@ -506,9 +573,11 @@ module.exports = {
   getTotalClientsCount,
   selectClient,
   selectCustomerID,
+  selectClientGroups,
   addClientByName,
   addNewClient,
   addNewAddress,
+  addClientGroup,
   editClient,
   editClientFull,
   editAddress,
