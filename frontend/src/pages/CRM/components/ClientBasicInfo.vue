@@ -162,6 +162,51 @@
                     <template #content>
                         <div v-if="client.client_group_id">
                             
+                            <DataTable :value="selectedClientGroup">
+                                <template #header>
+                                    <div class="flex justify-end">
+                                        <Button 
+                                            label="グループから外す"
+                                            icon="pi pi-times"
+                                            class="p-button-text p-button-danger mx-4"
+                                            @click="removeFromGroup"
+                                        />
+                                    </div>
+                                </template>
+                                <Column header="操作">
+                                    <template #body="{ data }">
+                                        <Button 
+                                            @click="goToEditClientPage(data.id)"
+                                            severity="info"
+                                            class="p-button-rounded p-button-text p-button-sm"
+                                        >
+                                            <i class="pi pi-pencil"></i>
+                                        </Button>
+                                    </template>
+                                </Column>
+                                <Column header="氏名・名称">
+                                    <template #body="{ data }">
+                                        {{ data.name_kanji || data.name }}
+                                    </template>
+                                </Column>
+                                <Column header="カナ">
+                                    <template #body="{ data }">
+                                        {{ data.name_kana }}
+                                    </template>
+                                </Column>                                
+                                <Column field="legal_or_natural_person" header="法人 / 個人">
+                                    <template #body="{ data }">
+                                        <span v-if="data.legal_or_natural_person === 'legal'">                                    
+                                            <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
+                                        </span>
+                                        <span v-else>
+                                            <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
+                                        </span>                                
+                                    </template>                                                       
+                                </Column>
+                                <Column field="phone" header="電話番号"></Column>
+                                <Column field="email" header="メールアドレス"></Column>
+                            </DataTable>
                             
                         </div>
                         <div v-else>
@@ -231,17 +276,18 @@
 <script setup>
     // Vue
     import { ref, onMounted, watch } from 'vue';
-    import { useRoute } from 'vue-router';
+    import { useRoute, useRouter } from 'vue-router';
     const route = useRoute();
+    const router = useRouter();
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { groups, selectedClient, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups } = useClientStore();
+    const { groups, selectedClient, selectedClientGroup, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Card, Dialog, FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, RadioButton, Textarea, Button } from 'primevue';
+    import { Card, Dialog, FloatLabel, InputText, InputNumber, DatePicker, Select, SelectButton, RadioButton, Textarea, Button, DataTable, Column, Tag } from 'primevue';
     
     // Client
     const clientId = ref(route.params.clientId);
@@ -332,23 +378,59 @@
     const newGroupName = ref('');
     const newGroupComment = ref('');
     const saveGroup = async () => {
-        console.log('selectedGroupId', selectedGroupId.value);
-        console.log('clientId', clientId.value);
+        
+        const result = await updateClientGroup(selectedGroupId.value, clientId.value);
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: `所属グループ紐づけました。 `,
+            life: 3000,
+        });
+
+        await fetchClient(clientId.value);     
+        client.value = selectedClient.value.client;
+
+    };
+    const removeFromGroup = async () => {
+        const result = await updateClientGroup(null, clientId.value);
+
+        toast.add({
+            severity: 'error',
+            summary: '削除',
+            detail: `所属グループ削除されました。`,
+            life: 3000,
+        });
+
+        await fetchClient(clientId.value);     
+        client.value = selectedClient.value.client;
     };
     const openNewGroup = () => {
         newGroupDialog.value = true;
     };
-    const createNewGroup = () => {
-  
+    const createNewGroup = async () => {  
         const data = {
             name: newGroupName.value, 
             comment: newGroupComment.value,
             clientId: clientId.value
         }
         console.log('createNewGroup', data);
+        const result = await createClientGroup(data);
+        if(result.success){
+            toast.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: `所属グループ「${data.name}」作成されました。 `,
+                life: 3000,
+            });
+        }   
+        await fetchClient(clientId.value);     
+        client.value = selectedClient.value.client;
   
         newGroupDialog.value = false;
   
+    };
+    const goToEditClientPage = (clientId) => {        
+        router.push({ name: 'ClientEdit', params: { clientId: clientId } });
     };
 
     onMounted(async () => {        

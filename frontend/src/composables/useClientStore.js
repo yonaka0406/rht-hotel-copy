@@ -5,6 +5,7 @@ const clients = ref([]);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
 const selectedClientAddress = ref(null);
+const selectedClientGroup = ref(null);
 
 export function useClientStore() {
     
@@ -70,10 +71,12 @@ export function useClientStore() {
             const result = await response.json();
             selectedClient.value = result.client;
             selectedClientAddress.value = result.client.addresses;
+            selectedClientGroup.value = result.client.group;
             console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
             return {
                 client: selectedClient.value,
                 addresses: selectedClientAddress.value,
+                group: selectedClientGroup.value,
             };            
         } catch (error) {
             console.error('Failed to fetch hotel rooms', error);
@@ -219,10 +222,33 @@ export function useClientStore() {
             throw new Error('Failed to create client');
           }
       
-          const newClient = await response.json();          
-          return newClient;
+          const result = await response.json();          
+          return result;
         } catch (error) {
           console.error('Failed to create client', error);
+          throw error;
+        }
+    };
+    const createClientGroup = async (groupFields) => {        
+        try {
+          const authToken = localStorage.getItem('authToken');
+          const response = await fetch('/api/client/group/new', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(groupFields),
+          });
+      
+          if (!response.ok) {
+            throw new Error('Failed to create group');
+          }
+      
+          const result = await response.json();          
+          return result;
+        } catch (error) {
+          console.error('Failed to create group', error);
           throw error;
         }
     };
@@ -315,6 +341,27 @@ export function useClientStore() {
         } catch (error) {
             console.error('Failed to update client', error);
         }
+    };    
+    const updateClientGroup = async (groupId, clientId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/group/${groupId}/update/${clientId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to update group');
+            }
+        
+            const editedData = await response.json();   
+            return editedData;         
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
     };
     const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {        
         try {
@@ -345,6 +392,7 @@ export function useClientStore() {
         clientsIsLoading,
         selectedClient,
         selectedClientAddress,
+        selectedClientGroup,
         setClientsIsLoading,
         fetchClients,
         fetchClient,
@@ -355,10 +403,12 @@ export function useClientStore() {
         createClient,
         createBasicClient,
         createAddress,
+        createClientGroup,
         removeAddress,
         updateClientInfo,
         updateClientInfoCRM,
         updateAddress,
+        updateClientGroup,
         mergeClientsCRM,
     };
 }

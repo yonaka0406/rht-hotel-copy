@@ -144,14 +144,26 @@ const selectClient = async (requestId, clientId) => {
     FROM addresses
     WHERE client_id = $1
   `;
+  const groupQuery = `
+    SELECT clients.*
+    FROM 
+      clients
+        JOIN
+      client_group
+        ON client_group.id = clients.client_group_id
+    WHERE clients.client_group_id = (SELECT client_group_id FROM clients WHERE id = $1)
+    ORDER BY clients.legal_or_natural_person, clients.name_kana, clients.name_kanji, clients.name
+  `;
   const values = [clientId];
 
   try {
     const clientResult = await pool.query(clientQuery, values);
     const addressResult = await pool.query(addressQuery, values);
+    const groupResult = await pool.query(groupQuery, values);
     return {
       client: clientResult.rows[0],
       addresses: addressResult.rows,
+      group: groupResult.rows,
     };
   }
   catch (err) {
@@ -340,12 +352,14 @@ const addClientGroup = async (requestId, user_id, group) => {
     const newGroupId = groupResult.rows[0].id;
 
     query = `
-      UPDATE clients
-      SET client_group_id = $1
-      WHERE id = $2;
+      UPDATE clients SET 
+        client_group_id = $1,
+        updated_by = $2
+      WHERE id = $3;
     `;
     values = [
       newGroupId,
+      user_id,
       group.clientId
     ];
 
@@ -489,6 +503,46 @@ const editAddress = async (requestId, addressId, updatedFields, user_id) => {
     throw err;
   }
 };
+const editClientGroup = async (requestId, clientId, groupId, user_id) => {
+  const pool = getPool(requestId);
+  let query = '';
+  let values = '';
+  
+  if(groupId !== 'null'){    
+    query = `
+      UPDATE clients SET
+        client_group_id = $1,      
+        updated_by = $2
+      WHERE id = $3
+      RETURNING *;
+    `;
+    values = [
+      groupId,     
+      user_id,
+      clientId
+    ];
+  } else{    
+    query = `
+      UPDATE clients SET
+        client_group_id = NULL,      
+        updated_by = $1
+      WHERE id = $2
+      RETURNING *;
+    `;
+    values = [      
+      user_id,
+      clientId
+    ];
+  }
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;    
+  } catch (err) {
+    console.error('Error updating client:', err);
+    throw err;
+  }
+};
 const selectClientReservations = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const query = `
@@ -581,6 +635,7 @@ module.exports = {
   editClient,
   editClientFull,
   editAddress,
+  editClientGroup,
   selectClientReservations,
   deleteClient,
   deleteAddress,

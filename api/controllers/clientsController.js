@@ -1,4 +1,4 @@
-const { processNameString, getAllClients, selectClient, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, editClientGroup, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 
 // GET
@@ -187,6 +187,20 @@ const updateAddress = async (req, res) => {
     res.status(500).json({ error: 'Failed to update address' });
   }
 };
+const updateClientGroup = async (req, res) => {
+  const clientId = req.params.id;  
+  const groupId = req.params.gid;  
+  const user_id = req.user.id;
+
+  try {
+    const updatedClient = await editClientGroup(req.requestId, clientId, groupId, user_id) 
+    res.json(updatedClient);
+  } catch (err) {
+    console.error('Error updating client:', err);
+    res.status(500).json({ error: 'Failed to update client' });
+  }
+  
+};
 
 const mergeClients = async (req, res) => {
   const newClientId = req.params.nid;
@@ -229,9 +243,11 @@ module.exports = {
   createClientBasic, 
   createClient, 
   createAddress,
+  createClientGroup,
   removeAddress,
   updateClient,
   updateClientFull,
   updateAddress,
+  updateClientGroup,
   mergeClients,
 };
