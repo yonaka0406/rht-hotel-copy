@@ -1,4 +1,4 @@
-const { selectReservationHistory, selectReservationInventoryChange, selectReservationGoogleInventoryChange } = require('../models/log');
+const { selectReservationHistory, selectReservationInventoryChange, selectReservationGoogleInventoryChange, selectClientHistory } = require('../models/log');
 
 const fetchReservationHistory = async (req, res) => {
     const { id } = req.params;
@@ -32,7 +32,20 @@ const fetchReservationInventoryChange = async (req, res) => {
   }
 };
 
+const fetchClientHistory = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const logs = await selectClientHistory(req.requestId, id);
+    res.json(logs);
+  } catch (error) {
+    console.error('Error getting hotel rooms:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
     fetchReservationHistory,
-    fetchReservationInventoryChange,    
+    fetchReservationInventoryChange,   
+    fetchClientHistory, 
 };

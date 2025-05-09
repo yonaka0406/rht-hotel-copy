@@ -212,6 +212,61 @@
     AFTER INSERT OR UPDATE OR DELETE ON addons_hotel
     FOR EACH ROW EXECUTE FUNCTION log_hotel_addons_changes();
 
+-- CLIENTS BLOCK
+
+    CREATE TABLE logs_clients (
+        id SERIAL PRIMARY KEY,
+        log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the log was created
+        user_id INT REFERENCES users(id), -- The user who made the change
+        table_name TEXT NOT NULL, -- Table where the change occurred
+        action TEXT NOT NULL, -- 'INSERT', 'UPDATE', or 'DELETE'
+        record_id UUID NOT NULL, -- ID of the affected record
+        changes JSONB, -- Changes made to the record    
+        ip_address INET -- IP address of the user who made the change
+    );
+
+    CREATE INDEX idx_logs_clients_record_id ON logs_clients(record_id);
+
+    CREATE OR REPLACE FUNCTION log_clients_changes()
+    RETURNS TRIGGER AS $$
+    BEGIN
+        -- Insert a log entry with changes
+        INSERT INTO logs_clients (user_id, table_name, action, record_id, changes, ip_address)
+        VALUES (
+            NEW.updated_by, -- Assuming each table has an `updated_by` column
+            TG_TABLE_NAME, -- Name of the table
+            TG_OP, -- The operation: INSERT, UPDATE, or DELETE
+            COALESCE(NEW.id, OLD.id), -- The affected record ID
+            CASE
+                WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)::jsonb -- Log the full record for deletes
+                WHEN TG_OP = 'INSERT' THEN row_to_json(NEW)::jsonb -- Log the full record for inserts
+                ELSE jsonb_build_object(
+                    'old', row_to_json(OLD)::jsonb,
+                    'new', row_to_json(NEW)::jsonb
+                ) -- Log only changes for updates
+            END,
+            inet_client_addr() -- Get the IP address of the client
+        );
+        RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql;
+
+    -- For the `clients` table
+    CREATE TRIGGER log_clients_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON clients
+    FOR EACH ROW EXECUTE FUNCTION log_clients_changes();
+
+    -- For the `addresses` table
+    CREATE TRIGGER log_addresses_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON addresses
+    FOR EACH ROW EXECUTE FUNCTION log_clients_changes();
+
+    -- For the `client_group` table
+    CREATE TRIGGER log_client_group_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON client_group
+    FOR EACH ROW EXECUTE FUNCTION log_clients_changes();
+
+
 -- RESERVATION BLOCK
 
     CREATE TABLE logs_reservation (

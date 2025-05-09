@@ -360,13 +360,15 @@
             toast.add({ severity: 'error', summary: 'Error', detail: '有効な電話番号を入力してください。', life: 3000 });
             return;
         }        
-        const validateCustomerId = await fetchCustomerID(client.value.id, client.value.customer_id);
 
-        if(validateCustomerId.client.length > 0) {
-            toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
-            return;
+        if(client.value.customer_id){
+            const validateCustomerId = await fetchCustomerID(client.value.id, client.value.customer_id);
+            if(validateCustomerId.client.length > 0) {
+                toast.add({ severity: 'error', summary: 'Error', detail: '顧客IDはすでに利用中です。', life: 3000 });
+                return;
+            }
         }
-
+        
         await updateClientInfoCRM(client.value.id, client.value);
         
         toast.add({ severity: 'success', summary: 'Success', detail: '顧客情報が編集されました。', life: 3000 });    
