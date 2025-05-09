@@ -22,7 +22,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         RETURNING id
       `;
       
-      const hotelResult = await pool.query(hotelQuery, [      
+      const hotelResult = await client.query(hotelQuery, [      
         req.body.formal_name, req.body.name, req.body.facility_type.code,
         req.body.open_date, req.body.total_rooms, req.body.postal_code,
         req.body.address, req.body.email, req.body.phone_number,      
@@ -37,7 +37,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
           PARTITION OF ${tableName} 
           FOR VALUES IN (${hotelId})
         `;
-        await pool.query(partitionQuery);
+        await client.query(partitionQuery);
       };
 
       const createPartitionsSequentially = async () => {
