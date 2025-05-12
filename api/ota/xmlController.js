@@ -360,6 +360,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
+    console.log('updateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
 
