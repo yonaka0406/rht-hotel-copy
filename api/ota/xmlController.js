@@ -310,6 +310,38 @@ const successOTAReservations = async (req, res, hotel_id, outputId) => {
         return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
     }
 };
+const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
+    const name = 'NetStockSearchService';
+
+    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+    if (!template) {
+        return res.status(500).send({ error: 'XML template not found.' });
+    }
+
+    const formatYYYYMMDD = (dateString) => {
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // getMonth() is 0-indexed
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${year}${month}${day}`;
+    };
+    const formattedStartDate = formatYYYYMMDD(startDate);
+    const formattedEndDate = formatYYYYMMDD(endDate);
+    
+    let xmlBody = template
+        .replace('{{extractionProcedure}}', 2)
+        .replace('{{searchDurationFrom}}', formattedStartDate)
+        .replace('{{searchDurationTo}}', formattedEndDate);
+
+    try {
+        const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);        
+        return apiResponse;
+    } catch (error) {        
+        console.error('Error submitting XML template:', error);        
+        res.status(500).send({ error: 'Failed to submit XML template.' });
+    }
+
+};
 const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
@@ -350,8 +382,11 @@ const updateInventoryMultipleDays = async (req, res) => {
     if (filteredInventory.length === 0) {
         return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
     }
-
     // console.log('filteredInventory', filteredInventory);
+    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
+    
+    const stockCheck = await checkOTAStock(req, res, hotel_id, minDate, maxDate);
+    console.log('stockCheck', stockCheck);
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -432,7 +467,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         return daysDiff > 30;
     };
 
-    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
+    //const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
     
     if (filteredInventory.length > 1000 || exceeds30Days) {        
