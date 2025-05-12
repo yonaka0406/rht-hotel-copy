@@ -185,6 +185,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.name_kana as client_kana
       ,clients.name as client_name
       ,clients.legal_or_natural_person
+      ,clients.billing_preference
       ,details.number_of_people as total_people
       ,details.date as stays_count
       ,(
