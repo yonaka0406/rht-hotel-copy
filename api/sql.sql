@@ -210,6 +210,25 @@ CREATE TABLE addresses (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
+CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note');
+CREATE TYPE crm_action_status_enum AS ENUM ('pending', 'scheduled', 'completed', 'cancelled', 'rescheduled', 'needs_follow_up');
+CREATE TABLE crm_actions (
+   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+   client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
+   action_type crm_action_type_enum NOT NULL,
+   action_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+   subject VARCHAR(255) NOT NULL,
+   details TEXT,
+   outcome TEXT,
+   assigned_to INT REFERENCES users(id),
+   due_date TIMESTAMP WITH TIME ZONE,
+   status crm_action_status_enum DEFAULT 'pending',
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   updated_by INT DEFAULT NULL REFERENCES users(id)
+);
+
+
+
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,
    name TEXT NOT NULL,
