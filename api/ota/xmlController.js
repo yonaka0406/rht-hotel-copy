@@ -383,6 +383,15 @@ const updateInventoryMultipleDays = async (req, res) => {
         return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
     }
     // console.log('filteredInventory', filteredInventory);
+    const getInventoryDateRange = (inventory) => {
+        if (inventory.length === 0) return { minDate: null, maxDate: null };
+
+        const dates = inventory.map((item) => new Date(item.date));
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+
+        return { minDate, maxDate };
+    };
     const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
     
     const stockCheck = await checkOTAStock(req, res, hotel_id, minDate, maxDate);
@@ -450,15 +459,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         }
         
     };
-    const getInventoryDateRange = (inventory) => {
-        if (inventory.length === 0) return { minDate: null, maxDate: null };
-
-        const dates = inventory.map((item) => new Date(item.date));
-        const minDate = new Date(Math.min(...dates));
-        const maxDate = new Date(Math.max(...dates));
-
-        return { minDate, maxDate };
-    };
+    
     const dateRangeExceeds30Days = (minDate, maxDate) => {
         if (!minDate || !maxDate) return false;
 
