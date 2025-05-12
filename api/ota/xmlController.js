@@ -363,15 +363,36 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     const name = 'NetStockBulkAdjustmentService';
 
+    // Helper function to format date to YYYYMMDD
+    const formatYYYYMMDD = (dateString) => {
+        const date = new Date(dateString);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+            return null; // Return null for invalid dates
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    };
+
     // console.log('updateInventoryMultipleDays:', hotel_id, name);
 
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
         return res.status(500).send({ error: 'XML template not found.' });
     }
-    // console.log('updateInventoryMultipleDays selectXMLTemplate:', template);
+    
+    // Filter out entries older than the current date and format dates for comparison
+    const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
 
-    // Filter out entries older than the current date
+    let filteredInventory = inventory.filter((item) => {
+        const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+        // Only include items with valid dates on or after the current date
+        return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
+    });
+
+    /*
     const currentDate = (() => {
         const date = new Date();
         const year = date.getFullYear();
@@ -393,23 +414,85 @@ const updateInventoryMultipleDays = async (req, res) => {
 
         return itemDate >= currentDate;
     });
+    */
     if (filteredInventory.length === 0) {
         return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
     }
-    // console.log('filteredInventory', filteredInventory);
+    
+    // Get the date range of the filtered inventory
     const getInventoryDateRange = (inventory) => {
         if (inventory.length === 0) return { minDate: null, maxDate: null };
 
-        const dates = inventory.map((item) => new Date(item.date));
+        const dates = inventory.map((item) => new Date(item.date)).filter(date => !isNaN(date.getTime())); 
+        if (dates.length === 0) return { minDate: null, maxDate: null };
+
         const minDate = new Date(Math.min(...dates));
         const maxDate = new Date(Math.max(...dates));
 
         return { minDate, maxDate };
     };
     const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
+    // If minDate or maxDate is null after filtering, it means no valid dates were found.
+    if (!minDate || !maxDate) {
+        return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+    }
     
-    const stockCheck = await checkOTAStock(req, res, hotel_id, minDate, maxDate);
-    console.log('stockCheck', stockCheck);
+    // Check current stock using checkOTAStock for the relevant date range
+    let stockCheckResults;
+    try {
+        stockCheckResults = await checkOTAStock(req, res, hotel_id, minDate, maxDate);        
+        if (!Array.isArray(stockCheckResults)) {
+             console.error('checkOTAStock did not return an array:', stockCheckResults);             
+             stockCheckResults = [];
+        }
+    } catch (error) {
+        console.error('Error during checkOTAStock:', error);        
+         return res.status(500).send({ error: 'Failed to retrieve current stock information.' });
+    }
+    // Create a map for quick lookup of stock check results by room type group and date
+    const stockCheckMap = new Map();
+    stockCheckResults.forEach(item => {        
+        const key = `${item.netRmTypeGroupCode}-${item.saleDate}`;
+        stockCheckMap.set(key, parseInt(item.remainingCount));
+    });
+
+    // Compare filteredInventory with stockCheckResults
+    let needsUpdate = false;
+    for (const item of filteredInventory) {
+        const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
+        const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
+        const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
+
+        const currentRemainingStock = stockCheckMap.get(lookupKey);
+
+        // Compare only if stock data exists for this room type and date
+        if (currentRemainingStock !== undefined) {
+             // Check if calculated remaining count from inventory matches current stock
+            if (expectedRemainingCount < 0) { // Ensure expectedRemainingCount is not negative
+                 if (currentRemainingStock !== 0) {
+                     needsUpdate = true;
+                     console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
+                     break; // Found a mismatch, no need to check further
+                 }
+            } else {
+                 if (currentRemainingStock !== expectedRemainingCount) {
+                     needsUpdate = true;
+                     console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
+                     break; // Found a mismatch, no need to check further
+                 }
+            }
+        } else {             
+             console.warn(`No stock data found for ${lookupKey}. Cannot compare.`);             
+        }
+    }
+
+    // If no mismatch was found, skip the update process
+    if (!needsUpdate) {
+        console.log('Inventory matches current stock. No update needed.');
+        return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
+    }
+
+    // --- Proceed with batch processing if an update is needed ---
 
     const processInventoryBatch = async (batch, batch_no) => {
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -474,17 +557,17 @@ const updateInventoryMultipleDays = async (req, res) => {
         
     };
     
+    // Check if the date range exceeds 30 days for batching decision
     const dateRangeExceeds30Days = (minDate, maxDate) => {
         if (!minDate || !maxDate) return false;
 
         const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
         const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
         return daysDiff > 30;
-    };
-
-    //const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
+    };    
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
     
+    // Determine batch size and process inventory in batches or as a single request
     if (filteredInventory.length > 1000 || exceeds30Days) {        
         const batchSize = 30;
         let requestNumber = 0;
@@ -494,6 +577,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             requestNumber++;
         }
     } else {
+        // Process all filtered inventory as a single batch
         await processInventoryBatch(filteredInventory, 0);
     }
 
