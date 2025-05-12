@@ -336,7 +336,20 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
     try {
         const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
         const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
-        return executeResponse;
+
+        // Check if executeResponse is an array, if not, make it an array
+        const executeResponseArray = Array.isArray(executeResponse) ? executeResponse : [executeResponse];
+
+        // Transform the data into the desired array format
+        const transformedResponse = executeResponseArray.map(item => ({
+            netRmTypeGroupCode: item.netRmTypeGroupCode,
+            saleDate: item.saleDate,
+            salesCount: item.salesCount,
+            remainingCount: item.remainingCount
+        }));
+
+        // Return the transformed data
+        return transformedResponse;
     } catch (error) {        
         console.error('Error submitting XML template:', error);        
         res.status(500).send({ error: 'Failed to submit XML template.' });
