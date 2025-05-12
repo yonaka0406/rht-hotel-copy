@@ -465,6 +465,8 @@ const updateInventoryMultipleDays = async (req, res) => {
         const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
         const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
 
+        console.log('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
+
         const currentRemainingStock = stockCheckMap.get(lookupKey);
 
         // Compare only if stock data exists for this room type and date
