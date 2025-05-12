@@ -40,6 +40,7 @@
                                         {{ group.total_value.toLocaleString() }} 円
                                     </div>
                                     <div class="col-span-2 text-right mr-4">
+                                        <Badge :severity="severityPreference(group.billing_preference)" class="mr-2"> {{ translatePreference(group.billing_preference) }}</Badge>
                                         <Badge v-if="group.invoice_number" severity="contrast" class="mr-2">{{ group.invoice_number }}</Badge>
                                         <Badge severity="secondary" class="mr-2">{{ translateStatus(group.status) }}</Badge>
                                         <Button
@@ -187,6 +188,20 @@
         };
         return statusMap[status] || status;
     };
+    const translatePreference = (preference) => {
+        const preferenceMap = {
+            "paper": "紙請求希望",
+            "digital": "電子請求希望",            
+        };
+        return preferenceMap[preference] || preference;
+    };
+    const severityPreference = (preference) => {
+        const preferenceMap = {
+            "paper": "warn",
+            "digital": "info",            
+        };
+        return preferenceMap[preference] || preference;
+    };
     function getAdjustedDueDate(dateStr) {
         const baseDate = new Date(dateStr);
         const year = baseDate.getFullYear();
@@ -237,6 +252,7 @@
                 client_kanji: item.client_kanji,
                 client_kana: item.client_kana,
                 legal_or_natural_person: item.legal_or_natural_person,
+                billing_preference: item.billing_preference,
                 total_people: parseFloat(item.total_people),
                 stays_count: parseFloat(item.stays_count),
                 total_value: parseFloat(item.value),
