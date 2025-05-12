@@ -223,11 +223,11 @@ CREATE TABLE crm_actions (
    assigned_to INT REFERENCES users(id),
    due_date TIMESTAMP WITH TIME ZONE,
    status crm_action_status_enum DEFAULT 'pending',
-   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
    updated_by INT DEFAULT NULL REFERENCES users(id)
 );
-
-
+CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);
+CREATE INDEX idx_crm_actions_action_type ON crm_actions(action_type);
 
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,
