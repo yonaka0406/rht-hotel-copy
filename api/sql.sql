@@ -216,7 +216,7 @@ CREATE TABLE crm_actions (
    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
    client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
    action_type crm_action_type_enum NOT NULL,
-   action_datetime TIMESTAMP WITH TIME ZONE NOT NULL,
+   action_datetime TIMESTAMP WITH TIME ZONE NULL,
    subject VARCHAR(255) NOT NULL,
    details TEXT,
    outcome TEXT,
@@ -224,6 +224,7 @@ CREATE TABLE crm_actions (
    due_date TIMESTAMP WITH TIME ZONE,
    status crm_action_status_enum DEFAULT 'pending',
    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
    updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);

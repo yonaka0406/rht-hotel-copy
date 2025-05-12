@@ -92,7 +92,7 @@
                     class="p-datatable-sm">                    
                     <Column field="action_type" header="タイプ" :sortable="true" style="min-width:100px">
                         <template #body="{data}">
-                            <Tag :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
+                            <Tag style="background: transparent;" :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
                         </template>
                          <template #filter="{filterModel,filterCallback}">
                             <Select v-model="filterModel.value" @change="filterCallback()" :options="actionTypeOptions" optionLabel="label" optionValue="value" placeholder="タイプを選択" class="p-column-filter" />
@@ -120,7 +120,7 @@
                     </Column>
                     <Column field="status" header="ステータス" :sortable="true" style="min-width:120px">
                          <template #body="{data}">
-                            <Tag :value="translateStatus(data.status)" :severity="getStatusSeverity(data.status)" />
+                            <Tag :value="translateStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
                         </template>
                         <template #filter="{filterModel,filterCallback}">
                             <Select v-model="filterModel.value" @change="filterCallback()" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="ステータスを選択" class="p-column-filter" />
@@ -146,7 +146,7 @@
         <DataTable :value="modalData" responsiveLayout="scroll" paginator :rows="10" class="p-datatable-sm">
             <Column field="action_type" header="タイプ">
                     <template #body="{data}">
-                    <Tag :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
+                    <Tag style="background: transparent;" :value="translateActionType(data.action_type)" :severity="getActionTypeSeverity(data.action_type)" />
                 </template>
             </Column>
             <Column field="subject" header="件名" :sortable="true"></Column>
@@ -159,7 +159,7 @@
             </Column>
             <Column field="status" header="ステータス" :sortable="true">
                     <template #body="{data}">
-                    <Tag :value="translateStatus(data.status)" :severity="getStatusSeverity(data.status)" />
+                    <Tag :value="translateStatus(data.status, data.due_date)" :severity="getStatusSeverity(data.status, data.due_date)" />
                 </template>
             </Column>
             <Column field="assigned_to_name" header="担当者" :sortable="true"></Column>
@@ -241,9 +241,12 @@
     const { users, logged_user, fetchUsers, fetchUser } = useUserStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
+    import { useCRMStore } from '@/composables/useCRMStore';
+    const { user_actions, actions, fetchUserActions, fetchAllActions } = useCRMStore();
     
     // --- Reactive State ---
     const selectedScope = ref('user');
+    const loggedInUserId = ref(null);
     const scopeOptions = ref([
         { label: '自身', value: 'user' },
         { label: '全体', value: 'all' }
@@ -252,9 +255,15 @@
     const allRawActions = ref([]);
 
     // Data for cards - computed from allRawActions
-    const scheduledActions = computed(() => allRawActions.value.filter(a => a.status === 'scheduled' && new Date(a.action_datetime) >= new Date()).sort((a,b) => new Date(a.action_datetime) - new Date(b.action_datetime)));
-    const pendingActions = computed(() => allRawActions.value.filter(a => a.status === 'pending' && (!a.due_date || new Date(a.due_date) >= new Date(new Date().setHours(0,0,0,0)) ) ).sort((a,b) => (a.due_date && b.due_date) ? (new Date(a.due_date) - new Date(b.due_date)) : !a.due_date ? 1 : -1));
-    const needsFollowUpActions = computed(() => allRawActions.value.filter(a => a.due_date && new Date(a.due_date) < new Date(new Date().setHours(0,0,0,0)) && a.status !== 'completed' && a.status !== 'cancelled').sort((a,b) => new Date(a.due_date) - new Date(b.due_date)));
+    const scheduledActions = computed(() => allRawActions.value
+        .filter(a => a.status === 'scheduled' && new Date(a.action_datetime) >= new Date()).sort((a,b) => new Date(a.action_datetime) - new Date(b.action_datetime))
+    );
+    const pendingActions = computed(() => allRawActions.value
+        .filter(a => a.status === 'pending' && (!a.due_date || new Date(a.due_date) >= new Date(new Date().setHours(0,0,0,0)) ) ).sort((a,b) => (a.due_date && b.due_date) ? (new Date(a.due_date) - new Date(b.due_date)) : !a.due_date ? 1 : -1)
+    );
+    const needsFollowUpActions = computed(() => allRawActions.value
+        .filter(a => a.due_date && new Date(a.due_date) < new Date(new Date().setHours(0,0,0,0)) && a.status !== 'completed' && a.status !== 'cancelled').sort((a,b) => new Date(a.due_date) - new Date(b.due_date))
+    );
 
     // Data for main table - can be same as allRawActions or further filtered if needed
     const allActions = computed(() => allRawActions.value);
@@ -296,12 +305,29 @@
         Object.entries(actionTypeTranslations).map(([value, label]) => ({ label, value }))
     );
     const statusOptions = ref(
-        Object.entries(statusTranslations).map(([value, label]) => ({ label, value }))
+        Object.entries(statusTranslations)
+            .filter(([value, label]) => value !== 'needs_follow_up') // Filter out 'needs_follow_up'
+            .map(([value, label]) => ({ label, value }))
     );
+    const getEffectiveStatus = (action, due_date) => {
+        const now = new Date();
+        now.setHours(0,0,0,0); // Start of today for due_date comparison
+
+        if (action === 'completed' || action === 'cancelled') {
+            return action;
+        }
+        if (due_date && new Date(due_date) < now) {
+            return 'needs_follow_up';
+        }
+        return action;
+    };
 
     // Helper functions for translation
     const translateActionType = (typeKey) => actionTypeTranslations[typeKey] || typeKey;
-    const translateStatus = (statusKey) => statusTranslations[statusKey] || statusKey;
+    const translateStatus = (status, due_date) => {
+        const eStatus = getEffectiveStatus(status, due_date);
+        return statusTranslations[eStatus] || status;
+    };
 
     // DataTable row actions menu
     const actionMenu = ref();
@@ -333,27 +359,7 @@
         actionMenu.value.toggle(event);
     };
 
-    // --- Methods ---
-    const fetchData = async () => {
-        loading.value = true;
-        console.log(`Workspaceing data for scope: ${selectedScope.value}`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const mockData = [
-            { id: 'uuid1', client_id: 'clientA_id', client_name: '株式会社A建設', action_type: 'meeting', action_datetime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), subject: '次期プロジェクト打ち合わせ', details: '詳細内容1', outcome: '', assigned_to: 1, assigned_to_name: '田中 太郎', due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), status: 'scheduled' },
-            { id: 'uuid2', client_id: 'clientB_id', client_name: '合同会社B工業', action_type: 'call', action_datetime: new Date().toISOString(), subject: '見積もりフォローアップ', details: '詳細内容2', outcome: '担当者不在', assigned_to: 1, assigned_to_name: '田中 太郎', due_date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: 'needs_follow_up' },
-            { id: 'uuid3', client_id: 'clientC_id', client_name: 'Cサービス株式会社', action_type: 'task', action_datetime: new Date().toISOString(), subject: '提案資料作成', details: '詳細内容3', outcome: '', assigned_to: 2, assigned_to_name: '佐藤 花子', due_date: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), status: 'pending' },
-        ];
-
-        if (selectedScope.value === 'user') {
-            const loggedInUserId = 1; // Replace with actual logged-in user ID
-            allRawActions.value = mockData.filter(a => a.assigned_to === loggedInUserId);
-        } else {
-            allRawActions.value = mockData;
-        }
-        loading.value = false;
-    };
-    
+    // --- Helpers ---    
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -363,9 +369,9 @@
 
     const getActionTypeSeverity = (actionType) => {
         const severities = {
-            visit: 'info',
-            call: 'success',
-            email: 'warning',
+            visit: 'primary',
+            call: 'info',
+            email: 'info',
             meeting: 'primary',
             task: 'secondary',
             note: 'contrast'
@@ -373,7 +379,8 @@
         return severities[actionType] || 'info';
     };
 
-    const getStatusSeverity = (status) => {
+    const getStatusSeverity = (status, due_date) => {
+        const eStatus = getEffectiveStatus(status, due_date);
         const severities = {
             pending: 'warning',
             scheduled: 'info',
@@ -382,7 +389,7 @@
             rescheduled: 'primary',
             needs_follow_up: 'danger'
         };
-        return severities[status] || 'info';
+        return severities[eStatus] || 'info';
     };
 
 
@@ -458,19 +465,18 @@
         await new Promise(resolve => setTimeout(resolve, 700));
         loading.value = false;
 
-        closeActionFormDialog();
-        fetchData(); // Refresh the main actions list
-        // Optionally, show a success toast message
+        closeActionFormDialog();        
     };
 
     // --- Lifecycle Hooks & Watchers ---
-    onMounted( async () => {
-        // Fetch CRM actions
-        fetchData();
-
+    onMounted( async () => {        
         // Fetch users
         await fetchUser();
-        await fetchUsers();
+        loggedInUserId.value = logged_user.value[0].id;
+        await fetchUsers();        
+        
+        await fetchUserActions(loggedInUserId.value);        
+        allRawActions.value = user_actions.value;
 
         // Fetch clients if not already loaded
         if (clients.value && clients.value.length === 0) {
@@ -489,8 +495,22 @@
         }        
     });
 
-    watch(selectedScope, () => {
-        fetchData(); // Re-fetch data when scope changes
+    watch(selectedScope, async (newScope) => {  
+        loading.value = true;
+        allRawActions.value = [];
+        try {
+            if (newScope === 'user') {
+                await fetchUserActions(loggedInUserId.value);
+                allRawActions.value = user_actions.value;
+            } else {
+                await fetchAllActions();
+                allRawActions.value = actions.value;
+            }        
+        } catch (error) {
+           console.error(`Failed to fetch actions for scope '${newScope}':`, error);            
+        } finally {
+            loading.value = false;
+        }
     });
     
 </script>
