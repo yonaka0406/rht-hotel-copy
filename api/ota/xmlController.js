@@ -335,7 +335,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 
     try {
         const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
-        const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse'];
+        const executeResponse = apiResponse['S:Envelope']['S:Body']['ns2:executeResponse']['return']['netRmTypeGroupAndDailyStockStatusList'];
         return executeResponse;
     } catch (error) {        
         console.error('Error submitting XML template:', error);        
