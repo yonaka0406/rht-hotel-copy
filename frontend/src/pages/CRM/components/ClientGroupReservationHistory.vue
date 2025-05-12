@@ -1,18 +1,10 @@
 <template>
-<Panel>    
-    <div v-if="clientReservations">
+<Panel>
+    <div v-if="selectedGroup">
         <DataTable :value="clientReservations" :sortable="true" sortMode="multiple" removableSort>
             <template #header>
                 <div>
-                        <p class="text-xl font-bold">
-                            {{ clientReservations[0].client_name }}
-                            
-                        </p>
-                        <small>{{ clientReservations[0].client_name_kana }}</small>
-                    </div>
-                <div class="flex justify-end">
-                    <span class="font-bold mr-2">顧客実績合計:</span>
-                    <span>{{ totalPriceSum }} 円</span>
+                    <p class="text-xl font-bold">{{ selectedGroup[0].group_name }}</p>
                 </div>
             </template>
             <Column header="操作">
@@ -33,6 +25,7 @@
                     </div>
                 </template>
             </Column>        
+            <Column field="client_name" header="氏名・名称" sortable></Column>
             <Column field="client_role" header="関係" sortable>
                 <template #body="{ data }">
                     <Tag :severity="getClientRoleSeverity(data.client_role)">
@@ -59,7 +52,7 @@
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
-    const { fetchClientReservations } = useClientStore();
+    const { selectedGroup, fetchGroup, fetchClientReservations } = useClientStore();
     import { useReservationStore } from '@/composables/useReservationStore';    
     const { setReservationId } = useReservationStore();
 
@@ -76,21 +69,25 @@
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
-    };
+    };    
 
-    // Client
-    const clientId = ref(route.params.clientId);
+    // Group
+    const groupId = ref(route.params.groupId);
     const loadingReservationInfo = ref(false);
 
     // Reservations
-    const clientReservations = ref(null);
-    const totalPriceSum = computed(() => {
-        if (clientReservations.value) {
-            return clientReservations.value.reduce((sum, reservation) => {
-                return sum + (reservation.total_price || 0);
-            }, 0).toLocaleString();
+    const allClientReservations = ref([]);
+    // Computed
+    const clientReservations = computed(() => {
+        if (allClientReservations.value) {
+        return [...allClientReservations.value].sort((b, a) => new Date(a.check_in) - new Date(b.check_in));
         }
-        return '0';
+        return [];
+    });    
+    const totalPriceSum = computed(() => {
+        return clientReservations.value.reduce((sum, reservation) => {
+        return sum + (reservation.total_price || 0);
+        }, 0).toLocaleString();
     });
 
     const getValue = (key, value) => {
@@ -134,26 +131,33 @@
     };
 
     onMounted(async () => {        
-        try {            
-            loadingReservationInfo.value = true;
-                        
-            const reservations = await fetchClientReservations(clientId.value);
-            // Format dates and values here
-             clientReservations.value = reservations.map(reservation => ({
-                ...reservation,
-                total_price: reservation.total_price * 1,
-                check_in: formatDate(new Date(reservation.check_in)),
-                check_out: formatDate(new Date(reservation.check_out)),
-                created_at: formatDate(new Date(reservation.created_at)),
-                type: getValue('type', reservation.type),
-                status: getValue('status', reservation.status),
-            }));         
-            console.log('clientReservations', clientReservations.value)
+        loadingReservationInfo.value = true;
 
-            loadingReservationInfo.value = false;            
+        try {
+            await fetchGroup(groupId.value);
+            if (selectedGroup.value && selectedGroup.value.length > 0) {
+                const clientIds = selectedGroup.value.map(client => client.id);
+                const reservationsPromises = clientIds.map(clientId => fetchClientReservations(clientId));
+                const allReservationsArrays = await Promise.all(reservationsPromises);
+
+                // Flatten the array of arrays into a single array
+                allClientReservations.value = allReservationsArrays.flat().map(reservation => ({
+                    ...reservation,
+                    total_price: reservation.total_price * 1,
+                    check_in: formatDate(new Date(reservation.check_in)),
+                    check_out: formatDate(new Date(reservation.check_out)),
+                    created_at: formatDate(new Date(reservation.created_at)),
+                    type: getValue('type', reservation.type),
+                    status: getValue('status', reservation.status),
+                }));
+            }
+
+            console.log(clientReservations.value)
         } catch (error) {
-            console.error("Error fetching client data:", error);      
-        }
+            console.error("Error fetching group or client reservations:", error);
+        } finally {
+            loadingReservationInfo.value = false;
+        }          
     });
 
 </script>

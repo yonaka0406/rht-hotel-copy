@@ -1,4 +1,4 @@
-const { processNameString, getAllClients, selectClient, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, editClientGroup, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
+const { processNameString, getAllClients, selectClient, selectGroup, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, editClientGroup, editGroup, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
 const { updateClientInReservation } = require('../models/reservations');
 
 // GET
@@ -21,7 +21,6 @@ const getClients = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 const getClient = async (req, res) => {
   const { id } = req.params;
     
@@ -30,6 +29,17 @@ const getClient = async (req, res) => {
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const getGroup = async (req, res) => {
+  const { id } = req.params;
+    
+  try{
+    const group = await selectGroup(req.requestId, id);
+    res.status(200).json( group );
+  } catch (error) {
+    console.error('Error getting group:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -201,6 +211,20 @@ const updateClientGroup = async (req, res) => {
   }
   
 };
+const updateGroup = async (req, res) => {   
+  const groupId = req.params.gid;
+  const data = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const updatedGroup = await editGroup(req.requestId, groupId, data, user_id) 
+    res.json(updatedGroup);
+  } catch (err) {
+    console.error('Error updating group:', err);
+    res.status(500).json({ error: 'Failed to update group' });
+  }
+  
+};
 
 const mergeClients = async (req, res) => {
   const newClientId = req.params.nid;
@@ -236,6 +260,7 @@ const removeAddress = async (req, res) => {
 module.exports = { 
   getClients, 
   getClient,
+  getGroup,
   getConvertedName,
   getClientReservations,
   getCustomerID,
@@ -249,5 +274,6 @@ module.exports = {
   updateClientFull,
   updateAddress,
   updateClientGroup,
+  updateGroup,
   mergeClients,
 };

@@ -171,6 +171,32 @@ const selectClient = async (requestId, clientId) => {
     throw new Error('Database error');
   }
 };
+const selectGroup = async (requestId, groupId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      client_group.name as group_name
+      ,client_group.comment as group_comment
+      ,clients.*
+      ,COALESCE(clients.name_kanji, clients.name) as display_name
+    FROM 
+      clients
+        JOIN
+      client_group
+        ON client_group.id = clients.client_group_id
+    WHERE clients.client_group_id = $1
+    ORDER BY clients.legal_or_natural_person, clients.name_kana, clients.name_kanji, clients.name
+  `;
+  const values = [groupId];
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  }
+  catch (err) {
+    console.error('Error selecting group:', err);
+    throw new Error('Database error');
+  }
+};
 const selectCustomerID = async (requestId, clientId, customerId) => {
   const pool = getPool(requestId);
   const query = `
@@ -192,9 +218,21 @@ const selectCustomerID = async (requestId, clientId, customerId) => {
 const selectClientGroups = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT * 
-    FROM client_group
-    ORDER BY name    
+    SELECT 
+      client_group.id
+      ,client_group.name
+      ,client_group.comment
+      ,COUNT(clients.id) as client_count
+    FROM 
+      client_group
+        JOIN
+      clients
+        ON clients.client_group_id = client_group.id
+    GROUP BY
+      client_group.id
+      ,client_group.name
+      ,client_group.comment
+    ORDER BY client_group.name  
   `;
 
   try {
@@ -543,19 +581,42 @@ const editClientGroup = async (requestId, clientId, groupId, user_id) => {
     throw err;
   }
 };
+const editGroup = async (requestId, groupId, data, user_id) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE client_group SET
+      name = $1
+      ,comment = $2
+      ,updated_by = $3
+    WHERE id = $4
+  `;
+  const values = [
+    data.name,
+    data.comment,
+    user_id,
+    groupId
+  ];
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;    
+  } catch (err) {
+    console.error('Error updating group:', err);
+    throw err;
+  }
+};
 const selectClientReservations = async (requestId, clientId) => {
   const pool = getPool(requestId);
   const query = `
     WITH unionData AS (
-      SELECT hotel_id, id, MIN(index) AS index
+      SELECT hotel_id, id, client_id, MIN(index) AS index
       FROM (
-        SELECT DISTINCT hotel_id, id, 1 AS index
+        SELECT DISTINCT hotel_id, id, reservation_client_id as client_id, 1 AS index
         FROM reservations
         WHERE reservation_client_id = $1
         
         UNION ALL
         
-        SELECT DISTINCT rd.hotel_id, rd.reservation_id, 2
+        SELECT DISTINCT rd.hotel_id, rd.reservation_id, rc.client_id, 2
         FROM reservation_details rd
         JOIN reservation_clients rc
           ON rc.hotel_id = rd.hotel_id AND rc.reservation_details_id = rd.id
@@ -563,16 +624,18 @@ const selectClientReservations = async (requestId, clientId) => {
         
         UNION ALL
         
-        SELECT DISTINCT hotel_id, reservation_id, 3
+        SELECT DISTINCT hotel_id, reservation_id, client_id, 3
         FROM reservation_payments
         WHERE client_id = $1
       ) AS all_union
-      GROUP BY hotel_id, id
+      GROUP BY hotel_id, id, client_id
     )
 
     SELECT	
       reservations.hotel_id
       ,hotels.formal_name
+      ,COALESCE(clients.name_kanji, clients.name) as client_name
+      ,clients.name_kana as client_name_kana
       ,reservations.id 
       ,reservations.status
       ,reservations.check_in	
@@ -595,7 +658,10 @@ const selectClientReservations = async (requestId, clientId) => {
       unionData
         JOIN 
       hotels 
-        ON hotels.id = unionData.hotel_id			
+        ON hotels.id = unionData.hotel_id
+        JOIN
+      clients
+        ON clients.id = unionData.client_id
         JOIN 
       reservations 
         ON reservations.hotel_id = unionData.hotel_id AND reservations.id = unionData.id
@@ -713,6 +779,7 @@ module.exports = {
   getAllClients,
   getTotalClientsCount,
   selectClient,
+  selectGroup,
   selectCustomerID,
   selectClientGroups,
   addClientByName,
@@ -723,6 +790,7 @@ module.exports = {
   editClientFull,
   editAddress,
   editClientGroup,
+  editGroup,
   selectClientReservations,
   deleteClient,
   deleteAddress,

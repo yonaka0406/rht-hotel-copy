@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 
 const groups = ref([]);
+const selectedGroup = ref(null);
 const clients = ref([]);
 const clientsIsLoading = ref(false);
 const selectedClient = ref(null);
@@ -52,7 +53,7 @@ export function useClientStore() {
             }
 
         } catch (error) {
-            console.error('Failed to fetch hotels', error);
+            console.error('Failed to fetch clients', error);
         }
     };
 
@@ -79,7 +80,7 @@ export function useClientStore() {
                 group: selectedClientGroup.value,
             };            
         } catch (error) {
-            console.error('Failed to fetch hotel rooms', error);
+            console.error('Failed to fetch client', error);
         }
     };
 
@@ -157,6 +158,25 @@ export function useClientStore() {
             
         } catch (error) {
             console.error('Failed to fetch client groups', error);
+        }
+    };
+    // Fetch data for the selected client
+    const fetchGroup = async (group_id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/group/${group_id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            selectedGroup.value = await response.json();
+
+            return selectedGroup.value;
+        } catch (error) {
+            console.error('Failed to fetch group', error);
         }
     };
     
@@ -364,6 +384,28 @@ export function useClientStore() {
             console.error('Failed to update client', error);
         }
     };
+    const updateGroup = async (groupId, data) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/client/group/update/${groupId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },    
+                body: JSON.stringify(data),           
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to update group');
+            }
+        
+            const editedData = await response.json();   
+            return editedData;         
+        } catch (error) {
+            console.error('Failed to update client', error);
+        }
+    };
     const mergeClientsCRM = async (newClientId, oldClientId, updatedFields) => {        
         try {
             const authToken = localStorage.getItem('authToken');
@@ -389,6 +431,7 @@ export function useClientStore() {
 
     return {
         groups,
+        selectedGroup,
         clients,
         clientsIsLoading,
         selectedClient,
@@ -402,6 +445,7 @@ export function useClientStore() {
         fetchCustomerID,
         fetchClientGroups,
         createClient,
+        fetchGroup,
         createBasicClient,
         createAddress,
         createClientGroup,
@@ -410,6 +454,7 @@ export function useClientStore() {
         updateClientInfoCRM,
         updateAddress,
         updateClientGroup,
+        updateGroup,
         mergeClientsCRM,
     };
 }

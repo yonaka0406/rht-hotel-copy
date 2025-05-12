@@ -59,19 +59,19 @@
 
                     <router-link v-if="isAdmin"
                         to="/admin"
-                        class="bg-yellow-500 hover:bg-yellow-600 p-2 block rounded mt-4 mx-2 mb-2"
+                        class="bg-yellow-500 hover:bg-yellow-600 p-2 block rounded my-4 mx-2"
                     >
                         <i class="pi pi-cog text-white mr-2"></i>
                         <span class="text-white">管理者パネル</span>
                     </router-link>                 
                     <router-link v-if="isClientEditor"
                         to="/crm/dashboard"
-                        class="bg-blue-500 hover:bg-blue-600 p-2 block rounded mx-2 mb-2"
+                        class="bg-blue-500 hover:bg-blue-600 p-2 block rounded my-4 mx-2"
                     >
                         <i class="pi pi-users text-white mr-2"></i>
                         <span class="text-white">顧客情報</span>
                     </router-link>
-                    <div class="mx-2">
+                    <div class="my-4 mx-2">
                         <Button
                             @click="handleLogout"
                             severity="danger"                        

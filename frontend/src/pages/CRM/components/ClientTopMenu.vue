@@ -112,6 +112,10 @@
                     route: '/crm/clients/duplicates'
                 }
                 */
+               {
+                    label: '所属グループ一覧',
+                    route: '/crm/groups/all'
+               }
             ]
         },
         {
