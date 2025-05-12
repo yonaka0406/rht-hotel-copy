@@ -436,6 +436,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     if (!minDate || !maxDate) {
         return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
     }
+    console.log('getInventoryDateRange', minDate, maxDate);
     
     // Check current stock using checkOTAStock for the relevant date range
     let stockCheckResults;
