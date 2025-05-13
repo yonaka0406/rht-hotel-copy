@@ -1,10 +1,21 @@
-const { selectUserActions, selectAllActions, insertAction, updateAction, deleteAction } = require('../models/crm');
+const { selectUserActions, selectClientActions, selectAllActions, insertAction, updateAction, deleteAction } = require('../models/crm');
 
 const fetchUserActions = async (req, res) => {
   const { uid } = req.params;
     
   try{
     const result = await selectUserActions(req.requestId, uid);    
+    res.status(200).json( result );
+  } catch (error) {
+    console.error('Error getting user actions:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+const fetchClientActions = async (req, res) => {
+  const { cid } = req.params;
+    
+  try{
+    const result = await selectClientActions(req.requestId, cid);    
     res.status(200).json( result );
   } catch (error) {
     console.error('Error getting user actions:', error);
@@ -67,4 +78,4 @@ const removeAction = async (req, res) => {
 
 
 
-module.exports = { fetchUserActions, fetchAllActions, addAction, editAction, removeAction };
+module.exports = { fetchUserActions, fetchClientActions, fetchAllActions, addAction, editAction, removeAction };

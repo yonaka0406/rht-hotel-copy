@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue';
 
 const user_actions = ref([]);
+const client_actions = ref([]);
 const actions = ref([]);
 
 export function useCRMStore() {
@@ -18,7 +19,23 @@ export function useCRMStore() {
     
             user_actions.value = await response.json();
         } catch (error) {
-            console.error('Failed to fetch users', error);
+            console.error('Failed to fetch actions', error);
+        }
+    };
+    const fetchClientActions = async (cid) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/actions/client/${cid}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+    
+            client_actions.value = await response.json();
+        } catch (error) {
+            console.error('Failed to fetch actions', error);
         }
     };
     const fetchAllActions = async () => {
@@ -34,7 +51,7 @@ export function useCRMStore() {
     
             actions.value = await response.json();
         } catch (error) {
-            console.error('Failed to fetch user', error);
+            console.error('Failed to fetch actions', error);
         }
     };
 
@@ -116,8 +133,10 @@ export function useCRMStore() {
 
     return {
         user_actions,
+        client_actions,
         actions,        
         fetchUserActions,
+        fetchClientActions,
         fetchAllActions,
         addAction,
         editAction,
