@@ -595,7 +595,7 @@ SELECT
     rd.hotel_id,
     rd.date,
     r.room_type_id,
-	sc.netrmtypegroupcode,
+	 sc.netrmtypegroupcode,
     rt.name as room_type_name,
     roomTotal.total_rooms,
     COUNT(rd.date) as room_count
