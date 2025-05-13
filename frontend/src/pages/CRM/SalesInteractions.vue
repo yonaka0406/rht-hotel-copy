@@ -107,10 +107,20 @@
                          <template #filter="{filterModel,filterCallback}">
                             <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" class="p-column-filter" placeholder="クライアントを検索"/>
                         </template>
+                        <template #body="{data}">                            
+                            <Button 
+                                @click="goToEditClientPage(data.client_id)"
+                                severity="info"
+                                class="p-button-rounded p-button-text p-button-sm"
+                            >
+                                <i class="pi pi-pencil"></i>
+                            </Button>
+                            {{ data.client_name }}
+                        </template>
                     </Column>
                     <Column field="action_datetime" header="日時" :sortable="true" style="min-width:160px">
                         <template #body="{data}">
-                            {{ formatDate(data.action_datetime) }}
+                            {{ formatDateTime(data.action_datetime) }}
                         </template>
                     </Column>
                     <Column field="due_date" header="期日" :sortable="true" style="min-width:160px">
@@ -150,9 +160,22 @@
                 </template>
             </Column>
             <Column field="subject" header="件名" :sortable="true"></Column>
-            <Column field="client_name" header="クライアント" :sortable="true"></Column>
+            <Column field="client_name" header="クライアント" :sortable="true">
+                <template #body="{data}">
+                    <span>                        
+                        <Button 
+                            @click="goToEditClientPage(data.client_id)"
+                            severity="info"
+                            class="p-button-rounded p-button-text p-button-sm"
+                        >
+                            <i class="pi pi-pencil"></i>
+                        </Button>
+                        {{ data.client_name }}
+                    </span>
+                </template>
+            </Column>
             <Column field="action_datetime" header="日時" :sortable="true">
-                <template #body="{data}">{{ formatDate(data.action_datetime) }}</template>
+                <template #body="{data}">{{ formatDateTime(data.action_datetime) }}</template>
             </Column>
             <Column field="due_date" header="期日" :sortable="true">
                     <template #body="{data}">{{ data.due_date ? formatDate(data.due_date) : 'N/A' }}</template>
@@ -235,6 +258,8 @@
     // Primevue
     import { Card, Dialog, Menu, InputText, DatePicker, Textarea, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
+    import { useToast } from 'primevue/usetoast';
+    const toast = useToast();
     
     // Stores
     import { useUserStore } from '@/composables/useUserStore';
@@ -242,7 +267,7 @@
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
     import { useCRMStore } from '@/composables/useCRMStore';
-    const { user_actions, actions, fetchUserActions, fetchAllActions } = useCRMStore();
+    const { user_actions, actions, fetchUserActions, fetchAllActions, addAction, editAction, removeAction } = useCRMStore();
     
     // --- Reactive State ---
     const selectedScope = ref('user');
@@ -334,8 +359,11 @@
     const currentActionItem = ref(null); // To store the action item for the menu    
     const actionMenuItems = ref([
         { label: '編集', icon: 'pi pi-pencil', command: () => { if(currentActionItem.value) openEditActionDialog(currentActionItem.value); } },
-        { label: '削除', icon: 'pi pi-trash', command: () => { console.log('Delete action:', currentActionItem.value); /* Implement delete logic */ } }        
+        { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteAction(currentActionItem.value.id); } }        
     ]);
+    const goToEditClientPage = (clientId) => {        
+        window.open(`/crm/clients/edit/${clientId}`, '_blank');
+    };
 
     // Action Form Dialog State
     const isActionFormDialogVisible = ref(false);
@@ -348,7 +376,7 @@
         subject: '',
         details: '',
         outcome: '',
-        assigned_to: null, // Consider defaulting to logged-in user in create mode
+        assigned_to: null,
         due_date: null,
         status: 'pending' // Default status
     };
@@ -360,11 +388,22 @@
     };
 
     // --- Helpers ---    
-    const formatDate = (dateString) => {
+    const formatDateTime = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         // Using Japan standard time for formatting display, adjust if needed
         return date.toLocaleString('ja-JP', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+    };
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        // Format without the hour and minute
+        return date.toLocaleString('ja-JP', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            timeZone: 'Asia/Tokyo' 
+        });
     };
 
     const getActionTypeSeverity = (actionType) => {
@@ -374,7 +413,7 @@
             email: 'info',
             meeting: 'primary',
             task: 'secondary',
-            note: 'contrast'
+            note: 'warn'
         };
         return severities[actionType] || 'info';
     };
@@ -382,7 +421,7 @@
     const getStatusSeverity = (status, due_date) => {
         const eStatus = getEffectiveStatus(status, due_date);
         const severities = {
-            pending: 'warning',
+            pending: 'warn',
             scheduled: 'info',
             completed: 'success',
             cancelled: 'danger',
@@ -424,7 +463,7 @@
             ...initialActionFormData,
             action_datetime: new Date(),
             due_date: null,
-            assigned_to: logged_user.value?.id || null
+            assigned_to: logged_user.value[0].id || null
         };
         isActionFormDialogVisible.value = true;
     };
@@ -447,25 +486,78 @@
 
     const handleSaveAction = async () => {
         console.log("Saving action:", currentActionFormData.value);
-        // Add form validation here (e.g., using Vuelidate or custom checks)
-        // Example: if (!currentActionFormData.value.client_id || !currentActionFormData.value.subject) { alert("Client and Subject are required!"); return; }
+        // --- Form Validation ---
+        const { client_id, subject, assigned_to, id } = currentActionFormData.value;
+        if (!client_id) {
+            toast.add({ severity: "error", summary: "エラー", detail: "クライアントを選択してください", life: 3000 });
+            return;
+        }
+        if (!subject) {
+            toast.add({ severity: "error", summary: "エラー", detail: "件名を記入してください", life: 3000 });
+            return;
+        }
+        if (!assigned_to) {
+            toast.add({ severity: "error", summary: "エラー", detail: "担当者を選択してください", life: 3000 });
+            return;
+        }
+        
+        loading.value = true;
 
-        // --- !!! REPLACE WITH ACTUAL API CALL !!! ---
-        // const payload = { ...currentActionFormData.value };
-        // if (actionFormMode.value === 'create') {
-        //     // await api.createAction(payload);
-        //     console.log("Simulating API create call with payload:", payload);
-        // } else {
-        //     // await api.updateAction(payload.id, payload);
-        //      console.log("Simulating API update call for ID:", payload.id, "with payload:", payload);
-        // }
+        try {
+            if (!id) {                
+                await addAction(currentActionFormData.value);
+                toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
+            } else {                
+                await editAction(id, currentActionFormData.value);
+                toast.add({ severity: "info", summary: "Edit", detail: "アクション編集されました。", life: 3000 });
+            }
 
-        // Simulate API call
-        loading.value = true; // You might want a specific loading state for the form
-        await new Promise(resolve => setTimeout(resolve, 700));
-        loading.value = false;
+            closeActionFormDialog();
 
-        closeActionFormDialog();        
+            if(selectedScope.value === 'user'){
+                await fetchUserActions(loggedInUserId.value);        
+                allRawActions.value = user_actions.value;    
+            } else {
+                await fetchAllActions();
+                allRawActions.value = actions.value;
+            }        
+        } catch (error) {
+            console.error('Failed to save action:', error);
+            toast.add({ severity: "error", summary: "保存失敗", detail: error.message || "アクションの保存に失敗しました。", life: 3000 });
+        } finally {
+            loading.value = false;
+        }      
+    };
+    const deleteAction = async (id) => {
+        
+        // --- Validation: Ensure an ID is provided ---
+        if (!id) {
+            toast.add({ severity: "error", summary: "エラー", detail: "アクションIDが無効です", life: 3000 });
+            return;
+        }
+
+        loading.value = true;
+        try {
+            console.log('Deleting action');
+            await removeAction(id);
+
+            toast.add({ severity: "success", summary: "Success", detail: "アクションが削除されました。", life: 3000 });
+
+            // Optionally: Refresh the actions after deletion
+            if (selectedScope.value === 'user') {
+                await fetchUserActions(loggedInUserId.value);
+                allRawActions.value = user_actions.value;
+            } else {
+                await fetchAllActions();
+                allRawActions.value = actions.value;
+            }
+
+        } catch (error) {
+            console.error('Failed to delete action:', error);
+            toast.add({ severity: "error", summary: "削除失敗", detail: error.message || "アクションの削除に失敗しました。", life: 3000 });
+        } finally {
+            loading.value = false;
+        }
     };
 
     // --- Lifecycle Hooks & Watchers ---
