@@ -681,10 +681,46 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
 const selectReservationsInventory = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
   const query = `
-      SELECT *
-      FROM vw_room_inventory
-      WHERE hotel_id = $1 AND date BETWEEN $2 AND $3
-      ORDER BY date, room_type_id
+      WITH date_range AS (
+          SELECT generate_series($2::date, $3::date, '1 day'::interval)::date AS date
+      ),
+      active_room_types AS (
+          -- Get only room types that have at least one reservation in the date range
+          SELECT DISTINCT room_type_id
+          FROM vw_room_inventory
+          WHERE hotel_id = $1
+          AND date BETWEEN $2 AND $3
+      ),
+      room_type_details AS (
+          -- Get the most recent details for these room types
+          SELECT DISTINCT ON (room_type_id) 
+              room_type_id, 
+              netrmtypegroupcode, 
+              room_type_name, 
+              total_rooms
+          FROM vw_room_inventory
+          WHERE hotel_id = $1
+          AND room_type_id IN (SELECT room_type_id FROM active_room_types)
+          ORDER BY room_type_id, date DESC
+      )
+      SELECT 
+          3 AS hotel_id,
+          d.date,
+          rt.room_type_id,
+          rt.netrmtypegroupcode,
+          rt.room_type_name,
+          rt.total_rooms,
+          COALESCE(inv.room_count, 0) AS room_count
+      FROM 
+          date_range d
+      CROSS JOIN room_type_details rt
+      LEFT JOIN vw_room_inventory inv ON 
+          inv.hotel_id = $1
+          AND inv.date = d.date 
+          AND inv.room_type_id = rt.room_type_id
+      ORDER BY 
+          d.date, 
+          rt.room_type_id;
   `;
   const values = [hotelId, startDate, endDate];
   try {
