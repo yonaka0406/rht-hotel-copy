@@ -690,6 +690,21 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
           FROM vw_room_inventory
           WHERE hotel_id = $1
           AND date BETWEEN $2 AND $3
+          AND netrmtypegroupcode IS NOT NULL
+      ),
+      fallback_room_types AS (
+          -- Get all room types for this hotel as fallback (excluding NULL netrmtypegroupcode)
+          SELECT DISTINCT room_type_id
+          FROM vw_room_inventory
+          WHERE hotel_id = $1
+          AND netrmtypegroupcode IS NOT NULL
+      ),
+      final_room_types AS (
+          -- Use active room types if they exist, otherwise all room types
+          SELECT room_type_id FROM active_room_types
+          UNION ALL
+          SELECT room_type_id FROM fallback_room_types
+          WHERE NOT EXISTS (SELECT 1 FROM active_room_types)
       ),
       room_type_details AS (
           -- Get the most recent details for these room types
@@ -700,7 +715,8 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
               total_rooms
           FROM vw_room_inventory
           WHERE hotel_id = $1
-          AND room_type_id IN (SELECT room_type_id FROM active_room_types)
+          AND room_type_id IN (SELECT room_type_id FROM final_room_types)
+          AND netrmtypegroupcode IS NOT NULL
           ORDER BY room_type_id, date DESC
       )
       SELECT 
