@@ -386,7 +386,10 @@ const updateInventoryMultipleDays = async (req, res) => {
     
     // Filter out entries older than the current date and format dates for comparison
     const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
-
+    
+    if (!inventory) {
+        return res.status(500).send({ error: 'Inventory data not found.' });
+    }    
     let filteredInventory = inventory.filter((item) => {
         const itemDateYYYYMMDD = formatYYYYMMDD(item.date);
         // Only include items with valid dates on or after the current date
