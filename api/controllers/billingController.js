@@ -68,7 +68,8 @@ const generateInvoice = async (req, res) => {
     if (!invoiceData.invoice_number) {
       invoiceData.invoice_number = max_invoice_number;      
     }
-    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
+    
+    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
     
     const userInfo = await getUsersByID(req.requestId, userId);    
     
@@ -139,7 +140,7 @@ function generateInvoiceHTML(html, data, userName) {
 
   let modifiedHTML = html;
 
-  console.log("generateInvoiceHTML:", data);
+  // console.log("generateInvoiceHTML:", data);
   
   modifiedHTML = modifiedHTML.replace(/{{ stamp_image }}/g, imageUrl);
 
@@ -147,7 +148,7 @@ function generateInvoiceHTML(html, data, userName) {
   modifiedHTML = modifiedHTML.replace(/{{ invoice_number }}/g, data.invoice_number);
   modifiedHTML = modifiedHTML.replace(/{{ invoice_date }}/g, data.date);
   modifiedHTML = modifiedHTML.replace(/{{ customer_name }}/g, data.client_name);
-  modifiedHTML = modifiedHTML.replace(/{{ customer_code }}/g, data.client_id);
+  modifiedHTML = modifiedHTML.replace(/{{ customer_code }}/g, data.customer_code);
   modifiedHTML = modifiedHTML.replace(/{{ company_contact_person }}/g, userName);
 
   // Main Table
@@ -197,52 +198,7 @@ function generateInvoiceHTML(html, data, userName) {
   }
   modifiedHTML = modifiedHTML.replace(/{{ comments }}/g, comment);  
     
-  return modifiedHTML;
-  let itemsHtml = data.items.map(item => `
-      <tr>
-        <td style="text-align: right;">${(item.tax_rate * 100).toLocaleString()} %</td>
-        <td style="text-align: right;">${item.total_net_price.toLocaleString()} 円</td>
-        <td style="text-align: right;">${item.total_price.toLocaleString()} 円</td>
-      </tr>
-  `).join('');
-
-  return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-          <meta charset="utf-8">
-          <title>Invoice</title>
-          <style>
-              /* Basic styling.  Customize as needed. */
-              body { font-family: sans-serif; }
-              table { width: 100%; border-collapse: collapse; }
-              table, th, td { border: 1px solid black; padding: 5px; }
-          </style>
-      </head>
-      <body>
-          <h1>Invoice</h1>
-          <p>Invoice Number: ${data.invoice_number}</p>
-          <p>Date: ${data.date}</p>
-          <p>Client: ${data.client_name}</p>
-
-          <table>
-              <thead>
-                  <tr>
-                      <th>Tax Rate</th>
-                      <th>Net Amount</th>
-                      <th>Total Amount</th>
-                  </tr>
-              </thead>
-              <tbody>
-                  ${itemsHtml}
-              </tbody>
-          </table>
-
-          <p>Total: ${data.invoice_total_value.toLocaleString()} 円</p>
-          <p>Thank you for your business!</p>
-      </body>
-      </html>
-  `;
+  return modifiedHTML;  
 };
 
 module.exports = { 

@@ -184,6 +184,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.name_kanji as client_kanji
       ,clients.name_kana as client_kana
       ,clients.name as client_name
+      ,clients.customer_id as customer_code
       ,clients.legal_or_natural_person
       ,clients.billing_preference
       ,details.number_of_people as total_people
@@ -296,7 +297,7 @@ const selectMaxInvoiceNumber = async (requestId, hotelId, month) => {
   }
 };
 
-const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {
+const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName, invoiceNumber, due_date, total_stays, comment) => {  
   const pool = getPool(requestId);
   const query = `
     UPDATE invoices SET

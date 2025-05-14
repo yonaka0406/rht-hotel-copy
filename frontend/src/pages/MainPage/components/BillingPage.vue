@@ -106,13 +106,13 @@
                     <div class="col-span-3 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">取引先番号:</label>
-                            <InputText type="text" v-model="invoiceData.client_id" fluid disabled />
+                            <InputText type="text" v-model="invoiceData.customer_code" fluid disabled />
                         </FloatLabel>
                     </div>
                     <div class="col-span-6 mt-6">                        
                         <FloatLabel>
                             <label class="font-bold">取引先名:</label>
-                            <InputText type="text" :value="invoiceData.client_name" fluid />                            
+                            <InputText type="text" v-model="invoiceData.client_name" fluid />
                         </FloatLabel>
                         <small class="ml-1">元データ：{{ invoiceDBData.client_name }}</small>
                     </div>
@@ -245,6 +245,7 @@
                 bank_account_number: item.bank_account_number,
                 bank_account_name: item.bank_account_name,
                 client_id: item.client_id,
+                customer_code: item.customer_code,
                 invoice_number: item.invoice_number,
                 date: formatDate(new Date(item.date)),
                 status: item.status,
@@ -357,6 +358,7 @@
             date: data.date,
             due_date: data.due_date,
             client_id: data.client_id,
+            customer_code: data.customer_code || '',
             client_name: data.display_name,
             invoice_total_stays: data.total_stays,
             invoice_total_value: data.total_value,
@@ -376,6 +378,7 @@
             date: data.date,
             due_date: getAdjustedDueDate(data.date),
             client_id: data.client_id,
+            customer_code: data.customer_code || '',
             client_name: data.client_kanji || data.client_name,
             invoice_total_stays: data.stays_count,
             invoice_total_value: data.total_value,
