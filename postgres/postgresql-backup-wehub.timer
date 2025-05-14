@@ -1,0 +1,10 @@
+[Unit]
+Description=Run daily PostgreSQL backup for wehub database
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

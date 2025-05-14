@@ -1,0 +1,13 @@
+[Unit]
+Description=Run PostgreSQL Daily Backup Service
+
+[Timer]
+# Run daily at 2:00 AM
+OnCalendar=*-*-* 02:00:00
+# Or run 15 minutes after boot if missed the scheduled time (optional but good)
+OnBootSec=15min
+# Ensure the timer persists across reboots
+Persistent=true
+
+[Install]
+WantedBy=timers.target

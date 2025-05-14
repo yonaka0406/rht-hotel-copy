@@ -1,0 +1,19 @@
+[Unit]
+Description=PostgreSQL Daily Backup
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# Call the script with 'rhthotels' as the argument
+ExecStart=/usr/local/bin/backup_postgresql.sh rhthotels
+# Give it some time to complete
+TimeoutSec=600
+# Redirect standard output and error to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=postgresql-backup
+
+[Install]
+WantedBy=multi-user.target

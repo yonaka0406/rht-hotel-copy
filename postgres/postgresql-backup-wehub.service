@@ -1,0 +1,18 @@
+[Unit]
+Description=PostgreSQL Daily Backup for wehub database
+Requires=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# Call the script with 'wehub' as the argument
+ExecStart=/usr/local/bin/backup_postgresql.sh wehub
+# Give it some time to complete
+TimeoutSec=600
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=postgresql-backup-wehub
+
+[Install]
+WantedBy=multi-user.target
