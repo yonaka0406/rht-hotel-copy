@@ -7,7 +7,7 @@ Type=oneshot
 User=root
 Group=root
 # Call the script with 'rhthotels' as the argument
-ExecStart=/usr/local/bin/backup_postgresql.sh rhthotels
+ExecStart=/usr/local/bin/backup_postgresql.sh rhthotels 1Yf-69S4xFV7wRavBnybcef8Q539uidc0
 # Give it some time to complete
 TimeoutSec=600
 # Redirect standard output and error to syslog

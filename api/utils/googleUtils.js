@@ -3,7 +3,18 @@ const path = require('path');
 const { google } = require('googleapis');
 
 const credentialsPath = path.join(__dirname, '../config/google_sheets_credentials.json');
-const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); // Path to store/read refresh token
+const storedRefreshTokenPath = path.join(__dirname, '../config/refresh_token.json'); 
+
+/*
+For system DB backup:
+sudo mkdir -p /etc/app_config/google/
+# Copy your credentials.json to this location
+# Make sure to copy the correct file from your backend project
+sudo cp /var/www/html/rht-hotel/api/config/google_sheets_credentials.json /etc/app_config/google/credentials.json
+# Copy your refresh_token.json to this location
+# Make sure you have a valid refresh token generated from an interactive flow
+sudo cp /var/www/html/rht-hotel/api/config/refresh_token.json /etc/app_config/google/refresh_token.json
+*/
 
 const redirectUri = 'http://localhost:3000';
 const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev

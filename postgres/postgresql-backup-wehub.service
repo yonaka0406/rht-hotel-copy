@@ -7,7 +7,7 @@ Type=oneshot
 User=root
 Group=root
 # Call the script with 'wehub' as the argument
-ExecStart=/usr/local/bin/backup_postgresql.sh wehub
+ExecStart=/usr/local/bin/backup_postgresql.sh wehub 1nG2Frk1bFzMG3WjXsrLDpZASqAIp1nJH
 # Give it some time to complete
 TimeoutSec=600
 StandardOutput=syslog
