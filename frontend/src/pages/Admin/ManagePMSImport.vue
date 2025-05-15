@@ -501,6 +501,9 @@
             };
         }
 
+        // Track processed clients using name and phone number as the key
+        const clientMap = new Map();
+
         const clients = [];
         const reservations = [];
         const reservation_details = [];
@@ -508,39 +511,64 @@
         const reservation_payments = [];
         const reservation_rates = [];
 
-        yadomasterReservations.value.toImport.map(reservation => {
+        yadomasterReservations.value.toImport.forEach(reservation => {
             // Common fields
             const reservationId = uuidv4();
             const clientId = uuidv4();
             const payerId = ref(uuidv4());
 
-            // clients table
-            clients.push({
-                id: clientId,                
-                name: reservation.bookerName,
-                legal_or_natural_person: isLegalPerson(reservation.bookerName) ? 'legal' : 'natural',
-                gender: 'other',
-                phone: reservation.bookerTel,                
-                created_by: 1,                
-            });
-            if(reservation.payerName && reservation.payerName !== reservation.bookerName){
+            let bookerClientId;
+            const bookerKey = `${reservation.bookerName}-${reservation.bookerTel}`;
+
+            // Check if booker already exists in the map
+            if (clientMap.has(bookerKey)) {
+                bookerClientId = clientMap.get(bookerKey);
+            } else {
+                // Booker is new, create a new client
+                bookerClientId = uuidv4();
                 clients.push({
-                    id: payerId.value,
-                    name: reservation.payerName,
-                    legal_or_natural_person: isLegalPerson(reservation.payerName) ? 'legal' : 'natural',
+                    id: bookerClientId,
+                    name: reservation.bookerName,
+                    legal_or_natural_person: isLegalPerson(reservation.bookerName) ? 'legal' : 'natural',
                     gender: 'other',
-                    phone: reservation.bookerTel,                    
-                    created_by: 1,                    
+                    phone: reservation.bookerTel,
+                    created_by: 1,
                 });
-            } else{
-                payerId.value = clientId;
+                // Add new booker and their ID to the map
+                clientMap.set(bookerKey, bookerClientId);
+            }
+            
+            let payerClientId;
+            if (reservation.payerName && reservation.payerName !== reservation.bookerName) {                
+                const payerKey = `${reservation.payerName}-${reservation.bookerTel}`;
+
+                // Check if payer already exists in the map
+                if (clientMap.has(payerKey)) {
+                    payerClientId = clientMap.get(payerKey);
+                } else {
+                    // Payer is new, create a new client
+                    payerClientId = uuidv4();
+                    clients.push({
+                        id: payerClientId,
+                        name: reservation.payerName,
+                        legal_or_natural_person: isLegalPerson(reservation.payerName) ? 'legal' : 'natural',
+                        gender: 'other',
+                        phone: reservation.bookerTel, // Assuming payer uses booker's phone
+                        created_by: 1,
+                    });
+                    // Add new payer and their ID to the map
+                    clientMap.set(payerKey, payerClientId);
+                }
+            } else {
+                // Payer is the same as booker, use the booker's client ID
+                payerClientId = bookerClientId;
             }
 
             // reservations table
             reservations.push({
                 id: reservationId,  // Generate UUID
                 hotel_id: selectedHotelId.value,  // From selected hotel
-                reservation_client_id: clientId,  // Function to fetch client ID
+                reservation_client_id: bookerClientId,  // Function to fetch client ID
                 check_in: reservation.チェックイン日,
                 check_out: reservation.チェックアウト日,
                 check_in_time: reservation.checkInTime,
@@ -616,7 +644,7 @@
                     reservation_id: reservationId,                    
                     date: payment.date,
                     room_id: getRoomId(payment.roomNumber),
-                    client_id: payerId.value,
+                    client_id: payerClientId,
                     payment_type_id: getPaymentTypeId(payment.type, payment.name),
                     value: payment.value,
                     comment: payment.name,                    
@@ -794,14 +822,6 @@
             for (const chunk of reservationRateChunks) {
                 await yadomasterAddReservationRates(chunk);
             }
-                
-            // If all chunks processed successfully
-            toast.add({
-                severity: 'success',
-                summary: '成功',
-                detail: '予約のインポートが完了しました。',
-                life: 3000,
-            });
         } catch (error) {
             console.error("Database operation failed during import:", error);
             toast.add({
@@ -809,6 +829,14 @@
                 summary: 'インポートエラー',
                 detail: `データベース操作中にエラーが発生しました: ${error.message}`,
                 life: 10000, // Longer life for database errors
+            });
+        } finally {
+            // If all chunks processed successfully
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '予約のインポートが完了しました。',
+                life: 3000,
             });
         }
     }
