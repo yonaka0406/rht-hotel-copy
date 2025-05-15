@@ -775,24 +775,42 @@
         const reservationAddonChunks = chunkArray(data.reservation_addons, 200);
         const reservationRateChunks = chunkArray(data.reservation_rates, 200);
 
-        for (const chunk of clientChunks) {
-            await yadomasterAddClients(chunk);
+        try {
+            for (const chunk of clientChunks) {
+                await yadomasterAddClients(chunk);
+            }
+            for (const chunk of reservationChunks) {
+                await yadomasterAddReservations(chunk);
+            }            
+            for (const chunk of reservationDetailChunks) {
+                await yadomasterAddReservationDetails(chunk);
+            }
+            for (const chunk of reservationPaymentChunks) {
+                await yadomasterAddReservationPayments(chunk);
+            }
+            for (const chunk of reservationAddonChunks) {
+                await yadomasterAddReservationAddons(chunk);
+            }
+            for (const chunk of reservationRateChunks) {
+                await yadomasterAddReservationRates(chunk);
+            }
+                
+            // If all chunks processed successfully
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '予約のインポートが完了しました。',
+                life: 3000,
+            });
+        } catch (error) {
+            console.error("Database operation failed during import:", error);
+            toast.add({
+                severity: 'error',
+                summary: 'インポートエラー',
+                detail: `データベース操作中にエラーが発生しました: ${error.message}`,
+                life: 10000, // Longer life for database errors
+            });
         }
-        for (const chunk of reservationChunks) {
-            await yadomasterAddReservations(chunk);
-        }
-        for (const chunk of reservationDetailChunks) {
-            await yadomasterAddReservationDetails(chunk);
-        }
-        for (const chunk of reservationPaymentChunks) {
-            await yadomasterAddReservationPayments(chunk);
-        }
-        for (const chunk of reservationAddonChunks) {
-            await yadomasterAddReservationAddons(chunk);
-        }
-        for (const chunk of reservationRateChunks) {
-            await yadomasterAddReservationRates(chunk);
-        }        
     }
 
     // Dialog
