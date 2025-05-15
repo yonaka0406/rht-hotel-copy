@@ -543,8 +543,9 @@
                 
                 const authToken = localStorage.getItem('authToken');
 
-                const bodyEmail = newUser.value.email;
-                const bodyName = newUser.value.name;
+
+                const bodyEmail = newUser.value.email.trim();
+                const bodyName = newUser.value.name.trim();
                 const bodyPassword = newUser.value.password;
                 const bodyRole = newUser.value.role;
 
@@ -607,7 +608,7 @@
                     });
                     apiResponse = { type: 'error', message: 'An error occurred. Please try again.' };                    
                 }
-            }
+            };
 
             // Edit User
             const submitEditUser = async () => {
