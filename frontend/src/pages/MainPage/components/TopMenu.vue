@@ -14,10 +14,10 @@
             <div class="flex items-center gap-4">
                 <span>{{ userGreeting }}</span>
                 <!-- Notifications Icon -->                
-                <OverlayBadge :value="holdReservations.length" class="mr-2">
-                    <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
-                        <i class="pi pi-bell" style="font-size:larger" />
-                    </button>
+                <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
+                    <Button class="p-button p-button-text" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
+                        <i class="pi pi-bell" :class="bellAnimationClass" style="font-size:larger" />
+                    </Button>
                 </OverlayBadge>
                 <!-- Hotel Dropdown -->
                 <Select
@@ -40,7 +40,7 @@
         <ul v-if="holdReservations.length">
             <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
                 <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)">
-                    {{ reservation.hotel_name }}<p>保留中予約を完成させてください: </p>
+                    {{ reservation.hotel_name }}<span>保留中予約を完成させてください: </span><br/>
                     {{ reservation.client_name }} @ {{ reservation.check_in }}
                 </button>
                 <Divider />
@@ -50,94 +50,118 @@
     </Drawer>
 </template>
 
-<script>
-    import { ref, computed, watch, onMounted } from 'vue';
+<script setup>
+    // Vue
+    import { ref, computed, watch, onMounted } from 'vue';    
     import { useRouter } from 'vue-router';
+    const router = useRouter();
+
+    // Stores
     import { useUserStore } from '@/composables/useUserStore';
+    const { logged_user, fetchUser } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
+    const { hotels, setHotelId, selectedHotelId } = useHotelStore();
     import { useReservationStore } from '@/composables/useReservationStore';
-    import { Toolbar, OverlayBadge, Select, Drawer, Divider } from 'primevue';
-    export default {
-        components: {
-            Toolbar,
-            OverlayBadge,
-            Select,
-            Drawer,
-            Divider,
-        },
-        setup() {     
-            const router = useRouter();       
-            const { logged_user, fetchUser } = useUserStore();
-            const { hotels, setHotelId, selectedHotelId } = useHotelStore();
-            const { holdReservations, fetchMyHoldReservations, getReservationHotelId, setReservationId, fetchReservation } = useReservationStore();
-            const showDrawer = ref(false);
-            const userMessage = ref('');
+    const { holdReservations, fetchMyHoldReservations, setReservationId } = useReservationStore();
 
-            const userGreeting = computed(() => {
-                const now = new Date();
-                const hour = now.getHours();
+    // Primevue
+    import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
 
-                if (hour >= 5 && hour < 10) {
-                    userMessage.value = 'おはようございます、' + logged_user.value[0]?.name;
-                    // Good morning (5:00 AM - 9:59 AM)
-                } else if (hour >= 10 && hour < 17) {
-                    userMessage.value = 'こんにちは、' + logged_user.value[0]?.name;
-                    // Good afternoon (10:00 AM - 4:59 PM)
-                } else {
-                    userMessage.value = 'こんばんは、' + logged_user.value[0]?.name;
-                    // Good evening (5:00 PM - 4:59 AM)
-                }
-                
-                return userMessage;
-            });
+    // --- Reactive State ---
+    const showDrawer = ref(false);
 
-            // Handle notification click
-            const goToEditReservationPage = async (hotel_id, reservation_id) => {
-                await setHotelId(hotel_id);
-                await setReservationId(reservation_id);
+    // --- Computed Properties ---
+    const userGreeting = computed(() => {
+        const now = new Date();
+        const hour = now.getHours();
+        // Robustly get user name with a fallback
+        const userName = (logged_user.value && logged_user.value.length > 0 && logged_user.value[0]?.name)
+                        ? logged_user.value[0].name
+                        : 'User'; // Default name if not available or structure is different
 
-                // console.log('TopMenu goToEditReservationPage:', hotel_id, reservation_id)
-                
-                showDrawer.value = false;
+        if (hour >= 5 && hour < 10) {
+            return `おはようございます、${userName}`; // Good morning (5:00 AM - 9:59 AM)
+        } else if (hour >= 10 && hour < 17) {
+            return `こんにちは、${userName}`; // Good afternoon (10:00 AM - 4:59 PM)
+        } else {
+            return `こんばんは、${userName}`; // Good evening (5:00 PM - 4:59 AM)
+        }
+    });
 
-                router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
-            };            
+    // Computed property for dynamic severity string based on notification count    
+    const notificationSeverity = computed(() => {
+      const count = holdReservations.value.length;
+      if (count > 5) { // More than 5 notifications
+        return 'danger';
+      } else if (count > 0) { // 1 to 5 notifications
+        return 'warn';
+      }      
+      return null; 
+    });
 
-            onMounted( async () => {
-                //console.log('holdReservations:',holdReservations.value);
-                // Already called in SideMenu                
-                //fetchHotels(); 
-                // await fetchUser();
-                //await fetchMyHoldReservations();    
-                //console.log('Logged user:',logged_user.value);                
-            });
-            
-            watch(selectedHotelId,
-                (newVal, oldVal) => {                    
-                    if (newVal) {
-                        // console.log(`Hotel ID ${newVal} is being provided by TopMenu.`);
-                    }
-                },
-                { immediate: true } // This ensures the watcher runs on initialization
-            );
+    // Computed property for bell animation class
+    const bellAnimationClass = computed(() => {
+      return holdReservations.value.length > 0 ? 'animate-bell-icon' : '';
+    });
 
-            return{   
-                logged_user,             
-                hotels,
-                selectedHotelId,
-                holdReservations,                
-                showDrawer,       
-                userGreeting,         
-                goToEditReservationPage,
-            };
-        },
-        methods: {
-            
-        },
+    // --- Methods ---
+    const goToEditReservationPage = async (hotel_id, reservation_id) => {
+        await setHotelId(hotel_id); // Set the hotel context in the store
+        await setReservationId(reservation_id); // Set the reservation context in the store
+
+        // console.log('TopMenu goToEditReservationPage:', hotel_id, reservation_id);
+
+        showDrawer.value = false; // Close the notification drawer
+
+        // Navigate to the reservation editing page
+        router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
     };
+
+    // --- Lifecycle Hooks ---
+    onMounted(async () => {
+        // console.log('holdReservations onMounted:', holdReservations.value);
+        // Already called in SideMenu 
+        // await fetchUser();
+        // await fetchMyHoldReservations();
+        // console.log('Logged user onMounted:', logged_user.value);
+    });
+
+    // --- Watchers ---
+    watch(selectedHotelId,
+        (newVal, oldVal) => {
+            if (newVal) {
+                // console.log(`Hotel ID changed from ${oldVal} to ${newVal} via TopMenu selection.`);
+            }
+        },
+        { immediate: true } // This ensures the watcher runs on component initialization with the initial value.
+    );
+
 </script>
 <style scoped>
     button {
         background-color: transparent;
+    }
+    .m-2 button {
+        display: block;
+        width: 100%;    
+        padding: 8px;
+        border-radius: 4px;
+    }
+    .m-2 button:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+
+    /* Keyframes for bell animation */
+    @keyframes gentle-bell-shake {
+        0%, 100% { transform: rotate(0); }
+        20%, 60% { transform: rotate(7deg); } /* Reduced rotation for subtlety */
+        40%, 80% { transform: rotate(-7deg); } /* Reduced rotation for subtlety */
+    }
+
+    /* Class to apply the animation to the bell icon */
+    .animate-bell-icon {
+        display: inline-block; /* Important for transforms to work correctly on inline elements like <i> */
+        transform-origin: top center; /* Bell swings from its top center */
+        animation: gentle-bell-shake 2s ease-in-out infinite; /* Animation properties: name, duration, timing function, iteration count */
     }
 </style>
