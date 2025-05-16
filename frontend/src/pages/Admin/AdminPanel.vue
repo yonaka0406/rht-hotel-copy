@@ -124,214 +124,221 @@
     </div>
   </template>
   
-<script>
+  <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';    
+    import { ref, computed, onMounted, onUnmounted } from 'vue';
+    const router = useRouter();
+    const route = useRoute();
     import { useRouter, useRoute } from 'vue-router';
 
     // Store
     import { useUserStore } from '@/composables/useUserStore';
+    const { logged_user, fetchUser } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
+    const { hotels, fetchHotels } = useHotelStore();       
 
     // Primevue
     import { Menubar, PanelMenu, Button } from 'primevue';
-    
-    export default {
-        name: 'Dashboard',
-        components: {
-            Menubar,
-            PanelMenu,
-            Button,
-        },
-        setup() {
-            const router = useRouter();
-            const route = useRoute();
-            const { logged_user, fetchUser } = useUserStore();
-            const { hotels, fetchHotels } = useHotelStore();       
-            const hotelCount = ref(0);
-            const activeUsers = ref(0);
-            const expandedKeys = ref({});            
-            const items = ref([
-                {
-                    key: 'dashboard',
-                    label: 'ダッシュボード',
-                    icon: 'pi pi-tablet',
-                    command: () => {
-                        router.push('/admin');
-                    },
-                },
-                {                    
-                    key: 'manage-users',
-                    label: 'ユーザー管理',
-                    icon: 'pi pi-users',
-                    items: [
-                        {                 
-                            key: 'mu-create-edit',
-                            label: '新規 & 編集',
-                            icon: 'pi pi-user',
-                            command: () => {
-                                router.push('/admin/users');
-                            }                        
-                        },
-                        {
-                            key: 'mu-roles',
-                            label: 'ロール',
-                            icon: 'pi pi-key',
-                            command: () => {
-                                router.push('/admin/roles');
-                            }
-                        },
-                    ],
-                },
-                {
-                    key: 'manage-hotels',
-                    label: 'ホテル管理',
-                    icon: 'pi pi-building',
-                    items: [
-                        {                 
-                            key: 'mh-create',
-                            label: '新規',
-                            icon: 'pi pi-plus',
-                            command: () => {
-                                router.push('/admin/hotel-create');
-                            }                        
-                        },
-                        {                 
-                            key: 'mh-edit',
-                            label: '編集',
-                            icon: 'pi pi-pen-to-square',
-                            command: () => {
-                                router.push('/admin/hotel-edit');
-                            }                        
-                        },
-                        {                 
-                            key: 'mh-plan',
-                            label: 'プラン',
-                            icon: 'pi pi-box',
-                            command: () => {
-                                router.push('/admin/hotel-plans');
-                            }                        
-                        },
-                        {                 
-                            key: 'mh-addon',
-                            label: 'アドオン',
-                            icon: 'pi pi-cart-plus',
-                            command: () => {
-                                router.push('/admin/hotel-addons');
-                            }                        
-                        },
-                        {                 
-                            key: 'mh-calendar',
-                            label: 'カレンダー',
-                            icon: 'pi pi-calendar',
-                            command: () => {
-                                router.push('/admin/hotel-calendar');
-                            }                        
-                        },
-                    ],
-                },
-                {
-                    key: 'other-settings',
-                    label: 'その他設定',
-                    icon: 'pi pi-cog',
-                    command: () => {
-                        router.push('/admin/settings');
-                    }
-                },
-                {
-                    key: 'manage-ota',
-                    label: 'OTA Exchange',
-                    icon: 'pi pi-arrow-right-arrow-left',
-                    command: () => {
-                        router.push('/admin/ota');
-                    }
-                },
-                {
-                    key: 'import-data',
-                    label: '他社PMSデータインポート',
-                    icon: 'pi pi-file-import',
-                    command: () => {
-                        router.push('/admin/pms-import');
-                    }
-                },
-            ]);
-            const userName = ref('');
+    import { usePrimeVue } from 'primevue/config';
+    const primevue = usePrimeVue();
 
-            const isRootAdminPath = computed(() => route.path === '/admin');
+    const hotelCount = ref(0);
+    const activeUsers = ref(0);
+    const expandedKeys = ref({});
+    const userName = ref('');            
+                        
+    const items = ref([
+        {
+            key: 'dashboard',
+            label: 'ダッシュボード',
+            icon: 'pi pi-tablet',
+            command: () => {
+                router.push('/admin');
+            },
+        },
+        {                    
+            key: 'manage-users',
+            label: 'ユーザー管理',
+            icon: 'pi pi-users',
+            items: [
+                {                 
+                    key: 'mu-create-edit',
+                    label: '新規 & 編集',
+                    icon: 'pi pi-user',
+                    command: () => {
+                        router.push('/admin/users');
+                    }                        
+                },
+                {
+                    key: 'mu-roles',
+                    label: 'ロール',
+                    icon: 'pi pi-key',
+                    command: () => {
+                        router.push('/admin/roles');
+                    }
+                },
+            ],
+        },
+        {
+            key: 'manage-hotels',
+            label: 'ホテル管理',
+            icon: 'pi pi-building',
+            items: [
+                {                 
+                    key: 'mh-create',
+                    label: '新規',
+                    icon: 'pi pi-plus',
+                    command: () => {
+                        router.push('/admin/hotel-create');
+                    }                        
+                },
+                {                 
+                    key: 'mh-edit',
+                    label: '編集',
+                    icon: 'pi pi-pen-to-square',
+                    command: () => {
+                        router.push('/admin/hotel-edit');
+                    }                        
+                },
+                {                 
+                    key: 'mh-plan',
+                    label: 'プラン',
+                    icon: 'pi pi-box',
+                    command: () => {
+                        router.push('/admin/hotel-plans');
+                    }                        
+                },
+                {                 
+                    key: 'mh-addon',
+                    label: 'アドオン',
+                    icon: 'pi pi-cart-plus',
+                    command: () => {
+                        router.push('/admin/hotel-addons');
+                    }                        
+                },
+                {                 
+                    key: 'mh-calendar',
+                    label: 'カレンダー',
+                    icon: 'pi pi-calendar',
+                    command: () => {
+                        router.push('/admin/hotel-calendar');
+                    }                        
+                },
+            ],
+        },
+        {
+            key: 'other-settings',
+            label: 'その他設定',
+            icon: 'pi pi-cog',
+            command: () => {
+                router.push('/admin/settings');
+            }
+        },
+        {
+            key: 'manage-ota',
+            label: 'OTA Exchange',
+            icon: 'pi pi-arrow-right-arrow-left',
+            command: () => {
+                router.push('/admin/ota');
+            }
+        },
+        {
+            key: 'import-data',
+            label: '他社PMSデータインポート',
+            icon: 'pi pi-file-import',
+            command: () => {
+                router.push('/admin/pms-import');
+            }
+        },
+        {
+            key: 'import-finances',
+            label: '財務データ',
+            icon: 'pi pi-wallet',
+            command: () => {
+                router.push('/admin/finances');
+            }
+        },
+    ]);
+
+    const isRootAdminPath = computed(() => route.path === '/admin');
             
-            const toggleAll = () => {
-                if (Object.keys(expandedKeys.value).length) collapseAll();
-                else expandAll();
-            };
-            const expandAll = () => {
-                for (let node of items.value) {
-                    expandNode(node);
-                }
+    const toggleAll = () => {
+        if (Object.keys(expandedKeys.value).length) collapseAll();
+        else expandAll();
+    };
+    const expandAll = () => {
+        for (let node of items.value) {
+            expandNode(node);
+        }
 
-                expandedKeys.value = {...expandedKeys.value};
-            };
-            const collapseAll = () => {
-                expandedKeys.value = {};
-            };
-            const expandNode = (node) => {
-                if (node.items && node.items.length) {
-                    expandedKeys.value[node.key] = true;
+        expandedKeys.value = {...expandedKeys.value};
+    };
+    const collapseAll = () => {
+        expandedKeys.value = {};
+    };
+    const expandNode = (node) => {
+        if (node.items && node.items.length) {
+            expandedKeys.value[node.key] = true;
 
-                    for (let child of node.items) {
-                        expandNode(child);
-                    }
-                }
-            };
-
-            onMounted( async () => {
-                await fetchHotels();
-                await fetchUser();
-                hotelCount.value = hotels.value.length;                
-                userName.value = logged_user.value[0]?.name + '、';
-            });
-
-            return {
-                userName,
-                hotelCount,
-                activeUsers,
-                expandedKeys,
-                items,
-                isRootAdminPath,
-                toggleAll,
-            };
-        },
-        methods: {
-            async fetchActiveUsers() {
-                try {
-                    const response = await fetch('/api/auth/active-users');
-                    const data = await response.json();
-                    this.activeUsers = data.activeUsers;                    
-                } catch (err) {
-                    console.error('Failed to fetch active users:', err);
-                }
-            },
-            handleLogout() {
-                // Clear user session or token
-                localStorage.removeItem('authToken'); // Example token removal
-                this.$router.push('/login'); // Redirect to login page
-            },
-
-        },
-        mounted() {
-            this.$primevue.config.ripple = true;
-            this.fetchActiveUsers();
-            // Update every 30 seconds
-            setInterval(this.fetchActiveUsers, 30000);
+            for (let child of node.items) {
+                expandNode(child);
+            }
         }
     };
-  </script>
+
+    const fetchActiveUsers = async () => {
+        try {
+            const response = await fetch('/api/auth/active-users');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            activeUsers.value = data.activeUsers;
+        } catch (err) {
+            console.error('Failed to fetch active users:', err);
+            // activeUsers.value = 0; // Optionally reset or set to a default on error
+        }
+    };
+
+    const handleLogout = () => {
+        // Clear user session or token
+        localStorage.removeItem('authToken'); // Example token removal
+        router.push('/login'); // Redirect to login page
+    };
+
+    let activeUsersInterval = null;
+
+    onMounted( async () => {
+        primevue.config.ripple = true;
+
+        await fetchHotels();
+        await fetchUser();
+        
+        hotelCount.value = hotels.value?.length || 0;
+        if (Array.isArray(logged_user.value) && logged_user.value.length > 0 && logged_user.value[0]?.name) {
+            userName.value = logged_user.value[0].name + '、';
+        } else {
+            userName.value = 'ユーザー、'; // Default or fallback name
+        }
+
+        fetchActiveUsers();
+        activeUsersInterval = setInterval(fetchActiveUsers, 30000); // Update every 30 seconds
+    });
+
+    onUnmounted(() => {
+        if (activeUsersInterval) {
+            clearInterval(activeUsersInterval);
+        }
+    });    
+        
+</script>
   
-  <style scoped>
-  /* You can add any custom styles here */
-  @media (max-width: 768px) {
+<style scoped>
+  
+    @media (max-width: 768px) {
         .hidden.md\\:block {
             display: none;
         }
     }
-  </style>
+</style>
   

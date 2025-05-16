@@ -12,6 +12,7 @@
                     <div ref="halfPie" class="w-full h-40"></div>
                 </template>
             </Card>
+            <!--
             <Card class="flex col-span-6">
                 <template #title>
                     <p>CARD</p>
@@ -30,6 +31,7 @@
                 <template #content>                    
                 </template>
             </Card>            
+            -->
         </div>
     </div>
 </template>

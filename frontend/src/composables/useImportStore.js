@@ -133,6 +133,29 @@ export function useImportStore() {
         }
     };
 
+    const forecastAddData = async (array) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/forecast`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(array),
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to import data');
+            }
+            const data = await response.json();            
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to import data', error);
+        }
+    };
+
     return{
         yadomasterAddClients,
         yadomasterAddReservations,
@@ -140,5 +163,6 @@ export function useImportStore() {
         yadomasterAddReservationPayments,
         yadomasterAddReservationAddons,
         yadomasterAddReservationRates,
+        forecastAddData,
     };
 }

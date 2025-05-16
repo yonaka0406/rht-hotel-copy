@@ -83,32 +83,34 @@ return { name, nameKana, nameKanji };
 };
 
 const insertYadomasterClients = async (requestId, clients) => {
-    const pool = getPool(requestId);    
+    const pool = getPool(requestId);
+    
+    const client = await pool.connect();
 
     // Disable trigger
-    await pool.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
-    await pool.query('ALTER TABLE addresses DISABLE TRIGGER log_addresses_trigger;');    
+    await client.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
+    await client.query('ALTER TABLE addresses DISABLE TRIGGER log_addresses_trigger;');    
   
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
         let valueIndex = 1;
 
-        for (const client of clients) {
-            const { name, nameKana, nameKanji } = await processNameString(client.name); // Still process names individually
+        for (const c of clients) {
+            const { name, nameKana, nameKanji } = await processNameString(c.name); // Still process names individually
 
             valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
-                client.id,
+                c.id,
                 name,
                 nameKana,
                 nameKanji,
-                client.legal_or_natural_person,
-                client.gender,
-                client.phone,
-                client.created_by
+                c.legal_or_natural_person,
+                c.gender,
+                c.phone,
+                c.created_by
             );
         }
 
@@ -118,28 +120,31 @@ const insertYadomasterClients = async (requestId, clients) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         return { success: true, count: clients.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding clients (transaction rolled back):', err);
         throw new Error('Database error during client insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
-        await pool.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
-        await pool.query('ALTER TABLE clients ENABLE TRIGGER log_addresses_trigger;');
+        await client.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
+        await client.query('ALTER TABLE addresses ENABLE TRIGGER log_addresses_trigger;');
+        client.release();
     }
 };
 const insertYadomasterReservations = async (requestId, reservations) => {
-    const pool = getPool(requestId);    
+    const pool = getPool(requestId);
+    
+    const client = await pool.connect();
 
     // Disable trigger
-    await pool.query('ALTER TABLE reservations DISABLE TRIGGER log_reservations_trigger;');
+    await client.query('ALTER TABLE reservations DISABLE TRIGGER log_reservations_trigger;');
   
     try {
-        await pool.query('BEGIN');        
+        await client.query('BEGIN');        
 
         const valuePlaceholders = [];
         const values = [];
@@ -170,28 +175,31 @@ const insertYadomasterReservations = async (requestId, reservations) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         
         return { success: true, count: reservations.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding reservations (transaction rolled back):', err);
         throw new Error('Database error during reservation insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
         await pool.query('ALTER TABLE reservations ENABLE TRIGGER log_reservations_trigger;');
+        client.release();
     }
 };
 const insertYadomasterDetails = async (requestId, details) => {
     const pool = getPool(requestId);
 
+    const client = await pool.connect();
+
     // Disable trigger
-    await pool.query('ALTER TABLE reservation_details DISABLE TRIGGER log_reservation_details_trigger;');
+    await client.query('ALTER TABLE reservation_details DISABLE TRIGGER log_reservation_details_trigger;');
   
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
@@ -224,27 +232,30 @@ const insertYadomasterDetails = async (requestId, details) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         return { success: true, count: details.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding reservation details (transaction rolled back):', err);
         throw new Error('Database error during reservation details insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
-        await pool.query('ALTER TABLE reservation_details ENABLE TRIGGER log_reservation_details_trigger;');
+        await client.query('ALTER TABLE reservation_details ENABLE TRIGGER log_reservation_details_trigger;');
+        client.release();
     }
 };
 const insertYadomasterPayments = async (requestId, payments) => {
     const pool = getPool(requestId);
 
+    const client = await pool.connect();
+
     // Disable trigger
-    await pool.query('ALTER TABLE reservation_payments DISABLE TRIGGER log_reservation_payments_trigger;');
+    await client.query('ALTER TABLE reservation_payments DISABLE TRIGGER log_reservation_payments_trigger;');
   
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
@@ -272,27 +283,30 @@ const insertYadomasterPayments = async (requestId, payments) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         return { success: true, count: payments.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding reservation payments (transaction rolled back):', err);
         throw new Error('Database error during reservation payments insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
-        await pool.query('ALTER TABLE reservation_payments ENABLE TRIGGER log_reservation_payments_trigger;');
+        await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER log_reservation_payments_trigger;');
+        client.release();
     }
 };
 const insertYadomasterAddons = async (requestId, addons) => {
     const pool = getPool(requestId);
 
+    const client = await pool.connect();
+
     // Disable trigger
-    await pool.query('ALTER TABLE reservation_addons DISABLE TRIGGER log_reservation_addons_trigger;');
+    await client.query('ALTER TABLE reservation_addons DISABLE TRIGGER log_reservation_addons_trigger;');
   
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
@@ -319,27 +333,30 @@ const insertYadomasterAddons = async (requestId, addons) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         return { success: true, count: addons.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding reservation addons (transaction rolled back):', err);
         throw new Error('Database error during reservation addons insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
-        await pool.query('ALTER TABLE reservation_addons ENABLE TRIGGER log_reservation_addons_trigger;');
+        await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER log_reservation_addons_trigger;');
+        client.release();
     }
 };
 const insertYadomasterRates = async (requestId, rates) => {
     const pool = getPool(requestId);
 
+    const client = await pool.connect();
+
     // Disable trigger
-    await pool.query('ALTER TABLE reservation_rates DISABLE TRIGGER log_reservation_rates_trigger;');
+    await client.query('ALTER TABLE reservation_rates DISABLE TRIGGER log_reservation_rates_trigger;');
   
     try {
-        await pool.query('BEGIN');
+        await client.query('BEGIN');
 
         const valuePlaceholders = [];
         const values = [];
@@ -364,17 +381,71 @@ const insertYadomasterRates = async (requestId, rates) => {
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
-        await pool.query(query, values);
+        await client.query(query, values);
 
-        await pool.query('COMMIT');
+        await client.query('COMMIT');
         return { success: true, count: rates.length };
     } catch (err) {
-        await pool.query('ROLLBACK'); 
+        await client.query('ROLLBACK'); 
         console.error('Error adding reservation rates (transaction rolled back):', err);
         throw new Error('Database error during reservation rates insertion (transaction rolled back)');
     } finally {
         // Reenable trigger
-        await pool.query('ALTER TABLE reservation_rates ENABLE TRIGGER log_reservation_rates_trigger;');
+        await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER log_reservation_rates_trigger;');
+        client.release();
+    }
+};
+
+const insertForecastData = async (requestId, forecasts, user_id) => {
+    const pool = getPool(requestId);
+
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        for (const forecast of forecasts) {
+
+            const query = `
+                INSERT INTO du_forecast (
+                    hotel_id, forecast_month,
+                    accommodation_revenue, operating_days,
+                    available_room_nights, rooms_sold_nights,
+                    created_by
+                    -- created_at and updated_at have defaults or are handled by triggers
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (hotel_id, forecast_month) DO UPDATE SET
+                    accommodation_revenue = EXCLUDED.accommodation_revenue,
+                    operating_days = EXCLUDED.operating_days,
+                    available_room_nights = EXCLUDED.available_room_nights,
+                    rooms_sold_nights = EXCLUDED.rooms_sold_nights,
+                    created_by = EXCLUDED.created_by                    
+                RETURNING id;
+            `;
+
+            const values = [
+                parseInt(forecast.hotel_id, 10),
+                forecast.forecast_month,
+                forecast.accommodation_revenue,
+                forecast.operating_days,
+                forecast.available_room_nights,
+                forecast.rooms_sold_nights,
+                user_id
+            ];
+
+            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}`, values);
+
+            const res = await client.query(query, values);
+            return { success: true, count: forecasts.length };
+        }
+
+        await client.query('COMMIT');
+        return { success: true, count: rates.length };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in insertForecastData:', error.stack);
+    } finally {
+        client.release();
     }
 };
 
@@ -385,4 +456,5 @@ module.exports = {
     insertYadomasterPayments,
     insertYadomasterAddons,
     insertYadomasterRates,
+    insertForecastData,
   };
