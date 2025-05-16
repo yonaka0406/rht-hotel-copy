@@ -7,6 +7,11 @@ const credentialsPath = path.join(__dirname, '../config/google_sheets_credential
 const tokenPath = path.join(__dirname, '../config/refresh_token.json');
 const redirectUri = 'http://localhost:3000'; // Use a consistent redirect URI
 
+/*
+  cd api/config
+  node getRefreshToken.js
+*/
+
 async function getAccessToken() {
   try {
     const credentials = await fs.readFile(credentialsPath);
