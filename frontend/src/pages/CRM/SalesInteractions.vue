@@ -199,8 +199,39 @@
     >
         <form @submit.prevent="handleSaveAction" class="flex flex-col gap-y-3"> 
             <div class="field">
-                <label for="client">クライアント</label>
-                <Select id="client" v-model="currentActionFormData.client_id" :options="clients" optionLabel="name" optionValue="id" placeholder="クライアントを選択" :filter="true" :loading="clientsIsLoading" :showClear="true" :disabled="actionFormMode === 'edit' && !!currentActionFormData.client_id" style="width: 100%;"></Select>
+                <label for="client">クライアント</label>                
+                <AutoComplete
+                    v-model="selectedClientObjectForForm"
+                    :suggestions="filteredClientsForForm"
+                    optionLabel="display_name" 
+                    @complete="searchClientsInForm"
+                    placeholder="クライアントを選択・検索"
+                    :disabled="actionFormMode === 'edit' && !!currentActionFormData.client_id"
+                    :loading="clientsIsLoading"
+                    forceSelection
+                    dropdown
+                    style="width: 100%;"
+                    panelClass="max-h-60 overflow-y-auto" 
+                >
+                    <template #option="slotProps">
+                    <div class="client-option-item p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                        <p class="font-medium">
+                        <i v-if="slotProps.option.is_legal_person" class="pi pi-building mr-2 text-gray-500"></i>
+                        <i v-else class="pi pi-user mr-2 text-gray-500"></i>
+                        {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                        <span v-if="slotProps.option.name_kana" class="text-sm text-gray-500"> ({{ slotProps.option.name_kana }})</span>
+                        </p>
+                        <div class="flex items-center gap-x-3 mt-1 text-xs">
+                        <span v-if="slotProps.option.phone" class="text-sky-700"><i class="pi pi-phone mr-1"></i>{{ slotProps.option.phone }}</span>
+                        <span v-if="slotProps.option.email" class="text-sky-700"><i class="pi pi-at mr-1"></i>{{ slotProps.option.email }}</span>
+                        <span v-if="slotProps.option.fax" class="text-sky-700"><i class="pi pi-send mr-1"></i>{{ slotProps.option.fax }}</span>
+                        </div>
+                    </div>
+                    </template>
+                    <template #empty>
+                    <div class="p-3 text-center text-gray-500">該当するクライアントが見つかりません。</div>
+                    </template>
+                </AutoComplete>
             </div>
 
             <div class="field">
@@ -256,7 +287,7 @@
     import { ref, computed, onMounted, watch } from "vue";
     
     // Primevue
-    import { Card, Dialog, Menu, InputText, DatePicker, Textarea, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner } from 'primevue';
+    import { Card, Dialog, Menu, InputText, DatePicker, Textarea, AutoComplete, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
@@ -278,6 +309,10 @@
     ]);
     const loading = ref(false);
     const allRawActions = ref([]);
+
+    // --- AutoComplete State for Client Selection in Form ---
+    const selectedClientObjectForForm = ref(null); // v-model for AutoComplete, stores the selected client object
+    const filteredClientsForForm = ref([]); // Suggestions for AutoComplete
 
     // Data for cards - computed from allRawActions
     const scheduledActions = computed(() => allRawActions.value
@@ -334,6 +369,22 @@
             .filter(([value, label]) => value !== 'needs_follow_up') // Filter out 'needs_follow_up'
             .map(([value, label]) => ({ label, value }))
     );
+
+    // --- Normalization Helper Functions ---
+    const normalizeKana = (str) => {
+    if (!str) return '';
+        let normalizedStr = str.normalize('NFKC');
+        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0x60));
+        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEC0));
+        return normalizedStr;
+    };
+    const normalizePhone = (phone) => {
+        if (!phone) return '';
+        let normalized = phone.replace(/\D/g, '');
+        normalized = normalized.replace(/^0+/, '');
+        return normalized;
+    };
+
     const getEffectiveStatus = (action, due_date) => {
         const now = new Date();
         now.setHours(0,0,0,0); // Start of today for due_date comparison
@@ -387,7 +438,7 @@
         actionMenu.value.toggle(event);
     };
 
-    // --- Helpers ---    
+    // --- Date Formatting Helpers ---  
     const formatDateTime = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
@@ -406,6 +457,7 @@
         });
     };
 
+    // --- Severity Helpers for Tags ---
     const getActionTypeSeverity = (actionType) => {
         const severities = {
             visit: 'primary',
@@ -417,7 +469,6 @@
         };
         return severities[actionType] || 'info';
     };
-
     const getStatusSeverity = (status, due_date) => {
         const eStatus = getEffectiveStatus(status, due_date);
         const severities = {
@@ -431,7 +482,57 @@
         return severities[eStatus] || 'info';
     };
 
+    // --- Client Search for AutoComplete in Form ---
+    const searchClientsInForm = (event) => {
+        const query = event.query.toLowerCase();
+        const normalizedQuery = normalizePhone(query);
+        const isNumericQuery = /^\d+$/.test(normalizedQuery);
 
+        if (!clients.value || !Array.isArray(clients.value)) {
+            filteredClientsForForm.value = [];
+            return;
+        }
+
+        let results = clients.value.filter((client) => {
+            const clientName = client.name || '';
+            const clientNameKana = client.name_kana || '';
+            const clientNameKanji = client.name_kanji || '';
+            const clientEmail = client.email || '';
+            const clientPhone = client.phone || '';
+            const clientFax = client.fax || '';
+
+            const matchesName =
+                clientName.toLowerCase().includes(query) ||
+                (clientNameKana && normalizeKana(clientNameKana).toLowerCase().includes(normalizeKana(query))) ||
+                clientNameKanji.toLowerCase().includes(query);
+
+            const matchesPhoneFax = isNumericQuery &&
+                ((clientFax && normalizePhone(clientFax).includes(normalizedQuery)) ||
+                 (clientPhone && normalizePhone(clientPhone).includes(normalizedQuery)));
+            
+            const matchesEmail = clientEmail.toLowerCase().includes(query);
+            
+            return matchesName || matchesPhoneFax || matchesEmail;
+        });
+        
+        // Add display_name to results for AutoComplete input field rendering via optionLabel
+        filteredClientsForForm.value = results.map(client => ({
+            ...client,
+            display_name: client.name_kanji || client.name || `ID: ${client.id}` // Fallback display name
+        }));
+    };
+
+    // Watch for changes in selectedClientObjectForForm to update currentActionFormData.client_id
+    watch(selectedClientObjectForForm, (newVal) => {
+        if (newVal && typeof newVal === 'object' && newVal.id) {
+            currentActionFormData.value.client_id = newVal.id;
+        } else if (!newVal && currentActionFormData.value.client_id !== null) { 
+            // Cleared or not an object, and client_id was previously set
+            currentActionFormData.value.client_id = null;
+        }
+    });
+
+    // --- Modal Methods for Action Lists ---
     const openModal = (type) => {
         switch (type) {
             case 'scheduled':
@@ -456,7 +557,7 @@
         modalData.value = [];
     };
 
-    // Action Form Dialog Methods    
+    // --- Action Form Dialog Methods --- 
     const openNewActionDialog = () => {
         actionFormMode.value = 'create';
         currentActionFormData.value = {
@@ -465,6 +566,7 @@
             due_date: null,
             assigned_to: logged_user.value[0].id || null
         };
+        selectedClientObjectForForm.value = null;
         isActionFormDialogVisible.value = true;
     };
 
@@ -475,13 +577,26 @@
             action_datetime: actionData.action_datetime ? new Date(actionData.action_datetime) : null,
             due_date: actionData.due_date ? new Date(actionData.due_date) : null,
         };
+        if (currentActionFormData.value.client_id && clients.value) {
+            const clientObj = clients.value.find(c => c.id === currentActionFormData.value.client_id);
+            if (clientObj) {
+                selectedClientObjectForForm.value = { 
+                    ...clientObj, 
+                    display_name: clientObj.name_kanji || clientObj.name || `ID: ${clientObj.id}`
+                };
+            } else {
+                selectedClientObjectForForm.value = null; // Client not found in current list
+                 toast.add({ severity: "warn", summary: "注意", detail: "関連クライアントが見つかりませんでした。リストを更新してください。", life: 4000 });
+            }
+        } else {
+            selectedClientObjectForForm.value = null;
+        }
         isActionFormDialogVisible.value = true;
     };
 
     const closeActionFormDialog = () => {
         isActionFormDialogVisible.value = false;
-        // It's good practice to reset the form data when closing
-        // currentActionFormData.value = { ...initialActionFormData }; // Or just let it be overwritten on next open
+        selectedClientObjectForForm.value = null;        
     };
 
     const handleSaveAction = async () => {
@@ -502,7 +617,7 @@
         }
         
         loading.value = true;
-
+        
         try {
             if (!id) {                
                 await addAction(currentActionFormData.value);
@@ -561,30 +676,48 @@
     };
 
     // --- Lifecycle Hooks & Watchers ---
-    onMounted( async () => {        
-        // Fetch users
-        await fetchUser();
-        loggedInUserId.value = logged_user.value[0].id;
-        await fetchUsers();        
-        
-        await fetchUserActions(loggedInUserId.value);        
-        allRawActions.value = user_actions.value;
-
-        // Fetch clients if not already loaded
-        if (clients.value && clients.value.length === 0) {
-            if (setClientsIsLoading) setClientsIsLoading(true);                                 
-            try {
-                const clientsTotalPages = await fetchClients(1);
-                // Fetch clients for all pages                
-                for (let page = 2; page <= clientsTotalPages; page++) {
-                    await fetchClients(page);
-                }                
-            } catch (error) {
-                console.error("Failed to fetch clients:", error);                
-            } finally {
-                if (setClientsIsLoading) setClientsIsLoading(false);
+    onMounted( async () => {     
+        loading.value = true;   
+        try {
+            await fetchUser();
+            if (logged_user.value && logged_user.value[0]) {
+                loggedInUserId.value = logged_user.value[0].id;
+            } else {
+                console.error("Logged in user not found.");
+                toast.add({ severity: "error", summary: "エラー", detail: "ログインユーザー情報を取得できませんでした。", life: 3000 });
+                loading.value = false;
+                return;
             }
-        }        
+            await fetchUsers(); 
+
+            if (selectedScope.value === 'user') {
+                await fetchUserActions(loggedInUserId.value);    
+                allRawActions.value = [...user_actions.value];
+            } else {
+                await fetchAllActions();
+                allRawActions.value = [...actions.value];
+            }
+
+            // Fetch clients if not already loaded
+            if (!clients.value || clients.value.length === 0) {
+                if (setClientsIsLoading) setClientsIsLoading(true);                 
+                try {
+                    const clientsTotalPages = await fetchClients(1);
+                    for (let page = 2; page <= clientsTotalPages; page++) {
+                        await fetchClients(page);
+                    }        
+                } catch (error) {
+                    console.error("Failed to fetch clients:", error);        
+                } finally {
+                    if (setClientsIsLoading) setClientsIsLoading(false);
+                }
+            }
+        } catch (error) {
+            console.error("Error during onMounted:", error);
+            toast.add({ severity: "error", summary: "初期化エラー", detail: "データの読み込みに失敗しました。", life: 3000 });
+        } finally {
+            loading.value = false;
+        }
     });
 
     watch(selectedScope, async (newScope) => {  
@@ -631,5 +764,8 @@
     :deep(.p-selectbutton .p-button) {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
+    }
+    .client-option-item:hover {
+        background-color: #f9fafb; /* Tailwind gray-50 */
     }
 </style>
