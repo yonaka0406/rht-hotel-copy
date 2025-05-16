@@ -1,7 +1,15 @@
 <template>
 <Panel>    
     <div v-if="clientReservations || crmActions">
-        <DataTable :value="filteredData" :sortable="true" sortMode="multiple" removableSort>
+        <DataTable :value="filteredData" 
+            :sortable="true" 
+            sortMode="multiple" 
+            removableSort
+            :paginator="true"
+            :rows="15"
+            :rowsPerPageOptions="[15,30,50]"
+            responsiveLayout="scroll"
+        >
             <template #header>
                 <div class="flex flex-col md:flex-row md:justify-between md:items-center">
                         <div class="mb-4 md:mb-0">
