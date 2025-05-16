@@ -88,13 +88,6 @@ CREATE TABLE hotels (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
-ALTER TABLE hotels
-   ADD COLUMN bank_name TEXT,
-   ADD COLUMN bank_branch_name TEXT,
-   ADD COLUMN bank_account_type TEXT,
-   ADD COLUMN bank_account_number TEXT,
-   ADD COLUMN bank_account_name TEXT;
-
 CREATE TABLE room_types (
     id SERIAL,
     hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE, 
@@ -153,12 +146,6 @@ CREATE TABLE clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
-
-ALTER TABLE clients
-   ADD COLUMN customer_id INT NULL,
-   ADD COLUMN website TEXT NULL,
-   ADD COLUMN billing_preference TEXT DEFAULT 'paper' CHECK (billing_preference IN ('paper', 'digital')),
-   ADD COLUMN comment TEXT NULL;
 
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)

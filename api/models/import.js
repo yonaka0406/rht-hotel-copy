@@ -87,6 +87,7 @@ const insertYadomasterClients = async (requestId, clients) => {
 
     // Disable trigger
     await pool.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
+    await pool.query('ALTER TABLE addresses DISABLE TRIGGER log_addresses_trigger;');    
   
     try {
         await pool.query('BEGIN');
@@ -128,6 +129,7 @@ const insertYadomasterClients = async (requestId, clients) => {
     } finally {
         // Reenable trigger
         await pool.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
+        await pool.query('ALTER TABLE clients ENABLE TRIGGER log_addresses_trigger;');
     }
 };
 const insertYadomasterReservations = async (requestId, reservations) => {
