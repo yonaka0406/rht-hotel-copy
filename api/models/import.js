@@ -397,53 +397,91 @@ const insertYadomasterRates = async (requestId, rates) => {
 };
 
 const insertForecastData = async (requestId, forecasts, user_id) => {
-    const pool = getPool(requestId);
+    // Ensure forecasts is an array and not empty
+    if (!Array.isArray(forecasts) || forecasts.length === 0) {
+        console.log('insertForecastData: No forecast data provided or forecasts array is empty.');
+        return { success: true, count: 0, message: 'No forecast data to process.' };
+    }
 
-    const client = await pool.connect();
+    const pool = getPool(requestId);
+    const client = await pool.connect();    
 
     try {
-        await client.query('BEGIN');
+        await client.query('BEGIN');        
 
-        for (const forecast of forecasts) {
+        const query = `
+            INSERT INTO du_forecast (
+                hotel_id, forecast_month,
+                accommodation_revenue, operating_days,
+                available_room_nights, rooms_sold_nights,
+                created_by                    
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (hotel_id, forecast_month) DO UPDATE SET
+                accommodation_revenue = CASE
+                                            WHEN $3 IS NOT NULL THEN EXCLUDED.accommodation_revenue
+                                            ELSE du_forecast.accommodation_revenue
+                                        END,
+                operating_days = CASE
+                                    WHEN $4 IS NOT NULL THEN EXCLUDED.operating_days
+                                    ELSE du_forecast.operating_days
+                                    END,
+                available_room_nights = CASE
+                                            WHEN $5 IS NOT NULL THEN EXCLUDED.available_room_nights
+                                            ELSE du_forecast.available_room_nights
+                                        END,
+                rooms_sold_nights = CASE
+                                        WHEN $6 IS NOT NULL THEN EXCLUDED.rooms_sold_nights
+                                        ELSE du_forecast.rooms_sold_nights
+                                    END,
+                created_by = EXCLUDED.created_by                    
+            RETURNING id;
+        `;
 
-            const query = `
-                INSERT INTO du_forecast (
-                    hotel_id, forecast_month,
-                    accommodation_revenue, operating_days,
-                    available_room_nights, rooms_sold_nights,
-                    created_by
-                    -- created_at and updated_at have defaults or are handled by triggers
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT (hotel_id, forecast_month) DO UPDATE SET
-                    accommodation_revenue = EXCLUDED.accommodation_revenue,
-                    operating_days = EXCLUDED.operating_days,
-                    available_room_nights = EXCLUDED.available_room_nights,
-                    rooms_sold_nights = EXCLUDED.rooms_sold_nights,
-                    created_by = EXCLUDED.created_by                    
-                RETURNING id;
-            `;
-
-            const values = [
+        // Map each forecast item to a promise that executes its query
+        const queryPromises = forecasts.map(forecast => {
+            // Prepare the values for the query for the current forecast
+            // Ensure numeric fields are correctly parsed or null
+            const currentValues = [
                 parseInt(forecast.hotel_id, 10),
-                forecast.forecast_month,
-                forecast.accommodation_revenue,
-                forecast.operating_days,
-                forecast.available_room_nights,
-                forecast.rooms_sold_nights,
+                forecast.forecast_month, // Assuming this is a date string like 'YYYY/MM/DD' or 'YYYY-MM-DD'
+                forecast.accommodation_revenue !== undefined && forecast.accommodation_revenue !== null ? parseFloat(forecast.accommodation_revenue) : null,
+                forecast.operating_days !== undefined && forecast.operating_days !== null ? parseInt(forecast.operating_days, 10) : null,
+                forecast.available_room_nights !== undefined && forecast.available_room_nights !== null ? parseInt(forecast.available_room_nights, 10) : null,
+                forecast.rooms_sold_nights !== undefined && forecast.rooms_sold_nights !== null ? parseInt(forecast.rooms_sold_nights, 10) : null,
                 user_id
             ];
 
-            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}`, values);
+            /*
+            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}`, {
+                accommodation_revenue: currentValues[2],
+                operating_days: currentValues[3],
+                available_room_nights: currentValues[4],
+                rooms_sold_nights: currentValues[5]
+            });
+            */
 
-            const res = await client.query(query, values);
-            return { success: true, count: forecasts.length };
-        }
+            // Return the promise from client.query
+            return client.query(query, currentValues)
+                .then(res => {
+                    // Attach forecast info to the result for easier processing/logging after Promise.all
+                    return { res, forecast };
+                })
+                .catch(err => {
+                    // Log specific error context here, then re-throw to ensure Promise.all fails
+                    console.error(`Error during database query for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}. Query: ${query.substring(0,200)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
+                    throw err; // Important: re-throw error to make Promise.all reject
+                });
+        });
+            
+        const allResults = await Promise.all(queryPromises);
 
         await client.query('COMMIT');
-        return { success: true, count: rates.length };
+        // console.log('Transaction committed successfully. Records processed:', forecasts.length);
+        return { success: true, count: forecasts.length };
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Error in insertForecastData:', error.stack);
+        return { success: false, error: error.message, stack: error.stack, count: 0 };
     } finally {
         client.release();
     }

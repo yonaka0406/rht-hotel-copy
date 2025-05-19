@@ -105,8 +105,8 @@ const addForecastData = async (req, res) => {
     }
 
     try {
-        await insertForecastData(req.requestId, data, user_id);
-        res.json({ message: 'Forecast data added.' });
+        const result = await insertForecastData(req.requestId, data, user_id);
+        res.json( result );
     } catch (err) {
         console.error('Error adding data:', err);
         res.status(500).json({ error: 'Failed to add imported data' });

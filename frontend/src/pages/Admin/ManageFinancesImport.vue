@@ -154,9 +154,7 @@
       '客室数': 'available_room_nights',
       '販売客室数': 'rooms_sold_nights'
     };
-    // Array of English keys for initializing the details object
-    const englishBudgetKeys = Object.values(budgetItemKeyMap);
-  
+      
     // --- Status Messages ---
     const forecastStatus = ref({ message: '', type: 'info' }); // type can be 'info', 'success', 'warn', 'error'
     const accountingStatus = ref({ message: '', type: 'info' });
@@ -303,20 +301,19 @@
                     hotelMonthDataMap[mapKey] = {
                         hotel_id: hotelId,
                         hotel_name: hotelName,
-                        forecast_month: monthString,
-                        details: [{}] // Initialize details array with one object
-                    };
-                    // Pre-fill all English budget keys in the details object with 0
-                    englishBudgetKeys.forEach(engKey => {
-                        hotelMonthDataMap[mapKey].details[0][engKey] = 0;
-                    });
+                        forecast_month: formatToFirstDayOfMonth(monthString),
+                        accommodation_revenue: null,
+                        operating_days: null,
+                        available_room_nights: null,
+                        rooms_sold_nights: null,
+                    };                    
                 }
 
                 // Get the English key corresponding to the Japanese budgetItemFromCsv
                 const englishKey = budgetItemKeyMap[budgetItemFromCsv];
                 if (englishKey) {
                     // Set the value using the English key
-                    hotelMonthDataMap[mapKey].details[0][englishKey] = value;
+                    hotelMonthDataMap[mapKey][englishKey] = value;
                 } else {
                     console.warn(`Unknown budget_item from CSV: '${budgetItemFromCsv}' for hotel ${hotelId}, month ${monthString}. No English key mapping found.`);
                 }
@@ -326,6 +323,21 @@
         // Convert the map values to an array
         return Object.values(hotelMonthDataMap);
     };
+    const formatToFirstDayOfMonth = (input) => {
+        // Try to parse the date in various formats, fallback if needed
+        const parsed = new Date(input);
+        if (isNaN(parsed)) {
+            console.warn(`Invalid month string: ${input}`);
+            return input; // fallback: return the raw input
+        }
+
+        // Set to first of the month
+        parsed.setDate(1);
+        
+        // Format to YYYY-MM-DD
+        return parsed.toISOString().split('T')[0];
+    };
+
   
     const handleFileUpload = (event, type) => {
         console.log('handleFileUpload was triggered. Event:', event, 'Type:', type); // Added user's log
