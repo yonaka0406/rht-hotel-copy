@@ -38,10 +38,10 @@
             <Card class="col-span-12 md:col-span-6">
                 <template #title>
                     <div v-if="viewMode==='month'">
-                        <span>当月KPI</span>
+                        <span>当月KPI<small>　(PMSx計画)</small></span>
                     </div>
                     <div v-else>
-                        <span>当年度累計KPI</span>
+                        <span>当年度累計KPI<small>　(PMSx計画)</small></span>
                     </div>
                 </template>
                 <template #content>
