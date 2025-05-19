@@ -31,13 +31,21 @@
                     <p>{{ lineChartTitle }}</p>
                 </template>
                 <template #content>    
-                    <div ref="lineChart" class="w-full h-40"></div>                
+                    <div ref="lineChart" class="w-full h-60"></div>                
                 </template>
             </Card>
             <!-- Indexes -->
             <Card class="col-span-12 md:col-span-6">
+                <template #title>
+                    <div v-if="viewMode==='month'">
+                        <span>当月KPI</span>
+                    </div>
+                    <div v-else>
+                        <span>当年度累計KPI</span>
+                    </div>
+                </template>
                 <template #content>
-                    <div class="grid grid-cols-12 gap-2">
+                    <div class="grid grid-cols-12 gap-2">                        
                         <div class="col-span-6">
                             <Fieldset legend="総売上" :toggleable="true" :collapsed="true" class="w-full text-sm">
                                 <p class="m-0">仮予約、確定予約のプランとアドオンの合計。</p>
@@ -76,7 +84,21 @@
                         </div>
                         <div class="flex justify-center items-center col-span-6 p-2">
                             <span class="text-3xl lg:text-4xl font-bold text-purple-600">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
-                        </div>                        
+                        </div>
+                        <div class="col-span-6 flex flex-col justify-center items-center p-2">
+                            <Fieldset legend="OCC" :toggleable="true" :collapsed="true" class="w-full text-sm">
+                                <p class="m-0">稼働率：</p>
+                                 <p class="m-0 text-center">
+                                    <span class="inline-block">
+                                        <span class="">販売部屋数の合計</span><br>
+                                        <span class="inline-block border-t border-black px-2">販売可能総部屋数</span>
+                                    </span>
+                                </p>                                
+                            </Fieldset>
+                        </div>
+                        <div class="flex justify-center items-center col-span-6 p-2">
+                            <span class="text-3xl lg:text-4xl font-bold">{{ OCC }} %</span>
+                        </div>
                     </div>
                     
                     
@@ -185,11 +207,13 @@
     // --- Metrics Calculation ---
     const ADR = ref(0);
     const revPAR = ref(0);
+    const OCC = ref(0);
     const displayedCumulativeSales = ref(0);
     const calculateMetrics = () => {
         if (!allReservationsData.value || allReservationsData.value.length === 0) {
             ADR.value = 0;
-            revPAR.value = 0;            
+            revPAR.value = 0;
+            OCC.value = 0;
             return;
         }
 
@@ -206,7 +230,7 @@
 
         filteredMetricsReservations.forEach(res => {
             totalRevenue += parseFloat(res.price || 0);
-            totalRoomsSold += parseInt(res.room_count || 0); // Assuming 'room_count' is rooms sold for this reservation
+            totalRoomsSold += parseInt(res.room_count || 0);
         });        
 
         // ADR
@@ -214,15 +238,37 @@
         ADR.value = totalRoomsSold > 0 ? Math.round(totalRevenue / totalRoomsSold) : 0;
 
         // RevPAR
-        const hotelCapacity = allReservationsData.value[0].total_rooms || 0;
+        const hotelCapacity = parseInt(allReservationsData.value[0].total_rooms || 0);
+        let totalAvailableRoomNightsInPeriod = 0;
+        const startDateObj = normalizeDate(new Date(metricsEffectiveStartDate.value));
+        const endDateObj = normalizeDate(new Date(metricsEffectiveEndDate.value));
+        const dailyActualAvailableRoomsMap = new Map();
+        allReservationsData.value.forEach(res => {
+            if (res.date && res.hasOwnProperty('total_rooms_real') && res.total_rooms_real !== null && res.total_rooms_real !== undefined) {
+                const realRooms = parseInt(res.total_rooms_real);
+                // Store it only if it's a valid number (including 0).
+                if (!isNaN(realRooms)) {
+                    dailyActualAvailableRoomsMap.set(res.date, realRooms);
+                }
+            }
+        });
+
+        let currentDateIter = startDateObj;        
+        const finalIterationEndDate = endDateObj;                
+        while (currentDateIter <= finalIterationEndDate) {
+            const currentDateStr = formatDate(currentDateIter); // Format current iteration date to 'YYYY-MM-DD'
+
+            if (dailyActualAvailableRoomsMap.has(currentDateStr)) {                
+                totalAvailableRoomNightsInPeriod += dailyActualAvailableRoomsMap.get(currentDateStr);
+            } else {                
+                totalAvailableRoomNightsInPeriod += hotelCapacity;
+            }            
+            // Move to the next day            
+            currentDateIter = addDaysUTC(currentDateIter, 1);
+        }        
+        revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
-        let daysInPeriod = 0;
-        if (startDateForCalc <= endDateForCalc) {
-             daysInPeriod = (new Date(endDateForCalc).getTime() - new Date(startDateForCalc).getTime()) / (1000 * 60 * 60 * 24) + 1;
-        }
-        // console.log('RevPAR', 'hotelCapacity', hotelCapacity, 'daysInPeriod', daysInPeriod, 'totalRevenue', totalRevenue)
-        const totalAvailableRoomNights = hotelCapacity * daysInPeriod;
-        revPAR.value = totalAvailableRoomNights > 0 ? Math.round(totalRevenue / totalAvailableRoomNights) : 0;
+        OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
     };
 
     // eCharts Instances & Refs
@@ -278,15 +324,16 @@
             initHeatMap(); // Initialize with empty data if needed
             return;
         }
-                
-        const start = new Date(heatMapDisplayStartDate.value);
-        const end = new Date(heatMapDisplayEndDate.value);
+        
+        const start = normalizeDate(new Date(heatMapDisplayStartDate.value));
+        const end = normalizeDate(new Date(heatMapDisplayEndDate.value));
                
         // Filter reservations for the heatmap's specific display window
         const relevantReservations = allReservationsData.value.filter(r => {
-            const rDate = new Date(r.date);
+            const rDate = normalizeDate(new Date(r.date));
             return rDate >= start && rDate <= end;
         });
+        console.log('relevantReservations', relevantReservations)
         
         if(relevantReservations && relevantReservations.length > 0){            
             heatMapMax.value = relevantReservations[0].total_rooms; 
@@ -295,25 +342,29 @@
         }
                 
         const datePositionMap = {};
-        let currentMapDate = new Date(start);
+        let currentMapDate = start;
         let weekIdx = 0;
-        let dayIdx = 6; // Monday is 6, Sunday is 0 (matching Y-axis)
+        let dayIdx = 0; // Monday is 6, Sunday is 0 (matching Y-axis)
 
         while (currentMapDate <= end) {
-            const isoDate = formatDate(currentMapDate); // Use consistent formatDate            
-            datePositionMap[isoDate] = { week: weekIdx, day: dayIdx };
             
-            dayIdx--;
-            if (dayIdx < 0) {
-                dayIdx = 6;
+            const formattedDate = formatDate(new Date(currentMapDate));
+            dayIdx = (7 - currentMapDate.getUTCDay()) % 7;            
+
+            datePositionMap[formattedDate] = { week: weekIdx, day: dayIdx };
+            
+            if (currentMapDate.getUTCDay() === 0) {
                 weekIdx++;
             }
-            currentMapDate.setDate(currentMapDate.getDate() + 1);
+            
+            currentMapDate = addDaysUTC(currentMapDate, 1);
         }
+        console.log('datePositionMap', datePositionMap)
         
         const processedData = [];
         relevantReservations.forEach(reservation => {
-            const reservationDateISO = formatDate(new Date(reservation.date)); // Ensure date is formatted consistently
+            const reservationDateISO = formatDate(new Date(reservation.date));
+            console.log('relevantReservations date', reservationDateISO)
             const position = datePositionMap[reservationDateISO];
             if (position) {
                 // Data format for heatmap: [weekIndex, dayIndex, value]
@@ -321,6 +372,7 @@
             }
         });
         heatMapData.value = processedData;
+        console.log('heatMapData', heatMapData.value)
         initHeatMap();
     };
     const initHeatMap = () => {
@@ -459,7 +511,7 @@
                 data: viewMode.value === 'month' ? ['日次売上', '当月累計'] : ['月次売上', '年度累計'],
                 bottom: 0
             },
-            grid: { top: '20%', height: '70%', left: '3%', right: '4%', bottom: '15%', containLabel: true }, // Adjusted grid
+            grid: { top: '20%', height: '70%', left: '3%', right: '4%', bottom: '10%', containLabel: true }, // Adjusted grid
             xAxis: {
                 type: 'category',
                 boundaryGap: viewMode.value === 'month', // true for bar-like, false for line to touch edges
@@ -523,7 +575,7 @@
         try {
             // Fetch data for the widest necessary range            
             const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-            
+                        
             if (rawData && Array.isArray(rawData)) {
                 
                 allReservationsData.value = rawData.map(item => ({
