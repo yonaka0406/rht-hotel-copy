@@ -155,6 +155,28 @@ export function useImportStore() {
             console.error('Failed to import data', error);
         }
     };
+    const accountingAddData = async (array) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/import/finance/accounting`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(array),
+            });
+        
+            if (!response.ok) {
+                throw new Error('Failed to import data');
+            }
+            const data = await response.json();            
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to import data', error);
+        }
+    }
 
     return{
         yadomasterAddClients,
@@ -164,5 +186,6 @@ export function useImportStore() {
         yadomasterAddReservationAddons,
         yadomasterAddReservationRates,
         forecastAddData,
+        accountingAddData,
     };
 }

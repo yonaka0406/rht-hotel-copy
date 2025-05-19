@@ -443,7 +443,7 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
             // Ensure numeric fields are correctly parsed or null
             const currentValues = [
                 parseInt(forecast.hotel_id, 10),
-                forecast.forecast_month, // Assuming this is a date string like 'YYYY/MM/DD' or 'YYYY-MM-DD'
+                forecast.month, // Assuming this is a date string like 'YYYY/MM/DD' or 'YYYY-MM-DD'
                 forecast.accommodation_revenue !== undefined && forecast.accommodation_revenue !== null ? parseFloat(forecast.accommodation_revenue) : null,
                 forecast.operating_days !== undefined && forecast.operating_days !== null ? parseInt(forecast.operating_days, 10) : null,
                 forecast.available_room_nights !== undefined && forecast.available_room_nights !== null ? parseInt(forecast.available_room_nights, 10) : null,
@@ -452,7 +452,7 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
             ];
 
             /*
-            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}`, {
+            console.log(`Executing UPSERT for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}`, {
                 accommodation_revenue: currentValues[2],
                 operating_days: currentValues[3],
                 available_room_nights: currentValues[4],
@@ -468,7 +468,7 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
                 })
                 .catch(err => {
                     // Log specific error context here, then re-throw to ensure Promise.all fails
-                    console.error(`Error during database query for hotel_id: ${forecast.hotel_id}, month: ${forecast.forecast_month}. Query: ${query.substring(0,200)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
+                    console.error(`Error during database query for hotel_id: ${forecast.hotel_id}, month: ${forecast.month}. Query: ${query.substring(0,200)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
                     throw err; // Important: re-throw error to make Promise.all reject
                 });
         });
@@ -487,6 +487,74 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
     }
 };
 
+const insertAccountingData = async (requestId, accountingEntries, user_id) => {
+    if (!Array.isArray(accountingEntries) || accountingEntries.length === 0) {
+        console.log('insertAccountingData: No accounting data provided or accountingEntries array is empty.');
+        return { success: true, count: 0, message: 'No accounting data to process.' };
+    }
+
+    const pool = getPool(requestId);
+    const client = await pool.connect();  
+    try {
+        await client.query('BEGIN');
+
+        const query = `
+            INSERT INTO du_accounting (
+                hotel_id, accounting_month,
+                accommodation_revenue,
+                created_by
+            ) VALUES ($1, $2, $3, $4)
+            ON CONFLICT (hotel_id, accounting_month) DO UPDATE SET
+                accommodation_revenue = CASE
+                                          WHEN EXCLUDED.accommodation_revenue IS NOT NULL THEN EXCLUDED.accommodation_revenue
+                                          ELSE du_accounting.accommodation_revenue -- Keep existing if new value is null
+                                        END,
+                created_by = EXCLUDED.created_by              
+            RETURNING id;
+        `;
+
+        // Map each accounting entry item to a promise that executes its query
+        const queryPromises = accountingEntries.map(entry => {
+            // Prepare the values for the query for the current entry
+            // Ensure numeric fields are correctly parsed or null
+            const currentValues = [
+                parseInt(entry.hotel_id, 10),
+                entry.month, // Assuming this is a date string like 'YYYY-MM-DD' and the DB column is DATE
+                entry.accommodation_revenue !== undefined && entry.accommodation_revenue !== null ? parseFloat(entry.accommodation_revenue) : null,
+                user_id
+            ];
+
+            // Return the promise from client.query
+            return client.query(query, currentValues)
+                .then(res => {
+                    // Attach entry info to the result for easier processing/logging after Promise.all
+                    if (res.rowCount === 0) {
+                         console.warn(`No rows affected for hotel_id: ${entry.hotel_id}, month: ${entry.month}. This might indicate an issue if an insert or update was expected.`);
+                    }
+                    return { res, entry };
+                })
+                .catch(err => {
+                    // Log specific error context here, then re-throw to ensure Promise.all fails
+                    console.error(`Error during database query for hotel_id: ${entry.hotel_id}, month: ${entry.month}. Query: ${query.substring(0,250)}... Values: ${JSON.stringify(currentValues)}`, err.stack);
+                    throw err; // Important: re-throw error to make Promise.all reject
+                });
+        });
+            
+        const allResults = await Promise.all(queryPromises);
+
+        await client.query('COMMIT');
+        
+        return { success: true, count: accountingEntries.length, results: allResults.map(r => ({id: r.res.rows[0]?.id, ...r.entry})) };
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in insertAccountingData transaction:', error.stack);
+        return { success: false, error: error.message, stack: error.stack, count: 0 };
+    } finally {
+        client.release();
+    }
+}
+
 module.exports = {
     insertYadomasterClients,
     insertYadomasterReservations,
@@ -495,4 +563,5 @@ module.exports = {
     insertYadomasterAddons,
     insertYadomasterRates,
     insertForecastData,
+    insertAccountingData
   };

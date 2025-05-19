@@ -132,7 +132,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore();
     import { useImportStore } from '@/composables/useImportStore';
-    const { forecastAddData } = useImportStore();
+    const { forecastAddData, accountingAddData } = useImportStore();
       
     // Primevue
     import { Tabs, TabList, Tab, TabPanels, TabPanel, Card, Button, FileUpload, Message, Toast, Panel } from 'primevue';
@@ -165,7 +165,7 @@
         return new Date(year, month + 1, 0).getDate();
     };
   
-    const generateCSVData = () => {
+    const generateCSVData = (type) => {        
         const csvRows = [];
         const currentDate = new Date();
         const year = currentDate.getFullYear();
@@ -173,18 +173,39 @@
     
         // Generate headers for the next 12 months
         const monthHeaders = [];
-        for (let i = 0; i < 12; i++) {
-        const d = new Date(year, month + i, 1);
-        monthHeaders.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+        if (type === 'accounting') {        
+            for (let i = 0; i < 12; i++) {
+                // year, month - 12 months + i-th month in the 12-month sequence
+                const d = new Date(year, month - 12 + i, 1);
+                monthHeaders.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+            }
+        } else { // 'forecast' or other types         
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(year, month + i, 1);
+                monthHeaders.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`);
+            }
         }
-        csvRows.push(['ID', '施設', '予算項目', ...monthHeaders].join(','));
+
+        let itemsForProcessing;
+        let itemColumnTitle;
+        if (type === 'accounting') {
+            itemColumnTitle = '会計項目'; // Set column title for accounting
+            itemsForProcessing = ['宿泊売上']; // Only this item for accounting
+        } else {
+            itemColumnTitle = '予算項目'; // Default column title
+            itemsForProcessing = budgetItems; // Use all budget items for other types (e.g., 'forecast')
+        }
+
+        // Add header row to CSV
+        csvRows.push(['ID', '施設', itemColumnTitle, ...monthHeaders].join(','));
     
         // Generate data rows
         if (!hotels.value || hotels.value.length === 0) {
-            console.warn('Hotel data is not available for CSV generation.');   
+            console.warn('Hotel data is not available for CSV generation.');
+            return "";
         }
         hotels.value.forEach(hotel => {
-            budgetItems.forEach(item => {
+            itemsForProcessing.forEach(item => {
                 const row = [hotel.id, hotel.name, item];
                 monthHeaders.forEach(header => {
                     const [hYear, hMonth] = header.split('-').map(Number);
@@ -221,8 +242,8 @@
                 toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルデータの取得に失敗しました。', life: 3000 });
                 return;
             }
-        }
-        const csvContent = generateCSVData();
+        }        
+        const csvContent = generateCSVData(type);
         const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });    
         const link = document.createElement('a');
         if (link.download !== undefined) {
@@ -301,7 +322,7 @@
                     hotelMonthDataMap[mapKey] = {
                         hotel_id: hotelId,
                         hotel_name: hotelName,
-                        forecast_month: formatToFirstDayOfMonth(monthString),
+                        month: formatToFirstDayOfMonth(monthString),
                         accommodation_revenue: null,
                         operating_days: null,
                         available_room_nights: null,
@@ -376,8 +397,13 @@
                     statusRef.value = { message: `${jsonData.length}件のデータをアップロード中...`, type: 'info' };
                     console.log(`Uploading ${type} data as JSON:`, JSON.stringify(jsonData, null, 2));
 
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    const result = await forecastAddData(jsonData);
+                    let result = null;
+                    if(type === 'forecast'){
+                        result = await forecastAddData(jsonData);
+                    } else{
+                        result = await accountingAddData(jsonData);
+                    }
+                    
                     
                     if (result && result.success) {
                         statusRef.value = { message: `${typeText}データ「${file.name}」(${jsonData.length}件)が正常にインポートされました。`, type: 'success' };

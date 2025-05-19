@@ -1,4 +1,4 @@
-const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData } = require('../models/import');
+const { insertYadomasterClients, insertYadomasterReservations, insertYadomasterDetails, insertYadomasterPayments, insertYadomasterAddons, insertYadomasterRates, insertForecastData, insertAccountingData } = require('../models/import');
 
 const addYadomasterClients = async (req, res) => {
     const data = req.body;
@@ -112,6 +112,22 @@ const addForecastData = async (req, res) => {
         res.status(500).json({ error: 'Failed to add imported data' });
     }
 };
+const addAccountingData = async (req, res) => {
+    const data = req.body;
+    const user_id = req.user.id;
+
+    if (!Array.isArray(data) || data.length === 0) {
+        return res.status(400).json({ error: 'Invalid data format' });
+    }
+
+    try {
+        const result = await insertAccountingData(req.requestId, data, user_id);
+        res.json( result );
+    } catch (err) {
+        console.error('Error adding data:', err);
+        res.status(500).json({ error: 'Failed to add imported data' });
+    }
+};
 
 module.exports = {
     addYadomasterClients,
@@ -120,5 +136,6 @@ module.exports = {
     addYadomasterPayments,
     addYadomasterAddons,
     addYadomasterRates,
-    addForecastData
+    addForecastData,
+    addAccountingData
 };
