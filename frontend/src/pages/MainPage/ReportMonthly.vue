@@ -53,9 +53,17 @@
                             </Fieldset>
                         </div>    
                         <div class="flex justify-center items-center col-span-6 p-2">
-                            <span class="text-3xl lg:text-4xl font-bold text-blue-600">
-                                {{ displayedCumulativeSales.toLocaleString('ja-JP') }} 円
-                            </span>
+                            <div class="grid">
+                                <span class="text-3xl lg:text-4xl font-bold text-blue-600">
+                                    {{ displayedCumulativeSales.toLocaleString('ja-JP') }} 円
+                                </span>
+                                <span v-if="forecastSales" class="text-sm text-blue-400">
+                                    (計画: {{ forecastSales.toLocaleString('ja-JP') }} 円)
+                                </span>
+                                <span v-if="salesDifference" :class="['text-sm', salesDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                    ({{ salesDifference > 0 ? '+' : '' }}{{ salesDifference.toLocaleString('ja-JP') }} 円)
+                                </span>
+                            </div>
                         </div>
                         <div class="col-span-6 flex flex-col justify-center items-center p-2">
                             <Fieldset legend="ADR" :toggleable="true" :collapsed="true" class="w-full text-sm">
@@ -69,7 +77,17 @@
                             </Fieldset>
                         </div>  
                         <div class="flex justify-center items-center col-span-6 p-2">
-                            <span class="text-3xl lg:text-4xl font-bold text-green-600">{{ ADR.toLocaleString('ja-JP') }} 円</span>
+                            <div class="grid">
+                                <span class="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 leading-snug">
+                                    {{ ADR.toLocaleString('ja-JP') }} 円
+                                </span>
+                                <span v-if="forecastADR" class="text-sm text-green-400 mt-1">
+                                    (計画: {{ forecastADR.toLocaleString('ja-JP') }} 円)
+                                </span>
+                                <span v-if="ADRDifference" :class="['text-sm mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                    ({{ ADRDifference > 0 ? '+' : '' }}{{ ADRDifference.toLocaleString('ja-JP') }} 円)
+                                </span>
+                            </div>
                         </div>
                         <div class="col-span-6 flex flex-col justify-center items-center p-2">
                             <Fieldset legend="RevPAR" :toggleable="true" :collapsed="true" class="w-full text-sm">
@@ -83,7 +101,15 @@
                             </Fieldset>
                         </div>
                         <div class="flex justify-center items-center col-span-6 p-2">
-                            <span class="text-3xl lg:text-4xl font-bold text-purple-600">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
+                            <div class="grid">
+                                <span class="text-3xl lg:text-4xl font-bold text-purple-600">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
+                                <span v-if="forecastRevPAR" class="text-sm text-purple-400">
+                                    (計画: {{ forecastRevPAR.toLocaleString('ja-JP') }} 円)
+                                </span>
+                                <span v-if="revPARDifference" :class="['text-sm', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                    ({{ revPARDifference > 0 ? '+' : '' }}{{ revPARDifference.toLocaleString('ja-JP') }} 円)
+                                </span>
+                            </div>
                         </div>
                         <div class="col-span-6 flex flex-col justify-center items-center p-2">
                             <Fieldset legend="OCC" :toggleable="true" :collapsed="true" class="w-full text-sm">
@@ -97,11 +123,17 @@
                             </Fieldset>
                         </div>
                         <div class="flex justify-center items-center col-span-6 p-2">
-                            <span class="text-3xl lg:text-4xl font-bold">{{ OCC }} %</span>
+                            <div class="grid">
+                                <span class="text-3xl lg:text-4xl font-bold">{{ OCC }} %</span>
+                                <span v-if="forecastOCC" class="text-sm text-orange-400">
+                                    (計画: {{ forecastOCC }} %)
+                                </span>
+                                <span v-if="OCCDifference" :class="['text-sm', OCCDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                    ({{ OCCDifference > 0 ? '+' : '' }}{{ OCCDifference }} %)
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    
-                    
                     
                 </template>
             </Card>
@@ -130,7 +162,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -175,6 +207,8 @@
   
     // --- Data Sources ---    
     const allReservationsData = ref([]);
+    const forecastData = ref([]);
+    const accountingData = ref([]);
     const dataFetchStartDate = computed(() => startOfYear.value);
     const dataFetchEndDate = computed(() => { // For heatmap range, ending last day of selectedMonth + 2 months
         const date = new Date(selectedMonth.value);
@@ -209,11 +243,32 @@
     const revPAR = ref(0);
     const OCC = ref(0);
     const displayedCumulativeSales = ref(0);
+    // Forecast Data
+    const forecastSales = ref(0);
+    const forecastADR = ref(0);
+    const forecastRevPAR = ref(0);
+    const forecastOCC = ref(0);
+    // Difference between actual and forecast
+    const salesDifference = ref(0);
+    const ADRDifference = ref(0);
+    const revPARDifference = ref(0);
+    const OCCDifference = ref(0);
+
     const calculateMetrics = () => {
         if (!allReservationsData.value || allReservationsData.value.length === 0) {
             ADR.value = 0;
             revPAR.value = 0;
             OCC.value = 0;
+
+            forecastSales.value = 0;
+            forecastADR.value = 0;
+            forecastRevPAR.value = 0;
+            forecastOCC.value = 0;
+
+            salesDifference.value = 0;
+            ADRDifference.value = 0;
+            revPARDifference.value = 0;
+            OCCDifference.value = 0;
             return;
         }
 
@@ -269,6 +324,32 @@
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
         OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
+
+        // Calculate Forecast
+        const forecastDataForPeriod = forecastData.value.filter(forecast => {
+            const forecastDate = forecast.date;
+            return forecastDate >= startDateForCalc && forecastDate <= endDateForCalc;
+        });
+        
+        let totalForecastRevenue = 0;
+        let totalForecastRooms = 0;
+        let totalForecastAvailableRooms = 0;
+        forecastDataForPeriod.forEach(forecast => {
+            totalForecastRevenue += parseFloat(forecast.accommodation_revenue || 0);
+            totalForecastRooms += parseInt(forecast.rooms_sold_nights || 0);
+            totalForecastAvailableRooms += parseInt(forecast.available_room_nights || 0);
+        });
+        
+        forecastSales.value = Math.round(totalForecastRevenue);
+        forecastADR.value = totalForecastRooms > 0 ? Math.round(totalForecastRevenue / totalForecastRooms) : 0;
+        forecastRevPAR.value = totalForecastAvailableRooms > 0 ? Math.round(totalForecastRevenue / totalForecastAvailableRooms) : 0;
+        forecastOCC.value = totalForecastAvailableRooms > 0 ? Math.round((totalForecastRooms / totalForecastAvailableRooms) * 10000) / 100 : 0;
+
+        // Calculate Differences
+        salesDifference.value = Math.round(totalRevenue) - forecastSales.value;
+        ADRDifference.value = Math.round(ADR.value) - forecastADR.value;
+        revPARDifference.value = Math.round(revPAR.value) - forecastRevPAR.value;
+        OCCDifference.value = OCC.value - forecastOCC.value;        
     };
 
     // eCharts Instances & Refs
@@ -333,8 +414,7 @@
             const rDate = normalizeDate(new Date(r.date));
             return rDate >= start && rDate <= end;
         });
-        console.log('relevantReservations', relevantReservations)
-        
+                
         if(relevantReservations && relevantReservations.length > 0){            
             heatMapMax.value = relevantReservations[0].total_rooms; 
         } else {
@@ -358,21 +438,18 @@
             }
             
             currentMapDate = addDaysUTC(currentMapDate, 1);
-        }
-        console.log('datePositionMap', datePositionMap)
+        }        
         
         const processedData = [];
         relevantReservations.forEach(reservation => {
-            const reservationDateISO = formatDate(new Date(reservation.date));
-            console.log('relevantReservations date', reservationDateISO)
+            const reservationDateISO = formatDate(new Date(reservation.date));            
             const position = datePositionMap[reservationDateISO];
             if (position) {
                 // Data format for heatmap: [weekIndex, dayIndex, value]
                 processedData.push([position.week, position.day, parseInt(reservation.room_count || 0)]);
             }
         });
-        heatMapData.value = processedData;
-        console.log('heatMapData', heatMapData.value)
+        heatMapData.value = processedData;        
         initHeatMap();
     };
     const initHeatMap = () => {
@@ -561,8 +638,7 @@
     };
 
     // --- Data Fetching and Processing ---
-    const fetchDataAndProcess = async () => {
-        // console.log('fetchDataAndProcess triggered')
+    const fetchDataAndProcess = async () => {        
         if (!selectedHotelId.value) {
             // console.warn("Hotel ID not selected. Skipping data fetch.");
             allReservationsData.value = []; // Clear data
@@ -575,9 +651,10 @@
         try {
             // Fetch data for the widest necessary range            
             const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
-                        
-            if (rawData && Array.isArray(rawData)) {
-                
+            const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+            const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+
+            if (rawData && Array.isArray(rawData)) {                
                 allReservationsData.value = rawData.map(item => ({
                     ...item,
                     date: formatDate(new Date(item.date))
@@ -585,6 +662,26 @@
             } else {
                 allReservationsData.value = [];
             }
+
+            if (forecastDataResult && Array.isArray(forecastDataResult)) {
+                forecastData.value = forecastDataResult.map(item => ({
+                    ...item,
+                    date: formatDate(new Date(item.forecast_month))
+                }));
+            } else {
+                forecastData.value = [];
+            }
+            // console.log('forecastData', forecastData.value);
+
+            if (accountingDataResult && Array.isArray(accountingDataResult)) {
+                accountingData.value = accountingDataResult.map(item => ({
+                    ...item,
+                    date: formatDate(new Date(item.accounting_month))
+                }));
+            } else {
+                accountingData.value = [];
+            }
+            // console.log('accountingData', accountingData.value);
             
         } catch (error) {
             console.error("Error fetching reservation data:", error);

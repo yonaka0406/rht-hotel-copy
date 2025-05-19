@@ -354,9 +354,12 @@
 
         // Set to first of the month
         parsed.setDate(1);
-        
+                
         // Format to YYYY-MM-DD
-        return parsed.toISOString().split('T')[0];
+        return parsed.getFullYear() + '-' +
+            String(parsed.getMonth() + 1).padStart(2, '0') + '-' +
+            String(parsed.getDate()).padStart(2, '0');
+
     };
 
   

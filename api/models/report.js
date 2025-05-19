@@ -392,6 +392,43 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
   }
 };
 
+const selectForecastData = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * 
+    FROM du_forecast
+    WHERE hotel_id = $1 
+      AND forecast_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+  `;
+  const values = [hotelId, dateStart, dateEnd]
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+const selectAccountingData = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT * 
+    FROM du_accounting
+    WHERE hotel_id = $1 
+      AND accounting_month BETWEEN date_trunc('month', $2::date) AND date_trunc('month', $3::date)
+  `;
+  const values = [hotelId, dateStart, dateEnd]
+
+  try {
+    const result = await pool.query(query, values);    
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving data:', err);
+    throw new Error('Database error');
+  }
+};
+
 const selectExportReservationList = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
@@ -816,6 +853,8 @@ module.exports = {
   selectCountReservationDetailsAddons,
   selectOccupationByPeriod,
   selectReservationListView,
+  selectForecastData,
+  selectAccountingData,
   selectExportReservationList,
   selectExportReservationDetails,
   selectExportMealCount,

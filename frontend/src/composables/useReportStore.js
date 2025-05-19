@@ -109,6 +109,55 @@ export function useReportStore() {
             console.error('Failed to fetch data', error);
         }
     };
+    
+    const fetchForecastData = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/forecast/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }
+    };
+    const fetchAccountingData = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/report/accounting/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },                
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }
+    };
 
     // Export
     const exportReservationList = async(hotelId, startDate, endDate) => {
@@ -208,6 +257,8 @@ export function useReportStore() {
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
         fetchReservationListView,
+        fetchForecastData, 
+        fetchAccountingData,
         exportReservationList,
         exportReservationDetails,
         exportMealCount,
