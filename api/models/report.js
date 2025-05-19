@@ -4,89 +4,110 @@ const { getPool } = require('../config/database');
 const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
+    WITH
+
+    -- 0. Dates that actually appear in reservation_details
+    dates AS (
+      SELECT DISTINCT date
+      FROM reservation_details
+      WHERE hotel_id = $1
+        AND date BETWEEN $2 AND $3
+    ),
+
+    -- 1. Blocked rooms count per date
+    blocked_rooms AS (
+      SELECT 
+        rd.hotel_id,
+        rd.date,
+        COUNT(CASE WHEN r.status = 'block' THEN rd.room_id ELSE NULL END) AS blocked_count
+      FROM reservations r
+      JOIN reservation_details rd 
+        ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+      JOIN rooms 
+        ON rd.room_id = rooms.id
+      WHERE 
+        r.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND r.status = 'block'
+        AND rooms.for_sale = TRUE
+      GROUP BY rd.hotel_id, rd.date
+    ),
+
+    -- 2. Room inventory
+    room_inventory AS (
+      SELECT 
+        hotel_id,
+        COUNT(*) AS total_rooms
+      FROM rooms
+      WHERE hotel_id = $1 AND for_sale = TRUE
+      GROUP BY hotel_id
+    ),
+
+    -- 3. Rooms left per date (only reservation dates)
+    room_total AS (
+      SELECT 
+        8 AS hotel_id,
+        d.date,
+        ri.total_rooms,
+        ri.total_rooms - COALESCE(br.blocked_count, 0) AS total_rooms_real
+      FROM dates d
+      CROSS JOIN room_inventory ri
+      LEFT JOIN blocked_rooms br
+        ON br.date = d.date AND br.hotel_id = ri.hotel_id
+    ),
+
+    -- 4. Rates
+    rate_totals AS (
+      SELECT 
+        reservation_details_id,
+        SUM(price) AS price
+      FROM reservation_rates
+      GROUP BY reservation_details_id
+    ),
+
+    -- 5. Add-ons
+    addon_totals AS (
+      SELECT 
+        reservation_detail_id,
+        SUM(price * quantity) AS total_price
+      FROM reservation_addons
+      GROUP BY reservation_detail_id
+    )
+
+    -- 6. Main Query
     SELECT 
-      reservation_details.date
-      ,roomTotal.total_rooms
-      ,COUNT(
-        CASE WHEN reservation_details.cancelled IS NULL THEN reservation_details.room_id
-        ELSE NULL END) as room_count
-      ,SUM(
-        CASE WHEN reservation_details.cancelled IS NULL THEN reservation_details.number_of_people
-        ELSE 0 END) AS people_sum
-      ,SUM(
-        CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price 
-        ELSE rr.price * reservation_details.number_of_people END 
-        + COALESCE(ra.total_price, 0)) AS price
-    FROM
-      reservations
-      ,reservation_details
-        LEFT JOIN
-      (
-        SELECT 
-          rr.reservation_details_id
-          ,SUM(rr.price) as price
-        FROM
-          reservation_rates rr
-        GROUP BY 
-          rr.reservation_details_id
-      ) rr
-        ON reservation_details.id = rr.reservation_details_id
-        LEFT JOIN 
-      (
-        SELECT
-          ra.reservation_detail_id
-          ,SUM(ra.price * ra.quantity) AS total_price
-        FROM reservation_addons ra
-        GROUP BY ra.reservation_detail_id
-      ) ra 
-        ON reservation_details.id = ra.reservation_detail_id
-      ,(
-        SELECT 
-          res.hotel_id, res.date, (room.total_rooms - res.count) as total_rooms
-	      FROM
-          ( 
-            SELECT 
-              rd.hotel_id, rd.date, COUNT(CASE WHEN r.status = 'block' THEN rd.room_id ELSE NULL END) 
-            FROM 
-              reservations r 
-                JOIN
-              reservation_details rd 
-                ON rd.reservation_id = r.id
-                AND rd.hotel_id = r.hotel_id
-                JOIN
-              rooms ON rd.room_id = rooms.id
-            WHERE 
-              r.hotel_id = $1 AND rd.date BETWEEN $2 AND $3
-              AND rd.billable = TRUE
-              AND r.type <> 'employee'
-              AND r.status NOT IN ('hold', 'block')
-              AND rooms.for_sale = true
-              
-            GROUP BY rd.hotel_id, rd.date
-          ) res
-            LEFT JOIN
-          (
-            SELECT r.hotel_id, COUNT(r.*) as total_rooms
-            FROM rooms r
-            WHERE r.for_sale = true AND r.hotel_id = $1
-            GROUP BY r.hotel_id
-          ) room
-            ON res.hotel_id = room.hotel_id
-      ) AS roomTotal
-    WHERE
-      reservation_details.hotel_id = $1
-      AND reservation_details.date BETWEEN $2 AND $3
-      AND reservation_details.billable = TRUE
-      AND reservations.type <> 'employee'
-      AND reservations.status NOT IN ('hold', 'block')
-      AND reservation_details.hotel_id = roomTotal.hotel_id
-      AND reservation_details.date = roomTotal.date
-      AND reservation_details.reservation_id = reservations.id
-      AND reservation_details.hotel_id = reservations.hotel_id
-    GROUP BY
-      reservation_details.date
-      ,roomTotal.total_rooms
-    ORDER BY 1;
+      rt.date,
+      rt.total_rooms,
+      rt.total_rooms_real,
+      COUNT(CASE WHEN rd.cancelled IS NULL THEN rd.room_id ELSE NULL END) AS room_count,
+      SUM(CASE WHEN rd.cancelled IS NULL THEN rd.number_of_people ELSE 0 END) AS people_sum,
+      SUM(
+        CASE 
+          WHEN rd.plan_type = 'per_room' THEN COALESCE(r.price, 0)
+          ELSE COALESCE(r.price, 0) * rd.number_of_people
+        END
+        + COALESCE(a.total_price, 0)
+      ) AS price
+    FROM room_total rt
+    LEFT JOIN reservation_details rd 
+      ON rd.hotel_id = rt.hotel_id AND rd.date = rt.date
+    LEFT JOIN reservations rsv 
+      ON rd.reservation_id = rsv.id AND rd.hotel_id = rsv.hotel_id
+    LEFT JOIN rate_totals r 
+      ON rd.id = r.reservation_details_id
+    LEFT JOIN addon_totals a 
+      ON rd.id = a.reservation_detail_id
+    WHERE 
+      rt.hotel_id = $1
+      AND (rd.id IS NULL OR (
+        rd.billable = TRUE
+        AND rsv.type <> 'employee'
+        AND rsv.status NOT IN ('hold', 'block')
+      ))
+    GROUP BY 
+      rt.date, rt.total_rooms, rt.total_rooms_real
+    ORDER BY rt.date;
+
   `;
   const values = [hotelId, dateStart, dateEnd]
 
