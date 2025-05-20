@@ -49,13 +49,21 @@
         const month = String(date.getMonth() + 1).padStart(2, '0')        
         return `${year}-${month}`
     }
-    const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));    
+    const normalizeDate = (date) => new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    function getDaysInMonth(year, month) {
+        // Month in JavaScript's Date is 0-indexed (0 for January, 11 for December)
+        // So, month 1 (January) is monthIndex 0.
+        // To get days in month `m` (1-indexed), we ask for day 0 of month `m+1` (1-indexed).
+        // Example: For January (month=1), we use monthIndex=1 (February) and day 0, which gives last day of Jan.
+        return new Date(year, month, 0).getDate();
+    }
 
     // --- Reactive State for the Parent Component ---
     const loading = ref(false);
     const selectedDate = ref(new Date());
     const period = ref('month');
     const selectedHotels = ref([]);
+    const allHotels = ref([]);
 
     const firstDayofFetch = computed(() => {
         if (!selectedDate.value) {
@@ -96,16 +104,13 @@
         if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0) {
             return result;
         }
-        console.log('revenueData firstDayofFetch', formatDate(firstDayofFetch.value), firstDayofFetch.value);
-        console.log('revenueData lastDayofFetch', formatDate(lastDayofFetch.value), lastDayofFetch.value);
 
         const monthlyAggregates = {};
 
         // Initialize all months and hotel_ids (including '0' for sum)
         let currentIterMonth = new Date(firstDayofFetch.value);
         const lastIterMonthDate = new Date(lastDayofFetch.value);
-
-        console.log('RMP: Iterating from', formatDateMonth(currentIterMonth), 'to', formatDateMonth(lastIterMonthDate));
+        
         while (currentIterMonth <= lastIterMonthDate) {
             const monthKey = formatDateMonth(currentIterMonth);
             monthlyAggregates[monthKey] = {};
@@ -204,6 +209,237 @@
 
         return result;
     });
+    const occupancyData = computed(() => {
+        const result = [];
+        if (!firstDayofFetch.value || !lastDayofFetch.value || selectedHotels.value.length === 0 || allHotels.value.length === 0) {            
+            return result;
+        }
+
+        const monthlyOccupancyAggregates = {};
+
+        // Initialize months and hotels for aggregation        
+        let currentIterMonth = new Date(firstDayofFetch.value);
+        const lastIterMonthDate = new Date(lastDayofFetch.value);
+
+        while (currentIterMonth <= lastIterMonthDate) {
+            const iterDateForMonthKey = normalizeDate(currentIterMonth);
+            const monthKey = formatDateMonth(currentIterMonth);
+            monthlyOccupancyAggregates[monthKey] = {};
+            monthlyOccupancyAggregates[monthKey]['0'] = {
+                total_rooms: 0,
+                sold_rooms: 0,
+                roomDifferenceSum: 0,
+                fc_total_rooms: 0,
+                fc_sold_rooms: 0
+            };
+
+            const year = iterDateForMonthKey.getUTCFullYear();
+            const monthIndex = iterDateForMonthKey.getUTCMonth(); // 0-indexed for getDaysInMonth
+            const daysInCalendarMonth = getDaysInMonth(year, monthIndex + 1);
+
+            // Define first and last day of the current iteration month for precise comparison
+            const firstDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, 1));
+            const lastDayOfCurrentProcessingMonth = normalizeDate(new Date(year, monthIndex, daysInCalendarMonth));
+
+            if (!firstDayOfCurrentProcessingMonth || !lastDayOfCurrentProcessingMonth) {
+                console.error(`RMP occupancyData: Could not determine month boundaries for ${monthKey}`);
+                const currentMonthLoop = currentIterMonth.getUTCMonth(); // Renamed to avoid conflict
+                currentIterMonth.setUTCMonth(currentMonthLoop + 1);
+                if (currentIterMonth.getUTCMonth() === (currentMonthLoop + 2) % 12) {
+                    currentIterMonth.setUTCDate(0); 
+                    currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 2);
+                }
+                currentIterMonth.setUTCDate(1);
+                continue;
+            }
+
+            // Initialize for each selected hotel (using stringified hotelId as key)
+            selectedHotels.value.forEach(hotelId => {
+                const hotelInfo = allHotels.value.find(h => String(h.id) === String(hotelId));
+                let physicalRooms = 0;
+                if (hotelInfo && typeof hotelInfo.total_rooms === 'number') {
+                    physicalRooms = hotelInfo.total_rooms;
+                } else {
+                    console.warn(`RMP occupancyData: Hotel info or total_rooms not found for hotelId ${hotelId}. Using 0 rooms.`);
+                }
+
+                let effectiveDaysForHotelInMonth = daysInCalendarMonth;
+
+                if (hotelInfo && hotelInfo.open_date) {                    
+                    const openDate = normalizeDate(new Date(hotelInfo.open_date));
+
+                    if (openDate && !isNaN(openDate.getTime())) { // Check if openDate is valid
+                        if (openDate > lastDayOfCurrentProcessingMonth) {
+                            // Hotel opens after the current processing month ends
+                            effectiveDaysForHotelInMonth = 0;
+                        } else if (openDate > firstDayOfCurrentProcessingMonth) {
+                            // Hotel opens during the current processing month
+                            // Calculate days from openDate (inclusive) to last day of month (inclusive)
+                            effectiveDaysForHotelInMonth = lastDayOfCurrentProcessingMonth.getUTCDate() - openDate.getUTCDate() + 1;
+                        }
+                        // If openDate is on or before firstDayOfCurrentProcessingMonth, it's open for the full duration
+                        // (effectiveDaysForHotelInMonth remains daysInCalendarMonth or the relevant part if month is partial)
+                    } else {
+                        console.warn(`RMP occupancyData: Invalid or missing open_date for hotelId ${hotelId}: ${hotelInfo.open_date}. Assuming open for the full considered period.`);
+                    }
+                }
+                
+                effectiveDaysForHotelInMonth = Math.max(0, effectiveDaysForHotelInMonth); // Ensure non-negative
+
+                const monthlyAvailableRoomDays = physicalRooms * effectiveDaysForHotelInMonth;
+
+                if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
+                    monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
+                }
+
+                console.log(`RMP occupancyData: Hotel ID ${hotelId} has ${physicalRooms} rooms and month ${monthKey} has ${effectiveDaysForHotelInMonth} days, resulting in ${monthlyAvailableRoomDays} available room days.`);
+
+                monthlyOccupancyAggregates[monthKey][String(hotelId)] = {
+                    total_rooms: monthlyAvailableRoomDays,
+                    sold_rooms: 0,
+                    roomDifferenceSum: 0,
+                    fc_total_rooms: 0,
+                    fc_sold_rooms: 0
+                };
+            });
+            currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
+        }
+
+        // Aggregate sold_rooms from pmsTotalData
+        if (pmsTotalData.value) {
+            for (const stringHotelIdKey in pmsTotalData.value) {
+                const pmsRecords = pmsTotalData.value[stringHotelIdKey];
+                if (Array.isArray(pmsRecords)) {
+                    pmsRecords.forEach(record => {
+                        if (record && record.date && typeof record.room_count === 'number') {
+                            const recordDateObj = normalizeDate(new Date(record.date));
+                            if (!recordDateObj) return;
+                            const monthKey = formatDateMonth(recordDateObj);
+                            if (!monthKey) return;
+
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].sold_rooms += record.room_count;
+                            }
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
+                                monthlyOccupancyAggregates[monthKey]['0'].sold_rooms += record.room_count;
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Aggregate sold_rooms from forecastTotalData        
+        if (forecastTotalData.value) {
+            for (const stringHotelIdKey in forecastTotalData.value) {
+                const isSelectedHotel = selectedHotels.value.some(selHotelId => String(selHotelId) === stringHotelIdKey);
+                if (stringHotelIdKey !== '0' && !isSelectedHotel) {
+                    continue;
+                }
+
+                const forecastRecords = forecastTotalData.value[stringHotelIdKey];
+                if (Array.isArray(forecastRecords)) {
+                    forecastRecords.forEach(record => {
+                        if (record && record.date && typeof record.room_count === 'number') {
+                            const recordDateObj = normalizeDate(new Date(record.date));
+                            if (!recordDateObj) return;
+                            const monthKey = formatDateMonth(recordDateObj);
+                            console.log(`RMP occupancyData: Forecast record for hotel ${stringHotelIdKey} on date ${record.date} with room_count ${record.room_count} and monthKey ${monthKey}`);
+                            if (!monthKey || !monthlyOccupancyAggregates[monthKey]) return;
+
+                            // Add to specific hotel's sold_rooms
+                            if (monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                                console.log(`RMP occupancyData: Adding sold_rooms for hotel ${stringHotelIdKey} in month ${monthKey}`, record.room_count, record.total_rooms);
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
+                            }
+                            // Add to the aggregate '0' if the hotel is among the selected ones
+                            if (isSelectedHotel) {
+                                if (monthlyOccupancyAggregates[monthKey]['0']) {
+                                    monthlyOccupancyAggregates[monthKey]['0'].fc_total_rooms += record.total_rooms;
+                                    monthlyOccupancyAggregates[monthKey]['0'].fc_sold_rooms += record.room_count;
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        // Aggregate room differences from pmsDataForHotel
+        if (pmsTotalData.value) {
+            for (const stringHotelIdKey in pmsTotalData.value) {
+                const hotelRecords = pmsTotalData.value[stringHotelIdKey];
+                if (Array.isArray(hotelRecords)) {
+                    hotelRecords.forEach(record => {
+                        if (record && record.date && typeof record.total_rooms === 'number' && typeof record.total_rooms_real === 'number') {
+                            const recordDateObj = normalizeDate(new Date(record.date));
+                            if (!recordDateObj) return; // Skip if date is invalid
+                            const monthKey = formatDateMonth(recordDateObj);
+                            if (!monthKey) return; // Skip if monthKey can't be determined
+
+                            const difference = record.total_rooms_real - record.total_rooms;
+
+                            // Add difference to the specific hotel's sum for the month
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
+                                monthlyOccupancyAggregates[monthKey][stringHotelIdKey].roomDifferenceSum += difference;
+                            }
+                            // Add difference to the aggregate sum ('0') for all selected hotels for the month
+                            if (monthlyOccupancyAggregates[monthKey] && monthlyOccupancyAggregates[monthKey]['0']) {
+                                monthlyOccupancyAggregates[monthKey]['0'].roomDifferenceSum += difference;
+                            }
+                        } else {
+                            console.warn(`RMP occupancyData: Malformed record in pmsTotalData for hotel ${stringHotelIdKey} and date ${record ? record.date : 'unknown'}. Required fields: date, total_rooms, total_rooms_real.`);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Format output and calculate occupancy
+        Object.keys(monthlyOccupancyAggregates).sort().forEach(monthKey => {
+            for (const hotelIdStringKeyInMonth in monthlyOccupancyAggregates[monthKey]) {
+                const data = monthlyOccupancyAggregates[monthKey][hotelIdStringKeyInMonth];
+
+                const adjustedTotalRooms = data.total_rooms + data.roomDifferenceSum;
+                const occupancyRate = adjustedTotalRooms > 0 ? (data.sold_rooms / adjustedTotalRooms) * 100 : 0;                
+
+                let outputHotelId = hotelIdStringKeyInMonth === '0' ? 0 : selectedHotels.value.find(h => String(h) === hotelIdStringKeyInMonth);
+                if (outputHotelId === undefined && hotelIdStringKeyInMonth !== '0') { // Fallback
+                    const parsed = parseInt(hotelIdStringKeyInMonth, 10);
+                    outputHotelId = String(parsed) === hotelIdStringKeyInMonth ? parsed : hotelIdStringKeyInMonth;
+                }
+
+                if (hotelIdStringKeyInMonth !== '0' || (hotelIdStringKeyInMonth === '0' && selectedHotels.value.length > 0)) {                    
+                    if (hotelIdStringKeyInMonth === '0' && adjustedTotalRooms === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && monthlyOccupancyAggregates[monthKey]['0'].total_rooms === 0) {                        
+                    } else {
+                        result.push({
+                            month: monthKey,
+                            hotel_id: outputHotelId,
+                            total_rooms: adjustedTotalRooms,
+                            sold_rooms: data.sold_rooms,
+                            occ: parseFloat(occupancyRate.toFixed(2)),
+                            not_available_rooms: data.roomDifferenceSum * -1,
+                            fc_total_rooms: 0,
+                            fc_sold_rooms: 0,
+                            fc_occ: 0
+                        });
+                    }
+                }
+            }
+        });
+
+        result.sort((a, b) => {
+            if (a.month < b.month) return -1;
+            if (a.month > b.month) return 1;
+            const idA = a.hotel_id; const idB = b.hotel_id;
+            if (idA === 0 && idB !== 0) return -1; if (idA !== 0 && idB === 0) return 1;
+            if (typeof idA === 'number' && typeof idB === 'number') return idA - idB;
+            return String(idA).localeCompare(String(idB));
+        });
+        // console.log('RMP occupancyData: Final calculated data:', JSON.parse(JSON.stringify(result)));
+        return result;
+    });
 
     const fetchData = async () => {
         // Clear existing data if no hotels are selected
@@ -255,7 +491,9 @@
                 if (rawForecastData && Array.isArray(rawForecastData)) {
                     forecastTotalData.value[String(hotelId)] = rawForecastData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.forecast_month))),
-                        revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,                        
+                        revenue: item.accommodation_revenue !== undefined ? Number(item.accommodation_revenue) : 0,
+                        total_rooms: item.available_room_nights !== undefined ? Number(item.available_room_nights) : 0,  
+                        room_count: item.rooms_sold_nights !== undefined ? Number(item.rooms_sold_nights) : 0,                      
                     })).filter(item => item.date !== null); // Filter out items with invalid dates
                 } else if (rawForecastData) {
                     console.warn(`RMP: Forecast data for hotel ${hotelId} is not an array:`, rawForecastData);
@@ -287,11 +525,12 @@
             loading.value = false;
         }
 
-        console.log('RMP: pmsDataForHotel', pmsTotalData.value);
-        console.log('RMP: forecastDataForHotel', forecastTotalData.value);
-        console.log('RMP: accountingDataForHotel', accountingTotalData.value);
+        console.log('RMP: pmsTotalData', pmsTotalData.value);
+        console.log('RMP: forecastTotalData', forecastTotalData.value);
+        console.log('RMP: accountingTotalData', accountingTotalData.value);
 
         console.log('RMP: computed revenueData', revenueData.value);
+        console.log('RMP: computed occupancyData', occupancyData.value);
         
     };
 
@@ -305,9 +544,10 @@
         period.value = newPeriod;
         await fetchData();
     };
-    const handleHotelChange = async (newSelectedHotelIds) => {
+    const handleHotelChange = async (newSelectedHotelIds, hotels) => {
         // console.log('Parent: Selected hotels changed to', newSelectedHotelIds, hotels);
         selectedHotels.value = newSelectedHotelIds;
+        allHotels.value = hotels;
         await fetchData();
     };
 
