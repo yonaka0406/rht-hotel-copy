@@ -71,6 +71,13 @@
                         <i class="pi pi-users text-white mr-2"></i>
                         <span class="text-white">顧客情報</span>
                     </router-link>
+                    <router-link v-if="isReporting"
+                        to="/reporting"
+                        class="bg-purple-500 hover:bg-purple-600 p-2 block rounded my-4 mx-2"
+                    >
+                        <i class="pi pi-book text-white mr-2"></i>
+                        <span class="text-white">レポート</span>
+                    </router-link>
                     <div class="my-4 mx-2">
                         <Button
                             @click="handleLogout"
@@ -258,7 +265,8 @@
             ]);
             const showDrawer = ref(false);
             const isAdmin = ref(false);
-            const isClientEditor = ref(false);            
+            const isClientEditor = ref(false); 
+            const isReporting = ref(false);           
             const userMessage = ref(null);
 
             const userGreeting = computed(() => {
@@ -312,6 +320,12 @@
                 }else{
                     isClientEditor.value = true;
                 }
+
+                if(!logged_user.value?.[0]?.permissions?.view_reports){
+                    isReporting.value = false;
+                }else{
+                    isReporting.value = true;
+                }
                 
                 //console.log(isAdmin.value)
                 await fetchMyHoldReservations();                
@@ -340,6 +354,7 @@
                 showDrawer,   
                 isAdmin,
                 isClientEditor,
+                isReporting,
                 userGreeting,             
                 goToEditReservationPage,
                 goToNewReservation,

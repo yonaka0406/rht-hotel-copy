@@ -40,6 +40,8 @@ const ClientGroupList = () => import('@/pages/CRM/ClientGroupList.vue');
 const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
 const SalesInteractions = () => import('@/pages/CRM/SalesInteractions.vue');
 
+const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
+
 const routes = [
   {path: '/',
     name: 'MainPage',
@@ -97,6 +99,11 @@ const routes = [
       { path: 'groups/edit/:groupId', name: 'ClientGroupEdit', component: ClientGroupEdit, props: true },
       { path: 'sales/interactions', component: SalesInteractions },
     ],
+    meta: { requiresAuth: true },
+  },
+  {path: '/reporting',
+    component: ReportingMainPage,
+    children: [],
     meta: { requiresAuth: true },
   },
   // Work in Progress
