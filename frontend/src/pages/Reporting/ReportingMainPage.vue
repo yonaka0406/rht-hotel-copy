@@ -105,6 +105,10 @@
             return result;
         }
 
+        const hotelIdLookup = new Map();
+        selectedHotels.value.forEach(hotelId => {
+            hotelIdLookup.set(String(hotelId), hotelId);
+        });
         const monthlyAggregates = {};
 
         // Initialize all months and hotel_ids (including '0' for sum)
@@ -114,11 +118,19 @@
         while (currentIterMonth <= lastIterMonthDate) {
             const monthKey = formatDateMonth(currentIterMonth);
             monthlyAggregates[monthKey] = {};
-            // Initialize for the sum (hotel_id: 0, key '0')
-            monthlyAggregates[monthKey]['0'] = { pms_revenue: 0, forecast_revenue: 0, acc_revenue: 0 };
-            // Initialize for each selected hotel (using stringified hotelId as key)
+            
+            monthlyAggregates[monthKey]['0'] = { 
+                pms_revenue: null, 
+                forecast_revenue: null, 
+                acc_revenue: null 
+            };
+            
             selectedHotels.value.forEach(hotelId => {
-                monthlyAggregates[monthKey][String(hotelId)] = { pms_revenue: 0, forecast_revenue: 0, acc_revenue: 0 };
+                monthlyAggregates[monthKey][String(hotelId)] = { 
+                    pms_revenue: null,
+                    forecast_revenue: null,
+                    acc_revenue: null                
+                };
             });
             currentIterMonth.setUTCMonth(currentIterMonth.getUTCMonth() + 1);
         }
@@ -158,30 +170,43 @@
         aggregateDataSource(accountingTotalData.value, 'acc_revenue');
         
         // Convert the aggregated data object to the final result array
-        Object.keys(monthlyAggregates).sort().forEach(monthKey => { // Sorts by month string 'YYYY-MM'
+        Object.keys(monthlyAggregates).sort().forEach(monthKey => { 
             for (const hotelIdStringKeyInMonth in monthlyAggregates[monthKey]) {
                 let outputHotelId;
                 if (hotelIdStringKeyInMonth === '0') {
                     outputHotelId = 0; // Numeric 0 for sum
-                } else {
+                } else {                    
                     // Find the original hotel ID from selectedHotels to preserve its type (number/string)
                     // This relies on selectedHotels.value containing the original IDs.
-                    outputHotelId = selectedHotels.value.find(h => String(h) === hotelIdStringKeyInMonth);
+                    outputHotelId = hotelIdLookup.get(hotelIdStringKeyInMonth);
                     if (outputHotelId === undefined) {
                         // Fallback if not found in selectedHotels (e.g. if selectedHotels changed, or ID is purely from data)
                         // Try to parse as int if it looks like one, otherwise use the string key.
                         const parsed = parseInt(hotelIdStringKeyInMonth, 10);
                         outputHotelId = String(parsed) === hotelIdStringKeyInMonth ? parsed : hotelIdStringKeyInMonth;
-                         console.warn(`RMP: Hotel ID key ${hotelIdStringKeyInMonth} from aggregation was not found in current selectedHotels. Using key as is or parsed.`);
+                        console.warn(`RMP: Hotel ID key ${hotelIdStringKeyInMonth} from aggregation was not found in current selectedHotels (via lookup map). Using key as is or parsed.`);
                     }
+                }
+
+                const aggregatedMonthData = monthlyAggregates[monthKey][hotelIdStringKeyInMonth];
+                const pmsRev = aggregatedMonthData.pms_revenue;
+                const forecastRev = aggregatedMonthData.forecast_revenue;
+                const accRev = aggregatedMonthData.acc_revenue; // This will be null or a number
+
+                let periodRev;
+                if (accRev !== null) { // Check if acc_revenue has a value (i.e., accounting data was aggregated)
+                    periodRev = accRev;
+                } else {
+                    periodRev = forecastRev; // Fallback to forecast_revenue
                 }
 
                 result.push({
                     month: monthKey,
-                    hotel_id: outputHotelId,
-                    pms_revenue: monthlyAggregates[monthKey][hotelIdStringKeyInMonth].pms_revenue,
-                    forecast_revenue: monthlyAggregates[monthKey][hotelIdStringKeyInMonth].forecast_revenue,
-                    acc_revenue: monthlyAggregates[monthKey][hotelIdStringKeyInMonth].acc_revenue,
+                    hotel_id: outputHotelId, // Assuming outputHotelId is determined as before
+                    pms_revenue: pmsRev,
+                    forecast_revenue: forecastRev,
+                    acc_revenue: accRev, // Will show null if no accounting data, or the value otherwise
+                    period_revenue: periodRev,
                 });
             }
         });
