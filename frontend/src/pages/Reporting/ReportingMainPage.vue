@@ -15,8 +15,8 @@
             <div v-if="loading" class="flex justify-content-center align-items-center h-full">
                 <ProgressSpinner />
             </div>
-            <ReportingSingleMonthAllHotels
-                v-else-if="selectedView === 'singleMonthAllHotels'"
+            <ReportingYearCumulativeAllHotels
+                v-else-if="selectedView === 'yearCumulativeAllHotels'"
                 :revenueData="revenueData"
                 :occupancyData="occupancyData"                
             />
@@ -35,7 +35,7 @@
     import { ref, computed, onMounted } from 'vue';   
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
-    import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
+    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
@@ -98,8 +98,36 @@
         date.setDate(0);
         return date;
     });
+    
+    const selectedView = computed(() => {
+        let viewName = '';
 
-    const selectedView = ref('singleMonthAllHotels');
+        
+
+        if (selectedDate.value && typeof selectedDate.value.getMonth === 'function' && selectedDate.value.getMonth() === 0) {
+            viewName = 'singleMonth';
+        } else {
+            if (period.value === 'month') {
+                viewName += 'singleMonth';
+            } else if (period.value === 'year') {
+                viewName += 'yearCumulative';
+            } else {
+                // Default or handle unknown period
+                viewName += 'singleMonth'; // Fallback to singleMonth
+            }
+        }        
+
+        // Determine hotel scope part
+        if (selectedHotels.value.length === 1) {
+            viewName += 'Hotel';
+        } else if (selectedHotels.value.length > 1) {
+            viewName += 'AllHotels';
+        } else {
+            
+        }
+        // console.log('RMP: Computed selectedView:', viewName);
+        return viewName;
+    });
 
     // --- Data Storage ---
     const pmsTotalData = ref({});
