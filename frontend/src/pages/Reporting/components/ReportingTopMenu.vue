@@ -38,7 +38,7 @@
         </div>
         <router-link
             to="/"
-            class="bg-emerald-500 hover:bg-emerald-600 m-2 block rounded-sm"
+            class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm"
         >
             <i class="pi pi-home text-white mr-2"></i>
             <span class="text-white">PMS</span>
