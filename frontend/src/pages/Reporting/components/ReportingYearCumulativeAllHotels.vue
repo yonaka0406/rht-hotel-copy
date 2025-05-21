@@ -56,7 +56,7 @@
         </div>
 
         <div v-if="selectedView === 'table'">
-            <Card>
+            <Card class="mb-4">
                 <template #header>
                     <span class="text-xl font-bold">収益（計画ｘ実績）</span>
                 </template>
@@ -109,6 +109,67 @@
                             </template>
                             <template #paginatorend>
                                 <Button type="button" icon="pi pi-download" text @click="exportCSV('revenue')" />
+                            </template>
+                        </DataTable>
+                    </div>
+                </template>
+            </Card>
+
+            <Card>
+                <template #header>
+                    <span class="text-xl font-bold">稼働状況（計画ｘ実績）</span>
+                </template>
+                <template #content>
+                     <div v-if="!props.occupancyData || props.occupancyData.length === 0" class="text-center p-4">
+                        データはありません。
+                    </div>
+                    <div v-else class="p-fluid">
+                        <DataTable :value="props.occupancyData"
+                            responsiveLayout="scroll" 
+                            paginator 
+                            :rows="5"
+                            :rowsPerPageOptions="[5, 15, 30, 50]"
+                            stripedRows
+                            sortMode="multiple"
+                            removableSort
+                        >
+                            <Column field="hotel_name" header="施設" frozen sortable style="min-width: 150px; width: 15%"></Column>
+                            <Column field="month" header="月度" sortable style="min-width: 100px; width: 10%"></Column>
+                            <Column field="fc_sold_rooms" header="計画販売室数" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ data.fc_sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
+                            </Column>
+                            <Column field="sold_rooms" header="実績販売室数" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ data.sold_rooms?.toLocaleString('ja-JP') || 0 }}</template>
+                            </Column>
+                            <Column header="販売室数差異" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ ( (data.sold_rooms || 0) - (data.fc_sold_rooms || 0) ).toLocaleString('ja-JP') }}</template>
+                            </Column>
+                            <Column field="fc_occ" header="計画稼働率" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ formatPercentage(data.fc_occ / 100) }}</template>
+                            </Column>
+                            <Column field="occ" header="実績稼働率" sortable style="min-width: 100px; width: 10%">
+                                <template #body="{data}">{{ formatPercentage(data.occ / 100) }}</template>
+                            </Column>
+                            <Column header="稼働率差異 (pp)" sortable style="min-width: 120px; width: 10%">
+                                 <template #body="{ data }">
+                                    <div class="flex justify-end items-center mr-2">
+                                        <span>{{ ((data.occ || 0) - (data.fc_occ || 0)).toFixed(2) }} pp</span>
+                                         <Badge class="ml-2" :severity="getSeverity((data.occ || 0) - (data.fc_occ || 0))" size="small">
+                                            {{ ((data.occ || 0) - (data.fc_occ || 0)) >= 0 ? '+' : '' }}{{ ((data.occ || 0) - (data.fc_occ || 0)).toFixed(2) }}
+                                        </Badge>
+                                    </div>
+                                </template>
+                            </Column>
+                            <Column field="fc_total_rooms" header="計画総室数" sortable style="min-width: 100px; width: 7.5%">
+                                <template #body="{data}">{{ data.fc_total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
+                            </Column>
+                            <Column field="total_rooms" header="実績総室数" sortable style="min-width: 100px; width: 7.5%">
+                                <template #body="{data}">{{ data.total_rooms?.toLocaleString('ja-JP') || 0 }}</template>
+                            </Column>
+                            <template #paginatorstart>                                
+                            </template>
+                             <template #paginatorend>
+                                <Button type="button" icon="pi pi-download" text @click="exportCSV('occupancy')" />
                             </template>
                         </DataTable>
                     </div>
@@ -564,58 +625,79 @@
         return 'info';
     };
     const exportCSV = (tableType) => {
-        if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
-            const headers = [
-                "施設",         // hotel_name
-                "月度",         // month
-                "計画売上 (円)", // forecast_revenue
-                "実績売上 (円)", // period_revenue
-                "分散額 (円)",   // period_revenue - forecast_revenue
-                "分散率 (%)"    // ((period_revenue / forecast_revenue) - 1) * 100
-            ];
+        let csvString = '';
+        let filename = 'data.csv';
 
-            const csvRows = [headers.join(',')]; // Add header row
-
+        if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {            
+            filename = '複数施設・年度・収益データ.csv';
+            const headers = ["施設","月度","計画売上 (円)","実績売上 (円)","分散額 (円)","分散率 (%)"];
+            const csvRows = [headers.join(',')]; 
             props.revenueData.forEach(row => {
                 const forecastRevenue = row.forecast_revenue || 0;
                 const periodRevenue = row.period_revenue || 0;
-                
                 const varianceAmount = periodRevenue - forecastRevenue;
                 let variancePercentage = 0;
-                if (forecastRevenue !== 0) {
-                    variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
-                } else if (periodRevenue !== 0) {
-                    variancePercentage = Infinity; // Or some other indicator for division by zero with non-zero period
-                }
-
-
+                if (forecastRevenue !== 0) variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
+                else if (periodRevenue !== 0) variancePercentage = Infinity; // Or "N/A" or specific handling
+                
                 const csvRow = [
                     `"${row.hotel_name || ''}"`,
                     `"${row.month || ''}"`,
                     forecastRevenue,
                     periodRevenue,
                     varianceAmount,
-                    forecastRevenue === 0 && periodRevenue !== 0 ? "N/A" : variancePercentage.toFixed(2) // Represent as percentage value
+                    (forecastRevenue === 0 && periodRevenue !== 0) ? "N/A" : variancePercentage.toFixed(2)
                 ];
                 csvRows.push(csvRow.join(','));
             });
+            csvString = csvRows.join('\n');
 
-            const csvString = csvRows.join('\n');
-            const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel
-            
-            const link = document.createElement("a");
-            if (link.download !== undefined) { // Feature detection
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", "revenue_data.csv");
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }
+        } else if (tableType === 'occupancy' && props.occupancyData && props.occupancyData.length > 0) {
+            filename = '複数施設・年度・稼働率データ.csv';
+            const headers = [
+                "施設", "月度", 
+                "計画販売室数", "実績販売室数", "販売室数差異",
+                "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (pp)",
+                "計画総室数", "実績総室数"
+            ];
+            const csvRows = [headers.join(',')];
+            props.occupancyData.forEach(row => {
+                const fcSold = row.fc_sold_rooms || 0;
+                const sold = row.sold_rooms || 0;
+                const fcOcc = row.fc_occ || 0;
+                const occ = row.occ || 0;
+
+                const csvRow = [
+                    `"${row.hotel_name || ''}"`,
+                    `"${row.month || ''}"`,
+                    fcSold,
+                    sold,
+                    sold - fcSold,
+                    fcOcc.toFixed(2),
+                    occ.toFixed(2),
+                    (occ - fcOcc).toFixed(2),
+                    row.fc_total_rooms || 0,
+                    row.total_rooms || 0
+                ];
+                csvRows.push(csvRow.join(','));
+            });
+            csvString = csvRows.join('\n');
         } else {
             console.log(`RSMAll: No data to export for ${tableType} or invalid table type.`);
+            return;
+        }
+        
+        const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }        
     };
 
