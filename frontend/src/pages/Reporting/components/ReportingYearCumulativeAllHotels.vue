@@ -683,7 +683,7 @@
             });
             csvString = csvRows.join('\n');
         } else {
-            console.log(`RSMAll: No data to export for ${tableType} or invalid table type.`);
+            console.log(`RYCAll: No data to export for ${tableType} or invalid table type.`);
             return;
         }
         
@@ -702,7 +702,7 @@
     };
 
     onMounted(async () => {
-        console.log('RSMAll: onMounted', props.revenueData, props.occupancyData);
+        console.log('RYCAll: onMounted', props.revenueData, props.occupancyData);
 
         if (selectedView.value === 'graph') {
             // Use nextTick to ensure containers are rendered before initializing
