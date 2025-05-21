@@ -21,7 +21,12 @@
                             <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
                         </div>
                     </div>                    
-                </template>                
+                </template> 
+                <template #footer>
+                    <div class="flex justify-content-between">
+                        <small>会計データがない場合はPMSの数値になっています。選択中の施設： {{ allHotelNames }}</small>
+                    </div>
+                </template>               
             </Card>
         </div>
 
@@ -135,6 +140,43 @@
         { label: 'テーブル', value: 'table' }
     ]);
 
+    // Computed property to get all unique hotel names from revenueData    
+    const allHotelNames = computed(() => {
+        if (!props.revenueData || props.revenueData.length === 0) {
+            return 'N/A';
+        }
+        const names = props.revenueData
+            .map(item => item.hotel_name)
+            .filter(name => name && name !== '施設合計'); // Exclude null/undefined and "施設合計"
+        
+        const uniqueNames = [...new Set(names)];
+        return uniqueNames.join(', ');
+    });
+
+
+    // Color scheme    
+    const colorScheme = {
+        // Solid base colors
+        actual: '#C8102E',       // Deep red for actual revenue
+        forecast: '#F2A900',     // Golden yellow for projected revenue
+        variance: '#555555',     // Neutral gray for variance label
+
+        // Gradient for Actual (from dark red to light red)
+        actual_gradient_top: '#A60D25',
+        actual_gradient_middle: '#C8102E',
+        actual_gradient_bottom: '#E94A57',
+
+        // Gradient for Forecast (from golden to soft yellow)
+        forecast_gradient_top: '#D48F00',
+        forecast_gradient_middle: '#F2A900',
+        forecast_gradient_bottom: '#FFE066',
+
+        // Gradient for Variance (negative to positive)
+        variance_gradient_top: '#888888',      // Light gray (low variance)
+        variance_gradient_middle: '#555555',   // Medium gray (baseline)
+        variance_gradient_bottom: '#222222',   // Dark gray (high variance)
+    };
+
     // ECharts imports
     import * as echarts from 'echarts/core';
     import {        
@@ -214,12 +256,12 @@
             xAxis: [{ type: 'category', data: months, axisPointer: { type: 'shadow' } }],
             yAxis: [
                 { type: 'value', name: '売上 (万円)', axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, scale: true },
-                { type: 'value', name: '分散 (%)', axisLabel: { formatter: '{value}%' }, scale: true }
+                { type: 'value', axisLabel: { show: false }, splitLine: { show: false } }
             ],
             series: [
-                { name: '計画売上', type: 'bar', data: forecastRevenues, emphasis: { focus: 'series' } },
-                { name: '実績売上', type: 'bar', data: periodRevenues, emphasis: { focus: 'series' } },
-                { name: '分散 (%)', type: 'line', yAxisIndex: 1, data: variances, smooth: true, itemStyle: { color: '#FFBF00' } }
+                { name: '計画売上', type: 'bar', data: forecastRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.forecast } },
+                { name: '実績売上', type: 'bar', data: periodRevenues, emphasis: { focus: 'series' }, itemStyle: { color: colorScheme.actual } },
+                { name: '分散 (%)', type: 'line', yAxisIndex: 1, data: variances, smooth: true, itemStyle: { color: colorScheme.variance }, label: { show: true, position: 'top', formatter: (params) => `${params.value}%`} }
             ]
         };
     });
@@ -252,18 +294,18 @@
             xAxis: [{ type: 'category', data: ['期間合計'] }],
             yAxis: [
                 { type: 'value', axisLabel: { show: false, formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, splitLine: { show: false } },
-                { type: 'value', axisLabel: { show: false, formatter: '{value}%' }, splitLine: { show: false } }
+                { type: 'value', axisLabel: { show: false }, splitLine: { show: false } }
             ],
             series: [
-                { name: '計画売上', type: 'bar', data: [totalForecastRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousands(params.value)} },
-                { name: '実績売上', type: 'bar', data: [totalPeriodRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousands(params.value)} },
+                { name: '計画売上', type: 'bar', data: [totalForecastRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousands(params.value)}, itemStyle: { color: colorScheme.forecast } },
+                { name: '実績売上', type: 'bar', data: [totalPeriodRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousands(params.value)}, itemStyle: { color: colorScheme.actual } },
                 { name: '分散 (%)', type: 'bar', yAxisIndex: 1, data: [totalVariancePercent], barWidth: '15%', 
                     itemStyle: { 
                         opacity: 0.8,
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                            { offset: 0, color: '#fff7cc' },
-                            { offset: 0.5, color: '#ffd700' },
-                            { offset: 1, color: '#b8860b' }
+                            { offset: 0, color: colorScheme.variance_gradient_bottom },
+                            { offset: 0.5, color: colorScheme.variance_gradient_middle },
+                            { offset: 1, color: colorScheme.variance_gradient_top }
                         ])                        
                     },
                     label: { show: true, position: 'top', formatter: (params) => `${params.value}%` }                
@@ -314,8 +356,58 @@
         return 'info';
     };
     const exportCSV = (tableType) => {
-        if(tableType === 'revenue') {
-            console.log(`RSMAll: exportCSV ${tableType}`, props.revenueData);        
+        if (tableType === 'revenue' && props.revenueData && props.revenueData.length > 0) {
+            const headers = [
+                "施設",         // hotel_name
+                "月度",         // month
+                "計画売上 (円)", // forecast_revenue
+                "実績売上 (円)", // period_revenue
+                "分散額 (円)",   // period_revenue - forecast_revenue
+                "分散率 (%)"    // ((period_revenue / forecast_revenue) - 1) * 100
+            ];
+
+            const csvRows = [headers.join(',')]; // Add header row
+
+            props.revenueData.forEach(row => {
+                const forecastRevenue = row.forecast_revenue || 0;
+                const periodRevenue = row.period_revenue || 0;
+                
+                const varianceAmount = periodRevenue - forecastRevenue;
+                let variancePercentage = 0;
+                if (forecastRevenue !== 0) {
+                    variancePercentage = ((periodRevenue / forecastRevenue) - 1) * 100;
+                } else if (periodRevenue !== 0) {
+                    variancePercentage = Infinity; // Or some other indicator for division by zero with non-zero period
+                }
+
+
+                const csvRow = [
+                    `"${row.hotel_name || ''}"`,
+                    `"${row.month || ''}"`,
+                    forecastRevenue,
+                    periodRevenue,
+                    varianceAmount,
+                    forecastRevenue === 0 && periodRevenue !== 0 ? "N/A" : variancePercentage.toFixed(2) // Represent as percentage value
+                ];
+                csvRows.push(csvRow.join(','));
+            });
+
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel
+            
+            const link = document.createElement("a");
+            if (link.download !== undefined) { // Feature detection
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "revenue_data.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        } else {
+            console.log(`RSMAll: No data to export for ${tableType} or invalid table type.`);
         }        
     };
 
