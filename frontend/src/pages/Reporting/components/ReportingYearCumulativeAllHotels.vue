@@ -164,6 +164,26 @@
         monthlyChartInstance.value?.resize();
         totalChartInstance.value?.resize();
     };
+    // Helper to manage both charts
+    const createOrRefreshChart = (instanceRef, containerRef, options) => {
+        if (containerRef.value) {            
+            if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
+                instanceRef.value = echarts.init(containerRef.value);
+            }
+            instanceRef.value.setOption(options, true);
+            instanceRef.value.resize();
+        }
+    };
+    const createOrRefreshAllCharts = () => {
+        if (hasRevenueDataForChart.value) {
+            createOrRefreshChart(monthlyChartInstance, monthlyChartContainer, monthlyChartOptions.value);
+            createOrRefreshChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
+        } else {
+            // If no data, clear the charts if instances exist
+            monthlyChartInstance.value?.clear();
+            totalChartInstance.value?.clear();
+        }
+    };
 
     // Revenue Chart
     const monthlyChartContainer = ref(null);
@@ -325,8 +345,8 @@
         if (selectedView.value === 'graph') {
             // Use nextTick to ensure containers are rendered before initializing
             nextTick(() => {
-                initCharts();
-            });
+            createOrRefreshAllCharts();
+        });
         }
         window.addEventListener('resize', resizeChartHandler);
     });
@@ -336,10 +356,21 @@
         window.removeEventListener('resize', resizeChartHandler);
     });
 
-    // Watch for changes in computed chart options
+    
+    // Watch for changes in chart options (e.g., data updates)
     watch([monthlyChartOptions, totalChartOptions], () => {
         if (selectedView.value === 'graph') {
-            updateCharts();
+            // Options have changed, so refresh the charts
+            createOrRefreshAllCharts();
         }
     }, { deep: true });
+
+    // Watch for view changes (Graph <-> Table)
+    watch(selectedView, async (newView) => {
+        if (newView === 'graph') {
+            await nextTick(); // Wait for DOM elements to be rendered
+            createOrRefreshAllCharts();
+        }
+        // No specific action needed when switching to 'table' regarding ECharts instances
+    });
 </script>
