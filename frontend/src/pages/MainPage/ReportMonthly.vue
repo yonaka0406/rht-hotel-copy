@@ -129,8 +129,9 @@
                                     (計画: {{ forecastOCC }} %)
                                 </span>
                                 <span v-if="OCCDifference" :class="['text-sm', OCCDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                    ({{ OCCDifference > 0 ? '+' : '' }}{{ OCCDifference }} %)
+                                    ({{ OCCDifference > 0 ? '+' : '' }}{{ parseFloat(OCCDifference).toFixed(2) }} %)
                                 </span>
+
                             </div>
                         </div>
                     </div>
