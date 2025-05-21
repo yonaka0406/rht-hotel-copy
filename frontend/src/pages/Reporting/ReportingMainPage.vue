@@ -12,9 +12,13 @@
         </header>
         
         <main class="flex-1 overflow-auto p-6">
+            <div v-if="loading" class="flex justify-content-center align-items-center h-full">
+                <ProgressSpinner />
+            </div>
             <ReportingSingleMonthAllHotels
-                v-if="selectedView === 'singleMonthAllHotels'"
-                :revenueData="revenueData"                
+                v-else-if="selectedView === 'singleMonthAllHotels'"
+                :revenueData="revenueData"
+                :occupancyData="occupancyData"                
             />
             <div v-else class="text-gray-700 text-center">
                 レポートを選択してください。
@@ -36,6 +40,9 @@
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
     const { fetchCountReservation, fetchForecastData, fetchAccountingData } = useReportStore();
+
+    // Primevue
+    import { ProgressSpinner } from 'primevue';
 
     // -- Helper Functions --
     function formatDate(date) {
@@ -105,10 +112,10 @@
             return result;
         }
 
-        const hotelIdLookup = new Map();
+        const hotelIdLookup = new Map();        
         selectedHotels.value.forEach(hotelId => {
             hotelIdLookup.set(String(hotelId), hotelId);
-        });
+        });        
         const monthlyAggregates = {};
 
         // Initialize all months and hotel_ids (including '0' for sum)
@@ -191,10 +198,11 @@
                 const aggregatedMonthData = monthlyAggregates[monthKey][hotelIdStringKeyInMonth];
                 const pmsRev = aggregatedMonthData.pms_revenue;
                 const forecastRev = aggregatedMonthData.forecast_revenue;
-                const accRev = aggregatedMonthData.acc_revenue; // This will be null or a number
+                const accRev = aggregatedMonthData.acc_revenue;
+                const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
 
                 let periodRev;
-                if (accRev !== null) { // Check if acc_revenue has a value (i.e., accounting data was aggregated)
+                if (accRev !== null) { 
                     periodRev = accRev;
                 } else {
                     periodRev = forecastRev; // Fallback to forecast_revenue
@@ -202,10 +210,11 @@
 
                 result.push({
                     month: monthKey,
-                    hotel_id: outputHotelId, // Assuming outputHotelId is determined as before
+                    hotel_id: outputHotelId,
+                    hotel_name: hotelName,
                     pms_revenue: pmsRev,
                     forecast_revenue: forecastRev,
-                    acc_revenue: accRev, // Will show null if no accounting data, or the value otherwise
+                    acc_revenue: accRev, 
                     period_revenue: periodRev,
                 });
             }
@@ -317,7 +326,7 @@
                     monthlyOccupancyAggregates[monthKey]['0'].total_rooms += monthlyAvailableRoomDays;
                 }
 
-                console.log(`RMP occupancyData: Hotel ID ${hotelId} has ${physicalRooms} rooms and month ${monthKey} has ${effectiveDaysForHotelInMonth} days, resulting in ${monthlyAvailableRoomDays} available room days.`);
+                // console.log(`RMP occupancyData: Hotel ID ${hotelId} has ${physicalRooms} rooms and month ${monthKey} has ${effectiveDaysForHotelInMonth} days, resulting in ${monthlyAvailableRoomDays} available room days.`);
 
                 monthlyOccupancyAggregates[monthKey][String(hotelId)] = {
                     total_rooms: monthlyAvailableRoomDays,
@@ -369,12 +378,12 @@
                             const recordDateObj = normalizeDate(new Date(record.date));
                             if (!recordDateObj) return;
                             const monthKey = formatDateMonth(recordDateObj);
-                            console.log(`RMP occupancyData: Forecast record for hotel ${stringHotelIdKey} on date ${record.date} with room_count ${record.room_count} and monthKey ${monthKey}`);
+                            // console.log(`RMP occupancyData: Forecast record for hotel ${stringHotelIdKey} on date ${record.date} with room_count ${record.room_count} and monthKey ${monthKey}`);
                             if (!monthKey || !monthlyOccupancyAggregates[monthKey]) return;
 
                             // Add to specific hotel's sold_rooms
                             if (monthlyOccupancyAggregates[monthKey][stringHotelIdKey]) {
-                                console.log(`RMP occupancyData: Adding sold_rooms for hotel ${stringHotelIdKey} in month ${monthKey}`, record.room_count, record.total_rooms);
+                                // console.log(`RMP occupancyData: Adding sold_rooms for hotel ${stringHotelIdKey} in month ${monthKey}`, record.room_count, record.total_rooms);
                                 monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_sold_rooms += record.room_count;
                                 monthlyOccupancyAggregates[monthKey][stringHotelIdKey].fc_total_rooms += record.total_rooms;
                             }
@@ -435,19 +444,22 @@
                     outputHotelId = String(parsed) === hotelIdStringKeyInMonth ? parsed : hotelIdStringKeyInMonth;
                 }
 
+                const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
+
                 if (hotelIdStringKeyInMonth !== '0' || (hotelIdStringKeyInMonth === '0' && selectedHotels.value.length > 0)) {                    
                     if (hotelIdStringKeyInMonth === '0' && adjustedTotalRooms === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && monthlyOccupancyAggregates[monthKey]['0'].total_rooms === 0) {                        
                     } else {
                         result.push({
                             month: monthKey,
                             hotel_id: outputHotelId,
+                            hotel_name: hotelName,
                             total_rooms: adjustedTotalRooms,
                             sold_rooms: data.sold_rooms,
                             occ: parseFloat(occupancyRate.toFixed(2)),
-                            not_available_rooms: data.roomDifferenceSum * -1,
-                            fc_total_rooms: 0,
-                            fc_sold_rooms: 0,
-                            fc_occ: 0
+                            not_available_rooms: data.roomDifferenceSum === 0 ? 0 : data.roomDifferenceSum * -1,
+                            fc_total_rooms: data.fc_total_rooms,
+                            fc_sold_rooms: data.fc_sold_rooms,
+                            fc_occ: data.fc_total_rooms > 0 ? parseFloat(((data.fc_sold_rooms / data.fc_total_rooms) * 100).toFixed(2)) : 0
                         });
                     }
                 }
@@ -550,12 +562,14 @@
             loading.value = false;
         }
 
+        /*
         console.log('RMP: pmsTotalData', pmsTotalData.value);
         console.log('RMP: forecastTotalData', forecastTotalData.value);
         console.log('RMP: accountingTotalData', accountingTotalData.value);
 
         console.log('RMP: computed revenueData', revenueData.value);
         console.log('RMP: computed occupancyData', occupancyData.value);
+        */
         
     };
 
@@ -573,8 +587,32 @@
         // console.log('Parent: Selected hotels changed to', newSelectedHotelIds, hotels);
         selectedHotels.value = newSelectedHotelIds;
         allHotels.value = hotels;
+        console.log('RMP: allHotels', allHotels.value);
         await fetchData();
     };
+
+    const searchAllHotels = (hotelId) => {
+        if(!allHotels.value || allHotels.value.length === 0) {
+            console.log('RMP: No hotels available for search.');
+            return [];
+        }
+        if (hotelId === 0) {
+            return [
+                {
+                    id: 0,
+                    name: '全施設合計',
+                }
+            ];
+        }
+
+        const foundHotel = allHotels.value.find(hotel => String(hotel.id) === String(hotelId));
+        if (foundHotel) {
+            return [foundHotel];
+        } else {
+            console.log(`RMP: Hotel with ID ${hotelId} not found in allHotels.`);
+            return [];
+        }
+    }
 
     onMounted(async () => {
         console.log('RMP: onMounted');
