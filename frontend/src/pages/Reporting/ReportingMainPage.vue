@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col h-screen bg-white">
+    <div class="flex flex-col h-screen bg-gray-100">
         <header>
             <ReportingTopMenu
                 :selectedDate="selectedDate"
