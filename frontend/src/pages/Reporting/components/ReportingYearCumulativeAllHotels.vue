@@ -378,7 +378,7 @@
         if (!props.occupancyData || props.occupancyData.length === 0) return [];
         const hotelMap = new Map();
         props.occupancyData.forEach(item => {
-             if (item.hotel_name && item.hotel_name !== '施設合計') {
+             if (item.hotel_name) {
                 const entry = hotelMap.get(item.hotel_name) || { 
                     hotel_name: item.hotel_name, 
                     sum_fc_sold_rooms: 0, sum_fc_total_rooms: 0,
@@ -525,7 +525,7 @@
                 } 
             },
             legend: { data: ['計画売上合計', '実績売上合計', '計画達成まで'], top: 'bottom' }, // Added new series to legend
-            grid: { containLabel: true, left: '3%', right: '4%', bottom: '10%' },
+            grid: { containLabel: true, left: '3%', right: '10%', bottom: '10%' },
             xAxis: { type: 'value', name: '売上 (万円)', axisLabel: { formatter: value => (value / 10000).toLocaleString('ja-JP') } },
             yAxis: { type: 'category', data: hotelNames, inverse: true }, 
             series: [
@@ -563,8 +563,8 @@
                 }
             },
             legend: { data: ['計画稼働率', '実績稼働率', '稼働率差異 (p.p.)'], top: 'bottom' },
-            grid: { containLabel: true, left: '3%', right: '4%', bottom: '10%' },
-            xAxis: { type: 'value', name: '稼働率 (%) / 差異 (p.p.)', axisLabel: { formatter: '{value}%' } },
+            grid: { containLabel: true, left: '3%', right: '5%', bottom: '10%' },
+            xAxis: { type: 'value', axisLabel: { formatter: '{value}%' } },
             yAxis: { type: 'category', data: hotelNames, inverse: true },
             series: [
                 { name: '計画稼働率', type: 'bar', data: forecastValues, itemStyle: { color: colorScheme.forecast }, barGap: '5%', label: { show: true, position: 'right', formatter: (params) => formatPercentage(params.value / 100)} },
