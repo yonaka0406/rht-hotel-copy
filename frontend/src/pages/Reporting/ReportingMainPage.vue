@@ -15,6 +15,11 @@
             <div v-if="loading" class="flex justify-content-center align-items-center h-full">
                 <ProgressSpinner />
             </div>
+            <ReportingSingleMonthAllHotels
+                v-else-if="selectedView === 'singleMonthAllHotels'"
+                :revenueData="revenueData"
+                :occupancyData="occupancyData"                
+            />
             <ReportingYearCumulativeAllHotels
                 v-else-if="selectedView === 'yearCumulativeAllHotels'"
                 :revenueData="revenueData"
@@ -35,7 +40,8 @@
     import { ref, computed, onMounted } from 'vue';   
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
-    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
+    import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
+    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';    
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
