@@ -38,8 +38,8 @@
                         <DataTable :value="props.revenueData" 
                             responsiveLayout="scroll" 
                             paginator 
-                            :rows="20"
-                            :rowsPerPageOptions="[10, 20, 50]"
+                            :rows="5"
+                            :rowsPerPageOptions="[5, 15, 30, 50]"
                             stripedRows
                             sortMode="multiple"
                             removableSort
@@ -164,26 +164,6 @@
         monthlyChartInstance.value?.resize();
         totalChartInstance.value?.resize();
     };
-    // Helper to manage both charts
-    const createOrRefreshChart = (instanceRef, containerRef, options) => {
-        if (containerRef.value) {            
-            if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
-                instanceRef.value = echarts.init(containerRef.value);
-            }
-            instanceRef.value.setOption(options, true);
-            instanceRef.value.resize();
-        }
-    };
-    const createOrRefreshAllCharts = () => {
-        if (hasRevenueDataForChart.value) {
-            createOrRefreshChart(monthlyChartInstance, monthlyChartContainer, monthlyChartOptions.value);
-            createOrRefreshChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
-        } else {
-            // If no data, clear the charts if instances exist
-            monthlyChartInstance.value?.clear();
-            totalChartInstance.value?.clear();
-        }
-    };
 
     // Revenue Chart
     const monthlyChartContainer = ref(null);
@@ -271,8 +251,8 @@
             grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
             xAxis: [{ type: 'category', data: ['期間合計'] }],
             yAxis: [
-                { type: 'value', axisLabel: { show: false, formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` } }, // Display in 万円
-                { type: 'value', axisLabel: { show: false, formatter: '{value}%' } }
+                { type: 'value', axisLabel: { show: false, formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, splitLine: { show: false } },
+                { type: 'value', axisLabel: { show: false, formatter: '{value}%' }, splitLine: { show: false } }
             ],
             series: [
                 { name: '計画売上', type: 'bar', data: [totalForecastRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousands(params.value)} },
@@ -293,35 +273,35 @@
     });
 
     // Initialize charts
-    const initCharts = () => {
-        if (monthlyChartContainer.value && hasRevenueDataForChart.value && !monthlyChartInstance.value) {
-            monthlyChartInstance.value = echarts.init(monthlyChartContainer.value);
-            monthlyChartInstance.value.setOption(monthlyChartOptions.value);
-        }
-        if (totalChartContainer.value && hasRevenueDataForChart.value && !totalChartInstance.value) {
-            totalChartInstance.value = echarts.init(totalChartContainer.value);
-            totalChartInstance.value.setOption(totalChartOptions.value);
+    const initOrUpdateChart = (instanceRef, containerRef, options) => {
+        if (containerRef.value) { // Ensure the container element exists
+            if (!instanceRef.value || instanceRef.value.isDisposed?.()) {
+                // If no instance or it's disposed, initialize a new one
+                instanceRef.value = echarts.init(containerRef.value);
+            }
+            // Always set options and resize
+            instanceRef.value.setOption(options, true); // true for notMerge
+            instanceRef.value.resize();
+        } else if (instanceRef.value && !instanceRef.value.isDisposed?.()) {
+            // Container is gone (e.g., v-if became false), but instance exists. Dispose it.
+            instanceRef.value.dispose();
+            instanceRef.value = null; // Clear the ref
         }
     };
-
-    // Update charts
-    const updateCharts = () => {
+    const refreshAllCharts = () => {
         if (hasRevenueDataForChart.value) {
-            if (monthlyChartInstance.value) {
-                monthlyChartInstance.value.setOption(monthlyChartOptions.value, true);
-            } else if (monthlyChartContainer.value) { // If instance was cleared but container exists
-                monthlyChartInstance.value = echarts.init(monthlyChartContainer.value);
-                monthlyChartInstance.value.setOption(monthlyChartOptions.value);
-            }
-            if (totalChartInstance.value) {
-                totalChartInstance.value.setOption(totalChartOptions.value, true);
-            } else if (totalChartContainer.value) { // If instance was cleared but container exists
-                totalChartInstance.value = echarts.init(totalChartContainer.value);
-                totalChartInstance.value.setOption(totalChartOptions.value);
-            }
+            initOrUpdateChart(monthlyChartInstance, monthlyChartContainer, monthlyChartOptions.value);
+            initOrUpdateChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
         } else {
-            monthlyChartInstance.value?.clear();
-            totalChartInstance.value?.clear();
+            // If no data, ensure charts are cleared/disposed
+            if (monthlyChartInstance.value && !monthlyChartInstance.value.isDisposed?.()) {
+                monthlyChartInstance.value.dispose(); // Dispose instead of clear for a cleaner state
+                monthlyChartInstance.value = null;
+            }
+            if (totalChartInstance.value && !totalChartInstance.value.isDisposed?.()) {
+                totalChartInstance.value.dispose(); // Dispose instead of clear
+                totalChartInstance.value = null;
+            }
         }
     };
 
@@ -345,8 +325,8 @@
         if (selectedView.value === 'graph') {
             // Use nextTick to ensure containers are rendered before initializing
             nextTick(() => {
-            createOrRefreshAllCharts();
-        });
+                refreshAllCharts();
+            });
         }
         window.addEventListener('resize', resizeChartHandler);
     });
@@ -356,21 +336,27 @@
         window.removeEventListener('resize', resizeChartHandler);
     });
 
-    
-    // Watch for changes in chart options (e.g., data updates)
+    // Watch for changes in computed chart options
     watch([monthlyChartOptions, totalChartOptions], () => {
         if (selectedView.value === 'graph') {
-            // Options have changed, so refresh the charts
-            createOrRefreshAllCharts();
+            refreshAllCharts();
         }
     }, { deep: true });
-
-    // Watch for view changes (Graph <-> Table)
     watch(selectedView, async (newView) => {
         if (newView === 'graph') {
-            await nextTick(); // Wait for DOM elements to be rendered
-            createOrRefreshAllCharts();
+            await nextTick(); 
+            
+            if (monthlyChartInstance.value && !monthlyChartInstance.value.isDisposed?.()) {
+                monthlyChartInstance.value.dispose();
+                monthlyChartInstance.value = null;
+            }
+            if (totalChartInstance.value && !totalChartInstance.value.isDisposed?.()) {
+                totalChartInstance.value.dispose();
+                totalChartInstance.value = null;
+            }
+            
+            // Now, refresh (which will re-initialize) the charts
+            refreshAllCharts();
         }
-        // No specific action needed when switching to 'table' regarding ECharts instances
     });
 </script>
