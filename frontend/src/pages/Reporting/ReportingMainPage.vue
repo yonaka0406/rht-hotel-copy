@@ -205,7 +205,7 @@
                 if (accRev !== null) { 
                     periodRev = accRev;
                 } else {
-                    periodRev = forecastRev; // Fallback to forecast_revenue
+                    periodRev = pmsRev || 0;
                 }
 
                 result.push({
@@ -562,14 +562,14 @@
             loading.value = false;
         }
 
-        /*
+        
         console.log('RMP: pmsTotalData', pmsTotalData.value);
         console.log('RMP: forecastTotalData', forecastTotalData.value);
         console.log('RMP: accountingTotalData', accountingTotalData.value);
 
         console.log('RMP: computed revenueData', revenueData.value);
         console.log('RMP: computed occupancyData', occupancyData.value);
-        */
+        
         
     };
 
@@ -600,7 +600,7 @@
             return [
                 {
                     id: 0,
-                    name: '全施設合計',
+                    name: '施設合計',
                 }
             ];
         }
