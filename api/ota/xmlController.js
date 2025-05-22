@@ -638,7 +638,19 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     const getInventoryDateRange = (inventory) => {
         if (inventory.length === 0) return { minDate: null, maxDate: null };
 
-        const dates = inventory.map((item) => new Date(item.saleDate)).filter(date => !isNaN(date.getTime())); 
+        const dates = inventory
+            .map((item) => {
+                const str = item.saleDate?.toString();
+                if (!/^\d{8}$/.test(str)) return null; // Ensure it's in YYYYMMDD format
+
+                const year = parseInt(str.slice(0, 4), 10);
+                const month = parseInt(str.slice(4, 6), 10) - 1; // month is 0-indexed
+                const day = parseInt(str.slice(6, 8), 10);
+
+                return new Date(year, month, day);
+            })
+            .filter(date => date instanceof Date && !isNaN(date.getTime()));
+
         if (dates.length === 0) return { minDate: null, maxDate: null };
 
         const minDate = new Date(Math.min(...dates));
