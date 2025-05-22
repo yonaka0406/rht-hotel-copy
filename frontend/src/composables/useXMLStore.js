@@ -309,7 +309,7 @@ export function useXMLStore() {
 
         try {
             const authToken = localStorage.getItem('authToken');    
-            const response = await fetch(`/api/report/res/inventory/${hotel_id}/${check_in}/${check_out}`, {
+            const response = await fetch(`/api/report/res/inventory-all/${hotel_id}/${check_in}/${check_out}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`, 

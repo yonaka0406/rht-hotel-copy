@@ -805,7 +805,52 @@ const selectReservationsInventory = async (requestId, hotelId, startDate, endDat
       throw new Error('Database error');
   }
 };
-
+const selectAllRoomTypesInventory = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+      WITH date_range AS (
+          SELECT generate_series($2::date, $3::date, '1 day'::interval)::date AS date
+      ),
+      room_type_details AS (
+          -- Get the most recent details for all room types with valid group codes
+          SELECT DISTINCT ON (room_type_id) 
+              room_type_id, 
+              netrmtypegroupcode, 
+              room_type_name, 
+              total_rooms
+          FROM vw_room_inventory
+          WHERE hotel_id = $1
+          AND netrmtypegroupcode IS NOT NULL
+          ORDER BY room_type_id, date DESC
+      )
+      SELECT 
+          $1 AS hotel_id,
+          d.date,
+          rt.room_type_id,
+          rt.netrmtypegroupcode,
+          rt.room_type_name,
+          rt.total_rooms,
+          COALESCE(inv.room_count, 0) AS room_count
+      FROM 
+          date_range d
+      CROSS JOIN room_type_details rt
+      LEFT JOIN vw_room_inventory inv ON 
+          inv.hotel_id = $1
+          AND inv.date = d.date 
+          AND inv.room_type_id = rt.room_type_id
+      ORDER BY 
+          d.date, 
+          rt.room_type_id;
+  `;
+  const values = [hotelId, startDate, endDate];
+  try {
+      const result = await pool.query(query, values);           
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving inventory:', err);
+      throw new Error('Database error');
+  }
+};
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
   const query = `
@@ -859,5 +904,6 @@ module.exports = {
   selectExportReservationDetails,
   selectExportMealCount,
   selectReservationsInventory,
+  selectAllRoomTypesInventory,
   selectReservationsForGoogle,
 };
