@@ -592,6 +592,162 @@ const updateInventoryMultipleDays = async (req, res) => {
 
 };
 
+const manualUpdateInventoryMultipleDays = async (req, res) => {
+    const hotel_id = req.params.hotel_id;
+    const log_id = req.params.log_id;
+    const inventory = req.body;
+    console.log('manualUpdateInventoryMultipleDays triggered')
+
+    const name = 'NetStockBulkAdjustmentService';
+
+    // Helper function to format date to YYYYMMDD
+    const formatYYYYMMDD = (dateString) => {
+        const date = new Date(dateString);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+            return null; // Return null for invalid dates
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    };
+
+    const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+    if (!template) {
+        return res.status(500).send({ error: 'XML template not found.' });
+    }
+    
+    // Filter out entries older than the current date and format dates for comparison
+    const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
+    
+    if (!inventory) {
+        return res.status(500).send({ error: 'Inventory data not found.' });
+    }    
+    let filteredInventory = inventory.filter((item) => {
+        const itemDateYYYYMMDD = item.saleDate;
+        // Only include items with valid dates on or after the current date
+        return itemDateYYYYMMDD !== null && itemDateYYYYMMDD >= currentDateYYYYMMDD;
+    });
+   
+    if (filteredInventory.length === 0) {
+        return res.status(200).send({ message: 'No valid inventory entries found. All dates are in the past.' });
+    }
+    
+    // Get the date range of the filtered inventory
+    const getInventoryDateRange = (inventory) => {
+        if (inventory.length === 0) return { minDate: null, maxDate: null };
+
+        const dates = inventory.map((item) => new Date(item.saleDate)).filter(date => !isNaN(date.getTime())); 
+        if (dates.length === 0) return { minDate: null, maxDate: null };
+
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+
+        return { minDate, maxDate };
+    };
+    const { minDate, maxDate } = getInventoryDateRange(filteredInventory);
+    // If minDate or maxDate is null after filtering, it means no valid dates were found.
+    if (!minDate || !maxDate) {
+        return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
+    }
+    console.log('getInventoryDateRange', minDate, maxDate);
+
+    // --- Proceed with batch ---
+
+    const processInventoryBatch = async (batch, batch_no) => {
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        await delay(1000); // 1-second pause
+
+        let adjustmentTargetXml = '';
+        batch.forEach((item) => {
+            const adjustmentDate = item.saleDate;
+            const netRmTypeGroupCode = parseInt(item.netRmTypeGroupCode);
+            const remainingCount = parseInt(item.pmsRemainingCount);
+            let salesStatus = parseInt(item.salesStatus);
+            if (salesStatus === 0) {
+                salesStatus = 3; // No change
+            } else if (salesStatus === 1) {
+                salesStatus = 1; // Start sales
+            } else {
+                salesStatus = 2; // Stop sales
+            }            
+
+            let target = `
+                <adjustmentTarget>
+                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
+                    <netRmTypeGroupCode>${netRmTypeGroupCode}</netRmTypeGroupCode>
+                    <adjustmentDate>${adjustmentDate}</adjustmentDate>
+                    <remainingCount>${remainingCount}</remainingCount>
+                    <salesStatus>${salesStatus}</salesStatus>
+                </adjustmentTarget>
+            `;
+            adjustmentTargetXml += target;
+        });
+
+        let xmlBody = template.replace(
+            `<adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <remainingCount>{{remainingCount}}</remainingCount>
+               <salesStatus>{{salesStatus}}</salesStatus>               
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <remainingCount>{{remainingCount2}}</remainingCount>
+               <salesStatus>{{salesStatus2}}</salesStatus>               
+            </adjustmentTarget>`,
+            adjustmentTargetXml
+        );
+
+        let requestId = log_id + (batch_no / 100);
+        requestId = requestId.toString();
+        if (requestId.length > 8) {
+            requestId = requestId.slice(-8); // keep the last 8 characters
+        }
+        xmlBody = xmlBody.replace('{{requestId}}', requestId);
+
+        // console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
+
+        try {
+            const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
+        } catch (error) {
+            
+        }
+        
+    };
+    
+    // Check if the date range exceeds 30 days for batching decision
+    const dateRangeExceeds30Days = (minDate, maxDate) => {
+        if (!minDate || !maxDate) return false;
+
+        const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
+        const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+        return daysDiff > 30;
+    };    
+    const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
+    
+    // Determine batch size and process inventory in batches or as a single request
+    if (filteredInventory.length > 1000 || exceeds30Days) {        
+        const batchSize = 30;
+        let requestNumber = 0;
+        for (let i = 0; i < filteredInventory.length; i += batchSize) {            
+            const batch = filteredInventory.slice(i, i + batchSize);
+            await processInventoryBatch(batch, requestNumber);
+            requestNumber++;
+        }
+    } else {
+        // Process all filtered inventory as a single batch
+        await processInventoryBatch(filteredInventory, 0);
+    }
+
+    res.status(200).send({ message: 'Inventory update processed.' });                
+
+};
+
 module.exports = {
     getXMLTemplate,
     getXMLRecentResponses,
@@ -604,4 +760,5 @@ module.exports = {
     getOTAReservations,
     successOTAReservations,
     updateInventoryMultipleDays,
+    manualUpdateInventoryMultipleDays,
 };

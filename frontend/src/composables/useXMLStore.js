@@ -331,7 +331,7 @@ export function useXMLStore() {
         
         try {
             const authToken = localStorage.getItem('authToken');  
-            await fetch(`/api/sc/tl/inventory/multiple/${hotel_id}/${logId}`, {
+            await fetch(`/api/sc/tl/inventory-manual/multiple/${hotel_id}/${logId}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
@@ -340,8 +340,8 @@ export function useXMLStore() {
                 body: JSON.stringify(inventory),
             });
             
-        } catch (siteControllerError) {
-          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
+        } catch (err) {
+          console.error(`Failed to update site controller for hotel ${hotel_id}:`, err);          
         }
     };
 
@@ -362,5 +362,6 @@ export function useXMLStore() {
         fetchTLPlanMaster,
         insertTLPlanMaster,
         fetchInventoryForTL,
+        updateTLInventory,
     };
 }

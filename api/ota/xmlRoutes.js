@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getXMLTemplate, getXMLRecentResponses, postXMLResponse, submitXMLTemplate, getTLRoomMaster, getTLPlanMaster, createTLRoomMaster, createTLPlanMaster, getOTAReservations, successOTAReservations, updateInventoryMultipleDays } = require('../ota/xmlController');
+const { getXMLTemplate, getXMLRecentResponses, postXMLResponse, submitXMLTemplate, getTLRoomMaster, getTLPlanMaster, createTLRoomMaster, createTLPlanMaster, getOTAReservations, successOTAReservations, updateInventoryMultipleDays, manualUpdateInventoryMultipleDays } = require('../ota/xmlController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 // GET
@@ -18,5 +18,6 @@ router.post('/sc/tl/master/plan', authMiddleware_manageDB, createTLPlanMaster);
 router.get('/sc/tl/reservations/fetch', getOTAReservations);
 router.get('/sc/tl/reservations/success', successOTAReservations);
 router.post('/sc/tl/inventory/multiple/:hotel_id/:log_id', updateInventoryMultipleDays);
+router.post('/sc/tl/inventory-manual/multiple/:hotel_id/:log_id', manualUpdateInventoryMultipleDays);
 
 module.exports = router;

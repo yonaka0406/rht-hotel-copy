@@ -246,18 +246,8 @@
         }
 
         console.log('Sending inventory data:', inventoryData);
-
-        return; // Temporarily disable sending data to the server
-
-        // Send the formatted data to the server
         try {
-            const response = await fetch('/api/updateInventory', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formattedInventoryData),
-            });
+            await updateTLInventory(props.hotel_id, inventoryData);
 
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -266,8 +256,8 @@
             const result = await response.json();
             toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が更新されました。' });
         } catch (error) {
-            console.error('Error updating inventory:', error);
-            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の更新に失敗しました。' });
+            console.error('Error sending inventory data:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
         }
     };
          
