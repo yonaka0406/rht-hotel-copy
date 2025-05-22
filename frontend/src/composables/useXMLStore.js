@@ -309,7 +309,7 @@ export function useXMLStore() {
 
         try {
             const authToken = localStorage.getItem('authToken');    
-            const response = await fetch(`http://localhost:5000/api/report/res/inventory/${hotel_id}/${check_in}/${check_out}`, {
+            const response = await fetch(`/api/report/res/inventory/${hotel_id}/${check_in}/${check_out}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${authToken}`, 
@@ -331,7 +331,7 @@ export function useXMLStore() {
         
         try {
             const authToken = localStorage.getItem('authToken');  
-            await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${hotel_id}/${logId}`, {
+            await fetch(`/api/sc/tl/inventory/multiple/${hotel_id}/${logId}`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
