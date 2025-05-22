@@ -207,10 +207,10 @@
         inventoryData.value = inventoryForTL.map((item) => ({
             hotel_id: props.hotel_id,
             netRmTypeGroupCode: item.netrmtypegroupcode,            
-            saleDate: formatDateToYYYYMMDD(new Date(item.date)),
-            salesCount: (item.total_rooms * 1 || 0) - (item.room_count * 1 || 0),
+            saleDate: formatDateToYYYYMMDD(new Date(item.date)),            
             totalRooms: item.total_rooms * 1 || 0,
-            remainingCount: item.room_count * 1 || 0,
+            salesCount: item.room_count * 1 || 0,
+            remainingCount: (item.total_rooms * 1 || 0) - (item.room_count * 1 || 0),
         }));
 
         console.log('inventoryData', inventoryData.value);
