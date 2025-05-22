@@ -1,16 +1,17 @@
 <template>
     <div class="p-4">
-        <Card>                            
+        <Card>
             <template #content>
                 <div class="mb-4">
                     <form @submit.prevent="fetchTemplate">
                         <div class="grid grid-cols-12 gap-2">
-                            <div class="col-span-12 md:col-span-4 mt-6">                            
-                                <FloatLabel>                            
+                            <div class="col-span-12 md:col-span-4 mt-6">
+                                <FloatLabel>
                                     <DatePicker v-model="searchDurationFrom" 
                                         dateFormat="yy-mm-dd"
                                         :selectOtherMonths="true"
                                         :showButtonBar="true"
+                                        :minDate="today"                                        
                                         fluid
                                     />
                                     <label>抽出日付開始</label>
@@ -22,12 +23,13 @@
                                         dateFormat="yy-mm-dd"
                                         :selectOtherMonths="true"
                                         :showButtonBar="true"
+                                        :minDate="today"
                                         fluid
                                     />
                                     <label>抽出日付終了</label>     
                                 </FloatLabel>
                             </div>
-                            <div class="col-span-12 md:col-span-4 mt-6">                            
+                            <div class="col-span-12 md:col-span-4 mt-6">
                                 <Button label="情報を取得" type="submit" />
                             </div>
                         </div>
@@ -36,10 +38,11 @@
                 <div>
                     <DataTable :value="mergedDisplayData"
                         responsiveLayout="scroll"
+                        removableSort
                     >
-                        <Column field="netRmTypeGroupCode" header="ネット室タイプグループコード"></Column>
-                        <Column field="netRmTypeGroupName" header="ネット室タイプグループ名"></Column>
-                        <Column field="saleDate" header="日付"></Column>
+                        <Column field="netRmTypeGroupCode" header="ネット室タイプグループコード" :sortable="true"></Column>
+                        <Column field="netRmTypeGroupName" header="ネット室タイプグループ名" :sortable="true"></Column>
+                        <Column field="saleDate" header="日付" :sortable="true"></Column>
                         <Column field="salesCount" header="販売数"></Column>
                         <Column field="remainingCount" header="残室数"></Column>
                         <Column field="pmsRemainingCount" header="PMS残数"></Column>
@@ -66,7 +69,7 @@
                                     </template>
                                 </Select>
                             </template>
-                        </Column>                    
+                        </Column>
                     </DataTable>
                 </div>
                 
@@ -81,9 +84,9 @@
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';
+    import { ref, computed, watch, onMounted } from 'vue';
 
-    const props = defineProps({        
+    const props = defineProps({
         hotel_id: {
             type: [Number],
             required: true,
@@ -140,6 +143,7 @@
             default: return '';
         }
     };
+    const today = ref(new Date());
 
     // Computed property to merge importData and inventoryData
     const mergedDisplayData = computed(() => {
@@ -218,7 +222,7 @@
     const parseXmlResponse = (data) => {
         const returnData = data['S:Envelope']['S:Body']['ns2:executeResponse']['return'];
 
-        const netRmTypeGroupAndDailyStockStatusList = returnData.netRmTypeGroupAndDailyStockStatusList;        
+        const netRmTypeGroupAndDailyStockStatusList = returnData.netRmTypeGroupAndDailyStockStatusList;
                 
         const inventory = [];
         
@@ -251,7 +255,7 @@
             if (!response.success) {
                 toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
             } else {
-                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。' });                
+                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。' });
             }
         } catch (error) {
             console.error('Error sending inventory data:', error);
@@ -262,6 +266,38 @@
 
     onMounted(async () => {       
         
+    });
+
+    // Watch for changes in searchDurationFrom
+    watch(searchDurationFrom, (newFromDate) => {
+        if (newFromDate && searchDurationTo.value && newFromDate > searchDurationTo.value) {            
+            searchDurationTo.value = searchDurationFrom.value;
+            toast.add({ severity: 'info', summary: '日付調整', detail: '終了日を開始日に調整しました。', life: 3000 });
+        }
+        // Also ensure 'from' date is not before today
+        if (newFromDate < today.value && newFromDate.toDateString() !== today.value.toDateString()) {
+             searchDurationFrom.value = new Date(today.value);
+             toast.add({ severity: 'warn', summary: '日付調整', detail: '開始日は本日以降である必要があります。', life: 3000 });
+        }
+    });
+
+    // Watch for changes in searchDurationTo
+    watch(searchDurationTo, (newToDate) => {
+        if (newToDate && searchDurationFrom.value && newToDate < searchDurationFrom.value) {            
+            searchDurationTo.value = searchDurationFrom.value;
+            toast.add({ severity: 'info', summary: '日付調整', detail: '終了日を開始日に調整しました。', life: 3000 });
+        }
+         // Also ensure 'to' date is not before today
+        if (newToDate < today.value && newToDate.toDateString() !== today.value.toDateString()) {
+             searchDurationTo.value = new Date(today.value);
+             // If 'to' is reset to today, and 'from' is also today, adjust 'to' to be tomorrow
+             if (searchDurationFrom.value.toDateString() === today.value.toDateString()) {
+                const tomorrow = new Date(today.value);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                searchDurationTo.value = tomorrow;
+             }
+             toast.add({ severity: 'warn', summary: '日付調整', detail: '終了日は本日以降である必要があります。', life: 3000 });
+        }
     });
 
 </script>
@@ -275,7 +311,7 @@
 
     .status-not-set {
         color: #6c757d; /* Bootstrap gray */
-        background-color: #f8f9fa; /* Light gray background */        
+        background-color: #f8f9fa; /* Light gray background */
         opacity: 0.9; /* Slightly transparent */   
     }
 
@@ -287,14 +323,14 @@
 
     .status-stopped {
         color: #dc3545; /* Bootstrap danger red */
-        background-color: #f8d7da; /* Light red background */        
+        background-color: #f8d7da; /* Light red background */
         opacity: 0.9; /* Slightly transparent */   
     }
 
     .status-temp-stopped {
         color: #ffc107; /* Bootstrap warning yellow */
-        background-color: #fff3cd; /* Light yellow background */                
-        opacity: 0.9; /* Slightly transparent */   
+        background-color: #fff3cd; /* Light yellow background */
+        opacity: 0.9; /* Slightly transparent */
     }
 </style>
 
