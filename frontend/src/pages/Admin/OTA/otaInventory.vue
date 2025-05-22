@@ -247,14 +247,12 @@
 
         console.log('Sending inventory data:', inventoryData);
         try {
-            await updateTLInventory(props.hotel_id, inventoryData);
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+            const response = await updateTLInventory(props.hotel_id, inventoryData);
+            if (!response.success) {
+                toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });
+            } else {
+                toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が正常に送信されました。' });                
             }
-
-            const result = await response.json();
-            toast.add({ severity: 'success', summary: '成功', detail: '在庫情報が更新されました。' });
         } catch (error) {
             console.error('Error sending inventory data:', error);
             toast.add({ severity: 'error', summary: 'エラー', detail: '在庫情報の送信に失敗しました。' });

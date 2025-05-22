@@ -756,7 +756,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         await processInventoryBatch(filteredInventory, 0);
     }
 
-    res.status(200).send({ message: 'Inventory update processed.' });                
+    res.status(200).send({ success: true, message: 'Inventory update processed.' });
 
 };
 
