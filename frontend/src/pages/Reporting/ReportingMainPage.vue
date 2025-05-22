@@ -20,8 +20,18 @@
                 :revenueData="revenueData"
                 :occupancyData="occupancyData"                
             />
+            <ReportingSingleMonthHotel
+                v-else-if="selectedView === 'singleMonthHotel'"
+                :revenueData="revenueData"
+                :occupancyData="occupancyData"                
+            />
             <ReportingYearCumulativeAllHotels
                 v-else-if="selectedView === 'yearCumulativeAllHotels'"
+                :revenueData="revenueData"
+                :occupancyData="occupancyData"                
+            />
+            <ReportingYearCumulativeHotel
+                v-else-if="selectedView === 'yearCumulativeHotel'"
                 :revenueData="revenueData"
                 :occupancyData="occupancyData"                
             />
@@ -41,7 +51,9 @@
 
     import ReportingTopMenu from './components/ReportingTopMenu.vue';
     import ReportingSingleMonthAllHotels from './components/ReportingSingleMonthAllHotels.vue';
-    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';    
+    import ReportingYearCumulativeAllHotels from './components/ReportingYearCumulativeAllHotels.vue';
+    import ReportingSingleMonthHotel from './components/ReportingSingleMonthHotel.vue';
+    import ReportingYearCumulativeHotel from './components/ReportingYearCumulativeHotel.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
@@ -275,6 +287,9 @@
             return String(idA).localeCompare(String(idB));
         });
 
+        if (selectedView.value?.endsWith('Hotel')) {
+            return result.filter(item => item.hotel_id !== 0);
+        }
         return result;
     });
     const occupancyData = computed(() => {
@@ -509,6 +524,10 @@
             return String(idA).localeCompare(String(idB));
         });
         // console.log('RMP occupancyData: Final calculated data:', JSON.parse(JSON.stringify(result)));
+ 
+        if (selectedView.value?.endsWith('Hotel')) {
+            return result.filter(item => item.hotel_id !== 0);
+        }
         return result;
     });
 

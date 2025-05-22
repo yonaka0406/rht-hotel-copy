@@ -7,6 +7,37 @@
         <div v-if="selectedView === 'graph'">
             <Card class="mb-4">
                 <template #header>
+                    <span class="text-xl font-bold">主要KPI（全施設合計）</span>
+                </template>
+                <template #content>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
+                        </div>
+                    </div>
+                </template>
+                <template #footer>
+                    <div class="flex justify-content-between">
+                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}</small>
+                    </div>
+                </template>
+            </Card>
+
+            <Card class="mb-4">
+                <template #header>
                     <span class="text-xl font-bold">収益（計画ｘ実績）</span>
                 </template>
                 <template #content>
@@ -17,6 +48,9 @@
                         <div class="w-full md:w-1/2">
                             <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
                         </div>
+                        <div class="w-full md:w-1/2">
+                            <div ref="revenueDistributionChartContainer" style="height: 450px; width: 100%;"></div>
+                        </div>                        
                     </div>
                 </template> 
                 <template #footer>
@@ -53,6 +87,36 @@
         </div>
 
         <div v-if="selectedView === 'table'">
+            <Card class="mb-4">
+                <template #header>
+                    <span class="text-xl font-bold">主要KPI（全施設合計）</span>
+                </template>
+                <template #content>
+                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">実績 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualADR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">計画 ADR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastADR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">実績 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(actualRevPAR) }}</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded-lg shadow">
+                            <h6 class="text-sm font-medium text-gray-500">計画 RevPAR</h6>
+                            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(forecastRevPAR) }}</p>
+                        </div>
+                    </div>
+                </template>
+                <template #footer>
+                    <div class="flex justify-content-between">
+                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。選択中の施設： {{ allHotelNames }}</small>
+                    </div>
+                </template>
+            </Card>
             <Card class="mb-4">
                 <template #header>
                     <span class="text-xl font-bold">収益（計画ｘ実績）</span>
@@ -147,10 +211,9 @@
                             <Column field="occ" header="実績稼働率" sortable style="min-width: 100px; width: 10%">
                                 <template #body="{data}">{{ formatPercentage(data.occ / 100) }}</template>
                             </Column>
-                            <Column header="稼働率差異 (pp)" sortable style="min-width: 120px; width: 10%">
+                            <Column header="稼働率差異 (p.p.)" sortable style="min-width: 120px; width: 10%">
                                  <template #body="{ data }">
-                                    <div class="flex justify-end items-center mr-2">
-                                        <span>{{ ((data.occ || 0) - (data.fc_occ || 0)).toFixed(2) }} pp</span>
+                                    <div class="flex justify-center items-center mr-2">                                        
                                          <Badge class="ml-2" :severity="getSeverity((data.occ || 0) - (data.fc_occ || 0))" size="small">
                                             {{ ((data.occ || 0) - (data.fc_occ || 0)) >= 0 ? '+' : '' }}{{ ((data.occ || 0) - (data.fc_occ || 0)).toFixed(2) }}
                                         </Badge>
@@ -194,9 +257,9 @@
     // Primevue
     import { Card, Badge, SelectButton, Button, DataTable, Column } from 'primevue';
 
-    // Helper
+    // Helper    
     const formatCurrency = (value) => {
-        if (value === null || value === undefined) return '-';
+        if (value === null || value === undefined || Number.isNaN(value)) return '- 円'; // Handle NaN
         return parseFloat(value).toLocaleString('ja-JP') + ' 円';
     };
     const formatPercentage = (value) => {
@@ -251,6 +314,49 @@
         return maxDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit' });
     });
 
+    // --- KPI Calculations (ADR, RevPAR) ---
+    const aggregateHotelZeroData = computed(() => {
+        // Find the entries for hotel_id === 0. It's assumed there's one such entry per relevant data array,
+        // representing the totals for the selected period.
+        const revenueEntry = props.revenueData?.find(item => item.hotel_id === 0);
+        const occupancyEntry = props.occupancyData?.find(item => item.hotel_id === 0);
+
+        return {
+            total_forecast_revenue: revenueEntry?.forecast_revenue || 0,
+            total_period_revenue: revenueEntry?.period_revenue || 0,
+            total_fc_sold_rooms: occupancyEntry?.fc_sold_rooms || 0,
+            total_sold_rooms: occupancyEntry?.sold_rooms || 0,
+            // fc_total_rooms from occupancy data is total_available_rooms for forecast period
+            total_fc_available_rooms: occupancyEntry?.fc_total_rooms || 0, 
+            // total_rooms from occupancy data is total_available_rooms for actual period
+            total_available_rooms: occupancyEntry?.total_rooms || 0,    
+        };
+    });
+
+    const actualADR = computed(() => {
+        const { total_period_revenue, total_sold_rooms } = aggregateHotelZeroData.value;
+        if (total_sold_rooms === 0 || total_sold_rooms === null || total_sold_rooms === undefined) return NaN;
+        return Math.round(total_period_revenue / total_sold_rooms);
+    });
+
+    const forecastADR = computed(() => {
+        const { total_forecast_revenue, total_fc_sold_rooms } = aggregateHotelZeroData.value;
+        if (total_fc_sold_rooms === 0 || total_fc_sold_rooms === null || total_fc_sold_rooms === undefined) return NaN;
+        return Math.round(total_forecast_revenue / total_fc_sold_rooms);
+    });
+
+    const actualRevPAR = computed(() => {
+        const { total_period_revenue, total_available_rooms } = aggregateHotelZeroData.value;
+        if (total_available_rooms === 0 || total_available_rooms === null || total_available_rooms === undefined) return NaN;
+        return Math.round(total_period_revenue / total_available_rooms);
+    });
+
+    const forecastRevPAR = computed(() => {
+        const { total_forecast_revenue, total_fc_available_rooms } = aggregateHotelZeroData.value;
+        if (total_fc_available_rooms === 0 || total_fc_available_rooms === null || total_fc_available_rooms === undefined) return NaN;
+        return Math.round(total_forecast_revenue / total_fc_available_rooms);
+    });
+
 
     // Color scheme    
     const colorScheme = {
@@ -291,7 +397,7 @@
         DatasetComponent,
         TransformComponent,
     } from 'echarts/components';    
-    import { BarChart, LineChart } from 'echarts/charts';    
+    import { BarChart, LineChart, PieChart } from 'echarts/charts';    
     import { CanvasRenderer } from 'echarts/renderers';
 
     // Register ECharts components
@@ -304,6 +410,7 @@
         TransformComponent,
         BarChart,
         LineChart,
+        PieChart,
         CanvasRenderer
     ]);    
     const resizeChartHandler = () => {
@@ -311,6 +418,7 @@
             totalChartInstance.value?.resize();
             allHotelsRevenueChartInstance.value?.resize();
             allHotelsOccupancyChartInstance.value?.resize();
+            revenueDistributionChartInstance.value?.resize();
         }
     };
 
@@ -318,10 +426,12 @@
     const totalChartContainer = ref(null);
     const allHotelsRevenueChartContainer = ref(null);
     const allHotelsOccupancyChartContainer = ref(null);
+    const revenueDistributionChartContainer = ref(null);
     
     const totalChartInstance = shallowRef(null);
     const allHotelsRevenueChartInstance = shallowRef(null);
     const allHotelsOccupancyChartInstance = shallowRef(null);
+    const revenueDistributionChartInstance = shallowRef(null);
 
     // --- Data Computeds for Charts ---
     const filteredRevenueForChart = computed(() => {
@@ -393,6 +503,50 @@
         });
     });
     const hasAllHotelsOccupancyData = computed(() => allHotelsOccupancyChartData.value.length > 0);
+
+    const revenueDistributionChartData = computed(() => {
+        if (!props.revenueData || props.revenueData.length === 0) {
+            return { actualSeriesData: [], forecastSeriesData: [], legendData: [] };
+        }
+
+        const hotelDataMap = new Map();
+        props.revenueData.forEach(item => {
+            // Filter for individual hotels (hotel_id !== 0) and ensure hotel_name is present
+            if (item.hotel_id !== 0 && item.hotel_name && item.hotel_name !== '施設合計') { 
+                const current = hotelDataMap.get(item.hotel_name) || { 
+                    forecast_revenue: 0, 
+                    period_revenue: 0, 
+                    name: item.hotel_name 
+                };
+                current.forecast_revenue += (item.forecast_revenue || 0);
+                current.period_revenue += (item.period_revenue || 0);
+                hotelDataMap.set(item.hotel_name, current);
+            }
+        });
+
+        const hotels = Array.from(hotelDataMap.values());
+        if (hotels.length === 0) {
+            return { actualSeriesData: [], forecastSeriesData: [], legendData: [] };
+        }
+        
+        const actualSeriesData = hotels.map(hotel => ({
+            name: hotel.name,
+            value: hotel.period_revenue || 0 // Ensure value is a number
+        }));
+
+        const forecastSeriesData = hotels.map(hotel => ({
+            name: hotel.name,
+            value: hotel.forecast_revenue || 0 // Ensure value is a number
+        }));
+
+        const legendData = hotels.map(hotel => hotel.name);
+
+        return {
+            actualSeriesData,
+            forecastSeriesData,
+            legendData
+        };
+    });
 
     // --- ECharts Options ---    
     const totalChartOptions = computed(() => {
@@ -522,6 +676,97 @@
             ]
         };
     });
+    const revenueDistributionChartOptions = computed(() => {
+        const { actualSeriesData, forecastSeriesData, legendData } = revenueDistributionChartData.value;
+
+        const hasActualData = actualSeriesData && actualSeriesData.length > 0 && actualSeriesData.some(d => d.value > 0);
+        const hasForecastData = forecastSeriesData && forecastSeriesData.length > 0 && forecastSeriesData.some(d => d.value > 0);
+
+        if (!hasActualData && !hasForecastData) {
+            return {
+                title: {
+                    text: 'データはありません。',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: { color: '#888', fontSize: 16 }
+                },
+                series: [] // ECharts expects series to be an array
+            };
+        }
+
+        const series = [];
+        if (hasActualData) {
+            series.push({
+                name: '実績収益', // Actual Revenue
+                type: 'pie',
+                radius: [0, '35%'], // Inner pie
+                center: ['50%', '55%'], // Center allowing space for legend at bottom
+                label: {
+                    position: 'inner',
+                    fontSize: 11,
+                    color: '#ffffff',
+                    formatter: (params) => {
+                        if (!params.name || params.value === 0 || params.percent < 5) return ''; // Hide label if value is 0 or too small
+                        const nameLabel = params.name.length > 6 ? params.name.substring(0, 4) + '...' : params.name;
+                        return `${nameLabel}\n${params.percent}%`;
+                    },
+                    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+                    textShadowBlur: 2
+                },
+                labelLine: { show: false },
+                data: actualSeriesData,
+                itemStyle: { borderColor: '#fff', borderWidth: 1 },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+            });
+        }
+
+        if (hasForecastData) {
+            series.push({
+                name: '計画収益', // Forecast Revenue
+                type: 'pie',
+                radius: ['50%', '70%'], // Outer ring
+                center: ['50%', '55%'],
+                label: {
+                    show: true,
+                    formatter: (params) => {
+                        if (!params.name || params.value === 0 || params.percent < 3) return ''; // Hide label if value is 0 or too small for outer
+                         // Keep labels concise for the chart, details in tooltip
+                        const nameLabel = params.name.length > 8 ? params.name.substring(0, 6) + '...' : params.name;
+                        return `${nameLabel}: ${params.percent}%`;
+                    },
+                    alignTo: 'labelLine', // Align text to label line
+                    minTurnAngle: 45, // Helps avoid label overlap
+                },
+                labelLine: { 
+                    show: true,
+                    smooth: 0.2,
+                    length: 8,
+                    length2: 12
+                },
+                data: forecastSeriesData,
+                itemStyle: { borderColor: '#fff', borderWidth: 1 },
+                emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' } }
+            });
+        }
+
+        return {
+            tooltip: {
+                trigger: 'item',
+                formatter: (params) => {
+                    if (params.value === undefined || params.value === null) return `${params.seriesName}<br/>${params.name}: データなし`;
+                    return `${params.seriesName}<br/>${params.name}: ${formatCurrency(params.value)} (${params.percent}%)`;
+                }
+            },
+            legend: {
+                data: legendData,
+                bottom: 10,
+                type: 'scroll', // Handles many legend items
+                itemGap: 10,
+                textStyle: { fontSize: 11 }
+            },
+            series: series
+        };
+    });
 
     // Initialize charts
     const initOrUpdateChart = (instanceRef, containerRef, options) => {
@@ -555,11 +800,21 @@
         } else {
             allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
         }
+
+        const rdData = revenueDistributionChartData.value;
+        if ((rdData.actualSeriesData && rdData.actualSeriesData.length > 0 && rdData.actualSeriesData.some(d=>d.value > 0)) || 
+            (rdData.forecastSeriesData && rdData.forecastSeriesData.length > 0 && rdData.forecastSeriesData.some(d=>d.value > 0))) { 
+            initOrUpdateChart(revenueDistributionChartInstance, revenueDistributionChartContainer, revenueDistributionChartOptions.value);
+        } else {            
+            initOrUpdateChart(revenueDistributionChartInstance, revenueDistributionChartContainer, revenueDistributionChartOptions.value);            
+        }
+        
     };
     const disposeAllCharts = () => {        
         totalChartInstance.value?.dispose(); totalChartInstance.value = null;
         allHotelsRevenueChartInstance.value?.dispose(); allHotelsRevenueChartInstance.value = null;
         allHotelsOccupancyChartInstance.value?.dispose(); allHotelsOccupancyChartInstance.value = null;
+        revenueDistributionChartInstance.value?.dispose(); revenueDistributionChartInstance.value = null;
     };
 
     // Table
@@ -603,7 +858,7 @@
             const headers = [
                 "施設", "月度", 
                 "計画販売室数", "実績販売室数", "販売室数差異",
-                "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (pp)",
+                "計画稼働率 (%)", "実績稼働率 (%)", "稼働率差異 (p.p.)",
                 "計画総室数", "実績総室数"
             ];
             const csvRows = [headers.join(',')];
