@@ -305,6 +305,45 @@ export function useXMLStore() {
             throw error; // Re-throw the error for handling in the component
         }
     };
+    const fetchInventoryForTL = async (hotel_id, check_in, check_out) => {
+
+        try {
+            const authToken = localStorage.getItem('authToken');    
+            const response = await fetch(`http://localhost:5000/api/report/res/inventory/${hotel_id}/${check_in}/${check_out}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`, 
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const data = await response.json();
+            
+            return data;
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        }        
+    };
+    const updateTLInventory = async (hotel_id, inventory) => {
+        
+        const logId = Math.floor(Math.random() * 1e8);
+        
+        try {
+            const authToken = localStorage.getItem('authToken');  
+            await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${hotel_id}/${logId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(inventory),
+            });
+            
+        } catch (siteControllerError) {
+          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
+        }
+    };
 
     return {        
         template,
@@ -322,5 +361,6 @@ export function useXMLStore() {
         insertTLRoomMaster,
         fetchTLPlanMaster,
         insertTLPlanMaster,
+        fetchInventoryForTL,
     };
 }

@@ -64,8 +64,10 @@
     const roomMaster = ref(null);
     const roomTypes = ref(null);
     const saveRoomMaster = async (data) => {
-        // Filter out items with null netRmTypeGroupCode
-        const filteredData = data.filter(item => item.netrmtypegroupcode != null);
+        // Filter out items with null netRmTypeGroupCode        
+        const filteredData = data.filter(
+          item => item.netrmtypegroupcode != null && item.room_type_id != null
+        );
 
         console.log('saveRoomMaster', filteredData);
 
@@ -90,11 +92,13 @@
                 }
             } else {
                 groupToRoomMap.set(groupCode, roomTypeId);
+                console.log('groupToRoomMap', groupCode, roomTypeId);
             }
 
             // Check: room_type_id must only map to ONE netrmtypegroupcode
             if (roomToGroupMap.has(roomTypeId)) {
                 const existingGroupCode = roomToGroupMap.get(roomTypeId);
+                console.log('existingGroupCode for',roomTypeId,  existingGroupCode, groupCode);
                 if (existingGroupCode !== groupCode) {
                     toast.add({
                         severity: 'error',
@@ -106,6 +110,7 @@
                 }
             } else {
                 roomToGroupMap.set(roomTypeId, groupCode);
+                console.log('roomToGroupMap', roomTypeId, groupCode);
             }
         }
        

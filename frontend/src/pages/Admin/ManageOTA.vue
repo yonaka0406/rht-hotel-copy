@@ -26,6 +26,7 @@
             <div v-if="hasSiteController" class="grid grid-cols-4 gap-4 mt-4">
               <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaRoomMaster', 'ネット室マスター')">ネット室マスター</Button>
               <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaPlanMaster', 'プランマスター')">プランマスター</Button>
+              <Button severity="secondary" raised rounded @click="openSiteControllerDetail('otaInventory', '在庫調整')">在庫調整</Button>
             </div>
           </AccordionContent>
         </AccordionPanel>
