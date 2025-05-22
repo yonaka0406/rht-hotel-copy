@@ -8,7 +8,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 
     -- 0. Dates that actually appear in reservation_details
     dates AS (
-      SELECT DISTINCT date
+      SELECT DISTINCT hotel_id, date
       FROM reservation_details
       WHERE hotel_id = $1
         AND date BETWEEN $2 AND $3
@@ -46,7 +46,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
     -- 3. Rooms left per date (only reservation dates)
     room_total AS (
       SELECT 
-        8 AS hotel_id,
+        d.hotel_id,
         d.date,
         ri.total_rooms,
         ri.total_rooms - COALESCE(br.blocked_count, 0) AS total_rooms_real
