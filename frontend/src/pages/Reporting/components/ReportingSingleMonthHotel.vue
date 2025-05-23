@@ -38,7 +38,7 @@
 
             <Card class="mb-4">
                 <template #header>
-                    <span class="text-xl font-bold">収益（計画ｘ実績）- {{ currentHotelName }}</span>
+                    <span class="text-xl font-bold">収益・稼働率 （計画ｘ実績）- {{ currentHotelName }}</span>
                 </template>
                 <template #content>
                     <div v-if="!hasRevenueDataForChart" class="text-center p-4">
@@ -49,13 +49,13 @@
                             <div ref="totalChartContainer" style="height: 450px; width: 100%;"></div>
                         </div>
                         <div class="w-full md:w-1/2">
-                            <div ref="revenueDistributionChartContainer" style="height: 450px; width: 100%;"></div>
-                        </div> 
+                            <div ref="totalOccupancyChartContainer" style="height: 450px; width: 100%;"></div>
+                        </div>                        
                     </div>
                 </template> 
                 <template #footer>
                     <div class="flex justify-content-between">
-                        <small>会計データがない場合はPMSの数値になっています。</small>
+                        <small>会計データがない場合はPMSの数値になっています。期間： {{ periodMaxDate }}。</small>
                     </div>
                 </template>
             </Card>
@@ -380,10 +380,9 @@
         GridComponent,
         LegendComponent,
         DatasetComponent,
-        TransformComponent,
-        // PolarComponent, // REMOVED PolarComponent
+        TransformComponent,        
     } from 'echarts/components';    
-    import { BarChart, LineChart } from 'echarts/charts';    
+    import { BarChart, LineChart, GaugeChart } from 'echarts/charts';    
     import { CanvasRenderer } from 'echarts/renderers';
 
     // Register ECharts components
@@ -393,22 +392,25 @@
         GridComponent,
         LegendComponent,
         DatasetComponent,
-        TransformComponent,
-        // PolarComponent, // REMOVED PolarComponent
+        TransformComponent,        
         BarChart,
         LineChart,
+        GaugeChart,
         CanvasRenderer
     ]);    
     const resizeChartHandler = () => {
         if (selectedView.value === 'graph') {            
-            totalChartInstance.value?.resize();                        
+            totalChartInstance.value?.resize();
+            totalOccupancyChartInstance.value?.resize();
         }
     };
 
     // --- Chart Refs and Instances ---    
     const totalChartContainer = ref(null);
+    const totalOccupancyChartContainer = ref(null);
     
     const totalChartInstance = shallowRef(null);
+    const totalOccupancyChartInstance = shallowRef(null);
 
     // --- Data Computeds for Charts ---
     // Provides the data for the main revenue chart (now for the single hotel)
@@ -536,6 +538,88 @@
             ]
         };
     });
+
+    const totalOccupancyChartOptions = computed(() => {        
+        if (!props.occupancyData ) return {};
+
+        const actualSold = props.occupancyData[0].sold_rooms;
+        const actualAvailable = props.occupancyData[0].total_rooms;
+        const forecastSold = props.occupancyData[0].fc_sold_rooms;
+        const forecastAvailable = props.occupancyData[0].fc_total_rooms;
+        
+        const totalActualOccupancy = actualAvailable > 0 ? actualSold / actualAvailable : 0;
+        const totalForecastOccupancy = forecastAvailable > 0 ? forecastSold / forecastAvailable : 0;
+        
+        return {
+            tooltip: {
+                formatter: (params) => {
+                    if (params.seriesName === '実績稼働率') {
+                        return `実績稼働率: ${formatPercentage(params.value)}<br/>計画稼働率: ${formatPercentage(totalForecastOccupancy)}`;
+                    }
+                    return '';
+                }
+            },
+            series: [{
+                type: 'gauge',
+                radius: '90%',
+                center: ['50%', '55%'], 
+                startAngle: 180, 
+                endAngle: 0,     
+                min: 0,
+                max: 1, 
+                splitNumber: 4, 
+                axisLine: {
+                    lineStyle: {
+                        width: 22, 
+                        color: [ 
+                            [1, '#E0E0E0'] 
+                        ]
+                    }
+                },
+                progress: { 
+                    show: true,
+                    width: 22, 
+                    itemStyle: { 
+                        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                            { offset: 0, color: colorScheme.actual_gradient_bottom }, 
+                            { offset: 1, color: colorScheme.actual_gradient_top }    
+                        ])
+                    }
+                },
+                pointer: { show: false }, 
+                axisTick: { show: false },
+                splitLine: { show: false },
+                axisLabel: { 
+                    show: true,
+                    distance: 5, 
+                    formatter: function (value) { return (value * 100).toFixed(0) + '%'; },
+                    fontSize: 10,
+                    color: '#555'
+                },
+                title: { 
+                    offsetCenter: [0, '25%'], 
+                    fontSize: 14,
+                    color: '#333',
+                    fontWeight: 'normal'
+                },
+                detail: { 
+                    width: '70%',
+                    lineHeight: 22,
+                    offsetCenter: [0, '-10%'], 
+                    valueAnimation: true,
+                    formatter: function (value) {
+                        let forecastText = `計画: ${formatPercentage(totalForecastOccupancy)}`;
+                        return `{actual|${formatPercentage(value)}}\n{forecast|${forecastText}}`;
+                    },
+                    rich: {
+                        actual: { fontSize: 24, fontWeight: 'bold', color: colorScheme.actual },
+                        forecast: { fontSize: 13, color: colorScheme.forecast, paddingTop: 8 }
+                    }
+                },
+                data: [{ value: totalActualOccupancy, name: '実績稼働率' }]
+            }]
+        };
+    });
     
     // Initialize charts
     const initOrUpdateChart = (instanceRef, containerRef, options) => {
@@ -555,10 +639,18 @@
             initOrUpdateChart(totalChartInstance, totalChartContainer, totalChartOptions.value);
         } else {            
             totalChartInstance.value?.dispose(); totalChartInstance.value = null;
-        }        
+        }  
+        
+        // Occupancy Charts
+        if (props.occupancyData) {            
+            // Total Occupancy Gauge Chart (now in the combined card with revenue)
+            initOrUpdateChart(totalOccupancyChartInstance, totalOccupancyChartContainer, totalOccupancyChartOptions.value);
+        } else {            
+            totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
+        }
     };
     const disposeAllCharts = () => {        
-        totalChartInstance.value?.dispose(); totalChartInstance.value = null;        
+        totalChartInstance.value?.dispose(); totalChartInstance.value = null;totalOccupancyChartInstance.value?.dispose(); totalOccupancyChartInstance.value = null;
     };
 
     // Table
