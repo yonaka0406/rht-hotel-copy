@@ -442,39 +442,109 @@
 
     const totalChartOptions = computed(() => {
         const aggData = aggregatedCurrentHotelRevenue.value;
-        if (!aggData) return {};
+        if (!aggData) return {};        
 
         const totalForecastRevenue = aggData.total_forecast_revenue;
         const totalPeriodRevenue = aggData.total_period_revenue;
-        const totalVarianceRatio = calculateVariancePercentage(totalPeriodRevenue, totalForecastRevenue);
-        const totalVariancePercent = totalVarianceRatio === Infinity || totalVarianceRatio === -Infinity ? 0 : parseFloat(totalVarianceRatio * 100);
+        const varianceAmount = totalPeriodRevenue - totalForecastRevenue;
+    
+        let displayVariancePercent;
+        if (totalForecastRevenue === 0 || totalForecastRevenue === null) {
+            displayVariancePercent = (totalPeriodRevenue === 0 || totalPeriodRevenue === null) ? "0.00%" : "N/A";
+        } else {
+        const percent = (varianceAmount / totalForecastRevenue) * 100;
+            displayVariancePercent = `${percent.toFixed(2)}%`;
+        }
 
+        const variancePositiveColor = '#4CAF50'; // Green for positive variance
+        const varianceNegativeColor = '#F44336'; // Red for negative variance
 
         return {
-            tooltip: { 
-                trigger: 'item', 
+            tooltip: {
+                trigger: 'axis',
                 axisPointer: { type: 'shadow' },
                 formatter: (params) => {
-                     if (params.seriesName === '分散 (%)') {
-                        return `${currentHotelName.value} - ${params.seriesName}: ${params.value.toFixed(2)}%`;
-                    }
-                    return `${currentHotelName.value} - ${params.seriesName}: ${formatYenInTenThousands(params.value)}`;
+                const valueParam = params.find(p => p.seriesName === '売上');
+                if (!valueParam || valueParam.value === undefined) { // Check for undefined value from placeholder
+                                // Try to get data from the placeholder if main series has no value (e.g. for base of variance)
+                                const placeholderParam = params.find(p => p.seriesName === 'PlaceholderBase');
+                                if(placeholderParam && valueParam && valueParam.name === '分散'){
+                                        // Special handling for variance tooltip if actual value is on placeholder
+                                } else if (!valueParam) {
+                                    return '';
+                                }
+                                }
+
+                let tooltipText = `${valueParam.name}<br/>`; // X-axis category
+                
+                if (valueParam.name === '分散') {
+                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(varianceAmount)}<br/>`; // Use varianceAmount directly
+                    tooltipText += `率: ${displayVariancePercent}`;
+                } else {
+                                // For '計画売上' and '実績売上', valueParam.value is correct
+                    tooltipText += `${valueParam.marker || ''} 金額: ${formatYenInTenThousands(valueParam.value)}`;
                 }
-            },
-            legend: { data: ['計画売上合計', '実績売上合計', '分散 (%)'], top: 'bottom' },
+                return tooltipText;
+                }
+            },        
             grid: { left: '3%', right: '10%', bottom: '10%', containLabel: true },
-            xAxis: [{ type: 'category', data: ['期間合計'] }], 
-            yAxis: [
-                { type: 'value', axisLabel: { show: false, formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, splitLine: { show: false } },
-                { type: 'value', axisLabel: { show: false }, splitLine: { show: false } }
-            ],
+            xAxis: [{
+                type: 'category',
+                data: ['計画売上', '分散', '実績売上'],
+                        splitLine: { show: false },
+                axisLabel: { interval: 0 }
+            }],
+            yAxis: [{
+                type: 'value',
+                name: '金額 (万円)',
+                axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` },
+                splitLine: { show: true } 
+            }],
             series: [
-                { name: '計画売上合計', type: 'bar', data: [totalForecastRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousandsNoDecimal(params.value)}, itemStyle: { color: colorScheme.forecast } },
-                { name: '実績売上合計', type: 'bar', data: [totalPeriodRevenue], barWidth: '30%', label: { show: true, position: 'top', formatter: (params) => formatYenInTenThousandsNoDecimal(params.value)}, itemStyle: { color: colorScheme.actual } },
-                { 
-                    name: '分散 (%)', type: 'bar', yAxisIndex: 1, data: [totalVariancePercent], barWidth: '15%', 
-                    itemStyle: { opacity: 0.8, color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset:0, color:colorScheme.variance_gradient_bottom}, {offset:0.5, color:colorScheme.variance_gradient_middle}, {offset:1, color:colorScheme.variance_gradient_top}])},
-                    label: { show: true, position: 'top', formatter: (params) => `${params.value.toFixed(2)}%` }                
+                { // Invisible base for stacking
+                    name: 'PlaceholderBase', 
+                    type: 'bar',
+                    stack: 'total',
+                                barWidth: '60%', // Adjust bar width as needed
+                    itemStyle: { borderColor: 'transparent', color: 'transparent' },
+                    emphasis: { itemStyle: { borderColor: 'transparent', color: 'transparent' }},
+                    data: [
+                        0, // Base for '計画売上' is 0
+                        varianceAmount >= 0 ? totalForecastRevenue : totalPeriodRevenue, // Base for '分散'
+                        0  // Base for '実績売上' is 0
+                    ]
+                },
+                { // Visible bars
+                    name: '売上', 
+                    type: 'bar',
+                    stack: 'total',
+                                barWidth: '60%',
+                    label: {
+                        show: true,
+                        formatter: (params) => {
+                        if (params.name === '分散') {
+                            return displayVariancePercent;
+                        }
+                        return formatYenInTenThousandsNoDecimal(params.value);
+                        }
+                    },
+                    data: [
+                        { // 計画売上
+                        value: totalForecastRevenue,
+                        itemStyle: { color: colorScheme.forecast },
+                        label: { position: 'top' } 
+                        },
+                        { // 分散                
+                            value: Math.abs(varianceAmount),                
+                            itemStyle: { color: varianceAmount >= 0 ? variancePositiveColor : varianceNegativeColor },
+                            label: { position: 'top' }
+                        },
+                        { // 実績売上
+                        value: totalPeriodRevenue,
+                        itemStyle: { color: colorScheme.actual },
+                        label: { position: 'top'}
+                        }
+                    ]
                 }
             ]
         };
