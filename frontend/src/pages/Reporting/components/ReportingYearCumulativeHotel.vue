@@ -429,7 +429,7 @@
             grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
             xAxis: [{ type: 'category', data: months, axisPointer: { type: 'shadow' } }],
             yAxis: [
-                { type: 'value', name: '売上 (万円)', axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, scale: true },
+                { type: 'value', name: '売上 (万円)', axisLabel: { formatter: (value) => `${(value / 10000).toLocaleString('ja-JP')}` }, min: 0 },
                 { type: 'value', axisLabel: { show: false }, splitLine: { show: false } }
             ],
             series: [
