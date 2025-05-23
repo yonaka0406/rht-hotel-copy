@@ -263,7 +263,7 @@
   
     // --- File Upload Handlers ---
     const parseCSVtoJSON = (csvText) => {
-        console.log('parseCSVtoJSON was triggered');
+        // console.log('parseCSVtoJSON was triggered');
         // For robust CSV parsing, consider a library like PapaParse.
         // This is a simplified parser.
         const lines = csvText.trim().split('\n');
@@ -364,7 +364,7 @@
 
   
     const handleFileUpload = (event, type) => {
-        console.log('handleFileUpload was triggered. Event:', event, 'Type:', type); // Added user's log
+        // console.log('handleFileUpload was triggered. Event:', event, 'Type:', type); // Added user's log
 
         const file = event.files[0];
         const statusRef = type === 'forecast' ? forecastStatus : accountingStatus;
@@ -398,7 +398,7 @@
                     }
 
                     statusRef.value = { message: `${jsonData.length}件のデータをアップロード中...`, type: 'info' };
-                    console.log(`Uploading ${type} data as JSON:`, JSON.stringify(jsonData, null, 2));
+                    // console.log(`Uploading ${type} data as JSON:`, JSON.stringify(jsonData, null, 2));
 
                     let result = null;
                     if(type === 'forecast'){
@@ -441,10 +441,10 @@
     };
 
     const handleForecastUpload = async (event) => {
-        console.log('handleForecastUpload was triggered', event); // User's log
+        // console.log('handleForecastUpload was triggered', event); // User's log
         try {
             await handleFileUpload(event, 'forecast');
-            console.log("Forecast upload process completed.");
+            // console.log("Forecast upload process completed.");
         } catch (error) {
             console.error("Forecast upload process failed:", error.message);
         }
@@ -452,10 +452,10 @@
 
     const handleAccountingUpload = async (event) => {
         // It's good practice to also log here if debugging
-        console.log('handleAccountingUpload was triggered', event);
+        // console.log('handleAccountingUpload was triggered', event);
         try {
             await handleFileUpload(event, 'accounting');
-            console.log("Accounting upload process completed.");
+            // console.log("Accounting upload process completed.");
         } catch (error) {
             console.error("Accounting upload process failed:", error.message);
         }
