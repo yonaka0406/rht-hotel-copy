@@ -1,9 +1,9 @@
 const express = require('express');
-const session = require('express-session'); // For OAuth state CSRF protection
-const crypto = require('crypto'); // For generating session secret if not in .env
+// const session = require('express-session'); // Removed
+// const crypto = require('crypto'); // Removed
 require('dotenv').config(); // Load environment variables
 
-const authRoutes = require('./routes/auth');
+// const authRoutes = require('./routes/auth'); // Removed
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,38 +12,20 @@ const port = process.env.PORT || 3000;
 app.use(express.json()); // For parsing application/json
 app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
 
-// Session middleware for OAuth state CSRF protection
-// Ensure SESSION_SECRET is set in your .env file for production.
-const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
-if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
-  console.warn('WARNING: SESSION_SECRET is not securely set for production!');
-  // In a real production environment, you might want to throw an error or exit
-  // if a secure session secret isn't provided.
-}
+// Session middleware for OAuth state CSRF protection - REMOVED as it's handled in api/index.js
 
-app.use(session({
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false, // Don't save session if unmodified
-  cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (requires HTTPS)
-    httpOnly: true, // Prevents client-side JS from accessing the cookie
-    maxAge: 300000, // 5 minutes (300,000 milliseconds) - for the duration of the OAuth flow
-    sameSite: 'lax' // Recommended for OAuth callback handling
-  }
-}));
-
-// Mount authentication routes
-app.use('/', authRoutes); // Mounts at the root, so paths will be /auth/google, /auth/google/callback
+// Mount authentication routes - REMOVED
+// app.use('/', authRoutes); 
 
 // Basic root route
 app.get('/', (req, res) => {
-  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `http://localhost:${port}/auth/google/callback`;
+  // Updated to reflect that authentication is now handled by the API
+  const apiAuthUrl = `/api/auth/google`; // Example, adjust if needed
   res.send(`
-    <h1>Google OAuth 2.0 Backend with CSRF Protection</h1>
-    <p>This is a Node.js Express backend application demonstrating Google OAuth 2.0 authentication restricted to a Google Workspace domain, now with CSRF protection using the 'state' parameter.</p>
-    <p>To initiate authentication, navigate to: <a href="/auth/google">/auth/google</a></p>
-    <h2>Setup Instructions:</h2>
+    <h1>Google OAuth 2.0 Backend</h1>
+    <p>This is the main application. Google OAuth 2.0 authentication is now handled by the API service.</p>
+    <p>To initiate authentication with the API, a frontend application would typically redirect to: <a href="${apiAuthUrl}">${apiAuthUrl}</a> (or this link could be part of a frontend UI)</p>
+    <h2>Setup Instructions (for API):</h2>
     <ol>
       <li>Ensure you have a <code>.env</code> file with the following variables:
         <ul>
@@ -61,16 +43,14 @@ app.get('/', (req, res) => {
       <li>Install dependencies: <code>npm install express googleapis jsonwebtoken dotenv express-session pg google-auth-library</code></li>
       <li>Run the server: <code>node app.js</code> or <code>nodemon app.js</code></li>
     </ol>
-    <h3>Google Cloud Console Setup:</h3>
-    <p>Ensure your "Authorized redirect URIs" in Google Cloud Console matches: <code>${callbackUrl}</code>.</p>
+    <h3>Google Cloud Console Setup (for API):</h3>
+    <p>Ensure your "Authorized redirect URIs" in Google Cloud Console for the API's OAuth client matches the API's callback URL (e.g., <code>http://localhost:YOUR_API_PORT/api/auth/google/callback</code>).</p>
     <h3>Security Best Practices:</h3>
     <ul>
       <li><strong>NEVER</strong> commit your <code>.env</code> file or hardcode secrets.</li>
-      <li>Use strong, unique secrets for <code>JWT_SECRET</code> and <code>SESSION_SECRET</code>.</li>
-      <li>Implement proper ID token verification in <code>routes/auth.js</code>.</li>
-      <li>Ensure <code>GOOGLE_CALLBACK_URL</code> is specific and uses HTTPS in production.</li>
-      <li>The <code>hd</code> (hosted domain) check is crucial.</li>
-      <li>The <code>state</code> parameter CSRF protection is now implemented.</li>
+      <li>Use strong, unique secrets for <code>JWT_SECRET</code> and <code>SESSION_SECRET</code> (used by the API).</li>
+      <li>ID token verification, 'hd' check, and CSRF (state) protection are handled by the API.</li>
+      <li>Ensure API's <code>GOOGLE_CALLBACK_URL</code> is specific and uses HTTPS in production.</li>
     </ul>
   `);
 });
@@ -82,12 +62,8 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-  console.log(`Google OAuth Callback URL: ${process.env.GOOGLE_CALLBACK_URL || `http://localhost:${port}/auth/google/callback`}`);
-  console.log(`Initiate login: http://localhost:${port}/auth/google`);
-  if (process.env.NODE_ENV !== 'production' && sessionSecret.includes('strong_session_secret')) {
-    console.warn("Using default development SESSION_SECRET. Please set a strong SESSION_SECRET in your .env file for production.");
-  }
+  console.log(`Main application server listening on port ${port}`);
+  // Removed old OAuth specific logs, as it's now handled by the API
 });
 
 module.exports = app; // For potential testing or modular use
