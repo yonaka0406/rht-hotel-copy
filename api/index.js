@@ -9,9 +9,30 @@ const fs = require('fs');
 const db = require('./config/database');
 const { Pool } = require('pg');
 const { startScheduling } = require('./utils/scheduleUtils');
+const session = require('express-session');
+const crypto = require('crypto'); // Added for session secret
 
 const app = express();
 app.use(db.setupRequestContext);
+
+// Session Configuration (Added)
+// Note: crypto was already required by authController, but good to ensure it's here if needed independently.
+const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
+  console.warn('WARNING: In production, SESSION_SECRET should be set to a strong, static secret in your environment variables.');
+}
+
+app.use(session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    httpOnly: true,
+    maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
+    sameSite: 'lax' // Recommended for most cases
+  }
+}));
 
 // Environment configuration helper
 const getEnvConfig = (req) => {

@@ -49,13 +49,22 @@
               type="submit"
             />
           </div>
+          
+          <div class="my-4"> <!-- Added Google Sign-In Button -->
+            <Button
+              label="Sign in with Google"
+              icon="pi pi-google"
+              class="w-full p-button-secondary"
+              @click="handleGoogleLogin"
+            />
+          </div>
 
           <div class="text-center">
             <router-link to="/forgot-password" class="text-sm text-blue-600">パスワードを忘れましたか？</router-link>
           </div>
         </form>
       </template>
-    </Card>  
+    </Card>
   </div>
 </template>
 
@@ -76,6 +85,11 @@
   const isLoading = ref(false);
   const emailError = ref(null);
   const passwordError = ref(null);
+
+  const handleGoogleLogin = () => { // Added
+    // Redirect to the backend Google OAuth endpoint
+    window.location.href = '/api/auth/google';
+  };
 
   const validateEmail = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

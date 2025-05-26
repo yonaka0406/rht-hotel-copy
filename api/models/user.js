@@ -118,4 +118,53 @@ module.exports = {
   updatePasswordHash,
   updateUserInfo,
   createUser,
+  findUserByProviderId,
+  linkGoogleAccount,
+  createUserWithGoogle,
 };
+
+// Find a user by provider ID
+async function findUserByProviderId(requestId, provider, providerUserId) {
+  const pool = getPool(requestId);
+  const query = 'SELECT * FROM users WHERE auth_provider = $1 AND provider_user_id = $2';
+  const values = [provider, providerUserId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0] || null; // Return the user row or null
+  } catch (err) {
+    console.error('Error finding user by provider ID:', err);
+    throw new Error('Database error');
+  }
+}
+
+// Link a Google account to an existing user
+async function linkGoogleAccount(requestId, userId, googleUserId) {
+  const pool = getPool(requestId);
+  // Assuming updated_at is handled by a database trigger or default value
+  const query = 'UPDATE users SET auth_provider = \'google\', provider_user_id = $1, password_hash = NULL WHERE id = $2 RETURNING *';
+  const values = [googleUserId, userId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the updated user row
+  } catch (err) {
+    console.error('Error linking Google account:', err);
+    throw new Error('Database error');
+  }
+}
+
+// Create a new user with Google authentication
+async function createUserWithGoogle(requestId, googleUserId, email, name, roleId = 5, statusId = 1) {
+  const pool = getPool(requestId);
+  const query = 'INSERT INTO users (email, name, auth_provider, provider_user_id, status_id, role_id, password_hash) VALUES ($1, $2, \'google\', $3, $4, $5, NULL) RETURNING *';
+  const values = [email, name, googleUserId, statusId, roleId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]; // Return the newly created user row
+  } catch (err) {
+    console.error('Error creating user with Google:', err);
+    throw new Error('Database error');
+  }
+}
