@@ -146,22 +146,28 @@ app.use(express.raw({ type: 'text/xml' }));
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
 app.get('/api/very-simple-session-test', (req, res) => {
-    console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`);
-    res.cookie('manual-test-cookie', 'hello', { httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
+    console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`); 
+    
+    // New header tests
     res.setHeader('X-Custom-Test-Header', 'hello-world');
     res.setHeader('Set-Cookie', 'direct-set-cookie=directly-set; Path=/; HttpOnly; Secure; SameSite=Lax');
+
     req.session.simpleTestData = 'This is a simple test ' + Date.now();
     req.session.save(err => {
         if (err) {
             console.error('[SIMPLE_TEST] Error saving session:', err);
-            return res.status(500).send('Error saving simple session');
+            // Even if session save fails, try to send response with headers for testing
         }
-        console.log(`[SIMPLE_TEST] Session saved. ID: ${req.sessionID}, Data: ${req.session.simpleTestData}`);
+        console.log(`[SIMPLE_TEST] Session saved (or attempted). ID: ${req.sessionID}, Data: ${req.session.simpleTestData}`);
         console.log(`[SIMPLE_TEST] res.headersSent: ${res.headersSent}`);
-        const setCookieHeader = res.getHeader('Set-Cookie'); // This will now potentially show both cookies if express-session works, or just the manual one.
-        console.log(`[SIMPLE_TEST] Set-Cookie header after save: ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
         
-        res.send(`Simple session test. ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for Set-Cookie. Manual cookie also set.`);
+        const customHeader = res.getHeader('X-Custom-Test-Header');
+        console.log(`[SIMPLE_TEST] X-Custom-Test-Header: ${customHeader ? JSON.stringify(customHeader) : 'undefined'}`);
+        
+        const setCookieHeader = res.getHeader('Set-Cookie'); 
+        console.log(`[SIMPLE_TEST] Set-Cookie header (direct set): ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
+        
+        res.send(`Simple session test. ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for X-Custom-Test-Header and Set-Cookie.`);
     });
 });
 
