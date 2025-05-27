@@ -1,6 +1,10 @@
-console.log(`[SERVER_STARTUP] Current NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[SERVER_STARTUP] cookie.secure will be: ${process.env.NODE_ENV === 'production'}`);
-require('dotenv').config({ path: './api/.env' });
+// These logs should be first to see initial environment state
+console.log(`[SERVER_STARTUP] Initial process.env.NODE_ENV: ${process.env.NODE_ENV}`);
+// Load environment variables from .env file as early as possible
+require('dotenv').config({ path: './api/.env' }); // ENSURE THIS IS THE CORRECT PATH
+console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[SERVER_STARTUP] cookie.secure will be based on: ${process.env.NODE_ENV === 'production'}`);
+
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -19,11 +23,18 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(db.setupRequestContext);
 
-// Session Configuration (Added)
-// Note: crypto was already required by authController, but good to ensure it's here if needed independently.
+// Session Configuration
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+
+// Log information about the session secret being used
+console.log(`[SESSION_INIT] Using sessionSecret. Type: ${typeof sessionSecret}, Length: ${sessionSecret ? sessionSecret.length : 'undefined/null'}`);
+if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
+    console.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
+    // Consider exiting if the secret is critically misconfigured for a production-like environment:
+    // if (process.env.NODE_ENV === 'production') { process.exit(1); }
+}
 if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
-  console.warn('WARNING: In production, SESSION_SECRET should be set to a strong, static secret in your environment variables.');
+  console.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
 }
 
 const sessionPool = new Pool({ // Or use your existing db.pool if appropriate
