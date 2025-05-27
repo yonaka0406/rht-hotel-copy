@@ -98,8 +98,8 @@ app.use(session({
     secure: true, // Always use secure cookies for HTTPS
     httpOnly: true,
     maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
-    sameSite: 'None', // Recommended for most cases
-    domain: 'test.wehub.work'
+    sameSite: 'lax', // Use lax to allow cookies in same-site requests
+    // domain: 'test.wehub.work'
   }
 }));
 
