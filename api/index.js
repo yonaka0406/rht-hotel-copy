@@ -185,26 +185,24 @@ app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirn
 app.get('/api/very-simple-session-test', (req, res) => {
     console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`); 
     
-    // New header tests
-    res.setHeader('X-Custom-Test-Header', 'hello-world');
-    res.setHeader('Set-Cookie', 'direct-set-cookie=directly-set; Path=/; HttpOnly; Secure; SameSite=Lax');
-
     req.session.simpleTestData = 'This is a simple test ' + Date.now();
+    // Log current session ID before save, if one exists (it shouldn't for a new session)
+    console.log(`[SIMPLE_TEST] About to save session. Current session ID (if any): ${req.sessionID}, Data to save: ${req.session.simpleTestData}`);
+
     req.session.save(err => {
         if (err) {
             console.error('[SIMPLE_TEST] Error saving session:', err);
-            // Even if session save fails, try to send response with headers for testing
+            return res.status(500).send('Error saving session, check logs.');
         }
-        console.log(`[SIMPLE_TEST] Session saved (or attempted). ID: ${req.sessionID}, Data: ${req.session.simpleTestData}`);
-        console.log(`[SIMPLE_TEST] res.headersSent: ${res.headersSent}`);
+        // Log new session ID after save
+        console.log(`[SIMPLE_TEST] Session saved successfully. Session ID: ${req.sessionID}`);
+        console.log(`[SIMPLE_TEST] res.headersSent before send: ${res.headersSent}`);
         
-        const customHeader = res.getHeader('X-Custom-Test-Header');
-        console.log(`[SIMPLE_TEST] X-Custom-Test-Header: ${customHeader ? JSON.stringify(customHeader) : 'undefined'}`);
+        // Crucial check: What Set-Cookie header does express-session add?
+        const sessionCookieHeader = res.getHeader('Set-Cookie'); 
+        console.log(`[SIMPLE_TEST] res.getHeader('Set-Cookie') after session.save: ${sessionCookieHeader ? JSON.stringify(sessionCookieHeader) : 'undefined'}`);
         
-        const setCookieHeader = res.getHeader('Set-Cookie'); 
-        console.log(`[SIMPLE_TEST] Set-Cookie header (direct set): ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
-        
-        res.send(`Simple session test. ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for X-Custom-Test-Header and Set-Cookie.`);
+        res.status(200).send(`Session test successful. Session ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for 'connect.sid' (or similar) cookie.`);
     });
 });
 
