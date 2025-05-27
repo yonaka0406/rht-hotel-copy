@@ -183,25 +183,34 @@ app.use(express.raw({ type: 'text/xml' }));
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
 app.get('/api/very-simple-session-test', (req, res) => {
-    console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`); 
-    
-    req.session.simpleTestData = 'This is a simple test ' + Date.now();
-    console.log(`[SIMPLE_TEST] About to save session. Current session ID (if any): ${req.sessionID}, Data to save: ${req.session.simpleTestData}`);
+    console.log(`[SIMPLE_TEST_REGENERATE] req.headers.host: ${req.headers.host}`);
+    // Log session ID at start of request, if any. After clearing cookies, this should be undefined.
+    console.log(`[SIMPLE_TEST_REGENERATE] Session ID at start of request (if any): ${req.sessionID}`);
 
-    req.session.save(err => {
+    req.session.regenerate(err => {
         if (err) {
-            console.error('[SIMPLE_TEST] Error saving session:', err);
-            // Still send a response so the client isn't left hanging
-            return res.status(500).send('Error saving session, check logs.');
+            console.error('[SIMPLE_TEST_REGENERATE] Error regenerating session:', err);
+            return res.status(500).send('Error regenerating session.');
         }
-        console.log(`[SIMPLE_TEST] Session saved successfully. Session ID: ${req.sessionID}`);
-        console.log(`[SIMPLE_TEST] res.headersSent before send: ${res.headersSent}`);
+        // Log the NEW session ID after regeneration
+        console.log(`[SIMPLE_TEST_REGENERATE] Session regenerated. New Session ID: ${req.sessionID}`);
         
-        // Crucial check: What Set-Cookie header does express-session add?
-        const sessionCookieHeader = res.getHeader('Set-Cookie'); 
-        console.log(`[SIMPLE_TEST] res.getHeader('Set-Cookie') after session.save: ${sessionCookieHeader ? JSON.stringify(sessionCookieHeader) : 'undefined'}`);
-        
-        res.status(200).send(`Session test successful. Session ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for 'connect.sid' (or similar) cookie.`);
+        req.session.simpleTestData = 'This is a regenerated session test ' + Date.now();
+        console.log(`[SIMPLE_TEST_REGENERATE] Data set on regenerated session: ${req.session.simpleTestData}`);
+
+        req.session.save(saveErr => {
+            if (saveErr) {
+                console.error('[SIMPLE_TEST_REGENERATE] Error saving regenerated session:', saveErr);
+                return res.status(500).send('Error saving regenerated session.');
+            }
+            console.log(`[SIMPLE_TEST_REGENERATE] Regenerated session saved successfully. Session ID: ${req.sessionID}`);
+            console.log(`[SIMPLE_TEST_REGENERATE] res.headersSent before send: ${res.headersSent}`);
+            
+            const sessionCookieHeader = res.getHeader('Set-Cookie');
+            console.log(`[SIMPLE_TEST_REGENERATE] res.getHeader('Set-Cookie') after save: ${sessionCookieHeader ? JSON.stringify(sessionCookieHeader) : 'undefined'}`);
+            
+            res.status(200).send(`Regenerated session test successful. Session ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for 'connect.sid' cookie.`);
+        });
     });
 });
 
