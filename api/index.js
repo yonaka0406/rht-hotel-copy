@@ -44,7 +44,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    //secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+    secure: true, // Always use secure cookies for HTTPS
     httpOnly: true,
     maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
     sameSite: 'lax' // Recommended for most cases
