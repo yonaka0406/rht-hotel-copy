@@ -186,15 +186,14 @@ app.get('/api/very-simple-session-test', (req, res) => {
     console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`); 
     
     req.session.simpleTestData = 'This is a simple test ' + Date.now();
-    // Log current session ID before save, if one exists (it shouldn't for a new session)
     console.log(`[SIMPLE_TEST] About to save session. Current session ID (if any): ${req.sessionID}, Data to save: ${req.session.simpleTestData}`);
 
     req.session.save(err => {
         if (err) {
             console.error('[SIMPLE_TEST] Error saving session:', err);
+            // Still send a response so the client isn't left hanging
             return res.status(500).send('Error saving session, check logs.');
         }
-        // Log new session ID after save
         console.log(`[SIMPLE_TEST] Session saved successfully. Session ID: ${req.sessionID}`);
         console.log(`[SIMPLE_TEST] res.headersSent before send: ${res.headersSent}`);
         
