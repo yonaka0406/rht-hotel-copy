@@ -7,10 +7,10 @@ const https = require('https');
 const socketio = require('socket.io');
 const fs = require('fs');
 const db = require('./config/database');
-const pgSession = require('connect-pg-simple')(session);
-const { Pool } = require('pg');
 const { startScheduling } = require('./utils/scheduleUtils');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
 const crypto = require('crypto'); // Added for session secret
 
 const app = express();
