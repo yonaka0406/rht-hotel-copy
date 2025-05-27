@@ -1,4 +1,3 @@
-//const bcrypt = require('bcrypt');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
@@ -8,6 +7,15 @@ const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAcc
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
 const crypto = require('crypto');
+
+// Get .env accordingly
+let envFrontend;
+
+if (process.env.NODE_ENV === 'production') {
+  envFrontend = process.env.PROD_FRONTEND_URL  
+} else {
+  envFrontend = process.env.FRONTEND_URL  
+}
 
 // Initialize Google Auth Client
 const googleAuthClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -244,7 +252,7 @@ const googleCallback = async (req, res) => {
 
 
     // 7. Redirect user to the frontend with the JWT    
-    const frontendRedirectUrl = `${process.env.FRONTEND_URL}/auth/google/callback?token=${jwtToken}`;    
+    const frontendRedirectUrl = `${envFrontend}/auth/google/callback?token=${jwtToken}`;    
     // console.log('Backend redirecting to frontend with URL:', frontendRedirectUrl);
     res.redirect(frontendRedirectUrl);
 
