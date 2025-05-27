@@ -174,6 +174,7 @@ const googleLogin = (req, res) => {
       hd: process.env.GOOGLE_HOSTED_DOMAIN,
       state: state, // State sent to Google
     });
+    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Redirecting to Google...`);
     res.redirect(authorizeUrl);
   });  
 };

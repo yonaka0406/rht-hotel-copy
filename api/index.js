@@ -143,6 +143,22 @@ app.use(express.raw({ type: 'text/xml' }));
 //assets for the frontend
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
+app.get('/api/very-simple-session-test', (req, res) => {
+    req.session.simpleTestData = 'This is a simple test ' + Date.now();
+    req.session.save(err => {
+        if (err) {
+            console.error('[SIMPLE_TEST] Error saving session:', err);
+            return res.status(500).send('Error saving simple session');
+        }
+        console.log(`[SIMPLE_TEST] Session saved. ID: ${req.sessionID}, Data: ${req.session.simpleTestData}`);
+        console.log(`[SIMPLE_TEST] res.headersSent: ${res.headersSent}`);
+        const setCookieHeader = res.getHeader('Set-Cookie');
+        console.log(`[SIMPLE_TEST] Set-Cookie header: ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
+        
+        res.send(`Simple session test. ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for Set-Cookie.`);
+    });
+});
+
 // Make config available to route handlers
 app.use((req, res, next) => {
   req.envConfig = getEnvConfig(req);  
