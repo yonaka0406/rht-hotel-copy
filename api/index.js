@@ -146,8 +146,10 @@ app.use(express.raw({ type: 'text/xml' }));
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
 app.get('/api/very-simple-session-test', (req, res) => {
-    console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`); // Added
-    res.cookie('manual-test-cookie', 'hello', { httpOnly: true, secure: true, sameSite: 'lax', path: '/' }); // Added
+    console.log(`[SIMPLE_TEST] req.headers.host: ${req.headers.host}`);
+    res.cookie('manual-test-cookie', 'hello', { httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
+    res.setHeader('X-Custom-Test-Header', 'hello-world');
+    res.setHeader('Set-Cookie', 'direct-set-cookie=directly-set; Path=/; HttpOnly; Secure; SameSite=Lax');
     req.session.simpleTestData = 'This is a simple test ' + Date.now();
     req.session.save(err => {
         if (err) {
