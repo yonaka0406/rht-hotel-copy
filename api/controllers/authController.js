@@ -127,15 +127,6 @@ const getActiveUsers = async (req, res) => {
   }
 };
 
-module.exports = { 
-  login, 
-  forgot, 
-  forgotAdmin,
-  reset, 
-  getActiveUsers,
-  googleLogin,
-  googleCallback,
-};
 
 // --- Google OAuth Functions ---
 
@@ -158,7 +149,7 @@ const googleLogin = (req, res) => {
     access_type: 'offline',
     scope: scopes,
     prompt: 'consent', // Force consent screen for development/testing if needed
-    hd: process.env.YOUR_WORKSPACE_DOMAIN, // Ensure this is set in your .env
+    hd: process.env.FRONTEND_URL, // Ensure this is set in your .env
     state: state,
   });
   res.redirect(authorizeUrl);
@@ -201,8 +192,8 @@ const googleCallback = async (req, res) => {
     const payload = ticket.getPayload();
 
     // 4. Verify the 'hd' (hosted domain) claim
-    if (!payload.hd || payload.hd !== process.env.YOUR_WORKSPACE_DOMAIN) {
-      console.warn(`Domain mismatch: User's domain (${payload.hd}) vs required domain (${process.env.YOUR_WORKSPACE_DOMAIN})`);
+    if (!payload.hd || payload.hd !== process.env.FRONTEND_URL) {
+      console.warn(`Domain mismatch: User's domain (${payload.hd}) vs required domain (${process.env.FRONTEND_URL})`);
       return res.status(403).json({
         error: 'Access denied. User does not belong to the required Google Workspace organization.'
       });
@@ -266,4 +257,14 @@ const googleCallback = async (req, res) => {
     }
     return res.status(500).json({ error: 'Authentication processing failed.' });
   }
+};
+
+module.exports = { 
+  login, 
+  forgot, 
+  forgotAdmin,
+  reset, 
+  getActiveUsers,
+  googleLogin,
+  googleCallback,
 };
