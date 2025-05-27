@@ -7,6 +7,7 @@ const https = require('https');
 const socketio = require('socket.io');
 const fs = require('fs');
 const db = require('./config/database');
+const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const { startScheduling } = require('./utils/scheduleUtils');
 const session = require('express-session');
@@ -23,7 +24,20 @@ if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || pro
   console.warn('WARNING: In production, SESSION_SECRET should be set to a strong, static secret in your environment variables.');
 }
 
+const sessionPool = new Pool({ // Or use your existing db.pool if appropriate
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE, // Or the specific DB for test.wehub.work
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+});
+
 app.use(session({
+  store: new pgSession({
+    pool: sessionPool,                // Use your PostgreSQL pool
+    tableName: 'user_sessions',       // Name of the session table (it will create it if it doesn't exist)
+    createTableIfMissing: true,
+  }),
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
