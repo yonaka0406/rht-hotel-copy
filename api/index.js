@@ -5,9 +5,6 @@ require('dotenv').config({ path: './api/.env' }); // ENSURE THIS IS THE CORRECT 
 console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`[SERVER_STARTUP] cookie.secure will be based on: ${process.env.NODE_ENV === 'production'}`);
 
-console.log(`[DEBUG_ENV] After dotenv in index.js: PG_USER=${process.env.PG_USER}, PG_HOST=${process.env.PG_HOST}, PG_DATABASE=${process.env.PG_DATABASE}, PG_PORT=${process.env.PG_PORT}`);
-console.log(`[DEBUG_ENV] SESSION_SECRET available here? Length: ${process.env.SESSION_SECRET ? process.env.SESSION_SECRET.length : 'undefined'}`);
-
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -20,7 +17,7 @@ const { startScheduling } = require('./utils/scheduleUtils');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
-const crypto = require('crypto');
+const crypto = require('crypto'); // Added for session secret
 
 const app = express();
 app.set('trust proxy', 1);
@@ -40,86 +37,60 @@ if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || pro
   console.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
 }
 
+// Enhanced Session Pool and Store Creation Logging
+console.log('[SESSION_POOL_CONFIG] PG_USER:', process.env.PG_USER);
+console.log('[SESSION_POOL_CONFIG] PG_HOST:', process.env.PG_HOST);
+console.log('[SESSION_POOL_CONFIG] PG_DATABASE:', process.env.PG_DATABASE);
+console.log('[SESSION_POOL_CONFIG] PG_PORT:', process.env.PG_PORT);
+console.log('[SESSION_POOL_CONFIG] PG_PASSWORD:', process.env.PG_PASSWORD ? 'PASSWORD_SET' : 'PASSWORD_NOT_SET');
+
 let sessionPool;
-console.log('[SESSION_POOL_CONFIG] About to configure sessionPool. PG_USER:', process.env.PG_USER, 'PG_HOST:', process.env.PG_HOST, 'PG_DATABASE:', process.env.PG_DATABASE, 'PG_PORT:', process.env.PG_PORT);
-console.log('[SESSION_POOL_CONFIG] PG_PASSWORD is', process.env.PG_PASSWORD ? 'SET' : 'NOT SET or empty');
-
 try {
-  const poolConfig = {
-      user: process.env.PG_USER,
-      host: process.env.PG_HOST,
-      database: process.env.PG_DATABASE,
-      password: process.env.PG_PASSWORD,
-      port: parseInt(process.env.PG_PORT, 10) || 5432, // Ensure port is an integer
-      // Consider adding connection timeout if issues persist
-      // connectionTimeoutMillis: 5000, // e.g., 5 seconds
-  };
-  console.log('[SESSION_INIT] Attempting to create Pool with config:', JSON.stringify({ ...poolConfig, password: poolConfig.password ? '***' : 'NOT SET' }));
-    
-  sessionPool = new Pool(poolConfig);
-  console.log('[SESSION_INIT] sessionPool created successfully.');
-
-  sessionPool.on('error', (err, client) => {
-      console.error('[SESSION_POOL_ERROR] Unexpected error on idle client in sessionPool', err);
-      // process.exit(-1); // Optional: exit if pool errors are critical
-  });
-
-  // Test query to ensure pool is working
-  sessionPool.connect(async (err, client, release) => {
-      if (err) {
-          return console.error('[SESSION_INIT_ERROR] Error acquiring client from sessionPool for test query:', err.stack);
-      }
-      try {
-          const result = await client.query('SELECT NOW()');
-          console.log('[SESSION_INIT] SELECT NOW() test query result:', result.rows[0]);
-      } catch (testQueryError) {
-          console.error('[SESSION_INIT_ERROR] Error executing SELECT NOW() on sessionPool:', testQueryError.stack);
-      } finally {
-          if (client) client.release();
-      }
-  });
-  
+    const poolConfig = {
+        user: process.env.PG_USER,
+        host: process.env.PG_HOST,
+        database: process.env.PG_DATABASE,
+        password: process.env.PG_PASSWORD,
+        port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
+    };
+    console.log('[SESSION_POOL_CONFIG] Attempting to create Pool with user:', poolConfig.user, 'host:', poolConfig.host, 'database:', poolConfig.database, 'port:', poolConfig.port);
+    sessionPool = new Pool(poolConfig);
+    console.log('[SESSION_INIT] sessionPool created successfully.');
+    sessionPool.on('error', (err) => { 
+      console.error('[SESSION_POOL_ERROR] Idle client error', err.message, err.stack); 
+    });
+    // Optional: Test query
+    sessionPool.query('SELECT NOW()', (err, res) => {
+        if (err) {
+            console.error('[SESSION_POOL_TEST_QUERY_ERROR]', err);
+        } else {
+            console.log('[SESSION_POOL_TEST_QUERY_SUCCESS] SELECT NOW():', res.rows[0]);
+        }
+    });
 } catch (error) {
-  console.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', error.stack);
+    console.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', error);
 }
 
-let sessionStoreInstance; 
-console.log('[SESSION_STORE_CONFIG] About to configure pgSession store.');
+let sessionStore;
 try {
-    if (!sessionPool) {
-        console.error("[SESSION_INIT_ERROR] sessionPool is not initialized or is undefined. Cannot create pgSession store. This is a critical error if you expect DB sessions.");
-        // Fallback to MemoryStore for now to allow app to run, but this is NOT for production.
-        // console.warn('[SESSION_INIT] Defaulting to MemoryStore due to sessionPool initialization failure.');
-        // sessionStoreInstance = new session.MemoryStore(); // This would explain the MemoryStore warning
-    } else {
-        const storeOptions = {
-            pool: sessionPool,
-            tableName: 'user_sessions', // Make sure this table name is correct
-            createTableIfMissing: true, // This is useful but ensure permissions are correct
-            // ttl: 86400 // Optional: session time to live in seconds (e.g., 1 day)
-            // errorLog: console.error // Optional: custom error logging for pg-session
-        };
-        console.log('[SESSION_STORE_CONFIG] Attempting to create pgSession store with options:', JSON.stringify({ ...storeOptions, pool: 'sessionPool object' }));
-        sessionStoreInstance = new pgSession(storeOptions);
-        console.log('[SESSION_INIT] pgSession store configured successfully using sessionPool.');
-    }
+    const storeOptions = {
+        pool: sessionPool,
+        tableName: 'user_sessions',
+        createTableIfMissing: true,
+        //ttl: 60 * 5 // 5 minutes for testing if needed
+    };
+    console.log('[SESSION_STORE_CONFIG] Attempting to create pgSession store with tableName:', storeOptions.tableName, 'and pool defined:', !!storeOptions.pool);
+    sessionStore = new pgSession(storeOptions);
+    console.log('[SESSION_INIT] pgSession store configured successfully.');
 } catch (error) {
-    console.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', error.stack);
-    // Fallback for safety, though this means DB sessions won't work.
-    // console.warn('[SESSION_INIT] Defaulting to MemoryStore due to pgSession store creation failure.');
-    // sessionStoreInstance = new session.MemoryStore();
+    console.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', error);
 }
 
-console.log(`[SESSION_INIT] Re-checking SESSION_SECRET before use. Type: ${typeof process.env.SESSION_SECRET}, Length: ${process.env.SESSION_SECRET ? process.env.SESSION_SECRET.length : 'undefined/null'}`);
-if (!sessionStoreInstance) {
-    console.error("[CRITICAL_SESSION_ERROR] sessionStoreInstance is undefined before app.use(session). THIS WILL LIKELY CAUSE MemoryStore FALLBACK OR ERRORS. Check previous logs.");
-    // To absolutely ensure MemoryStore isn't used silently if pgSession fails AND you didn't set a fallback:
-    // throw new Error("Session store could not be initialized."); 
-}
-console.log(`[SESSION_INIT] Using session store type: ${sessionStoreInstance ? sessionStoreInstance.constructor.name : 'undefined'}`);
-app.use(session({  
-  store: sessionStoreInstance,  
-  secret: process.env.SESSION_SECRET || sessionSecret, // Use the environment variable or fallback to generated secret
+console.log(`[SESSION_INIT] Checking process.env.SESSION_SECRET before app.use(session()): ${process.env.SESSION_SECRET ? 'SET (length ' + process.env.SESSION_SECRET.length + ')' : 'NOT SET'}`);
+
+app.use(session({
+  store: sessionStore, // Use the created sessionStore
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
