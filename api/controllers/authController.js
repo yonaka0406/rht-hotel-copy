@@ -162,6 +162,11 @@ const googleLogin = (req, res) => {
     // LOG 2: Confirm session saved and state value just before redirect
     console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Session saved. oauth_state in session: ${req.session.oauth_state}. Redirecting...`);
 
+    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] res.headersSent before redirect: ${res.headersSent}`);
+    const setCookieHeader = res.getHeader('Set-Cookie');
+    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Value of 'Set-Cookie' header before redirect: ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
+    
+    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Redirecting...`);
     const authorizeUrl = googleOAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
