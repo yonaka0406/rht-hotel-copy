@@ -142,7 +142,7 @@ const googleLogin = (req, res) => {
   }
   req.session.oauth_state = state;
 
-  console.log(`Generated OAuth state: ${state} for session ID: ${req.sessionID}`);
+  // console.log(`Generated OAuth state: ${state} for session ID: ${req.sessionID}`);
 
   // 3. Include this state parameter in the authorization URL
   const authorizeUrl = googleOAuth2Client.generateAuthUrl({
@@ -224,7 +224,7 @@ const googleCallback = async (req, res) => {
         // Consider default role_id and status_id. Assuming 5 and 1 as per previous logic.
         // These could be configurable or based on other logic.
         user = await createUserWithGoogle(req.requestId, googleUserId, userEmail, userName /*, defaultRoleId, defaultStatusId */);
-        console.log(`Created new user ${userEmail} with Google ID ${googleUserId}`);
+        // console.log(`Created new user ${userEmail} with Google ID ${googleUserId}`);
       }
     }
 
