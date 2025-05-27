@@ -5,6 +5,7 @@ const WorkInProgress = () => import('@/components/WorkInProgress.vue');
 const Login = () => import('@/pages/Login.vue');
 const ForgotPassword = () => import('@/pages/ForgotPassword.vue');
 const ResetPassword = () => import('@/pages/ResetPassword.vue');
+const AuthCallback = () => import('@/pages/AuthCallback.vue');
 const NotFound = () => import('@/pages/NotFound.vue');
 
 const AdminPanel = () => import('@/pages/Admin/AdminPanel.vue');
@@ -70,6 +71,11 @@ const routes = [
   {path: '/reset-password',
     name: 'ResetPassword',    
     component: ResetPassword,
+  },
+  {
+    path: '/auth/google/callback',
+    name: 'AuthCallback',
+    component: AuthCallback,
   },
   {path: '/admin',
     component: AdminPanel,

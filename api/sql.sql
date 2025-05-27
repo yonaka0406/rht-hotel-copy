@@ -34,19 +34,21 @@ CREATE TABLE user_roles (
 
 INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true}', '顧客を編集し、レポートを閲覧できます。'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true}', 'レポートを閲覧できます。'),
-        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": false}', '特別な権限のないデフォルトのロール。');
+        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
+        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', '特別な権限のない閲覧のみです。');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     name TEXT,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT NULL,
     status_id INT REFERENCES user_status(id) DEFAULT 1,        -- Status ID (default to 1, representing 'active')
-    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)    
+    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)
+    auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
+    provider_user_id VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
@@ -63,6 +65,19 @@ CREATE TABLE users (
 
     ALTER TABLE user_roles
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
+
+    -- 1. Make the password_hash column nullable
+   ALTER TABLE users
+   ALTER COLUMN password_hash DROP NOT NULL;
+
+   -- 2. Add a new column auth_provider
+   ALTER TABLE users
+   ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) NOT NULL DEFAULT 'local';
+
+   -- 3. Add a new column provider_user_id
+   ALTER TABLE users
+   ADD COLUMN IF NOT EXISTS provider_user_id VARCHAR(255) NULL;
 
 -- Main Hotels Table
 CREATE TABLE hotels (

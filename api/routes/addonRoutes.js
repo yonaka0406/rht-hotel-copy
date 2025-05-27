@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getAllAddons, getGlobalAddons, getHotelsAddons, getHotelAddons, createGlobalAddon,
     createHotelAddon, editGlobalAddon, editHotelAddon } = require('../controllers/addonController');
-const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageDB } = require('../middleware/authMiddleware');
+const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 // All
 router.get('/addons/all/:hotel_id', authMiddleware, getAllAddons);

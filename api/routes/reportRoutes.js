@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, getReservationsForGoogle } = require('../controllers/reportController');
-const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageUsers } = require('../middleware/authMiddleware');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
 router.get('/report/res/count/dtl/:hid/:sdate/:edate', authMiddleware, getCountReservationDetails);
