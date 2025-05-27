@@ -184,6 +184,7 @@ app.use(express.raw({ type: 'text/xml' }));
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
 
 app.get('/api/very-simple-session-test', (req, res) => {
+    console.log(`[SIMPLE_TEST_REGENERATE] req.protocol: ${req.protocol}`);
     console.log(`[SIMPLE_TEST_REGENERATE] req.headers.host: ${req.headers.host}`);
     // Log session ID at start of request, if any. After clearing cookies, this should be undefined.
     console.log(`[SIMPLE_TEST_REGENERATE] Session ID at start of request (if any): ${req.sessionID}`);
