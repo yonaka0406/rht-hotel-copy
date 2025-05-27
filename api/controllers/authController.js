@@ -149,7 +149,7 @@ const googleLogin = (req, res) => {
     access_type: 'offline',
     scope: scopes,
     prompt: 'consent', // Force consent screen for development/testing if needed
-    hd: process.env.FRONTEND_URL, // Ensure this is set in your .env
+    hd: process.env.GOOGLE_HOSTED_DOMAIN,
     state: state,
   });
   res.redirect(authorizeUrl);
@@ -159,7 +159,7 @@ const googleCallback = async (req, res) => {
   const { code, state: receivedState } = req.query;
   const storedState = req.session ? req.session.oauth_state : null;
 
-  console.log(`Received OAuth callback. Code: ${code ? 'present' : 'missing'}, Received State: ${receivedState}, Stored State: ${storedState}`);
+  // console.log(`Received OAuth callback. Code: ${code ? 'present' : 'missing'}, Received State: ${receivedState}, Stored State: ${storedState}`);
 
   if (req.session) {
     delete req.session.oauth_state; // Clear state early
@@ -192,10 +192,10 @@ const googleCallback = async (req, res) => {
     const payload = ticket.getPayload();
 
     // 4. Verify the 'hd' (hosted domain) claim
-    if (!payload.hd || payload.hd !== process.env.FRONTEND_URL) {
-      console.warn(`Domain mismatch: User's domain (${payload.hd}) vs required domain (${process.env.FRONTEND_URL})`);
+    if (!payload.hd || payload.hd !== process.env.GOOGLE_HOSTED_DOMAIN) { 
+      console.warn(`Domain mismatch: User's domain (<span class="math-inline">\{payload\.hd\}\) vs required domain \(</span>{process.env.FRONTEND_URL})`);
       return res.status(403).json({
-        error: 'Access denied. User does not belong to the required Google Workspace organization.'
+        error: `Invalid domain. Please use an account from ${process.env.GOOGLE_HOSTED_DOMAIN}.`
       });
     }
 
@@ -211,7 +211,7 @@ const googleCallback = async (req, res) => {
       if (existingUserByEmail) {
         if (existingUserByEmail.auth_provider === 'local' || existingUserByEmail.auth_provider === null) { // Check for null too
           user = await linkGoogleAccount(req.requestId, existingUserByEmail.id, googleUserId);
-          console.log(`Linked existing local user ${userEmail} to Google ID ${googleUserId}`);
+          // console.log(`Linked existing local user ${userEmail} to Google ID ${googleUserId}`);
         } else if (existingUserByEmail.auth_provider === 'google' && existingUserByEmail.provider_user_id !== googleUserId) {
           console.error(`User ${userEmail} is already associated with a different Google account.`);
           return res.status(409).json({
@@ -243,8 +243,9 @@ const googleCallback = async (req, res) => {
     // const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
 
-    // 7. Redirect user to the frontend with the JWT
-    const frontendRedirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173/auth/callback'}?token=${jwtToken}`;
+    // 7. Redirect user to the frontend with the JWT    
+    const frontendRedirectUrl = `${process.env.FRONTEND_URL}/auth/google/callback?token=${jwtToken}`;    
+    // console.log('Backend redirecting to frontend with URL:', frontendRedirectUrl);
     res.redirect(frontendRedirectUrl);
 
   } catch (error) {

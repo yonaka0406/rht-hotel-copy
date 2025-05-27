@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-require('dotenv').config(); // To load environment variables from .env
+require('dotenv').config({ path: './api/.env' });
 
 /**
  * Creates and configures a Google OAuth2 client.
@@ -9,7 +9,7 @@ function getGoogleOAuth2Client() {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CALLBACK_URL
+    process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5000/api/auth/google/callback'
   );
   return oauth2Client;
 }

@@ -111,18 +111,6 @@ const createUser = async (requestId, email, name, password, role_id, created_by,
   }
 };
 
-module.exports = {
-  getAllUsers,
-  getUsersByID,
-  findUserByEmail,
-  updatePasswordHash,
-  updateUserInfo,
-  createUser,
-  findUserByProviderId,
-  linkGoogleAccount,
-  createUserWithGoogle,
-};
-
 // Find a user by provider ID
 async function findUserByProviderId(requestId, provider, providerUserId) {
   const pool = getPool(requestId);
@@ -168,3 +156,15 @@ async function createUserWithGoogle(requestId, googleUserId, email, name, roleId
     throw new Error('Database error');
   }
 }
+
+module.exports = {
+  getAllUsers,
+  getUsersByID,
+  findUserByEmail,
+  updatePasswordHash,
+  updateUserInfo,
+  createUser,
+  findUserByProviderId,
+  linkGoogleAccount,
+  createUserWithGoogle,
+};
