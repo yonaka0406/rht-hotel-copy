@@ -1,9 +1,6 @@
-// These logs should be first to see initial environment state
-console.log(`[SERVER_STARTUP] Initial process.env.NODE_ENV: ${process.env.NODE_ENV}`);
 // Load environment variables from .env file as early as possible
-require('dotenv').config({ path: './api/.env' }); // ENSURE THIS IS THE CORRECT PATH
+require('dotenv').config({ path: './api/.env' });
 console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
-console.log(`[SERVER_STARTUP] cookie.secure will be based on: ${process.env.NODE_ENV === 'production'}`);
 
 const path = require('path');
 const express = require('express');
@@ -27,7 +24,6 @@ app.use(db.setupRequestContext);
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
 // Log information about the session secret being used
-console.log(`[SESSION_INIT] Using sessionSecret. Type: ${typeof sessionSecret}, Length: ${sessionSecret ? sessionSecret.length : 'undefined/null'}`);
 if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
     console.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
     // Consider exiting if the secret is critically misconfigured for a production-like environment:
@@ -36,13 +32,6 @@ if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length 
 if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
   console.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
 }
-
-// Enhanced Session Pool and Store Creation Logging
-console.log('[SESSION_POOL_CONFIG] PG_USER:', process.env.PG_USER);
-console.log('[SESSION_POOL_CONFIG] PG_HOST:', process.env.PG_HOST);
-console.log('[SESSION_POOL_CONFIG] PG_DATABASE:', process.env.PG_DATABASE);
-console.log('[SESSION_POOL_CONFIG] PG_PORT:', process.env.PG_PORT);
-console.log('[SESSION_POOL_CONFIG] PG_PASSWORD:', process.env.PG_PASSWORD ? 'PASSWORD_SET' : 'PASSWORD_NOT_SET');
 
 let sessionPool;
 try {
@@ -53,20 +42,12 @@ try {
         password: process.env.PG_PASSWORD,
         port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
     };
-    console.log('[SESSION_POOL_CONFIG] Attempting to create Pool with user:', poolConfig.user, 'host:', poolConfig.host, 'database:', poolConfig.database, 'port:', poolConfig.port);
+    
     sessionPool = new Pool(poolConfig);
-    console.log('[SESSION_INIT] sessionPool created successfully.');
+    
     sessionPool.on('error', (err) => { 
       console.error('[SESSION_POOL_ERROR] Idle client error', err.message, err.stack); 
-    });
-    // Optional: Test query
-    sessionPool.query('SELECT NOW()', (err, res) => {
-        if (err) {
-            console.error('[SESSION_POOL_TEST_QUERY_ERROR]', err);
-        } else {
-            console.log('[SESSION_POOL_TEST_QUERY_SUCCESS] SELECT NOW():', res.rows[0]);
-        }
-    });
+    });    
 } catch (error) {
     console.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', error);
 }
@@ -78,15 +59,11 @@ try {
         tableName: 'user_sessions',
         createTableIfMissing: true,
         //ttl: 60 * 5 // 5 minutes for testing if needed
-    };
-    console.log('[SESSION_STORE_CONFIG] Attempting to create pgSession store with tableName:', storeOptions.tableName, 'and pool defined:', !!storeOptions.pool);
-    sessionStore = new pgSession(storeOptions);
-    console.log('[SESSION_INIT] pgSession store configured successfully.');
+    };    
+    sessionStore = new pgSession(storeOptions);    
 } catch (error) {
     console.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', error);
 }
-
-console.log(`[SESSION_INIT] Checking process.env.SESSION_SECRET before app.use(session()): ${process.env.SESSION_SECRET ? 'SET (length ' + process.env.SESSION_SECRET.length + ')' : 'NOT SET'}`);
 
 app.use(session({
   store: sessionStore, // Use the created sessionStore
@@ -142,8 +119,7 @@ try {
   };
   httpsServer = https.createServer(credentials, app);
 } catch (error) {
-  console.error('HTTPS setup failed:', error.message);
-  console.log('HTTPS server will not be started.');
+  console.error('HTTPS setup failed:', error.message);  
 }
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
@@ -182,39 +158,6 @@ app.use(express.json());
 app.use(express.raw({ type: 'text/xml' }));
 //assets for the frontend
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
-
-app.get('/api/very-simple-session-test', (req, res) => {
-    console.log(`[SIMPLE_TEST_REGENERATE] req.protocol: ${req.protocol}`);
-    console.log(`[SIMPLE_TEST_REGENERATE] req.headers.host: ${req.headers.host}`);
-    // Log session ID at start of request, if any. After clearing cookies, this should be undefined.
-    console.log(`[SIMPLE_TEST_REGENERATE] Session ID at start of request (if any): ${req.sessionID}`);
-
-    req.session.regenerate(err => {
-        if (err) {
-            console.error('[SIMPLE_TEST_REGENERATE] Error regenerating session:', err);
-            return res.status(500).send('Error regenerating session.');
-        }
-        // Log the NEW session ID after regeneration
-        console.log(`[SIMPLE_TEST_REGENERATE] Session regenerated. New Session ID: ${req.sessionID}`);
-        
-        req.session.simpleTestData = 'This is a regenerated session test ' + Date.now();
-        console.log(`[SIMPLE_TEST_REGENERATE] Data set on regenerated session: ${req.session.simpleTestData}`);
-
-        req.session.save(saveErr => {
-            if (saveErr) {
-                console.error('[SIMPLE_TEST_REGENERATE] Error saving regenerated session:', saveErr);
-                return res.status(500).send('Error saving regenerated session.');
-            }
-            console.log(`[SIMPLE_TEST_REGENERATE] Regenerated session saved successfully. Session ID: ${req.sessionID}`);
-            console.log(`[SIMPLE_TEST_REGENERATE] res.headersSent before send: ${res.headersSent}`);
-            
-            const sessionCookieHeader = res.getHeader('Set-Cookie');
-            console.log(`[SIMPLE_TEST_REGENERATE] res.getHeader('Set-Cookie') after save: ${sessionCookieHeader ? JSON.stringify(sessionCookieHeader) : 'undefined'}`);
-            
-            res.status(200).send(`Regenerated session test successful. Session ID: ${req.sessionID}. Data: ${req.session.simpleTestData}. Check browser for 'connect.sid' cookie.`);
-        });
-    });
-});
 
 // Make config available to route handlers
 app.use((req, res, next) => {
