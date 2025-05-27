@@ -149,35 +149,71 @@ const googleLogin = (req, res) => {
     return res.status(500).json({ error: 'Session configuration error.' });
   }
   req.session.oauth_state = state;
+  // LOG 1: Log Session ID and the state being stored
+  console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Storing oauth_state: ${state}`);
 
-  // console.log(`Generated OAuth state: ${state} for session ID: ${req.sessionID}`);
+  req.session.save(err => {
+    if (err) {
+      console.error(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Error saving session before redirect:`, err);
+      // It's often better to still attempt the redirect or inform the user,
+      // as failing here might leave them stranded. But for debugging, this is informative.
+      return res.status(500).json({ error: 'Failed to save session.' });
+    }
+    // LOG 2: Confirm session saved and state value just before redirect
+    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Session saved. oauth_state in session: ${req.session.oauth_state}. Redirecting...`);
 
-  // 3. Include this state parameter in the authorization URL
-  const authorizeUrl = googleOAuth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: scopes,
-    prompt: 'consent', // Force consent screen for development/testing if needed
-    hd: process.env.GOOGLE_HOSTED_DOMAIN,
-    state: state,
-  });
-  res.redirect(authorizeUrl);
+    const authorizeUrl = googleOAuth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      prompt: 'consent',
+      hd: process.env.GOOGLE_HOSTED_DOMAIN,
+      state: state, // State sent to Google
+    });
+    res.redirect(authorizeUrl);
+  });  
 };
 
 const googleCallback = async (req, res) => {
   const { code, state: receivedState } = req.query;
   const storedState = req.session ? req.session.oauth_state : null;
 
-  // console.log(`Received OAuth callback. Code: ${code ? 'present' : 'missing'}, Received State: ${receivedState}, Stored State: ${storedState}`);
+  // LOG 3: Log what's received from Google in the callback URL
+  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Callback received. Code: ${code ? 'present' : 'missing'}, Received State: ${receivedState}, Stored State: ${storedState}`);
 
-  if (req.session) {
-    delete req.session.oauth_state; // Clear state early
+  if (!req.session) {
+    console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] CRITICAL: req.session is undefined on callback. Session not found or not loaded. Received state from URL: ${receivedState}.`);
+    return res.status(500).json({ error: 'Session not available on callback. State verification failed.' });
+  }
+
+  // LOG 4: Log Session ID, the state retrieved from session, and the state from URL
+  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Stored state from session (req.session.oauth_state): ${storedState}, Received state from URL (req.query.state): ${receivedState}`);
+
+  const stateForComparison = req.session.oauth_state;
+  
+  if (req.session.oauth_state) {
+    delete req.session.oauth_state;
+    req.session.save(err => { // Save session after deleting the state
+      if (err) {
+        console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Error saving session after deleting oauth_state:`, err);
+      } else {
+        // LOG 5: Confirm state deletion from session
+        console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, oauth_state deleted from session and session saved.`);
+      }
+    });
+  } else {
+    // LOG 6: Warn if no state was found in session to delete
+    console.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, No oauth_state found in session to delete. Received state from URL: ${receivedState}.`);
   }
 
   // 1. Verify the state parameter
-  if (!receivedState || !storedState || receivedState !== storedState) {
-    console.error('Invalid OAuth state parameter. CSRF attack suspected.');
+  if (!receivedState || !stateForComparison || receivedState !== stateForComparison) {
+    // LOG 7: Critical error log for state mismatch
+    console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] STATE MISMATCH OR MISSING! Session ID: ${req.sessionID}. URL state: '${receivedState}', Session state: '${stateForComparison}'. Authentication aborted.`);
     return res.status(403).json({ error: 'Invalid state parameter. Authentication aborted.' });
   }
+
+  // LOG 8: Confirm successful state validation
+  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, State validated successfully. Proceeding with token exchange.`);
 
   if (!code) {
     return res.status(400).json({ error: 'Authorization code missing.' });
