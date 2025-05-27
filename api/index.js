@@ -111,15 +111,21 @@ const httpServer = http.createServer(app);
 // HTTPS Server setup (try/catch block)
 let httpsServer = null; // Initialize as null
 try {
-  const privateKey = fs.readFileSync('/etc/letsencrypt/live/wehub.work/privkey.pem', 'utf8');
-  const certificate = fs.readFileSync('/etc/letsencrypt/live/wehub.work/fullchain.pem', 'utf8');
+  let privateKey, certificate;
+  if (process.env.NODE_ENV === 'production') {
+    privateKey = fs.readFileSync('/etc/letsencrypt/live/wehub.work/privkey.pem', 'utf8');
+    certificate = fs.readFileSync('/etc/letsencrypt/live/wehub.work/fullchain.pem', 'utf8');
+  } else{
+    privateKey = fs.readFileSync('/etc/letsencrypt/live/test.wehub.work/privkey.pem', 'utf8');
+    certificate = fs.readFileSync('/etc/letsencrypt/live/test.wehub.work/fullchain.pem', 'utf8');
+  }  
   const credentials = {
     key: privateKey,
     cert: certificate,
   };
   httpsServer = https.createServer(credentials, app);
-} catch (error) {
-  console.error('HTTPS setup failed:', error.message);  
+} catch (error) {  
+  console.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
 }
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
