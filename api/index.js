@@ -46,11 +46,13 @@ const sessionPool = new Pool({ // Or use your existing db.pool if appropriate
 });
 
 app.use(session({
+  /*
   store: new pgSession({
     pool: sessionPool,                // Use your PostgreSQL pool
     tableName: 'user_sessions',       // Name of the session table (it will create it if it doesn't exist)
     createTableIfMissing: true,
   }),
+  */
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
