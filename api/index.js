@@ -13,6 +13,7 @@ const session = require('express-session');
 const crypto = require('crypto'); // Added for session secret
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy for secure cookies in production
 app.use(db.setupRequestContext);
 
 // Session Configuration (Added)
