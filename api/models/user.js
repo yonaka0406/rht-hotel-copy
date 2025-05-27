@@ -114,7 +114,14 @@ const createUser = async (requestId, email, name, password, role_id, created_by,
 // Find a user by provider ID
 async function findUserByProviderId(requestId, provider, providerUserId) {
   const pool = getPool(requestId);
-  const query = 'SELECT * FROM users WHERE auth_provider = $1 AND provider_user_id = $2';
+  const query = `
+    SELECT users.*, user_roles.role_name, user_roles.permissions 
+    FROM 
+      users 
+        INNER JOIN 
+      user_roles ON users.role_id = user_roles.id
+    WHERE auth_provider = $1 AND provider_user_id = $2
+  `;
   const values = [provider, providerUserId];
 
   try {

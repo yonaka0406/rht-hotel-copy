@@ -218,7 +218,7 @@ const listenForTableChanges = async () => {
       });
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
-        console.log('report/res/inventor', data);
+        // console.log('report/res/inventor', data);
         // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',

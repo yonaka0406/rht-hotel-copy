@@ -1,5 +1,3 @@
-//JWT token generation/verification helpers
-
 const jwt = require('jsonwebtoken');
 const sessionService = require('../services/sessionService');
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -15,8 +13,7 @@ const generateToken = (user) => {
       email: user.email,
       status_id: user.status_id,
       role: user.role_name,
-      permissions: user.permissions,
-      // Issued at time for additional tracking
+      permissions: user.permissions,      
       iat: Math.floor(Date.now() / 1000)
     };
       

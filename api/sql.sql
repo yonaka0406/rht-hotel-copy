@@ -34,11 +34,11 @@ CREATE TABLE user_roles (
 
 INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true}', '顧客を編集し、レポートを閲覧できます。'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true}', 'レポートを閲覧できます。'),
-        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": false}', '特別な権限のないデフォルトのロール。');
+        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
+        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', '特別な権限のない閲覧のみです。');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
