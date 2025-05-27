@@ -1,3 +1,5 @@
+console.log(`[SERVER_STARTUP] Current NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`[SERVER_STARTUP] cookie.secure will be: ${process.env.NODE_ENV === 'production'}`);
 require('dotenv').config({ path: './api/.env' });
 const path = require('path');
 const express = require('express');
