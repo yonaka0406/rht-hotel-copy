@@ -3,16 +3,13 @@
         <!-- Left Section -->
         <template #start>
             <div class="flex items-center gap-4">                
-                <!-- Logo -->
-                <img src="@/assets/logo-simple.png" alt="Hotel PMS" class="h-8" />
-                <!-- Title -->
-                <span class="text-lg font-semibold text-gray-700">WeHub</span>
+                <span class="ml-4">{{ userGreeting }}</span>
             </div>
         </template>
         <!-- Right Section -->
         <template #end>
             <div class="flex items-center gap-4">
-                <span>{{ userGreeting }}</span>
+                
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
