@@ -1,18 +1,31 @@
 <template>
-  <div class="p-2">
+  <div class="p-0 space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 items-center">
+
+      <div class="lg:col-span-4">
+        <h2 class="text-xl font-semibold mb-3 text-gray-700">当日の概要</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <Card v-for="metric in summaryMetrics" :key="metric.title" class="shadow-md rounded-lg">
+              <template #title>                
+                <i :class="[metric.icon, metric.iconColor, 'text-xl mr-2']"></i>
+                <span class="text-sm font-medium text-gray-500">{{ metric.title }}</span>                
+              </template>
+              <template #content>
+                <p class="text-3xl font-bold text-gray-800 pt-1">{{ metric.count }}</p>
+              </template>
+            </Card>
+        </div>
+      </div>
+
+      <div class="lg:col-span-3 flex lg:justify-center items-start">
+        <div class="w-full lg:max-w-md p-1">          
+          <DatePicker v-model="selectedDate" inline dateFormat="yy-mm-dd" :selectOtherMonths="true" class="w-full custom-datepicker-inline rounded-md" />
+        </div>
+      </div>
+
+    </div>
+
     <Panel>
-      <template #header>
-        <div class="grid grid-cols-2">
-          <p class="text-lg font-bold">部屋概要：</p>
-          <DatePicker v-model="selectedDate" 
-              :showIcon="true" 
-              iconDisplay="input" 
-              dateFormat="yy-mm-dd"
-              :selectOtherMonths="true"                 
-              fluid
-              required 
-          />
-        </div>        
+      <template #header>        
       </template>
       <div v-if="isLoading" class="grid gap-4">
         <div v-for="n in 4" :key="n" class="col-span-1 md:col-span-1">
@@ -140,7 +153,14 @@
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
-  const toast = useToast();
+  const toast = useToast();  
+  import Panel from 'primevue/panel';
+  import Card from 'primevue/card';
+  import Drawer from 'primevue/drawer';
+  import Skeleton from 'primevue/skeleton';
+  import Avatar from 'primevue/avatar';
+  import DatePicker from 'primevue/datepicker';
+  import Button from 'primevue/button';
 
   //Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -149,8 +169,6 @@
   const { clients, fetchClients } = useClientStore();
   import { useReservationStore } from '@/composables/useReservationStore';
   const { reservedRoomsDayView, fetchReservationsToday } = useReservationStore();
-  import { Panel, Card, Drawer, Skeleton, Avatar } from 'primevue';
-  import { DatePicker, Button } from 'primevue';
       
   const isUpdating = ref(false);
   const isLoading = ref(false);
@@ -181,6 +199,24 @@
       if (!time) return "";
       const date = new Date(`1970-01-01T${time}`);
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getContrastColor = (hexcolor) => {
+    if (!hexcolor || typeof hexcolor !== 'string') return '#000000';
+    let processedHex = hexcolor.startsWith('#') ? hexcolor.slice(1) : hexcolor;
+    
+    if (processedHex.length === 3) {
+      processedHex = processedHex.split('').map(char => char + char).join('');
+    }
+    if (processedHex.length !== 6) return '#000000'; // Invalid hex
+
+    const r = parseInt(processedHex.substring(0, 2), 16);
+    const g = parseInt(processedHex.substring(2, 4), 16);
+    const b = parseInt(processedHex.substring(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#000000'; // Parsing failed
+
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#000000' : '#FFFFFF';
   };
 
   const selectedDate = ref(new Date());
@@ -272,6 +308,24 @@
     // console.log('roomGroups:', result);
     return result;
 
+  });
+
+  const summaryMetrics = computed(() => {
+    const metricsMap = {
+      '本日チェックイン': { title: '本日チェックイン', icon: 'pi pi-arrow-down-left', iconColor: 'text-blue-500' },
+      '本日チェックアウト': { title: '本日チェックアウト', icon: 'pi pi-arrow-up-right', iconColor: 'text-green-500' },
+      '滞在': { title: '滞在者数', icon: 'pi pi-users', iconColor: 'text-yellow-500' },
+      '空室': { title: '空室数', icon: 'pi pi-home', iconColor: 'text-gray-500' },
+    };
+    return Object.entries(metricsMap).map(([groupKey, metricDetails]) => {
+      const group = roomGroups.value.find(g => g.title === groupKey);
+      return {
+        title: metricDetails.title,
+        icon: metricDetails.icon,
+        iconColor: metricDetails.iconColor,
+        count: group ? group.rooms.length : 0,
+      };
+    });
   });
   
   const openNewReservation = (room) => {
