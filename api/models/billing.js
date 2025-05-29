@@ -193,7 +193,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
 	      SELECT json_agg(rd)
 	      FROM reservation_details rd
 	      WHERE rd.hotel_id = reservations.hotel_id AND rd.reservation_id = reservations.id AND rd.room_id = reservation_payments.room_id
-	        AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date) AND rd.billable = TRUE
+	        AND rd.billable = TRUE
 	    ) AS reservation_details_json
       ,(
         SELECT json_agg(taxed_group)
@@ -210,8 +210,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             WHERE 
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
-              AND rd.room_id = reservation_payments.room_id
-              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.room_id = reservation_payments.room_id              
               AND rd.billable = TRUE
 
             UNION ALL			
@@ -225,8 +224,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
             WHERE 
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
-              AND rd.room_id = reservation_payments.room_id
-              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.room_id = reservation_payments.room_id              
               AND rd.billable = TRUE
           ) AS inside
           GROUP BY tax_rate
@@ -243,7 +241,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         JOIN
       (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
         FROM reservation_details 
-      WHERE DATE_TRUNC('month', reservation_details.date) = DATE_TRUNC('month', $2::date) AND billable = TRUE
+      WHERE billable = TRUE
       GROUP BY hotel_id, reservation_id, room_id
       ) AS details
         ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id 
