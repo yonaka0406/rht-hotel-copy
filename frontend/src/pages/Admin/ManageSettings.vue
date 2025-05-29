@@ -3,9 +3,9 @@
         <Panel header="その他の設定">
             <Card class="mb-2">
                 <template #title>
-                    <div class="grid grid-cols-4">
+                    <div class="grid grid-cols-4 border-b">
                         <div class="flex col-span-3 justify-center items-center mb-2">
-                            支払方法
+                            <h3 class="text-lg font-semibold text-gray-700">支払方法</h3>
                         </div>                    
                         <div class="flex justify-end mb-2">
                             <Button @click="showPaymentDialog = true"
@@ -15,8 +15,6 @@
                             ></Button>
                         </div>
                     </div>
-                    
-                    
                 </template>
                 <template #content>
                     <DataTable :value="paymentTypes"
@@ -54,10 +52,10 @@
             </Card>
             <Card class="mb-2">
                 <template #title>
-                    <div class="grid grid-cols-4">
+                    <div class="grid grid-cols-4 border-b">
                         <div class="flex col-span-3 justify-center items-center mb-2">
-                            税区分
-                        </div>                    
+                            <h3 class="text-lg font-semibold text-gray-700">税区分</h3>
+                        </div>
                         <div class="flex justify-end mb-2">
                             <Button @click="showTaxDialog = true"
                                 icon="pi pi-plus"
@@ -93,8 +91,8 @@
 
             <Card class="mb-2">
                 <template #title>
-                    <div class="flex justify-center items-center mb-2">
-                        会社印鑑
+                    <div class="flex justify-center items-center py-3 border-b">
+                        <h3 class="text-lg font-semibold text-gray-700">会社印鑑</h3>
                     </div>
                 </template>
                 <template #content>
@@ -105,7 +103,12 @@
                             <small v-if="!currentStampImageUrl" class="mt-2">アップロードされていません</small>
                         </div>
                         <div class="flex flex-col items-center justify-center">
-                            <input type="file" @change="handleFileChange" accept="image/png,image/jpeg,image/gif" ref="fileInputRef" class="mb-2" />
+                            <InputText type="file" 
+                                @change="handleFileChange"                                
+                                accept="image/png,image/jpeg,image/gif"
+                                ref="fileInputRef"
+                                class="mb-2"
+                            />
                             <Button @click="uploadStamp" 
                                 label="新しい印鑑をアップロード" 
                                 icon="pi pi-upload" 

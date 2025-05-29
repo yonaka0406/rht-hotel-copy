@@ -216,12 +216,8 @@ export function useSettingsStore() {
                 // Otherwise, use a generic HTTP error.
                 throw new Error(data.message || `サーバーエラー: ${response.status}`);
             }
-
-            // Optionally, if you want to update any state in the store related to the stamp,
-            // you can do it here. For example:
-            // this.currentStampVersion = new Date().getTime(); // To trigger reactivity if stamp URL is in store
-
-            return data; // Return the success response (e.g., { message: "Stamp updated successfully." })
+            
+            return data;
         } catch (error) {
             console.error('Error uploading stamp in store:', error);
             // Re-throw the error so the component can catch it and display a toast

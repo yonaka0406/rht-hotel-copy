@@ -87,7 +87,7 @@ const uploadStampImage = (req, res) => {
           console.error('Error renaming file:', renameErr);
           return res.status(500).json({ success: false, message: 'Error saving stamp image: ' + renameErr.message });
         }
-        return res.status(200).json({ success: true, message: 'Stamp updated successfully.' });
+        return res.status(200).json({ success: true, message: '印鑑更新されました。' });
       });
 
     } catch (sharpError) {
