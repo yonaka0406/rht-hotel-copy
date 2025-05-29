@@ -380,7 +380,11 @@ const listenForTableChanges = async () => {
 };
 
 // Start listening for table changes
-listenForTableChanges();
+if (process.env.NODE_ENV !== 'test') {
+  listenForTableChanges();
+} else {
+  console.log('[TEST_SETUP] Skipping listenForTableChanges in test environment.');
+}
 
 // Socket.IO event handlers
 ioHttp.on('connection', (socket) => {
@@ -423,16 +427,24 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 */
 
-// Start the servers
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`HTTP Server is running on http://0.0.0.0:${PORT}`);
-});
-
-if (httpsServer) {
-  httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-    console.log(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
+// Start the servers if not in test environment
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`HTTP Server is running on http://0.0.0.0:${PORT}`);
   });
+
+  if (httpsServer) {
+    httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+      console.log(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
+    });
+  }
+  // Start the scheduling
+  startScheduling();
+} else {
+  console.log('[TEST_SETUP] Servers not started automatically in test environment.');
+  console.log('[TEST_SETUP] Scheduling not started automatically in test environment.');
 }
 
-// Start the scheduling
-startScheduling();
+module.exports = app; // Ensure app is exported for supertest
+// For more complex scenarios where servers might need to be explicitly closed by tests:
+// module.exports = { app, httpServer, httpsServer };

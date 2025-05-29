@@ -90,6 +90,34 @@
                     </DataTable>
                 </template>
             </Card>
+
+            <Card class="mb-2">
+                <template #title>
+                    <div class="flex justify-center items-center mb-2">
+                        会社印鑑
+                    </div>
+                </template>
+                <template #content>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex flex-col items-center">
+                            <p class="font-semibold mb-2">現在の印鑑</p>
+                            <Image :src="currentStampImageUrl" alt="Company Stamp" width="150" preview />
+                            <small v-if="!currentStampImageUrl" class="mt-2">アップロードされていません</small>
+                        </div>
+                        <div class="flex flex-col items-center justify-center">
+                            <input type="file" @change="handleFileChange" accept="image/png,image/jpeg,image/gif" ref="fileInputRef" class="mb-2" />
+                            <Button @click="uploadStamp" 
+                                label="新しい印鑑をアップロード" 
+                                icon="pi pi-upload" 
+                                class="p-button-primary"
+                                :loading="isLoading"
+                                :disabled="!selectedFile || isLoading" />
+                            <small class="mt-2">画像は150x150px以上、1MB以内</small>
+                        </div>
+                    </div>
+                </template>
+            </Card>
+
         </Panel> 
     </div>
 
@@ -183,16 +211,110 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Panel, Card, Tag, Button, DataTable, Column, Dialog, FloatLabel, InputText, InputNumber, ToggleSwitch, Select, Textarea } from "primevue";
+    import { Panel, Card, Tag, Button, DataTable, Column, Dialog, FloatLabel, InputText, InputNumber, ToggleSwitch, Select, Textarea, Image, FileUpload } from "primevue";
 
     // Stores
     import { useSettingsStore } from '@/composables/useSettingsStore';
     const { paymentTypes, fetchPaymentTypes, createPaymentType, alterPaymentTypeVisibility, alterPaymentTypeDescription,
-        taxTypes, fetchTaxTypes, createTaxType, alterTaxTypeVisibility, alterTaxTypeDescription
+        taxTypes, fetchTaxTypes, createTaxType, alterTaxTypeVisibility, alterTaxTypeDescription,
      } = useSettingsStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore();
 
+
+    // Stamp Image Upload
+    const selectedFile = ref(null);
+    const currentStampImageUrl = ref('');
+    const isLoading = ref(false);
+    const fileInputRef = ref(null);
+
+    const updateStampUrl = () => {
+      // Check if the stamp.png exists before setting the URL to avoid 404 if not uploaded yet.
+      // This is a simplified check; a more robust way might be an API endpoint that returns the stamp URL or status.
+      // For now, we assume if it's there, it's the correct one, and cache-bust.
+      // If it's not there, Image component might show its broken image icon or alt text.
+      currentStampImageUrl.value = `/api/components/stamp.png?t=${new Date().getTime()}`;
+    };
+
+    const handleFileChange = (event) => {
+        const file = event.target.files[0];
+        if (!file) {
+            selectedFile.value = null;
+            return;
+        }
+
+        if (file.size > 1024 * 1024) { // 1MB
+            toast.add({ severity: 'warn', summary: 'ファイルサイズ超過', detail: '画像は1MB以内である必要があります。', life: 4000 });
+            selectedFile.value = null;
+            if (fileInputRef.value) fileInputRef.value.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new window.Image(); // Use window.Image to avoid conflict with PrimeVue Image component
+            img.onload = () => {
+                if (img.width < 150 || img.height < 150) {
+                    toast.add({ severity: 'warn', summary: '画像サイズエラー', detail: '画像は150x150px以上である必要があります。', life: 4000 });
+                    selectedFile.value = null;
+                    if (fileInputRef.value) fileInputRef.value.value = '';
+                } else {
+                    selectedFile.value = file;
+                }
+            };
+            img.onerror = () => {
+                toast.add({ severity: 'error', summary: 'ファイルエラー', detail: '無効な画像ファイルです。', life: 3000 });
+                selectedFile.value = null;
+                if (fileInputRef.value) fileInputRef.value.value = '';
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = () => {
+            toast.add({ severity: 'error', summary: 'ファイルエラー', detail: 'ファイルの読み込みに失敗しました。', life: 3000 });
+            selectedFile.value = null;
+            if (fileInputRef.value) fileInputRef.value.value = '';
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const uploadStamp = async () => {
+        if (!selectedFile.value) {
+            toast.add({ severity: 'warn', summary: 'ファイル未選択', detail: 'アップロードするファイルを選択してください。', life: 3000 });
+            return;
+        }
+
+        isLoading.value = true;
+        const formData = new FormData();
+        formData.append('stampImage', selectedFile.value);
+
+        try {
+            const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+            const response = await fetch('/api/settings/stamp/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            }
+
+            toast.add({ severity: 'success', summary: '成功', detail: data.message, life: 3000 });
+            updateStampUrl();
+            selectedFile.value = null;
+            if (fileInputRef.value) {
+                fileInputRef.value.value = '';
+            }
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'アップロード失敗', detail: error.message || '不明なエラーが発生しました。', life: 4000 });
+        } finally {
+            isLoading.value = false;
+        }
+    };
 
     // Payments
     const showPaymentDialog = ref(false);
@@ -326,5 +448,6 @@
         resetNewPaymentData();
         await fetchTaxTypes();
         resetNewTaxData();
+        updateStampUrl(); // Initialize stamp image URL
     });
 </script>
