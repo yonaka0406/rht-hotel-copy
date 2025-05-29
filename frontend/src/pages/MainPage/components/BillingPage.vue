@@ -273,9 +273,9 @@
                         rates: item.reservation_rates_json,
                     },
                 ],
-                display_name: item.display_name,
-                due_date: formatDate(new Date(item.due_date)),
-                total_stays: parseFloat(item.total_stays),
+                display_name: item.display_name,                
+                due_date: item.due_date ? formatDate(new Date(item.due_date)) : getAdjustedDueDate(item.date),
+                total_stays: parseFloat(item.total_stays || item.stays_count) ,
                 comment: item.comment,
             };
             } else {
