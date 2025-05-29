@@ -1,6 +1,7 @@
 // Load environment variables from .env file as early as possible
 require('dotenv').config({ path: './api/.env' });
 // console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
+const logger = require('./config/logger'); // Winston Logger
 
 const path = require('path');
 const express = require('express');
@@ -17,6 +18,7 @@ const { Pool } = require('pg');
 const crypto = require('crypto'); // Added for session secret
 
 const app = express();
+app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
 app.use(db.setupRequestContext);
 
@@ -30,12 +32,12 @@ const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toStr
 
 // Log information about the session secret being used
 if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
-    console.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
+    logger.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
     // Consider exiting if the secret is critically misconfigured for a production-like environment:
     // if (process.env.NODE_ENV === 'production') { process.exit(1); }
 }
 if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === crypto.randomBytes(32).toString('hex'))) {
-  console.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
+  logger.warn('[SESSION_INIT] WARNING: In production, SESSION_SECRET should be a strong, static secret defined in your environment variables. A dynamically generated secret will invalidate sessions on each restart.');
 }
 
 let sessionPool;
@@ -50,11 +52,11 @@ try {
     
     sessionPool = new Pool(poolConfig);
     
-    sessionPool.on('error', (err) => { 
-      console.error('[SESSION_POOL_ERROR] Idle client error', err.message, err.stack); 
-    });    
+    sessionPool.on('error', (err) => {
+      logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
+    });
 } catch (error) {
-    console.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', error);
+    logger.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', { error: error.message, stack: error.stack });
 }
 
 let sessionStore;
@@ -65,9 +67,9 @@ try {
         createTableIfMissing: true,
         //ttl: 60 * 5 // 5 minutes for testing if needed
     };    
-    sessionStore = new pgSession(storeOptions);    
+    sessionStore = new pgSession(storeOptions);
 } catch (error) {
-    console.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', error);
+    logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
 }
 
 app.use(session({
@@ -123,14 +125,14 @@ try {
   } else{
     privateKey = fs.readFileSync('/etc/letsencrypt/live/test.wehub.work/privkey.pem', 'utf8');
     certificate = fs.readFileSync('/etc/letsencrypt/live/test.wehub.work/fullchain.pem', 'utf8');
-  }  
+  }
   const credentials = {
     key: privateKey,
     cert: certificate,
   };
   httpsServer = https.createServer(credentials, app);
-} catch (error) {  
-  console.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
+} catch (error) {
+  logger.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
 }
 // Socket.IO setup for HTTP and HTTPS
 const ioHttp = socketio(httpServer, {
@@ -233,16 +235,17 @@ const prodListenClient = new Pool({
 const listenForTableChanges = async () => {
   const client = await listenClient.connect();
   
-  client.on('notification', async (msg) => {    
+  client.on('notification', async (msg) => {
     if (msg.channel === 'logs_reservation_changed') {
-      //console.log('Notification received:', msg.channel); // Debugging
+      logger.debug('Notification received: logs_reservation_changed (dev)');
       ioHttp.emit('tableUpdate', 'Reservation update detected');
       if (ioHttps) {
         ioHttps.emit('tableUpdate', 'Reservation update detected');
       }
     }
-    if (msg.channel === 'reservation_log_inserted') {      
+    if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
+      logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
 
       let response = null;
 
@@ -274,7 +277,7 @@ const listenForTableChanges = async () => {
       });
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
-        // console.log('report/res/inventor', data);
+        // logger.debug('report/res/inventor', data);
         // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
@@ -282,7 +285,7 @@ const listenForTableChanges = async () => {
             'Content-Type': 'application/json',
           }
         });
-        const inventory = await response.json();        
+        const inventory = await response.json();
 
         // Update Site Controller
         try {
@@ -293,35 +296,37 @@ const listenForTableChanges = async () => {
             },
             body: JSON.stringify(inventory),
           });
-          // console.log(`Successfully updated site controller for hotel ${data[0].hotel_id}`);
+          logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
         } catch (siteControllerError) {
-          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
-        }        
+          logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+        }
       }
     }
   });
 
   await client.query('LISTEN logs_reservation_changed');
   await client.query('LISTEN reservation_log_inserted');
-  // console.log('Listening for changes on logs_reservation_changed');
+  logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
 
   // Prod database listener
   const prodClient = await prodListenClient.connect();
-  prodClient.on('notification', async (msg) => {    
+  prodClient.on('notification', async (msg) => {
     if (msg.channel === 'logs_reservation_changed') {
-      ioHttp.emit('tableUpdate', { 
+      logger.info('Notification received: logs_reservation_changed (prod)');
+      ioHttp.emit('tableUpdate', {
         message: 'Reservation update detected',
         environment: 'prod'
       });
       if (ioHttps) {
-        ioHttps.emit('tableUpdate', { 
+        ioHttps.emit('tableUpdate', {
           message: 'Reservation update detected',
           environment: 'prod'
         });
       }
     }
-    if (msg.channel === 'reservation_log_inserted') {      
+    if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
+      logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
       let response = null;
 
@@ -353,7 +358,7 @@ const listenForTableChanges = async () => {
       });
       const data = await response.json();
       if (data && Object.keys(data).length > 0) {
-        
+
         // Fetch inventory data from view
         response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
@@ -361,7 +366,7 @@ const listenForTableChanges = async () => {
             'Content-Type': 'application/json',
           }
         });
-        const inventory = await response.json();        
+        const inventory = await response.json();
 
         // Update Site Controller
         try {
@@ -372,9 +377,9 @@ const listenForTableChanges = async () => {
             },
             body: JSON.stringify(inventory),
           });
-          // console.log(`Successfully updated site controller for hotel ${data[0].hotel_id}`);
+          logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
         } catch (siteControllerError) {
-          console.error(`Failed to update site controller for hotel ${data[0].hotel_id}:`, siteControllerError);          
+          logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
         }
       }
     }
@@ -389,26 +394,26 @@ listenForTableChanges();
 
 // Socket.IO event handlers
 ioHttp.on('connection', (socket) => {
-  // console.log('Client connected (HTTP)');
+  logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
   const origin = socket.handshake.headers.origin;
   const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
   socket.join(environment);
 
   // Handle client disconnection
   socket.on('disconnect', () => {
-    // console.log('Client disconnected (HTTP)');
+    logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
   });
 });
 if (ioHttps) {
   ioHttps.on('connection', (socket) => {
-    // console.log('Client connected (HTTPS)');
+    logger.debug('Client connected (HTTPS)', { clientId: socket.id, origin: socket.handshake.headers.origin });
     const origin = socket.handshake.headers.origin;
     const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
     socket.join(environment);
 
     // Handle client disconnection
     socket.on('disconnect', () => {
-      // console.log('Client disconnected (HTTPS)');
+      logger.debug('Client disconnected (HTTPS)', { clientId: socket.id });
     });
   });
 }
@@ -424,18 +429,19 @@ app.get('*', (req, res) => {
 // Start the server
 /*
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  // This block is commented out, but if it were active, it would be:
+  // logger.info(`Server is running on http://localhost:${PORT}`);
 });
 */
 
 // Start the servers
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`HTTP Server is running on http://0.0.0.0:${PORT}`);
+  logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
 if (httpsServer) {
   httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
-    console.log(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
+    logger.info(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
   });
 }
 

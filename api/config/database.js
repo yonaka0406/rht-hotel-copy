@@ -2,6 +2,7 @@
 require('dotenv').config({ path: './api/.env' });
 const { Pool } = require('pg');
 const url = require('url');
+const logger = require('./logger'); // Import Winston logger
 
 // Create both pools
 const pool = new Pool({
@@ -43,22 +44,22 @@ const isDomainProduction = (domain) => {
       domain = parsedUrl.hostname;
     }
   } catch (e) {
-    console.log('Error parsing URL:', domain, e.message);
+    logger.warn('Error parsing URL for domain check', { domain, errorMessage: e.message });
   }
   
   // Log the extracted domain
-  // console.log('Checking domain:', domain);
+  // logger.debug('Checking domain:', { domain });
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
-  // console.log(`Domain ${domain} identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  // logger.debug(`Domain ${domain} identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
   
   return isProd;
 };
 
 // Function to set environment for a specific request
 const setEnvironment = (requestId, env) => {
-  // console.log(`Setting environment for request ${requestId} to ${env}`);
+  logger.debug(`Setting environment for request ${requestId} to ${env}`);
   requestEnv.set(requestId, env);
   
   // Cleanup old request IDs to prevent memory leaks
@@ -82,10 +83,10 @@ const setupRequestContext = (req, res, next) => {
   const origin = req.headers.origin || req.headers.referer || '';
   const host = req.headers.host || '';
   
-  // console.log(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
+  logger.debug(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
   
   // Check both origin and host to determine environment
-  const isProdOrigin = isDomainProduction(origin);  
+  const isProdOrigin = isDomainProduction(origin);
   const isProd = isProdOrigin;
   
   setEnvironment(requestId, isProd ? 'prod' : 'dev');
@@ -94,7 +95,7 @@ const setupRequestContext = (req, res, next) => {
   res.on('finish', () => {
     setTimeout(() => {
       requestEnv.delete(requestId);
-      //console.log(`Cleaned up request #${requestId} context`);
+      logger.debug(`Cleaned up request #${requestId} context`);
     }, 10000); // Keep the context for 10 seconds after response
   });
   
@@ -115,20 +116,20 @@ const getPool = (requestId) => {
   // If we have a requestId, use it to determine the environment
   if (requestId) {
     const env = getEnvironment(requestId);
-    //console.log(`Getting pool for request #${requestId}, environment: ${env}`);
+    logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
     
     if (env === 'prod') {
       return prodPool;
     }
   } else {
-    //console.log('No requestId provided to getPool(), checking global.currentRequest');
+    logger.warn('No requestId provided to getPool(), checking global.currentRequest as fallback');
     
     // As a fallback, check the global.currentRequest
     if (global.currentRequest) {
       const origin = global.currentRequest.headers.origin || global.currentRequest.headers.referer || '';
       
       if (origin && origin.includes('wehub.work') && !origin.includes('test.wehub')) {
-        //console.log('Using PROD pool based on global.currentRequest origin');
+        logger.debug('Using PROD pool based on global.currentRequest origin');
         return prodPool;
       }
     }
@@ -140,46 +141,46 @@ const getPool = (requestId) => {
       
       // Check if the URL in the stack trace suggests production
       if (stack.includes('wehub.work') && !stack.includes('test.wehub')) {
-        //console.log('Using PROD pool based on stack trace');
+        logger.debug('Using PROD pool based on stack trace analysis');
         return prodPool;
       }
     } catch (e) {
-      console.log('Error analyzing stack trace:', e.message);
+      logger.warn('Error analyzing stack trace for pool selection:', { errorMessage: e.message });
     }
   }
   
   // Default to development pool
-  //console.log('Defaulting to development pool');
+  logger.debug('Defaulting to development pool');
   return pool;
 };
 
 // Create a function to explicitly select prod pool for socket connections
 const getProdPool = () => {
-  console.log('Explicitly selecting production pool');
+  logger.debug('Explicitly selecting production pool');
   return prodPool;
 };
 
-// Create a function to explicitly select dev pool for socket connections  
+// Create a function to explicitly select dev pool for socket connections
 const getDevPool = () => {
-  console.log('Explicitly selecting development pool');
+  logger.debug('Explicitly selecting development pool');
   return pool;
 };
 
 // Log connections for debugging
 pool.on('connect', () => {
-  // console.log('DEV pool connection created');
+  logger.debug('DEV pool: connection created');
 });
 
 prodPool.on('connect', () => {
-  // console.log('PROD pool connection created');
+  logger.debug('PROD pool: connection created');
 });
 
 pool.on('error', (err) => {
-  console.error('Error in DEV pool:', err.message);
+  logger.error('Error in DEV pool', { errorMessage: err.message, stack: err.stack });
 });
 
 prodPool.on('error', (err) => {
-  console.error('Error in PROD pool:', err.message);
+  logger.error('Error in PROD pool', { errorMessage: err.message, stack: err.stack });
 });
 
 module.exports = {
