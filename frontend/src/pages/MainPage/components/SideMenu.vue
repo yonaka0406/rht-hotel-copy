@@ -229,7 +229,7 @@
         },
         
         { label: '予約', type: 'header', icon: 'pi pi-calendar-plus' },
-        { label: '新規予約', icon: 'pi pi-fw pi-plus-circle', type: 'link', command: () => goToNewReservation() },
+        { label: '新規予約', icon: 'pi pi-fw pi-plus-circle', route: '/reservations/new', type: 'link', command: () => goToNewReservation() },
         { label: '予約カレンダー', icon: 'pi pi-fw pi-calendar', route: '/reservations/calendar', type: 'link', command: () => router.push('/reservations/calendar') },
         { label: '予約一覧', icon: 'pi pi-fw pi-list', route: '/reservations/list', type: 'link', command: () => router.push('/reservations/list') },
         { label: '月次集計', icon: 'pi pi-fw pi-calendar-plus', route: '/report/monthly', type: 'link', command: () => router.push('/report/monthly') },
