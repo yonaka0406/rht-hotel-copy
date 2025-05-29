@@ -100,6 +100,27 @@ const uploadStampImage = (req, res) => {
   });
 };
 
+const getCompanyStampImage = (req, res) => {
+  try {
+    const customStampDir = process.env.STAMP_COMPONENTS_DIR;
+    // This logic for determining targetDir MUST be consistent with uploadStampImage
+    const defaultStampDir = path.join(__dirname, '..', 'components'); // Resolves to api/components/
+    const targetDir = customStampDir && customStampDir.trim() !== '' ? customStampDir : defaultStampDir;
+    
+    const imagePath = path.join(targetDir, 'stamp.png');
+
+    if (fs.existsSync(imagePath)) {
+      // res.sendFile will set appropriate Content-Type headers based on file extension
+      res.sendFile(path.resolve(imagePath)); // path.resolve ensures an absolute path
+    } else {
+      res.status(404).json({ success: false, message: 'Stamp image not found.' });
+    }
+  } catch (error) {
+    console.error('Error retrieving stamp image:', error);
+    res.status(500).json({ success: false, message: 'Error retrieving stamp image: ' + error.message });
+  }
+};
+
 const getPaymentTypes = async (req, res) => {
   try {
     const data = await selectPaymentTypes(req.requestId);    
@@ -227,6 +248,7 @@ module.exports = {
   getTaxTypes, 
   addTaxType, 
   changeTaxTypeVisibility,
-  changeTaxTypeDescription, 
+  changeTaxTypeDescription,
+  getCompanyStampImage, 
   uploadStampImage,
 };

@@ -217,6 +217,7 @@
     import { useSettingsStore } from '@/composables/useSettingsStore';
     const { paymentTypes, fetchPaymentTypes, createPaymentType, alterPaymentTypeVisibility, alterPaymentTypeDescription,
         taxTypes, fetchTaxTypes, createTaxType, alterTaxTypeVisibility, alterTaxTypeDescription,
+        getCompanyStampImageUrl, uploadCompanyStamp
      } = useSettingsStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore();
@@ -227,13 +228,39 @@
     const currentStampImageUrl = ref('');
     const isLoading = ref(false);
     const fileInputRef = ref(null);
+    const stampImageLoaded = ref(false);
+    const stampImageAttempted = ref(false);
+    
+    const updateStampUrl = async () => { // Make it async
+        stampImageLoaded.value = false;
+        stampImageAttempted.value = true;
+        try {
+            const imageUrl = await getCompanyStampImageUrl(); // Call the store function
+            if (imageUrl) {
+                currentStampImageUrl.value = imageUrl;
+                // The @load and @error events on the <Image> component will handle stampImageLoaded
+            } else {
+                currentStampImageUrl.value = ''; // Or set to a placeholder if image not found
+                stampImageLoaded.value = false; // Explicitly set if no URL
+            }
+        } catch (error) {
+            console.error("Failed to get stamp image URL from store:", error);
+            currentStampImageUrl.value = ''; // Clear or set to placeholder on error
+            stampImageLoaded.value = false;
+            toast.add({ severity: 'error', summary: '印鑑取得エラー', detail: error.message || '印鑑画像の読み込みに失敗しました。', life: 3000 });
+        }
+    };
 
-    const updateStampUrl = () => {
-      // Check if the stamp.png exists before setting the URL to avoid 404 if not uploaded yet.
-      // This is a simplified check; a more robust way might be an API endpoint that returns the stamp URL or status.
-      // For now, we assume if it's there, it's the correct one, and cache-bust.
-      // If it's not there, Image component might show its broken image icon or alt text.
-      currentStampImageUrl.value = `/api/components/stamp.png?t=${new Date().getTime()}`;
+    const handleStampImageLoad = () => {
+        stampImageLoaded.value = true;
+    };
+
+    const handleStampImageError = () => {
+        // This means the image at currentStampImageUrl (likely /api/components/stamp.png)
+        // could not be loaded. It might not exist, or there was a server error.
+        console.warn('Failed to load company stamp image from:', currentStampImageUrl.value);
+        stampImageLoaded.value = false;
+        // currentStampImageUrl.value = ''; // Optionally clear the URL if it's known to be invalid
     };
 
     const handleFileChange = (event) => {
@@ -243,10 +270,10 @@
             return;
         }
 
-        if (file.size > 1024 * 1024) { // 1MB
+        if (file.size > 1 * 1024 * 1024) { // 1MB
             toast.add({ severity: 'warn', summary: 'ファイルサイズ超過', detail: '画像は1MB以内である必要があります。', life: 4000 });
             selectedFile.value = null;
-            if (fileInputRef.value) fileInputRef.value.value = '';
+            if (fileInputRef.value) fileInputRef.value.value = ''; // Reset file input
             return;
         }
 
@@ -284,32 +311,23 @@
         }
 
         isLoading.value = true;
-        const formData = new FormData();
-        formData.append('stampImage', selectedFile.value);
-
+        
         try {
-            const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
-            const response = await fetch('/api/settings/stamp/upload', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            // Call the action from the store
+            const result = await uploadCompanyStamp(selectedFile.value);
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || `HTTP error! status: ${response.status}`);
-            }
-
-            toast.add({ severity: 'success', summary: '成功', detail: data.message, life: 3000 });
-            updateStampUrl();
+            // The store action should throw an error on failure or return success data
+            // For this example, we assume it returns an object with a message on success
+            // and throws an error (which will be caught here) on failure.
+            
+            toast.add({ severity: 'success', summary: '成功', detail: result.message || '印鑑を更新しました。', life: 3000 });
+            updateStampUrl(); 
             selectedFile.value = null;
             if (fileInputRef.value) {
-                fileInputRef.value.value = '';
+                fileInputRef.value.value = ''; 
             }
         } catch (error) {
+            console.error("Stamp upload error (from component):", error);
             toast.add({ severity: 'error', summary: 'アップロード失敗', detail: error.message || '不明なエラーが発生しました。', life: 4000 });
         } finally {
             isLoading.value = false;
@@ -448,6 +466,6 @@
         resetNewPaymentData();
         await fetchTaxTypes();
         resetNewTaxData();
-        updateStampUrl(); // Initialize stamp image URL
+        updateStampUrl();
     });
 </script>
