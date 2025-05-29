@@ -7,3 +7,5 @@ frontend/package-lock.json
 api/public/index.html
 frontend/.env.dev
 api/config/google_sheets_credentials.json
+api/tmp/uploads/
+/api/tests/temp_assets/

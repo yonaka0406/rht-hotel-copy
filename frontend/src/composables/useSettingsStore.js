@@ -141,6 +141,91 @@ export function useSettingsStore() {
         }
     };
 
+    const getCompanyStampImageUrl = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                // Or handle appropriately, e.g., return null or a placeholder URL
+                throw new Error('認証トークンが見つかりません。画像を取得できません。');
+            }
+
+            // Use the new route you defined: /api/settings/stamp/get
+            const response = await fetch(`/api/settings/stamp/get?t=${new Date().getTime()}`, { // Added cache buster
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    // No 'Content-Type' needed for GET request expecting an image
+                },
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.warn('Company stamp image not found on server.');
+                    return null; // Or a specific indicator that it's not found
+                }
+                // For other errors, try to parse a message if server sends one, otherwise generic error
+                let errorMsg = `サーバーエラー: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData && errorData.message) {
+                        errorMsg = errorData.message;
+                    }
+                } catch (e) {
+                    // Ignore if response is not JSON
+                }
+                throw new Error(errorMsg);
+            }
+
+            const imageBlob = await response.blob();
+            if (imageBlob.size === 0) {
+                console.warn('Received empty blob for stamp image.');
+                return null; // Or handle as image not found
+            }
+            return URL.createObjectURL(imageBlob);
+
+        } catch (error) {
+            console.error('Error fetching company stamp image URL:', error);
+            throw error; // Re-throw for the component to handle (e.g., show toast)
+        }
+    };
+    const uploadCompanyStamp = async (stampFile) => {
+        const formData = new FormData();
+        formData.append('stampImage', stampFile);
+
+        try {
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                // Handle missing token case, perhaps redirect to login or show error
+                // For now, we'll throw an error that the component can catch.
+                throw new Error('認証トークンが見つかりません。ログインしてください。');
+            }
+
+            const response = await fetch('/api/settings/stamp/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    // 'Content-Type': 'multipart/form-data' is set automatically by the browser with FormData
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // If the server returns a JSON error message, use it.
+                // Otherwise, use a generic HTTP error.
+                throw new Error(data.message || `サーバーエラー: ${response.status}`);
+            }
+            
+            return data;
+        } catch (error) {
+            console.error('Error uploading stamp in store:', error);
+            // Re-throw the error so the component can catch it and display a toast
+            // You might want to transform the error or provide a more user-friendly message here
+            throw error; 
+        }
+    }
+
     return {        
         paymentTypes,
         taxTypes,
@@ -152,5 +237,7 @@ export function useSettingsStore() {
         createTaxType,
         alterTaxTypeVisibility,
         alterTaxTypeDescription,
+        getCompanyStampImageUrl,
+        uploadCompanyStamp
     };
 }
