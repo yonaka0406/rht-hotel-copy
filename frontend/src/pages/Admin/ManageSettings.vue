@@ -105,7 +105,7 @@
                         <div class="flex flex-col items-center justify-center">
                             <InputText type="file" 
                                 @change="handleFileChange"                                
-                                accept="image/png,image/jpeg,image/gif"
+                                accept="image/png"
                                 ref="fileInputRef"
                                 class="mb-2"
                             />
@@ -115,7 +115,7 @@
                                 class="p-button-primary"
                                 :loading="isLoading"
                                 :disabled="!selectedFile || isLoading" />
-                            <small class="mt-2">画像は150x150px以上、1MB以内</small>
+                            <small class="mt-2">PNG画像は150x150px以上、1MB以内</small>
                         </div>
                     </div>
                 </template>
