@@ -1,6 +1,6 @@
 // Load environment variables from .env file as early as possible
 require('dotenv').config({ path: './api/.env' });
-console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
+// console.log(`[SERVER_STARTUP] After dotenv, process.env.NODE_ENV: ${process.env.NODE_ENV}`);
 
 const path = require('path');
 const express = require('express');
@@ -20,7 +20,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(db.setupRequestContext);
 
-console.log('STAMP_COMPONENTS_DIR', process.env.STAMP_COMPONENTS_DIR)
+// console.log('STAMP_COMPONENTS_DIR', process.env.STAMP_COMPONENTS_DIR)
 const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR;
 const projectRoot = path.resolve(__dirname, '..');
 const absoluteStampPath = path.resolve(projectRoot, stampDirEnvPath);
