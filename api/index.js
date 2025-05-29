@@ -20,6 +20,11 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(db.setupRequestContext);
 
+console.log('STAMP_COMPONENTS_DIR', process.env.STAMP_COMPONENTS_DIR)
+const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR;
+const projectRoot = path.resolve(__dirname, '..');
+const absoluteStampPath = path.resolve(projectRoot, stampDirEnvPath);
+
 // Session Configuration
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 
@@ -163,7 +168,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.raw({ type: 'text/xml' }));
 //assets for the frontend
-app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(path.join(__dirname, 'public')));
+app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(absoluteStampPath));
 
 // Make config available to route handlers
 app.use((req, res, next) => {
