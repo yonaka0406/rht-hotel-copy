@@ -6,8 +6,8 @@ const {
   updateUserInfo, 
   updateUserCalendarSettings
 } = require('../models/user');
-const googleCalendarUtils = require('../utils/googleCalendarUtils'); // Added googleCalendarUtils
-const { syncCalendarFromGoogle } = require('../services/synchronizationService'); // Added sync service
+const googleCalendarUtils = require('../utils/googleCalendarUtils');
+const { syncCalendarFromGoogle } = require('../services/synchronizationService');
 
 const users = async (req, res) => {
   const logger = req.app.locals.logger;

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { fetchUserActions, fetchClientActions, fetchAllActions, addAction, editAction, removeAction, syncActionToCalendar  } = require('../controllers/crmController'); // Added syncActionToCalendar
+const { fetchUserActions, fetchClientActions, fetchAllActions, addAction, editAction, removeAction, syncActionToCalendar  } = require('../controllers/crmController');
 const { authMiddleware, authMiddlewareCRUDAccess } = require('../middleware/authMiddleware');
 
 router.get('/actions/user/:uid', authMiddleware, fetchUserActions);

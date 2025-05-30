@@ -657,10 +657,10 @@
         
         try {
             if (!id) {                
-                await addAction(currentActionFormData.value); // This now comes from useCRMStore
+                await addAction(currentActionFormData.value); 
                 toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
             } else {                
-                await editAction(id, currentActionFormData.value); // This now comes from useCRMStore
+                await editAction(id, currentActionFormData.value);
                 toast.add({ severity: "info", summary: "Edit", detail: "アクション編集されました。", life: 3000 });
             }
 

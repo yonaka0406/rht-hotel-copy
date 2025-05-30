@@ -53,6 +53,7 @@ CREATE TABLE users (
     google_access_token TEXT NULL,
     google_refresh_token TEXT NULL,
     google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
+    last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
@@ -76,7 +77,8 @@ CREATE TABLE users (
       ADD COLUMN google_calendar_id TEXT NULL,
       ADD COLUMN google_access_token TEXT NULL,
       ADD COLUMN google_refresh_token TEXT NULL,
-      ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL;   
+      ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL;
 
 -- Main Hotels Table
 CREATE TABLE hotels (

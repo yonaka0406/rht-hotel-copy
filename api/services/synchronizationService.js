@@ -27,10 +27,15 @@ async function syncCalendarFromGoogle(requestId, userId) {
         user = userArr[0];
     } catch (dbError) {
         logger.error('Failed to fetch user details for sync.', { error: dbError.message, stack: dbError.stack });
-        throw dbError; // Propagate error
+        throw dbError; 
     }
 
-    const calendarIdForSync = user.google_calendar_id || 'primary';
+    if (!user.google_calendar_id) {
+        logger.warn(`User ${userId} does not have a google_calendar_id configured. Aborting sync.`);
+        return { success: false, message: 'ユーザーのカレンダー設定が見つかりません。GoogleカレンダーIDが設定されているか確認してください。(User calendar configuration not found. Please ensure a Google Calendar ID is set.)' };
+    }
+    const calendarIdForSync = user.google_calendar_id;
+    
     const lastSyncTimeISO = user.last_successful_google_sync ? new Date(user.last_successful_google_sync).toISOString() : null;
     
     logger.info(`Fetching Google Calendar events for calendar: ${calendarIdForSync}. Syncing events updated since: ${lastSyncTimeISO || 'beginning of time'}.`);

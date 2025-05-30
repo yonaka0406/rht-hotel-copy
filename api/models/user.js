@@ -216,7 +216,7 @@ async function updateUserCalendarSettings(requestId, userId, settings) {
   const pool = getPool(requestId);
   
   // Fields that can be updated by this function
-  const updatableFields = ['google_calendar_id'];
+  const updatableFields = ['google_calendar_id', 'last_successful_google_sync'];
   const setClauses = [];
   const values = [];
   let paramIndex = 1;
