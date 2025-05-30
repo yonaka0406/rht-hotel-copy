@@ -216,5 +216,82 @@ module.exports = {
   linkGoogleAccount,
   createUserWithGoogle,
   updateUserGoogleTokens,
-  updateUserCalendarSettings, // Added updateUserCalendarSettings
+  updateUserCalendarSettings,
 };
+
+// Update user's calendar specific settings
+async function updateUserCalendarSettings(requestId, userId, settings) {
+  const pool = getPool(requestId);
+  
+  // Fields that can be updated by this function
+  const updatableFields = ['sync_google_calendar', 'google_calendar_id', 'last_successful_google_sync'];
+  const setClauses = [];
+  const values = [];
+  let paramIndex = 1;
+
+  for (const field of updatableFields) {
+    if (settings.hasOwnProperty(field)) {
+      setClauses.push(`${field} = $${paramIndex++}`);
+      // For 'last_successful_google_sync', ensure it's a valid timestamp or null
+      if (field === 'last_successful_google_sync' && settings[field] !== null) {
+        values.push(new Date(settings[field]));
+      } else {
+        values.push(settings[field]);
+      }
+    }
+  }
+
+  // If no specific settings fields are being updated, at least update 'updated_by' and 'updated_at'
+  // However, the primary purpose of this function is settings, so ensure at least one setting is changing.
+  if (setClauses.length === 0) {
+    // Optionally, if you want to prevent calls that don't change any of the specified settings:
+    // console.warn(`[UserStore][updateUserCalendarSettings] No valid settings provided for user ${userId}.`);
+    // return findUserById or throw error. For now, let it proceed if other logic relies on it touching updated_by.
+    // To be more strict and ensure it only runs for its designated fields:
+    // throw new Error("No valid calendar settings provided for update.");
+    // For now, we'll let it pass to only update updated_by if nothing else matches.
+  }
+
+  // Always update the 'updated_by' field.
+  // Assuming an 'updated_at' field that automatically updates on row change via a DB trigger is preferred.
+  // If not, 'updated_at = CURRENT_TIMESTAMP' should be added here.
+  setClauses.push(`updated_by = $${paramIndex++}`);
+  values.push(userId); 
+
+  if (setClauses.length === 1 && setClauses[0].startsWith('updated_by')) {
+      // This means no actual calendar settings were in the 'settings' object.
+      // Depending on desired behavior, one might return early or proceed to only update 'updated_by'.
+      // For this function, it's better to require at least one actual setting.
+      // However, the dynamic nature means if only 'updated_by' is set, the query is still valid.
+      // Let's refine: if ONLY updated_by is set because no other settings were provided, it's not an "error" but maybe not the intended use.
+      // The check "if (setClauses.length === 0)" before adding updated_by would be more strict.
+      // The current structure will always include updated_by.
+  }
+
+
+  values.push(userId); // For WHERE id = $N (this N should be paramIndex after all SET clauses)
+
+  const query = `
+    UPDATE users 
+    SET ${setClauses.join(', ')}
+    WHERE id = $${paramIndex} 
+    RETURNING *; 
+  `;
+  // Note: The RETURNING * clause will include all user fields, including potentially sensitive ones.
+  // It's often better to return specific, non-sensitive fields or just a success status.
+  // For consistency with other update functions in this model, RETURNING * is kept.
+
+  try {
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      // This case should ideally not be hit if userId is coming from req.user.id (authenticated user)
+      // but good to have as a safeguard.
+      console.error(`[UserStore][updateUserCalendarSettings] User not found for ID: ${userId} during update.`);
+      throw new Error('User not found or calendar settings update failed.');
+    }
+    return result.rows[0]; // Return the updated user row
+  } catch (err) {
+    console.error(`[UserStore][updateUserCalendarSettings] Error updating calendar settings for user ${userId}:`, err.message, { stack: err.stack, query, values });
+    throw new Error('Database error during calendar settings update.');
+  }
+}
