@@ -1,6 +1,6 @@
 <template>    
     <div class="p-4">
-        <Panel header="Manage Roles">            
+        <Panel header="ユーザーロール管理">            
             <div>
                 <div class="text-left">
                     <Button
