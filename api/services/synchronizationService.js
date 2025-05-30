@@ -1,7 +1,7 @@
 const { getUsersByID, updateUserCalendarSettings } = require('../models/user');
 const { getActionById, insertAction, updateAction } = require('../models/crm');
 const googleCalendarUtils = require('../utils/googleCalendarUtils');
-const {ಾರ್, logger: defaultLogger } = require('../config/logging'); // Assuming a default logger setup
+const defaultLogger = require('../config/logger');
 
 /**
  * Synchronizes events from Google Calendar to the PMS/CRM for a given user.
@@ -28,15 +28,6 @@ async function syncCalendarFromGoogle(requestId, userId) {
     } catch (dbError) {
         logger.error('Failed to fetch user details for sync.', { error: dbError.message, stack: dbError.stack });
         throw dbError; // Propagate error
-    }
-    
-    if (!user.sync_google_calendar) {
-        logger.info('Google Calendar sync is not enabled for this user. Skipping sync.');
-        return { success: true, message: 'Sync not enabled for user.', actionsCreated: 0, actionsUpdated: 0, actionsFailed: 0 };
-    }
-    if (!user.google_access_token) {
-        logger.warn('User has sync enabled but no Google access token. Aborting sync. User may need to re-authenticate.');
-        return { success: false, message: 'User has no Google access token. Please re-authenticate with Google.'};
     }
 
     const calendarIdForSync = user.google_calendar_id || 'primary';
@@ -170,7 +161,7 @@ async function syncCalendarFromGoogle(requestId, userId) {
     logger.info('Google Calendar to PMS sync process completed.');
     return { 
         success: true, 
-        message: 'Sync completed.', 
+        message: '同期処理完了', 
         actionsCreated, 
         actionsUpdated, 
         actionsFailed 

@@ -5,10 +5,10 @@ const {
     insertAction, 
     updateAction, 
     deleteAction,
-    getActionById // Added getActionById
+    getActionById
 } = require('../models/crm');
 const { getUsersByID } = require('../models/user'); // To get user's Google Calendar sync preferences
-const googleCalendarUtils = require('../utils/googleCalendarUtils'); // Google Calendar utility functions
+const googleCalendarUtils = require('../utils/googleCalendarUtils');
 
 const SYNCABLE_ACTION_TYPES = ['meeting', 'task', 'visit', 'call']; // Define action types that can be synced
 
@@ -68,7 +68,7 @@ const addAction = async (req, res) => {
     const user = await _getUserForSync(req.requestId, userId, logger);
     const isSyncableType = SYNCABLE_ACTION_TYPES.includes(actionFields.action_type);
 
-    if (user && user.sync_google_calendar && actionFields.action_datetime && isSyncableType) {
+    if (user && actionFields.action_datetime && isSyncableType) {
       if (logger) logger.info(`[CRMController][addAction] Attempting to create Google Calendar event for user ${userId}, action type ${actionFields.action_type}.`);
       try {
         const calendarEvent = await googleCalendarUtils.createCalendarEvent(
@@ -86,7 +86,7 @@ const addAction = async (req, res) => {
         actionFields.synced_with_google_calendar = false; // Ensure it's false if sync failed
       }
     } else {
-        if (logger) logger.info(`[CRMController][addAction] Skipping Google Calendar event creation for user ${userId}. Sync enabled: ${user ? user.sync_google_calendar : 'N/A'}, Action type: ${actionFields.action_type}, Has action_datetime: ${!!actionFields.action_datetime}`);
+        if (logger) logger.info(`[CRMController][addAction] Skipping Google Calendar event creation for user ${userId}. Action type: ${actionFields.action_type}, Has action_datetime: ${!!actionFields.action_datetime}`);
         actionFields.synced_with_google_calendar = false; // Explicitly false if not attempting sync
     }
 
@@ -121,7 +121,7 @@ const editAction = async (req, res) => {
     actionFields.synced_with_google_calendar = actionFields.hasOwnProperty('synced_with_google_calendar') ? actionFields.synced_with_google_calendar : existingAction.synced_with_google_calendar;
 
 
-    if (user && user.sync_google_calendar && effectiveActionDatetime && isSyncableType) {
+    if (user && effectiveActionDatetime && isSyncableType) {
       if (logger) logger.info(`[CRMController][editAction] Sync enabled for user ${userId}. Action type ${actionFields.action_type || existingAction.action_type} is syncable.`);
       const calendarIdToUse = user.google_calendar_id || 'primary';
       // Merge existing action data with new fields for calendar event context
@@ -169,7 +169,7 @@ const editAction = async (req, res) => {
       actionFields.google_calendar_html_link = null;
       actionFields.synced_with_google_calendar = false;
     } else {
-        if (logger) logger.info(`[CRMController][editAction] Skipping Google Calendar operations for action ${actionId}. User sync: ${user ? user.sync_google_calendar : 'N/A'}, Type: ${actionFields.action_type || existingAction.action_type}, DateTime: ${!!effectiveActionDatetime}`);
+        if (logger) logger.info(`[CRMController][editAction] Skipping Google Calendar operations for action ${actionId}. Type: ${actionFields.action_type || existingAction.action_type}, DateTime: ${!!effectiveActionDatetime}`);
         if (!actionFields.hasOwnProperty('synced_with_google_calendar')) { // Avoid overriding if client explicitly sends this field
             actionFields.synced_with_google_calendar = false;
         }
@@ -247,12 +247,7 @@ const syncActionToCalendar = async (req, res) => {
         if (!user) {
             return res.status(403).json({ error: 'User not found, cannot sync.' });
         }
-
-        if (!user.sync_google_calendar) {
-            if (logger) logger.warn(`[CRMController][syncActionToCalendar] Calendar sync is not enabled for user ${userId}.`);
-            return res.status(400).json({ error: 'Calendar sync is not enabled for this user.' });
-        }
-
+        
         const isSyncableType = SYNCABLE_ACTION_TYPES.includes(action.action_type);
         if (!isSyncableType) {
             if (logger) logger.warn(`[CRMController][syncActionToCalendar] Action type ${action.action_type} for action ${actionId} is not syncable.`);

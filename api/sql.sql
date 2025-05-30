@@ -49,6 +49,10 @@ CREATE TABLE users (
     role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)
     auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
     provider_user_id VARCHAR(255) NULL,
+    google_calendar_id TEXT NULL,
+    google_access_token TEXT NULL,
+    google_refresh_token TEXT NULL,
+    google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
@@ -67,17 +71,12 @@ CREATE TABLE users (
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
 
 
-    -- 1. Make the password_hash column nullable
+    -- Temporary
    ALTER TABLE users
-   ALTER COLUMN password_hash DROP NOT NULL;
-
-   -- 2. Add a new column auth_provider
-   ALTER TABLE users
-   ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) NOT NULL DEFAULT 'local';
-
-   -- 3. Add a new column provider_user_id
-   ALTER TABLE users
-   ADD COLUMN IF NOT EXISTS provider_user_id VARCHAR(255) NULL;
+      ADD COLUMN google_calendar_id TEXT NULL,
+      ADD COLUMN google_access_token TEXT NULL,
+      ADD COLUMN google_refresh_token TEXT NULL,
+      ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL;   
 
 -- Main Hotels Table
 CREATE TABLE hotels (
@@ -225,12 +224,20 @@ CREATE TABLE crm_actions (
    assigned_to INT REFERENCES users(id),
    due_date TIMESTAMP WITH TIME ZONE,
    status crm_action_status_enum DEFAULT 'pending',
+   google_calendar_event_id TEXT NULL,
+   google_calendar_html_link TEXT,
+   synced_with_google_calendar BOOLEAN DEFAULT FALSE,
    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
    created_by INT REFERENCES users(id),
    updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);
 CREATE INDEX idx_crm_actions_action_type ON crm_actions(action_type);
+
+ALTER TABLE crm_actions 
+   ADD COLUMN google_calendar_event_id TEXT NULL,
+   ADD COLUMN google_calendar_html_link TEXT NULL,
+   ADD COLUMN synced_with_google_calendar BOOLEAN DEFAULT FALSE NULL;
 
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,

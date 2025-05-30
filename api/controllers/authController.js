@@ -9,7 +9,7 @@ const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAcc
 
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
-const { syncCalendarFromGoogle } = require('../services/synchronizationService'); // Import sync service
+const { syncCalendarFromGoogle } = require('../services/synchronizationService');
 const crypto = require('crypto');
 
 // Get .env accordingly
@@ -72,7 +72,7 @@ const login = async (req, res) => {
     logger.info('User logged in successfully', { userId: user.id, email, ip: req.ip });
 
     // Trigger background sync if enabled
-    if (user.sync_google_calendar && user.id) {
+    if (user.id) {
       logger.info(`Triggering background Google Calendar sync for user ${user.id} after local login. Request ID: ${req.requestId}`);
       syncCalendarFromGoogle(req.requestId, user.id)
         .then(syncResult => {
@@ -381,7 +381,7 @@ const googleCallback = async (req, res) => {
     logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Generated JWT for user.', { userId: user.id, email: userEmail, ip: req.ip });
 
     // Trigger background sync if enabled
-    if (user.sync_google_calendar && user.id) {
+    if (user.id) {
       logger.info(`Triggering background Google Calendar sync for user ${user.id} after Google login/callback. Request ID: ${req.requestId}`);
       syncCalendarFromGoogle(req.requestId, user.id)
         .then(syncResult => {

@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
 const { getUsersByID, updateUserGoogleTokens } = require('../models/user');
-// For createDedicatedCalendar, we'd ideally import a function like:
-// const { updateUserGoogleCalendarId } = require('../models/user'); 
+const { getGoogleOAuth2Client } = require('../config/oauth');
 
 // Default timezone for calendar events. Consider making this user-specific or app-configurable.
 const DEFAULT_TIMEZONE = 'Asia/Tokyo'; 
@@ -21,55 +20,24 @@ async function getCalendarService(requestId, userId) {
   }
   const user = users[0];
 
-  if (!user.google_access_token) {
-    console.error(`[GoogleCalendarUtils][getCalendarService] Google access token not found for user ID: ${userId}, requestId: ${requestId}`);
-    throw new Error('Google access token not found. Please re-authenticate.');
-  }
+  // Get the base OAuth2 client from your centralized config
+  const oauth2Client = getGoogleOAuth2Client();
 
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_CALLBACK_URL) {
-    console.error(`[GoogleCalendarUtils][getCalendarService] Missing Google OAuth2 client environment variables. requestId: ${requestId}`);
-    throw new Error('Google OAuth2 client configuration is incomplete.');
-  }
+  
+  // console.log(`[DEBUG][getCalendarService] For User ID: ${userId}, Request ID: ${requestId}`);
+  // console.log(`[DEBUG][getCalendarService]   - Retrieved user.google_access_token: '${user.google_access_token}' (Type: ${typeof user.google_access_token})`);
+  // console.log(`[DEBUG][getCalendarService]   - Retrieved user.google_refresh_token: '${user.google_refresh_token}' (Type: ${typeof user.google_refresh_token})`);
+  // console.log(`[DEBUG][getCalendarService]   - Retrieved user.google_token_expiry_date: '${user.google_token_expiry_date}' (Type: ${typeof user.google_token_expiry_date})`);
 
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_CALLBACK_URL
-  );
-
+  const expiryDateForCredentials = user.google_token_expiry_date ? new Date(user.google_token_expiry_date).getTime() : null;
+  // console.log(`[DEBUG][getCalendarService]   - Calculated expiry_date for setCredentials: ${expiryDateForCredentials} (Type: ${typeof expiryDateForCredentials})`);
+  
   oauth2Client.setCredentials({
     access_token: user.google_access_token,
     refresh_token: user.google_refresh_token,
-    expiry_date: user.google_token_expiry_date ? new Date(user.google_token_expiry_date).getTime() : null,
+    expiry_date: expiryDateForCredentials,
   });
-
-  const isActuallyExpiring = user.google_token_expiry_date 
-                             ? (new Date(user.google_token_expiry_date).getTime() < (Date.now() + (5 * 60 * 1000)))
-                             : true;
-
-  if (isActuallyExpiring) {
-    console.info(`[GoogleCalendarUtils][getCalendarService] Token for user ID: ${userId} is expiring. Attempting refresh. requestId: ${requestId}`);
-    if (user.google_refresh_token) {
-      try {
-        const { credentials } = await oauth2Client.refreshAccessToken();
-        console.info(`[GoogleCalendarUtils][getCalendarService] Successfully refreshed token for user ID: ${userId}. requestId: ${requestId}`);
-        await updateUserGoogleTokens(
-          requestId,
-          userId,
-          credentials.access_token,
-          credentials.refresh_token || user.google_refresh_token,
-          credentials.expiry_date
-        );
-        console.info(`[GoogleCalendarUtils][getCalendarService] Updated refreshed tokens in DB for user ID: ${userId}. requestId: ${requestId}`);
-      } catch (refreshError) {
-        console.error(`[GoogleCalendarUtils][getCalendarService] Failed to refresh token for user ID: ${userId}. Error: ${refreshError.message}. requestId: ${requestId}`, refreshError.stack);
-        throw new Error('Failed to refresh Google access token. Please re-authenticate.');
-      }
-    } else {
-      console.warn(`[GoogleCalendarUtils][getCalendarService] Token for user ID: ${userId} expired, no refresh token. User needs to re-authenticate. requestId: ${requestId}`);
-      throw new Error('Google access token expired, no refresh token. Please re-authenticate.');
-    }
-  }
+  
   return google.calendar({ version: 'v3', auth: oauth2Client });
 }
 
@@ -86,8 +54,8 @@ async function createDedicatedCalendar(requestId, userId) {
   const userName = (users && users.length > 0 && users[0].name) ? users[0].name : `User ${userId}`;
 
   const calendarResource = {
-    summary: `CRM Events - ${userName}`,
-    description: 'Calendar for events synced from Your PMS/CRM Application.',
+    summary: `WeHub - ${userName}`,
+    description: 'WeHubのCRMと同期するカレンダー',
     timeZone: DEFAULT_TIMEZONE,
   };
 
@@ -95,12 +63,7 @@ async function createDedicatedCalendar(requestId, userId) {
     const response = await calendarService.calendars.insert({ resource: calendarResource });
     const newCalendarId = response.data.id;
     console.info(`[GoogleCalendarUtils][createDedicatedCalendar] Successfully created dedicated calendar for user ID: ${userId} with Calendar ID: ${newCalendarId}. requestId: ${requestId}`);
-    
-    // **CONCEPTUAL**: Store newCalendarId in the users table
-    // This would typically involve calling a model function:
-    // await updateUserGoogleCalendarId(requestId, userId, newCalendarId);
-    console.log(`[GoogleCalendarUtils][createDedicatedCalendar] CONCEPTUAL: Would call updateUserGoogleCalendarId(${requestId}, ${userId}, ${newCalendarId}) here.`);
-    
+        
     return newCalendarId;
   } catch (error) {
     console.error(`[GoogleCalendarUtils][createDedicatedCalendar] Error creating dedicated calendar for user ID: ${userId}. Error: ${error.message}. requestId: ${requestId}`, error.stack);

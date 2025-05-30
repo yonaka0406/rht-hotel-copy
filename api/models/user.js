@@ -25,6 +25,12 @@ const getUsersByID = async (requestId, id) => {
           users.name,
           users.status_id, 
           users.role_id, 
+          users.auth_provider,
+          users.provider_user_id,
+          users.google_calendar_id,
+          users.google_access_token,
+          users.google_refresh_token,
+          users.google_token_expiry_date,
           user_roles.role_name,
           user_roles.permissions,
           user_status.status_name      
@@ -205,26 +211,12 @@ async function createUserWithGoogle(requestId, googleUserId, email, name, roleId
   }
 }
 
-module.exports = {
-  getAllUsers,
-  getUsersByID,
-  findUserByEmail,
-  updatePasswordHash,
-  updateUserInfo,
-  createUser,
-  findUserByProviderId,
-  linkGoogleAccount,
-  createUserWithGoogle,
-  updateUserGoogleTokens,
-  updateUserCalendarSettings,
-};
-
 // Update user's calendar specific settings
 async function updateUserCalendarSettings(requestId, userId, settings) {
   const pool = getPool(requestId);
   
   // Fields that can be updated by this function
-  const updatableFields = ['sync_google_calendar', 'google_calendar_id', 'last_successful_google_sync'];
+  const updatableFields = ['google_calendar_id'];
   const setClauses = [];
   const values = [];
   let paramIndex = 1;
@@ -295,3 +287,19 @@ async function updateUserCalendarSettings(requestId, userId, settings) {
     throw new Error('Database error during calendar settings update.');
   }
 }
+
+module.exports = {
+  getAllUsers,
+  getUsersByID,
+  findUserByEmail,
+  updatePasswordHash,
+  updateUserInfo,
+  createUser,
+  findUserByProviderId,
+  linkGoogleAccount,
+  createUserWithGoogle,
+  updateUserGoogleTokens,
+  updateUserCalendarSettings,
+};
+
+
