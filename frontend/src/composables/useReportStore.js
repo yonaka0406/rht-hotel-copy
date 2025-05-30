@@ -4,6 +4,72 @@ const reservationList = ref(null);
 
 export function useReportStore() {
     
+    const fetchActiveReservationsChange = async (hotelId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            // If hotelId is null, 0, or 'all', pass 'all' to the backend,
+            // as the backend is designed to interpret 'all' or '0' as NULL.
+            const effectiveHotelId = (hotelId === null || hotelId === 0 || hotelId === 'all') ? 'all' : hotelId;
+            const url = `/api/report/active-reservations-change/${effectiveHotelId}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active reservations change. Response not OK.' }));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch active reservations change:', error);
+            throw error; // Re-throw the error to be caught by the caller
+        }
+    };
+
+    const fetchMonthlyReservationEvolution = async (hotelId, targetMonth) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            // Ensure hotelId is not null or undefined if it's a required parameter
+            if (hotelId === null || typeof hotelId === 'undefined') {
+                throw new Error('hotelId is required for monthly reservation evolution.');
+            }
+            // Ensure targetMonth is a valid YYYY-MM-DD string
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(targetMonth)) {
+                throw new Error('targetMonth is required and must be in YYYY-MM-DD format.');
+            }
+
+            const url = `/api/report/monthly-reservation-evolution/${hotelId}/${targetMonth}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Failed to fetch monthly reservation evolution. Response not OK.' }));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data;
+            
+        } catch (error) {
+            console.error('Failed to fetch monthly reservation evolution:', error);
+            throw error; // Re-throw the error to be caught by the caller
+        }
+    };
+
     const fetchCountReservation = async (hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -262,5 +328,7 @@ export function useReportStore() {
         exportReservationList,
         exportReservationDetails,
         exportMealCount,
+        fetchActiveReservationsChange,
+        fetchMonthlyReservationEvolution,
     };
 }
