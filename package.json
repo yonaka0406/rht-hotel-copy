@@ -5,14 +5,12 @@
     "scripts": {
         "start": "npm run build && npm run start:backend",
         "serve": "npm run build:frontend development && npm run start:backend",
-                                
         "serve:dev": "npm run build:frontend --mode development && sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env development --only backend-dev",
         "serve:prod": "npm run build:frontend production && sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
         "start:backend:dev": "pm2 start ecosystem.config.js --env development --only backend-dev",
         "start:backend:prod": "pm2 start ecosystem.config.js --env production --only backend-prod",
         "stop:backend:dev": "pm2 stop backend-dev",
         "stop:backend:prod": "pm2 stop backend-prod",
-
         "restart": "pm2 restart backend",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "build": "npm run build:frontend",
@@ -31,12 +29,12 @@
     "dependencies": {
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
-        "express-session": "^1.18.1",
+        "express-session": "^1.18.1",        
         "google-auth-library": "^9.15.1",
         "ioredis": "^5.4.2",
         "jsonwebtoken": "^9.0.2",
         "nodemon": "^3.1.9",
         "pg": "^8.16.0",
-        "pm2": "^5.4.3"
+        "pm2": "^5.4.3"        
     }
 }

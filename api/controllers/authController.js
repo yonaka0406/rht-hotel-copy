@@ -1,3 +1,4 @@
+const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
@@ -26,112 +27,171 @@ const scopes = [
 ];
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
+    logger.warn('Login validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
+    // For multiple validation errors, sending all of them might be too verbose for prod.
+    // Sending the first one or a generic message.
+    const clientError = isProduction ? 'Login failed. Please check your input.' : specificErrors[0].message;
+    return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
+  const { email, password } = req.body;
+
   try {
-    const user = await findUserByEmail(req.requestId, email);    
+    const user = await findUserByEmail(req.requestId, email);
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      const specificError = 'User not found';
+      logger.warn('Login attempt for non-existent user', { email, ip: req.ip, specificError });
+      return res.status(401).json({ error: isProduction ? 'Invalid credentials.' : specificError });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'パスワードの誤差がありました。' });
+      const specificError = 'パスワードの誤差がありました。'; // Password error
+      logger.warn('Invalid password attempt', { userId: user.id, email, ip: req.ip, specificError });
+      return res.status(401).json({ error: isProduction ? 'Invalid credentials.' : specificError });
     }
 
     if (user.status_id !== 1) {
-      return res.status(401).json({ error: 'ユーザーが無効になっています。' });
+      const specificError = 'ユーザーが無効になっています。'; // User is disabled
+      logger.warn('Login attempt for disabled user', { userId: user.id, email, status_id: user.status_id, ip: req.ip, specificError });
+      return res.status(401).json({ error: isProduction ? 'Account issue. Please contact support.' : specificError });
     }
 
     const token = generateToken(user);
+    logger.info('User logged in successfully', { userId: user.id, email, ip: req.ip });
     res.json({ message: 'ログインしました。', token });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Internal server error' });
+    const specificError = 'Internal server error during login';
+    logger.error('Login error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
+    res.status(500).json({ error: isProduction ? 'Login failed. Please try again later.' : specificError });
   }
 };
 
 const forgot = async (req, res) => {
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
+    logger.warn('Forgot password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
+    const clientError = isProduction ? 'Invalid input. Please check your email.' : specificErrors[0].message;
+    return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
+  }
+
   const { email } = req.body;
+
   try {
     const user = await findUserByEmail(req.requestId, email);
     if (!user) {
-      return res.status(400).json({ error: 'ユーザー見つかりません。' });
+      const specificError = 'ユーザー見つかりません。'; // User not found
+      logger.warn('Password reset requested for non-existent user', { email, ip: req.ip, specificError });
+      const message = isProduction ? 'If your email is registered, you will receive a password reset link.' : specificError;
+      return res.status(isProduction ? 200 : 400).json({ message: message, error: isProduction ? undefined : specificError });
     }
 
-    // Generate a reset token    
     const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-        
+
     // Send the email with the reset link
     await sendResetEmail(req.requestId, user.email, resetToken);
 
-    // Respond to the client
+    logger.info('Password reset email sent', { userId: user.id, email, ip: req.ip });
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
   } catch (err) {
-    res.status(500).json({ error: 'Error occurred while sending the email.' });
+    const specificError = 'Error occurred while sending the password reset email.';
+    logger.error('Forgot password error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
+    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError });
   }
 }
 
 const forgotAdmin = async (req, res) => {
-  const { email } = req.body;
-  try {
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const errors = validationResult(req);
 
-    // Generate a reset token    
+  if (!errors.isEmpty()) {
+    const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
+    logger.warn('Forgot admin password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
+    const clientError = isProduction ? 'Invalid input. Please check your email.' : specificErrors[0].message;
+    return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
+  }
+
+  const { email } = req.body;
+
+  try {
     const resetToken = jwt.sign({ email: email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-    // console.log('email:', email);    
-    // console.log('resetToken:', resetToken);  
-    // Send the email with the reset link
     await sendAdminResetEmail(req.requestId, email, resetToken);
 
-    // Respond to the client
+    logger.info('Admin password reset email sent', { email, ip: req.ip });
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
   } catch (err) {
-    console.error('Error occurred while sending the email:', err);
-    res.status(500).json({ error: 'Error occurred while sending the email.' });
+    const specificError = 'Error occurred while sending the admin password reset email.';
+    logger.error('Forgot admin password error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
+    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError });
   }
 }
 
 const reset = async (req, res) => {
-  const { token, password } = req.body;  
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
+    logger.warn('Reset password validation failed', { ip: req.ip, errors: specificErrors });
+    // Password validation errors can be more specific in prod if they don't leak too much (e.g. "Password too short")
+    const clientError = isProduction ? 'Password reset failed. Please ensure your new password meets the requirements.' : specificErrors[0].message;
+    return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
+  }
+
+  const { token, password } = req.body;
 
   try {
-    // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_RESET_SECRET);
-
-    // Extract the userId from the decoded token
     const email = decoded.email;
-
-    // Find user by reset token    
     const user = await findUserByEmail(req.requestId, email);
-    
+
     if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
+      const specificError = 'Invalid or expired token (user not found for token email)';
+      logger.warn('Password reset attempt with invalid or expired token', { tokenEmail: email, ip: req.ip, specificError });
+      return res.status(400).json({ error: isProduction ? 'Password reset failed. The link may be invalid or expired.' : specificError });
     }
 
-    const updated_by = user.id;    
-
-    // Hash the new password
+    const updated_by = user.id;
     const hashedPassword = await bcrypt.hash(password, 10);
+    await updatePasswordHash(req.requestId, email, hashedPassword, updated_by);
 
-    // Update user password and reset the token
-    await updatePasswordHash(req.requestId, email, hashedPassword, updated_by);    
-    
+    logger.info('Password reset successfully', { userId: user.id, email, ip: req.ip });
     res.json({ message: 'パスワードが正常にリセットされました。' });
   } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ error: 'Error occurred while resetting password' });
+    let specificError = 'Error occurred while resetting password';
+    if (error.name === 'TokenExpiredError') {
+        specificError = 'Password reset token has expired.';
+    } else if (error.name === 'JsonWebTokenError') {
+        specificError = 'Password reset token is invalid.';
+    }
+    logger.error('Error resetting password', { error: error.message, stack: error.stack, errorName: error.name, tokenUsed: !!token, ip: req.ip, specificError });
+    res.status(500).json({ error: isProduction ? 'Password reset failed. Please try again or request a new link.' : specificError });
   }
 }
 
 const getActiveUsers = async (req, res) => {
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
   try {
     const count = await sessionService.getActiveSessions();
+    logger.debug('Fetched active users count', { count });
     res.json({ activeUsers: count });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get active users' });
+    const specificError = 'Failed to get active users';
+    logger.error('Failed to get active users', { error: err.message, stack: err.stack, specificError });
+    res.status(500).json({ error: isProduction ? 'Error fetching data.' : specificError });
   }
 };
 
@@ -139,182 +199,174 @@ const getActiveUsers = async (req, res) => {
 // --- Google OAuth Functions ---
 
 const googleLogin = (req, res) => {
-  // 1. Generate a random string for the state parameter
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
   const state = crypto.randomBytes(32).toString('hex');
 
-  // 2. Store this state value in req.session.oauth_state
-  // Ensure session middleware is active for this to work
   if (!req.session) {
-    console.error('Session middleware not active or configured correctly.');
-    return res.status(500).json({ error: 'Session configuration error.' });
+    const specificError = 'Google login: Session middleware not active or configured correctly.';
+    logger.error(specificError, { ip: req.ip });
+    return res.status(500).json({ error: isProduction ? 'Authentication setup error. Please try again later.' : specificError });
   }
   req.session.oauth_state = state;
-  // LOG 1: Log Session ID and the state being stored
-  console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Storing oauth_state: ${state}`);
+  logger.debug(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Storing oauth_state (length: ${state.length})`, { ip: req.ip });
 
   req.session.save(err => {
     if (err) {
-      console.error(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Error saving session before redirect:`, err);
-      // It's often better to still attempt the redirect or inform the user,
-      // as failing here might leave them stranded. But for debugging, this is informative.
-      return res.status(500).json({ error: 'Failed to save session.' });
+      const specificError = `Error saving session before redirect: ${err.message}`;
+      logger.error(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, ${specificError}`, { stack: err.stack, ip: req.ip });
+      return res.status(500).json({ error: isProduction ? 'Authentication setup error. Please try again later.' : specificError });
     }
-    // LOG 2: Confirm session saved and state value just before redirect
-    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Session saved. oauth_state in session: ${req.session.oauth_state}. Redirecting...`);
-
-    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] res.headersSent before redirect: ${res.headersSent}`);
+    logger.debug(`[AUTH_CTRL_GOOGLE_LOGIN] Session ID: ${req.sessionID}, Session saved. oauth_state in session (length: ${req.session.oauth_state ? req.session.oauth_state.length : 'undefined'}). Redirecting...`, { ip: req.ip });
+    logger.debug(`[AUTH_CTRL_GOOGLE_LOGIN] res.headersSent before redirect: ${res.headersSent}`, { ip: req.ip });
     const setCookieHeader = res.getHeader('Set-Cookie');
-    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Value of 'Set-Cookie' header before redirect: ${setCookieHeader ? JSON.stringify(setCookieHeader) : 'undefined'}`);
-    
-    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Redirecting...`);
+    logger.debug(`[AUTH_CTRL_GOOGLE_LOGIN] Value of 'Set-Cookie' header before redirect: ${setCookieHeader ? 'present' : 'undefined'}`, { ip: req.ip });
+
+    logger.info(`[AUTH_CTRL_GOOGLE_LOGIN] Redirecting to Google for OAuth...`, { ip: req.ip });
     const authorizeUrl = googleOAuth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent',
       hd: process.env.GOOGLE_HOSTED_DOMAIN,
-      state: state, // State sent to Google
+      state: state,
     });
-    console.log(`[AUTH_CTRL_GOOGLE_LOGIN] Redirecting to Google...`);
     res.redirect(authorizeUrl);
-  });  
+  });
 };
 
 const googleCallback = async (req, res) => {
+  const logger = req.app.locals.logger;
   const { code, state: receivedState } = req.query;
   const storedState = req.session ? req.session.oauth_state : null;
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  // LOG 3: Log what's received from Google in the callback URL
-  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Callback received. Code: ${code ? 'present' : 'missing'}, Received State: ${receivedState}, Stored State: ${storedState}`);
+  logger.debug(`[AUTH_CTRL_GOOGLE_CALLBACK] Callback received. Code: ${code ? 'present' : 'missing'}, Received State (length: ${receivedState ? receivedState.length : 'missing'}), Stored State (length: ${storedState ? storedState.length : 'missing'})`, { ip: req.ip });
 
   if (!req.session) {
-    console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] CRITICAL: req.session is undefined on callback. Session not found or not loaded. Received state from URL: ${receivedState}.`);
-    return res.status(500).json({ error: 'Session not available on callback. State verification failed.' });
+    const specificError = `CRITICAL: req.session is undefined on callback. Session not found or not loaded. Received state from URL: ${receivedState}.`;
+    logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] ${specificError}`, { receivedStateLength: receivedState ? receivedState.length : 'missing', ip: req.ip });
+    return res.status(500).json({ error: isProduction ? 'Authentication failed. Session issue.' : specificError });
   }
 
-  // LOG 4: Log Session ID, the state retrieved from session, and the state from URL
-  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Stored state from session (req.session.oauth_state): ${storedState}, Received state from URL (req.query.state): ${receivedState}`);
+  logger.debug(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Stored state from session (length: ${storedState ? storedState.length : 'undefined'}), Received state from URL (length: ${receivedState ? receivedState.length : 'undefined'})`, { ip: req.ip });
 
   const stateForComparison = req.session.oauth_state;
-  
+
   if (req.session.oauth_state) {
     delete req.session.oauth_state;
-    req.session.save(err => { // Save session after deleting the state
+    req.session.save(err => {
       if (err) {
-        console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Error saving session after deleting oauth_state:`, err);
+        logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, Error saving session after deleting oauth_state:`, { error: err.message, stack: err.stack, ip: req.ip });
       } else {
-        // LOG 5: Confirm state deletion from session
-        console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, oauth_state deleted from session and session saved.`);
+        logger.debug(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, oauth_state deleted from session and session saved.`, { ip: req.ip });
       }
     });
   } else {
-    // LOG 6: Warn if no state was found in session to delete
-    console.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, No oauth_state found in session to delete. Received state from URL: ${receivedState}.`);
+    logger.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, No oauth_state found in session to delete.`, { receivedStateLength: receivedState ? receivedState.length : 'undefined', ip: req.ip });
   }
 
-  // 1. Verify the state parameter
   if (!receivedState || !stateForComparison || receivedState !== stateForComparison) {
-    // LOG 7: Critical error log for state mismatch
-    console.error(`[AUTH_CTRL_GOOGLE_CALLBACK] STATE MISMATCH OR MISSING! Session ID: ${req.sessionID}. URL state: '${receivedState}', Session state: '${stateForComparison}'. Authentication aborted.`);
-    return res.status(403).json({ error: 'Invalid state parameter. Authentication aborted.' });
+    const specificError = `STATE MISMATCH OR MISSING! Session ID: ${req.sessionID}. URL state: '${receivedState}', Session state: '${stateForComparison}'. Authentication aborted.`;
+    logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] ${specificError}`, { urlStateLength: receivedState ? receivedState.length : 'missing', sessionStateLength: stateForComparison ? stateForComparison.length : 'missing', ip: req.ip });
+    return res.status(403).json({ error: isProduction ? 'Authentication failed. Invalid request state.' : specificError });
   }
 
-  // LOG 8: Confirm successful state validation
-  console.log(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, State validated successfully. Proceeding with token exchange.`);
+  logger.debug(`[AUTH_CTRL_GOOGLE_CALLBACK] Session ID: ${req.sessionID}, State validated successfully. Proceeding with token exchange.`, { ip: req.ip });
 
   if (!code) {
-    return res.status(400).json({ error: 'Authorization code missing.' });
+    const specificError = 'Authorization code missing.';
+    logger.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] ${specificError}`, { ip: req.ip });
+    return res.status(400).json({ error: isProduction ? 'Authentication failed. Missing authorization code.' : specificError });
   }
 
   try {
-    // 2. Exchange authorization code for tokens
     const { tokens } = await googleOAuth2Client.getToken(code);
     const idToken = tokens.id_token;
 
     if (!idToken) {
-      return res.status(400).json({ error: 'ID token missing from Google response.' });
+      const specificError = 'ID token missing from Google response.';
+      logger.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] ${specificError}`, { ip: req.ip });
+      return res.status(400).json({ error: isProduction ? 'Authentication failed. Missing ID token.' : specificError });
     }
+    logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Received ID token from Google.', { ip: req.ip });
 
-    // 3. Verify the ID token
     const ticket = await googleAuthClient.verifyIdToken({
       idToken: idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
+    logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Google ID token verified successfully.', { email: payload.email, googleUserId: payload.sub, ip: req.ip });
 
-    // 4. Verify the 'hd' (hosted domain) claim
-    if (!payload.hd || payload.hd !== process.env.GOOGLE_HOSTED_DOMAIN) { 
-      console.warn(`Domain mismatch: User's domain (<span class="math-inline">\{payload\.hd\}\) vs required domain \(</span>{process.env.FRONTEND_URL})`);
-      return res.status(403).json({
-        error: `Invalid domain. Please use an account from ${process.env.GOOGLE_HOSTED_DOMAIN}.`
-      });
+    if (!payload.hd || payload.hd !== process.env.GOOGLE_HOSTED_DOMAIN) {
+      const specificError = `Invalid domain. Please use an account from ${process.env.GOOGLE_HOSTED_DOMAIN}. User's domain: ${payload.hd}`;
+      logger.warn(`[AUTH_CTRL_GOOGLE_CALLBACK] Domain mismatch for user.`, { userHd: payload.hd, requiredHd: process.env.GOOGLE_HOSTED_DOMAIN, email: payload.email, ip: req.ip, specificError });
+      return res.status(403).json({ error: isProduction ? 'Authentication failed. Invalid account domain.' : specificError });
     }
 
     const googleUserId = payload.sub;
     const userEmail = payload.email;
     const userName = payload.name;
 
-    // 5. User Handling Logic
     let user = await findUserByProviderId(req.requestId, 'google', googleUserId);
 
     if (!user) {
       const existingUserByEmail = await findUserByEmail(req.requestId, userEmail);
       if (existingUserByEmail) {
-        if (existingUserByEmail.auth_provider === 'local' || existingUserByEmail.auth_provider === null) { // Check for null too
+        if (existingUserByEmail.auth_provider === 'local' || existingUserByEmail.auth_provider === null) {
           user = await linkGoogleAccount(req.requestId, existingUserByEmail.id, googleUserId);
-          // console.log(`Linked existing local user ${userEmail} to Google ID ${googleUserId}`);
+          logger.info(`Linked existing local user to Google ID.`, { userId: existingUserByEmail.id, email: userEmail, googleUserId, ip: req.ip });
         } else if (existingUserByEmail.auth_provider === 'google' && existingUserByEmail.provider_user_id !== googleUserId) {
-          console.error(`User ${userEmail} is already associated with a different Google account.`);
-          return res.status(409).json({
-            error: 'This email is associated with a different Google account. Please sign in with the original Google account or contact support.'
-          });
-        } else { // User found by email, already correctly linked to this googleId or another provider
+          const specificError = 'This email is associated with a different Google account. Please sign in with the original Google account or contact support.';
+          logger.warn(`User email already associated with a different Google account.`, { email: userEmail, existingGoogleId: existingUserByEmail.provider_user_id, currentAttemptGoogleId: googleUserId, ip: req.ip, specificError });
+          return res.status(409).json({ error: isProduction ? 'Authentication conflict. Please contact support.' : specificError });
+        } else {
           user = existingUserByEmail;
+          logger.debug(`User found by email, already linked or with other provider.`, { userId: user.id, email: userEmail, ip: req.ip });
         }
       } else {
-        // Consider default role_id and status_id. Assuming 5 and 1 as per previous logic.
-        // These could be configurable or based on other logic.
-        user = await createUserWithGoogle(req.requestId, googleUserId, userEmail, userName /*, defaultRoleId, defaultStatusId */);
-        // console.log(`Created new user ${userEmail} with Google ID ${googleUserId}`);
+        user = await createUserWithGoogle(req.requestId, googleUserId, userEmail, userName);
+        logger.info(`Created new user with Google ID.`, { userId: user.id, email: userEmail, googleUserId, ip: req.ip });
       }
+    } else {
+        logger.debug(`User found by Google provider ID.`, { userId: user.id, email: userEmail, googleUserId, ip: req.ip });
     }
 
     if (!user) {
-      console.error('User object is null after user handling logic.');
-      return res.status(500).json({ error: 'User processing failed after authentication.' });
+      const specificError = 'User processing failed after authentication.';
+      logger.error('[AUTH_CTRL_GOOGLE_CALLBACK] User object is null after user handling logic.', { email: userEmail, googleUserId, ip: req.ip, specificError });
+      return res.status(500).json({ error: isProduction ? 'Authentication error. Please try again.' : specificError });
     }
 
-    // 6. JWT Generation
-    // Ensure generateToken creates a JWT with the same payload structure as in old routes/auth.js
-    // Payload: { userId: user.id, email: user.email, name: user.name, role_id: user.role_id }
-    // If generateToken is suitable:
     const jwtToken = generateToken(user);
-    // If not, replicate JWT signing:
-    // const jwtPayload = { userId: user.id, email: user.email, name: user.name, role_id: user.role_id };
-    // const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Generated JWT for user.', { userId: user.id, email: userEmail, ip: req.ip });
 
-
-    // 7. Redirect user to the frontend with the JWT    
-    const frontendRedirectUrl = `${envFrontend}/auth/google/callback?token=${jwtToken}`;    
-    // console.log('Backend redirecting to frontend with URL:', frontendRedirectUrl);
+    const frontendRedirectUrl = `${envFrontend}/auth/google/callback?token=${jwtToken}`;
+    logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Redirecting to frontend with JWT for user.`, { userId: user.id, email: userEmail, redirectUrlDomain: envFrontend, ip: req.ip });
     res.redirect(frontendRedirectUrl);
 
   } catch (error) {
-    console.error('Error during Google OAuth callback processing:', error);
-    if (error.isAxiosError && error.response) {
-        console.error('Google API Error Details:', error.response.data);
-        return res.status(500).json({ error: `Authentication failed: ${error.response.data.error_description || 'Google API error'}` });
+    let specificError = 'Authentication processing failed.';
+    if (error.isAxiosError && error.response && error.response.data) {
+        specificError = `Google API error: ${error.response.data.error_description || error.response.data.error || 'Unknown Google API error'}`;
+        logger.error('Google API Error Details:', { data: error.response.data, ip: req.ip });
     } else if (error.message && (error.message.includes("Invalid token signature") || error.message.includes("Token used too late"))) {
-        return res.status(401).json({ error: `Google ID token validation failed: ${error.message}`});
+        specificError = `Google ID token validation failed: ${error.message}`;
+    } else if (error.message) {
+        specificError = error.message;
     }
-    return res.status(500).json({ error: 'Authentication processing failed.' });
+    
+    logger.error('Error during Google OAuth callback processing:', { errorMessage: error.message, stack: error.stack, isAxiosError: !!error.isAxiosError, ip: req.ip, specificError });
+    
+    const status = (error.message && (error.message.includes("Invalid token signature") || error.message.includes("Token used too late"))) ? 401 : 500;
+    return res.status(status).json({ error: isProduction ? 'Authentication failed. Please try again.' : specificError });
   }
 };
 
-module.exports = { 
-  login, 
-  forgot, 
+module.exports = {
+  login,
+  forgot,
   forgotAdmin,
-  reset, 
+  reset,
   getActiveUsers,
   googleLogin,
   googleCallback,
