@@ -136,6 +136,25 @@
                             <Select v-model="filterModel.value" @change="filterCallback()" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="ステータスを選択" class="p-column-filter" />
                         </template>
                     </Column>
+                    <Column header="GCal" headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center;">
+                        <template #body="{data}">
+                            <a v-if="data.synced_with_google_calendar && data.google_calendar_html_link" 
+                               :href="data.google_calendar_html_link" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               v-tooltip.top="'View in Google Calendar'">
+                                <i class="pi pi-calendar" style="color: #34A853; font-size: 1.2rem;"></i>
+                            </a>
+                            <i v-else-if="data.synced_with_google_calendar" 
+                               class="pi pi-calendar-check" 
+                               style="color: #1858A8; font-size: 1.2rem;" 
+                               v-tooltip.top="'Synced with Google Calendar'"></i>
+                            <i v-else 
+                               class="pi pi-calendar-times" 
+                               style="color: #cccccc; font-size: 1.2rem;" 
+                               v-tooltip.top="'Not synced with Google Calendar'"></i>
+                        </template>
+                    </Column>
                     <Column field="assigned_to_name" header="担当者" :sortable="true" style="min-width:120px">
                          <template #filter="{filterModel,filterCallback}">
                             <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" class="p-column-filter" placeholder="担当者を検索"/>
@@ -410,7 +429,7 @@
     const currentActionItem = ref(null); // To store the action item for the menu    
     const actionMenuItems = ref([
         { label: '編集', icon: 'pi pi-pencil', command: () => { if(currentActionItem.value) openEditActionDialog(currentActionItem.value); } },
-        { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteAction(currentActionItem.value.id); } }        
+        { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteActionHandler(currentActionItem.value.id); } }        
     ]);
     const goToEditClientPage = (clientId) => {        
         window.open(`/crm/clients/edit/${clientId}`, '_blank');
@@ -564,7 +583,7 @@
             ...initialActionFormData,
             action_datetime: new Date(),
             due_date: null,
-            assigned_to: logged_user.value[0].id || null
+            assigned_to: logged_user.value && logged_user.value[0] ? logged_user.value[0].id : null
         };
         selectedClientObjectForForm.value = null;
         isActionFormDialogVisible.value = true;
@@ -620,10 +639,10 @@
         
         try {
             if (!id) {                
-                await addAction(currentActionFormData.value);
+                await addAction(currentActionFormData.value); // This now comes from useCRMStore
                 toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
             } else {                
-                await editAction(id, currentActionFormData.value);
+                await editAction(id, currentActionFormData.value); // This now comes from useCRMStore
                 toast.add({ severity: "info", summary: "Edit", detail: "アクション編集されました。", life: 3000 });
             }
 
@@ -643,9 +662,9 @@
             loading.value = false;
         }      
     };
-    const deleteAction = async (id) => {
+    // Renamed deleteAction to deleteActionHandler to avoid conflict with imported deleteAction from store
+    const deleteActionHandler = async (id) => { 
         
-        // --- Validation: Ensure an ID is provided ---
         if (!id) {
             toast.add({ severity: "error", summary: "エラー", detail: "アクションIDが無効です", life: 3000 });
             return;
@@ -653,12 +672,10 @@
 
         loading.value = true;
         try {
-            console.log('Deleting action');
-            await removeAction(id);
+            await removeAction(id); // This now comes from useCRMStore
 
             toast.add({ severity: "success", summary: "Success", detail: "アクションが削除されました。", life: 3000 });
 
-            // Optionally: Refresh the actions after deletion
             if (selectedScope.value === 'user') {
                 await fetchUserActions(loggedInUserId.value);
                 allRawActions.value = user_actions.value;
@@ -682,6 +699,10 @@
             await fetchUser();
             if (logged_user.value && logged_user.value[0]) {
                 loggedInUserId.value = logged_user.value[0].id;
+                 // Set default assigned_to for new actions if not already set
+                if (initialActionFormData.assigned_to === null) {
+                    initialActionFormData.assigned_to = logged_user.value[0].id;
+                }
             } else {
                 console.error("Logged in user not found.");
                 toast.add({ severity: "error", summary: "エラー", detail: "ログインユーザー情報を取得できませんでした。", life: 3000 });
@@ -698,14 +719,16 @@
                 allRawActions.value = [...actions.value];
             }
 
-            // Fetch clients if not already loaded
             if (!clients.value || clients.value.length === 0) {
                 if (setClientsIsLoading) setClientsIsLoading(true);                 
                 try {
-                    const clientsTotalPages = await fetchClients(1);
-                    for (let page = 2; page <= clientsTotalPages; page++) {
-                        await fetchClients(page);
-                    }        
+                    const clientsTotalPages = await fetchClients(1); // Assuming fetchClients returns total pages or similar
+                    // This logic might need adjustment based on actual fetchClients behavior (e.g., if it fetches all at once)
+                    if (typeof clientsTotalPages === 'number' && clientsTotalPages > 1) { 
+                        for (let page = 2; page <= clientsTotalPages; page++) {
+                            await fetchClients(page);
+                        }    
+                    }    
                 } catch (error) {
                     console.error("Failed to fetch clients:", error);        
                 } finally {

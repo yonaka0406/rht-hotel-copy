@@ -43,6 +43,8 @@ const SalesInteractions = () => import('@/pages/CRM/SalesInteractions.vue');
 
 const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 
+const UserProfile = () => import('@/pages/User/UserProfile.vue'); // Import the new component
+
 const routes = [
   {path: '/',
     name: 'MainPage',
@@ -123,6 +125,12 @@ const routes = [
     path: '/:pathMatch(.*)*',
     name: 'NotFound',    
     component: NotFound,
+  },
+  {
+    path: '/user-profile', // Or '/account-settings'
+    name: 'UserProfile',
+    component: UserProfile,
+    meta: { requiresAuth: true }
   },
 ];
 

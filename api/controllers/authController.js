@@ -4,9 +4,10 @@ const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
 const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
 const sessionService = require('../services/sessionService');
-const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle } = require('../models/user');
+const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle, updateUserGoogleTokens } = require('../models/user');
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
+const { syncCalendarFromGoogle } = require('../services/synchronizationService'); // Import sync service
 const crypto = require('crypto');
 
 // Get .env accordingly
@@ -24,6 +25,8 @@ const googleOAuth2Client = getGoogleOAuth2Client(); // Assuming this is correctl
 const scopes = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/calendar.app.created',
+  'https://www.googleapis.com/auth/calendar.readonly',
 ];
 
 const login = async (req, res) => {
@@ -65,6 +68,19 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
     logger.info('User logged in successfully', { userId: user.id, email, ip: req.ip });
+
+    // Trigger background sync if enabled
+    if (user.sync_google_calendar && user.id) {
+      logger.info(`Triggering background Google Calendar sync for user ${user.id} after local login. Request ID: ${req.requestId}`);
+      syncCalendarFromGoogle(req.requestId, user.id)
+        .then(syncResult => {
+          logger.info(`Background sync for user ${user.id} (after local login) completed. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
+        })
+        .catch(syncError => {
+          logger.error(`Error during background sync for user ${user.id} (after local login): ${syncError.message}`, { stack: syncError.stack, requestId: req.requestId });
+        });
+    }
+
     res.json({ message: 'ログインしました。', token });
   } catch (err) {
     const specificError = 'Internal server error during login';
@@ -282,6 +298,8 @@ const googleCallback = async (req, res) => {
   try {
     const { tokens } = await googleOAuth2Client.getToken(code);
     const idToken = tokens.id_token;
+    // Log the received tokens for debugging (REMOVE IN PRODUCTION)
+    // logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Received tokens from Google:', { tokens });
 
     if (!idToken) {
       const specificError = 'ID token missing from Google response.';
@@ -337,8 +355,40 @@ const googleCallback = async (req, res) => {
       return res.status(500).json({ error: isProduction ? 'Authentication error. Please try again.' : specificError });
     }
 
+    // Persist the tokens
+    if (user && user.id && tokens.access_token) {
+      try {
+        await updateUserGoogleTokens(
+          req.requestId,
+          user.id,
+          tokens.access_token,
+          tokens.refresh_token || null, // refresh_token might not always be provided
+          tokens.expiry_date || null    // expiry_date is a timestamp in ms
+        );
+        logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Successfully saved Google OAuth tokens for user.`, { userId: user.id, email: userEmail, ip: req.ip });
+      } catch (tokenSaveError) {
+        logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Failed to save Google OAuth tokens for user.`, { userId: user.id, email: userEmail, error: tokenSaveError.message, stack: tokenSaveError.stack, ip: req.ip });
+        // Decide if this is a critical failure. For now, log and continue.
+        // Potentially, redirect to an error page or return an error JSON.
+      }
+    } else {
+      logger.warn('[AUTH_CTRL_GOOGLE_CALLBACK] User object or access token missing, skipping token save.', { userId: user ? user.id : 'N/A', hasAccessToken: !!tokens.access_token, ip: req.ip });
+    }
+
     const jwtToken = generateToken(user);
     logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Generated JWT for user.', { userId: user.id, email: userEmail, ip: req.ip });
+
+    // Trigger background sync if enabled
+    if (user.sync_google_calendar && user.id) {
+      logger.info(`Triggering background Google Calendar sync for user ${user.id} after Google login/callback. Request ID: ${req.requestId}`);
+      syncCalendarFromGoogle(req.requestId, user.id)
+        .then(syncResult => {
+          logger.info(`Background sync for user ${user.id} (after Google login) completed. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
+        })
+        .catch(syncError => {
+          logger.error(`Error during background sync for user ${user.id} (after Google login): ${syncError.message}`, { stack: syncError.stack, requestId: req.requestId });
+        });
+    }
 
     const frontendRedirectUrl = `${envFrontend}/auth/google/callback?token=${jwtToken}`;
     logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Redirecting to frontend with JWT for user.`, { userId: user.id, email: userEmail, redirectUrlDomain: envFrontend, ip: req.ip });
