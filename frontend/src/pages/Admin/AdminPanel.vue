@@ -1,135 +1,171 @@
 <template>
-    <div class="flex bg-gray-100 m-0 p-0 block md:hidden">
-        <!-- Menubar for Sidebar -->
-        <Menubar :model="items" class="w-full mb-4">
-            <template #end>
-                <div class="flex items-center gap-4 mt-4">
-                    <!-- Home Router Link with Icon in the Menubar -->
-                    <router-link
-                        to="/"
-                        class="text-primary hover:bg-yellow-100 p-2 block rounded-sm flex items-center"
-                    >
-                        <i class="pi pi-home"></i>                        
-                    </router-link>
-                    <Button
-                        @click="handleLogout"
-                        severity="danger"
-                    >
-                        <i class="pi pi-sign-out"></i>                        
-                    </Button>
+    <div class="flex min-h-screen bg-gray-100">
+        <div :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
+            <div :class="['p-4 border-b border-yellow-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
+                <div v-if="!isCollapsed" class="flex items-center">
+                    <img src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8 mr-2" />
+                    <span class="text-xl font-semibold">管理者パネル</span>
                 </div>
-            </template>
-        </Menubar>
-    </div>
-    <div class="flex min-h-screen bg-gray-100 m-0 p-0">
-        <!-- Sidebar -->
-        <div class="max-w-xs w-full min-h-screen bg-yellow-500 text-white m-0 p-4 flex flex-col h-full hidden md:block">
-            <!-- Title: Admin Dashboard -->
-            <div class="flex justify-between items-center mb-6">
-                <router-link
-                    to="/admin"
-                    class="text-white p-2 block rounded-sm"
-                >
-                    <h2 class="text-xl text-white font-semibold">管理者パネル</h2>
-                </router-link>
+                <img v-else src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8" />
                 <Button
-                    type="button"
-                    label="すべて切り替え"
-                    severity="secondary"                    
-                    @click="toggleAll"
+                    @click="toggleSidebar"
+                    :icon="isCollapsed ? 'pi pi-arrow-right' : 'pi pi-arrow-left'"
+                    text
+                    rounded
+                    class="p-button-secondary text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    :class="isCollapsed ? 'w-full justify-center mt-2' : ''"
+                    aria-label="Toggle Sidebar"
                 />
             </div>
 
-            <!-- PanelMenu -->
-            <PanelMenu v-model:expandedKeys="expandedKeys" :model="items">
-                <template #item="{ item }">
-                    <router-link v-if="item.route" v-slot="{ href, navigate }" :to="item.route" custom>
-                        <a v-ripple class="flex items-center cursor-pointer text-surface-700 dark:text-surface-0 px-4 py-2" :href="href" @click="navigate">
-                            <span :class="item.icon" />
-                            <span class="ml-2">{{ item.label }}</span>
+            <nav class="flex-1 space-y-1 mt-4 p-2">
+                <template v-for="(item, index) in adminSidebarItems" :key="'desktop-' + item.key + '-' + index">
+                    <div v-if="item.type === 'header'" :class="['px-4 py-2 text-xs text-yellow-300 uppercase font-semibold tracking-wider', isCollapsed ? 'text-center mt-2' : '']">
+                        <span v-if="!isCollapsed">{{ item.label }}</span>
+                        <i v-if="isCollapsed && item.icon" :class="[item.icon, 'text-lg']" :title="item.label"></i>
+                        <hr v-if="isCollapsed && !item.icon" class="border-yellow-700 mt-1"> 
+                    </div>
+                    <router-link v-else-if="item.type === 'link'" :to="item.route" v-slot="{ href, navigate, isActive, isExactActive }" custom>
+                        <a :href="href" @click="navigate"
+                        :class="[
+                            'flex items-center py-2.5 text-gray-200 hover:bg-yellow-700 hover:text-white rounded-lg transition-colors duration-200 group',
+                            ( (isActive && item.route !== '/admin') || (isExactActive && item.route === '/admin') || ($route.path.startsWith(String(item.route)) && String(item.route) !== '/admin' && String(item.route).length > '/admin'.length && !$route.path.substring(String(item.route).length).startsWith('/')) ) ? 'bg-yellow-700 font-semibold' : '',
+                            isCollapsed ? 'px-3 justify-center' : 'px-4'
+                        ]">
+                        <i :class="[item.icon, 'text-lg', isCollapsed ? '' : 'mr-3']"></i>
+                        <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+                        <span v-if="isCollapsed" class="absolute left-full rounded-md px-2 py-1 ml-3 bg-yellow-800 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0 z-50 shadow-lg">
+                            {{ item.label }}
+                        </span>
                         </a>
                     </router-link>
-                        <a v-else v-ripple class="flex items-center cursor-pointer text-surface-700 dark:text-surface-0 px-4 py-2" :href="item.url" :target="item.target">
-                            <span :class="item.icon" />
-                            <span class="ml-2">{{ item.label }}</span>
-                            <span v-if="item.items" class="pi pi-angle-down text-primary ml-auto" />
-                        </a>                    
+                    <Divider v-if="item.type === 'separator'" class="my-2 !border-yellow-700" :class="isCollapsed ? 'mx-2' : 'mx-4'" />
                 </template>
+            </nav>
 
-            </PanelMenu>
-
-            <!-- Back to Home and Logout Links -->
-            <div class="mt-auto">
-                <router-link
-                    to="/"
-                    class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm mt-4 mb-2"
-                >
-                <i class="pi pi-home text-white mr-2"></i>
-                <span class="text-white">PMS</span>
-                </router-link>
-                <Button
-                    @click="handleLogout"
-                    severity="danger"                        
-                    fluid
-                >
-                    <i class="pi pi-sign-out mr-2"></i>ログアウト
+            <div :class="['mt-auto mb-4 space-y-2', isCollapsed ? 'px-2' : 'px-4']">
+                <router-link to="/" :class="['flex items-center py-2.5 text-gray-200 hover:bg-yellow-700 hover:text-white rounded-lg transition-colors duration-200 group', isCollapsed ? 'px-3 justify-center' : 'px-4']">
+                <i :class="['pi pi-home text-lg', isCollapsed ? '' : 'mr-3']"></i>
+                <span v-if="!isCollapsed">PMSホーム</span>
+                <span v-if="isCollapsed" class="absolute left-full rounded-md px-2 py-1 ml-3 bg-yellow-800 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0 z-50 shadow-lg">PMSホーム</span>
+                </router-link>                
+                <Button @click="handleLogout"
+                    :class="[
+                        'flex items-center w-full py-2.5 text-white',
+                        '!bg-red-500 !border !border-red-500', /* Normal state: red background, red border */
+                        'hover:!bg-red-600 hover:!border-red-600', /* Hover state: darker red background and border */
+                        'rounded-lg transition-colors duration-200 group',
+                        'focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 focus:!border-red-600', /* Focus: red ring, offset, and explicit border color */
+                        isCollapsed ? 'px-3 justify-center' : 'px-4'
+                    ]">
+                    <i :class="['pi pi-sign-out text-lg', isCollapsed ? '' : 'mr-3']"></i>
+                    <span v-if="!isCollapsed">ログアウト</span>
+                    <span v-if="isCollapsed" class="absolute left-full rounded-md px-2 py-1 ml-3 bg-red-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0 z-50 shadow-lg">ログアウト</span>
                 </Button>
             </div>
+            <div :class="['p-3 border-t border-yellow-700', isCollapsed ? 'text-center' : 'text-left']">
+                <p v-if="!isCollapsed" class="text-xs text-yellow-300">© {{ new Date().getFullYear() }} WeHub.work</p>
+                <p v-if="isCollapsed" class="text-xs text-yellow-300">©{{ new Date().getFullYear() }}</p>
+            </div>
+
+        </div>  
+        
+        <div class="flex-1 flex flex-col min-w-0"> <div class="md:hidden bg-white shadow-md sticky top-0 z-30">
+            <Menubar :model="adminMobileMenuItems" class="w-full !border-0 !rounded-none !py-0">
+            <template #start>
+                <div class="flex items-center">
+                <Button icon="pi pi-bars" @click="mobileSidebarVisible = true" text class="mr-1 !text-gray-600" />
+                <img src="@/assets/logo-simple.png" alt="Admin" class="h-7" />
+                </div>
+            </template>
+            <template #end>
+                <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-700">{{ userNameDisplayShort }}</span>
+                <Button @click="handleLogout" icon="pi pi-sign-out" severity="danger" text rounded aria-label="Logout" class="!text-red-500" />
+                </div>
+            </template>
+            </Menubar>
         </div>
-
-
-        <!-- Main Content -->
-        <div class="flex-1 overflow-x-hidden overflow-y-auto">
-            <p class="text-2xl font-bold text-gray-700 mb-2">{{ userName }}管理者パネルへようこそ！</p>
-            <div v-if="isRootAdminPath" class="p-4">
-                <!-- Dashboard Content -->
-                <div class="bg-white rounded-lg shadow-lg p-8">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <!-- Quick Stats Cards -->
-                        <div class="bg-blue-50 p-6 rounded-lg flex flex-col">
-                            <div class="grow h-16">
-                                <h3 class="text-lg font-semibold text-blue-800">ログイン中ユーザー</h3>
-                            </div>
-                            <div class="mt-auto h-12">
-                                <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
-                            </div>
-                        </div>
-
-                        <div class="bg-green-50 p-6 rounded-lg flex flex-col">
-                            <div class="grow h-16">
-                                <h3 class="text-lg font-semibold text-green-800">ホテル</h3>
-                            </div>
-                            <div class="mt-auto h-12">
-                                <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
-                            </div>
-                        </div>
-
-                        <div class="bg-purple-50 p-6 rounded-lg flex flex-col">
-                            <div class="grow h-16">
-                                <h3 class="text-lg font-semibold text-purple-800">予約数</h3>
-                            </div>
-                            <div class="mt-auto h-12">
-                                <p class="text-3xl font-bold text-purple-600">0</p>
-                            </div>
-                        </div>
+        
+        <Sidebar v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
+            <div class="flex flex-col h-full">
+                <div class="flex items-center p-4 border-b">
+                    <img src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8 mr-2" />
+                    <span class="text-xl font-semibold text-gray-800">管理者パネル</span>
+                </div>
+                <nav class="flex-1 space-y-1 p-4 overflow-y-auto">
+                    <template v-for="(item, index) in adminSidebarItems" :key="'mobile-' + item.key + '-' + index">
+                    <div v-if="item.type === 'header'" class="px-2 py-2 text-xs text-gray-500 uppercase font-semibold tracking-wider mt-1">
+                        {{ item.label }}
                     </div>
-
+                    <router-link v-else-if="item.type === 'link'" :to="item.route" v-slot="{ href, navigate, isActive, isExactActive }" custom>
+                        <a :href="href" @click="navigate($event); mobileSidebarVisible = false;"
+                        :class="['flex items-center py-2.5 px-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 group',
+                                    ( (isActive && item.route !== '/admin') || (isExactActive && item.route === '/admin') || ($route.path.startsWith(String(item.route)) && String(item.route) !== '/admin' && String(item.route).length > '/admin'.length && !$route.path.substring(String(item.route).length).startsWith('/')) ) ? 'bg-gray-200 font-semibold' : '']">
+                        <i :class="[item.icon, 'text-lg mr-3 text-gray-600']"></i>
+                        <span class="truncate">{{ item.label }}</span>
+                        </a>
+                    </router-link>
+                    <Divider v-if="item.type === 'separator'" class="my-2" />
+                    </template>
+                </nav>
+                <div class="mt-auto p-4 border-t space-y-2">
+                    <router-link to="/" @click="mobileSidebarVisible = false" class="flex items-center py-2.5 px-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 group">
+                        <i class="pi pi-home text-lg mr-3 text-gray-600"></i>
+                        <span>PMSホーム</span>
+                    </router-link>
+                    <Button @click="handleLogoutAndCloseMobileSidebar" text class="flex items-center w-full py-2.5 px-3 !text-red-500 hover:!bg-red-50 rounded-lg transition-colors duration-200 group">
+                        <i class="pi pi-sign-out text-lg mr-3"></i>
+                        <span>ログアウト</span>
+                    </Button>
                 </div>
             </div>
-            
-            <router-view v-else />
+        </Sidebar>
 
+        <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
+            <p class="text-2xl font-semibold text-gray-800 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
+            <div v-if="isRootAdminPath" class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-blue-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="grow min-h-[3rem]">
+                    <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
+                </div>
+                <div class="mt-auto">
+                    <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
+                </div>
+                </div>
+                <div class="bg-green-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="grow min-h-[3rem]">
+                    <h3 class="text-md font-semibold text-green-800">ホテル</h3>
+                </div>
+                <div class="mt-auto">
+                    <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
+                </div>
+                </div>
+                <div class="bg-purple-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="grow min-h-[3rem]">
+                    <h3 class="text-md font-semibold text-purple-800">予約数</h3>
+                </div>
+                <div class="mt-auto">
+                    <p class="text-3xl font-bold text-purple-600">0</p>
+                </div>
+                </div>
+            </div>
+            </div>
+            <router-view v-else />
+        </main>
         </div>
     </div>
+
   </template>
   
   <script setup>
     // Vue
     import { ref, computed, onMounted, onUnmounted } from 'vue';
+    import { useRouter, useRoute } from 'vue-router';    
     const router = useRouter();
-    const route = useRoute();
-    import { useRouter, useRoute } from 'vue-router';
+    const route = useRoute();    
 
     // Store
     import { useUserStore } from '@/composables/useUserStore';
@@ -143,152 +179,48 @@
     const primevue = usePrimeVue();
 
     const hotelCount = ref(0);
-    const activeUsers = ref(0);
-    const expandedKeys = ref({});
-    const userName = ref('');            
+    const activeUsers = ref(0);    
+    const userName = ref('');
+    
+    const isCollapsed = ref(false);
+    const mobileSidebarVisible = ref(false);
+
+    const userNameDisplay = computed(() => userName.value || 'ユーザー、');
+    const userNameDisplayShort = computed(() => (logged_user.value?.[0]?.name || 'ユーザー'));
                         
-    const items = ref([
-        {
-            key: 'dashboard',
-            label: 'ダッシュボード',
-            icon: 'pi pi-tablet',
-            command: () => {
-                router.push('/admin');
-            },
-        },
-        {                    
-            key: 'manage-users',
-            label: 'ユーザー管理',
-            icon: 'pi pi-users',
-            items: [
-                {                 
-                    key: 'mu-create-edit',
-                    label: '新規 & 編集',
-                    icon: 'pi pi-user',
-                    command: () => {
-                        router.push('/admin/users');
-                    }                        
-                },
-                {
-                    key: 'mu-roles',
-                    label: 'ロール',
-                    icon: 'pi pi-key',
-                    command: () => {
-                        router.push('/admin/roles');
-                    }
-                },
-            ],
-        },
-        {
-            key: 'manage-hotels',
-            label: 'ホテル管理',
-            icon: 'pi pi-building',
-            items: [
-                {                 
-                    key: 'mh-create',
-                    label: '新規',
-                    icon: 'pi pi-plus',
-                    command: () => {
-                        router.push('/admin/hotel-create');
-                    }                        
-                },
-                {                 
-                    key: 'mh-edit',
-                    label: '編集',
-                    icon: 'pi pi-pen-to-square',
-                    command: () => {
-                        router.push('/admin/hotel-edit');
-                    }                        
-                },
-                {                 
-                    key: 'mh-plan',
-                    label: 'プラン',
-                    icon: 'pi pi-box',
-                    command: () => {
-                        router.push('/admin/hotel-plans');
-                    }                        
-                },
-                {                 
-                    key: 'mh-addon',
-                    label: 'アドオン',
-                    icon: 'pi pi-cart-plus',
-                    command: () => {
-                        router.push('/admin/hotel-addons');
-                    }                        
-                },
-                {                 
-                    key: 'mh-calendar',
-                    label: 'カレンダー',
-                    icon: 'pi pi-calendar',
-                    command: () => {
-                        router.push('/admin/hotel-calendar');
-                    }                        
-                },
-            ],
-        },
-        {
-            key: 'other-settings',
-            label: 'その他設定',
-            icon: 'pi pi-cog',
-            command: () => {
-                router.push('/admin/settings');
-            }
-        },
-        {
-            key: 'manage-ota',
-            label: 'OTA Exchange',
-            icon: 'pi pi-arrow-right-arrow-left',
-            command: () => {
-                router.push('/admin/ota');
-            }
-        },
-        {
-            key: 'import-data',
-            label: '他社PMSデータインポート',
-            icon: 'pi pi-file-import',
-            command: () => {
-                router.push('/admin/pms-import');
-            }
-        },
-        {
-            key: 'import-finances',
-            label: '財務データ',
-            icon: 'pi pi-wallet',
-            command: () => {
-                router.push('/admin/finances');
-            }
-        },
+    const adminSidebarItems = ref([
+        { key: 'dashboard', type: 'link', label: 'ダッシュボード', icon: 'pi pi-fw pi-tablet', route: '/admin' },
+        { type: 'separator' },
+        { key: 'manage-users-header', type: 'header', label: 'ユーザー管理', icon: 'pi pi-fw pi-users' },
+        { key: 'mu-create-edit', type: 'link', label: '新規 & 編集', icon: 'pi pi-fw pi-user', route: '/admin/users' },
+        { key: 'mu-roles', type: 'link', label: 'ロール', icon: 'pi pi-fw pi-key', route: '/admin/roles' },
+        { type: 'separator' },
+        { key: 'manage-hotels-header', type: 'header', label: 'ホテル管理', icon: 'pi pi-fw pi-building' },
+        { key: 'mh-create', type: 'link', label: '新規', icon: 'pi pi-fw pi-plus', route: '/admin/hotel-create' },
+        { key: 'mh-edit', type: 'link', label: '編集', icon: 'pi pi-fw pi-pen-to-square', route: '/admin/hotel-edit' },
+        { key: 'mh-plan', type: 'link', label: 'プラン', icon: 'pi pi-fw pi-box', route: '/admin/hotel-plans' },
+        { key: 'mh-addon', type: 'link', label: 'アドオン', icon: 'pi pi-fw pi-cart-plus', route: '/admin/hotel-addons' },
+        { key: 'mh-calendar', type: 'link', label: 'カレンダー', icon: 'pi pi-fw pi-calendar', route: '/admin/hotel-calendar' },
+        { type: 'separator' },
+        { key: 'other-settings', type: 'link', label: 'その他設定', icon: 'pi pi-fw pi-cog', route: '/admin/settings' },
+        { key: 'manage-ota', type: 'link', label: 'OTA Exchange', icon: 'pi pi-fw pi-arrow-right-arrow-left', route: '/admin/ota' },
+        { key: 'import-data', type: 'link', label: '他社PMSデータインポート', icon: 'pi pi-fw pi-file-import', route: '/admin/pms-import' },
+        { key: 'import-finances', type: 'link', label: '財務データ', icon: 'pi pi-fw pi-wallet', route: '/admin/finances' },
     ]);
 
+    // For the mobile top menubar, very minimal. Actual nav is in mobile Sidebar.
+    const adminMobileMenuItems = ref([]); // This can be empty if all actions are in the start/end templates or mobile Sidebar
+
     const isRootAdminPath = computed(() => route.path === '/admin');
-            
-    const toggleAll = () => {
-        if (Object.keys(expandedKeys.value).length) collapseAll();
-        else expandAll();
-    };
-    const expandAll = () => {
-        for (let node of items.value) {
-            expandNode(node);
-        }
 
-        expandedKeys.value = {...expandedKeys.value};
-    };
-    const collapseAll = () => {
-        expandedKeys.value = {};
-    };
-    const expandNode = (node) => {
-        if (node.items && node.items.length) {
-            expandedKeys.value[node.key] = true;
-
-            for (let child of node.items) {
-                expandNode(child);
-            }
-        }
-    };
+    const toggleSidebar = () => {
+        isCollapsed.value = !isCollapsed.value;
+    };           
+    
 
     const fetchActiveUsers = async () => {
         try {
-            const response = await fetch('/api/auth/active-users');
+            const response = await fetch('/api/auth/active-users'); // Make sure this API endpoint is correct
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -299,30 +231,37 @@
             // activeUsers.value = 0; // Optionally reset or set to a default on error
         }
     };
-
+    
     const handleLogout = () => {
-        // Clear user session or token
-        localStorage.removeItem('authToken'); // Example token removal
-        router.push('/login'); // Redirect to login page
+        localStorage.removeItem('authToken');
+        logged_user.value = null; // Clear user store state
+        router.push('/login');
+    };
+
+    const handleLogoutAndCloseMobileSidebar = () => {
+        mobileSidebarVisible.value = false;
+        handleLogout();
     };
 
     let activeUsersInterval = null;
 
-    onMounted( async () => {
+    onMounted(async () => {
         primevue.config.ripple = true;
 
         await fetchHotels();
         await fetchUser();
         
         hotelCount.value = hotels.value?.length || 0;
-        if (Array.isArray(logged_user.value) && logged_user.value.length > 0 && logged_user.value[0]?.name) {
+        if (logged_user.value && Array.isArray(logged_user.value) && logged_user.value.length > 0 && logged_user.value[0]?.name) {
             userName.value = logged_user.value[0].name + '、';
         } else {
             userName.value = 'ユーザー、'; // Default or fallback name
         }
 
-        fetchActiveUsers();
-        activeUsersInterval = setInterval(fetchActiveUsers, 30000); // Update every 30 seconds
+        if (isRootAdminPath.value) { // Fetch active users only if on the admin dashboard page initially
+            fetchActiveUsers();
+            activeUsersInterval = setInterval(fetchActiveUsers, 30000); // Update every 30 seconds
+        }
     });
 
     onUnmounted(() => {
@@ -334,11 +273,28 @@
 </script>
   
 <style scoped>
-  
-    @media (max-width: 768px) {
-        .hidden.md\\:block {
-            display: none;
-        }
-    }
+  .no-scroll {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .no-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  .pi {
+    line-height: inherit; /* Ensures PrimeIcons align well */
+  }
+
+  /* Adjust PrimeVue Menubar padding for mobile */
+  :deep(.md\\:hidden .p-menubar) {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  /* Custom styling for PrimeVue Sidebar header and footer */
+  :deep(.p-sidebar .p-sidebar-header) {
+    padding: 1rem; /* Adjust as needed */
+  }
+   :deep(.p-sidebar .p-sidebar-content) {
+    padding: 0; 
+  }
 </style>
   
