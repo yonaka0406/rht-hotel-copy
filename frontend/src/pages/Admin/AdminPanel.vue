@@ -52,10 +52,10 @@
                 <Button @click="handleLogout"
                     :class="[
                         'flex items-center w-full py-2.5 text-white',
-                        '!bg-red-500 !border !border-red-500', /* Normal state: red background, red border */
-                        'hover:!bg-red-600 hover:!border-red-600', /* Hover state: darker red background and border */
+                        '!bg-red-500 !border !border-red-500',
+                        'hover:!bg-red-600 hover:!border-red-600',
                         'rounded-lg transition-colors duration-200 group',
-                        'focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 focus:!border-red-600', /* Focus: red ring, offset, and explicit border color */
+                        'focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1 focus:!border-red-600',
                         isCollapsed ? 'px-3 justify-center' : 'px-4'
                     ]">
                     <i :class="['pi pi-sign-out text-lg', isCollapsed ? '' : 'mr-3']"></i>
@@ -126,7 +126,8 @@
             <p class="text-2xl font-semibold text-gray-800 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
             <div v-if="isRootAdminPath" class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Grid layout for stat cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-blue-50 p-5 rounded-lg flex flex-col shadow">
                 <div class="grow min-h-[3rem]">
                     <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
@@ -143,14 +144,31 @@
                     <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
                 </div>
                 </div>
+                <!-- Reservations Today Card -->
                 <div class="bg-purple-50 p-5 rounded-lg flex flex-col shadow">
                 <div class="grow min-h-[3rem]">
-                    <h3 class="text-md font-semibold text-purple-800">予約数</h3>
+                    <h3 class="text-md font-semibold text-purple-800">本日の予約</h3>
                 </div>
                 <div class="mt-auto">
-                    <p class="text-3xl font-bold text-purple-600">0</p>
+                    <p class="text-3xl font-bold text-purple-600">{{ reservationsTodayCount }}</p>
+                    <p v-if="reservationsTodayValue > 0" class="text-sm text-purple-500">
+                        (¥{{ reservationsTodayValue.toLocaleString() }})
+                    </p>
                 </div>
                 </div>
+                <!-- ADDED SECTION START: Average Lead Time Card -->
+                <div class="bg-orange-50 p-5 rounded-lg flex flex-col shadow">
+                    <div class="grow min-h-[3rem]">
+                        <h3 class="text-md font-semibold text-orange-800">平均リードタイム</h3>
+                    </div>
+                    <div class="mt-auto">
+                        <p class="text-3xl font-bold text-orange-600">
+                            {{ averageLeadTimeDays !== null ? averageLeadTimeDays.toFixed(1) + ' 日' : 'N/A' }}
+                        </p>
+                        <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500">過去30日間</p>
+                    </div>
+                </div>
+                <!-- ADDED SECTION END: Average Lead Time Card -->
             </div>
             </div>
             <router-view v-else />
@@ -173,8 +191,11 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore();       
 
-    // Primevue
-    import { Menubar, PanelMenu, Button } from 'primevue';
+    // Primevue Components
+    import Menubar from 'primevue/menubar';
+    import Button from 'primevue/button';
+    import Divider from 'primevue/divider';
+    import Sidebar from 'primevue/sidebar';
     import { usePrimeVue } from 'primevue/config';
     const primevue = usePrimeVue();
 
@@ -182,6 +203,13 @@
     const activeUsers = ref(0);    
     const userName = ref('');
     
+    // Reactive variables for "Reservations Today"
+    const reservationsTodayCount = ref(0);
+    const reservationsTodayValue = ref(0);
+    // ADDED START: Reactive variable for "Average Lead Time"
+    const averageLeadTimeDays = ref(null);
+    // ADDED END: Reactive variable for "Average Lead Time"
+
     const isCollapsed = ref(false);
     const mobileSidebarVisible = ref(false);
 
@@ -208,8 +236,7 @@
         { key: 'import-finances', type: 'link', label: '財務データ', icon: 'pi pi-fw pi-wallet', route: '/admin/finances' },
     ]);
 
-    // For the mobile top menubar, very minimal. Actual nav is in mobile Sidebar.
-    const adminMobileMenuItems = ref([]); // This can be empty if all actions are in the start/end templates or mobile Sidebar
+    const adminMobileMenuItems = ref([]); 
 
     const isRootAdminPath = computed(() => route.path === '/admin');
 
@@ -217,10 +244,52 @@
         isCollapsed.value = !isCollapsed.value;
     };           
     
+    const fetchReservationsToday = async () => {
+        // TODO: This should be made more dynamic, e.g., based on a user selection if multiple hotels are managed.
+        const hotelIdToFetch = hotels.value?.[0]?.id || 1; 
+
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayDateString = `${year}-${month}-${day}`;
+
+        try {
+            const response = await fetch(`/api/v1/hotels/${hotelIdToFetch}/metrics/reservations-today?date=${todayDateString}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            }
+            const data = await response.json();
+            reservationsTodayCount.value = data.reservationsCount;
+            reservationsTodayValue.value = data.reservationsValue;
+        } catch (err) {
+            console.error('Failed to fetch reservations today:', err);
+        }
+    };
+
+    // ADDED START: Function to fetch "Average Lead Time"
+    const fetchAverageLeadTime = async () => {
+        // TODO: This hotelId should be made more dynamic, similar to fetchReservationsToday.
+        const hotelIdToFetch = hotels.value?.[0]?.id || 1;
+        const lookbackDays = 30; // Default lookback period
+
+        try {
+            const response = await fetch(`/api/v1/hotels/${hotelIdToFetch}/metrics/average-lead-time?lookback_days=${lookbackDays}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+            }
+            const data = await response.json();
+            averageLeadTimeDays.value = data.averageLeadTimeDays;
+        } catch (err) {
+            console.error('Failed to fetch average lead time:', err);
+            // averageLeadTimeDays.value = null; // Reset or set to a default on error
+        }
+    };
+    // ADDED END: Function to fetch "Average Lead Time"
 
     const fetchActiveUsers = async () => {
         try {
-            const response = await fetch('/api/auth/active-users'); // Make sure this API endpoint is correct
+            const response = await fetch('/api/auth/active-users'); 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -228,13 +297,12 @@
             activeUsers.value = data.activeUsers;
         } catch (err) {
             console.error('Failed to fetch active users:', err);
-            // activeUsers.value = 0; // Optionally reset or set to a default on error
         }
     };
     
     const handleLogout = () => {
         localStorage.removeItem('authToken');
-        logged_user.value = null; // Clear user store state
+        logged_user.value = null; 
         router.push('/login');
     };
 
@@ -248,19 +316,23 @@
     onMounted(async () => {
         primevue.config.ripple = true;
 
-        await fetchHotels();
+        await fetchHotels(); 
         await fetchUser();
         
         hotelCount.value = hotels.value?.length || 0;
         if (logged_user.value && Array.isArray(logged_user.value) && logged_user.value.length > 0 && logged_user.value[0]?.name) {
             userName.value = logged_user.value[0].name + '、';
         } else {
-            userName.value = 'ユーザー、'; // Default or fallback name
+            userName.value = 'ユーザー、'; 
         }
 
-        if (isRootAdminPath.value) { // Fetch active users only if on the admin dashboard page initially
+        if (isRootAdminPath.value) { 
             fetchActiveUsers();
-            activeUsersInterval = setInterval(fetchActiveUsers, 30000); // Update every 30 seconds
+            activeUsersInterval = setInterval(fetchActiveUsers, 30000); 
+            
+            await fetchReservationsToday();
+            // ADDED: Call fetchAverageLeadTime on mount
+            await fetchAverageLeadTime();
         }
     });
 
@@ -297,4 +369,3 @@
     padding: 0; 
   }
 </style>
-  
