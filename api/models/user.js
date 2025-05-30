@@ -133,6 +133,47 @@ async function findUserByProviderId(requestId, provider, providerUserId) {
   }
 }
 
+// Update user's Google OAuth tokens
+async function updateUserGoogleTokens(requestId, userId, accessToken, refreshToken, expiryDateTimestampMs) {
+  const pool = getPool(requestId);
+  
+  let expiryDate;
+  if (expiryDateTimestampMs) {
+    expiryDate = new Date(expiryDateTimestampMs);
+  } else {
+    // Default to null if not provided, or could set a default like 1 hour from now
+    // For now, strictly using the provided value or null.
+    expiryDate = null; 
+  }
+
+  const query = `
+    UPDATE users 
+    SET 
+      google_access_token = $1,
+      google_refresh_token = $2,
+      google_token_expiry_date = $3,
+      updated_by = $4, 
+      auth_provider = 'google' -- Ensure auth_provider is set to google
+    WHERE id = $5 
+    RETURNING *;
+  `;
+  // Using userId also for updated_by, assuming the user is performing this action for themselves
+  const values = [accessToken, refreshToken, expiryDate, userId, userId];
+
+  try {
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('User not found or token update failed.');
+    }
+    return result.rows[0]; // Return the updated user row
+  } catch (err) {
+    console.error(`Error updating Google tokens for user ${userId}:`, err);
+    // Consider logging requestId as well if available in this scope directly
+    // For now, just logging the error and userId.
+    throw new Error('Database error during token update');
+  }
+}
+
 // Link a Google account to an existing user
 async function linkGoogleAccount(requestId, userId, googleUserId) {
   const pool = getPool(requestId);
@@ -174,4 +215,6 @@ module.exports = {
   findUserByProviderId,
   linkGoogleAccount,
   createUserWithGoogle,
+  updateUserGoogleTokens,
+  updateUserCalendarSettings, // Added updateUserCalendarSettings
 };

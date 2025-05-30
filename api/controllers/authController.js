@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
 const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
 const sessionService = require('../services/sessionService');
-const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle } = require('../models/user');
+const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle, updateUserGoogleTokens } = require('../models/user'); // Added updateUserGoogleTokens
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
 const crypto = require('crypto');
@@ -24,6 +24,8 @@ const googleOAuth2Client = getGoogleOAuth2Client(); // Assuming this is correctl
 const scopes = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/calendar.app.created',
+  'https://www.googleapis.com/auth/calendar.readonly',
 ];
 
 const login = async (req, res) => {
@@ -282,6 +284,8 @@ const googleCallback = async (req, res) => {
   try {
     const { tokens } = await googleOAuth2Client.getToken(code);
     const idToken = tokens.id_token;
+    // Log the received tokens for debugging (REMOVE IN PRODUCTION)
+    // logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Received tokens from Google:', { tokens });
 
     if (!idToken) {
       const specificError = 'ID token missing from Google response.';
@@ -335,6 +339,26 @@ const googleCallback = async (req, res) => {
       const specificError = 'User processing failed after authentication.';
       logger.error('[AUTH_CTRL_GOOGLE_CALLBACK] User object is null after user handling logic.', { email: userEmail, googleUserId, ip: req.ip, specificError });
       return res.status(500).json({ error: isProduction ? 'Authentication error. Please try again.' : specificError });
+    }
+
+    // Persist the tokens
+    if (user && user.id && tokens.access_token) {
+      try {
+        await updateUserGoogleTokens(
+          req.requestId,
+          user.id,
+          tokens.access_token,
+          tokens.refresh_token || null, // refresh_token might not always be provided
+          tokens.expiry_date || null    // expiry_date is a timestamp in ms
+        );
+        logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Successfully saved Google OAuth tokens for user.`, { userId: user.id, email: userEmail, ip: req.ip });
+      } catch (tokenSaveError) {
+        logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Failed to save Google OAuth tokens for user.`, { userId: user.id, email: userEmail, error: tokenSaveError.message, stack: tokenSaveError.stack, ip: req.ip });
+        // Decide if this is a critical failure. For now, log and continue.
+        // Potentially, redirect to an error page or return an error JSON.
+      }
+    } else {
+      logger.warn('[AUTH_CTRL_GOOGLE_CALLBACK] User object or access token missing, skipping token save.', { userId: user ? user.id : 'N/A', hasAccessToken: !!tokens.access_token, ip: req.ip });
     }
 
     const jwtToken = generateToken(user);
