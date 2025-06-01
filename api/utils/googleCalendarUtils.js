@@ -73,49 +73,126 @@ async function createDedicatedCalendar(requestId, userId) {
 
 /**
  * Helper to format CRM action data into a Google Calendar event resource.
- * @param {object} crmActionData - The CRM action object.
- * @param {string} [defaultEventDurationHours=1] - Default duration in hours if end time is not specified.
+ * @param {object} crmActionData - The CRM action object, containing details like `action_datetime`, `due_date`, `subject`, etc.
+ * @param {number} [defaultEventDurationHours=0.5] - Default duration in hours if end time is not specified for timed events.
  * @returns {object} Google Calendar event resource.
  */
-function formatEventResource(crmActionData, defaultEventDurationHours = 1) {
-    const startDateTime = new Date(crmActionData.action_datetime);
-    let endDateTime = crmActionData.due_date ? new Date(crmActionData.due_date) : null;
-
-    if (!endDateTime) {
-        endDateTime = new Date(startDateTime.getTime() + defaultEventDurationHours * 60 * 60 * 1000);
+function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
+    if (!crmActionData || !crmActionData.action_datetime) {
+        console.error('[GoogleCalendarUtils][formatEventResource] Invalid crmActionData or missing action_datetime.');
+        throw new Error('Invalid crmActionData: action_datetime is required.');
     }
-    
-    // Check if it's an all-day event (time part is midnight for start and end, and end is exactly one day after start)
-    // This is a heuristic. More robust all-day detection might be needed.
-    const isAllDay = startDateTime.getHours() === 0 && startDateTime.getMinutes() === 0 && startDateTime.getSeconds() === 0 &&
-                     endDateTime.getHours() === 0 && endDateTime.getMinutes() === 0 && endDateTime.getSeconds() === 0 &&
-                     (endDateTime.getTime() - startDateTime.getTime() === 24 * 60 * 60 * 1000 ||
-                      (endDateTime.getTime() === startDateTime.getTime() && !crmActionData.due_date)); // If no due_date, and time is 00:00:00, treat as all-day for the start date.
 
+    // 1. Deriving startDateTime and originalEndDateTime (conceptual)
+    // startDateTime is directly obtained from crmActionData.action_datetime.
+    // originalEndDateTime would be derived from crmActionData.due_date if it exists.
+    // This is used to determine the event's duration or specific end point.
+    const startDateTime = new Date(crmActionData.action_datetime);
+    let originalEndDateTime; // This variable will store the Date object if due_date is provided.
+    if (crmActionData.due_date) {
+        originalEndDateTime = new Date(crmActionData.due_date);
+    }
+
+    // 2. Logic for determining isAllDay status
+    // isAllDay is determined through a series of checks:
+    // a) If action_datetime is a string and does not contain 'T', it's treated as a date string (e.g., "YYYY-MM-DD"), implying an all-day event.
+    // b) If action_datetime has a time component, but it's midnight (00:00:00), it might be an all-day event.
+    //    In this case, if due_date is also at midnight or not provided, it's considered all-day.
+    // c) An explicit boolean field `crmActionData.is_all_day` can override the above logic if present.
+    let isAllDay = false;
+    if (typeof crmActionData.action_datetime === 'string' && !crmActionData.action_datetime.includes('T')) {
+        isAllDay = true; // Handles date-only strings like "YYYY-MM-DD"
+    } else if (startDateTime.getHours() === 0 && startDateTime.getMinutes() === 0 && startDateTime.getSeconds() === 0) {
+        // Check for midnight time
+        if (!originalEndDateTime) { // No due_date means it's likely a single all-day event if start is midnight
+            isAllDay = true;
+        } else {
+            // If due_date is also at midnight, it's consistent with an all-day event definition
+            if (originalEndDateTime.getHours() === 0 && originalEndDateTime.getMinutes() === 0 && originalEndDateTime.getSeconds() === 0) {
+                isAllDay = true;
+            }
+        }
+    }
+    // Override with explicit flag if provided
+    if (typeof crmActionData.is_all_day === 'boolean') {
+        isAllDay = crmActionData.is_all_day;
+    }
 
     const eventResource = {
-        summary: crmActionData.subject,
-        description: crmActionData.details || '', // Ensure description is not null
+        summary: crmActionData.subject || 'No Subject',
+        description: crmActionData.details || '', 
         extendedProperties: {
             private: {
-                crmActionId: String(crmActionData.id), // Ensure it's a string
-                crmClientId: String(crmActionData.client_id || ''), // Ensure it's a string, handle if undefined
+                crmActionId: String(crmActionData.id), 
+                crmClientId: String(crmActionData.client_id || ''), 
             },
         },
-        //guestsCanInviteOthers: false, // Example: set other properties
-        //guestsCanModify: false,
     };
 
+    // 3. Constructing eventResource.start and eventResource.end
     if (isAllDay) {
+        // For all-day events:
+        // - `start.date` is the date part of startDateTime (YYYY-MM-DD).
+        // - `end.date` is also a YYYY-MM-DD string.
+        // - Google Calendar's end date for all-day events is exclusive. 
+        //   So, an event that occurs *on* '2023-10-26' needs an end date of '2023-10-27'.
+        //   If due_date specifies the same day as action_datetime or is earlier (e.g. data error), it's a single day event.
+        //   If due_date specifies a later day (e.g. '2023-10-27' for an event *ending on* the 27th), GCal needs '2023-10-28'.
         eventResource.start = { date: startDateTime.toISOString().split('T')[0] };
-        // For all-day events, Google Calendar's end date is exclusive.
-        // If it's a single all-day event, end date should be the day after.
-        // If crmActionData.due_date was used and it was the same as action_datetime for an all-day event, adjust.
-        const adjustedEndDateTime = new Date(endDateTime.getTime() + (crmActionData.due_date && crmActionData.due_date === crmActionData.action_datetime ? 24*60*60*1000 : 0));
-        eventResource.end = { date: adjustedEndDateTime.toISOString().split('T')[0] };
+        
+        let endDateForAllday;
+        if (originalEndDateTime) {
+            endDateForAllday = new Date(originalEndDateTime); // Use the due_date
+            // If originalEndDateTime (from due_date) is on or before startDateTime for an all-day event,
+            // it implies a single-day event from CRM's perspective, or an error.
+            // For Google Calendar, this means the end date must be the day after startDateTime.
+            if (endDateForAllday.toISOString().split('T')[0] <= startDateTime.toISOString().split('T')[0]) {
+                endDateForAllday = new Date(startDateTime); 
+                endDateForAllday.setDate(startDateTime.getDate() + 1);
+            } else {
+                // If due_date is '2023-10-27', meaning the event lasts through the 27th,
+                // Google Calendar's exclusive end date should be '2023-10-28'.
+                endDateForAllday.setDate(endDateForAllday.getDate() + 1);
+            }
+        } else {
+            // No due_date specified, so it's a single all-day event. End date is the day after startDateTime.
+            endDateForAllday = new Date(startDateTime); 
+            endDateForAllday.setDate(startDateTime.getDate() + 1);
+        }
+        eventResource.end = { date: endDateForAllday.toISOString().split('T')[0] };
+
     } else {
+        // For timed events:
+        // - `start.dateTime` is the full ISO string of startDateTime.
+        // - `end.dateTime` is the full ISO string of the calculated end time.
+        // - Both include `timeZone`.
         eventResource.start = { dateTime: startDateTime.toISOString(), timeZone: DEFAULT_TIMEZONE };
-        eventResource.end = { dateTime: endDateTime.toISOString(), timeZone: DEFAULT_TIMEZONE };
+
+        // 4. Application of the 30-minute default duration for timed events.
+        // The minimum duration for a timed event is `defaultEventDurationHours` (0.5 hours = 30 minutes).
+        const minDurationMillis = defaultEventDurationHours * 60 * 60 * 1000;
+        let calculatedEndDateTime;
+
+        if (originalEndDateTime) {
+            calculatedEndDateTime = new Date(originalEndDateTime); // Use due_date if available
+            // If the duration from startDateTime to originalEndDateTime is less than the minimum,
+            // or if originalEndDateTime is before startDateTime (invalid range),
+            // adjust calculatedEndDateTime to meet the minimum duration.
+            if (calculatedEndDateTime.getTime() - startDateTime.getTime() < minDurationMillis) {
+                calculatedEndDateTime = new Date(startDateTime.getTime() + minDurationMillis);
+            }
+        } else {
+            // No due_date provided, so set end time using the default minimum duration from startDateTime.
+            calculatedEndDateTime = new Date(startDateTime.getTime() + minDurationMillis);
+        }
+        // Final safety check: if calculatedEndDateTime is still on or before startDateTime,
+        // (e.g., due to invalid due_date from CRM that wasn't fully caught or extremely short duration),
+        // enforce the minimum duration from startDateTime.
+        if (calculatedEndDateTime.getTime() <= startDateTime.getTime()) {
+             calculatedEndDateTime = new Date(startDateTime.getTime() + minDurationMillis);
+        }
+
+        eventResource.end = { dateTime: calculatedEndDateTime.toISOString(), timeZone: DEFAULT_TIMEZONE };
     }
     return eventResource;
 }
