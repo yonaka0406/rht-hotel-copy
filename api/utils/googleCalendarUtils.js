@@ -120,10 +120,10 @@ function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
 
     const eventResource = {
         summary: crmActionData.subject || 'No Subject',
-        description: crmActionData.details || '',
+        description: crmActionData.details || '', 
         extendedProperties: {
             private: {
-                crmActionId: String(crmActionData.id),
+                crmActionId: String(crmActionData.id), 
                 crmClientId: String(crmActionData.client_id || ''),
             },
         },
