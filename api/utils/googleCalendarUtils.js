@@ -124,7 +124,7 @@ function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
         extendedProperties: {
             private: {
                 crmActionId: String(crmActionData.id), 
-                crmClientId: String(crmActionData.client_id || ''), 
+                crmClientId: String(crmActionData.client_id || ''),
             },
         },
     };
@@ -134,12 +134,12 @@ function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
         // For all-day events:
         // - `start.date` is the date part of startDateTime (YYYY-MM-DD).
         // - `end.date` is also a YYYY-MM-DD string.
-        // - Google Calendar's end date for all-day events is exclusive. 
+        // - Google Calendar's end date for all-day events is exclusive.
         //   So, an event that occurs *on* '2023-10-26' needs an end date of '2023-10-27'.
         //   If due_date specifies the same day as action_datetime or is earlier (e.g. data error), it's a single day event.
         //   If due_date specifies a later day (e.g. '2023-10-27' for an event *ending on* the 27th), GCal needs '2023-10-28'.
         eventResource.start = { date: startDateTime.toISOString().split('T')[0] };
-        
+
         let endDateForAllday;
         if (originalEndDateTime) {
             endDateForAllday = new Date(originalEndDateTime); // Use the due_date
@@ -147,7 +147,7 @@ function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
             // it implies a single-day event from CRM's perspective, or an error.
             // For Google Calendar, this means the end date must be the day after startDateTime.
             if (endDateForAllday.toISOString().split('T')[0] <= startDateTime.toISOString().split('T')[0]) {
-                endDateForAllday = new Date(startDateTime); 
+                endDateForAllday = new Date(startDateTime);
                 endDateForAllday.setDate(startDateTime.getDate() + 1);
             } else {
                 // If due_date is '2023-10-27', meaning the event lasts through the 27th,
@@ -156,7 +156,7 @@ function formatEventResource(crmActionData, defaultEventDurationHours = 0.5) {
             }
         } else {
             // No due_date specified, so it's a single all-day event. End date is the day after startDateTime.
-            endDateForAllday = new Date(startDateTime); 
+            endDateForAllday = new Date(startDateTime);
             endDateForAllday.setDate(startDateTime.getDate() + 1);
         }
         eventResource.end = { date: endDateForAllday.toISOString().split('T')[0] };
