@@ -77,9 +77,8 @@ app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    //secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    secure: true, // Always use secure cookies for HTTPS
+  cookie: {    
+    secure: process.env.NODE_ENV === ('production' || 'development'), // Secure cookies for HTTPS (in localhost it should be false)
     httpOnly: true,
     maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
     sameSite: 'lax', // Use lax to allow cookies in same-site requests

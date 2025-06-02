@@ -2,7 +2,7 @@
 require('dotenv').config({ path: './api/.env' });
 const { Pool } = require('pg');
 const url = require('url');
-const logger = require('./logger'); // Import Winston logger
+const logger = require('./logger'); 
 
 // Create both pools
 const pool = new Pool({
