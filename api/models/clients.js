@@ -29,6 +29,75 @@ const toFullWidthKana = (str) => {
 const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
   String.fromCharCode(char.charCodeAt(0) + 0x60)
 );
+const processNameStringWithSubstitutions = (name, nameKanji) => {
+    if (typeof name !== 'string' || typeof nameKanji !== 'string') {
+        // Or handle more gracefully depending on expected inputs, maybe return original name
+        console.warn('processNameStringWithSubstitutions: name and nameKanji must be strings.');
+        return name;
+    }
+
+    const substitutions = [
+        { pattern: 'japan', replacement: ' Japan ', kanji_match: 'ジャパン' },
+        { pattern: 'nihon', replacement: ' Nihon ', kanji_match: '日本' },
+        { pattern: 'hokkaidou', replacement: ' Hokkaido ', kanji_match: '北海道' },
+        { pattern: 'sapporo', replacement: ' Sapporo ', kanji_match: '札幌' },
+        { pattern: 'kensetsu', replacement: ' Kensetsu ', kanji_match: '建設' },
+        { pattern: 'setsubi', replacement: ' Setsubi ', kanji_match: '設備' },
+        { pattern: 'kabushikigaisha', replacement: ' K.K ', kanji_match: '株式会社' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '工業' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '興業' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '鋼業' },
+        { pattern: 'sangyou', replacement: ' Sangyo ', kanji_match: '産業' },
+        { pattern: 'tekkou', replacement: ' Tekkou ', kanji_match: '鉄工' },
+        { pattern: 'kikou', replacement: ' Kikou ', kanji_match: '機工' },
+        { pattern: 'denkou', replacement: ' Denkou ', kanji_match: '電工' },
+        { pattern: 'tosou', replacement: ' Tosou ', kanji_match: '塗装' },
+        { pattern: 'kureen', replacement: ' Crane ', kanji_match: 'クレーン' },
+        { pattern: 'koumuten', replacement: ' Koumuten ', kanji_match: '工務店' },
+        { pattern: 'giken', replacement: ' Giken ', kanji_match: '技研' },
+        { pattern: 'gijutsu', replacement: ' Gijutsu ', kanji_match: '技術' },
+        { pattern: 'guruupu', replacement: ' Group ', kanji_match: 'グループ' },
+        { pattern: 'hoomu', replacement: ' Home ', kanji_match: 'ホーム' },
+        { pattern: 'hausu', replacement: ' House ', kanji_match: 'ハウス' },
+        { pattern: 'shisutemu', replacement: ' System ', kanji_match: 'システム' },
+        { pattern: 'hoorudeingusu', replacement: ' Holdings ', kanji_match: 'ホールディングス' },
+        { pattern: 'konsarutanto', replacement: ' Consultant ', kanji_match: 'コンサルタント' }
+    ];
+
+    let updatedName = name;
+
+    for (const sub of substitutions) {
+        // Check for kanji_match presence (simple substring check)
+        if (nameKanji.includes(sub.kanji_match)) {
+            // Create a case-insensitive regex for the pattern
+            try {
+                const regex = new RegExp(sub.pattern, 'gi'); // 'g' for global, 'i' for case-insensitive
+                if (regex.test(updatedName)) {
+                    updatedName = updatedName.replace(regex, sub.replacement);
+                }
+            } catch (e) {
+                console.error(`Error creating RegExp with pattern: ${sub.pattern}`, e);
+                // Skip this substitution if regex is invalid
+            }
+        }
+    }
+
+    // Trim whitespace, replace multiple spaces with a single space
+    updatedName = updatedName.trim().replace(/\s+/g, ' ');
+
+    // Apply INITCAP (capitalize the first letter of each word)
+    updatedName = updatedName
+        .split(' ')
+        .map(word => {
+            if (word.length === 0) return '';
+            // Preserve K.K as is, otherwise INITCAP
+            if (word === 'K.K') return 'K.K';
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+
+    return updatedName;
+};
 const processNameString = async (nameString) => {
   if (!nameString) {
     throw new Error('processNameString: nameString is required');
@@ -38,62 +107,53 @@ const processNameString = async (nameString) => {
   }
 
   const kanjiRegex = /[\u4E00-\u9FAF]/; // Kanji
-  const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Kana
-  const halfKanaRegex = /[\uFF65-\uFF9F]/; // Half-width Kana
+  const kanaRegex = /[\u3040-\u309F\u30A0-\u30FF]/; // Full-width Kana
+  const halfKanaRegex = /[\uFF65-\uFF9F]/; // Half-width Katakana
   const { convertText } = await import('../utils/japaneseUtils.mjs');
-  /*
-  const toFullWidthKana = (str) => {
-      return str.normalize('NFKC').replace(/[\uFF61-\uFF9F]/g, (char) => {
-          const code = char.charCodeAt(0) - 0xFF61 + 0x30A1;
-          return String.fromCharCode(code);
-      });
-  };
-  
-  const toKatakana = (str) => str.replace(/[\u3040-\u309F]/g, (char) =>
-    String.fromCharCode(char.charCodeAt(0) + 0x60)
-  );
-  */
-  let name = nameString; // Default
+
+  let name = nameString;
   let nameKana = null;
   let nameKanji = null;
 
-  if(halfKanaRegex.test(nameString)){ 
-    //console.log('Half-width kana provided: ', nameString);
-    nameKana = toFullWidthKana(nameString);
-    //console.log('Half-width kana converted: ', nameKana);
-  };
+  if (halfKanaRegex.test(nameString)) {
+    // Normalize half-width kana to full-width katakana first for consistent processing
+    nameKana = toKatakana(toFullWidthKana(nameString));
+  }
 
   if (kanjiRegex.test(nameString)) {
     nameKanji = nameString;
-    nameKana = await convertText(nameString);
-    nameKana = toKatakana(nameKana);
+    const tempKana = await convertText(nameString); // convertText likely returns Hiragana or mixed
+    nameKana = toKatakana(tempKana); // Ensure it's Katakana
     name = await transliterateKanaToRomaji(nameKana);
-  } else if (kanaRegex.test(nameString) || halfKanaRegex.test(nameString)) {
-    const fullKana = halfKanaRegex.test(nameString)
+  } else if (kanaRegex.test(nameString) || halfKanaRegex.test(nameString)) { // Process Kana or already converted half-width
+    const fullKanaForProcessing = nameKana || (halfKanaRegex.test(nameString)
       ? toFullWidthKana(nameString)
-      : nameString;
+      : nameString);
 
-    const halfWidthName = fullKana
+    // Convert full-width numbers/alpha to half-width, full-width spaces to half-width spaces
+    const normalizedKana = fullKanaForProcessing
       .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-      .replace(/　/g, ' ') // Replace full-width spaces
-      .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0));
+      .replace(/　/g, ' ');
 
-    nameKana = toKatakana(halfWidthName);
+    nameKana = toKatakana(normalizedKana); // Ensure it's Katakana
     name = await transliterateKanaToRomaji(nameKana);
   } else {
-    // Handle full-width alphabet and spaces
+    // Input is likely Romaji or other non-Japanese script
     name = nameString
       .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-      .replace(/　/g, ' ') // Replace full-width spaces
+      .replace(/　/g, ' ')
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
   }
 
-  //console.log([name, nameKana, nameKanji]);
+  if (nameKanji) {
+    name = processNameStringWithSubstitutions(name, nameKanji);
+  }
 
   return { name, nameKana, nameKanji };
 };
+
 
 // Return all clients
 const getAllClients = async (requestId, limit, offset) => {
@@ -773,81 +833,9 @@ const deleteAddress = async (requestId, addressId, updatedBy) => {
   }
 };
 
-// New function for specific name processing based on patterns
-const processNameStringWithSubstitutions = (name, nameKanji) => {
-    if (typeof name !== 'string' || typeof nameKanji !== 'string') {
-        // Or handle more gracefully depending on expected inputs, maybe return original name
-        console.warn('processNameStringWithSubstitutions: name and nameKanji must be strings.');
-        return name;
-    }
-
-    const substitutions = [
-        { pattern: 'japan', replacement: ' Japan ', kanji_match: 'ジャパン' },
-        { pattern: 'nihon', replacement: ' Nihon ', kanji_match: '日本' },
-        { pattern: 'hokkaidou', replacement: ' Hokkaido ', kanji_match: '北海道' },
-        { pattern: 'sapporo', replacement: ' Sapporo ', kanji_match: '札幌' },
-        { pattern: 'kensetsu', replacement: ' Kensetsu ', kanji_match: '建設' },
-        { pattern: 'setsubi', replacement: ' Setsubi ', kanji_match: '設備' },
-        { pattern: 'kabushikigaisha', replacement: ' K.K ', kanji_match: '株式会社' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '工業' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '興業' },
-        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '鋼業' },
-        { pattern: 'sangyou', replacement: ' Sangyo ', kanji_match: '産業' },
-        { pattern: 'tekkou', replacement: ' Tekkou ', kanji_match: '鉄工' },
-        { pattern: 'kikou', replacement: ' Kikou ', kanji_match: '機工' },
-        { pattern: 'denkou', replacement: ' Denkou ', kanji_match: '電工' },
-        { pattern: 'tosou', replacement: ' Tosou ', kanji_match: '塗装' },
-        { pattern: 'kureen', replacement: ' Crane ', kanji_match: 'クレーン' },
-        { pattern: 'koumuten', replacement: ' Koumuten ', kanji_match: '工務店' },
-        { pattern: 'giken', replacement: ' Giken ', kanji_match: '技研' },
-        { pattern: 'gijutsu', replacement: ' Gijutsu ', kanji_match: '技術' },
-        { pattern: 'guruupu', replacement: ' Group ', kanji_match: 'グループ' },
-        { pattern: 'hoomu', replacement: ' Home ', kanji_match: 'ホーム' },
-        { pattern: 'hausu', replacement: ' House ', kanji_match: 'ハウス' },
-        { pattern: 'shisutemu', replacement: ' System ', kanji_match: 'システム' },
-        { pattern: 'hoorudeingusu', replacement: ' Holdings ', kanji_match: 'ホールディングス' },
-        { pattern: 'konsarutanto', replacement: ' Consultant ', kanji_match: 'コンサルタント' }
-    ];
-
-    let updatedName = name;
-
-    for (const sub of substitutions) {
-        // Check for kanji_match presence (simple substring check)
-        if (nameKanji.includes(sub.kanji_match)) {
-            // Create a case-insensitive regex for the pattern
-            try {
-                const regex = new RegExp(sub.pattern, 'gi'); // 'g' for global, 'i' for case-insensitive
-                if (regex.test(updatedName)) {
-                    updatedName = updatedName.replace(regex, sub.replacement);
-                }
-            } catch (e) {
-                console.error(`Error creating RegExp with pattern: ${sub.pattern}`, e);
-                // Skip this substitution if regex is invalid
-            }
-        }
-    }
-
-    // Trim whitespace, replace multiple spaces with a single space
-    updatedName = updatedName.trim().replace(/\s+/g, ' ');
-
-    // Apply INITCAP (capitalize the first letter of each word)
-    updatedName = updatedName
-        .split(' ')
-        .map(word => {
-            if (word.length === 0) return '';
-            // Preserve K.K as is, otherwise INITCAP
-            if (word === 'K.K') return 'K.K';
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        })
-        .join(' ');
-
-    return updatedName;
-};
-
 module.exports = {
   toFullWidthKana,
-  processNameString,
-  processNameStringWithSubstitutions, // Added new function
+  processNameString,  
   getAllClients,
   getTotalClientsCount,
   selectClient,
