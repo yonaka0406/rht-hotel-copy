@@ -59,7 +59,7 @@ CREATE TABLE users (
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     -- TODO: Replace with a secure method for initial admin user creation in production.
     -- INSERT INTO users (email, password_hash, role_id)
-    -- VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+    -- VALUES ('root@wehub.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
     ALTER TABLE users
     ADD COLUMN created_by INT REFERENCES users(id),
