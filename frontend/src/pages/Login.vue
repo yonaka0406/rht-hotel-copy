@@ -1,9 +1,9 @@
 <template>
   <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
     <Card class="w-full max-w-md">
-      <img src="/logo.jpg" alt="Logo" class="login-logo" />
+      
       <template #title>
-        <h2 class="text-2xl font-bold mb-6 text-center">ログイン</h2>
+        <img src="/logo.jpg" alt="Logo" class="login-logo" />        
       </template>
       <template #content>
         <form @submit.prevent="handleLogin">
@@ -59,7 +59,7 @@
 
           <div class="my-4"> <!-- Added Google Sign-In Button -->
             <Button
-              label="Sign in with Google"
+              label="Google でログイン"
               icon="pi pi-google"
               class="w-full p-button-secondary google-login-button"
               @click="handleGoogleLogin"
@@ -69,7 +69,8 @@
           <!-- Toggle Button/Link for Email & Password -->
           <div class="my-4 text-center">
             <Button
-              label="Or, sign in with Email & Password"
+              v-if="!showPasswordLogin"
+              label="又はID＆PWでログイン"
               icon="pi pi-envelope"
               class="p-button-text p-button-secondary w-full toggle-password-login"
               @click="showPasswordLogin = !showPasswordLogin"
