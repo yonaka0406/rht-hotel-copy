@@ -170,6 +170,72 @@ INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_na
 VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
 
+CREATE TEMP TABLE temp_client_substitutions (
+    pattern TEXT,
+    replacement TEXT,
+    kanji_match TEXT
+);
+
+INSERT INTO temp_client_substitutions (pattern, replacement, kanji_match) VALUES
+   ('japan', ' Japan ', '%ジャパン%'),
+   ('nihon', ' Nihon ', '%日本%'),
+   ('hokkaidou', ' Hokkaido ', '%北海道%'),
+	('sapporo', ' Sapporo ', '%札幌%'),
+   ('kensetsu', ' Kensetsu ', '%建設%'),
+   ('setsubi', ' Setsubi ', '%設備%'),
+   ('kabushikigaisha', ' K.K ', '%株式会社%'),
+   ('kougyou', ' Kogyo ', '%工業%'),
+   ('kougyou', ' Kogyo ', '%興業%'),
+   ('kougyou', ' Kogyo ', '%鋼業%'),
+   ('sangyou', ' Sangyo ', '%産業%'),
+   ('tekkou', ' Tekkou ', '%鉄工%'),
+   ('kikou', ' Kikou ', '%機工%'),
+   ('denkou', ' Denkou ', '%電工%'),   
+   ('tosou', ' Tosou ', '%塗装%'),
+   ('kureen', ' Crane ', '%クレーン%'),
+   ('koumuten', ' Koumuten ', '%工務店%'),   
+   ('giken', ' Giken ', '%技研%'),
+   ('gijutsu', ' Gijutsu ', '%技術%'),
+   ('guruupu', ' Group ', '%グループ%'),   
+   ('hoomu', ' Home ', '%ホーム%'),
+   ('hausu', ' House ', '%ハウス%'),
+   ('shisutemu', ' System ', '%システム%'),
+   ('hoorudeingusu', ' Holdings ', '%ホールディングス%'),
+   ('konsarutanto', ' Consultant ', '%コンサルタント%')
+   ;
+
+-- Bulk data treatment
+DO $$
+DECLARE
+    client_row RECORD;
+    sub_row RECORD;
+    updated_name TEXT;
+BEGIN
+    FOR client_row IN
+        SELECT * FROM clients
+        WHERE created_at >= '2025-06-02'
+    LOOP
+        updated_name := client_row.name;
+
+        FOR sub_row IN
+            SELECT * FROM temp_client_substitutions
+            WHERE client_row.name ILIKE '%' || pattern || '%'
+              AND client_row.name_kanji LIKE kanji_match
+        LOOP
+            updated_name := regexp_replace(updated_name, '(?i)' || sub_row.pattern, sub_row.replacement, 'g');
+        END LOOP;
+
+        updated_name := regexp_replace(trim(updated_name), '\s+', ' ', 'g');
+
+        IF updated_name IS DISTINCT FROM client_row.name THEN
+            UPDATE clients
+            SET name = INITCAP(updated_name)
+            WHERE id = client_row.id;
+        END IF;
+    END LOOP;
+END $$;
+
+
 -- Mock data generator
 /*
 INSERT INTO clients (
