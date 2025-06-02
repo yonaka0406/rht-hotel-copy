@@ -74,6 +74,8 @@ CREATE TABLE users (
 
     -- Temporary
    ALTER TABLE users
+      ADD COLUMN auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
+      ADD COLUMN provider_user_id VARCHAR(255) NULL,
       ADD COLUMN google_calendar_id TEXT NULL,
       ADD COLUMN google_access_token TEXT NULL,
       ADD COLUMN google_refresh_token TEXT NULL,
@@ -238,11 +240,6 @@ CREATE TABLE crm_actions (
 CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);
 CREATE INDEX idx_crm_actions_action_type ON crm_actions(action_type);
 
-ALTER TABLE crm_actions 
-   ADD COLUMN google_calendar_event_id TEXT NULL,
-   ADD COLUMN google_calendar_html_link TEXT NULL,
-   ADD COLUMN synced_with_google_calendar BOOLEAN DEFAULT FALSE NULL;
-
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,
    name TEXT NOT NULL,
@@ -321,7 +318,7 @@ CREATE TABLE plans_rates (
             THEN FLOOR(adjustment_value / (1 + tax_rate)) 
             ELSE NULL 
          END
-    ) STORED;
+    ) STORED,
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
     condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
@@ -407,6 +404,27 @@ CREATE TABLE plan_addons (
     )
 );
 
+CREATE TABLE payment_types (
+    id SERIAL PRIMARY KEY, 
+    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
+    name TEXT NOT NULL,
+    description TEXT,     
+    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
+    visible BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    UNIQUE (name)
+);
+INSERT INTO payment_types (name, transaction, created_by)
+VALUES
+    ('現金', 'cash', 1),
+    ('ネットポイント', 'point', 1),
+    ('事前振り込み', 'wire', 1),
+    ('クレジットカード', 'credit', 1),
+    ('請求書', 'bill', 1),
+    ('割引', 'discount', 1);
+
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel    
@@ -424,12 +442,8 @@ CREATE TABLE reservations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
+    PRIMARY KEY (hotel_id, id)    
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE reservations
-ADD COLUMN ota_reservation_id TEXT NULL
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
@@ -506,9 +520,6 @@ CREATE TABLE reservation_payments (
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_payments
-ADD COLUMN invoice_id UUID DEFAULT NULL;
-
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -526,27 +537,6 @@ CREATE TABLE reservation_rates (
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-CREATE TABLE payment_types (
-    id SERIAL PRIMARY KEY, 
-    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
-    name TEXT NOT NULL,
-    description TEXT,     
-    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
-    visible BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    UNIQUE (name)
-);
-INSERT INTO payment_types (name, transaction, created_by)
-VALUES
-    ('現金', 'cash', 1),
-    ('ネットポイント', 'point', 1),
-    ('事前振り込み', 'wire', 1),
-    ('クレジットカード', 'credit', 1),
-    ('請求書', 'bill', 1),
-    ('割引', 'discount', 1);
-
 CREATE TABLE invoices (
    id UUID,
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -562,100 +552,6 @@ CREATE TABLE invoices (
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE invoices
-   ADD COLUMN display_name TEXT NULL
-   ADD COLUMN due_date DATE NULL,
-   ADD COLUMN total_stays INT NULL,
-   ADD COLUMN comment TEXT NULL;
-
--- VIEW
-
-CREATE OR REPLACE VIEW vw_room_inventory AS
-WITH roomTotal AS (
-    SELECT
-        hotel_id,
-        room_type_id,
-        COUNT(*) as total_rooms
-    FROM rooms
-    WHERE for_sale = true
-    GROUP BY hotel_id, room_type_id
-)
-SELECT
-    rd.hotel_id,
-    rd.date,
-    r.room_type_id,
-	 sc.netrmtypegroupcode,
-    rt.name as room_type_name,
-    roomTotal.total_rooms,
-    COUNT(rd.date) as room_count
-FROM
-    reservation_details rd
-    JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
-    JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
-	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
-    JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
-WHERE rd.cancelled IS NULL
-GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
-
-CREATE OR REPLACE VIEW vw_booking_for_google AS
-SELECT
-    h.id AS hotel_id,
-    h.formal_name AS hotel_name,
-    rd.id AS reservation_detail_id,
-    rd.date,
-    rt.name AS room_type_name,
-    rd.room_id,
-    rooms.room_number,
-    COALESCE(c.name_kanji, c.name) AS client_name,
-    rd.plan_name,
-    r.status,
-    r.type,
-    r.agent
-FROM
-    hotels h
-      JOIN
-    reservations r ON h.id = r.hotel_id
-      JOIN
-    clients c ON c.id = r.reservation_client_id
-      JOIN
-    reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
-      JOIN
-    rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
-      JOIN
-    room_types rt ON rooms.room_type_id = rt.id
-WHERE
-    rd.cancelled IS NULL
-ORDER BY
-    h.id, rd.date, rooms.room_number;
-
--- Financial data
-
-CREATE TABLE du_forecast (
-   id SERIAL PRIMARY KEY,
-   hotel_id INT NOT NULL REFERENCES hotels(id),
-   forecast_month DATE NOT NULL,
-   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
-   operating_days INTEGER, -- '営業日数'
-   available_room_nights INTEGER, -- '客室数'
-   rooms_sold_nights INTEGER, -- '販売客室数'
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-   created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
-);
-COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
-COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
-
-CREATE TABLE du_accounting (
-   id SERIAL PRIMARY KEY,
-   hotel_id INT NOT NULL REFERENCES hotels(id),
-   accounting_month DATE NOT NULL,
-   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'   
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-   created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
-);
-COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
 
 -- OTA / Site Controller
 
@@ -1103,8 +999,93 @@ CREATE TABLE xml_responses (
    PRIMARY KEY (id, hotel_id)   
 ) PARTITION BY LIST (hotel_id);
 
-TRUNCATE TABLE xml_requests RESTART IDENTITY;
-TRUNCATE TABLE xml_responses RESTART IDENTITY;
+-- VIEW
+
+CREATE OR REPLACE VIEW vw_room_inventory AS
+WITH roomTotal AS (
+    SELECT
+        hotel_id,
+        room_type_id,
+        COUNT(*) as total_rooms
+    FROM rooms
+    WHERE for_sale = true
+    GROUP BY hotel_id, room_type_id
+)
+SELECT
+    rd.hotel_id,
+    rd.date,
+    r.room_type_id,
+	 sc.netrmtypegroupcode,
+    rt.name as room_type_name,
+    roomTotal.total_rooms,
+    COUNT(rd.date) as room_count
+FROM
+    reservation_details rd
+    JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
+    JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
+	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
+    JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
+WHERE rd.cancelled IS NULL
+GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
+
+CREATE OR REPLACE VIEW vw_booking_for_google AS
+SELECT
+    h.id AS hotel_id,
+    h.formal_name AS hotel_name,
+    rd.id AS reservation_detail_id,
+    rd.date,
+    rt.name AS room_type_name,
+    rd.room_id,
+    rooms.room_number,
+    COALESCE(c.name_kanji, c.name) AS client_name,
+    rd.plan_name,
+    r.status,
+    r.type,
+    r.agent
+FROM
+    hotels h
+      JOIN
+    reservations r ON h.id = r.hotel_id
+      JOIN
+    clients c ON c.id = r.reservation_client_id
+      JOIN
+    reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+      JOIN
+    rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
+      JOIN
+    room_types rt ON rooms.room_type_id = rt.id
+WHERE
+    rd.cancelled IS NULL
+ORDER BY
+    h.id, rd.date, rooms.room_number;
+
+-- Financial data
+
+CREATE TABLE du_forecast (
+   id SERIAL PRIMARY KEY,
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   forecast_month DATE NOT NULL,
+   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
+   operating_days INTEGER, -- '営業日数'
+   available_room_nights INTEGER, -- '客室数'
+   rooms_sold_nights INTEGER, -- '販売客室数'
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
+);
+COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
+COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
+
+CREATE TABLE du_accounting (
+   id SERIAL PRIMARY KEY,
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   accounting_month DATE NOT NULL,
+   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'   
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
+);
+COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
 
 -- TODO: Review if these duplicate client handling scripts are necessary for initial production deployment. They appear to be for data cleanup after a specific import dated '2025-03-25'.
 /*
