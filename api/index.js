@@ -247,9 +247,11 @@ const listenForTableChanges = async () => {
     if (msg.channel === 'logs_reservation_changed') {
       logger.debug('Notification received: logs_reservation_changed (dev)');
       ioHttp.emit('tableUpdate', 'Reservation update detected');
+      /*
       if (ioHttps) {
         ioHttps.emit('tableUpdate', 'Reservation update detected');
       }
+      */
     }
     if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
@@ -325,12 +327,14 @@ const listenForTableChanges = async () => {
         message: 'Reservation update detected',
         environment: 'prod'
       });
+      /*
       if (ioHttps) {
         ioHttps.emit('tableUpdate', {
           message: 'Reservation update detected',
           environment: 'prod'
         });
       }
+      */
     }
     if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
@@ -412,6 +416,7 @@ ioHttp.on('connection', (socket) => {
     logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
   });
 });
+/*
 if (ioHttps) {
   ioHttps.on('connection', (socket) => {
     logger.debug('Client connected (HTTPS)', { clientId: socket.id, origin: socket.handshake.headers.origin });
@@ -425,6 +430,7 @@ if (ioHttps) {
     });
   });
 }
+*/
 
 // Serve static files from the frontend build folder
 app.use(express.static(path.join(__dirname, 'public')));
