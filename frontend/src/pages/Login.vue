@@ -1,14 +1,16 @@
 <template>
   <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
     <Card class="w-full max-w-md">
+      <img src="/logo.jpg" alt="Logo" class="login-logo" />
       <template #title>
         <h2 class="text-2xl font-bold mb-6 text-center">ログイン</h2>
       </template>
       <template #content>
         <form @submit.prevent="handleLogin">
-          <div class="field mb-6">   
-            <FloatLabel>
-              <InputText
+          <div v-if="showPasswordLogin">
+            <div class="field mb-6">
+              <FloatLabel>
+                <InputText
                 id="email"
                 v-model="email"
                 fluid
@@ -41,26 +43,37 @@
           </div>
 
           <div class="mb-4">
-            <Button
-              label="ログイン"
+              <Button
+                label="ログイン"
               icon="pi pi-sign-in"
-              class="w-full"
+              class="w-full standard-login-button"
               :loading="isLoading"
-              type="submit"
-            />
+                type="submit"
+              />
+            </div>
+            <!-- Forgot password link MOVED HERE -->
+            <div class="text-center">
+              <router-link to="/forgot-password" class="text-sm forgot-password-link">パスワードを忘れましたか？</router-link>
+            </div>
           </div>
-          
+
           <div class="my-4"> <!-- Added Google Sign-In Button -->
             <Button
               label="Sign in with Google"
               icon="pi pi-google"
-              class="w-full p-button-secondary"
+              class="w-full p-button-secondary google-login-button"
               @click="handleGoogleLogin"
             />
           </div>
 
-          <div class="text-center">
-            <router-link to="/forgot-password" class="text-sm text-blue-600">パスワードを忘れましたか？</router-link>
+          <!-- Toggle Button/Link for Email & Password -->
+          <div class="my-4 text-center">
+            <Button
+              label="Or, sign in with Email & Password"
+              icon="pi pi-envelope"
+              class="p-button-text p-button-secondary w-full toggle-password-login"
+              @click="showPasswordLogin = !showPasswordLogin"
+            />
           </div>
         </form>
       </template>
@@ -85,6 +98,7 @@
   const isLoading = ref(false);
   const emailError = ref(null);
   const passwordError = ref(null);
+  const showPasswordLogin = ref(false);
 
   const handleGoogleLogin = () => { // Added
     // Redirect to the backend Google OAuth endpoint
@@ -172,3 +186,59 @@
   };
 
 </script>
+
+<style scoped>
+.login-logo {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1.5rem; /* Tailwind mb-6 equivalent */
+  max-width: 150px;
+  height: auto;
+}
+
+.google-login-button.p-button { /* Targeting PrimeVue button structure */
+  background-color: #047857 !important; /* Tailwind emerald-700 */
+  color: white !important;
+  border-color: #047857 !important; /* Ensure border matches */
+}
+
+.google-login-button.p-button:hover,
+.google-login-button.p-button:focus {
+  background-color: #059669 !important; /* Tailwind emerald-600 */
+  border-color: #059669 !important;
+}
+
+.forgot-password-link {
+  color: #047857; /* Tailwind emerald-700 */
+  text-decoration: none; /* Default, but good to ensure */
+}
+.forgot-password-link:hover {
+  color: #059669; /* Tailwind emerald-600 */
+  text-decoration: underline;
+}
+
+.toggle-password-login.p-button.p-button-text { /* Targeting PrimeVue text button */
+  color: #047857 !important; /* Tailwind emerald-700 for text */
+}
+/* Ensure the icon inside the toggle button also gets the color */
+.toggle-password-login.p-button.p-button-text .pi {
+  color: #047857 !important; /* Tailwind emerald-700 for icon */
+}
+/* Optional: Add a subtle background on hover/focus for text button */
+.toggle-password-login.p-button.p-button-text:hover,
+.toggle-password-login.p-button.p-button-text:focus {
+  background-color: rgba(4, 120, 87, 0.05) !important; /* Very light emerald */
+}
+
+.standard-login-button.p-button { /* Standard login button */
+  background-color: #065f46 !important; /* Tailwind emerald-800 */
+  color: white !important;
+  border-color: #065f46 !important;
+}
+.standard-login-button.p-button:hover,
+.standard-login-button.p-button:focus {
+  background-color: #047857 !important; /* Tailwind emerald-700 */
+  border-color: #047857 !important;
+}
+</style>
