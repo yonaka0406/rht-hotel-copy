@@ -1,3 +1,4 @@
+-- TODO: Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
 GRANT CREATE ON SCHEMA public TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
@@ -6,13 +7,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
 GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
-
-/*
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE logs_user TO rhtsys_user;
-*/
+
 
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,                
@@ -34,11 +33,11 @@ CREATE TABLE user_roles (
 
 INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
-        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', '特別な権限のない閲覧のみです。');
+        ('アドミン', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('マネージャー', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('エディター', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('ユーザー', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
+        ('閲覧者', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', 'デフォルトとして、特別な権限のないユーザーです。');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -46,7 +45,7 @@ CREATE TABLE users (
     name TEXT,
     password_hash TEXT NULL,
     status_id INT REFERENCES user_status(id) DEFAULT 1,        -- Status ID (default to 1, representing 'active')
-    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)
+    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 5, referencing 'Viewer' role)
     auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
     provider_user_id VARCHAR(255) NULL,
     google_calendar_id TEXT NULL,
@@ -58,8 +57,9 @@ CREATE TABLE users (
 );
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    INSERT INTO users (email, password_hash, role_id)
-    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+    -- TODO: Replace with a secure method for initial admin user creation in production.
+    -- INSERT INTO users (email, password_hash, role_id)
+    -- VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
     ALTER TABLE users
     ADD COLUMN created_by INT REFERENCES users(id),
@@ -169,6 +169,7 @@ VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
 
 -- Mock data generator
+/*
 INSERT INTO clients (
     name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, 
     gender, email, phone, fax, created_by
@@ -194,6 +195,7 @@ FROM (
         floor(random() * 99000)::TEXT AS random_number,
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
+*/
 
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -524,12 +526,6 @@ CREATE TABLE reservation_rates (
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-/*ATENCAO: ADICIONAR TABELA A QUERY DA PARTITION
-CREATE TABLE reservation_rates_7 
-PARTITION OF reservation_rates 
-FOR VALUES IN (7)
-*/
-
 CREATE TABLE payment_types (
     id SERIAL PRIMARY KEY, 
     hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
@@ -572,23 +568,6 @@ ALTER TABLE invoices
    ADD COLUMN due_date DATE NULL,
    ADD COLUMN total_stays INT NULL,
    ADD COLUMN comment TEXT NULL;
-
---Ainda nao esta certo que vai ser usada
-
-    CREATE TABLE user_hotels (
-        user_id INT REFERENCES users(id) ON DELETE CASCADE,
-        hotel_id VARCHAR(6) NOT NULL,
-        PRIMARY KEY (user_id, hotel_id)
-    );
-
---Reservations Schema Candidate
-
-CREATE TABLE parking_spots (
-    id SERIAL PRIMARY KEY,
-    spot_number TEXT NOT NULL UNIQUE,
-    reserved BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 -- VIEW
 
@@ -1127,9 +1106,8 @@ CREATE TABLE xml_responses (
 TRUNCATE TABLE xml_requests RESTART IDENTITY;
 TRUNCATE TABLE xml_responses RESTART IDENTITY;
 
-CREATE TABLE xml_responses_1 PARTITION OF xml_responses
-FOR VALUES IN (1);
-
+-- TODO: Review if these duplicate client handling scripts are necessary for initial production deployment. They appear to be for data cleanup after a specific import dated '2025-03-25'.
+/*
 --------------------------------------------------------------------
 --Imported clients, delete duplicates
 WITH duplicate_clients AS (
@@ -1268,4 +1246,5 @@ WHERE id IN (
   SELECT id FROM ranked_clients
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
+*/
 
