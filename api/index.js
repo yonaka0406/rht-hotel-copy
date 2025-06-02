@@ -114,7 +114,9 @@ const getEnvConfig = (req) => {
 // HTTP Server setup
 const httpServer = http.createServer(app);
 
-// HTTPS Server setup (try/catch block)
+/*
+// HTTPS Server setup
+// Apache is handling HTTPS termination
 let httpsServer = null; // Initialize as null
 try {
   let privateKey, certificate;
@@ -133,13 +135,18 @@ try {
 } catch (error) {
   logger.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
 }
-// Socket.IO setup for HTTP and HTTPS
+*/
+
+// Socket.IO setup
 const ioHttp = socketio(httpServer, {
   cors: {
     origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
     methods: ["GET", "POST"]
   }
 });
+
+/*
+// Apache is handling HTTPS termination
 let ioHttps = null;
 if (httpsServer) {
   ioHttps = socketio(httpsServer, {
@@ -149,6 +156,7 @@ if (httpsServer) {
     }
   });
 }
+*/
 
 const PORT = process.env.PORT || 5000;
 const baseUrl = `http://localhost:${PORT}`;
@@ -439,11 +447,14 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
+/*
+// Apache is handling HTTPS termination
 if (httpsServer) {
   httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
     logger.info(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
   });
 }
+*/
 
 // Start the scheduling
 startScheduling();
