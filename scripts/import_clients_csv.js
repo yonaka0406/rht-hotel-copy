@@ -27,86 +27,173 @@ function parseCsvPromise(fileContent, options) {
     });
 }
 
-/**
- * Processes a name string to extract Kanji, Kana, and Romaji parts.
- * @param {string} nameKanjiFull - The full name in Kanji.
- * @param {string} nameKanaFull - The full name in Kana.
- * @returns {{name: string, name_kana: string, name_kanji: string}}
- */
-function processNameString(nameKanjiFull, nameKanaFull) {
-    // TODO: Implement a more sophisticated version based on api/models/clients.js
-    // For now, directly use provided fields and a placeholder for Romaji.
-    const name_kanji = nameKanjiFull ? nameKanjiFull.trim() : '';
-    const name_kana = nameKanaFull ? nameKanaFull.trim() : '';
+// --- Name Processing Helper Functions (adapted from api/models/clients.js) ---
 
-    // Placeholder for Romaji name - ideally, this would involve transliteration
-    const name = name_kanji || name_kana || 'Unknown'; // Basic placeholder
+/**
+ * Transliterates Kana string to Romaji, capitalizing words.
+ * Assumes japaneseUtils.mjs exports toRomaji.
+ * @param {string} kanaString - The Kana string to transliterate.
+ * @returns {Promise<string>} The Romaji string.
+ */
+async function transliterateKanaToRomaji(kanaString) {
+    if (!kanaString) return ''; // Handle null or empty input
+
+    // Assuming japaneseUtils.mjs is in PROJECT_ROOT/utils/japaneseUtils.mjs
+    // and this script is in PROJECT_ROOT/scripts/import_clients_csv.js
+    // The path for dynamic import is relative to this file.
+    const { toRomaji } = await import('../api/utils/japaneseUtils.mjs');
+
+    const halfWidthString = kanaString
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)) // Full-width alpha-num to half-width
+        .replace(/　/g, ' ') // Replace full-width spaces with regular spaces
+        .replace(/[\uFF61-\uFF9F]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0)); // Half-width Katakana to (what seems to be an attempt at half-width, ensure toRomaji handles this)
+
+    let romaji = toRomaji(halfWidthString); // Call the utility function
+
+    // Capitalize the first letter of each word
+    romaji = romaji
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    return romaji;
+}
+
+/**
+ * Converts a string to full-width Katakana.
+ * Normalizes NFKC, then converts half-width Katakana characters.
+ * @param {string} str - The input string.
+ * @returns {string|null} Full-width Katakana string or null if input is null/undefined.
+ */
+function toFullWidthKana(str) {
+    if (str === null || typeof str === 'undefined') return null;
+    return str.normalize('NFKC').replace(/[\uFF61-\uFF9F]/g, (char) => { // Half-width Katakana range
+        const code = char.charCodeAt(0) - 0xFF61 + 0x30A1; // Offset to full-width Katakana start
+        return String.fromCharCode(code);
+    });
+}
+
+/**
+ * Converts Hiragana characters in a string to Katakana.
+ * @param {string} str - The input string.
+ * @returns {string|null} String with Hiragana converted to Katakana or null if input is null/undefined.
+ */
+function toKatakana(str) {
+    if (str === null || typeof str === 'undefined') return null;
+    return str.replace(/[\u3040-\u309F]/g, (char) => // Hiragana range
+        String.fromCharCode(char.charCodeAt(0) + 0x60) // Offset to Katakana
+    );
+}
+
+/**
+ * Processes name strings from CSV to extract/derive Kanji, Kana, and Romaji.
+ * Uses helper functions for conversion and transliteration.
+ * @param {string} nameKanjiFullCsv - The full name in Kanji (from CSV's "取引先名").
+ * @param {string} nameKanaFullCsv - The full name in Kana (from CSV's "取引先名（かな）").
+ * @returns {Promise<{name: string, name_kana: string, name_kanji: string}>}
+ */
+async function processNameString(nameKanjiFullCsv, nameKanaFullCsv) {
+    const name_kanji = nameKanjiFullCsv ? nameKanjiFullCsv.trim() : null;
+    // Normalize CSV Kana input to full-width Katakana
+    let name_kana = nameKanaFullCsv ? toKatakana(toFullWidthKana(nameKanaFullCsv.trim())) : null;
+
+    let name_romaji = 'Unknown'; // This will be the 'name' field
+
+    if (name_kana) {
+        // If Kana is provided in the CSV, use it as the primary source for Romaji
+        name_romaji = await transliterateKanaToRomaji(name_kana);
+    } else if (name_kanji) {
+        // If Kana is not in CSV, but Kanji is, try to derive Kana from Kanji, then get Romaji
+        try {
+            // Assuming japaneseUtils.mjs exports convertText for Kanji to Kana (likely Hiragana)
+            const { convertText } = await import('../api/utils/japaneseUtils.mjs');
+            const derivedKanaFromKanji = await convertText(name_kanji); // e.g., "山田太郎" -> "やまだたろう"
+
+            if (derivedKanaFromKanji && derivedKanaFromKanji !== name_kanji) { // Check if conversion happened
+                const katakanaFromKanji = toKatakana(toFullWidthKana(derivedKanaFromKanji)); // "やまだたろう" -> "ヤマダタロウ"
+                if (katakanaFromKanji) {
+                    name_romaji = await transliterateKanaToRomaji(katakanaFromKanji);
+                    // We don't automatically populate name_kana here from derivedKana,
+                    // as name_kana is intended to reflect the CSV's Kana column.
+                    // If the CSV Kana column was empty, name_kana remains null.
+                } else {
+                    name_romaji = name_kanji; // Fallback if derived Kana is empty
+                }
+            } else {
+                 name_romaji = name_kanji; // Fallback if convertText doesn't change Kanji (or returns null/empty)
+            }
+        } catch (e) {
+            console.warn(`Could not derive Kana from Kanji "${name_kanji}" for Romaji conversion: ${e.message}. Using Kanji as Romaji fallback.`);
+            name_romaji = name_kanji; // Fallback to Kanji itself if conversion process fails
+        }
+    }
+    // If name_romaji is still 'Unknown' (neither CSV Kana nor derived Kana from Kanji worked),
+    // use Kanji as a last resort if available.
+    if (name_romaji === 'Unknown' && name_kanji) {
+        name_romaji = name_kanji;
+    }
+
 
     return {
-        name,
-        name_kana,
-        name_kanji,
+        name: name_romaji || 'Unknown', // Ensure 'name' (Romaji) is never null
+        name_kana: name_kana,       // This is from CSV "取引先名（かな）", normalized
+        name_kanji: name_kanji,      // This is from CSV "取引先名"
     };
 }
 
+/**
+ * Main function to import clients from the CSV file.
+ * @param {boolean} dryRun - If true, simulates the import without DB changes.
+ */
 async function importCSV(dryRun) {
     console.log(`Starting CSV import ${dryRun ? '(dry run)' : ''}...`);
-    let pool; // Declared here for potential pool.end() in finally, if needed
-    let client; // Database client
+    let pool;
+    let client;
 
     try {
-        // Read CSV file content
         const fileContent = fs.readFileSync(CSV_FILE_PATH, { encoding: 'utf8' });
-
-        // Parse CSV content using the promisified helper
-        // This will wait until all records are parsed before proceeding.
         const records = await parseCsvPromise(fileContent, {
-            columns: true, // Use the first row as column headers
+            columns: true,
             skip_empty_lines: true,
-            from_line: 1, // Start from the first data record after header
+            from_line: 1,
         });
 
         console.log(`Found ${records.length} records in CSV.`);
         let successCount = 0;
         let failureCount = 0;
 
-        // Connect to DB only if not a dry run AND there are records to process
         if (!dryRun && records.length > 0) {
             const requestId = crypto.randomUUID();
-            pool = getPool(requestId); // Initialize pool here if you plan to use pool.end()
+            pool = getPool(requestId);
             client = await pool.connect();
             console.log('Database client connected.');
         } else if (!dryRun && records.length === 0) {
             console.log('No records to import, database connection not initiated.');
         }
 
-        // Loop through the records. This code runs AFTER parsing is fully complete.
         for (let i = 0; i < records.length; i++) {
             const record = records[i];
             console.log(`\nProcessing record ${i + 1}/${records.length}: ${record['顧客ID']} - ${record['取引先名']}`);
-            // Optional: Add timestamp for detailed timing
-            // console.log(`[${new Date().toISOString()}] Iteration for record ${i + 1} BEGINS.`);
 
             try {
-                const processedNames = processNameString(record['取引先名'], record['取引先名（かな）']);
+                // Use the new async processNameString
+                const processedNames = await processNameString(record['取引先名'], record['取引先名（かな）']);
 
                 const clientData = {
                     customer_id: record['顧客ID'] || null,
-                    name: processedNames.name,
-                    name_kana: processedNames.name_kana,
-                    name_kanji: processedNames.name_kanji,
-                    legal_or_natural_person: 'legal', // Default
+                    name: processedNames.name, // This is Romaji
+                    name_kana: processedNames.name_kana, // This is Katakana (from CSV Kana or null)
+                    name_kanji: processedNames.name_kanji, // This is Kanji (from CSV Kanji or null)
+                    legal_or_natural_person: 'legal',
                     email: record['代表E-mail'] || null,
                     phone: record['代表電話'] || null,
                     fax: record['代表Fax'] || null,
                     website: record['Web サイト'] || null,
-                    billing_preference: 'paper', // Default, to be updated
-                    comment: '', // To be constructed
+                    billing_preference: 'paper',
+                    comment: '',
                     created_by: USER_ID_PLACEHOLDER,
                     updated_by: USER_ID_PLACEHOLDER,
                 };
 
-                // Billing preference
                 const billingMethod = record['請求書発行方法'] || '';
                 if (billingMethod.includes('メール')) {
                     clientData.billing_preference = 'digital';
@@ -114,7 +201,6 @@ async function importCSV(dryRun) {
                     clientData.billing_preference = 'paper';
                 }
 
-                // Construct comment
                 let comments = [];
                 if (record['取引注意フラグ'] && record['取引注意フラグ'] !== '取引可') {
                     comments.push(`取引注意: ${record['取引注意フラグ']}`);
@@ -129,12 +215,11 @@ async function importCSV(dryRun) {
                 if (record['※企業コード']) comments.push(`企業コード: ${record['※企業コード']}`);
                 clientData.comment = comments.join('\n');
 
-                // --- Billing Address ---
                 const billingAddress = {
-                    address_name: '請求先', // Billing destination
+                    address_name: '請求先',
                     street: `${record['住所(請求先)'] || ''} ${record['ビル名（請求先）'] || ''}`.trim(),
                     state: record['都道府県(請求先)'] || null,
-                    city: null, // To be populated by improved logic below
+                    city: null,
                     postal_code: record['郵便番号(請求先)'] || null,
                     country: 'Japan',
                     created_by: USER_ID_PLACEHOLDER,
@@ -152,13 +237,12 @@ async function importCSV(dryRun) {
                         if (parts.length > 1 && billingAddressFull.match(/[市区町村郡]/)) {
                              billingCity = parts[0] + billingAddressFull.match(/[市区町村郡]/)[0];
                         } else {
-                            billingCity = billingAddressFull.split(' ')[0]; // Simplest fallback
+                            billingCity = billingAddressFull.split(' ')[0];
                         }
                     }
                 }
                 billingAddress.city = billingCity;
 
-                // --- Invoice Mailing Address (optional) ---
                 let invoiceMailingAddress = null;
                 const invoiceCompany = record['会社名(請求書発送先)'];
                 const invoiceZip = record['郵便番号(請求書発送先)'];
@@ -174,11 +258,11 @@ async function importCSV(dryRun) {
                         tempInvoiceState !== billingAddress.state
                     ) {
                         invoiceMailingAddress = {
-                            address_name: '請求書送付先', // Invoice mailing destination
+                            address_name: '請求書送付先',
                             representative_name: invoiceCompany || null,
                             street: tempInvoiceStreet,
                             state: tempInvoiceState,
-                            city: null, // To be populated
+                            city: null,
                             postal_code: invoiceZip || null,
                             country: 'Japan',
                             phone: record['TEL(請求書発送先)'] || null,
@@ -197,7 +281,7 @@ async function importCSV(dryRun) {
                                 if (parts.length > 1 && invoiceAddressFull.match(/[市区町村郡]/)) {
                                     invoiceCity = parts[0] + invoiceAddressFull.match(/[市区町村郡]/)[0];
                                 } else {
-                                    invoiceCity = invoiceAddressFull.split(' ')[0]; // Simplest fallback
+                                    invoiceCity = invoiceAddressFull.split(' ')[0];
                                 }
                             }
                         }
@@ -213,20 +297,13 @@ async function importCSV(dryRun) {
                     }
                     successCount++;
                 } else {
-                    // Ensure client is available (it should be if not dryRun and records > 0)
                     if (!client) {
                         console.error(`Database client not available for record ${record['顧客ID']}. Skipping.`);
                         failureCount++;
-                        continue; // Skip to next record
+                        continue;
                     }
-
-                    // --- Database Operations ---
-                    // Optional: Add timestamp for detailed timing
-                    // console.log(`[${new Date().toISOString()}] Attempting BEGIN for record ${record['顧客ID']}`);
                     try {
-                        await client.query('BEGIN'); // This is approximately your original line 255
-
-                        // Insert client
+                        await client.query('BEGIN');
                         const clientInsertQuery = `
                             INSERT INTO clients (
                                 customer_id, name, name_kana, name_kanji, legal_or_natural_person,
@@ -244,7 +321,6 @@ async function importCSV(dryRun) {
                         ]);
                         const newClientId = clientResult.rows[0].id;
 
-                        // Insert billing address
                         const addressInsertQuery = `
                             INSERT INTO addresses (
                                 client_id, address_name, representative_name, street, state, city, postal_code, country,
@@ -254,13 +330,12 @@ async function importCSV(dryRun) {
                             );
                         `;
                         await client.query(addressInsertQuery, [
-                            newClientId, billingAddress.address_name, null /* representative_name for billing */,
+                            newClientId, billingAddress.address_name, null,
                             billingAddress.street, billingAddress.state, billingAddress.city, billingAddress.postal_code,
-                            billingAddress.country, null /* phone for billing */, null /* fax for billing */,
+                            billingAddress.country, null, null,
                             billingAddress.created_by, billingAddress.updated_by
                         ]);
 
-                        // Insert invoice mailing address if present
                         if (invoiceMailingAddress) {
                             await client.query(addressInsertQuery, [
                                 newClientId, invoiceMailingAddress.address_name, invoiceMailingAddress.representative_name,
@@ -269,17 +344,13 @@ async function importCSV(dryRun) {
                                 invoiceMailingAddress.fax, invoiceMailingAddress.created_by, invoiceMailingAddress.updated_by
                             ]);
                         }
-
                         await client.query('COMMIT');
-                        // Optional: Add timestamp for detailed timing
-                        // console.log(`[${new Date().toISOString()}] COMMITTED record ${record['顧客ID']}`);
                         console.log(`Successfully inserted client ${clientData.customer_id} and addresses.`);
                         successCount++;
                     } catch (dbError) {
-                        // Log distinct error for DB transaction failure
                         console.error(`DB TRANSACTION FAILED for record ${record['顧客ID']}:`, dbError.message, dbError.stack ? `\nStack: ${dbError.stack}` : '');
                         failureCount++;
-                        if (client) { // Check if client exists before trying to rollback
+                        if (client) {
                             try {
                                 await client.query('ROLLBACK');
                             } catch (rollbackError) {
@@ -289,12 +360,9 @@ async function importCSV(dryRun) {
                     }
                 }
             } catch (processError) {
-                // Log distinct error for general processing failure
                 console.error(`GENERAL PROCESSING ERROR for record ${record['顧客ID']}:`, processError.message, processError.stack ? `\nStack: ${processError.stack}` : '');
                 failureCount++;
             }
-            // Optional: Add timestamp for detailed timing
-            // console.log(`[${new Date().toISOString()}] Iteration for record ${i + 1} ENDS.`);
         }
 
         console.log(`\nImport summary:`);
@@ -302,10 +370,10 @@ async function importCSV(dryRun) {
         console.log(`Successful inserts: ${successCount}`);
         console.log(`Failed inserts: ${failureCount}`);
 
-    } catch (error) { // Catches errors from readFile, parseCsvPromise, or pool.connect
+    } catch (error) {
         console.error('MAJOR SCRIPT ERROR during import process:', error.message, error.stack ? `\nStack: ${error.stack}` : '');
     } finally {
-        if (client && !dryRun) { // client would only be defined if not dryRun and records.length > 0
+        if (client && !dryRun) {
             try {
                 client.release();
                 console.log('Database client released.');
@@ -313,16 +381,6 @@ async function importCSV(dryRun) {
                 console.error('Error releasing database client:', releaseError.message, releaseError.stack ? `\nStack: ${releaseError.stack}` : '');
             }
         }
-        // For a standalone script, you might consider ending the pool if it's no longer needed.
-        // This depends on how getPool() is implemented and if the pool is shared.
-        // if (pool) {
-        //     try {
-        //         await pool.end();
-        //         console.log('Database pool closed.');
-        //     } catch (poolEndError) {
-        //         console.error('Error closing database pool:', poolEndError.message, poolEndError.stack ? `\nStack: ${poolEndError.stack}` : '');
-        //     }
-        // }
     }
 }
 
