@@ -1,3 +1,4 @@
+-- TODO: Review these broad permissions for production. Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
 GRANT CREATE ON SCHEMA public TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
@@ -6,6 +7,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
 GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
+
+-- TODO: This schema uses table partitioning by hotel_id (e.g., rooms, reservations). Hardcoded partition creations for specific hotel_ids have been commented out. A strategy for managing and creating partitions for new hotels in production needs to be established (e.g., manual scripts, automated procedures upon new hotel creation).
 
 /*
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
@@ -58,8 +61,9 @@ CREATE TABLE users (
 );
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    INSERT INTO users (email, password_hash, role_id)
-    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+    -- TODO: Replace with a secure method for initial admin user creation in production.
+    -- INSERT INTO users (email, password_hash, role_id)
+    -- VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
     ALTER TABLE users
     ADD COLUMN created_by INT REFERENCES users(id),
@@ -169,6 +173,7 @@ VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
 
 -- Mock data generator
+/*
 INSERT INTO clients (
     name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, 
     gender, email, phone, fax, created_by
@@ -194,6 +199,7 @@ FROM (
         floor(random() * 99000)::TEXT AS random_number,
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
+*/
 
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -525,9 +531,9 @@ CREATE TABLE reservation_rates (
 ) PARTITION BY LIST (hotel_id);
 
 /*ATENCAO: ADICIONAR TABELA A QUERY DA PARTITION
-CREATE TABLE reservation_rates_7 
-PARTITION OF reservation_rates 
-FOR VALUES IN (7)
+-- CREATE TABLE reservation_rates_7
+-- PARTITION OF reservation_rates
+-- FOR VALUES IN (7)
 */
 
 CREATE TABLE payment_types (
@@ -712,6 +718,7 @@ CREATE TABLE sc_tl_plans (
    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 );
 
+-- TODO: The following XML templates contain placeholders like {{systemId}}, {{pmsUserId}}, {{pmsPassword}}. These must be configured with actual production values.
 CREATE TABLE xml_templates (
     id SERIAL PRIMARY KEY,    
     name TEXT UNIQUE NOT NULL,
@@ -1127,9 +1134,11 @@ CREATE TABLE xml_responses (
 TRUNCATE TABLE xml_requests RESTART IDENTITY;
 TRUNCATE TABLE xml_responses RESTART IDENTITY;
 
-CREATE TABLE xml_responses_1 PARTITION OF xml_responses
-FOR VALUES IN (1);
+-- CREATE TABLE xml_responses_1 PARTITION OF xml_responses
+-- FOR VALUES IN (1);
 
+-- TODO: Review if these duplicate client handling scripts are necessary for initial production deployment. They appear to be for data cleanup after a specific import dated '2025-03-25'.
+/*
 --------------------------------------------------------------------
 --Imported clients, delete duplicates
 WITH duplicate_clients AS (
@@ -1268,4 +1277,5 @@ WHERE id IN (
   SELECT id FROM ranked_clients
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
+*/
 
