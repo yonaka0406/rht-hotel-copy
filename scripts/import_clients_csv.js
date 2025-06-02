@@ -5,7 +5,7 @@ const { parse } = require('csv-parse');
 const crypto = require('crypto'); // Added for UUID generation
 const { getPool } = require('../api/config/database'); // Adjust path as necessary
 
-const CSV_FILE_PATH = '../temp/顧客マスター - 顧客.csv'; // Changed to relative path
+const CSV_FILE_PATH = './temp/顧客マスター - 顧客.csv'; // Changed to relative path
 const USER_ID_PLACEHOLDER = 1; // Placeholder for created_by/updated_by
 
 /**
@@ -209,9 +209,9 @@ async function importCSV(dryRun) {
                                 INSERT INTO clients (
                                     customer_id, name, name_kana, name_kanji, legal_or_natural_person,
                                     email, phone, fax, website, billing_preference, comment,
-                                    created_by, updated_by, created_at, updated_at
+                                    created_by, updated_by, created_at
                                 ) VALUES (
-                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW()
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW()
                                 ) RETURNING id;
                             `;
                             const clientResult = await client.query(clientInsertQuery, [
@@ -226,9 +226,9 @@ async function importCSV(dryRun) {
                             const addressInsertQuery = `
                                 INSERT INTO addresses (
                                     client_id, address_name, representative_name, street, state, city, postal_code, country,
-                                    phone, fax, created_by, updated_by, created_at, updated_at
+                                    phone, fax, created_by, updated_by, created_at
                                 ) VALUES (
-                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW()
+                                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW()
                                 );
                             `;
                             await client.query(addressInsertQuery, [
