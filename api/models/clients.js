@@ -773,9 +773,81 @@ const deleteAddress = async (requestId, addressId, updatedBy) => {
   }
 };
 
+// New function for specific name processing based on patterns
+const processNameStringWithSubstitutions = (name, nameKanji) => {
+    if (typeof name !== 'string' || typeof nameKanji !== 'string') {
+        // Or handle more gracefully depending on expected inputs, maybe return original name
+        console.warn('processNameStringWithSubstitutions: name and nameKanji must be strings.');
+        return name;
+    }
+
+    const substitutions = [
+        { pattern: 'japan', replacement: ' Japan ', kanji_match: 'ジャパン' },
+        { pattern: 'nihon', replacement: ' Nihon ', kanji_match: '日本' },
+        { pattern: 'hokkaidou', replacement: ' Hokkaido ', kanji_match: '北海道' },
+        { pattern: 'sapporo', replacement: ' Sapporo ', kanji_match: '札幌' },
+        { pattern: 'kensetsu', replacement: ' Kensetsu ', kanji_match: '建設' },
+        { pattern: 'setsubi', replacement: ' Setsubi ', kanji_match: '設備' },
+        { pattern: 'kabushikigaisha', replacement: ' K.K ', kanji_match: '株式会社' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '工業' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '興業' },
+        { pattern: 'kougyou', replacement: ' Kogyo ', kanji_match: '鋼業' },
+        { pattern: 'sangyou', replacement: ' Sangyo ', kanji_match: '産業' },
+        { pattern: 'tekkou', replacement: ' Tekkou ', kanji_match: '鉄工' },
+        { pattern: 'kikou', replacement: ' Kikou ', kanji_match: '機工' },
+        { pattern: 'denkou', replacement: ' Denkou ', kanji_match: '電工' },
+        { pattern: 'tosou', replacement: ' Tosou ', kanji_match: '塗装' },
+        { pattern: 'kureen', replacement: ' Crane ', kanji_match: 'クレーン' },
+        { pattern: 'koumuten', replacement: ' Koumuten ', kanji_match: '工務店' },
+        { pattern: 'giken', replacement: ' Giken ', kanji_match: '技研' },
+        { pattern: 'gijutsu', replacement: ' Gijutsu ', kanji_match: '技術' },
+        { pattern: 'guruupu', replacement: ' Group ', kanji_match: 'グループ' },
+        { pattern: 'hoomu', replacement: ' Home ', kanji_match: 'ホーム' },
+        { pattern: 'hausu', replacement: ' House ', kanji_match: 'ハウス' },
+        { pattern: 'shisutemu', replacement: ' System ', kanji_match: 'システム' },
+        { pattern: 'hoorudeingusu', replacement: ' Holdings ', kanji_match: 'ホールディングス' },
+        { pattern: 'konsarutanto', replacement: ' Consultant ', kanji_match: 'コンサルタント' }
+    ];
+
+    let updatedName = name;
+
+    for (const sub of substitutions) {
+        // Check for kanji_match presence (simple substring check)
+        if (nameKanji.includes(sub.kanji_match)) {
+            // Create a case-insensitive regex for the pattern
+            try {
+                const regex = new RegExp(sub.pattern, 'gi'); // 'g' for global, 'i' for case-insensitive
+                if (regex.test(updatedName)) {
+                    updatedName = updatedName.replace(regex, sub.replacement);
+                }
+            } catch (e) {
+                console.error(`Error creating RegExp with pattern: ${sub.pattern}`, e);
+                // Skip this substitution if regex is invalid
+            }
+        }
+    }
+
+    // Trim whitespace, replace multiple spaces with a single space
+    updatedName = updatedName.trim().replace(/\s+/g, ' ');
+
+    // Apply INITCAP (capitalize the first letter of each word)
+    updatedName = updatedName
+        .split(' ')
+        .map(word => {
+            if (word.length === 0) return '';
+            // Preserve K.K as is, otherwise INITCAP
+            if (word === 'K.K') return 'K.K';
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+
+    return updatedName;
+};
+
 module.exports = {
   toFullWidthKana,
   processNameString,
+  processNameStringWithSubstitutions, // Added new function
   getAllClients,
   getTotalClientsCount,
   selectClient,
