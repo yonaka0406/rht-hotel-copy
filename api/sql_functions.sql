@@ -39,14 +39,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Example Usage (not part of the function body, just for testing):
--- Assuming you have a hotel with id 1:
--- SELECT * FROM get_average_lead_time_for_new_bookings(1, 30); -- Avg lead time for bookings made in the last 30 days for hotel 1
--- SELECT * FROM get_average_lead_time_for_new_bookings(1, 90); -- Avg lead time for bookings made in the last 90 days for hotel 1
--- SELECT * FROM get_average_lead_time_for_new_bookings(999, 30); -- Example for a hotel with no bookings, should return 0.00
--- Compute a weighted average across hotels
--- SELECT SUM(lead_time_avg * reservation_count) / SUM(reservation_count) AS weighted_avg_lead_time FROM (SELECT * FROM get_average_lead_time_for_new_bookings(hotel_id, 30) FROM (SELECT unnest(ARRAY[7, 8, 9]) AS hotel_id) AS hotels) t;
-
 CREATE OR REPLACE FUNCTION get_checkin_based_lead_time(
     p_hotel_id INT,
     p_lookback_days INT,
@@ -134,7 +126,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Example Usage (not part of the function body, just for testing):
--- Assuming you have hotels with id 1 and some reservations for 2023-10-26:
--- SELECT * FROM get_reservations_made_on_date('2023-10-26', 1);
+CREATE OR REPLACE FUNCTION get_active_reservations_count_at_datetime(
+    p_hotel_id INT, -- Assuming you might want this per hotel, can be NULL for all
+    p_snapshot_datetime TIMESTAMP
+)
+RETURNS BIGINT AS $$
+DECLARE
+    active_count BIGINT;
+BEGIN
+    WITH reservation_last_status AS (
+        SELECT
+            lr.record_id AS reservation_id,
+            -- Extract the status from the JSON based on the action
+            CASE
+                WHEN lr.action = 'INSERT' THEN lr.changes ->> 'status'
+                WHEN lr.action = 'UPDATE' THEN lr.changes -> 'new' ->> 'status'
+                ELSE NULL -- Consider DELETEd as not active or handle as per business rule
+            END AS status_at_snapshot,
+            ROW_NUMBER() OVER (PARTITION BY lr.record_id ORDER BY lr.log_time DESC) as rn
+        FROM
+            logs_reservation lr
+        WHERE
+            lr.table_name = 'reservations'
+            AND lr.log_time <= p_snapshot_datetime
+            AND ( 
+                  p_hotel_id IS NULL OR
+                  (lr.action = 'INSERT' AND (lr.changes ->> 'hotel_id')::INT = p_hotel_id) OR
+                  (lr.action = 'UPDATE' AND (lr.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id)
+            )
+    ),
+    reservation_initial_data AS (
+      SELECT
+        lr.record_id as reservation_id,
+        (lr.changes ->> 'hotel_id')::INT as hotel_id
+      FROM logs_reservation lr
+      WHERE lr.table_name = 'reservations' AND lr.action = 'INSERT'
+      AND lr.log_time <= p_snapshot_datetime
+      GROUP BY 1,2 
+    )
+    SELECT COUNT(DISTINCT rls.reservation_id)
+    INTO active_count
+    FROM reservation_last_status rls
+    LEFT JOIN reservation_initial_data rid ON rls.reservation_id = rid.reservation_id
+    WHERE rls.rn = 1 
+      AND rls.status_at_snapshot IN ('confirmed', 'checked_in', 'checked_out')
+      AND (p_hotel_id IS NULL OR rid.hotel_id = p_hotel_id);
+
+    RETURN active_count;
+END;
+$$ LANGUAGE plpgsql;
 
