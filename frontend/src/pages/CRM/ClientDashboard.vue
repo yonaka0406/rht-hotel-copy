@@ -38,7 +38,7 @@
   
 <script setup>
     // Vue
-    import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+    import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 
     // Primevue
     import { Card } from 'primevue';
@@ -126,6 +126,45 @@
         
         window.addEventListener('resize', handleResize);
     });
+
+    watch(clientsCount, () => {
+        // Ensure the DOM element is available and the chart instance exists
+        if (halfPie.value && myHalfPie) {
+            initHalfPie();
+        } else if (halfPie.value && !myHalfPie) {
+            // If the chart wasn't initialized yet but the element is ready
+            initHalfPie();
+        }
+        // If halfPie.value is null, onMounted hasn't run yet, or the element isn't rendered.
+        // initHalfPie will be called in onMounted.
+    }, { deep: true }); // Added deep: true just in case, though likely not strictly needed for a computed object.
+
+/*
+Future Dashboard Enhancements Suggestions:
+
+Overall Client Metrics:
+- Total Active Clients: Display the number of clients considered "active" based on recent interactions or status.
+- New Client Acquisition Rate: A line chart showing new clients added per month/quarter.
+- Client Churn/Retention Rate: Metrics on client attrition or retention over time (requires tracking client status changes).
+
+Client Segmentation (if more data fields become available):
+- Distribution by Industry/Category: If clients can be categorized by industry.
+- Distribution by Client Rank/Tier: E.g., VIP, Regular, New, if such a system exists.
+- Distribution by Geographic Location: E.g., clients by prefecture or city.
+
+Activity/Engagement Metrics (consider if these require more data than available in useClientStore().clients directly):
+- Average Stay: (User Suggested) Could be relevant if clients are, for example, guests in a hotel context. Would likely require linking to reservation data.
+- Distribution by Times Used/Service Consumption: (User Suggested) How frequently clients use services. Would likely require linking to usage or transactional data.
+- Total Interactions This Period: Aggregate count of calls, emails, meetings for the current month/quarter.
+- Most Active CRM Users: Top users logging interactions.
+- Clients Without Recent Contact: Identify clients who haven't been contacted in X days.
+
+Sales Pipeline Overview (if a separate sales pipeline module/data exists):
+- Sales Funnel: Chart showing stages (Lead > Qualified > Proposal > Closed).
+
+Remember to evaluate data availability and API capabilities when planning these.
+Some of these metrics might require fetching and processing additional data beyond the basic client list.
+*/
 
     onBeforeUnmount(() => {
         window.removeEventListener('resize', handleResize);
