@@ -9,6 +9,7 @@
             <p>{{ error }}</p>
         </div>
         <div v-else-if="reportData && reportData.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Cards remain here -->
             <Card>
                 <template #title>
                     <div class="flex items-center">
@@ -34,9 +35,10 @@
                 </template>
             </Card>
         </div>
+        <!-- ECharts container to be added here -->
         <div v-if="reportData && reportData.length > 0" class="mt-8">
             <h4 class="text-lg font-semibold mb-3">日次差異チャート</h4>
-            <Chart type="line" :data="chartData" />
+            <div ref="lineChartContainer" style="width: 100%; height: 400px;"></div>
         </div>
         <div v-if="reportData && reportData.length > 0" class="mt-8">
             <h4 class="text-lg font-semibold mb-3">詳細データ</h4>
@@ -67,7 +69,7 @@
 
 <script setup>
     // Vue
-    import { ref, watch, computed } from 'vue';
+    import { ref, watch, computed, onMounted, onBeforeUnmount, shallowRef, nextTick } from 'vue';
     const props = defineProps({
         hotelId: {
             type: [Number, String], // Can be number or 'all'
@@ -86,14 +88,40 @@
     // Primevue
     import ProgressSpinner from 'primevue/progressspinner';
     import Card from 'primevue/card';
-    import Chart from 'primevue/chart';
     import DataTable from 'primevue/datatable';
     import Column from 'primevue/column';
+
+    // ECharts imports
+    import * as echarts from 'echarts/core';
+    import {
+        LineChart // Specifically for line charts
+    } from 'echarts/charts';
+    import {
+        TitleComponent,    // For chart titles
+        TooltipComponent,  // For interactive tooltips
+        GridComponent,     // For the chart grid
+        LegendComponent    // For the legend (optional, but good to include)
+    } from 'echarts/components';
+    import {
+        CanvasRenderer     // Renderer
+    } from 'echarts/renderers';
+
+    // Register ECharts components
+    echarts.use([
+        TitleComponent,
+        TooltipComponent,
+        GridComponent,
+        LegendComponent,
+        LineChart,
+        CanvasRenderer
+    ]);
 
     // Refs
     const reportData = ref([]);
     const loading = ref(false);
     const error = ref(null);
+    const lineChartContainer = ref(null); // For the DOM element
+    const lineChartInstance = shallowRef(null); // For the ECharts instance
 
     const totalPreviousDayEnd = computed(() => {
         if (!reportData.value || reportData.value.length === 0) {
@@ -109,36 +137,88 @@
         return reportData.value.reduce((sum, item) => sum + item.count_as_of_snapshot_day_end, 0);
     });
 
-    const chartData = computed(() => {
-        if (!reportData.value || reportData.value.length === 0) {
-            return {
-                labels: [],
-                datasets: []
-            };
-        }
-        // Sort data by date to ensure the chart displays chronologically
-        const sortedData = [...reportData.value].sort((a, b) => new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted));
-
-        return {
-            labels: sortedData.map(item => item.inventory_date_formatted),
-            datasets: [
-                {
-                    label: '日次差異 (指定日 - 前日)',
-                    data: sortedData.map(item => item.daily_difference),
-                    fill: false,
-                    borderColor: '#42A5F5', // Example color, can be customized
-                    tension: 0.4 // Makes the line a bit curved
-                }
-            ]
-        };
-    });
-
     const sortedReportDataForTable = computed(() => {
         if (!reportData.value || reportData.value.length === 0) {
             return [];
         }
         // Sort data by date to ensure the table displays chronologically by default
         return [...reportData.value].sort((a, b) => new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted));
+    });
+
+    const lineChartOptions = computed(() => {
+        if (!reportData.value || reportData.value.length === 0) {
+            // Return a minimal config or one that shows 'No Data' if ECharts supports it directly
+            return {
+                title: {
+                    text: 'データがありません',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: { color: '#888', fontSize: 16 }
+                },
+                xAxis: { show: false },
+                yAxis: { show: false },
+                series: []
+            };
+        }
+
+        // Sort data by date to ensure the chart displays chronologically
+        // This was previously done in `chartData` for PrimeVue and `sortedReportDataForTable`.
+        // It's good practice to ensure data fed to the chart is explicitly sorted.
+        const sortedData = [...reportData.value].sort((a, b) => {
+            // Assuming inventory_date_formatted is 'YYYY-MM-DD'
+            return new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted);
+        });
+
+        return {
+            tooltip: {
+                trigger: 'axis', // Trigger tooltip when hovering over axis
+                axisPointer: {
+                    type: 'cross' // Crosshair pointer
+                }
+            },
+            legend: {
+                data: ['日次差異'], // Legend for the series
+                top: 'bottom'
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '10%', // Adjust bottom to make space for legend if it's at the bottom
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false, // No gap at the ends of the axis
+                data: sortedData.map(item => item.inventory_date_formatted) // Dates for X-axis
+            },
+            yAxis: {
+                type: 'value',
+                name: '差異', // Y-axis title
+                axisLabel: {
+                    formatter: '{value}' // Basic formatter
+                }
+            },
+            series: [
+                {
+                    name: '日次差異', // Series name (matches legend)
+                    type: 'line',
+                    data: sortedData.map(item => item.daily_difference), // Values for Y-axis
+                    smooth: true, // Makes the line smooth
+                    itemStyle: {
+                        color: '#5470C6' // Example line color
+                    },
+                    areaStyle: { // Optional: add a subtle area fill
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
+                            offset: 0,
+                            color: 'rgba(84, 112, 198, 0.3)'
+                        }, {
+                            offset: 1,
+                            color: 'rgba(84, 112, 198, 0)'
+                        }])
+                    }
+                }
+            ]
+        };
     });
 
     // Helper function to get today's date in YYYY-MM-DD format
@@ -273,6 +353,38 @@
 
     // Watch for changes in props and trigger fetch
     watch(() => [props.hotelId, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
+
+    watch(lineChartOptions, async (newOptions) => {
+        // Ensure the chart container is rendered and DOM is ready
+        await nextTick();
+
+        if (lineChartContainer.value) { // Check if container exists
+            if (!lineChartInstance.value || lineChartInstance.value.isDisposed?.()) {
+                // If no instance or it's disposed, initialize a new one
+                lineChartInstance.value = echarts.init(lineChartContainer.value);
+            }
+            // Set the new options
+            // The 'true' argument in setOption means 'notMerge', which is often good for dynamic data
+            // to prevent old series from sticking around if they are removed from new options.
+            // However, if only data within a series changes, 'false' (merge) might be slightly more performant.
+            // For this case, where the entire structure might change (e.g. 'No Data' state), 'true' is safer.
+            lineChartInstance.value.setOption(newOptions, true);
+        }
+    }, { deep: true, immediate: true }); // immediate: true to run on initial load
+
+    const resizeChartHandler = () => {
+        lineChartInstance.value?.resize();
+    };
+
+    onMounted(() => {
+        window.addEventListener('resize', resizeChartHandler);
+        // Initial chart rendering is handled by the 'immediate' watcher on lineChartOptions
+    });
+
+    onBeforeUnmount(() => {
+        lineChartInstance.value?.dispose();
+        window.removeEventListener('resize', resizeChartHandler);
+    });
 
 </script>
 
