@@ -1,0 +1,16 @@
+{
+  "name": "csv-import-scripts",
+  "version": "1.0.0",
+  "description": "Scripts for importing data.",
+  "main": "import_clients_csv.js",
+  "scripts": {
+    "import_clients": "node import_clients_csv.js",
+    "import_clients_dry_run": "node import_clients_csv.js --dry-run"
+  },
+  "dependencies": {
+    "csv-parse": "^5.5.0",
+    "pg": "^8.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}

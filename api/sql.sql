@@ -1,3 +1,4 @@
+-- TODO: Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
 GRANT CREATE ON SCHEMA public TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
@@ -6,13 +7,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
 GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
-
-/*
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE logs_user TO rhtsys_user;
-*/
+
 
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,                
@@ -34,11 +33,11 @@ CREATE TABLE user_roles (
 
 INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
-        ('Admin', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
-        ('Manager', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
-        ('Editor', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
-        ('User', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
-        ('Viewer', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', '特別な権限のない閲覧のみです。');
+        ('アドミン', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
+        ('マネージャー', '{"manage_db": false, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、ユーザーを管理できますが、ホテル データベースを管理することはできません。'),
+        ('エディター', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
+        ('ユーザー', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
+        ('閲覧者', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', 'デフォルトとして、特別な権限のないユーザーです。');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -46,15 +45,21 @@ CREATE TABLE users (
     name TEXT,
     password_hash TEXT NULL,
     status_id INT REFERENCES user_status(id) DEFAULT 1,        -- Status ID (default to 1, representing 'active')
-    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 4, referencing 'Viewer' role)
+    role_id INT REFERENCES user_roles(id) DEFAULT 5,          -- Role ID (default to 5, referencing 'Viewer' role)
     auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
     provider_user_id VARCHAR(255) NULL,
+    google_calendar_id TEXT NULL,
+    google_access_token TEXT NULL,
+    google_refresh_token TEXT NULL,
+    google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
+    last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
 
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    INSERT INTO users (email, password_hash, role_id)
-    VALUES ('root@rht-hotel.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+    -- TODO: Replace with a secure method for initial admin user creation in production.
+    -- INSERT INTO users (email, password_hash, role_id)
+    -- VALUES ('root@wehub.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
     ALTER TABLE users
     ADD COLUMN created_by INT REFERENCES users(id),
@@ -67,17 +72,15 @@ CREATE TABLE users (
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
 
 
-    -- 1. Make the password_hash column nullable
+    -- Temporary
    ALTER TABLE users
-   ALTER COLUMN password_hash DROP NOT NULL;
-
-   -- 2. Add a new column auth_provider
-   ALTER TABLE users
-   ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) NOT NULL DEFAULT 'local';
-
-   -- 3. Add a new column provider_user_id
-   ALTER TABLE users
-   ADD COLUMN IF NOT EXISTS provider_user_id VARCHAR(255) NULL;
+      ADD COLUMN auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
+      ADD COLUMN provider_user_id VARCHAR(255) NULL,
+      ADD COLUMN google_calendar_id TEXT NULL,
+      ADD COLUMN google_access_token TEXT NULL,
+      ADD COLUMN google_refresh_token TEXT NULL,
+      ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
+      ADD COLUMN last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL;
 
 -- Main Hotels Table
 CREATE TABLE hotels (
@@ -167,7 +170,74 @@ INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_na
 VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
 
+CREATE TEMP TABLE temp_client_substitutions (
+    pattern TEXT,
+    replacement TEXT,
+    kanji_match TEXT
+);
+
+INSERT INTO temp_client_substitutions (pattern, replacement, kanji_match) VALUES
+   ('japan', ' Japan ', '%ジャパン%'),
+   ('nihon', ' Nihon ', '%日本%'),
+   ('hokkaidou', ' Hokkaido ', '%北海道%'),
+	('sapporo', ' Sapporo ', '%札幌%'),
+   ('kensetsu', ' Kensetsu ', '%建設%'),
+   ('setsubi', ' Setsubi ', '%設備%'),
+   ('kabushikigaisha', ' K.K ', '%株式会社%'),
+   ('kougyou', ' Kogyo ', '%工業%'),
+   ('kougyou', ' Kogyo ', '%興業%'),
+   ('kougyou', ' Kogyo ', '%鋼業%'),
+   ('sangyou', ' Sangyo ', '%産業%'),
+   ('tekkou', ' Tekkou ', '%鉄工%'),
+   ('kikou', ' Kikou ', '%機工%'),
+   ('denkou', ' Denkou ', '%電工%'),   
+   ('tosou', ' Tosou ', '%塗装%'),
+   ('kureen', ' Crane ', '%クレーン%'),
+   ('koumuten', ' Koumuten ', '%工務店%'),   
+   ('giken', ' Giken ', '%技研%'),
+   ('gijutsu', ' Gijutsu ', '%技術%'),
+   ('guruupu', ' Group ', '%グループ%'),   
+   ('hoomu', ' Home ', '%ホーム%'),
+   ('hausu', ' House ', '%ハウス%'),
+   ('shisutemu', ' System ', '%システム%'),
+   ('hoorudeingusu', ' Holdings ', '%ホールディングス%'),
+   ('konsarutanto', ' Consultant ', '%コンサルタント%')
+   ;
+
+-- Bulk data treatment
+DO $$
+DECLARE
+    client_row RECORD;
+    sub_row RECORD;
+    updated_name TEXT;
+BEGIN
+    FOR client_row IN
+        SELECT * FROM clients
+        WHERE created_at >= '2025-06-02'
+    LOOP
+        updated_name := client_row.name;
+
+        FOR sub_row IN
+            SELECT * FROM temp_client_substitutions
+            WHERE client_row.name ILIKE '%' || pattern || '%'
+              AND client_row.name_kanji LIKE kanji_match
+        LOOP
+            updated_name := regexp_replace(updated_name, '(?i)' || sub_row.pattern, sub_row.replacement, 'g');
+        END LOOP;
+
+        updated_name := regexp_replace(trim(updated_name), '\s+', ' ', 'g');
+
+        IF updated_name IS DISTINCT FROM client_row.name THEN
+            UPDATE clients
+            SET name = INITCAP(updated_name)
+            WHERE id = client_row.id;
+        END IF;
+    END LOOP;
+END $$;
+
+
 -- Mock data generator
+/*
 INSERT INTO clients (
     name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, 
     gender, email, phone, fax, created_by
@@ -193,6 +263,7 @@ FROM (
         floor(random() * 99000)::TEXT AS random_number,
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
+*/
 
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -225,6 +296,9 @@ CREATE TABLE crm_actions (
    assigned_to INT REFERENCES users(id),
    due_date TIMESTAMP WITH TIME ZONE,
    status crm_action_status_enum DEFAULT 'pending',
+   google_calendar_event_id TEXT NULL,
+   google_calendar_html_link TEXT,
+   synced_with_google_calendar BOOLEAN DEFAULT FALSE,
    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
    created_by INT REFERENCES users(id),
    updated_by INT DEFAULT NULL REFERENCES users(id)
@@ -310,7 +384,7 @@ CREATE TABLE plans_rates (
             THEN FLOOR(adjustment_value / (1 + tax_rate)) 
             ELSE NULL 
          END
-    ) STORED;
+    ) STORED,
     condition_type TEXT CHECK (condition_type IN ('no_restriction', 'day_of_week', 'month')) NOT NULL,  -- Type of condition
     condition_value TEXT NULL,  -- The specific condition (e.g., '土曜日', '2024-12-25', etc.)
     date_start DATE NOT NULL, -- Start of the applicable rate
@@ -396,6 +470,27 @@ CREATE TABLE plan_addons (
     )
 );
 
+CREATE TABLE payment_types (
+    id SERIAL PRIMARY KEY, 
+    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
+    name TEXT NOT NULL,
+    description TEXT,     
+    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
+    visible BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT DEFAULT NULL REFERENCES users(id),
+    UNIQUE (name)
+);
+INSERT INTO payment_types (name, transaction, created_by)
+VALUES
+    ('現金', 'cash', 1),
+    ('ネットポイント', 'point', 1),
+    ('事前振り込み', 'wire', 1),
+    ('クレジットカード', 'credit', 1),
+    ('請求書', 'bill', 1),
+    ('割引', 'discount', 1);
+
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel    
@@ -413,12 +508,8 @@ CREATE TABLE reservations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
+    PRIMARY KEY (hotel_id, id)    
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE reservations
-ADD COLUMN ota_reservation_id TEXT NULL
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
@@ -495,9 +586,6 @@ CREATE TABLE reservation_payments (
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-ALTER TABLE reservation_payments
-ADD COLUMN invoice_id UUID DEFAULT NULL;
-
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -515,33 +603,6 @@ CREATE TABLE reservation_rates (
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
 
-/*ATENCAO: ADICIONAR TABELA A QUERY DA PARTITION
-CREATE TABLE reservation_rates_7 
-PARTITION OF reservation_rates 
-FOR VALUES IN (7)
-*/
-
-CREATE TABLE payment_types (
-    id SERIAL PRIMARY KEY, 
-    hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
-    name TEXT NOT NULL,
-    description TEXT,     
-    transaction TEXT CHECK (transaction IN ('cash', 'wire', 'credit', 'bill', 'point', 'discount')) NOT NULL DEFAULT 'cash',
-    visible BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    UNIQUE (name)
-);
-INSERT INTO payment_types (name, transaction, created_by)
-VALUES
-    ('現金', 'cash', 1),
-    ('ネットポイント', 'point', 1),
-    ('事前振り込み', 'wire', 1),
-    ('クレジットカード', 'credit', 1),
-    ('請求書', 'bill', 1),
-    ('割引', 'discount', 1);
-
 CREATE TABLE invoices (
    id UUID,
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -557,117 +618,6 @@ CREATE TABLE invoices (
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
-
-ALTER TABLE invoices
-   ADD COLUMN display_name TEXT NULL
-   ADD COLUMN due_date DATE NULL,
-   ADD COLUMN total_stays INT NULL,
-   ADD COLUMN comment TEXT NULL;
-
---Ainda nao esta certo que vai ser usada
-
-    CREATE TABLE user_hotels (
-        user_id INT REFERENCES users(id) ON DELETE CASCADE,
-        hotel_id VARCHAR(6) NOT NULL,
-        PRIMARY KEY (user_id, hotel_id)
-    );
-
---Reservations Schema Candidate
-
-CREATE TABLE parking_spots (
-    id SERIAL PRIMARY KEY,
-    spot_number TEXT NOT NULL UNIQUE,
-    reserved BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- VIEW
-
-CREATE OR REPLACE VIEW vw_room_inventory AS
-WITH roomTotal AS (
-    SELECT
-        hotel_id,
-        room_type_id,
-        COUNT(*) as total_rooms
-    FROM rooms
-    WHERE for_sale = true
-    GROUP BY hotel_id, room_type_id
-)
-SELECT
-    rd.hotel_id,
-    rd.date,
-    r.room_type_id,
-	 sc.netrmtypegroupcode,
-    rt.name as room_type_name,
-    roomTotal.total_rooms,
-    COUNT(rd.date) as room_count
-FROM
-    reservation_details rd
-    JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
-    JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
-	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
-    JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
-WHERE rd.cancelled IS NULL
-GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
-
-CREATE OR REPLACE VIEW vw_booking_for_google AS
-SELECT
-    h.id AS hotel_id,
-    h.formal_name AS hotel_name,
-    rd.id AS reservation_detail_id,
-    rd.date,
-    rt.name AS room_type_name,
-    rd.room_id,
-    rooms.room_number,
-    COALESCE(c.name_kanji, c.name) AS client_name,
-    rd.plan_name,
-    r.status,
-    r.type,
-    r.agent
-FROM
-    hotels h
-      JOIN
-    reservations r ON h.id = r.hotel_id
-      JOIN
-    clients c ON c.id = r.reservation_client_id
-      JOIN
-    reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
-      JOIN
-    rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
-      JOIN
-    room_types rt ON rooms.room_type_id = rt.id
-WHERE
-    rd.cancelled IS NULL
-ORDER BY
-    h.id, rd.date, rooms.room_number;
-
--- Financial data
-
-CREATE TABLE du_forecast (
-   id SERIAL PRIMARY KEY,
-   hotel_id INT NOT NULL REFERENCES hotels(id),
-   forecast_month DATE NOT NULL,
-   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
-   operating_days INTEGER, -- '営業日数'
-   available_room_nights INTEGER, -- '客室数'
-   rooms_sold_nights INTEGER, -- '販売客室数'
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-   created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
-);
-COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
-COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
-
-CREATE TABLE du_accounting (
-   id SERIAL PRIMARY KEY,
-   hotel_id INT NOT NULL REFERENCES hotels(id),
-   accounting_month DATE NOT NULL,
-   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'   
-   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-   created_by INT REFERENCES users(id),
-   CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
-);
-COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
 
 -- OTA / Site Controller
 
@@ -1115,12 +1065,96 @@ CREATE TABLE xml_responses (
    PRIMARY KEY (id, hotel_id)   
 ) PARTITION BY LIST (hotel_id);
 
-TRUNCATE TABLE xml_requests RESTART IDENTITY;
-TRUNCATE TABLE xml_responses RESTART IDENTITY;
+-- VIEW
 
-CREATE TABLE xml_responses_1 PARTITION OF xml_responses
-FOR VALUES IN (1);
+CREATE OR REPLACE VIEW vw_room_inventory AS
+WITH roomTotal AS (
+    SELECT
+        hotel_id,
+        room_type_id,
+        COUNT(*) as total_rooms
+    FROM rooms
+    WHERE for_sale = true
+    GROUP BY hotel_id, room_type_id
+)
+SELECT
+    rd.hotel_id,
+    rd.date,
+    r.room_type_id,
+	 sc.netrmtypegroupcode,
+    rt.name as room_type_name,
+    roomTotal.total_rooms,
+    COUNT(rd.date) as room_count
+FROM
+    reservation_details rd
+    JOIN rooms r ON r.hotel_id = rd.hotel_id AND r.id = rd.room_id
+    JOIN room_types rt ON rt.hotel_id = r.hotel_id AND rt.id = r.room_type_id
+	LEFT JOIN (SELECT DISTINCT hotel_id, room_type_id, netrmtypegroupcode FROM sc_tl_rooms) sc ON sc.hotel_id = rt.hotel_id AND sc.room_type_id = rt.id
+    JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
+WHERE rd.cancelled IS NULL
+GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
 
+CREATE OR REPLACE VIEW vw_booking_for_google AS
+SELECT
+    h.id AS hotel_id,
+    h.formal_name AS hotel_name,
+    rd.id AS reservation_detail_id,
+    rd.date,
+    rt.name AS room_type_name,
+    rd.room_id,
+    rooms.room_number,
+    COALESCE(c.name_kanji, c.name) AS client_name,
+    rd.plan_name,
+    r.status,
+    r.type,
+    r.agent
+FROM
+    hotels h
+      JOIN
+    reservations r ON h.id = r.hotel_id
+      JOIN
+    clients c ON c.id = r.reservation_client_id
+      JOIN
+    reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+      JOIN
+    rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
+      JOIN
+    room_types rt ON rooms.room_type_id = rt.id
+WHERE
+    rd.cancelled IS NULL
+ORDER BY
+    h.id, rd.date, rooms.room_number;
+
+-- Financial data
+
+CREATE TABLE du_forecast (
+   id SERIAL PRIMARY KEY,
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   forecast_month DATE NOT NULL,
+   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'
+   operating_days INTEGER, -- '営業日数'
+   available_room_nights INTEGER, -- '客室数'
+   rooms_sold_nights INTEGER, -- '販売客室数'
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   CONSTRAINT uq_hotel_month_forecast UNIQUE (hotel_id, forecast_month)
+);
+COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
+COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
+
+CREATE TABLE du_accounting (
+   id SERIAL PRIMARY KEY,
+   hotel_id INT NOT NULL REFERENCES hotels(id),
+   accounting_month DATE NOT NULL,
+   accommodation_revenue NUMERIC(15, 2), -- '宿泊売上'   
+   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+   created_by INT REFERENCES users(id),
+   CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
+);
+COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
+
+-- TODO: Review if these duplicate client handling scripts are necessary for initial production deployment. They appear to be for data cleanup after a specific import dated '2025-03-25'.
+/*
 --------------------------------------------------------------------
 --Imported clients, delete duplicates
 WITH duplicate_clients AS (
@@ -1259,4 +1293,5 @@ WHERE id IN (
   SELECT id FROM ranked_clients
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
+*/
 

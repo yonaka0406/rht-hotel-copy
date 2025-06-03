@@ -77,9 +77,8 @@ app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    //secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-    secure: true, // Always use secure cookies for HTTPS
+  cookie: {    
+    secure: process.env.NODE_ENV === ('production' || 'development'), // Secure cookies for HTTPS (in localhost it should be false)
     httpOnly: true,
     maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
     sameSite: 'lax', // Use lax to allow cookies in same-site requests
@@ -115,7 +114,9 @@ const getEnvConfig = (req) => {
 // HTTP Server setup
 const httpServer = http.createServer(app);
 
-// HTTPS Server setup (try/catch block)
+/*
+// HTTPS Server setup
+// Apache is handling HTTPS termination
 let httpsServer = null; // Initialize as null
 try {
   let privateKey, certificate;
@@ -134,13 +135,18 @@ try {
 } catch (error) {
   logger.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
 }
-// Socket.IO setup for HTTP and HTTPS
+*/
+
+// Socket.IO setup
 const ioHttp = socketio(httpServer, {
   cors: {
     origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
     methods: ["GET", "POST"]
   }
 });
+
+/*
+// Apache is handling HTTPS termination
 let ioHttps = null;
 if (httpsServer) {
   ioHttps = socketio(httpsServer, {
@@ -150,8 +156,10 @@ if (httpsServer) {
     }
   });
 }
+*/
 
 const PORT = process.env.PORT || 5000;
+const baseUrl = `http://localhost:${PORT}`;
 const HTTPS_PORT = 443;
 
 // Dynamic CORS middleware
@@ -239,9 +247,11 @@ const listenForTableChanges = async () => {
     if (msg.channel === 'logs_reservation_changed') {
       logger.debug('Notification received: logs_reservation_changed (dev)');
       ioHttp.emit('tableUpdate', 'Reservation update detected');
+      /*
       if (ioHttps) {
         ioHttps.emit('tableUpdate', 'Reservation update detected');
       }
+      */
     }
     if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
@@ -250,7 +260,7 @@ const listenForTableChanges = async () => {
       let response = null;
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/google`, {
+      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -260,7 +270,7 @@ const listenForTableChanges = async () => {
       if (googleData && Object.keys(googleData).length > 0) {
         // Update Google Sheets
         const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
-        response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+        response = await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -269,7 +279,7 @@ const listenForTableChanges = async () => {
       }
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/site-controller`, {
+      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -279,7 +289,7 @@ const listenForTableChanges = async () => {
       if (data && Object.keys(data).length > 0) {
         // logger.debug('report/res/inventor', data);
         // Fetch inventory data from view
-        response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+        response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -289,7 +299,7 @@ const listenForTableChanges = async () => {
 
         // Update Site Controller
         try {
-          await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+          await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -317,12 +327,14 @@ const listenForTableChanges = async () => {
         message: 'Reservation update detected',
         environment: 'prod'
       });
+      /*
       if (ioHttps) {
         ioHttps.emit('tableUpdate', {
           message: 'Reservation update detected',
           environment: 'prod'
         });
       }
+      */
     }
     if (msg.channel === 'reservation_log_inserted') {
       const logId = parseInt(msg.payload, 10);
@@ -331,7 +343,7 @@ const listenForTableChanges = async () => {
       let response = null;
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/google`, {
+      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -341,7 +353,7 @@ const listenForTableChanges = async () => {
       if (googleData && Object.keys(googleData).length > 0) {
         // Update Google Sheets
         const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
-        response = await fetch(`http://localhost:5000/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+        response = await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -350,7 +362,7 @@ const listenForTableChanges = async () => {
       }
 
       // Fetch log data to check if inventory has changed
-      response = await fetch(`http://localhost:5000/api/log/reservation-inventory/${logId}/site-controller`, {
+      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -360,7 +372,7 @@ const listenForTableChanges = async () => {
       if (data && Object.keys(data).length > 0) {
 
         // Fetch inventory data from view
-        response = await fetch(`http://localhost:5000/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+        response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -370,7 +382,7 @@ const listenForTableChanges = async () => {
 
         // Update Site Controller
         try {
-          await fetch(`http://localhost:5000/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+          await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -404,6 +416,7 @@ ioHttp.on('connection', (socket) => {
     logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
   });
 });
+/*
 if (ioHttps) {
   ioHttps.on('connection', (socket) => {
     logger.debug('Client connected (HTTPS)', { clientId: socket.id, origin: socket.handshake.headers.origin });
@@ -417,6 +430,7 @@ if (ioHttps) {
     });
   });
 }
+*/
 
 // Serve static files from the frontend build folder
 app.use(express.static(path.join(__dirname, 'public')));
@@ -439,11 +453,14 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
+/*
+// Apache is handling HTTPS termination
 if (httpsServer) {
   httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
     logger.info(`HTTPS Server is running on https://0.0.0.0:${HTTPS_PORT}`);
   });
 }
+*/
 
 // Start the scheduling
 startScheduling();

@@ -4,9 +4,12 @@ const jwt = require('jsonwebtoken');
 const { generateToken } = require('../utils/jwtUtils');
 const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
 const sessionService = require('../services/sessionService');
-const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle } = require('../models/user');
+
+const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle, updateUserGoogleTokens } = require('../models/user');
+
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
+const { syncCalendarFromGoogle } = require('../services/synchronizationService');
 const crypto = require('crypto');
 
 // Get .env accordingly
@@ -24,6 +27,8 @@ const googleOAuth2Client = getGoogleOAuth2Client(); // Assuming this is correctl
 const scopes = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/calendar.app.created',
+  'https://www.googleapis.com/auth/calendar.readonly',
 ];
 
 const login = async (req, res) => {
@@ -65,6 +70,19 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
     logger.info('User logged in successfully', { userId: user.id, email, ip: req.ip });
+
+    // Trigger background sync if enabled
+    if (user.id) {
+      logger.info(`Triggering background Google Calendar sync for user ${user.id} after local login. Request ID: ${req.requestId}`);
+      syncCalendarFromGoogle(req.requestId, user.id)
+        .then(syncResult => {
+          logger.info(`Background sync for user ${user.id} (after local login) completed. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
+        })
+        .catch(syncError => {
+          logger.error(`Error during background sync for user ${user.id} (after local login): ${syncError.message}`, { stack: syncError.stack, requestId: req.requestId });
+        });
+    }
+
     res.json({ message: 'ログインしました。', token });
   } catch (err) {
     const specificError = 'Internal server error during login';
@@ -78,35 +96,62 @@ const forgot = async (req, res) => {
   const isProduction = process.env.NODE_ENV === 'production';
   const errors = validationResult(req);
 
+  // Log the start of the request
+  logger.debug('Forgot password request received', { ip: req.ip, bodyEmail: req.body.email, requestId: req.requestId });
+
   if (!errors.isEmpty()) {
     const specificErrors = errors.array().map(err => ({ field: err.param, message: err.msg }));
-    logger.warn('Forgot password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors });
+    logger.warn('Forgot password validation failed', { ip: req.ip, email: req.body.email, errors: specificErrors, requestId: req.requestId });
     const clientError = isProduction ? 'Invalid input. Please check your email.' : specificErrors[0].message;
     return res.status(400).json({ error: clientError, details: isProduction ? undefined : specificErrors });
   }
 
   const { email } = req.body;
+  logger.debug('Email extracted for password reset', { email, ip: req.ip, requestId: req.requestId });
 
   try {
-    const user = await findUserByEmail(req.requestId, email);
+    logger.debug('Attempting to find user by email', { email, requestId: req.requestId });
+    const user = await findUserByEmail(req.requestId, email); // Assuming findUserByEmail also uses requestId for logging/tracing
+
     if (!user) {
       const specificError = 'ユーザー見つかりません。'; // User not found
-      logger.warn('Password reset requested for non-existent user', { email, ip: req.ip, specificError });
+      logger.warn('Password reset requested for non-existent user', { email, ip: req.ip, specificError, requestId: req.requestId });
       const message = isProduction ? 'If your email is registered, you will receive a password reset link.' : specificError;
+      // Respond with 200 in production even if user not found to prevent email enumeration
       return res.status(isProduction ? 200 : 400).json({ message: message, error: isProduction ? undefined : specificError });
     }
+    logger.debug('User found for password reset', { userId: user.id, userEmail: user.email, requestId: req.requestId });
 
     const resetToken = jwt.sign({ email: user.email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
+    logger.debug('Password reset token generated', { userEmail: user.email, tokenPreview: resetToken.substring(0, 20) + '...', requestId: req.requestId });
 
-    // Send the email with the reset link
-    await sendResetEmail(req.requestId, user.email, resetToken);
+    // Log right before sending the email
+    logger.debug(`Value of user.email before calling sendResetEmail: [${user.email}]`, { userId: user.id, requestId: req.requestId });
+    if (!user.email) {
+        logger.error('CRITICAL: user.email is undefined or empty before calling sendResetEmail!', { userObject: user, requestId: req.requestId });
+        // You might want to return an error here to prevent calling sendResetEmail with no recipient
+        return res.status(500).json({ error: 'Internal server error: user email is missing.' });
+    }
+    logger.debug('Attempting to send password reset email', { recipientEmail: user.email, userId: user.id, requestId: req.requestId });
+    await sendResetEmail(user.email, resetToken);
 
-    logger.info('Password reset email sent', { userId: user.id, email, ip: req.ip });
-    res.json({ message: 'パスワードのリセットリンクが送られました。' });
+    logger.info('Password reset email successfully sent', { userId: user.id, email, ip: req.ip, requestId: req.requestId });
+    res.json({ message: 'パスワードのリセットリンクが送られました。' }); // Password reset link has been sent.
+
   } catch (err) {
     const specificError = 'Error occurred while sending the password reset email.';
-    logger.error('Forgot password error', { error: err.message, stack: err.stack, email, ip: req.ip, specificError });
-    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError });
+    // Ensure all relevant details are logged, especially if err.code or err.command exists (like from Nodemailer)
+    logger.error('Forgot password process error', {
+        error: err.message,
+        stack: err.stack,
+        code: err.code, // Log Nodemailer specific error codes if present
+        command: err.command, // Log Nodemailer specific commands if present
+        email,
+        ip: req.ip,
+        specificError,
+        requestId: req.requestId
+    });
+    res.status(500).json({ error: isProduction ? 'Error processing request. Please try again later.' : specificError + (isProduction ? '' : ` (${err.message})`) });
   }
 }
 
@@ -126,7 +171,7 @@ const forgotAdmin = async (req, res) => {
 
   try {
     const resetToken = jwt.sign({ email: email }, process.env.JWT_RESET_SECRET, { expiresIn: '15m' });
-    await sendAdminResetEmail(req.requestId, email, resetToken);
+    await sendAdminResetEmail(email, resetToken);
 
     logger.info('Admin password reset email sent', { email, ip: req.ip });
     res.json({ message: 'パスワードのリセットリンクが送られました。' });
@@ -282,6 +327,8 @@ const googleCallback = async (req, res) => {
   try {
     const { tokens } = await googleOAuth2Client.getToken(code);
     const idToken = tokens.id_token;
+    // Log the received tokens for debugging (REMOVE IN PRODUCTION)
+    // logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Received tokens from Google:', { tokens });
 
     if (!idToken) {
       const specificError = 'ID token missing from Google response.';
@@ -337,8 +384,40 @@ const googleCallback = async (req, res) => {
       return res.status(500).json({ error: isProduction ? 'Authentication error. Please try again.' : specificError });
     }
 
+    // Persist the tokens
+    if (user && user.id && tokens.access_token) {
+      try {
+        await updateUserGoogleTokens(
+          req.requestId,
+          user.id,
+          tokens.access_token,
+          tokens.refresh_token || null, // refresh_token might not always be provided
+          tokens.expiry_date || null    // expiry_date is a timestamp in ms
+        );
+        logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Successfully saved Google OAuth tokens for user.`, { userId: user.id, email: userEmail, ip: req.ip });
+      } catch (tokenSaveError) {
+        logger.error(`[AUTH_CTRL_GOOGLE_CALLBACK] Failed to save Google OAuth tokens for user.`, { userId: user.id, email: userEmail, error: tokenSaveError.message, stack: tokenSaveError.stack, ip: req.ip });
+        // Decide if this is a critical failure. For now, log and continue.
+        // Potentially, redirect to an error page or return an error JSON.
+      }
+    } else {
+      logger.warn('[AUTH_CTRL_GOOGLE_CALLBACK] User object or access token missing, skipping token save.', { userId: user ? user.id : 'N/A', hasAccessToken: !!tokens.access_token, ip: req.ip });
+    }
+
     const jwtToken = generateToken(user);
     logger.debug('[AUTH_CTRL_GOOGLE_CALLBACK] Generated JWT for user.', { userId: user.id, email: userEmail, ip: req.ip });
+
+    // Trigger background sync if enabled
+    if (user.id) {
+      logger.info(`Triggering background Google Calendar sync for user ${user.id} after Google login/callback. Request ID: ${req.requestId}`);
+      syncCalendarFromGoogle(req.requestId, user.id)
+        .then(syncResult => {
+          logger.info(`Background sync for user ${user.id} (after Google login) completed. Result: ${JSON.stringify(syncResult)}. Request ID: ${req.requestId}`);
+        })
+        .catch(syncError => {
+          logger.error(`Error during background sync for user ${user.id} (after Google login): ${syncError.message}`, { stack: syncError.stack, requestId: req.requestId });
+        });
+    }
 
     const frontendRedirectUrl = `${envFrontend}/auth/google/callback?token=${jwtToken}`;
     logger.info(`[AUTH_CTRL_GOOGLE_CALLBACK] Redirecting to frontend with JWT for user.`, { userId: user.id, email: userEmail, redirectUrlDomain: envFrontend, ip: req.ip });

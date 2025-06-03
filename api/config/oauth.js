@@ -9,6 +9,11 @@ if (process.env.NODE_ENV === 'production') {
   googleCallback = process.env.GOOGLE_CALLBACK_URL  
 }
 
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  console.error(`[GoogleCalendarUtils][getCalendarService] Missing Google OAuth2 client environment variables. requestId: ${requestId}`);
+  throw new Error('Google OAuth2 client configuration is incomplete.');
+}
+
 /**
  * Creates and configures a Google OAuth2 client.
  * @returns {OAuth2Client} Configured Google OAuth2 client
