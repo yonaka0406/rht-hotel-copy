@@ -892,6 +892,115 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
   }
 };
 
+const selectActiveReservationsChange = async (requestId, hotel_id) => {
+  const pool = getPool(requestId);
+
+  // Convert 'all' or 0 to NULL for hotel_id if necessary
+  const p_hotel_id = (hotel_id === 'all' || hotel_id === '0') ? null : parseInt(hotel_id, 10);
+
+  if (hotel_id !== 'all' && hotel_id !== '0' && isNaN(p_hotel_id)) {
+    return { error: 'Invalid hotel_id format.' };
+  }
+
+  const query = `
+    WITH report_times AS (
+        SELECT
+            (date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL '1 microsecond') AS yesterday_snapshot,
+            CURRENT_TIMESTAMP AS today_snapshot
+    )
+    SELECT
+        rt.yesterday_snapshot,
+        get_active_reservations_count_at_datetime($1, rt.yesterday_snapshot) AS count_yesterday,
+        rt.today_snapshot,
+        get_active_reservations_count_at_datetime($1, rt.today_snapshot) AS count_today
+    FROM report_times rt;
+  `;
+  const values = [p_hotel_id];
+  try {
+      const result = await pool.query(query, values);           
+      if (result.rows.length === 0) {
+        return { error: 'No data returned from query.' };
+      }
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving data:', err);
+      throw new Error('Database error');
+  }
+}
+
+const selectMonthlyReservationEvolution = async () => {
+  const pool = getPool(requestId);
+
+  const p_hotel_id = parseInt(hotel_id, 10);
+  if (isNaN(p_hotel_id)) {
+    return { error: 'Invalid hotel_id format.' };
+  }
+  // Validate target_month format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(target_month)) {
+    return { error: 'Invalid target_month format. Expected YYYY-MM-DD.' };
+  }
+  const p_target_month_start_date = target_month;
+
+  const query = `
+    WITH
+    target_month_days AS (
+        SELECT generate_series(
+                   $2::DATE,
+                   ($2::DATE + INTERVAL '1 month' - INTERVAL '1 day')::DATE,
+                   INTERVAL '1 day'
+               )::DATE AS stay_date
+    ),
+    lead_day_series AS (
+        SELECT generate_series(0, 180) AS lead_days
+    ),
+    matrix_base AS (
+        SELECT
+            tmd.stay_date,
+            lds.lead_days,
+            (tmd.stay_date - lds.lead_days * INTERVAL '1 day')::DATE AS booking_cutoff_date_start_of_day,
+            (tmd.stay_date - lds.lead_days * INTERVAL '1 day' + INTERVAL '1 day' - INTERVAL '1 microsecond')::TIMESTAMP AS booking_cutoff_datetime_end_of_day
+    FROM
+            target_month_days tmd
+    CROSS JOIN
+            lead_day_series lds
+    )
+    SELECT
+        mb.stay_date,
+        mb.lead_days,
+        COUNT(rd.id) AS booked_room_nights_count 
+    FROM
+        matrix_base mb
+    LEFT JOIN
+        reservation_details rd ON rd.hotel_id = $1
+                               AND rd.date = mb.stay_date 
+                               AND rd.cancelled IS NULL   
+    LEFT JOIN
+        reservations r ON rd.reservation_id = r.id
+                       AND rd.hotel_id = r.hotel_id     
+    WHERE
+        r.hotel_id = $1                 
+        AND r.status IN ('confirmed', 'checked_in', 'checked_out') 
+        AND r.created_at <= mb.booking_cutoff_datetime_end_of_day 
+    GROUP BY
+        mb.stay_date,
+        mb.lead_days
+    ORDER BY
+        mb.stay_date,
+        mb.lead_days;
+  `;
+  const values = [p_hotel_id, p_target_month_start_date];
+  try {
+      const result = await pool.query(query, values);           
+      if (result.rows.length === 0) {
+        return { error: 'No data returned from query.' };
+      }
+      return result.rows;
+  } catch (err) {
+      console.error('Error retrieving data:', err);
+      throw new Error('Database error');
+  }
+}
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -906,4 +1015,6 @@ module.exports = {
   selectReservationsInventory,
   selectAllRoomTypesInventory,
   selectReservationsForGoogle,
+  selectActiveReservationsChange,
+  selectMonthlyReservationEvolution,
 };

@@ -5,7 +5,7 @@
                 :selectedDate="selectedDate"
                 :period="period"
                 :selectedHotels="selectedHotels"
-                :initialReportType="selectedReportType"              
+                :initialReportType="selectedReportType"
                 @date-change="handleDateChange"
                 @period-change="handlePeriodChange"
                 @hotel-change="handleHotelChange"
