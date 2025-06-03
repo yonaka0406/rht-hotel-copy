@@ -169,6 +169,11 @@
             return new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted);
         });
 
+        // Define desired colors
+        const bloodRed = '#8B0000';
+        const darkGrey = '#696969'; // Using a slightly darker grey than A9A9A9 for better visibility
+        const darkGold = '#B8860B';
+
         return {
             tooltip: {
                 trigger: 'axis',
@@ -206,35 +211,35 @@
                     smooth: true,
                     data: sortedData.map(item => item.count_as_of_previous_day_end),
                     itemStyle: {
-                        color: '#91CC75' // Example color (Green)
+                        color: darkGrey // Updated color
                     }
-                    // Optionally, add areaStyle if desired for this series too
                 },
                 {
-                    name: '当日終了時点在庫', // Series for count_as_of_snapshot_day_end
+                    name: '当日終了時点在庫',
                     type: 'line',
                     smooth: true,
                     data: sortedData.map(item => item.count_as_of_snapshot_day_end),
                     itemStyle: {
-                        color: '#FAC858' // Example color (Yellow/Orange)
+                        color: bloodRed // Updated color
                     }
-                    // Optionally, add areaStyle
                 },
                 {
-                    name: '日次差異', // Existing series for daily_difference
+                    name: '日次差異',
                     type: 'line',
                     smooth: true,
-                    data: sortedData.map(item => item.daily_difference), // Values for Y-axis
+                    data: sortedData.map(item => item.daily_difference),
                     itemStyle: {
-                        color: '#5470C6' // Existing color (Blue)
+                        color: darkGold // Updated color
                     },
                     areaStyle: {
+                        // Updated gradient to match darkGold
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
                             offset: 0,
-                            color: 'rgba(84, 112, 198, 0.3)'
+                            // Adjust alpha for gradient, e.g., from 0.3 to 0
+                            color: echarts.color.modifyAlpha(darkGold, 0.3)
                         }, {
                             offset: 1,
-                            color: 'rgba(84, 112, 198, 0)'
+                            color: echarts.color.modifyAlpha(darkGold, 0)
                         }])
                     }
                 }
