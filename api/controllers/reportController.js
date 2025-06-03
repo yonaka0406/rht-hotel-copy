@@ -574,10 +574,10 @@ const formatDataForSheet = (reservations) => {
 };
 
 const getActiveReservationsChange = async (req, res) => {
-  const { hotel_id } = req.params;
+  const { hotel_id, date } = req.params;
 
   try {
-    const data = await selectActiveReservationsChange(req.requestId, hotel_id);
+    const data = await selectActiveReservationsChange(req.requestId, hotel_id, date);
 
     if (!data || data.length === 0) {
       return res.status(404).json({ error: 'No data returned from query.' });

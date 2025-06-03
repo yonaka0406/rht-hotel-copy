@@ -20,7 +20,7 @@ router.get('/report/res/inventory-all/:hid/:sdate/:edate', getAllInventory);
 router.get('/report/res/google/:sid/:hid/:sdate/:edate', getReservationsForGoogle);
 
 // New Report Routes
-router.get('/report/active-reservations-change/:hotel_id', authMiddleware, getActiveReservationsChange);
+router.get('/report/active-reservations-change/:hotel_id/:date', authMiddleware, getActiveReservationsChange);
 router.get('/report/monthly-reservation-evolution/:hotel_id/:target_month', authMiddleware, getMonthlyReservationEvolution);
 
 module.exports = router;

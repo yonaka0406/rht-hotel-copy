@@ -892,41 +892,39 @@ const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDat
   }
 };
 
-const selectActiveReservationsChange = async (requestId, hotel_id) => {
+const selectActiveReservationsChange = async (requestId, hotel_id, dateString) => {
   const pool = getPool(requestId);
 
-  // Convert 'all' or 0 to NULL for hotel_id if necessary
-  const p_hotel_id = (hotel_id === 'all' || hotel_id === '0') ? null : parseInt(hotel_id, 10);
-
-  if (hotel_id !== 'all' && hotel_id !== '0' && isNaN(p_hotel_id)) {
-    return { error: 'Invalid hotel_id format.' };
+  let p_hotel_id;
+  // Handle 'all' or '0' for hotel_id by setting it to null for the SQL query
+  if (hotel_id === 'all' || String(hotel_id) === '0' || hotel_id === 0) {
+    p_hotel_id = null;
+  } else {
+    p_hotel_id = parseInt(hotel_id, 10);
+    if (isNaN(p_hotel_id) || p_hotel_id <= 0) {
+      return { error: 'Invalid hotel_id. Must be a positive integer, "all", or "0".' };
+    }
   }
-
+  // Basic validation for dateString format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return { error: 'Invalid dateString format. Expected YYYY-MM-DD.' };
+  }
+  
   const query = `
-    WITH report_times AS (
-        SELECT
-            (date_trunc('day', CURRENT_TIMESTAMP) - INTERVAL '1 microsecond') AS yesterday_snapshot,
-            CURRENT_TIMESTAMP AS today_snapshot
-    )
-    SELECT
-        rt.yesterday_snapshot,
-        get_active_reservations_count_at_datetime($1, rt.yesterday_snapshot) AS count_yesterday,
-        rt.today_snapshot,
-        get_active_reservations_count_at_datetime($1, rt.today_snapshot) AS count_today
-    FROM report_times rt;
+    SELECT * FROM get_room_inventory_comparison_for_date_range($1, $2);
   `;
-  const values = [p_hotel_id];
+  const values = [p_hotel_id, dateString];
   try {
       const result = await pool.query(query, values);           
       if (result.rows.length === 0) {
-        return { error: 'No data returned from query.' };
+        return { message: 'No inventory data found for the given parameters.', data: [] };
       }
       return result.rows;
   } catch (err) {
-      console.error('Error retrieving data:', err);
-      throw new Error('Database error');
+      console.error('Error retrieving data from get_room_inventory_comparison_for_date_range:', err);
+      return { error: 'Database error occurred while fetching room inventory.' };
   }
-}
+};
 
 const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_month) => {
   const pool = getPool(requestId);

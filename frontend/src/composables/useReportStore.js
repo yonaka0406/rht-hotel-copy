@@ -4,13 +4,21 @@ const reservationList = ref(null);
 
 export function useReportStore() {
     
-    const fetchActiveReservationsChange = async (hotelId) => {
+    const fetchActiveReservationsChange = async (hotelId, dateString) => {        
         try {
             const authToken = localStorage.getItem('authToken');
             // If hotelId is null, 0, or 'all', pass 'all' to the backend,
             // as the backend is designed to interpret 'all' or '0' as NULL.
             const effectiveHotelId = (hotelId === null || hotelId === 0 || hotelId === 'all') ? 'all' : hotelId;
-            const url = `/api/report/active-reservations-change/${effectiveHotelId}`;
+            // Validate dateString format (basic check, more robust validation can be added if needed)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+                console.error('Invalid dateString format in store. Expected YYYY-MM-DD.');
+                throw new Error('Invalid date format in store. Please use YYYY-MM-DD.');
+            }
+            
+            // Construct the URL based on the new route
+            const url = `/api/report/active-reservations-change/${effectiveHotelId}/${dateString}`;
+        
             
             const response = await fetch(url, {
                 method: 'GET',
@@ -21,8 +29,16 @@ export function useReportStore() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Failed to fetch active reservations change. Response not OK.' }));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                let errorData = { message: `Failed to fetch room inventory report. HTTP status: ${response.status}` };
+                try {
+                    // Try to parse a JSON error response from the server
+                    const parsedError = await response.json();
+                    errorData.message = parsedError.message || parsedError.error || errorData.message;
+                } catch (e) {
+                    // If response is not JSON or another error occurs during parsing
+                    console.warn('Could not parse error response as JSON.', e);
+                }
+                throw new Error(errorData.message);
             }
 
             const data = await response.json();
