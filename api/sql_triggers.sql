@@ -31,4 +31,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER logs_reservation_changes
 AFTER INSERT OR UPDATE OR DELETE ON logs_reservation
 FOR EACH ROW EXECUTE PROCEDURE notify_logs_reservation_changes();
-

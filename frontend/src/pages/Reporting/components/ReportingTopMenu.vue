@@ -1,99 +1,242 @@
 <template>
-    <div class="h-16 bg-red-600 text-white p-4 flex items-center justify-between shadow-md">
-        <div class="text-2xl font-bold">RHTレポート</div>
-        <div class="flex items-center gap-4">
-            <label for="date" class="text-sm">月度:</label>
-            <DatePicker
-                v-model="selectedDate"
-                view="month"
-                dateFormat="mm月yy年"
-                @update:modelValue="onInternalDateChange"                 
-                fluid
-                class="text-black p-2 rounded border-gray-300"
-            />
+    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap shadow-md gap-4">        
+        <!-- Header and Filters Row -->
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
+            <div class="flex gap-x-4 gap-y-2 flex-wrap">
+                <!-- Title -->
+                <div class="flex items-center gap-2 grid">                    
+                    <div class="text-2xl font-bold">RHTレポート</div>
+                    <!-- PMS Button -->
+                    <router-link
+                        to="/"
+                        class="bg-emerald-500 hover:bg-emerald-600 py-1 px-3 block rounded-sm whitespace-nowrap"
+                    >
+                        <i class="pi pi-home text-white mr-2"></i>
+                        <span class="text-white">PMS</span>
+                    </router-link>
+                </div>
 
-            <label for="period" class="text-sm">期間:</label>
-            <Select                
-                v-model="period"
-                :options="periodOptions"
-                optionLabel="label"
-                optionValue="value"
-                @change="onInternalPeriodChange"
-                class="text-black rounded border-gray-300"
-            >                
-            </Select>
+                <!-- Report Type Filter -->
+                <div class="flex gap-2 grid">                    
+                    <label for="reportType" class="text-sm text-gray-200">レポートタイプ</label>
+                    <Select
+                        v-model="selectedReportType"
+                        :options="reportTypeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        @change="onInternalReportTypeChange"
+                        placeholder="レポートを選択"
+                        class="text-black rounded border-gray-300 min-w-[150px] w-full sm:w-auto"
+                    />                    
+                </div>
 
-            <label for="hotels" class="text-sm">施設:</label>
-            <MultiSelect 
-                v-model="selectedHotels"                  
-                :options="hotels"
-                optionLabel="name" 
-                optionValue="id"
-                multiple
-                :maxSelectedLabels="1"
-                @change="onInternalHotelSelectionChange"
-                class="text-black rounded border-gray-300"
-            >                
-            </MultiSelect >
-        </div>
-        <router-link
-            to="/"
-            class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm"
-        >
-            <i class="pi pi-home text-white mr-2"></i>
-            <span class="text-white">PMS</span>
-        </router-link>
+                <!-- Date Filter -->
+                <template v-if="!isReservationChangeReport">
+                    <div class="flex gap-2 grid">
+                        <label for="date" class="text-sm text-gray-200">月度</label>
+                        <DatePicker
+                            v-model="selectedDate"
+                            view="month"
+                            dateFormat="yy年mm月"
+                            @update:modelValue="onInternalDateChange"
+                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                        />
+                    </div>
+                </template>
+
+                <!-- Period Filter -->
+                <template v-if="!isReservationChangeReport">
+                    <div class="flex gap-2 grid">
+                        <label for="period" class="text-sm text-gray-200">期間</label>
+                        <Select
+                            v-model="period"
+                            :options="periodOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            @change="onInternalPeriodChange"
+                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                            placeholder="期間を選択"
+                        />
+                    </div>
+                </template>
+
+                <!-- Hotels Filter -->
+                <div v-if="!isReservationChangeReport" class="flex gap-2 grid">
+                    <label for="hotels" class="text-sm text-gray-200">施設</label>
+                    <MultiSelect
+                        v-model="selectedHotels"
+                        :options="hotels"
+                        optionLabel="name"
+                        optionValue="id"
+                        multiple
+                        :maxSelectedLabels="1"
+                        @change="onInternalHotelSelectionChange"
+                        placeholder="施設を選択"                            
+                        class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                    />                    
+                </div>
+                <div v-if="isReservationChangeReport" class="flex gap-2 grid">
+                    <label for="facility" class="text-sm text-gray-200">施設</label>
+                    <Select
+                        v-model="singleSelectedHotelId"
+                        :options="hotelOptions"
+                        optionLabel="name"
+                        optionValue="id"
+                        @change="onInternalHotelSelectionChange"
+                        placeholder="施設を選択"
+                        class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                    />
+                </div>
+            </div>
+        </div>      
     </div>
 </template>
 <script setup>
     // Vue
-    import { ref, computed, onMounted } from 'vue';
+    import { ref, computed, onMounted, watch } from 'vue';
 
     const props = defineProps({
         selectedDate: Date,
         period: String,
-        selectedHotels: Array        
+        selectedHotels: Array,
+        initialReportType: String // Optional: if parent wants to set initial report type
     });
-    const emit = defineEmits(['date-change', 'period-change', 'hotel-change']);
+    const emit = defineEmits(['date-change', 'period-change', 'hotel-change', 'report-type-change']);
 
     // Primevue
-    import { DatePicker, MultiSelect, Select } from 'primevue';
+    import { DatePicker, FloatLabel, MultiSelect, Select } from 'primevue';
 
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, selectedHotel, fetchHotels, fetchHotel } = useHotelStore();
 
     // State
-    const selectedDate = ref(new Date());
-    const period = ref('month');
+    // Initialize with prop values if provided, otherwise use defaults
+    const selectedDate = ref(props.selectedDate || new Date());
+    const period = ref(props.period || 'month');
     const periodOptions = [
         { label: '当月', value: 'month' },
         { label: '年度累計', value: 'year' }        
     ];
-    const selectedHotels = ref(null);
+    const selectedHotels = ref([]); // Initialize with prop or default // Modified to init as []
+
+    // Report Type State
+    const selectedReportType = ref(props.initialReportType || 'monthlySummary'); // Initialize with prop or default
+
+    // Computed property to determine if the current report type is 'activeReservationsChange'
+    const isReservationChangeReport = computed(() => selectedReportType.value === 'activeReservationsChange');
+
+    // Computed property for hotel options, adding "全施設" if it's the reservation change report
+    const hotelOptions = computed(() => {
+      const options = hotels.value ? [...hotels.value] : []; // Ensure 'hotels.value' is the reactive array from the store
+      if (isReservationChangeReport.value) {
+        return [{ id: 0, name: '全施設' }, ...options];
+      }
+      return options;
+    });
+
+    // Computed property for single hotel selection, mapping to/from selectedHotels array
+    const singleSelectedHotelId = computed({
+      get: () => (selectedHotels.value && selectedHotels.value.length > 0) ? selectedHotels.value[0] : 0,
+      set: (val) => { selectedHotels.value = (val === null || val === undefined) ? [] : [val]; } // Handle null/undefined for val
+    });
+
+    const reportTypeOptions = ref([
+        { label: '月次収益・稼働サマリ', value: 'monthlySummary' },
+        { label: '予約数変動 (昨日/今日)', value: 'activeReservationsChange' },
+        { label: '予約進化 (OTBマトリクス)', value: 'monthlyReservationEvolution' }
+        // Add other existing views if they are to be selected via this dropdown
+    ]);
 
     // When a date is picked in ReportingTopMenu:
-    function onInternalDateChange(newDate) {        
+    function onInternalDateChange(newDate) {
+        selectedDate.value = newDate; // Update internal state
         emit('date-change', newDate);
     }
 
     // When period is changed in ReportingTopMenu:
-    function onInternalPeriodChange(newPeriod) {
-        emit('period-change', newPeriod.value);
+    function onInternalPeriodChange(event) { // event for PrimeVue Select is { value: 'actualValue' }
+        period.value = event.value; // Update internal state
+        emit('period-change', event.value);
     }
 
     // When hotel selection changes in ReportingTopMenu:
-    function onInternalHotelSelectionChange(newHotelIdsArray) {
-        emit('hotel-change', newHotelIdsArray.value, hotels.value);
+    // When hotel selection changes in ReportingTopMenu:
+    function onInternalHotelSelectionChange() {
+      // This function is called on @change by both facility Select and MultiSelect.
+      // v-model (on selectedHotels or singleSelectedHotelId) would have already updated selectedHotels.value.
+      emit('hotel-change', selectedHotels.value, hotels.value);
     }
 
-    onMounted(async () => {
-        await fetchHotels();
-        await fetchHotel();        
+    // When report type changes in ReportingTopMenu:
+    function onInternalReportTypeChange(event) { // event for PrimeVue Select is { value: 'actualValue' }
+      const newReportType = event.value;
+      const oldReportType = selectedReportType.value; // Capture current value before updating selectedReportType
+      selectedReportType.value = newReportType; // Update the ref
 
-        selectedHotels.value = ref(hotels.value.map(h => h.id));
-        //onInternalDateChange(selectedDate.value);
-        //onInternalPeriodChange(period.value);
-        onInternalHotelSelectionChange(selectedHotels.value);
+      if (newReportType === 'activeReservationsChange') {
+        if (Array.isArray(selectedHotels.value) && selectedHotels.value.length > 0) {
+          selectedHotels.value = [selectedHotels.value[0]]; // Keep first selected, or set to "全施設" if first is not valid
+        } else {
+          selectedHotels.value = [0]; // Default to "全施設" (ID 0)
+        }
+      } else if (oldReportType === 'activeReservationsChange') { // Check if the *previous* type was activeReservationsChange
+        if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
+          selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; // "全施設" -> all hotels
+        }
+        // If a single specific hotel was selected (e.g., [hotelId]), it's a valid array for MultiSelect.
+        // If selectedHotels.value was empty [], it's also fine.
+      }
+      emit('report-type-change', newReportType);
+      emit('hotel-change', selectedHotels.value, hotels.value); // Emit updated hotel selection
+    }
+    
+    // Watch for prop changes to allow parent to control initial state or update dynamically
+    watch(() => props.selectedDate, (newValue) => {
+        if (newValue) selectedDate.value = newValue;
+    });
+    watch(() => props.period, (newValue) => {
+        if (newValue) period.value = newValue;
+    });
+    // Parent always provides selectedHotels as an array.
+    watch(() => props.selectedHotels, (newValue) => {
+      selectedHotels.value = newValue ? [...newValue] : [];
+    }, { deep: true, immediate: true });
+
+    watch(() => props.initialReportType, (newValue) => {
+        if (newValue) selectedReportType.value = newValue;
+    });
+
+    onMounted(async () => {
+      await fetchHotels(); // from useHotelStore
+      // await fetchHotel(); // Commented out as per plan
+
+      // initialReportType prop is processed first
+      if (props.initialReportType) {
+        selectedReportType.value = props.initialReportType;
+      }
+
+      // props.selectedHotels watcher with immediate:true has already run and populated selectedHotels.value.
+      // Now, adjust selectedHotels.value based on the effective selectedReportType.
+      if (selectedReportType.value === 'activeReservationsChange') {
+        if (selectedHotels.value && selectedHotels.value.length > 0) {
+          selectedHotels.value = [selectedHotels.value[0]];
+        } else {
+          // If prop didn't set any hotel or set an empty array, default to "全施設"
+          selectedHotels.value = [0];
+        }
+      } else { // Not 'activeReservationsChange' (i.e., multi-select mode)
+        // If no hotels are selected via props (selectedHotels.value is empty after watcher)
+        // AND hotels are loaded, then select all hotels.
+        if ((!selectedHotels.value || selectedHotels.value.length === 0) && hotels.value && hotels.value.length > 0) {
+          selectedHotels.value = hotels.value.map(h => h.id);
+        }
+      }
+
+      // Emit all initial states to parent.
+      emit('date-change', selectedDate.value);
+      emit('period-change', period.value);
+      emit('hotel-change', selectedHotels.value, hotels.value); // selectedHotels.value is an array
+      emit('report-type-change', selectedReportType.value);
     });
 </script>

@@ -1,4 +1,5 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle } = require('../models/report');
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectActiveReservationsChange,
+  selectMonthlyReservationEvolution } = require('../models/report');
 const { authorize, appendDataToSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
@@ -572,6 +573,40 @@ const formatDataForSheet = (reservations) => {
   return [...rows];
 };
 
+const getActiveReservationsChange = async (req, res) => {
+  const { hotel_id, date } = req.params;
+
+  try {
+    const data = await selectActiveReservationsChange(req.requestId, hotel_id, date);
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data returned from query.' });
+    }  
+
+    res.json(data);
+  } catch (err) {
+    console.error(`[${req.requestId}] Error in getActiveReservationsChange:`, err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const getMonthlyReservationEvolution = async (req, res) => {
+  const { hotel_id, target_month } = req.params;
+
+  try {
+    const data = await selectMonthlyReservationEvolution(req.requestId, hotel_id, target_month);
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data returned from query.' });
+    }  
+
+    res.json(data);
+  } catch (err) {
+    console.error(`[${req.requestId}] Error in getMonthlyReservationEvolution:`, err);
+    res.status(500).json({ error: 'Internal server error' });
+  }  
+};
+
 
 module.exports = { 
   getCountReservation,
@@ -586,4 +621,6 @@ module.exports = {
   getReservationsInventory,
   getAllInventory,
   getReservationsForGoogle,
+  getActiveReservationsChange,
+  getMonthlyReservationEvolution,
 };

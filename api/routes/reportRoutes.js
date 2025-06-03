@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, getReservationsForGoogle } = require('../controllers/reportController');
+const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, getReservationsForGoogle, getActiveReservationsChange, getMonthlyReservationEvolution } = require('../controllers/reportController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
+// Existing routes
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
 router.get('/report/res/count/dtl/:hid/:sdate/:edate', authMiddleware, getCountReservationDetails);
 router.get('/report/occ/:period/:hid/:rdate', authMiddleware, getOccupationByPeriod);
@@ -17,5 +18,9 @@ router.get('/report/download/res/meals/:hid/:sdate/:edate', authMiddleware, getE
 router.get('/report/res/inventory/:hid/:sdate/:edate', getReservationsInventory);
 router.get('/report/res/inventory-all/:hid/:sdate/:edate', getAllInventory);
 router.get('/report/res/google/:sid/:hid/:sdate/:edate', getReservationsForGoogle);
+
+// New Report Routes
+router.get('/report/active-reservations-change/:hotel_id/:date', authMiddleware, getActiveReservationsChange);
+router.get('/report/monthly-reservation-evolution/:hotel_id/:target_month', authMiddleware, getMonthlyReservationEvolution);
 
 module.exports = router;
