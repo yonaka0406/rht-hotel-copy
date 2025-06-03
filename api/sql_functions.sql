@@ -1,33 +1,41 @@
-CREATE OR REPLACE FUNCTION get_average_lead_time_for_new_bookings(
+CREATE OR REPLACE FUNCTION get_booking_based_lead_time(
     p_hotel_id INT,
-    p_lookback_days INT
+    p_lookback_days INT,
+    p_reference_date DATE
 )
-RETURNS DECIMAL(10, 2) AS $$ -- Specify precision for the returned DECIMAL
-DECLARE
-    avg_lead_time DECIMAL(10, 2);
+RETURNS TABLE(
+    average_lead_time NUMERIC(10, 2),
+    total_nights NUMERIC
+) AS $$
 BEGIN
-    -- This function calculates the average lead time for new, non-cancelled bookings
-    -- for a specific hotel, looking back a defined number of days from the current date.
-    -- Lead time is the difference in days between check_in date and reservation creation date.
-
-    WITH RelevantBookings AS (
+    RETURN QUERY
+    WITH RelevantReservations AS (
         SELECT
-            r.check_in::DATE - r.created_at::DATE AS lead_time_days
+            r.id AS reservation_id,
+            r.hotel_id,
+            (r.check_in::DATE - r.created_at::DATE) AS lead_time
         FROM
             reservations r
         WHERE
-            r.hotel_id = p_hotel_id                                     -- Filter by the specific hotel
-            AND r.created_at >= (CURRENT_DATE - (p_lookback_days || ' days')::INTERVAL) -- Filter for bookings within the lookback period
-            AND r.created_at < (CURRENT_DATE + INTERVAL '1 day')        -- Ensure we capture bookings made today up to the end of day
-            AND r.status <> 'cancelled'                                 -- Exclude cancelled reservations
+            r.hotel_id = p_hotel_id
+            AND r.created_at::DATE BETWEEN (p_reference_date - p_lookback_days) AND p_reference_date
+            AND r.status <> 'cancelled'
+    ),
+    RoomNights AS (
+        SELECT
+            rd.reservation_id,
+            COUNT(*) AS nights
+        FROM reservation_details rd
+        WHERE
+            rd.hotel_id = p_hotel_id
+            AND rd.billable = TRUE
+        GROUP BY rd.reservation_id
     )
     SELECT
-        COALESCE(AVG(rb.lead_time_days), 0.00) INTO avg_lead_time
-    FROM
-        RelevantBookings rb;
-
-    RETURN avg_lead_time;
-
+        COALESCE(SUM(rr.lead_time * rn.nights)::NUMERIC / NULLIF(SUM(rn.nights), 0), 0)::NUMERIC(10, 2) AS average_lead_time,
+        COALESCE(SUM(rn.nights), 0) AS total_nights
+    FROM RelevantReservations rr
+    JOIN RoomNights rn ON rr.reservation_id = rn.reservation_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -36,6 +44,50 @@ $$ LANGUAGE plpgsql;
 -- SELECT * FROM get_average_lead_time_for_new_bookings(1, 30); -- Avg lead time for bookings made in the last 30 days for hotel 1
 -- SELECT * FROM get_average_lead_time_for_new_bookings(1, 90); -- Avg lead time for bookings made in the last 90 days for hotel 1
 -- SELECT * FROM get_average_lead_time_for_new_bookings(999, 30); -- Example for a hotel with no bookings, should return 0.00
+-- Compute a weighted average across hotels
+-- SELECT SUM(lead_time_avg * reservation_count) / SUM(reservation_count) AS weighted_avg_lead_time FROM (SELECT * FROM get_average_lead_time_for_new_bookings(hotel_id, 30) FROM (SELECT unnest(ARRAY[7, 8, 9]) AS hotel_id) AS hotels) t;
+
+CREATE OR REPLACE FUNCTION get_checkin_based_lead_time(
+    p_hotel_id INT,
+    p_lookback_days INT,
+    p_reference_date DATE
+)
+RETURNS TABLE(
+    average_lead_time NUMERIC(10, 2),
+    total_nights NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH RelevantReservations AS (
+        SELECT
+            r.id AS reservation_id,
+            r.hotel_id,
+            (r.check_in::DATE - r.created_at::DATE) AS lead_time
+        FROM
+            reservations r
+        WHERE
+            r.hotel_id = p_hotel_id
+            AND r.check_in::DATE BETWEEN (p_reference_date - p_lookback_days) AND p_reference_date
+            AND r.status <> 'cancelled'
+    ),
+    RoomNights AS (
+        SELECT
+            rd.reservation_id,
+            COUNT(*) AS nights
+        FROM reservation_details rd
+        WHERE
+            rd.hotel_id = p_hotel_id
+            AND rd.billable = TRUE
+        GROUP BY rd.reservation_id
+    )
+    SELECT
+        COALESCE(SUM(rr.lead_time * rn.nights)::NUMERIC / NULLIF(SUM(rn.nights), 0), 0)::NUMERIC(10, 2) AS average_lead_time,
+        COALESCE(SUM(rn.nights), 0) AS total_nights
+    FROM RelevantReservations rr
+    JOIN RoomNights rn ON rr.reservation_id = rn.reservation_id;
+END;
+$$ LANGUAGE plpgsql;
+
 
 CREATE OR REPLACE FUNCTION get_reservations_made_on_date(
     p_target_date DATE,
