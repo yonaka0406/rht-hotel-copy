@@ -25,10 +25,9 @@
                 :hotel-id="selectedHotelIdForReport"
                 :target-month="firstDayOfMonthForApi"
                 :trigger-fetch="reportTriggerKey"
-            />
+            />            
             
-            <!-- Existing Summary Reports Logic -->
-            <div v-else> {/* This div wraps the existing summary reports section */}
+            <div v-else> 
                 <div v-if="loading" class="flex justify-content-center align-items-center h-full">
                     <ProgressSpinner />
                 </div>

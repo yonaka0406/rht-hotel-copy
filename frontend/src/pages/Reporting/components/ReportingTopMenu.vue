@@ -141,22 +141,17 @@
     });
 
     onMounted(async () => {
-        await fetchHotels(); // Fetches all hotels
-        // Consider if fetchHotel() is needed or if selectedHotel store property is used elsewhere.
-        // If not, it might be removable. For now, keeping it as it was.
+        await fetchHotels();
         await fetchHotel(); 
-
-        // Initialize selectedHotels with all hotel IDs if current selection from props is null/empty
-        // and there are hotels available.
+        
         if ((!selectedHotels.value || selectedHotels.value.length === 0) && hotels.value && hotels.value.length > 0) {
             selectedHotels.value = hotels.value.map(h => h.id);
         }
         
-        // Emit initial state to parent to ensure synchronization
-        // This is crucial if the parent relies on these values for initial data fetching for reports.
+        // Emit initial state to parent to ensure synchronization        
         emit('date-change', selectedDate.value);
         emit('period-change', period.value);
-        emit('hotel-change', selectedHotels.value, hotels.value); // Ensure 'hotels.value' is the full list
+        emit('hotel-change', selectedHotels.value, hotels.value);
         emit('report-type-change', selectedReportType.value);
     });
 </script>
