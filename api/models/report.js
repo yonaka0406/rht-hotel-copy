@@ -928,7 +928,7 @@ const selectActiveReservationsChange = async (requestId, hotel_id) => {
   }
 }
 
-const selectMonthlyReservationEvolution = async () => {
+const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_month) => {
   const pool = getPool(requestId);
 
   const p_hotel_id = parseInt(hotel_id, 10);
