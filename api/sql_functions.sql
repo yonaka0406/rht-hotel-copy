@@ -126,109 +126,162 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION get_active_reservations_count_at_datetime(
-    p_hotel_id INT, -- Assuming you might want this per hotel, can be NULL for all
-    p_snapshot_datetime TIMESTAMP
+CREATE OR REPLACE FUNCTION get_room_inventory_comparison_for_target_date(
+    p_hotel_id INT, -- Hotel ID to filter by, NULL for all hotels
+    p_snapshot_date DATE, -- The "current day" of observation
+    p_target_date_for_inventory DATE -- The future date for which inventory is being checked
 )
-RETURNS BIGINT AS $$
+RETURNS BIGINT[] AS $$ -- Returns: [count_as_of_previous_day_end, count_as_of_snapshot_day_end]
 DECLARE
-    active_count BIGINT;
-BEGIN
-    WITH reservation_last_status AS (
-        SELECT
-            lr.record_id AS reservation_id,
-            -- Extract the status from the JSON based on the action
-            CASE
-                WHEN lr.action = 'INSERT' THEN lr.changes ->> 'status'
-                WHEN lr.action = 'UPDATE' THEN lr.changes -> 'new' ->> 'status'
-                ELSE NULL -- Consider DELETEd as not active or handle as per business rule
-            END AS status_at_snapshot,
-            ROW_NUMBER() OVER (PARTITION BY lr.record_id ORDER BY lr.log_time DESC) as rn
-        FROM
-            logs_reservation lr
-        WHERE
-            lr.table_name = 'reservations'
-            AND lr.log_time <= p_snapshot_datetime
-            AND ( 
-                  p_hotel_id IS NULL OR
-                  (lr.action = 'INSERT' AND (lr.changes ->> 'hotel_id')::INT = p_hotel_id) OR
-                  (lr.action = 'UPDATE' AND (lr.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id)
-            )
-    ),
-    reservation_initial_data AS (
-      SELECT
-        lr.record_id as reservation_id,
-        (lr.changes ->> 'hotel_id')::INT as hotel_id
-      FROM logs_reservation lr
-      WHERE lr.table_name = 'reservations' AND lr.action = 'INSERT'
-      AND lr.log_time <= p_snapshot_datetime
-      GROUP BY 1,2 
-    )
-    SELECT COUNT(DISTINCT rls.reservation_id)
-    INTO active_count
-    FROM reservation_last_status rls
-    LEFT JOIN reservation_initial_data rid ON rls.reservation_id = rid.reservation_id
-    WHERE rls.rn = 1 
-      AND rls.status_at_snapshot IN ('confirmed', 'checked_in', 'checked_out')
-      AND (p_hotel_id IS NULL OR rid.hotel_id = p_hotel_id);
+    count_as_of_snapshot_day_end BIGINT;
+    count_as_of_previous_day_end BIGINT;
 
-    RETURN active_count;
+    -- Define the precise end-of-day timestamps for log filtering
+    snapshot_day_end_ts TIMESTAMP;
+    previous_day_end_ts TIMESTAMP;
+BEGIN
+    snapshot_day_end_ts := (p_snapshot_date + INTERVAL '1 day' - INTERVAL '1 microsecond');
+    previous_day_end_ts := (p_snapshot_date - INTERVAL '1 microsecond');
+
+    -- Calculate count of active (non-deleted, non-cancelled) details as of previous_day_end_ts
+    WITH relevant_reservation_details_base AS (
+        SELECT
+            lrd.record_id AS reservation_detail_id -- This is assumed to be reservation_details.id
+        FROM
+            logs_reservation lrd
+        WHERE
+            lrd.action = 'INSERT' -- Anchor on original insertions
+            -- Filter for logs pertaining to reservation_details table for the specific hotel or all hotels
+            AND (
+                (p_hotel_id IS NOT NULL AND lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+                OR
+                (p_hotel_id IS NULL AND lrd.table_name LIKE 'reservation_details_%')
+            )
+            -- Ensure the INSERT log's 'changes' JSON matches the hotel and target date
+            AND ((lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)
+            AND (lrd.changes ->> 'date')::DATE = p_target_date_for_inventory
+    )
+    SELECT COUNT(DISTINCT base.reservation_detail_id)
+    INTO count_as_of_previous_day_end
+    FROM relevant_reservation_details_base base
+    LEFT JOIN LATERAL (
+        -- Find the last relevant log entry for this detail up to previous_day_end_ts
+        SELECT
+            sub_lrd.action,
+            CASE
+                WHEN sub_lrd.action = 'INSERT' THEN (sub_lrd.changes ->> 'cancelled')
+                WHEN sub_lrd.action = 'UPDATE' THEN (sub_lrd.changes -> 'new' ->> 'cancelled')
+                ELSE NULL
+            END AS cancelled_uuid_text,
+            sub_lrd.log_time AS last_log_time
+        FROM logs_reservation sub_lrd
+        WHERE sub_lrd.record_id = base.reservation_detail_id -- Assumes record_id is reservation_details.id
+          AND sub_lrd.log_time <= previous_day_end_ts
+          -- Filter for logs pertaining to reservation_details table
+          AND (
+                (p_hotel_id IS NOT NULL AND sub_lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+                OR
+                (p_hotel_id IS NULL AND sub_lrd.table_name LIKE 'reservation_details_%')
+            )
+          -- Ensure the log entry's hotel_id (if present in JSON) matches, or p_hotel_id is NULL
+          AND (
+                (sub_lrd.action = 'INSERT' AND ((sub_lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
+                (sub_lrd.action = 'UPDATE' AND ((sub_lrd.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
+                (sub_lrd.action = 'DELETE') -- For DELETE, hotel_id might not be in 'changes' but is known from 'base'
+             )
+        ORDER BY sub_lrd.log_time DESC -- Removed log_id for tie-breaking
+        LIMIT 1
+    ) latest_status_prev ON TRUE
+    WHERE
+        latest_status_prev.last_log_time IS NOT NULL
+        AND latest_status_prev.action <> 'DELETE'
+        AND latest_status_prev.cancelled_uuid_text IS NULL;
+
+    -- Calculate count of active (non-deleted, non-cancelled) details as of snapshot_day_end_ts
+    WITH relevant_reservation_details_base AS (
+        SELECT
+            lrd.record_id AS reservation_detail_id -- This is assumed to be reservation_details.id
+        FROM
+            logs_reservation lrd
+        WHERE
+            lrd.action = 'INSERT' -- Anchor on original insertions
+            -- Filter for logs pertaining to reservation_details table for the specific hotel or all hotels
+            AND (
+                (p_hotel_id IS NOT NULL AND lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+                OR
+                (p_hotel_id IS NULL AND lrd.table_name LIKE 'reservation_details_%')
+            )
+            -- Ensure the INSERT log's 'changes' JSON matches the hotel and target date
+            AND ((lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)
+            AND (lrd.changes ->> 'date')::DATE = p_target_date_for_inventory
+    )
+    SELECT COUNT(DISTINCT base.reservation_detail_id)
+    INTO count_as_of_snapshot_day_end
+    FROM relevant_reservation_details_base base
+    LEFT JOIN LATERAL (
+        -- Find the last relevant log entry for this detail up to snapshot_day_end_ts
+        SELECT
+            sub_lrd.action,
+            CASE
+                WHEN sub_lrd.action = 'INSERT' THEN (sub_lrd.changes ->> 'cancelled')
+                WHEN sub_lrd.action = 'UPDATE' THEN (sub_lrd.changes -> 'new' ->> 'cancelled')
+                ELSE NULL
+            END AS cancelled_uuid_text,
+            sub_lrd.log_time AS last_log_time
+        FROM logs_reservation sub_lrd
+        WHERE sub_lrd.record_id = base.reservation_detail_id -- Assumes record_id is reservation_details.id
+          AND sub_lrd.log_time <= snapshot_day_end_ts
+          -- Filter for logs pertaining to reservation_details table
+          AND (
+                (p_hotel_id IS NOT NULL AND sub_lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+                OR
+                (p_hotel_id IS NULL AND sub_lrd.table_name LIKE 'reservation_details_%')
+            )
+          AND (
+                (sub_lrd.action = 'INSERT' AND ((sub_lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
+                (sub_lrd.action = 'UPDATE' AND ((sub_lrd.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
+                (sub_lrd.action = 'DELETE')
+             )
+        ORDER BY sub_lrd.log_time DESC -- Removed log_id for tie-breaking
+        LIMIT 1
+    ) latest_status_snap ON TRUE
+    WHERE
+        latest_status_snap.last_log_time IS NOT NULL
+        AND latest_status_snap.action <> 'DELETE'
+        AND latest_status_snap.cancelled_uuid_text IS NULL;
+
+    RETURN ARRAY[count_as_of_previous_day_end, count_as_of_snapshot_day_end];
 END;
 $$ LANGUAGE plpgsql;
--- Example Usage for get_active_reservations_count_at_datetime:
+
+-- Example Usage for get_room_inventory_comparison_for_target_date:
 --
--- Assumptions for examples:
--- 1. The 'logs_reservation' table contains historical data for reservations.
--- 2. A reservation is active if its status is 'confirmed', 'checked_in', or 'checked_out'.
+-- This function calculates the number of non-cancelled rooms for a specific future date ('p_target_date_for_inventory')
+-- by reconstructing the state from 'logs_reservation' (assuming it logs changes to 'reservation_details')
+-- at two points in time:
+-- 1. As of the end of 'p_snapshot_date - 1 day'.
+-- 2. As of the end of 'p_snapshot_date'.
 --
--- Scenario 1: Count active reservations for a specific hotel (e.g., hotel_id = 1)
---             at a specific timestamp.
--- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
+-- Assumptions:
+-- 1. 'logs_reservation' table logs changes to 'reservation_details'.
+--    - 'record_id' in logs is 'reservation_details.id' when logging a detail change.
+--    - 'table_name' in logs is like 'reservation_details_<hotel_id>' for detail logs.
+--    - 'changes' JSON contains relevant fields like 'cancelled' (UUID), 'hotel_id', 'date' for detail logs.
+--    - 'action' can be 'INSERT', 'UPDATE', 'DELETE'.
+-- 2. A room detail is considered "active" or "booked" if its latest state before the snapshot point
+--    was not 'DELETE' and its 'cancelled' field (UUID) was NULL.
+-- 3. The function returns an array of two BIGINTs:
+--    - result[1]: Count of rooms for 'p_target_date_for_inventory' as of end of ('p_snapshot_date' - 1 DAY).
+--    - result[2]: Count of rooms for 'p_target_date_for_inventory' as of end of 'p_snapshot_date'.
 --
--- Scenario 2: Count active reservations for ALL hotels at a specific timestamp.
--- SELECT get_active_reservations_count_at_datetime(NULL, '2023-10-26 14:00:00');
+-- Scenario:
+-- p_hotel_id = 7
+-- p_snapshot_date = '2025-06-03' (observing "today" and "yesterday")
+-- p_target_date_for_inventory = '2025-07-08' (the future date we care about inventory for)
 --
--- Scenario 3: A reservation (e.g., res_id = 101) for hotel_id = 1 became 'confirmed'
---             at '2023-10-26 10:00:00'.
---             We check at '2023-10-26 14:00:00'. It should be counted.
---             Relevant log entry in logs_reservation for res_id = 101:
---             log_time = '2023-10-26 10:00:00', action = 'UPDATE', changes = '{"new": {"status": "confirmed", "hotel_id": 1}}'
--- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
---
--- Scenario 4: A reservation (e.g., res_id = 102) for hotel_id = 1 was 'confirmed' but then
---             became 'cancelled' at '2023-10-26 11:00:00'.
---             We check at '2023-10-26 14:00:00'. It should NOT be counted.
---             Relevant log entries for res_id = 102:
---             log_time = '2023-10-25 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
---             log_time = '2023-10-26 11:00:00', action = 'UPDATE', changes = '{"new": {"status": "cancelled", "hotel_id": 1}}'
--- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
---
--- Scenario 5: A reservation (e.g., res_id = 103) for hotel_id = 2 became 'checked_in'
---             exactly at '2023-10-27 15:00:00'.
---             We check at '2023-10-27 15:00:00'. It should be counted.
---             Relevant log entry for res_id = 103:
---             log_time = '2023-10-27 15:00:00', action = 'UPDATE', changes = '{"new": {"status": "checked_in", "hotel_id": 2}}'
--- SELECT get_active_reservations_count_at_datetime(2, '2023-10-27 15:00:00');
---
--- Scenario 6: A reservation (e.g., res_id = 104) for hotel_id = 1 is created (INSERT log)
---             at '2023-10-28 10:00:00' with status 'confirmed'.
---             We check at '2023-10-28 09:00:00'. It should NOT be counted.
---             Relevant log entry for res_id = 104:
---             log_time = '2023-10-28 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
--- SELECT get_active_reservations_count_at_datetime(1, '2023-10-28 09:00:00');
---
--- Scenario 7: A reservation (res_id = 105) for hotel_id = 1 had its hotel_id updated.
---             Original insert: hotel_id = 1, status 'confirmed' at '2023-11-01 10:00:00'
---             Update log: hotel_id changed to 2 at '2023-11-01 12:00:00'
---             If we query for hotel_id = 1 at '2023-11-01 13:00:00', it should NOT be counted (as its latest hotel_id is 2).
---             If we query for hotel_id = 2 at '2023-11-01 13:00:00', it SHOULD be counted.
---             Relevant log entries for res_id = 105:
---             log_time = '2023-11-01 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
---             log_time = '2023-11-01 12:00:00', action = 'UPDATE', changes = '{"old": {"hotel_id": 1}, "new": {"hotel_id": 2, "status": "confirmed"}}'
--- SELECT get_active_reservations_count_at_datetime(1, '2023-11-01 13:00:00'); -- Expected: count excluding 105
--- SELECT get_active_reservations_count_at_datetime(2, '2023-11-01 13:00:00'); -- Expected: count including 105
---
--- Note: The function relies on the structure of the 'changes' JSON blob in 'logs_reservation'
---       and assumes 'hotel_id' is present in 'changes' -> 'new' for UPDATEs
---       or directly in 'changes' for INSERTs if p_hotel_id is specified.
+-- If, based on logs up to end of '2025-06-02', there were 3 rooms for hotel 7 on '2025-07-08'.
+-- And, due to a cancellation logged on '2025-06-03', based on logs up to end of '2025-06-03',
+-- there are now 0 rooms for hotel 7 on '2025-07-08'.
+-- SELECT get_room_inventory_comparison_for_target_date(7, '2025-06-03', '2025-07-08');
+-- Expected output: ARRAY[3, 0]
 
