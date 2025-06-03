@@ -126,16 +126,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION get_room_inventory_comparison_for_target_date(
+CREATE OR REPLACE FUNCTION get_room_inventory_comparison_for_date_range(
     p_hotel_id INT, -- Hotel ID to filter by, NULL for all hotels
-    p_snapshot_date DATE, -- The "current day" of observation
-    p_target_date_for_inventory DATE -- The future date for which inventory is being checked
+    p_snapshot_date DATE -- The "current day" of observation
 )
-RETURNS BIGINT[] AS $$ -- Returns: [count_as_of_previous_day_end, count_as_of_snapshot_day_end]
+RETURNS TABLE (
+    inventory_date DATE,
+    count_as_of_previous_day_end BIGINT,
+    count_as_of_snapshot_day_end BIGINT
+) AS $$
 DECLARE
-    count_as_of_snapshot_day_end BIGINT;
-    count_as_of_previous_day_end BIGINT;
-
     -- Define the precise end-of-day timestamps for log filtering
     snapshot_day_end_ts TIMESTAMP;
     previous_day_end_ts TIMESTAMP;
@@ -143,114 +143,108 @@ BEGIN
     snapshot_day_end_ts := (p_snapshot_date + INTERVAL '1 day' - INTERVAL '1 microsecond');
     previous_day_end_ts := (p_snapshot_date - INTERVAL '1 microsecond');
 
-    -- Calculate count of active (non-deleted, non-cancelled) details as of previous_day_end_ts
-    WITH relevant_reservation_details_base AS (
-        SELECT
-            lrd.record_id AS reservation_detail_id -- This is assumed to be reservation_details.id
-        FROM
-            logs_reservation lrd
-        WHERE
-            lrd.action = 'INSERT' -- Anchor on original insertions
-            -- Filter for logs pertaining to reservation_details table for the specific hotel or all hotels
-            AND (
+    RETURN QUERY
+    WITH base_reservation_details AS (
+        -- Step 1: Identify all unique reservation_detail_ids that were ever INSERTED
+        -- for the target hotel(s). We get their original inventory date as a fallback.
+        SELECT DISTINCT
+            lrd.record_id AS reservation_detail_id,
+            (lrd.changes ->> 'date')::DATE AS original_inventory_date -- Original date from INSERT
+        FROM logs_reservation lrd
+        WHERE lrd.action = 'INSERT'
+          AND ( -- Filter for logs pertaining to reservation_details table
                 (p_hotel_id IS NOT NULL AND lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
                 OR
                 (p_hotel_id IS NULL AND lrd.table_name LIKE 'reservation_details_%')
-            )
-            -- Ensure the INSERT log's 'changes' JSON matches the hotel and target date
-            AND ((lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)
-            AND (lrd.changes ->> 'date')::DATE = p_target_date_for_inventory
-    )
-    SELECT COUNT(DISTINCT base.reservation_detail_id)
-    INTO count_as_of_previous_day_end
-    FROM relevant_reservation_details_base base
-    LEFT JOIN LATERAL (
-        -- Find the last relevant log entry for this detail up to previous_day_end_ts
-        SELECT
-            sub_lrd.action,
+              )
+          AND ((lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL) -- Match hotel_id from INSERT log
+    ),
+    latest_log_entries_prev AS (
+        -- Step 2: For each relevant reservation_detail_id, find its latest status
+        -- and effective_inventory_date as of the end of 'p_snapshot_date - 1 day'.
+        SELECT DISTINCT ON (lr.record_id)
+            lr.record_id AS reservation_detail_id,
+            lr.action,
             CASE
-                WHEN sub_lrd.action = 'INSERT' THEN (sub_lrd.changes ->> 'cancelled')
-                WHEN sub_lrd.action = 'UPDATE' THEN (sub_lrd.changes -> 'new' ->> 'cancelled')
+                WHEN lr.action = 'INSERT' THEN (lr.changes ->> 'cancelled')
+                WHEN lr.action = 'UPDATE' THEN (lr.changes -> 'new' ->> 'cancelled')
                 ELSE NULL
             END AS cancelled_uuid_text,
-            sub_lrd.log_time AS last_log_time
-        FROM logs_reservation sub_lrd
-        WHERE sub_lrd.record_id = base.reservation_detail_id -- Assumes record_id is reservation_details.id
-          AND sub_lrd.log_time <= previous_day_end_ts
-          -- Filter for logs pertaining to reservation_details table
-          AND (
-                (p_hotel_id IS NOT NULL AND sub_lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+            COALESCE((lr.changes -> 'new' ->> 'date')::DATE, (lr.changes ->> 'date')::DATE) AS effective_inventory_date
+        FROM logs_reservation lr
+        JOIN base_reservation_details brd ON lr.record_id = brd.reservation_detail_id
+        WHERE lr.log_time <= previous_day_end_ts
+          AND ( -- Ensure log entry is from the correct table_name
+                (p_hotel_id IS NOT NULL AND lr.table_name = ('reservation_details_' || p_hotel_id::TEXT))
                 OR
-                (p_hotel_id IS NULL AND sub_lrd.table_name LIKE 'reservation_details_%')
-            )
-          -- Ensure the log entry's hotel_id (if present in JSON) matches, or p_hotel_id is NULL
-          AND (
-                (sub_lrd.action = 'INSERT' AND ((sub_lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
-                (sub_lrd.action = 'UPDATE' AND ((sub_lrd.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
-                (sub_lrd.action = 'DELETE') -- For DELETE, hotel_id might not be in 'changes' but is known from 'base'
+                (p_hotel_id IS NULL AND lr.table_name LIKE 'reservation_details_%')
+              )
+          AND ( -- Hotel_id check on the specific log entry
+                ((lr.action = 'INSERT' AND ((lr.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL))) OR
+                ((lr.action = 'UPDATE' AND ((lr.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL))) OR
+                (lr.action = 'DELETE')
              )
-        ORDER BY sub_lrd.log_time DESC -- Removed log_id for tie-breaking
-        LIMIT 1
-    ) latest_status_prev ON TRUE
-    WHERE
-        latest_status_prev.last_log_time IS NOT NULL
-        AND latest_status_prev.action <> 'DELETE'
-        AND latest_status_prev.cancelled_uuid_text IS NULL;
-
-    -- Calculate count of active (non-deleted, non-cancelled) details as of snapshot_day_end_ts
-    WITH relevant_reservation_details_base AS (
-        SELECT
-            lrd.record_id AS reservation_detail_id -- This is assumed to be reservation_details.id
-        FROM
-            logs_reservation lrd
-        WHERE
-            lrd.action = 'INSERT' -- Anchor on original insertions
-            -- Filter for logs pertaining to reservation_details table for the specific hotel or all hotels
-            AND (
-                (p_hotel_id IS NOT NULL AND lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
-                OR
-                (p_hotel_id IS NULL AND lrd.table_name LIKE 'reservation_details_%')
-            )
-            -- Ensure the INSERT log's 'changes' JSON matches the hotel and target date
-            AND ((lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)
-            AND (lrd.changes ->> 'date')::DATE = p_target_date_for_inventory
-    )
-    SELECT COUNT(DISTINCT base.reservation_detail_id)
-    INTO count_as_of_snapshot_day_end
-    FROM relevant_reservation_details_base base
-    LEFT JOIN LATERAL (
-        -- Find the last relevant log entry for this detail up to snapshot_day_end_ts
-        SELECT
-            sub_lrd.action,
+        ORDER BY lr.record_id, lr.log_time DESC, lr.id DESC
+    ),
+    latest_log_entries_snap AS (
+        -- Step 3: Similar to above, find latest status and effective_inventory_date
+        -- as of the end of 'p_snapshot_date'.
+        SELECT DISTINCT ON (lr.record_id)
+            lr.record_id AS reservation_detail_id,
+            lr.action,
             CASE
-                WHEN sub_lrd.action = 'INSERT' THEN (sub_lrd.changes ->> 'cancelled')
-                WHEN sub_lrd.action = 'UPDATE' THEN (sub_lrd.changes -> 'new' ->> 'cancelled')
+                WHEN lr.action = 'INSERT' THEN (lr.changes ->> 'cancelled')
+                WHEN lr.action = 'UPDATE' THEN (lr.changes -> 'new' ->> 'cancelled')
                 ELSE NULL
             END AS cancelled_uuid_text,
-            sub_lrd.log_time AS last_log_time
-        FROM logs_reservation sub_lrd
-        WHERE sub_lrd.record_id = base.reservation_detail_id -- Assumes record_id is reservation_details.id
-          AND sub_lrd.log_time <= snapshot_day_end_ts
-          -- Filter for logs pertaining to reservation_details table
-          AND (
-                (p_hotel_id IS NOT NULL AND sub_lrd.table_name = ('reservation_details_' || p_hotel_id::TEXT))
+            COALESCE((lr.changes -> 'new' ->> 'date')::DATE, (lr.changes ->> 'date')::DATE) AS effective_inventory_date
+        FROM logs_reservation lr
+        JOIN base_reservation_details brd ON lr.record_id = brd.reservation_detail_id
+        WHERE lr.log_time <= snapshot_day_end_ts
+          AND ( -- Ensure log entry is from the correct table_name
+                (p_hotel_id IS NOT NULL AND lr.table_name = ('reservation_details_' || p_hotel_id::TEXT))
                 OR
-                (p_hotel_id IS NULL AND sub_lrd.table_name LIKE 'reservation_details_%')
-            )
-          AND (
-                (sub_lrd.action = 'INSERT' AND ((sub_lrd.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
-                (sub_lrd.action = 'UPDATE' AND ((sub_lrd.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL)) OR
-                (sub_lrd.action = 'DELETE')
+                (p_hotel_id IS NULL AND lr.table_name LIKE 'reservation_details_%')
+              )
+          AND ( -- Hotel_id check on the specific log entry
+                ((lr.action = 'INSERT' AND ((lr.changes ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL))) OR
+                ((lr.action = 'UPDATE' AND ((lr.changes -> 'new' ->> 'hotel_id')::INT = p_hotel_id OR p_hotel_id IS NULL))) OR
+                (lr.action = 'DELETE')
              )
-        ORDER BY sub_lrd.log_time DESC -- Removed log_id for tie-breaking
-        LIMIT 1
-    ) latest_status_snap ON TRUE
-    WHERE
-        latest_status_snap.last_log_time IS NOT NULL
-        AND latest_status_snap.action <> 'DELETE'
-        AND latest_status_snap.cancelled_uuid_text IS NULL;
+        ORDER BY lr.record_id, lr.log_time DESC, lr.id DESC
+    )
+    -- Step 4: Final aggregation
+    SELECT
+        COALESCE(snap.effective_inventory_date, prev.effective_inventory_date, brd.original_inventory_date) AS grouping_inventory_date,
+        COUNT(DISTINCT CASE
+                  WHEN prev.action IS NOT NULL AND prev.action <> 'DELETE' AND prev.cancelled_uuid_text IS NULL
+                  THEN brd.reservation_detail_id
+                  ELSE NULL
+              END) AS count_as_of_previous_day_end,
+        COUNT(DISTINCT CASE
+                  WHEN snap.action IS NOT NULL AND snap.action <> 'DELETE' AND snap.cancelled_uuid_text IS NULL
+                  THEN brd.reservation_detail_id
+                  ELSE NULL
+              END) AS count_as_of_snapshot_day_end
+    FROM base_reservation_details brd
+    LEFT JOIN latest_log_entries_prev prev ON brd.reservation_detail_id = prev.reservation_detail_id
+    LEFT JOIN latest_log_entries_snap snap ON brd.reservation_detail_id = snap.reservation_detail_id
+    WHERE COALESCE(snap.effective_inventory_date, prev.effective_inventory_date, brd.original_inventory_date) >= p_snapshot_date
+    GROUP BY grouping_inventory_date
+    HAVING
+        COUNT(DISTINCT CASE
+                  WHEN prev.action IS NOT NULL AND prev.action <> 'DELETE' AND prev.cancelled_uuid_text IS NULL
+                  THEN brd.reservation_detail_id
+                  ELSE NULL
+              END) > 0
+        OR
+        COUNT(DISTINCT CASE
+                  WHEN snap.action IS NOT NULL AND snap.action <> 'DELETE' AND snap.cancelled_uuid_text IS NULL
+                  THEN brd.reservation_detail_id
+                  ELSE NULL
+              END) > 0
+    ORDER BY grouping_inventory_date;
 
-    RETURN ARRAY[count_as_of_previous_day_end, count_as_of_snapshot_day_end];
 END;
 $$ LANGUAGE plpgsql;
 
