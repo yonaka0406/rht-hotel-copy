@@ -175,4 +175,60 @@ BEGIN
     RETURN active_count;
 END;
 $$ LANGUAGE plpgsql;
+-- Example Usage for get_active_reservations_count_at_datetime:
+--
+-- Assumptions for examples:
+-- 1. The 'logs_reservation' table contains historical data for reservations.
+-- 2. A reservation is active if its status is 'confirmed', 'checked_in', or 'checked_out'.
+--
+-- Scenario 1: Count active reservations for a specific hotel (e.g., hotel_id = 1)
+--             at a specific timestamp.
+-- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
+--
+-- Scenario 2: Count active reservations for ALL hotels at a specific timestamp.
+-- SELECT get_active_reservations_count_at_datetime(NULL, '2023-10-26 14:00:00');
+--
+-- Scenario 3: A reservation (e.g., res_id = 101) for hotel_id = 1 became 'confirmed'
+--             at '2023-10-26 10:00:00'.
+--             We check at '2023-10-26 14:00:00'. It should be counted.
+--             Relevant log entry in logs_reservation for res_id = 101:
+--             log_time = '2023-10-26 10:00:00', action = 'UPDATE', changes = '{"new": {"status": "confirmed", "hotel_id": 1}}'
+-- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
+--
+-- Scenario 4: A reservation (e.g., res_id = 102) for hotel_id = 1 was 'confirmed' but then
+--             became 'cancelled' at '2023-10-26 11:00:00'.
+--             We check at '2023-10-26 14:00:00'. It should NOT be counted.
+--             Relevant log entries for res_id = 102:
+--             log_time = '2023-10-25 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
+--             log_time = '2023-10-26 11:00:00', action = 'UPDATE', changes = '{"new": {"status": "cancelled", "hotel_id": 1}}'
+-- SELECT get_active_reservations_count_at_datetime(1, '2023-10-26 14:00:00');
+--
+-- Scenario 5: A reservation (e.g., res_id = 103) for hotel_id = 2 became 'checked_in'
+--             exactly at '2023-10-27 15:00:00'.
+--             We check at '2023-10-27 15:00:00'. It should be counted.
+--             Relevant log entry for res_id = 103:
+--             log_time = '2023-10-27 15:00:00', action = 'UPDATE', changes = '{"new": {"status": "checked_in", "hotel_id": 2}}'
+-- SELECT get_active_reservations_count_at_datetime(2, '2023-10-27 15:00:00');
+--
+-- Scenario 6: A reservation (e.g., res_id = 104) for hotel_id = 1 is created (INSERT log)
+--             at '2023-10-28 10:00:00' with status 'confirmed'.
+--             We check at '2023-10-28 09:00:00'. It should NOT be counted.
+--             Relevant log entry for res_id = 104:
+--             log_time = '2023-10-28 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
+-- SELECT get_active_reservations_count_at_datetime(1, '2023-10-28 09:00:00');
+--
+-- Scenario 7: A reservation (res_id = 105) for hotel_id = 1 had its hotel_id updated.
+--             Original insert: hotel_id = 1, status 'confirmed' at '2023-11-01 10:00:00'
+--             Update log: hotel_id changed to 2 at '2023-11-01 12:00:00'
+--             If we query for hotel_id = 1 at '2023-11-01 13:00:00', it should NOT be counted (as its latest hotel_id is 2).
+--             If we query for hotel_id = 2 at '2023-11-01 13:00:00', it SHOULD be counted.
+--             Relevant log entries for res_id = 105:
+--             log_time = '2023-11-01 10:00:00', action = 'INSERT', changes = '{"status": "confirmed", "hotel_id": 1}'
+--             log_time = '2023-11-01 12:00:00', action = 'UPDATE', changes = '{"old": {"hotel_id": 1}, "new": {"hotel_id": 2, "status": "confirmed"}}'
+-- SELECT get_active_reservations_count_at_datetime(1, '2023-11-01 13:00:00'); -- Expected: count excluding 105
+-- SELECT get_active_reservations_count_at_datetime(2, '2023-11-01 13:00:00'); -- Expected: count including 105
+--
+-- Note: The function relies on the structure of the 'changes' JSON blob in 'logs_reservation'
+--       and assumes 'hotel_id' is present in 'changes' -> 'new' for UPDATEs
+--       or directly in 'changes' for INSERTs if p_hotel_id is specified.
 

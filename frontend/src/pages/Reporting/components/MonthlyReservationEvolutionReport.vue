@@ -36,9 +36,12 @@
                         <span class="font-semibold">平均OTB (リード日数別)</span>
                     </div>
                 </template>
-                <Chart type="line" :data="chartData" :options="chartOptions" style="height: 400px" v-if="averageData.length && chartData" />
-                <!-- Fallback to DataTable for averageData if chartData is somehow null but averageData exists -->
-                <DataTable :value="averageData" responsiveLayout="scroll" v-else-if="averageData.length && !chartData" class="mt-4">
+                <!-- ECharts container -->
+                <div ref="lineChartContainer" style="height: 400px" v-if="averageData.length && echartsOptions"></div>
+
+                <!-- Fallback to DataTable for averageData if data exists but chart options are somehow not generated (should not happen if averageData.length > 0) -->
+                <!-- Or, this could be a specific state, but for now, it's a direct replacement -->
+                <DataTable :value="averageData" responsiveLayout="scroll" v-else-if="averageData.length && !echartsOptions" class="mt-4">
                      <Column field="lead_days" header="リード日数" :sortable="true"></Column>
                      <Column field="avg_booked_room_nights" header="平均予約室数" :sortable="true">
                         <template #body="slotProps">
@@ -46,7 +49,7 @@
                         </template>
                      </Column>
                 </DataTable>
-                <p v-else class="text-gray-500 p-4">平均OTBデータがありません。</p>
+                <p v-else-if="!averageData.length" class="text-gray-500 p-4">平均OTBデータがありません。</p> <!-- Explicitly check averageData.length for this message -->
             </Panel>
         </div>
     </div>
@@ -58,9 +61,30 @@ import { useReportStore } from '@/composables/useReportStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-import Chart from 'primevue/chart';
+// import Chart from 'primevue/chart'; // Removed PrimeVue Chart
 import Panel from 'primevue/panel';
 
+// ECharts imports
+import * as echarts from 'echarts/core';
+import {
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+} from 'echarts/components';
+import { LineChart } from 'echarts/charts';
+import { CanvasRenderer } from 'echarts/renderers';
+import { shallowRef, nextTick, onMounted, onBeforeUnmount } from 'vue'; // Added shallowRef, nextTick, onMounted, onBeforeUnmount
+
+// Register ECharts components
+echarts.use([
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  LineChart,
+  CanvasRenderer,
+]);
 
 const props = defineProps({
     hotelId: { type: [Number, String], required: true },
@@ -73,6 +97,10 @@ const matrixData = ref([]);
 const averageData = ref([]);
 const loading = ref(false);
 const error = ref(null);
+
+// ECharts refs
+const lineChartContainer = ref(null);
+const lineChartInstance = shallowRef(null);
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -141,76 +169,110 @@ const fetchReportData = async () => {
     }
 };
 
-watch(() => [props.hotelId, props.targetMonth, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
-
-const chartData = computed(() => {
+// ECharts options computed property
+const echartsOptions = computed(() => {
     if (!averageData.value || averageData.value.length === 0) {
-        // Return a structure that Chart.js expects, even if empty, to avoid errors
-        return {
-            labels: [],
-            datasets: [{
-                label: '平均予約室数',
-                data: [],
-                borderColor: '#42A5F5',
-                tension: 0.1
-            }]
-        };
+        return null;
     }
     return {
-        labels: averageData.value.map(item => item.lead_days.toString()), // Ensure labels are strings
-        datasets: [
-            {
-                label: '平均予約室数',
-                data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights).toFixed(2)),
-                fill: false,
-                borderColor: '#42A5F5',
-                tension: 0.1
+        tooltip: {
+            trigger: 'axis',
+            formatter: (params) => {
+                const param = params[0];
+                return `リード日数: ${param.axisValueLabel}<br/>平均予約室数: ${param.value}`;
             }
-        ]
+        },
+        legend: {
+            data: ['平均予約室数'],
+            bottom: 10,
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '15%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            name: 'リード日数 (Lead Days)',
+            nameLocation: 'middle',
+            nameGap: 30,
+            data: averageData.value.map(item => item.lead_days.toString()),
+        },
+        yAxis: {
+            type: 'value',
+            name: '平均予約室数',
+            nameLocation: 'middle',
+            nameGap: 40,
+            min: 0,
+            axisLabel: {
+                formatter: '{value}'
+            }
+        },
+        series: [
+            {
+                name: '平均予約室数',
+                type: 'line',
+                data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights).toFixed(2)),
+                smooth: true,
+                emphasis: {
+                    focus: 'series'
+                }
+            }
+        ],
+        responsive: true,
     };
 });
 
-const chartOptions = ref({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            labels: {
-                color: '#495057'
-            }
+watch(() => [props.hotelId, props.targetMonth, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
+
+// ECharts helper functions
+const initOrUpdateLineChart = () => {
+    if (lineChartContainer.value && echartsOptions.value) {
+        if (!lineChartInstance.value) {
+            lineChartInstance.value = echarts.init(lineChartContainer.value);
         }
-    },
-    scales: {
-        x: {
-            title: {
-                display: true,
-                text: 'リード日数 (Lead Days)',
-                color: '#495057'
-            },
-            ticks: {
-                color: '#495057'
-            },
-            grid: {
-                color: '#ebedef'
-            }
-        },
-        y: {
-            title: {
-                display: true,
-                text: '平均予約室数',
-                color: '#495057'
-            },
-            ticks: {
-                color: '#495057',
-                precision: 0.1 // Show decimal if average is like 0.5
-            },
-            grid: {
-                color: '#ebedef'
-            },
-            beginAtZero: true
-        }
+        lineChartInstance.value.setOption(echartsOptions.value, true);
     }
+};
+
+const resizeLineChartHandler = () => {
+    if (lineChartInstance.value) {
+        lineChartInstance.value.resize();
+    }
+};
+
+const disposeLineChart = () => {
+    if (lineChartInstance.value) {
+        lineChartInstance.value.dispose();
+        lineChartInstance.value = null;
+    }
+};
+
+// Lifecycle hooks
+onMounted(() => {
+    nextTick(() => {
+        initOrUpdateLineChart();
+    });
+    window.addEventListener('resize', resizeLineChartHandler);
 });
+
+onBeforeUnmount(() => {
+    disposeLineChart();
+    window.removeEventListener('resize', resizeLineChartHandler);
+});
+
+// Watch for data changes to update the chart
+watch(averageData, () => {
+    if (averageData.value.length === 0 && lineChartInstance.value) {
+        disposeLineChart();
+    }
+    if (averageData.value.length > 0 && !lineChartInstance.value && lineChartContainer.value) {
+         nextTick(() => initOrUpdateLineChart());
+    } else if (lineChartInstance.value) {
+         nextTick(() => initOrUpdateLineChart());
+    }
+}, { deep: true });
 
 </script>
 
