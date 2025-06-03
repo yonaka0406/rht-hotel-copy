@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <h3 class="text-xl font-semibold mb-4">在庫比較 (指定日とその前日)</h3>
+        <h3 class="text-xl font-semibold mb-4">アクティブ予約変動レポート</h3>
         <div v-if="loading" class="flex justify-center items-center">
             <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" animationDuration=".5s" />
         </div>
@@ -13,26 +13,51 @@
                 <template #title>
                     <div class="flex items-center">
                         <i class="pi pi-calendar mr-2"></i>
-                        <span>前日 ({{ getPreviousDay(getTodayDateString()) }})</span>
+                        <span>前日合計</span>
                     </div>
                 </template>
                 <template #content>                    
-                    <p class="text-sm text-gray-600 mb-1">在庫数:</p>
-                    <p class="text-3xl font-bold text-blue-600">{{ reportData[0].count_as_of_previous_day_end }}</p>
+                    <p class="text-sm text-gray-600 mb-1">在庫数合計:</p>
+                    <p class="text-3xl font-bold text-blue-600">{{ totalPreviousDayEnd }}</p>
                 </template>
             </Card>
             <Card>
                 <template #title>
                     <div class="flex items-center">
                         <i class="pi pi-calendar-plus mr-2"></i>
-                        <span>指定日 ({{ getTodayDateString() }})</span>
+                        <span>指定日合計</span>
                     </div>
                 </template>
                 <template #content>                    
-                    <p class="text-sm text-gray-600 mb-1">在庫数:</p>
-                    <p class="text-3xl font-bold text-green-600">{{ reportData[0].count_as_of_snapshot_day_end }}</p>
+                    <p class="text-sm text-gray-600 mb-1">在庫数合計:</p>
+                    <p class="text-3xl font-bold text-green-600">{{ totalSnapshotDayEnd }}</p>
                 </template>
             </Card>
+        </div>
+        <div v-if="reportData && reportData.length > 0" class="mt-8">
+            <h4 class="text-lg font-semibold mb-3">日次差異チャート</h4>
+            <Chart type="line" :data="chartData" />
+        </div>
+        <div v-if="reportData && reportData.length > 0" class="mt-8">
+            <h4 class="text-lg font-semibold mb-3">詳細データ</h4>
+            <DataTable :value="sortedReportDataForTable" responsiveLayout="scroll" sortMode="single" :sortOrder="1" sortField="inventory_date_formatted">
+                <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true"></Column>
+                <Column field="count_as_of_previous_day_end" header="前日終了時点在庫" :sortable="true">
+                    <template #body="slotProps">
+                        {{ slotProps.data.count_as_of_previous_day_end }}
+                    </template>
+                </Column>
+                <Column field="count_as_of_snapshot_day_end" header="当日終了時点在庫" :sortable="true">
+                    <template #body="slotProps">
+                        {{ slotProps.data.count_as_of_snapshot_day_end }}
+                    </template>
+                </Column>
+                <Column field="daily_difference" header="日次差異" :sortable="true">
+                    <template #body="slotProps">
+                        {{ slotProps.data.daily_difference }}
+                    </template>
+                </Column>
+            </DataTable>
         </div>
         <div v-else class="text-gray-500">
             データがありません。適切なホテルが選択されているか、または指定日にデータが存在するか確認してください。
@@ -42,7 +67,7 @@
 
 <script setup>
     // Vue
-    import { ref, watch } from 'vue';
+    import { ref, watch, computed } from 'vue';
     const props = defineProps({
         hotelId: {
             type: [Number, String], // Can be number or 'all'
@@ -61,11 +86,60 @@
     // Primevue
     import ProgressSpinner from 'primevue/progressspinner';
     import Card from 'primevue/card';
+    import Chart from 'primevue/chart';
+    import DataTable from 'primevue/datatable';
+    import Column from 'primevue/column';
 
     // Refs
     const reportData = ref([]);
     const loading = ref(false);
     const error = ref(null);
+
+    const totalPreviousDayEnd = computed(() => {
+        if (!reportData.value || reportData.value.length === 0) {
+            return 0;
+        }
+        return reportData.value.reduce((sum, item) => sum + item.count_as_of_previous_day_end, 0);
+    });
+
+    const totalSnapshotDayEnd = computed(() => {
+        if (!reportData.value || reportData.value.length === 0) {
+            return 0;
+        }
+        return reportData.value.reduce((sum, item) => sum + item.count_as_of_snapshot_day_end, 0);
+    });
+
+    const chartData = computed(() => {
+        if (!reportData.value || reportData.value.length === 0) {
+            return {
+                labels: [],
+                datasets: []
+            };
+        }
+        // Sort data by date to ensure the chart displays chronologically
+        const sortedData = [...reportData.value].sort((a, b) => new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted));
+
+        return {
+            labels: sortedData.map(item => item.inventory_date_formatted),
+            datasets: [
+                {
+                    label: '日次差異 (指定日 - 前日)',
+                    data: sortedData.map(item => item.daily_difference),
+                    fill: false,
+                    borderColor: '#42A5F5', // Example color, can be customized
+                    tension: 0.4 // Makes the line a bit curved
+                }
+            ]
+        };
+    });
+
+    const sortedReportDataForTable = computed(() => {
+        if (!reportData.value || reportData.value.length === 0) {
+            return [];
+        }
+        // Sort data by date to ensure the table displays chronologically by default
+        return [...reportData.value].sort((a, b) => new Date(a.inventory_date_formatted) - new Date(b.inventory_date_formatted));
+    });
 
     // Helper function to get today's date in YYYY-MM-DD format
     const getTodayDateString = () => {
@@ -103,6 +177,54 @@
         }
     };
 
+    const formatInventoryDate = (isoDateString) => {
+        if (!isoDateString) return 'N/A';
+        try {
+            const date = new Date(isoDateString);
+            // Adjust for local timezone. The toISOString gives UTC, so we construct date in a way that Date() parses it as local.
+            // A more robust way is to get individual date components in UTC and then create a new Date object for local display.
+            // However, for just displaying the date part, often the local time zone conversion by new Date() is sufficient if the server sends UTC.
+            // Let's ensure we are interpreting the date correctly.
+            // The issue states "2025-06-03T15:00:00.000Z, which should be displayed as 2025-06-04 because it is the local time."
+            // This implies the original date is UTC and needs to be shifted to the local timezone for display.
+
+            // Create a date object. By default, it should parse in local timezone if no Z is present,
+            // or in UTC if Z is present.
+            // To display correctly, we can add the timezone offset before formatting.
+            // However, a simpler way for date display is to use UTC methods and then format.
+            // For example, if "2025-06-03T15:00:00.000Z" is meant to be "2025-06-04" locally,
+            // it means the local timezone is such that 15:00 UTC on June 3rd is already June 4th.
+            // Example: Japan Standard Time (JST) is UTC+9. So 15:00 UTC is 24:00 JST (00:00 next day).
+
+            // Let's use UTC date parts to avoid local timezone interpretation issues during formatting
+            // and then construct the date string.
+            // The key is that `new Date(isoDateString)` already converts it to the local timezone of the machine running the JS.
+            // We just need to format it.
+
+            const originalDate = new Date(isoDateString);
+
+            // Create a new date by adding the timezone offset to effectively get "local" date parts from UTC timestamp
+            // This is a common source of confusion. A simpler way:
+            // The date "2025-06-03T15:00:00.000Z" IS June 3rd in UTC.
+            // If it should be displayed as June 4th LOCALLY, it means the local timezone is such that 15:00 UTC on June 3rd is already June 4th.
+            // Example: Japan Standard Time (JST) is UTC+9. So 15:00 UTC is 24:00 JST (00:00 next day).
+
+            // Let's use UTC date parts to avoid local timezone interpretation issues during formatting
+            // and then construct the date string.
+            // The key is that `new Date(isoDateString)` already converts it to the local timezone of the machine running the JS.
+            // We just need to format it.
+
+            const year = originalDate.getFullYear();
+            const month = String(originalDate.getMonth() + 1).padStart(2, '0');
+            const day = String(originalDate.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+
+        } catch (e) {
+            console.error("Error formatting inventory date:", e, isoDateString);
+            return '日付書式エラー';
+        }
+    };
+
     const fetchReportData = async () => {
         if (props.hotelId === null || typeof props.hotelId === 'undefined' || props.hotelId === '') {
             reportData.value = []; 
@@ -125,14 +247,20 @@
             // or handle the { message: '...', data: [] } structure internally.
             // Let's assume it returns the array of data rows.
             if (Array.isArray(data)) {
-                reportData.value = data;
+                reportData.value = data.map(item => ({
+                    ...item,
+                    inventory_date_formatted: formatInventoryDate(item.inventory_date),
+                    count_as_of_previous_day_end: parseInt(item.count_as_of_previous_day_end, 10) || 0,
+                    count_as_of_snapshot_day_end: parseInt(item.count_as_of_snapshot_day_end, 10) || 0,
+                    daily_difference: (parseInt(item.count_as_of_snapshot_day_end, 10) || 0) - (parseInt(item.count_as_of_previous_day_end, 10) || 0)
+                }));
             } else {
                 // This case should ideally be handled within fetchActiveReservationsChange
                 // For safety, if it returns something unexpected:
                 console.warn("fetchActiveReservationsChange did not return an array:", data);
                 reportData.value = []; 
             }
-            // console.log('Fetched data for room inventory report:', data);
+            // console.log('Fetched data for room inventory report:', reportData.value);
 
         } catch (err) {
             console.error('Failed to fetch room inventory report:', err);
