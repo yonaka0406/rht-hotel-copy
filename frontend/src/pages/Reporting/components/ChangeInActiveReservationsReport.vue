@@ -171,13 +171,14 @@
 
         return {
             tooltip: {
-                trigger: 'axis', // Trigger tooltip when hovering over axis
+                trigger: 'axis',
                 axisPointer: {
-                    type: 'cross' // Crosshair pointer
+                    type: 'cross'
                 }
             },
             legend: {
-                data: ['日次差異'], // Legend for the series
+                // Updated legend to include all three series
+                data: ['前日終了時点在庫', '当日終了時点在庫', '日次差異'],
                 top: 'bottom'
             },
             grid: {
@@ -193,21 +194,41 @@
             },
             yAxis: {
                 type: 'value',
-                name: '差異', // Y-axis title
+                name: 'カウント', // Changed Y-axis name to be more generic
                 axisLabel: {
-                    formatter: '{value}' // Basic formatter
+                    formatter: '{value}'
                 }
             },
             series: [
                 {
-                    name: '日次差異', // Series name (matches legend)
+                    name: '前日終了時点在庫', // Series for count_as_of_previous_day_end
                     type: 'line',
-                    data: sortedData.map(item => item.daily_difference), // Values for Y-axis
-                    smooth: true, // Makes the line smooth
+                    smooth: true,
+                    data: sortedData.map(item => item.count_as_of_previous_day_end),
                     itemStyle: {
-                        color: '#5470C6' // Example line color
+                        color: '#91CC75' // Example color (Green)
+                    }
+                    // Optionally, add areaStyle if desired for this series too
+                },
+                {
+                    name: '当日終了時点在庫', // Series for count_as_of_snapshot_day_end
+                    type: 'line',
+                    smooth: true,
+                    data: sortedData.map(item => item.count_as_of_snapshot_day_end),
+                    itemStyle: {
+                        color: '#FAC858' // Example color (Yellow/Orange)
+                    }
+                    // Optionally, add areaStyle
+                },
+                {
+                    name: '日次差異', // Existing series for daily_difference
+                    type: 'line',
+                    smooth: true,
+                    data: sortedData.map(item => item.daily_difference), // Values for Y-axis
+                    itemStyle: {
+                        color: '#5470C6' // Existing color (Blue)
                     },
-                    areaStyle: { // Optional: add a subtle area fill
+                    areaStyle: {
                         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{
                             offset: 0,
                             color: 'rgba(84, 112, 198, 0.3)'
