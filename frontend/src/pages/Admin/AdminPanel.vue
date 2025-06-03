@@ -87,7 +87,7 @@
             </Menubar>
         </div>
         
-        <Sidebar v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
+        <Drawer v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
             <div class="flex flex-col h-full">
                 <div class="flex items-center p-4 border-b">
                     <img src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8 mr-2" />
@@ -120,7 +120,7 @@
                     </Button>
                 </div>
             </div>
-        </Sidebar>
+        </Drawer>
 
         <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
             <p class="text-2xl font-semibold text-gray-800 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
@@ -129,34 +129,32 @@
             <!-- Grid layout for stat cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-blue-50 p-5 rounded-lg flex flex-col shadow">
-                <div class="grow min-h-[3rem]">
-                    <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
-                </div>
-                <div class="mt-auto">
-                    <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
-                </div>
+                    <div class="grow min-h-[3rem]">
+                        <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
+                    </div>
+                    <div class="mt-auto">
+                        <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
+                    </div>
                 </div>
                 <div class="bg-green-50 p-5 rounded-lg flex flex-col shadow">
-                <div class="grow min-h-[3rem]">
-                    <h3 class="text-md font-semibold text-green-800">ホテル</h3>
-                </div>
-                <div class="mt-auto">
-                    <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
-                </div>
-                </div>
-                <!-- Reservations Today Card -->
+                    <div class="grow min-h-[3rem]">
+                        <h3 class="text-md font-semibold text-green-800">ホテル</h3>
+                    </div>
+                    <div class="mt-auto">
+                        <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
+                    </div>
+                </div>                
                 <div class="bg-purple-50 p-5 rounded-lg flex flex-col shadow">
-                <div class="grow min-h-[3rem]">
-                    <h3 class="text-md font-semibold text-purple-800">本日の予約</h3>
+                    <div class="grow min-h-[3rem]">
+                        <h3 class="text-md font-semibold text-purple-800">本日の予約</h3>
+                    </div>
+                    <div class="mt-auto">
+                        <p class="text-3xl font-bold text-purple-600">{{ reservationsTodayCount }}</p>
+                        <p v-if="reservationsTodayValue > 0" class="text-sm text-purple-500">
+                            ¥{{ reservationsTodayValue.toLocaleString() }}
+                        </p>
+                    </div>
                 </div>
-                <div class="mt-auto">
-                    <p class="text-3xl font-bold text-purple-600">{{ reservationsTodayCount }}</p>
-                    <p v-if="reservationsTodayValue > 0" class="text-sm text-purple-500">
-                        (¥{{ reservationsTodayValue.toLocaleString() }})
-                    </p>
-                </div>
-                </div>
-                <!-- ADDED SECTION START: Average Lead Time Card -->
                 <div class="bg-orange-50 p-5 rounded-lg flex flex-col shadow">
                     <div class="grow min-h-[3rem]">
                         <h3 class="text-md font-semibold text-orange-800">平均リードタイム</h3>
@@ -165,10 +163,9 @@
                         <p class="text-3xl font-bold text-orange-600">
                             {{ averageLeadTimeDays !== null ? averageLeadTimeDays.toFixed(1) + ' 日' : 'N/A' }}
                         </p>
-                        <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500">過去30日間</p>
+                        <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500">本日の予約</p>
                     </div>
-                </div>
-                <!-- ADDED SECTION END: Average Lead Time Card -->
+                </div>                
             </div>
             </div>
             <router-view v-else />
@@ -189,13 +186,15 @@
     import { useUserStore } from '@/composables/useUserStore';
     const { logged_user, fetchUser } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, fetchHotels } = useHotelStore();       
+    const { hotels, fetchHotels } = useHotelStore(); 
+    import { useMetricsStore } from '@/composables/useMetricsStore';
+    const { reservationsToday, averageBookingLeadTime, fetchReservationsToday, fetchBookingLeadTime } = useMetricsStore();
 
     // Primevue Components
     import Menubar from 'primevue/menubar';
     import Button from 'primevue/button';
     import Divider from 'primevue/divider';
-    import Sidebar from 'primevue/sidebar';
+    import Drawer from 'primevue/drawer';
     import { usePrimeVue } from 'primevue/config';
     const primevue = usePrimeVue();
 
@@ -203,12 +202,16 @@
     const activeUsers = ref(0);    
     const userName = ref('');
     
-    // Reactive variables for "Reservations Today"
+    // Reactive variables
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayDateString = `${year}-${month}-${day}`;
     const reservationsTodayCount = ref(0);
     const reservationsTodayValue = ref(0);
-    // ADDED START: Reactive variable for "Average Lead Time"
-    const averageLeadTimeDays = ref(null);
-    // ADDED END: Reactive variable for "Average Lead Time"
+    
+    const averageLeadTimeDays = ref(0);    
 
     const isCollapsed = ref(false);
     const mobileSidebarVisible = ref(false);
@@ -243,49 +246,6 @@
     const toggleSidebar = () => {
         isCollapsed.value = !isCollapsed.value;
     };           
-    
-    const fetchReservationsToday = async () => {
-        // TODO: This should be made more dynamic, e.g., based on a user selection if multiple hotels are managed.
-        const hotelIdToFetch = hotels.value?.[0]?.id || 1; 
-
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const todayDateString = `${year}-${month}-${day}`;
-
-        try {
-            const response = await fetch(`/api/v1/hotels/${hotelIdToFetch}/metrics/reservations-today?date=${todayDateString}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-            }
-            const data = await response.json();
-            reservationsTodayCount.value = data.reservationsCount;
-            reservationsTodayValue.value = data.reservationsValue;
-        } catch (err) {
-            console.error('Failed to fetch reservations today:', err);
-        }
-    };
-
-    // ADDED START: Function to fetch "Average Lead Time"
-    const fetchAverageLeadTime = async () => {
-        // TODO: This hotelId should be made more dynamic, similar to fetchReservationsToday.
-        const hotelIdToFetch = hotels.value?.[0]?.id || 1;
-        const lookbackDays = 30; // Default lookback period
-
-        try {
-            const response = await fetch(`/api/v1/hotels/${hotelIdToFetch}/metrics/average-lead-time?lookback_days=${lookbackDays}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
-            }
-            const data = await response.json();
-            averageLeadTimeDays.value = data.averageLeadTimeDays;
-        } catch (err) {
-            console.error('Failed to fetch average lead time:', err);
-            // averageLeadTimeDays.value = null; // Reset or set to a default on error
-        }
-    };
-    // ADDED END: Function to fetch "Average Lead Time"
 
     const fetchActiveUsers = async () => {
         try {
@@ -330,9 +290,56 @@
             fetchActiveUsers();
             activeUsersInterval = setInterval(fetchActiveUsers, 30000); 
             
-            await fetchReservationsToday();
-            // ADDED: Call fetchAverageLeadTime on mount
-            await fetchAverageLeadTime();
+            let accumulatedReservationsCount = 0;
+            let accumulatedReservationsValue = 0;
+            let accumulatedWeightedLeadTime = 0;
+            let accumulatedTotalNights = 0; 
+
+            // Check if hotels.value is available and is an array
+            if (hotels.value && Array.isArray(hotels.value)) {
+                // Loop through each hotel in the hotels.value array
+                for (const hotel of hotels.value) {
+                    // Ensure the hotel object and its id property exist
+                    if (hotel && typeof hotel.id !== 'undefined') {
+                        try {
+                            // --- Fetch and process reservations data ---                            
+                            await fetchReservationsToday(hotel.id, todayDateString);
+                            if (reservationsToday.value) {                                
+                                accumulatedReservationsCount += Number(reservationsToday.value.reservationsCount) || 0;                             
+                                accumulatedReservationsValue += Number(reservationsToday.value.reservationsValue) || 0;
+                            } else {
+                                console.warn(`No reservation data found for hotel ${hotel.id} after fetch.`);
+                            }
+
+                            // --- Fetch and process booking lead time data ---
+                            await fetchBookingLeadTime(hotel.id, 0, todayDateString);                            
+                            if (averageBookingLeadTime.value) { // Ensure this variable name matches your implementation
+                                const leadTime = Number(averageBookingLeadTime.value.average_lead_time) || 0;
+                                const nights = Number(averageBookingLeadTime.value.total_nights) || 0;
+
+                                if (nights > 0) { // Only consider if there are nights, to make lead time meaningful
+                                    accumulatedWeightedLeadTime += leadTime * nights;
+                                    accumulatedTotalNights += nights;
+                                }
+                            } else {
+                                console.warn(`No booking lead time data found for hotel ${hotel.id} after fetchBookingLeadTime.`);
+                            }
+                        } catch (error) {                            
+                            console.error(`Error fetching reservations for hotel ${hotel.id}:`, error);                            
+                        }
+                    } else {
+                        console.warn("Skipping a hotel due to missing id:", hotel);
+                    }
+                }
+            } else {
+                console.warn("hotels.value is not an array or is undefined. Cannot process reservations.");
+            }
+            
+            // After iterating through all hotels update the final reactive variables that store the total count and value.
+            reservationsTodayCount.value = accumulatedReservationsCount;
+            reservationsTodayValue.value = accumulatedReservationsValue;
+
+            averageLeadTimeDays.value = accumulatedTotalNights > 0 ? accumulatedWeightedLeadTime / accumulatedTotalNights : 0;            
         }
     });
 

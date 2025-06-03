@@ -202,6 +202,7 @@ const billingRoutes = require('./routes/billingRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
+const metricsRoutes = require('./routes/metricsRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
 
 app.use('/api', protectedRoutes);
@@ -219,6 +220,7 @@ app.use('/api', billingRoutes);
 app.use('/api', settingsRoutes);
 app.use('/api', importRoutes);
 app.use('/api', logRoutes);
+app.use('/api', metricsRoutes);
 app.use('/api', xmlRoutes);
 
 // Connect to PostgreSQL database
