@@ -42,21 +42,34 @@
         </div>
         <div v-if="reportData && reportData.length > 0" class="mt-8">
             <h4 class="text-lg font-semibold mb-3">詳細データ</h4>
-            <DataTable :value="sortedReportDataForTable" responsiveLayout="scroll" sortMode="single" :sortOrder="1" sortField="inventory_date_formatted">
+            <DataTable
+                :value="sortedReportDataForTable"
+                responsiveLayout="scroll"
+                rowGroupMode="subheader"
+                groupRowsBy="yearMonth"
+                expandableRowGroups
+                v-model:expandedRowGroups="expandedRowGroups"
+            >
+                <template #groupheader="slotProps">
+                    <span class="font-bold">
+                        {{ slotProps.data.yearMonth }}
+                    </span>
+                </template>
+
                 <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true"></Column>
                 <Column field="count_as_of_previous_day_end" header="前日終了時点在庫" :sortable="true">
-                    <template #body="slotProps">
-                        {{ slotProps.data.count_as_of_previous_day_end }}
+                    <template #body="columnSlotProps">
+                        {{ columnSlotProps.data.count_as_of_previous_day_end }}
                     </template>
                 </Column>
                 <Column field="count_as_of_snapshot_day_end" header="当日終了時点在庫" :sortable="true">
-                    <template #body="slotProps">
-                        {{ slotProps.data.count_as_of_snapshot_day_end }}
+                    <template #body="columnSlotProps">
+                        {{ columnSlotProps.data.count_as_of_snapshot_day_end }}
                     </template>
                 </Column>
                 <Column field="daily_difference" header="日次差異" :sortable="true">
-                    <template #body="slotProps">
-                        {{ slotProps.data.daily_difference }}
+                    <template #body="columnSlotProps">
+                        {{ columnSlotProps.data.daily_difference }}
                     </template>
                 </Column>
             </DataTable>
@@ -122,6 +135,7 @@
     const error = ref(null);
     const lineChartContainer = ref(null); // For the DOM element
     const lineChartInstance = shallowRef(null); // For the ECharts instance
+    const expandedRowGroups = ref([]);
 
     const totalPreviousDayEnd = computed(() => {
         if (!reportData.value || reportData.value.length === 0) {
@@ -353,13 +367,19 @@
             // or handle the { message: '...', data: [] } structure internally.
             // Let's assume it returns the array of data rows.
             if (Array.isArray(data)) {
-                reportData.value = data.map(item => ({
-                    ...item,
-                    inventory_date_formatted: formatInventoryDate(item.inventory_date),
-                    count_as_of_previous_day_end: parseInt(item.count_as_of_previous_day_end, 10) || 0,
-                    count_as_of_snapshot_day_end: parseInt(item.count_as_of_snapshot_day_end, 10) || 0,
-                    daily_difference: (parseInt(item.count_as_of_snapshot_day_end, 10) || 0) - (parseInt(item.count_as_of_previous_day_end, 10) || 0)
-                }));
+                reportData.value = data.map(item => {
+                    const formattedDate = formatInventoryDate(item.inventory_date); // Assuming this is 'YYYY-MM-DD'
+                    const yearMonth = formattedDate && formattedDate !== 'N/A' && formattedDate !== '日付書式エラー' ? formattedDate.substring(0, 7) : 'N/A'; // Extracts 'YYYY-MM'
+
+                    return {
+                        ...item,
+                        inventory_date_formatted: formattedDate,
+                        yearMonth: yearMonth, // Add the new yearMonth field
+                        count_as_of_previous_day_end: parseInt(item.count_as_of_previous_day_end, 10) || 0,
+                        count_as_of_snapshot_day_end: parseInt(item.count_as_of_snapshot_day_end, 10) || 0,
+                        daily_difference: (parseInt(item.count_as_of_snapshot_day_end, 10) || 0) - (parseInt(item.count_as_of_previous_day_end, 10) || 0)
+                    };
+                });
             } else {
                 // This case should ideally be handled within fetchActiveReservationsChange
                 // For safety, if it returns something unexpected:
