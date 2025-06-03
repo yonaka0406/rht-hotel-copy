@@ -1,67 +1,86 @@
 <template>
-    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap items-center justify-between shadow-md gap-4">
-        <div class="text-2xl font-bold">RHTレポート</div>
-        <div class="flex items-center gap-x-4 gap-y-2 flex-wrap">
-            <div class="flex items-center gap-2">
-                <label for="reportType" class="text-sm">レポートタイプ:</label>
-                <Select                
-                    v-model="selectedReportType"
-                    :options="reportTypeOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    @change="onInternalReportTypeChange"
-                    placeholder="レポートを選択"
-                    class="text-black rounded border-gray-300 min-w-[220px]"
-                />
-            </div>
+    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap items-center justify-between shadow-md gap-4">        
+        <!-- Header and Filters Row -->
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div class="flex items-center gap-x-4 gap-y-2 flex-wrap">
+                <!-- Title -->
+                <div class="flex items-center gap-2 grid">                    
+                    <div class="text-2xl font-bold">RHTレポート</div>
+                    <!-- PMS Button -->
+                    <router-link
+                        to="/"
+                        class="bg-emerald-500 hover:bg-emerald-600 py-1 px-3 block rounded-sm whitespace-nowrap"
+                    >
+                        <i class="pi pi-home text-white mr-2"></i>
+                        <span class="text-white">PMS</span>
+                    </router-link>
+                </div>
 
-            <div class="flex items-center gap-2">
-                <label for="date" class="text-sm">月度:</label>
-                <DatePicker
-                    v-model="selectedDate"
-                    view="month"
-                    dateFormat="yy年mm月" 
-                    showIcon
-                    @update:modelValue="onInternalDateChange"                 
-                    class="text-black p-2 rounded border-gray-300 min-w-[150px]"
-                />
-            </div>
+                <!-- Report Type Filter -->
+                <div class="flex items-center gap-2 mt-4">
+                    <FloatLabel>
+                        <label for="reportType" class="text-sm text-gray-200">レポートタイプ:</label>
+                        <Select
+                            v-model="selectedReportType"
+                            :options="reportTypeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            @change="onInternalReportTypeChange"
+                            placeholder="レポートを選択"
+                            class="text-black rounded border-gray-300 min-w-[150px] w-full sm:w-auto"
+                        />
+                    </FloatLabel>
+                </div>
 
-            <div class="flex items-center gap-2">
-                <label for="period" class="text-sm">期間:</label>
-                <Select                
-                    v-model="period"
-                    :options="periodOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    @change="onInternalPeriodChange"
-                    class="text-black rounded border-gray-300 min-w-[120px]"
-                />
-            </div>
+                <!-- Date Filter -->
+                <div class="flex items-center gap-2 mt-4">
+                    <FloatLabel>
+                        <label for="date" class="text-sm text-gray-200">月度:</label>
+                        <DatePicker
+                            v-model="selectedDate"
+                            view="month"
+                            dateFormat="yy年mm月"
+                            @update:modelValue="onInternalDateChange"
+                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                        />
+                    </FloatLabel>
+                </div>
 
-            <div class="flex items-center gap-2">
-                <label for="hotels" class="text-sm">施設:</label>
-                <MultiSelect 
-                    v-model="selectedHotels"                  
-                    :options="hotels"
-                    optionLabel="name" 
-                    optionValue="id"
-                    multiple
-                    :maxSelectedLabels="1"
-                    @change="onInternalHotelSelectionChange"
-                    placeholder="施設を選択"
-                    display="chip"
-                    class="text-black rounded border-gray-300 min-w-[180px]"
-                />
+                <!-- Period Filter -->
+                <div class="flex items-center gap-2 mt-4">
+                    <FloatLabel>
+                        <label for="period" class="text-sm text-gray-200">期間:</label>
+                        <Select
+                            v-model="period"
+                            :options="periodOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            @change="onInternalPeriodChange"
+                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                            placeholder="期間を選択"
+                        />
+                    </FloatLabel>
+                </div>
+
+                <!-- Hotels Filter -->
+                <div class="flex items-center gap-2 mt-4">
+                    <FloatLabel>
+                        <label for="hotels" class="text-sm text-blue-200">施設:</label>
+                        <MultiSelect
+                            v-model="selectedHotels"
+                            :options="hotels"
+                            optionLabel="name"
+                            optionValue="id"
+                            multiple
+                            :maxSelectedLabels="1"
+                            @change="onInternalHotelSelectionChange"
+                            placeholder="施設を選択"                            
+                            class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                        />
+                    </FloatLabel>
+                </div>
             </div>
-        </div>
-        <router-link
-            to="/"
-            class="bg-emerald-500 hover:bg-emerald-600 p-2 block rounded-sm whitespace-nowrap"
-        >
-            <i class="pi pi-home text-white mr-2"></i>
-            <span class="text-white">PMS</span>
-        </router-link>
+        </div>      
     </div>
 </template>
 <script setup>
@@ -77,7 +96,7 @@
     const emit = defineEmits(['date-change', 'period-change', 'hotel-change', 'report-type-change']);
 
     // Primevue
-    import { DatePicker, MultiSelect, Select } from 'primevue';
+    import { DatePicker, FloatLabel, MultiSelect, Select } from 'primevue';
 
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
@@ -155,3 +174,6 @@
         emit('report-type-change', selectedReportType.value);
     });
 </script>
+<style scoped>
+
+</style>
