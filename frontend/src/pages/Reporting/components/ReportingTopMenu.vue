@@ -1,8 +1,8 @@
 <template>
-    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap items-center justify-between shadow-md gap-4">        
+    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap shadow-md gap-4">        
         <!-- Header and Filters Row -->
-        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <div class="flex items-center gap-x-4 gap-y-2 flex-wrap">
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
+            <div class="flex gap-x-4 gap-y-2 flex-wrap">
                 <!-- Title -->
                 <div class="flex items-center gap-2 grid">                    
                     <div class="text-2xl font-bold">RHTレポート</div>
@@ -17,67 +17,59 @@
                 </div>
 
                 <!-- Report Type Filter -->
-                <div class="flex items-center gap-2 mt-4">
-                    <FloatLabel>
-                        <label for="reportType" class="text-sm text-gray-200">レポートタイプ:</label>
-                        <Select
-                            v-model="selectedReportType"
-                            :options="reportTypeOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            @change="onInternalReportTypeChange"
-                            placeholder="レポートを選択"
-                            class="text-black rounded border-gray-300 min-w-[150px] w-full sm:w-auto"
-                        />
-                    </FloatLabel>
+                <div class="flex gap-2 grid">                    
+                    <label for="reportType" class="text-sm text-gray-200">レポートタイプ</label>
+                    <Select
+                        v-model="selectedReportType"
+                        :options="reportTypeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        @change="onInternalReportTypeChange"
+                        placeholder="レポートを選択"
+                        class="text-black rounded border-gray-300 min-w-[150px] w-full sm:w-auto"
+                    />                    
                 </div>
 
                 <!-- Date Filter -->
-                <div class="flex items-center gap-2 mt-4">
-                    <FloatLabel>
-                        <label for="date" class="text-sm text-gray-200">月度:</label>
-                        <DatePicker
-                            v-model="selectedDate"
-                            view="month"
-                            dateFormat="yy年mm月"
-                            @update:modelValue="onInternalDateChange"
-                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
-                        />
-                    </FloatLabel>
+                <div class="flex gap-2 grid">
+                    <label for="date" class="text-sm text-gray-200">月度</label>
+                    <DatePicker
+                        v-model="selectedDate"
+                        view="month"
+                        dateFormat="yy年mm月"
+                        @update:modelValue="onInternalDateChange"
+                        class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                    />                    
                 </div>
 
                 <!-- Period Filter -->
-                <div class="flex items-center gap-2 mt-4">
-                    <FloatLabel>
-                        <label for="period" class="text-sm text-gray-200">期間:</label>
-                        <Select
-                            v-model="period"
-                            :options="periodOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            @change="onInternalPeriodChange"
-                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
-                            placeholder="期間を選択"
-                        />
-                    </FloatLabel>
+                <div class="flex gap-2 grid">                    
+                    <label for="period" class="text-sm text-gray-200">期間</label>
+                    <Select
+                        v-model="period"
+                        :options="periodOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        @change="onInternalPeriodChange"
+                        class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                        placeholder="期間を選択"
+                    />                    
                 </div>
 
                 <!-- Hotels Filter -->
-                <div class="flex items-center gap-2 mt-4">
-                    <FloatLabel>
-                        <label for="hotels" class="text-sm text-blue-200">施設:</label>
-                        <MultiSelect
-                            v-model="selectedHotels"
-                            :options="hotels"
-                            optionLabel="name"
-                            optionValue="id"
-                            multiple
-                            :maxSelectedLabels="1"
-                            @change="onInternalHotelSelectionChange"
-                            placeholder="施設を選択"                            
-                            class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
-                        />
-                    </FloatLabel>
+                <div class="flex gap-2 grid">                    
+                    <label for="hotels" class="text-sm text-gray-200">施設</label>
+                    <MultiSelect
+                        v-model="selectedHotels"
+                        :options="hotels"
+                        optionLabel="name"
+                        optionValue="id"
+                        multiple
+                        :maxSelectedLabels="1"
+                        @change="onInternalHotelSelectionChange"
+                        placeholder="施設を選択"                            
+                        class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                    />                    
                 </div>
             </div>
         </div>      
@@ -174,6 +166,3 @@
         emit('report-type-change', selectedReportType.value);
     });
 </script>
-<style scoped>
-
-</style>
