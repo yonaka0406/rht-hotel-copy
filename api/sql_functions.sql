@@ -248,34 +248,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Example Usage for get_room_inventory_comparison_for_target_date:
+-- Example Usage for get_room_inventory_comparison_for_date_range:
 --
--- This function calculates the number of non-cancelled rooms for a specific future date ('p_target_date_for_inventory')
--- by reconstructing the state from 'logs_reservation' (assuming it logs changes to 'reservation_details')
--- at two points in time:
--- 1. As of the end of 'p_snapshot_date - 1 day'.
--- 2. As of the end of 'p_snapshot_date'.
+-- This function calculates the number of non-cancelled rooms for a dynamic range of inventory dates.
+-- The range starts from p_snapshot_date and extends to the latest date a room was effectively active
+-- considering states at (p_snapshot_date - 1 day) and p_snapshot_date.
+-- For each inventory_date in this range, it reconstructs the state from 'logs_reservation'.
 --
--- Assumptions:
--- 1. 'logs_reservation' table logs changes to 'reservation_details'.
---    - 'record_id' in logs is 'reservation_details.id' when logging a detail change.
---    - 'table_name' in logs is like 'reservation_details_<hotel_id>' for detail logs.
---    - 'changes' JSON contains relevant fields like 'cancelled' (UUID), 'hotel_id', 'date' for detail logs.
---    - 'action' can be 'INSERT', 'UPDATE', 'DELETE'.
--- 2. A room detail is considered "active" or "booked" if its latest state before the snapshot point
---    was not 'DELETE' and its 'cancelled' field (UUID) was NULL.
--- 3. The function returns an array of two BIGINTs:
---    - result[1]: Count of rooms for 'p_target_date_for_inventory' as of end of ('p_snapshot_date' - 1 DAY).
---    - result[2]: Count of rooms for 'p_target_date_for_inventory' as of end of 'p_snapshot_date'.
+-- Assumptions: (Same as Optimized v2)
 --
 -- Scenario:
 -- p_hotel_id = 7
--- p_snapshot_date = '2025-06-03' (observing "today" and "yesterday")
--- p_target_date_for_inventory = '2025-07-08' (the future date we care about inventory for)
+-- p_snapshot_date = '2025-06-03'
+-- If the latest active room booking (considering both snapshots) is for '2025-06-13',
+-- the function will report dates from '2025-06-03' up to '2025-06-13'.
 --
--- If, based on logs up to end of '2025-06-02', there were 3 rooms for hotel 7 on '2025-07-08'.
--- And, due to a cancellation logged on '2025-06-03', based on logs up to end of '2025-06-03',
--- there are now 0 rooms for hotel 7 on '2025-07-08'.
--- SELECT get_room_inventory_comparison_for_target_date(7, '2025-06-03', '2025-07-08');
--- Expected output: ARRAY[3, 0]
-
+-- SELECT * FROM get_room_inventory_comparison_for_date_range(7, '2025-06-03');
