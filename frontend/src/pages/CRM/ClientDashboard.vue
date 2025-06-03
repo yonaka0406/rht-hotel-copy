@@ -38,7 +38,7 @@
   
 <script setup>
     // Vue
-    import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
+    import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
     // Primevue
     import { Card } from 'primevue';
@@ -78,36 +78,42 @@
 
     let myHalfPie;
     const halfPie = ref(null);
-    const halfPieOption = ref(
-        {
-            tooltip: {
-                trigger: 'item',
-                formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
-            },            
-            series: [
-                {
-                    name: '顧客データ割合',
-                    type: 'pie',
-                    radius: ['40%', '90%'],
-                    center: ['50%', '50%'],                
-                    startAngle: 180,            
-                    endAngle: 360,
-                    label: {
-                        show: true,
-                        formatter: "{b}: {d}%",
-                    },
-                    data: [
-                        { value: clientsCount.value.legal, name: '法人' },
-                        { value: clientsCount.value.natural, name: '個人' },                    
-                    ]
-                }
-            ]
-        }
-    );
 
-    const initHalfPie = () => {        
-        myHalfPie = echarts.getInstanceByDom(halfPie.value);
-        if (myHalfPie) {
+    const halfPieOption = computed(() => ({
+        tooltip: {
+            trigger: 'item',
+            formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
+        },            
+        series: [
+            {
+                name: '顧客データ割合',
+                type: 'pie',
+                radius: ['40%', '90%'],
+                center: ['50%', '50%'],                
+                startAngle: 180,            
+                endAngle: 360,
+                label: {
+                    show: true,
+                    formatter: "{b}: {d}%",
+                },
+                // Ensure data is valid, provide defaults if necessary
+                data: [
+                    { value: clientsCount.value.legal || 0, name: '法人' },
+                    { value: clientsCount.value.natural || 0, name: '個人' },
+                ]
+            }
+        ]
+    }));
+
+    const initHalfPie = () => {
+        if (!halfPie.value || clients.value.length === 0) {
+            // If DOM element isn't ready or no client data, don't proceed
+            return; 
+        }
+
+        let currentChartInstance = echarts.getInstanceByDom(halfPie.value);
+        if (currentChartInstance) {
+            myHalfPie = currentChartInstance; // Ensure myHalfPie is assigned
             myHalfPie.setOption(halfPieOption.value);
         } else {
             myHalfPie = echarts.init(halfPie.value);
@@ -121,23 +127,19 @@
         }
     };  
 
-    onMounted(async () => {        
-        initHalfPie();
-        
+    onMounted(async () => {
+        await nextTick(); // Wait for DOM updates
+        initHalfPie(); 
         window.addEventListener('resize', handleResize);
     });
 
-    watch(clientsCount, () => {
-        // Ensure the DOM element is available and the chart instance exists
-        if (halfPie.value && myHalfPie) {
-            initHalfPie();
-        } else if (halfPie.value && !myHalfPie) {
-            // If the chart wasn't initialized yet but the element is ready
+    watch(clientsCount, async (newCounts) => {
+        if (newCounts.total > 0) { // Only attempt to update if there's actual data
+            await nextTick(); // Wait for DOM updates
             initHalfPie();
         }
-        // If halfPie.value is null, onMounted hasn't run yet, or the element isn't rendered.
-        // initHalfPie will be called in onMounted.
-    }, { deep: true }); // Added deep: true just in case, though likely not strictly needed for a computed object.
+        // If total is 0, initHalfPie will be guarded by clients.value.length === 0 anyway
+    }, { deep: true }); // immediate: false is default, so not explicitly set.
 
 /*
 Future Dashboard Enhancements Suggestions:
