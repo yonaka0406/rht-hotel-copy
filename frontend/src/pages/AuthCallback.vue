@@ -1,40 +1,43 @@
 <template>
-  <div class="flex justify-center items-center min-h-screen">
-    <ProgressSpinner />
-    <p class="ml-2">Logging you in...</p>
+  <div class="flex justify-center items-center min-h-screen bg-gray-100">
+    <ProgressSpinner 
+      style="width: 50px; height: 50px" 
+      strokeWidth="8" 
+      fill="transparent" 
+      animationDuration=".5s" 
+      aria-label="Loading" 
+    />
   </div>
 </template>
 
-<script>
-import { onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import ProgressSpinner from 'primevue/progressspinner'; // Corrected import
+<script setup>
+  // Vue
+  import { onMounted } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  const route = useRoute();
+  const router = useRouter();
 
-export default {
-  name: 'AuthCallback',
-  components: {
-    ProgressSpinner
-  },
-  setup() {
-    const route = useRoute();
-    const router = useRouter();
+  // Primevue
+  import ProgressSpinner from 'primevue/progressspinner';
 
-    onMounted(() => {
-      const token = route.query.token;
-      const error = route.query.error;
+  // Lifecycle hook that runs after the component is mounted
+  onMounted(() => {
+    // Retrieve token and error from the URL query parameters
+    const token = route.query.token;
+    const error = route.query.error;
 
-      if (token) {
-        localStorage.setItem('authToken', token);
-        // Optionally, you could verify the token or fetch user profile here
-        router.push('/'); // Redirect to home/dashboard
-      } else {
-        console.error('Authentication failed:', error || 'No token received.');
-        // Redirect to login with an error query param or show a message
-        router.push('/login?error=google_auth_failed');
-      }
-    });
+    if (token) {      
+      localStorage.setItem('authToken', String(token));
+      
+      // Redirect the user to the home page or dashboard
+      router.push('/');       
+    } else {
+      // If there's an error or no token, log the error
+      console.error('Authentication failed:', error || 'No token received.');
+      
+      // Redirect the user to the login page with an error indicator      
+      router.push('/login?error=google_auth_failed');      
+    }
+  });
 
-    return {};
-  }
-}
 </script>
