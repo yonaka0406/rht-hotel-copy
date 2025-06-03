@@ -4,6 +4,22 @@
         <div class="mb-4 flex justify-between items-center">
             <h1 class="font-semibold text-gray-700">やり取り一覧</h1>
             <Button label="新規アクション作成" icon="pi pi-plus" @click="openNewActionDialog" class="p-button-success" />
+            <Button @click="handleManualSync"
+                v-if="hasGoogleCalendarId && hasGoogleCalendarId"
+                label="Googleカレンダー同期" 
+                icon="pi pi-sync"
+                :loading="isSyncingCalendar" 
+                :disabled="isSubmitting || isSyncingCalendar"
+                class="p-button-secondary" 
+            />
+            <Button @click="setupDedicatedCalendar" 
+                v-if="logged_user && !hasGoogleCalendarId"
+                label="Googleカレンダー作成" 
+                icon="pi pi-calendar-plus" 
+                class="p-button-primary mr-2"
+                :loading="isSubmitting && !isSyncingCalendar" 
+                :disabled="isSubmitting || isSyncingCalendar" 
+            />
             <SelectButton 
                 v-model="selectedScope"
                 :options="scopeOptions"
@@ -134,6 +150,25 @@
                         </template>
                         <template #filter="{filterModel,filterCallback}">
                             <Select v-model="filterModel.value" @change="filterCallback()" :options="statusOptions" optionLabel="label" optionValue="value" placeholder="ステータスを選択" class="p-column-filter" />
+                        </template>
+                    </Column>
+                    <Column header="Google" headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center;">
+                        <template #body="{data}">
+                            <a v-if="data.synced_with_google_calendar && data.google_calendar_html_link" 
+                               :href="data.google_calendar_html_link" 
+                               target="_blank" 
+                               rel="noopener noreferrer" 
+                               v-tooltip.top="'Googleカレンダーで開く'">
+                                <i class="pi pi-calendar" style="color: #34A853; font-size: 1.2rem;"></i>
+                            </a>
+                            <i v-else-if="data.synced_with_google_calendar" 
+                               class="pi pi-calendar-check" 
+                               style="color: #1858A8; font-size: 1.2rem;" 
+                               v-tooltip.top="'Googleカレンダー同期済み'"></i>
+                            <i v-else 
+                               class="pi pi-calendar-times" 
+                               style="color: #cccccc; font-size: 1.2rem;" 
+                               v-tooltip.top="'Googleカレンダー未同期'"></i>
                         </template>
                     </Column>
                     <Column field="assigned_to_name" header="担当者" :sortable="true" style="min-width:120px">
@@ -294,7 +329,7 @@
     
     // Stores
     import { useUserStore } from '@/composables/useUserStore';
-    const { users, logged_user, fetchUsers, fetchUser } = useUserStore();
+    const { users, logged_user, fetchUsers, fetchUser, createUserCalendar, triggerCalendarSyncStore } = useUserStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
     import { useCRMStore } from '@/composables/useCRMStore';
@@ -303,6 +338,11 @@
     // --- Reactive State ---
     const selectedScope = ref('user');
     const loggedInUserId = ref(null);
+    const hasGoogleCalendarId = computed(() => {
+        if (!logged_user) return;        
+        if(logged_user.value[0] && logged_user.value[0].google_calendar_id) return true;
+        return false;
+    });
     const scopeOptions = ref([
         { label: '自身', value: 'user' },
         { label: '全体', value: 'all' }
@@ -410,7 +450,7 @@
     const currentActionItem = ref(null); // To store the action item for the menu    
     const actionMenuItems = ref([
         { label: '編集', icon: 'pi pi-pencil', command: () => { if(currentActionItem.value) openEditActionDialog(currentActionItem.value); } },
-        { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteAction(currentActionItem.value.id); } }        
+        { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteActionHandler(currentActionItem.value.id); } }        
     ]);
     const goToEditClientPage = (clientId) => {        
         window.open(`/crm/clients/edit/${clientId}`, '_blank');
@@ -564,12 +604,11 @@
             ...initialActionFormData,
             action_datetime: new Date(),
             due_date: null,
-            assigned_to: logged_user.value[0].id || null
+            assigned_to: logged_user.value && logged_user.value[0] ? logged_user.value[0].id : null
         };
         selectedClientObjectForForm.value = null;
         isActionFormDialogVisible.value = true;
     };
-
     const openEditActionDialog = (actionData) => {
         actionFormMode.value = 'edit';        
         currentActionFormData.value = {
@@ -593,12 +632,10 @@
         }
         isActionFormDialogVisible.value = true;
     };
-
     const closeActionFormDialog = () => {
         isActionFormDialogVisible.value = false;
         selectedClientObjectForForm.value = null;        
     };
-
     const handleSaveAction = async () => {
         console.log("Saving action:", currentActionFormData.value);
         // --- Form Validation ---
@@ -620,7 +657,7 @@
         
         try {
             if (!id) {                
-                await addAction(currentActionFormData.value);
+                await addAction(currentActionFormData.value); 
                 toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
             } else {                
                 await editAction(id, currentActionFormData.value);
@@ -642,10 +679,9 @@
         } finally {
             loading.value = false;
         }      
-    };
-    const deleteAction = async (id) => {
+    };    
+    const deleteActionHandler = async (id) => { 
         
-        // --- Validation: Ensure an ID is provided ---
         if (!id) {
             toast.add({ severity: "error", summary: "エラー", detail: "アクションIDが無効です", life: 3000 });
             return;
@@ -653,12 +689,10 @@
 
         loading.value = true;
         try {
-            console.log('Deleting action');
-            await removeAction(id);
+            await removeAction(id); // This now comes from useCRMStore
 
             toast.add({ severity: "success", summary: "Success", detail: "アクションが削除されました。", life: 3000 });
 
-            // Optionally: Refresh the actions after deletion
             if (selectedScope.value === 'user') {
                 await fetchUserActions(loggedInUserId.value);
                 allRawActions.value = user_actions.value;
@@ -675,6 +709,55 @@
         }
     };
 
+    // --- Google Calendar ---
+    const isSubmitting = ref(false);
+    const isSyncingCalendar = ref(false);
+    const setupDedicatedCalendar = async () => {
+      if (isSubmitting.value || isSyncingCalendar.value) return;
+      isSubmitting.value = true;
+      
+      try {        
+        await createUserCalendar();
+        await fetchUser();
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Googleカレンダー作成されました。', life: 3000 });
+      } catch (err) {
+        const error = err.message || 'Failed to setup dedicated calendar.';
+        toast.add({ severity: 'error', summary: 'Setup Error', detail: error, life: 3000 });
+      } finally {
+        isSubmitting.value = false;
+      }
+    };
+    const handleManualSync = async () => {
+        if (isSubmitting.value || isSyncingCalendar.value) return;
+        isSyncingCalendar.value = true;
+        
+        try {
+            const response = await triggerCalendarSyncStore();
+            toast.add({ 
+            severity: 'success', 
+            summary: 'Calendar Sync', 
+            detail: response.message || 'Synchronization with Google Calendar has completed.', 
+            life: 5000 
+            });
+            // Optionally, display more details from response.details if needed
+            if (response.details) {
+            console.log("Sync details:", response.details);
+            // Could add more toasts for created/updated/failed counts
+            let detailMsg = `Created: ${response.details.actionsCreated}, Updated: ${response.details.actionsUpdated}, Failed: ${response.details.actionsFailed}`;
+                toast.add({ severity: 'info', summary: 'Sync Stats', detail: detailMsg, life: 6000 });
+            }
+        } catch (err) {
+            toast.add({ 
+            severity: 'error', 
+            summary: 'Sync Error', 
+            detail: err.message || 'Could not sync with Google Calendar.', 
+            life: 5000 
+            });            
+        } finally {
+            isSyncingCalendar.value = false;
+        }
+    };
+
     // --- Lifecycle Hooks & Watchers ---
     onMounted( async () => {     
         loading.value = true;   
@@ -682,6 +765,10 @@
             await fetchUser();
             if (logged_user.value && logged_user.value[0]) {
                 loggedInUserId.value = logged_user.value[0].id;
+                 // Set default assigned_to for new actions if not already set
+                if (initialActionFormData.assigned_to === null) {
+                    initialActionFormData.assigned_to = logged_user.value[0].id;
+                }
             } else {
                 console.error("Logged in user not found.");
                 toast.add({ severity: "error", summary: "エラー", detail: "ログインユーザー情報を取得できませんでした。", life: 3000 });
@@ -698,14 +785,16 @@
                 allRawActions.value = [...actions.value];
             }
 
-            // Fetch clients if not already loaded
             if (!clients.value || clients.value.length === 0) {
                 if (setClientsIsLoading) setClientsIsLoading(true);                 
                 try {
-                    const clientsTotalPages = await fetchClients(1);
-                    for (let page = 2; page <= clientsTotalPages; page++) {
-                        await fetchClients(page);
-                    }        
+                    const clientsTotalPages = await fetchClients(1); // Assuming fetchClients returns total pages or similar
+                    // This logic might need adjustment based on actual fetchClients behavior (e.g., if it fetches all at once)
+                    if (typeof clientsTotalPages === 'number' && clientsTotalPages > 1) { 
+                        for (let page = 2; page <= clientsTotalPages; page++) {
+                            await fetchClients(page);
+                        }    
+                    }    
                 } catch (error) {
                     console.error("Failed to fetch clients:", error);        
                 } finally {

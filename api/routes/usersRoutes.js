@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { users, getUser, registerUser, updateUser } = require('../controllers/usersController');
+const { users, getUser, registerUser, updateUser, createUserCalendar, triggerGoogleCalendarSync } = require('../controllers/usersController');
 const { authMiddleware, authMiddlewareAdmin, authMiddleware_manageUsers } = require('../middleware/authMiddleware');
 const {
   emailValidation,
@@ -20,5 +20,7 @@ router.post(
 );
 router.put('/user/update', authMiddleware_manageUsers, updateUser);
 
+router.post('/user/calendar/create-google', authMiddleware, createUserCalendar);
+router.post('/user/calendar/sync-from-google', authMiddleware, triggerGoogleCalendarSync);
 
 module.exports = router;

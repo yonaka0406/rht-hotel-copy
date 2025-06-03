@@ -1,14 +1,16 @@
 <template>
   <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
     <Card class="w-full max-w-md">
+      
       <template #title>
-        <h2 class="text-2xl font-bold mb-6 text-center">ログイン</h2>
+        <img src="/logo.jpg" alt="Logo" class="block mx-auto mb-6 max-w-[150px] h-auto" />        
       </template>
       <template #content>
         <form @submit.prevent="handleLogin">
-          <div class="field mb-6">   
-            <FloatLabel>
-              <InputText
+          <div v-if="showPasswordLogin">
+            <div class="field mb-6">
+              <FloatLabel>
+                <InputText
                 id="email"
                 v-model="email"
                 fluid
@@ -41,26 +43,38 @@
           </div>
 
           <div class="mb-4">
-            <Button
-              label="ログイン"
-              icon="pi pi-sign-in"
-              class="w-full"
-              :loading="isLoading"
-              type="submit"
-            />
+              <Button
+                label="ログイン"
+                icon="pi pi-sign-in"
+                class="w-full !bg-emerald-800 !text-white !border-emerald-800 hover:!bg-emerald-700 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!border-emerald-700"
+                :loading="isLoading"
+                type="submit"
+              />
+            </div>
+            <!-- Forgot password link MOVED HERE -->
+            <div class="text-center">
+              <router-link to="/forgot-password" class="text-sm text-emerald-700 hover:text-emerald-600 hover:underline">パスワードを忘れましたか？</router-link>
+            </div>
           </div>
-          
+
           <div class="my-4"> <!-- Added Google Sign-In Button -->
             <Button
-              label="Sign in with Google"
+              label="Google でログイン"
               icon="pi pi-google"
-              class="w-full p-button-secondary"
+              class="w-full !bg-emerald-700 !text-white !border-emerald-700 hover:!bg-emerald-600 hover:!border-emerald-600 focus:!bg-emerald-600 focus:!border-emerald-600"
               @click="handleGoogleLogin"
             />
           </div>
 
-          <div class="text-center">
-            <router-link to="/forgot-password" class="text-sm text-blue-600">パスワードを忘れましたか？</router-link>
+          <!-- Toggle Button/Link for Email & Password -->
+          <div class="my-4 text-center">
+            <Button
+              v-if="!showPasswordLogin"
+              label="又はID＆PWでログイン"
+              icon="pi pi-envelope"
+              class="w-full !text-emerald-700 hover:!bg-emerald-700/[.05] focus:!bg-emerald-700/[.05] p-button-text"
+              @click="showPasswordLogin = !showPasswordLogin"
+            />
           </div>
         </form>
       </template>
@@ -85,6 +99,7 @@
   const isLoading = ref(false);
   const emailError = ref(null);
   const passwordError = ref(null);
+  const showPasswordLogin = ref(false);
 
   const handleGoogleLogin = () => { // Added
     // Redirect to the backend Google OAuth endpoint
@@ -172,3 +187,7 @@
   };
 
 </script>
+
+<style scoped>
+
+</style>

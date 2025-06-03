@@ -10,101 +10,95 @@
             <div v-if="client">
                 
                 <form @submit.prevent="saveClient">
-                    <div class="flex grid sm:grid-cols-1 grid-cols-2 xl:grid-cols-3 gap-2 gap-y-6 pt-6">
-                        <!-- Name of the client -->
-                        <div class="field col-6">
+                    <div class="flex grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 gap-y-6 pt-6">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <InputText id="name" v-model="client.name" fluid required />
                                 <label for="name">氏名・名称</label>
                             </FloatLabel>
                         </div>
-                        <div class="field col-6">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <label for="name_kana">カナ</label>
                                 <InputText id="name_kana" v-model="client.name_kana" fluid />
-                            </FloatLabel>                        
+                            </FloatLabel>                            
                         </div>
-                        <div class="field col-6">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <label for="name_kanji">漢字</label>
                                 <InputText id="name_kanji" v-model="client.name_kanji" fluid />
-                            </FloatLabel>                        
+                            </FloatLabel>                            
                         </div>
-                        <div class="field col-6">                        
+                        <div class="field col-span-1">                            
                             <FloatLabel>                            
                                 <label for="date_of_birth">生年月日・設立日</label>
                                 <DatePicker v-model="client.date_of_birth"
                                     :showIcon="true" 
-                                    iconDisplay="input"                      
+                                    iconDisplay="input"                                    
                                     dateFormat="yy-mm-dd" 
-                                    :selectOtherMonths="true"                 
+                                    :selectOtherMonths="true"                                
                                     fluid
                                 />
-                            </FloatLabel>                        
+                            </FloatLabel>                            
                         </div>
-                        <!-- Type of person (Legal or Natural) -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <SelectButton 
                                 v-model="client.legal_or_natural_person" 
                                 :options="personTypeOptions" 
                                 option-label="label" 
                                 option-value="value"
-                                fluid                        
+                                fluid                                
                             />
                         </div>
-                        <!-- Gender input if person is natural -->
-                        <div class="field col-4">          
+                        <div class="field col-span-1">        
                             <div v-if="client.legal_or_natural_person === 'natural'" class="flex gap-3">
                                 <RadioButton
                                     v-model="client.gender"
                                     :inputId="'male'"
-                                    :value="'male'"                            
+                                    :value="'male'"                                    
                                 />
                                 <label for="male">男性</label>
                                 <RadioButton
                                     v-model="client.gender"
                                     :inputId="'female'"
-                                    :value="'female'"                            
+                                    :value="'female'"                                    
                                 />
                                 <label for="female">女性</label>
                                 <RadioButton
                                     v-model="client.gender"
                                     :inputId="'other'"
-                                    :value="'other'"                            
+                                    :value="'other'"                                    
                                 />
                                 <label for="other">その他</label>
                             </div>
                         </div>
-                        <!-- Email input -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <InputText 
                                     v-model="client.email"
                                     :pattern="emailPattern"
                                     :class="{'p-invalid': !isValidEmail}"
                                     @input="validateEmail(client.email)"
-                                    fluid                         
+                                    fluid                                
                                 />
                                 <label>メールアドレス</label>
                                 <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
                             </FloatLabel>
                         </div>
-                        <!-- Phone number input -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <FloatLabel>
                             <InputText
                                 v-model="client.phone"
                                 :pattern="phonePattern"
                                 :class="{'p-invalid': !isValidPhone}"
                                 @input="validatePhone(client.phone)"
-                                fluid                        
+                                fluid                                
                             />
                             <label>電話番号</label>
                             <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
                         </div>
-                        <!-- Phone number input -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <FloatLabel>
                             <InputText
                                 v-model="client.fax"
@@ -117,39 +111,34 @@
                             <small v-if="!isValidFAX" class="p-error">有効な電話番号を入力してください。</small>
                             </FloatLabel>
                         </div>
-                        <!-- Website URL -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <InputText v-model="client.website" fluid />
                                 <label>ウェブサイト</label>
                             </FloatLabel>
                         </div>
-                        <!-- Billing preference -->
-                        <div class="field col-4">                            
+                        <div class="field col-span-1">                                
                             <SelectButton 
                                 v-model="client.billing_preference" 
                                 :options="billingOptions" 
                                 option-label="label" 
                                 option-value="value"
-                                fluid                        
-                            />                            
+                                fluid                                
+                            />                                
                         </div>
-                        <!-- Customer ID -->
-                        <div class="field col-4">
+                        <div class="field col-span-1">
                             <FloatLabel>
                                 <InputNumber v-model="client.customer_id" :min="0" fluid />
                                 <label>顧客ID</label>
                             </FloatLabel>
                         </div>
-                        <!-- Comment -->
-                        <div class="field col-span-3">
+                        <div class="field col-span-1 md:col-span-2 xl:col-span-3">
                             <FloatLabel>
-                                <Textarea v-model="client.comment" fluid />                                
+                                <Textarea v-model="client.comment" fluid />                                        
                                 <label>備考</label>
                             </FloatLabel>
                         </div>
                     </div>
-                    <!-- Save button -->                
                     <div class="flex justify-center items-center mt-3">
                         <Button label="保存" severity="info" type="submit" />
                     </div>
@@ -193,16 +182,16 @@
                                     <template #body="{ data }">
                                         {{ data.name_kana }}
                                     </template>
-                                </Column>                                
+                                </Column>                                        
                                 <Column field="legal_or_natural_person" header="法人 / 個人">
                                     <template #body="{ data }">
-                                        <span v-if="data.legal_or_natural_person === 'legal'">                                    
+                                        <span v-if="data.legal_or_natural_person === 'legal'">                                        
                                             <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                         </span>
                                         <span v-else>
                                             <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
-                                        </span>                                
-                                    </template>                                                       
+                                        </span>                                        
+                                    </template>                                                                        
                                 </Column>
                                 <Column field="phone" header="電話番号"></Column>
                                 <Column field="email" header="メールアドレス"></Column>
@@ -211,7 +200,7 @@
                         </div>
                         <div v-else>
                             <form @submit.prevent="saveGroup">
-                                <div class="flex grid grid-cols-12 gap-4">                                    
+                                <div class="flex grid grid-cols-12 gap-4">                                        
                                     <div class="col-span-1"></div>
                                     <Select
                                         v-model="selectedGroupId"

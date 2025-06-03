@@ -38,7 +38,7 @@
   
 <script setup>
     // Vue
-    import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+    import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 
     // Primevue
     import { Card } from 'primevue';
@@ -78,36 +78,42 @@
 
     let myHalfPie;
     const halfPie = ref(null);
-    const halfPieOption = ref(
-        {
-            tooltip: {
-                trigger: 'item',
-                formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
-            },            
-            series: [
-                {
-                    name: '顧客データ割合',
-                    type: 'pie',
-                    radius: ['40%', '90%'],
-                    center: ['50%', '50%'],                
-                    startAngle: 180,            
-                    endAngle: 360,
-                    label: {
-                        show: true,
-                        formatter: "{b}: {d}%",
-                    },
-                    data: [
-                        { value: clientsCount.value.legal, name: '法人' },
-                        { value: clientsCount.value.natural, name: '個人' },                    
-                    ]
-                }
-            ]
-        }
-    );
 
-    const initHalfPie = () => {        
-        myHalfPie = echarts.getInstanceByDom(halfPie.value);
-        if (myHalfPie) {
+    const halfPieOption = computed(() => ({
+        tooltip: {
+            trigger: 'item',
+            formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
+        },            
+        series: [
+            {
+                name: '顧客データ割合',
+                type: 'pie',
+                radius: ['40%', '90%'],
+                center: ['50%', '50%'],                
+                startAngle: 180,            
+                endAngle: 360,
+                label: {
+                    show: true,
+                    formatter: "{b}: {d}%",
+                },
+                // Ensure data is valid, provide defaults if necessary
+                data: [
+                    { value: clientsCount.value.legal || 0, name: '法人' },
+                    { value: clientsCount.value.natural || 0, name: '個人' },
+                ]
+            }
+        ]
+    }));
+
+    const initHalfPie = () => {
+        if (!halfPie.value || clients.value.length === 0) {
+            // If DOM element isn't ready or no client data, don't proceed
+            return; 
+        }
+
+        let currentChartInstance = echarts.getInstanceByDom(halfPie.value);
+        if (currentChartInstance) {
+            myHalfPie = currentChartInstance; // Ensure myHalfPie is assigned
             myHalfPie.setOption(halfPieOption.value);
         } else {
             myHalfPie = echarts.init(halfPie.value);
@@ -121,11 +127,46 @@
         }
     };  
 
-    onMounted(async () => {        
-        initHalfPie();
-        
+    onMounted(async () => {
+        await nextTick(); // Wait for DOM updates
+        initHalfPie(); 
         window.addEventListener('resize', handleResize);
     });
+
+    watch(clientsCount, async (newCounts) => {
+        if (newCounts.total > 0) { // Only attempt to update if there's actual data
+            await nextTick(); // Wait for DOM updates
+            initHalfPie();
+        }
+        // If total is 0, initHalfPie will be guarded by clients.value.length === 0 anyway
+    }, { deep: true }); // immediate: false is default, so not explicitly set.
+
+/*
+Future Dashboard Enhancements Suggestions:
+
+Overall Client Metrics:
+- Total Active Clients: Display the number of clients considered "active" based on recent interactions or status.
+- New Client Acquisition Rate: A line chart showing new clients added per month/quarter.
+- Client Churn/Retention Rate: Metrics on client attrition or retention over time (requires tracking client status changes).
+
+Client Segmentation (if more data fields become available):
+- Distribution by Industry/Category: If clients can be categorized by industry.
+- Distribution by Client Rank/Tier: E.g., VIP, Regular, New, if such a system exists.
+- Distribution by Geographic Location: E.g., clients by prefecture or city.
+
+Activity/Engagement Metrics (consider if these require more data than available in useClientStore().clients directly):
+- Average Stay: (User Suggested) Could be relevant if clients are, for example, guests in a hotel context. Would likely require linking to reservation data.
+- Distribution by Times Used/Service Consumption: (User Suggested) How frequently clients use services. Would likely require linking to usage or transactional data.
+- Total Interactions This Period: Aggregate count of calls, emails, meetings for the current month/quarter.
+- Most Active CRM Users: Top users logging interactions.
+- Clients Without Recent Contact: Identify clients who haven't been contacted in X days.
+
+Sales Pipeline Overview (if a separate sales pipeline module/data exists):
+- Sales Funnel: Chart showing stages (Lead > Qualified > Proposal > Closed).
+
+Remember to evaluate data availability and API capabilities when planning these.
+Some of these metrics might require fetching and processing additional data beyond the basic client list.
+*/
 
     onBeforeUnmount(() => {
         window.removeEventListener('resize', handleResize);
