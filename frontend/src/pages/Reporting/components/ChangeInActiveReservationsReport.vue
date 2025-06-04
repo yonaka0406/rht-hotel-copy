@@ -37,62 +37,73 @@
         </div>
         <!-- ECharts container to be added here -->
         <div v-if="reportData && reportData.length > 0" class="mt-8">
-            <h4 class="text-lg font-semibold mb-3">日次差異チャート</h4>
-            <div ref="lineChartContainer" style="width: 100%; height: 400px;"></div>
+            <Card>
+                <template #header>
+                    <h4 class="text-lg font-semibold mb-3">日次差異チャート</h4>
+                </template>
+                <template #content>
+                    <div ref="lineChartContainer" style="width: 100%; height: 400px;"></div>
+                </template>
+            </Card>
         </div>
         <div v-if="reportData && reportData.length > 0" class="mt-8">
-            <h4 class="text-lg font-semibold mb-3">詳細データ</h4>
-            <DataTable
-                :value="sortedReportDataForTable"
-                responsiveLayout="scroll"
-                rowGroupMode="subheader"
-                groupRowsBy="yearMonth"
-                expandableRowGroups
-                v-model:expandedRowGroups="expandedRowGroups"
-                tableStyle="min-width: 50rem"
-            >
-                <template #groupheader="slotProps">
-                    <div class="flex p-2 cursor-pointer w-full items-center" @click="toggleRowGroup(slotProps.data.yearMonth)">
-                        <!-- Column 1: Month and Toggle Icon -->
-                        <div class="flex items-center" style="width: 25%;">
-                            <i :class="expandedRowGroups.includes(slotProps.data.yearMonth) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" class="mr-2 text-blue-500 text-sm"></i>
-                            <span class="font-bold text-gray-800 text-sm">{{ slotProps.data.yearMonth }}</span>
-                        </div>
-
-                        <!-- Column 2: Previous Day Total (aligned right) -->
-                        <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                            <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
-                        </div>
-
-                        <!-- Column 3: Snapshot Day Total (aligned right) -->
-                        <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                            <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
-                        </div>
-
-                        <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
-                        <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
-                            <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
-                        </div>
-                    </div>
+            <Card>
+                <template #header>
+                    <h4 class="text-lg font-semibold mb-3">詳細データ</h4>
                 </template>
+                <template #content>
+                    <DataTable
+                        :value="sortedReportDataForTable"
+                        responsiveLayout="scroll"
+                        rowGroupMode="subheader"
+                        groupRowsBy="yearMonth"
+                        expandableRowGroups
+                        v-model:expandedRowGroups="expandedRowGroups"                       
+                    >
+                        <template #groupheader="slotProps">
+                            <div class="p-datatable-group-header-content flex items-center p-2 cursor-pointer w-full" @click="toggleRowGroup(slotProps.data.yearMonth)">
+                                <!-- Column 1: Month and Toggle Icon -->
+                                <div class="flex items-center" style="width: 25%;">
+                                    <i :class="expandedRowGroups.includes(slotProps.data.yearMonth) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" class="mr-2 text-blue-500 text-sm"></i>
+                                    <span class="font-bold text-gray-800 text-sm">{{ slotProps.data.yearMonth }}</span>
+                                </div>
 
-                <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true" style="flex: 1;"></Column>
-                <Column field="count_as_of_previous_day_end" header="前日在庫" :sortable="true" style="flex: 1; text-align: right;">
-                    <template #body="columnSlotProps">
-                        {{ columnSlotProps.data.count_as_of_previous_day_end }}
-                    </template>
-                </Column>
-                <Column field="count_as_of_snapshot_day_end" header="当日在庫" :sortable="true" style="flex: 1; text-align: right;">
-                    <template #body="columnSlotProps">
-                        {{ columnSlotProps.data.count_as_of_snapshot_day_end }}
-                    </template>
-                </Column>
-                <Column field="daily_difference" header="日次差異" :sortable="true" style="flex: 1; text-align: right;">
-                    <template #body="columnSlotProps">
-                        {{ columnSlotProps.data.daily_difference }}
-                    </template>
-                </Column>
-            </DataTable>
+                                <!-- Column 2: Previous Day Total (aligned right) -->
+                                <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
+                                </div>
+
+                                <!-- Column 3: Snapshot Day Total (aligned right) -->
+                                <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
+                                </div>
+
+                                <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
+                                <div style="width: 25%; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
+                                </div>
+                            </div>
+                        </template>
+
+                        <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true" style="flex: 1;"></Column>
+                        <Column field="count_as_of_previous_day_end" header="前日在庫" :sortable="true" style="flex: 1; text-align: right;">
+                            <template #body="columnSlotProps">
+                                {{ columnSlotProps.data.count_as_of_previous_day_end }}
+                            </template>
+                        </Column>
+                        <Column field="count_as_of_snapshot_day_end" header="当日在庫" :sortable="true" style="flex: 1; text-align: right;">
+                            <template #body="columnSlotProps">
+                                {{ columnSlotProps.data.count_as_of_snapshot_day_end }}
+                            </template>
+                        </Column>
+                        <Column field="daily_difference" header="日次差異" :sortable="true" style="flex: 1; text-align: right;">
+                            <template #body="columnSlotProps">
+                                {{ columnSlotProps.data.daily_difference }}
+                            </template>
+                        </Column>
+                    </DataTable>
+                </template>
+            </Card>
         </div>
         <div v-else class="text-gray-500">
             データがありません。適切なホテルが選択されているか、または指定日にデータが存在するか確認してください。
@@ -496,9 +507,5 @@
 </script>
 
 <style scoped>
-/* Add this rule */
-.p-datatable .p-rowgroup-header td {
-    padding: 0 !important; /* Override PrimeVue's default padding */
-}
 
 </style>
