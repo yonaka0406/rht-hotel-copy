@@ -205,7 +205,7 @@ const echartsOptions = computed(() => {
             {
                 name: '平均予約室数',
                 type: 'line',
-                data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights).toFixed(2)),
+            data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights)),
                 smooth: true,
                 emphasis: {
                     focus: 'series'
