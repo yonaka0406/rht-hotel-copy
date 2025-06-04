@@ -77,12 +77,12 @@
                 </template>
 
                 <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true" style="flex: 1;"></Column>
-                <Column field="count_as_of_previous_day_end" header="前日終了時点在庫" :sortable="true" style="flex: 1; text-align: right;">
+                <Column field="count_as_of_previous_day_end" header="前日在庫" :sortable="true" style="flex: 1; text-align: right;">
                     <template #body="columnSlotProps">
                         {{ columnSlotProps.data.count_as_of_previous_day_end }}
                     </template>
                 </Column>
-                <Column field="count_as_of_snapshot_day_end" header="当日終了時点在庫" :sortable="true" style="flex: 1; text-align: right;">
+                <Column field="count_as_of_snapshot_day_end" header="当日在庫" :sortable="true" style="flex: 1; text-align: right;">
                     <template #body="columnSlotProps">
                         {{ columnSlotProps.data.count_as_of_snapshot_day_end }}
                     </template>
