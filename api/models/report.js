@@ -990,7 +990,7 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
   try {
       const result = await pool.query(query, values);           
       if (result.rows.length === 0) {
-        return { error: 'No data returned from query.' };
+        return []; // This line needs to change
       }
       return result.rows;
   } catch (err) {
