@@ -43,6 +43,7 @@
 <script setup>
 import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, shallowRef } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
+import { useHotelStore } from '@/composables/useHotelStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -79,6 +80,7 @@ const props = defineProps({
 });
 
 const { fetchMonthlyReservationEvolution } = useReportStore();
+const hotelStore = useHotelStore();
 const matrixData = ref([]);
 const averageData = ref([]); // This is populated by fetchReportData
 const loading = ref(false);
@@ -242,6 +244,22 @@ const heatmapData = computed(() => {
     };
 });
 
+const currentHotelTotalRooms = computed(() => {
+    if (props.hotelId && hotelStore.hotels.value && hotelStore.hotels.value.length > 0) {
+        const currentHotel = hotelStore.hotels.value.find(
+            (hotel) => hotel.id === Number(props.hotelId) // Ensure props.hotelId is compared as a number
+        );
+        if (currentHotel && typeof currentHotel.total_rooms === 'number') {
+            return currentHotel.total_rooms;
+        }
+    }
+    // Fallback or default if total_rooms cannot be found.
+    // For visualMap.max, a value of 0 or 1 might make sense if total_rooms is unknown,
+    // or we could rely on hData.maxCount from heatmapData as an alternative.
+    // Let's return null for now, and handle fallback in heatmapEchartsOptions.
+    return null;
+});
+
 // ECharts refs
 const lineChartContainer = ref(null); // Ref to the chart's DOM container
 const lineChartInstance = shallowRef(null); // Ref to the ECharts instance
@@ -357,11 +375,12 @@ const heatmapEchartsOptions = computed(() => {
         },
         visualMap: {
             min: 0,
-            max: hData.maxCount > 0 ? hData.maxCount : 1, // Ensure max is at least 1 to avoid issues if all counts are 0
+            max: (currentHotelTotalRooms.value && currentHotelTotalRooms.value > 0) ? currentHotelTotalRooms.value : (hData.maxCount > 0 ? hData.maxCount : 1),
             calculable: true,
             orient: 'horizontal',
             left: 'center',
-            bottom: '5%' // Position at the bottom
+            bottom: '5%',
+            color: ['#D3D3D3', 'yellow', 'red'], // Added/Updated color scheme
         },
         series: [{
             name: 'Booked Room Nights',
