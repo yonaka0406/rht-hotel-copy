@@ -323,7 +323,7 @@ const echartsOptions = computed(() => {
 
 // Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch],
-    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch]) => {
+    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch] = []) => {
         console.log(
             'MonthlyReservationEvolutionReport: Props watcher triggered.',
             {
