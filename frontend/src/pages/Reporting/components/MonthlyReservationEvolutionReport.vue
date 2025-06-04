@@ -55,8 +55,9 @@ import {
   GridComponent,
   LegendComponent,
   TitleComponent,
+  VisualMapComponent // Added
 } from 'echarts/components';
-import { LineChart } from 'echarts/charts';
+import { LineChart, HeatmapChart } from 'echarts/charts'; // Added
 import { CanvasRenderer } from 'echarts/renderers';
 
 // Register ECharts components
@@ -65,7 +66,9 @@ echarts.use([
   GridComponent,
   LegendComponent,
   TitleComponent,
+  VisualMapComponent, // Added
   LineChart,
+  HeatmapChart,       // Added
   CanvasRenderer,
 ]);
 
