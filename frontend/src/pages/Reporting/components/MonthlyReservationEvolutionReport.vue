@@ -124,10 +124,12 @@ const fetchReportData = async () => {
     try {
         // console.log(`Fetching OTB Evolution for hotel: ${props.hotelId}, month: ${props.targetMonth}, trigger: ${props.triggerFetch}`);
         const rawData = await fetchMonthlyReservationEvolution(props.hotelId, props.targetMonth);
+        console.log('Raw Data from API:', JSON.parse(JSON.stringify(rawData)));
         matrixData.value = rawData.map(item => ({
             ...item,
             stay_date: item.stay_date // Assuming it's already in 'YYYY-MM-DD' or a parsable format
         }));
+        console.log('Processed matrixData:', JSON.parse(JSON.stringify(matrixData.value)));
 
         if (rawData && rawData.length > 0) {
             const leadDayMap = new Map();
@@ -151,6 +153,7 @@ const fetchReportData = async () => {
         } else {
             averageData.value = [];
         }
+        console.log('Calculated averageData:', JSON.parse(JSON.stringify(averageData.value)));
     } catch (err) {
         console.error('Failed to fetch OTB Evolution report:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
