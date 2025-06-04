@@ -366,15 +366,27 @@
     };
 
     const fetchReportData = async () => {
+        // Dispose existing chart instance to ensure a clean slate
+        if (lineChartInstance.value && typeof lineChartInstance.value.dispose === 'function' && !lineChartInstance.value.isDisposed?.()) {
+            lineChartInstance.value.dispose();
+            lineChartInstance.value = null; // Set to null so the watcher re-initializes
+        }
+
         if (props.hotelId === null || typeof props.hotelId === 'undefined' || props.hotelId === '') {
             reportData.value = []; 
             error.value = 'ホテルが選択されていません。';
             loading.value = false;
+            // Ensure chart options are updated for "No Data" state if reportData is empty
+            // The lineChartOptions computed property already handles empty reportData,
+            // and the watcher will pick it up.
             return;
         }
         loading.value = true;
         error.value = null;
-        reportData.value = []; // Clear previous data
+        // It's important reportData is cleared *before* new data might come in,
+        // so chart options can reflect an empty/loading state if needed.
+        reportData.value = [];
+        expandedRowGroups.value = []; // Reset expanded groups as well
 
         try {
             const todayDateString = getTodayDateString();
@@ -402,22 +414,22 @@
                 });
 
             // Ensure groups are collapsed initially
-            expandedRowGroups.value = [];
+            // expandedRowGroups.value = []; // Already set above
 
         } else {
             // This case should ideally be handled within fetchActiveReservationsChange
             // For safety, if it returns something unexpected:
             console.warn("fetchActiveReservationsChange did not return an array:", data);
-            reportData.value = [];
-            expandedRowGroups.value = []; // Also clear if data fetch fails or is empty
+            // reportData.value = []; // Already set above
+            // expandedRowGroups.value = []; // Already set above
         }
             // console.log('Fetched data for room inventory report:', reportData.value);
 
         } catch (err) {
             console.error('Failed to fetch room inventory report:', err);
             error.value = err.message || 'データの取得中にエラーが発生しました。';
-            reportData.value = []; // Clear data on error
-            expandedRowGroups.value = []; // Clear on error too
+            // reportData.value = []; // Already set above
+            // expandedRowGroups.value = []; // Already set above
         } finally {
             loading.value = false;
         }
