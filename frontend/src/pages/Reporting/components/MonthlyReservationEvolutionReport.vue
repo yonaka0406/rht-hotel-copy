@@ -10,24 +10,18 @@
             <p>{{ error }}</p>
         </div>
         <div v-else>
-            <Panel toggleable class="mb-6" v-if="false">
-                <template #header>
+            <Card class="mb-6">
+                <template #title>
                     <div class="flex items-center gap-2">
-                        <i class="pi pi-table"></i>
-                        <span class="font-semibold">OTBマトリクス</span>
+                        <i class="pi pi-th-large"></i> <!-- Changed icon for heatmap -->
+                        <span class="font-semibold">OTB Heatmap (Lead Days vs. Stay Date)</span>
                     </div>
                 </template>
-                <DataTable :value="matrixData" responsiveLayout="scroll" scrollable scrollHeight="400px" showGridlines stripedRows size="small" v-if="matrixData.length">
-                    <Column field="stay_date" header="滞在日" :sortable="true" style="min-width: 120px;">
-                         <template #body="slotProps">
-                            {{ formatDate(slotProps.data.stay_date) }}
-                        </template>
-                    </Column>
-                    <Column field="lead_days" header="リード日数" :sortable="true" style="min-width: 100px;"></Column>
-                    <Column field="booked_room_nights_count" header="予約室数" :sortable="true" style="min-width: 100px;"></Column>
-                </DataTable>
-                <p v-else class="text-gray-500 p-4">マトリクスデータがありません。</p>
-            </Panel>
+                <template #content>
+                    <div ref="heatmapChartContainer" style="height: 600px;" v-if="heatmapEchartsOptions"></div> <!-- Taller height for heatmap -->
+                    <p v-else class="text-gray-500 p-4">Heatmap data is not available or being processed.</p>
+                </template>
+            </Card>
 
             <Card>
                 <template #title>
@@ -53,7 +47,6 @@ import ProgressSpinner from 'primevue/progressspinner';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Card from 'primevue/card'; // Assuming Card is kept from previous change
-import Panel from 'primevue/panel'; // Keep if still used for the (hidden) OTB Matrix
 
 // ECharts imports
 import * as echarts from 'echarts/core';
@@ -160,9 +153,97 @@ const fetchReportData = async () => {
     }
 };
 
+// Helper function to get all dates in a given month (YYYY-MM-DD format for the first day)
+const getDaysInMonth = (targetMonthIsoString) => {
+    if (!targetMonthIsoString) return [];
+    const date = new Date(targetMonthIsoString);
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-indexed
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysArray = [];
+    for (let i = 1; i <= daysInMonth; i++) {
+        // Format as 'DD' for y-axis category
+        daysArray.push(String(i).padStart(2, '0'));
+    }
+    return daysArray;
+};
+
+const heatmapData = computed(() => {
+    if (!matrixData.value || matrixData.value.length === 0 || !props.targetMonth) {
+        return { seriesData: [], xAxisData: [], yAxisData: [], maxCount: 0 };
+    }
+
+    // Y-Axis: Days of the target month (e.g., ["01", "02", ..., "30"])
+    const yAxisData = getDaysInMonth(props.targetMonth);
+
+    // X-Axis: Lead days (0 to 180, as strings)
+    // Determine actual range from matrixData to avoid overly sparse xAxis if possible,
+    // but for consistency with line chart and SQL, 0-180 is expected.
+    // Let's find min/max lead_days present in matrixData for a potentially tighter axis.
+    let minLead = 180;
+    let maxLead = 0;
+    if (matrixData.value.length > 0) {
+        matrixData.value.forEach(item => {
+            if (item.lead_days < minLead) minLead = item.lead_days;
+            if (item.lead_days > maxLead) maxLead = item.lead_days;
+        });
+    } else {
+        minLead = 0; // Default if matrixData is empty but somehow this computed runs
+    }
+    // Ensure maxLead is at least minLead, and generate categories from 0 up to maxLead found or a default like 30/60/90 if too large.
+    // For OTB, 0-180 is the full range from SQL. Let's stick to a fixed sensible range for now e.g. 0-90 or make it dynamic.
+    // Or, more simply, use all lead_days that appear in matrixData.
+    const uniqueLeadDays = [...new Set(matrixData.value.map(item => item.lead_days))].sort((a, b) => a - b);
+    const xAxisData = uniqueLeadDays.map(String);
+
+
+    const seriesData = [];
+    let maxCount = 0;
+
+    matrixData.value.forEach(item => {
+        const leadDay = item.lead_days;
+        const stayDate = new Date(item.stay_date);
+        const dayOfMonth = String(stayDate.getUTCDate()).padStart(2, '0'); // Use getUTCDate for consistency if dates are UTC
+
+        const count = parseInt(item.booked_room_nights_count, 10);
+        if (isNaN(count)) return; // Should not happen with SQL COUNT
+
+        if (count > maxCount) {
+            maxCount = count;
+        }
+
+        // For ECharts heatmap, data is typically [xIndex, yIndex, value]
+        // Find index of leadDay in xAxisData and dayOfMonth in yAxisData
+        const xIndex = xAxisData.indexOf(String(leadDay));
+        const yIndex = yAxisData.indexOf(dayOfMonth);
+
+        if (xIndex !== -1 && yIndex !== -1) {
+            seriesData.push([xIndex, yIndex, count]);
+        }
+    });
+
+    // If using actual values for heatmap series [xVal, yVal, value]
+    // const seriesDataWithValue = matrixData.value.map(item => {
+    //     const count = parseInt(item.booked_room_nights_count, 10);
+    //     if (isNaN(count)) return [item.lead_days, new Date(item.stay_date).getUTCDate(), 0]; // Default on error
+    //     if (count > maxCount) maxCount = count;
+    //     return [item.lead_days, new Date(item.stay_date).getUTCDate(), count];
+    // });
+
+
+    return {
+        seriesData: seriesData, // This is [xIndex, yIndex, value]
+        xAxisData: xAxisData,     // Categories for X-axis (lead_days as strings)
+        yAxisData: yAxisData,     // Categories for Y-axis (day of month as "DD" strings)
+        maxCount: maxCount        // Max value for visualMap
+    };
+});
+
 // ECharts refs
 const lineChartContainer = ref(null); // Ref to the chart's DOM container
 const lineChartInstance = shallowRef(null); // Ref to the ECharts instance
+const heatmapChartContainer = ref(null); // Ref for the heatmap's DOM container
+const heatmapChartInstance = shallowRef(null); // Ref for the heatmap ECharts instance
 
 // ECharts options computed property - definition remains the same
 const echartsOptions = computed(() => {
@@ -222,6 +303,84 @@ const echartsOptions = computed(() => {
 // Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
 
+const heatmapEchartsOptions = computed(() => {
+    const hData = heatmapData.value; // from previous step { seriesData, xAxisData, yAxisData, maxCount }
+    if (!hData || !hData.seriesData || hData.seriesData.length === 0) {
+        return null; // No data, no options
+    }
+
+    return {
+        tooltip: {
+            position: 'top',
+            formatter: (params) => {
+                // params.value will be [xIndex, yIndex, count]
+                // We need to map xIndex back to lead_day and yIndex back to day_of_month
+                if (params.componentType === 'series') {
+                    const leadDay = hData.xAxisData[params.value[0]];
+                    const dayOfMonth = hData.yAxisData[params.value[1]];
+                    const count = params.value[2];
+                    return `Date: ${props.targetMonth.substring(0, 7)}-${dayOfMonth}<br/>Lead Day: ${leadDay}<br/>Reservations: ${count}`;
+                }
+                return '';
+            }
+        },
+        grid: {
+            height: '60%', // Adjust as needed
+            top: '10%',
+            bottom: '25%', // Make space for visualMap and xAxis labels
+            left: '5%',
+            right: '5%',
+            containLabel: true
+        },
+        xAxis: {
+            type: 'category',
+            data: hData.xAxisData,
+            name: 'Lead Days',
+            nameLocation: 'middle',
+            nameGap: 25, // Adjust if labels overlap
+            splitArea: { show: true },
+            axisLabel: {
+                // Optional: rotate if too many categories
+                // rotate: 45,
+            }
+        },
+        yAxis: {
+            type: 'category',
+            data: hData.yAxisData, // Day numbers "01", "02", ...
+            name: `Days of ${formatTargetMonthForDisplay(props.targetMonth)}`, // Dynamic month name
+            nameLocation: 'middle',
+            nameGap: 35, // Adjust
+            splitArea: { show: true }
+        },
+        visualMap: {
+            min: 0,
+            max: hData.maxCount > 0 ? hData.maxCount : 1, // Ensure max is at least 1 to avoid issues if all counts are 0
+            calculable: true,
+            orient: 'horizontal',
+            left: 'center',
+            bottom: '5%' // Position at the bottom
+        },
+        series: [{
+            name: 'Booked Room Nights',
+            type: 'heatmap',
+            data: hData.seriesData, // [xIndex, yIndex, value]
+            label: {
+                show: true,
+                formatter: (params) => {
+                    return params.value[2] > 0 ? params.value[2] : ''; // Show count if > 0
+                }
+            },
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            }
+        }],
+        responsive: true
+    };
+});
+
 // NEW: Watcher for echartsOptions to manage chart lifecycle
 watch(echartsOptions, (newOptions) => {
     if (newOptions) {
@@ -251,20 +410,49 @@ const disposeLineChart = () => {
     }
 };
 
-const resizeLineChartHandler = () => {
+// Watcher for heatmapEchartsOptions
+watch(heatmapEchartsOptions, (newOptions) => {
+    if (newOptions) {
+        nextTick(() => {
+            if (heatmapChartContainer.value) {
+                if (!heatmapChartInstance.value) {
+                    heatmapChartInstance.value = echarts.init(heatmapChartContainer.value);
+                }
+                heatmapChartInstance.value.setOption(newOptions, true);
+            }
+        });
+    } else {
+        if (heatmapChartInstance.value) {
+            heatmapChartInstance.value.dispose();
+            heatmapChartInstance.value = null;
+        }
+    }
+}, { deep: true });
+
+const disposeHeatmapChart = () => {
+    if (heatmapChartInstance.value) {
+        heatmapChartInstance.value.dispose();
+        heatmapChartInstance.value = null;
+    }
+};
+
+const handleChartsResize = () => {
     if (lineChartInstance.value) {
         lineChartInstance.value.resize();
+    }
+    if (heatmapChartInstance.value) {
+        heatmapChartInstance.value.resize();
     }
 };
 
 onMounted(() => {
-    // No direct chart init here anymore. The watcher for echartsOptions will handle it.
-    window.addEventListener('resize', resizeLineChartHandler);
+    window.addEventListener('resize', handleChartsResize); // Use combined handler
 });
 
 onBeforeUnmount(() => {
     disposeLineChart();
-    window.removeEventListener('resize', resizeLineChartHandler);
+    disposeHeatmapChart(); // Dispose heatmap too
+    window.removeEventListener('resize', handleChartsResize); // Use combined handler
 });
 
 </script>
