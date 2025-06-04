@@ -417,24 +417,16 @@ const heatmapEchartsOptions = computed(() => {
 
 // NEW: Watcher for echartsOptions to manage chart lifecycle
 watch(echartsOptions, (newOptions) => {
+    disposeLineChart(); // Always dispose if instance exists (disposeLineChart checks internally)
     if (newOptions) {
-        // Options are available (meaning data is ready)
         nextTick(() => {
-            if (lineChartContainer.value) { // Ensure DOM element is ready
-                if (!lineChartInstance.value) { // If no instance, create one
-                    lineChartInstance.value = echarts.init(lineChartContainer.value);
-                }
-                lineChartInstance.value.setOption(newOptions, true); // Apply new options
-            } else {
-                // This might happen if the v-if on the container somehow isn't true yet,
-                // though nextTick after options are ready should make it available.
-                // console.warn('Chart container not found when trying to render chart.');
+            if (lineChartContainer.value) {
+                lineChartInstance.value = echarts.init(lineChartContainer.value); // Always re-init
+                lineChartInstance.value.setOption(newOptions, true);
             }
         });
-    } else {
-        // Options are null (meaning averageData is empty)
-        disposeLineChart();
     }
+    // If newOptions is null, disposeLineChart() was already called.
 }, { deep: true }); // deep: true might be useful if options object structure is complex and changes internally
 
 const disposeLineChart = () => {
@@ -446,21 +438,16 @@ const disposeLineChart = () => {
 
 // Watcher for heatmapEchartsOptions
 watch(heatmapEchartsOptions, (newOptions) => {
+    disposeHeatmapChart(); // Always dispose if instance exists (disposeHeatmapChart checks internally)
     if (newOptions) {
         nextTick(() => {
             if (heatmapChartContainer.value) {
-                if (!heatmapChartInstance.value) {
-                    heatmapChartInstance.value = echarts.init(heatmapChartContainer.value);
-                }
+                heatmapChartInstance.value = echarts.init(heatmapChartContainer.value); // Always re-init
                 heatmapChartInstance.value.setOption(newOptions, true);
             }
         });
-    } else {
-        if (heatmapChartInstance.value) {
-            heatmapChartInstance.value.dispose();
-            heatmapChartInstance.value = null;
-        }
     }
+    // If newOptions is null, disposeHeatmapChart() was already called.
 }, { deep: true });
 
 const disposeHeatmapChart = () => {
