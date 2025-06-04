@@ -594,16 +594,24 @@ const getMonthlyReservationEvolution = async (req, res) => {
   const { hotel_id, target_month } = req.params;
 
   try {
+    // The model function selectMonthlyReservationEvolution now throws errors for invalid input
+    // or returns an array (empty or with data).
     const data = await selectMonthlyReservationEvolution(req.requestId, hotel_id, target_month);
 
-    if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data returned from query.' });
-    }  
-
+    // If data is an empty array, it means "no data found", which is a successful query.
+    // res.json will handle sending a 200 OK with the array (empty or populated).
     res.json(data);
+
   } catch (err) {
-    console.error(`[${req.requestId}] Error in getMonthlyReservationEvolution:`, err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(`[${req.requestId}] Error in getMonthlyReservationEvolution:`, err.message);
+    if (err.message === 'Invalid hotel_id format.' || err.message === 'Invalid target_month format. Expected YYYY-MM-DD.') {
+      res.status(400).json({ error: err.message });
+    } else if (err.message === 'Database error') { // Or a more generic check if the model throws this
+      res.status(500).json({ error: 'A database error occurred.' });
+    }
+    else {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   }  
 };
 

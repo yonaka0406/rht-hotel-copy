@@ -931,11 +931,11 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
 
   const p_hotel_id = parseInt(hotel_id, 10);
   if (isNaN(p_hotel_id)) {
-    return { error: 'Invalid hotel_id format.' };
+    throw new Error('Invalid hotel_id format.');
   }
   // Validate target_month format (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(target_month)) {
-    return { error: 'Invalid target_month format. Expected YYYY-MM-DD.' };
+    throw new Error('Invalid target_month format. Expected YYYY-MM-DD.');
   }
   const p_target_month_start_date = target_month;
 
