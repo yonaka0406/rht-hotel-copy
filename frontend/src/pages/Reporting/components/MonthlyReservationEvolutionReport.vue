@@ -258,14 +258,22 @@ onBeforeUnmount(() => {
 });
 
 // Watch for data changes to update the chart
-watch(averageData, () => {
-    if (averageData.value.length === 0 && lineChartInstance.value) {
-        disposeLineChart();
+watch(averageData, (newValue, oldValue) => { // Added newValue, oldValue for potential debugging if needed, not used yet
+    if (lineChartInstance.value) {
+        disposeLineChart(); // Dispose existing instance first
     }
-    if (averageData.value.length > 0 && !lineChartInstance.value && lineChartContainer.value) {
-         nextTick(() => initOrUpdateLineChart());
-    } else if (lineChartInstance.value) {
-         nextTick(() => initOrUpdateLineChart());
+
+    // If new data is available and valid for charting
+    if (newValue && newValue.length > 0) {
+        if (lineChartContainer.value) {
+            nextTick(() => {
+                initOrUpdateLineChart(); // This will init and set options
+            });
+        } else {
+            // This case should ideally not happen if the component's structure is correct
+            // and v-if for chart container depends on averageData.length
+            console.warn('Chart container not available when averageData updated.');
+        }
     }
 }, { deep: true });
 
