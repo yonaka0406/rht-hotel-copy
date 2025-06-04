@@ -49,25 +49,35 @@
                 groupRowsBy="yearMonth"
                 expandableRowGroups
                 v-model:expandedRowGroups="expandedRowGroups"
+                tableStyle="min-width: 50rem"
             >
                 <template #groupheader="slotProps">
-                    <span class="font-bold">
+                    <div class="font-bold p-2"> <!-- Added padding for appearance -->
                         {{ slotProps.data.yearMonth }}
-                    </span>
+                    </div>
                 </template>
 
-                <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true"></Column>
-                <Column field="count_as_of_previous_day_end" header="前日終了時点在庫" :sortable="true">
+                <template #groupfooter="slotProps">
+                    <div class="flex font-bold" style="padding: 0.5rem;"> <!-- Ensure consistent padding with header/cells -->
+                        <span style="flex: 1; text-align: left;">月合計:</span>
+                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span>
+                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span>
+                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span>
+                    </div>
+                </template>
+
+                <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true" style="flex: 1;"></Column>
+                <Column field="count_as_of_previous_day_end" header="前日終了時点在庫" :sortable="true" style="flex: 1; text-align: right;">
                     <template #body="columnSlotProps">
                         {{ columnSlotProps.data.count_as_of_previous_day_end }}
                     </template>
                 </Column>
-                <Column field="count_as_of_snapshot_day_end" header="当日終了時点在庫" :sortable="true">
+                <Column field="count_as_of_snapshot_day_end" header="当日終了時点在庫" :sortable="true" style="flex: 1; text-align: right;">
                     <template #body="columnSlotProps">
                         {{ columnSlotProps.data.count_as_of_snapshot_day_end }}
                     </template>
                 </Column>
-                <Column field="daily_difference" header="日次差異" :sortable="true">
+                <Column field="daily_difference" header="日次差異" :sortable="true" style="flex: 1; text-align: right;">
                     <template #body="columnSlotProps">
                         {{ columnSlotProps.data.daily_difference }}
                     </template>
@@ -399,6 +409,29 @@
 
     // Watch for changes in props and trigger fetch
     watch(() => [props.hotelId, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
+
+    const toggleRowGroup = (yearMonth) => {
+        const index = expandedRowGroups.value.indexOf(yearMonth);
+        if (index === -1) {
+            expandedRowGroups.value.push(yearMonth);
+        } else {
+            expandedRowGroups.value.splice(index, 1);
+        }
+    };
+
+    const calculateGroupTotals = (yearMonth) => {
+        if (!reportData.value || !yearMonth) {
+            return { prevDayTotal: 0, snapshotDayTotal: 0, diffTotal: 0 };
+        }
+        const groupItems = reportData.value.filter(item => item.yearMonth === yearMonth);
+        const totals = groupItems.reduce((acc, item) => {
+            acc.prevDayTotal += item.count_as_of_previous_day_end;
+            acc.snapshotDayTotal += item.count_as_of_snapshot_day_end;
+            acc.diffTotal += item.daily_difference;
+            return acc;
+        }, { prevDayTotal: 0, snapshotDayTotal: 0, diffTotal: 0 });
+        return totals;
+    };
 
     watch(lineChartOptions, async (newOptions) => {
         // Ensure the chart container is rendered and DOM is ready
