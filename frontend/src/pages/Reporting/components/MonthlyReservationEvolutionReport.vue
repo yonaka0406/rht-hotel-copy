@@ -322,7 +322,19 @@ const echartsOptions = computed(() => {
 });
 
 // Watch for prop changes to refetch data
-watch(() => [props.hotelId, props.targetMonth, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
+watch(() => [props.hotelId, props.targetMonth, props.triggerFetch],
+    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch]) => {
+        console.log(
+            'MonthlyReservationEvolutionReport: Props watcher triggered.',
+            {
+                newHotelId, newTargetMonth, newTriggerFetch,
+                oldHotelId, oldTargetMonth, oldTriggerFetch
+            }
+        );
+        fetchReportData(); // Call the original handler
+    },
+    { immediate: true, deep: true }
+);
 
 const heatmapEchartsOptions = computed(() => {
     const hData = heatmapData.value; // from previous step { seriesData, xAxisData, yAxisData, maxCount }
