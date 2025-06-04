@@ -118,13 +118,13 @@ const fetchReportData = async () => {
     error.value = null;
     try {
         const rawData = await fetchMonthlyReservationEvolution(props.hotelId, props.targetMonth);
-        console.log('Raw Data from API:', JSON.parse(JSON.stringify(rawData))); // Keep log
+        // console.log('Raw Data from API:', JSON.parse(JSON.stringify(rawData))); // Keep log
 
         matrixData.value = rawData.map(item => ({
             ...item,
             stay_date: item.stay_date
         }));
-        console.log('Processed matrixData:', JSON.parse(JSON.stringify(matrixData.value))); // Keep log
+        // console.log('Processed matrixData:', JSON.parse(JSON.stringify(matrixData.value))); // Keep log
 
         if (rawData && rawData.length > 0) {
             const leadDayMap = new Map();
@@ -147,7 +147,7 @@ const fetchReportData = async () => {
         } else {
             averageData.value = [];
         }
-        console.log('Calculated averageData:', JSON.parse(JSON.stringify(averageData.value))); // Keep log
+        // console.log('Calculated averageData:', JSON.parse(JSON.stringify(averageData.value))); // Keep log
     } catch (err) {
         console.error('Failed to fetch OTB Evolution report:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
@@ -323,14 +323,7 @@ const echartsOptions = computed(() => {
 
 // Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch],
-    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch] = []) => {
-        console.log(
-            'MonthlyReservationEvolutionReport: Props watcher triggered.',
-            {
-                newHotelId, newTargetMonth, newTriggerFetch,
-                oldHotelId, oldTargetMonth, oldTriggerFetch
-            }
-        );
+    ([newHotelId, newTargetMonth, newTriggerFetch], [oldHotelId, oldTargetMonth, oldTriggerFetch] = []) => {        
         fetchReportData(); // Call the original handler
     },
     { immediate: true, deep: true }
