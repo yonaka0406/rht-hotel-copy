@@ -45,7 +45,7 @@
                 </template>
 
                 <!-- Period Filter -->
-                <template v-if="!isReservationChangeReport && selectedReportType.value !== 'monthlyReservationEvolution'">
+                <template v-if="!showSingleHotelSelect">
                     <div class="flex gap-2 grid">
                         <label for="period" class="text-sm text-gray-200">期間</label>
                         <Select

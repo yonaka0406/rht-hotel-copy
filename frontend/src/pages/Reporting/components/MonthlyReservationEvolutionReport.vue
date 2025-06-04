@@ -14,12 +14,12 @@
                 <template #title>
                     <div class="flex items-center gap-2">
                         <i class="pi pi-th-large"></i> <!-- Changed icon for heatmap -->
-                        <span class="font-semibold">OTB Heatmap (Lead Days vs. Stay Date)</span>
+                        <span class="font-semibold">OTB ヒートマップ (リード日数 vs. 宿泊日)</span>
                     </div>
                 </template>
                 <template #content>
                     <div ref="heatmapChartContainer" style="height: 600px;" v-if="heatmapEchartsOptions"></div> <!-- Taller height for heatmap -->
-                    <p v-else class="text-gray-500 p-4">Heatmap data is not available or being processed.</p>
+                    <p v-else class="text-gray-500 p-4">ヒートマップデータはないまたは処理中</p>
                 </template>
             </Card>
 
@@ -291,7 +291,7 @@ const echartsOptions = computed(() => {
         },
         xAxis: {
             type: 'category',
-            name: 'リード日数 (Lead Days)',
+            name: 'リード日数',
             nameLocation: 'middle',
             nameGap: 30,
             data: averageData.value.map(item => item.lead_days.toString()),
@@ -368,7 +368,7 @@ const heatmapEchartsOptions = computed(() => {
         xAxis: {
             type: 'category',
             data: hData.xAxisData,
-            name: 'Lead Days',
+            name: 'リード日数',
             nameLocation: 'middle',
             nameGap: 25, // Adjust if labels overlap
             splitArea: { show: true },
@@ -380,7 +380,7 @@ const heatmapEchartsOptions = computed(() => {
         yAxis: {
             type: 'category',
             data: hData.yAxisData, // Day numbers "01", "02", ...
-            name: `Days of ${formatTargetMonthForDisplay(props.targetMonth)}`, // Dynamic month name
+            name: `${formatTargetMonthForDisplay(props.targetMonth)}`, // Dynamic month name
             nameLocation: 'middle',
             nameGap: 35, // Adjust
             splitArea: { show: true }
@@ -392,17 +392,14 @@ const heatmapEchartsOptions = computed(() => {
             orient: 'horizontal',
             left: 'center',
             bottom: '5%',
-            color: ['#F0F0F0', '#FFFFE0', '#B22222'], // Added/Updated color scheme
+            color: ['#D32F2F', '#FFEB3B', '#ECEFF1','#FFFFFF'],
         },
         series: [{
             name: 'Booked Room Nights',
             type: 'heatmap',
             data: hData.seriesData, // [xIndex, yIndex, value]
             label: {
-                show: true,
-                formatter: (params) => {
-                    return params.value[2] > 0 ? params.value[2] : ''; // Show count if > 0
-                }
+                show: false,                
             },
             emphasis: {
                 itemStyle: {
