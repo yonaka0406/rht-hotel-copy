@@ -52,28 +52,32 @@
                 tableStyle="min-width: 50rem"
             >
                 <template #groupheader="slotProps">
-                    <div class="flex p-2 cursor-pointer w-full items-center" @click="toggleRowGroup(slotProps.data.yearMonth)">
-                        <!-- Column 1: Month and Toggle Icon -->
-                        <div class="flex items-center flex-1">
-                            <i :class="expandedRowGroups.includes(slotProps.data.yearMonth) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" class="mr-2 text-blue-500 text-sm"></i>
-                            <span class="font-bold text-gray-800 text-sm">{{ slotProps.data.yearMonth }}</span>
-                        </div>
+                    <tr class="p-rowgroup-header">
+                        <td :colspan="4" class="p-0"> <!-- Assuming 4 columns, p-0 to remove default TD padding -->
+                            <div class="flex items-center p-2 cursor-pointer w-full" @click="toggleRowGroup(slotProps.data.yearMonth)">
+                                <!-- Column 1: Month and Toggle Icon -->
+                                <div class="flex items-center" style="flex: 1;">
+                                    <i :class="expandedRowGroups.includes(slotProps.data.yearMonth) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" class="mr-2 text-blue-500 text-sm"></i>
+                                    <span class="font-bold text-gray-800 text-sm">{{ slotProps.data.yearMonth }}</span>
+                                </div>
 
-                        <!-- Column 2: Previous Day Total (aligned right) -->
-                        <div class="flex-1 text-right pr-2">
-                            <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
-                        </div>
+                                <!-- Column 2: Previous Day Total (aligned right) -->
+                                <div style="flex: 1; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
+                                </div>
 
-                        <!-- Column 3: Snapshot Day Total (aligned right) -->
-                        <div class="flex-1 text-right pr-2">
-                            <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
-                        </div>
+                                <!-- Column 3: Snapshot Day Total (aligned right) -->
+                                <div style="flex: 1; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
+                                </div>
 
-                        <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
-                        <div class="flex-1 text-right pr-2">
-                            <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
-                        </div>
-                    </div>
+                                <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
+                                <div style="flex: 1; text-align: right; padding-right: 0.5rem;">
+                                    <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                 </template>
 
                 <Column field="inventory_date_formatted" header="日付 (現地時間)" :sortable="true" style="flex: 1;"></Column>
