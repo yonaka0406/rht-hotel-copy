@@ -10,7 +10,7 @@
             <p>{{ error }}</p>
         </div>
         <div v-else>
-            <Panel toggleable class="mb-6">
+            <Panel toggleable class="mb-6" v-if="false">
                 <template #header>
                     <div class="flex items-center gap-2">
                         <i class="pi pi-table"></i>
@@ -29,28 +29,19 @@
                 <p v-else class="text-gray-500 p-4">マトリクスデータがありません。</p>
             </Panel>
 
-            <Panel toggleable>
-                 <template #header>
+            <Card>
+                <template #title>
                     <div class="flex items-center gap-2">
                         <i class="pi pi-chart-line"></i>
                         <span class="font-semibold">平均OTB (リード日数別)</span>
                     </div>
                 </template>
-                <!-- ECharts container -->
-                <div ref="lineChartContainer" style="height: 400px" v-if="averageData.length && echartsOptions"></div>
-
-                <!-- Fallback to DataTable for averageData if data exists but chart options are somehow not generated (should not happen if averageData.length > 0) -->
-                <!-- Or, this could be a specific state, but for now, it's a direct replacement -->
-                <DataTable :value="averageData" responsiveLayout="scroll" v-else-if="averageData.length && !echartsOptions" class="mt-4">
-                     <Column field="lead_days" header="リード日数" :sortable="true"></Column>
-                     <Column field="avg_booked_room_nights" header="平均予約室数" :sortable="true">
-                        <template #body="slotProps">
-                            {{ parseFloat(slotProps.data.avg_booked_room_nights).toFixed(2) }}
-                        </template>
-                     </Column>
-                </DataTable>
-                <p v-else-if="!averageData.length" class="text-gray-500 p-4">平均OTBデータがありません。</p> <!-- Explicitly check averageData.length for this message -->
-            </Panel>
+                <template #content>
+                    <div ref="lineChartContainer" style="height: 400px" v-if="averageData.length && echartsOptions"></div>
+                    <p v-else-if="!averageData.length" class="text-gray-500 p-4">平均OTBデータがありません。</p>
+                    <!-- The fallback DataTable that was here is removed as it's likely unreachable -->
+                </template>
+            </Card>
         </div>
     </div>
 </template>
@@ -63,6 +54,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 // import Chart from 'primevue/chart'; // Removed PrimeVue Chart
 import Panel from 'primevue/panel';
+import Card from 'primevue/card';
 
 // ECharts imports
 import * as echarts from 'echarts/core';
