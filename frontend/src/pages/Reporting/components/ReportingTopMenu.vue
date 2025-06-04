@@ -169,26 +169,20 @@
     }
 
     // When report type changes in ReportingTopMenu:
-    function onInternalReportTypeChange(event) { // event for PrimeVue Select is { value: 'actualValue' }
-      const newReportType = event.value;
-      const oldReportType = selectedReportType.value; // Capture current value before updating selectedReportType
-      selectedReportType.value = newReportType; // Update the ref
+    function onInternalReportTypeChange(event) { 
+        const newReportType = event.value;
+        const oldReportType = selectedReportType.value;
+        selectedReportType.value = newReportType;
 
       if (newReportType === 'activeReservationsChange') {
-        if (Array.isArray(selectedHotels.value) && selectedHotels.value.length > 0) {
-          selectedHotels.value = [selectedHotels.value[0]]; // Keep first selected, or set to "全施設" if first is not valid
-        } else {
-          selectedHotels.value = [0]; // Default to "全施設" (ID 0)
-        }
+        selectedHotels.value = [0];
       } else if (oldReportType === 'activeReservationsChange') { // Check if the *previous* type was activeReservationsChange
         if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
-          selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; // "全施設" -> all hotels
+            selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; 
         }
-        // If a single specific hotel was selected (e.g., [hotelId]), it's a valid array for MultiSelect.
-        // If selectedHotels.value was empty [], it's also fine.
       }
       emit('report-type-change', newReportType);
-      emit('hotel-change', selectedHotels.value, hotels.value); // Emit updated hotel selection
+      emit('hotel-change', selectedHotels.value, hotels.value);
     }
     
     // Watch for prop changes to allow parent to control initial state or update dynamically
