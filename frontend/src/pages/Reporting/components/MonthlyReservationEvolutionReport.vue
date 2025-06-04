@@ -47,14 +47,13 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, shallowRef } from 'vue';
 import { useReportStore } from '@/composables/useReportStore';
 import ProgressSpinner from 'primevue/progressspinner';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
-// import Chart from 'primevue/chart'; // Removed PrimeVue Chart
-import Panel from 'primevue/panel';
-import Card from 'primevue/card';
+import Card from 'primevue/card'; // Assuming Card is kept from previous change
+import Panel from 'primevue/panel'; // Keep if still used for the (hidden) OTB Matrix
 
 // ECharts imports
 import * as echarts from 'echarts/core';
@@ -66,7 +65,6 @@ import {
 } from 'echarts/components';
 import { LineChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
-import { shallowRef, nextTick, onMounted, onBeforeUnmount } from 'vue'; // Added shallowRef, nextTick, onMounted, onBeforeUnmount
 
 // Register ECharts components
 echarts.use([
@@ -86,13 +84,12 @@ const props = defineProps({
 
 const { fetchMonthlyReservationEvolution } = useReportStore();
 const matrixData = ref([]);
-const averageData = ref([]);
+const averageData = ref([]); // This is populated by fetchReportData
 const loading = ref(false);
 const error = ref(null);
 
-// ECharts refs
-const lineChartContainer = ref(null);
-const lineChartInstance = shallowRef(null);
+// Console logs added previously can remain for user's debugging for now, or be removed if confident.
+// For this subtask, let's assume they remain.
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -116,44 +113,43 @@ const fetchReportData = async () => {
         matrixData.value = [];
         averageData.value = [];
         error.value = 'ホテルIDと対象月を選択してください。';
-        loading.value = false; // Ensure loading is false if prerequisites aren't met
+        loading.value = false;
         return;
     }
     loading.value = true;
     error.value = null;
     try {
-        // console.log(`Fetching OTB Evolution for hotel: ${props.hotelId}, month: ${props.targetMonth}, trigger: ${props.triggerFetch}`);
         const rawData = await fetchMonthlyReservationEvolution(props.hotelId, props.targetMonth);
-        console.log('Raw Data from API:', JSON.parse(JSON.stringify(rawData)));
+        console.log('Raw Data from API:', JSON.parse(JSON.stringify(rawData))); // Keep log
+
         matrixData.value = rawData.map(item => ({
             ...item,
-            stay_date: item.stay_date // Assuming it's already in 'YYYY-MM-DD' or a parsable format
+            stay_date: item.stay_date
         }));
-        console.log('Processed matrixData:', JSON.parse(JSON.stringify(matrixData.value)));
+        console.log('Processed matrixData:', JSON.parse(JSON.stringify(matrixData.value))); // Keep log
 
         if (rawData && rawData.length > 0) {
             const leadDayMap = new Map();
             rawData.forEach(item => {
                 const count = parseInt(item.booked_room_nights_count, 10);
-                if (isNaN(count)) return; // Skip if count is not a number
+                if (isNaN(count)) return;
 
                 if (!leadDayMap.has(item.lead_days)) {
-                    leadDayMap.set(item.lead_days, { sum: 0, count: 0, items: 0 });
+                    leadDayMap.set(item.lead_days, { sum: 0, items: 0 }); // Simplified
                 }
                 const current = leadDayMap.get(item.lead_days);
                 current.sum += count;
-                current.items++; // Number of records for this lead_day
+                current.items++;
             });
             
             averageData.value = Array.from(leadDayMap.entries()).map(([lead_days, data]) => ({
-                lead_days: parseInt(lead_days, 10), // Ensure lead_days is a number for sorting
+                lead_days: parseInt(lead_days, 10),
                 avg_booked_room_nights: data.items > 0 ? data.sum / data.items : 0
             })).sort((a, b) => a.lead_days - b.lead_days);
-
         } else {
             averageData.value = [];
         }
-        console.log('Calculated averageData:', JSON.parse(JSON.stringify(averageData.value)));
+        console.log('Calculated averageData:', JSON.parse(JSON.stringify(averageData.value))); // Keep log
     } catch (err) {
         console.error('Failed to fetch OTB Evolution report:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
@@ -164,7 +160,11 @@ const fetchReportData = async () => {
     }
 };
 
-// ECharts options computed property
+// ECharts refs
+const lineChartContainer = ref(null); // Ref to the chart's DOM container
+const lineChartInstance = shallowRef(null); // Ref to the ECharts instance
+
+// ECharts options computed property - definition remains the same
 const echartsOptions = computed(() => {
     if (!averageData.value || averageData.value.length === 0) {
         return null;
@@ -199,7 +199,7 @@ const echartsOptions = computed(() => {
             name: '平均予約室数',
             nameLocation: 'middle',
             nameGap: 40,
-            min: 0,
+            min: 0, // Keep min 0
             axisLabel: {
                 formatter: '{value}'
             }
@@ -208,7 +208,7 @@ const echartsOptions = computed(() => {
             {
                 name: '平均予約室数',
                 type: 'line',
-            data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights)),
+                data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights)), // Using parseFloat as per last fix
                 smooth: true,
                 emphasis: {
                     focus: 'series'
@@ -219,15 +219,35 @@ const echartsOptions = computed(() => {
     };
 });
 
+// Watch for prop changes to refetch data
 watch(() => [props.hotelId, props.targetMonth, props.triggerFetch], fetchReportData, { immediate: true, deep: true });
 
-// ECharts helper functions
-const initOrUpdateLineChart = () => {
-    if (lineChartContainer.value && echartsOptions.value) {
-        if (!lineChartInstance.value) {
-            lineChartInstance.value = echarts.init(lineChartContainer.value);
-        }
-        lineChartInstance.value.setOption(echartsOptions.value, true);
+// NEW: Watcher for echartsOptions to manage chart lifecycle
+watch(echartsOptions, (newOptions) => {
+    if (newOptions) {
+        // Options are available (meaning data is ready)
+        nextTick(() => {
+            if (lineChartContainer.value) { // Ensure DOM element is ready
+                if (!lineChartInstance.value) { // If no instance, create one
+                    lineChartInstance.value = echarts.init(lineChartContainer.value);
+                }
+                lineChartInstance.value.setOption(newOptions, true); // Apply new options
+            } else {
+                // This might happen if the v-if on the container somehow isn't true yet,
+                // though nextTick after options are ready should make it available.
+                // console.warn('Chart container not found when trying to render chart.');
+            }
+        });
+    } else {
+        // Options are null (meaning averageData is empty)
+        disposeLineChart();
+    }
+}, { deep: true }); // deep: true might be useful if options object structure is complex and changes internally
+
+const disposeLineChart = () => {
+    if (lineChartInstance.value) {
+        lineChartInstance.value.dispose();
+        lineChartInstance.value = null;
     }
 };
 
@@ -237,18 +257,8 @@ const resizeLineChartHandler = () => {
     }
 };
 
-const disposeLineChart = () => {
-    if (lineChartInstance.value) {
-        lineChartInstance.value.dispose();
-        lineChartInstance.value = null;
-    }
-};
-
-// Lifecycle hooks
 onMounted(() => {
-    nextTick(() => {
-        initOrUpdateLineChart();
-    });
+    // No direct chart init here anymore. The watcher for echartsOptions will handle it.
     window.addEventListener('resize', resizeLineChartHandler);
 });
 
@@ -256,26 +266,6 @@ onBeforeUnmount(() => {
     disposeLineChart();
     window.removeEventListener('resize', resizeLineChartHandler);
 });
-
-// Watch for data changes to update the chart
-watch(averageData, (newValue, oldValue) => { // Added newValue, oldValue for potential debugging if needed, not used yet
-    if (lineChartInstance.value) {
-        disposeLineChart(); // Dispose existing instance first
-    }
-
-    // If new data is available and valid for charting
-    if (newValue && newValue.length > 0) {
-        if (lineChartContainer.value) {
-            nextTick(() => {
-                initOrUpdateLineChart(); // This will init and set options
-            });
-        } else {
-            // This case should ideally not happen if the component's structure is correct
-            // and v-if for chart container depends on averageData.length
-            console.warn('Chart container not available when averageData updated.');
-        }
-    }
-}, { deep: true });
 
 </script>
 
