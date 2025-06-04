@@ -931,11 +931,11 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
 
   const p_hotel_id = parseInt(hotel_id, 10);
   if (isNaN(p_hotel_id)) {
-    return { error: 'Invalid hotel_id format.' };
+    throw new Error('Invalid hotel_id format.');
   }
   // Validate target_month format (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(target_month)) {
-    return { error: 'Invalid target_month format. Expected YYYY-MM-DD.' };
+    throw new Error('Invalid target_month format. Expected YYYY-MM-DD.');
   }
   const p_target_month_start_date = target_month;
 
@@ -943,10 +943,10 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
     WITH
     target_month_days AS (
         SELECT generate_series(
-                   $2::DATE,
-                   ($2::DATE + INTERVAL '1 month' - INTERVAL '1 day')::DATE,
-                   INTERVAL '1 day'
-               )::DATE AS stay_date
+                    $2::DATE,
+                    ($2::DATE + INTERVAL '1 month' - INTERVAL '1 day')::DATE,
+                    INTERVAL '1 day'
+                )::DATE AS stay_date
     ),
     lead_day_series AS (
         SELECT generate_series(0, 180) AS lead_days
@@ -954,31 +954,39 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
     matrix_base AS (
         SELECT
             tmd.stay_date,
-            lds.lead_days,
-            (tmd.stay_date - lds.lead_days * INTERVAL '1 day')::DATE AS booking_cutoff_date_start_of_day,
-            (tmd.stay_date - lds.lead_days * INTERVAL '1 day' + INTERVAL '1 day' - INTERVAL '1 microsecond')::TIMESTAMP AS booking_cutoff_datetime_end_of_day
-    FROM
+            lds.lead_days
+        FROM
             target_month_days tmd
-    CROSS JOIN
+        CROSS JOIN
             lead_day_series lds
+    ),
+    RelevantReservations AS (
+        SELECT
+            rd.id AS room_night_id,
+            rd.date AS stay_date,
+            r.hotel_id,
+            (r.check_in::DATE - r.created_at::DATE) AS calculated_lead_time_days
+        FROM
+            reservation_details rd
+        JOIN
+            reservations r ON rd.reservation_id = r.id
+                           AND rd.hotel_id = r.hotel_id
+        WHERE
+            r.hotel_id = $1
+            AND r.status IN ('confirmed', 'checked_in', 'checked_out')
+            AND rd.cancelled IS NULL
     )
     SELECT
         mb.stay_date,
         mb.lead_days,
-        COUNT(rd.id) AS booked_room_nights_count 
+        COUNT(rr.room_night_id) AS booked_room_nights_count
     FROM
-        matrix_base mb
+      matrix_base mb
     LEFT JOIN
-        reservation_details rd ON rd.hotel_id = $1
-                               AND rd.date = mb.stay_date 
-                               AND rd.cancelled IS NULL   
-    LEFT JOIN
-        reservations r ON rd.reservation_id = r.id
-                       AND rd.hotel_id = r.hotel_id     
-    WHERE
-        r.hotel_id = $1                 
-        AND r.status IN ('confirmed', 'checked_in', 'checked_out') 
-        AND r.created_at <= mb.booking_cutoff_datetime_end_of_day 
+      RelevantReservations rr
+    ON rr.stay_date = mb.stay_date
+      AND rr.calculated_lead_time_days >= mb.lead_days
+      AND rr.hotel_id = $1
     GROUP BY
         mb.stay_date,
         mb.lead_days
@@ -990,7 +998,7 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
   try {
       const result = await pool.query(query, values);           
       if (result.rows.length === 0) {
-        return { error: 'No data returned from query.' };
+        return []; // This line needs to change
       }
       return result.rows;
   } catch (err) {

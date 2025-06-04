@@ -45,7 +45,7 @@
                 </template>
 
                 <!-- Period Filter -->
-                <template v-if="!isReservationChangeReport">
+                <template v-if="!showSingleHotelSelect">
                     <div class="flex gap-2 grid">
                         <label for="period" class="text-sm text-gray-200">期間</label>
                         <Select
@@ -61,7 +61,7 @@
                 </template>
 
                 <!-- Hotels Filter -->
-                <div v-if="!isReservationChangeReport" class="flex gap-2 grid">
+                <div v-if="!showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
                     <label for="hotels" class="text-sm text-gray-200">施設</label>
                     <MultiSelect
                         v-model="selectedHotels"
@@ -75,7 +75,7 @@
                         class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
                     />                    
                 </div>
-                <div v-if="isReservationChangeReport" class="flex gap-2 grid">
+                <div v-if="showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
                     <label for="facility" class="text-sm text-gray-200">施設</label>
                     <Select
                         v-model="singleSelectedHotelId"
@@ -126,19 +126,25 @@
     // Computed property to determine if the current report type is 'activeReservationsChange'
     const isReservationChangeReport = computed(() => selectedReportType.value === 'activeReservationsChange');
 
+    const showSingleHotelSelect = computed(() =>
+        selectedReportType.value === 'activeReservationsChange' ||
+        selectedReportType.value === 'monthlyReservationEvolution'
+    );
+
     // Computed property for hotel options, adding "全施設" if it's the reservation change report
     const hotelOptions = computed(() => {
-      const options = hotels.value ? [...hotels.value] : []; // Ensure 'hotels.value' is the reactive array from the store
-      if (isReservationChangeReport.value) {
+      const options = hotels.value ? [...hotels.value] : [];
+      // Only add "全施設" for 'activeReservationsChange' report type
+      if (selectedReportType.value === 'activeReservationsChange') { // New condition
         return [{ id: 0, name: '全施設' }, ...options];
       }
-      return options;
+      return options; // For other single-select modes (like monthlyReservationEvolution), do not add "全施設"
     });
 
     // Computed property for single hotel selection, mapping to/from selectedHotels array
     const singleSelectedHotelId = computed({
-      get: () => (selectedHotels.value && selectedHotels.value.length > 0) ? selectedHotels.value[0] : 0,
-      set: (val) => { selectedHotels.value = (val === null || val === undefined) ? [] : [val]; } // Handle null/undefined for val
+      get: () => (selectedHotels.value && selectedHotels.value.length > 0) ? selectedHotels.value[0] : null, // Changed default to null
+      set: (val) => { selectedHotels.value = (val === null || val === undefined) ? [] : [val]; }
     });
 
     const reportTypeOptions = ref([
@@ -174,15 +180,33 @@
         const oldReportType = selectedReportType.value;
         selectedReportType.value = newReportType;
 
-      if (newReportType === 'activeReservationsChange') {
-        selectedHotels.value = [0];
-      } else if (oldReportType === 'activeReservationsChange') { // Check if the *previous* type was activeReservationsChange
-        if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
-            selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; 
+        if (newReportType === 'activeReservationsChange') {
+            selectedHotels.value = [0]; // Default to "All Facilities"
+        } else if (newReportType === 'monthlyReservationEvolution') {
+            // If switching to Monthly Reservation Evolution
+            // Default to the first hotel if no hotel is selected, or if "All Facilities" was selected from activeReservationsChange, or multiple hotels were selected
+            if (hotels.value && hotels.value.length > 0) {
+                if (!selectedHotels.value || selectedHotels.value.length === 0 ||
+                    (selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) || // Coming from "All Facilities"
+                    selectedHotels.value.length > 1) { // Or if multiple were selected
+                    selectedHotels.value = [hotels.value[0].id];
+                }
+                // If a single, valid hotel was already selected, keep it.
+            } else {
+                selectedHotels.value = []; // No hotels available
+            }
+        } else if (oldReportType === 'activeReservationsChange' && newReportType !== 'activeReservationsChange' && newReportType !== 'monthlyReservationEvolution') {
+            // If switching from "activeReservationsChange" (and "All Facilities" was selected) to other multi-hotel reports
+            if (selectedHotels.value && selectedHotels.value.length === 1 && selectedHotels.value[0] === 0) {
+                selectedHotels.value = hotels.value ? hotels.value.map(h => h.id) : []; // Select all hotels
+            }
         }
-      }
-      emit('report-type-change', newReportType);
-      emit('hotel-change', selectedHotels.value, hotels.value);
+        // Note: If switching from a multi-hotel selection to another multi-hotel report (e.g. monthlySummary to another),
+        // selectedHotels generally remains as is, which is usually the desired behavior.
+
+        emit('report-type-change', newReportType);
+        // Ensure hotel-change is emitted after selectedHotels is finalized for the new report type
+        emit('hotel-change', selectedHotels.value, hotels.value);
     }
     
     // Watch for prop changes to allow parent to control initial state or update dynamically
@@ -214,16 +238,24 @@
       // Now, adjust selectedHotels.value based on the effective selectedReportType.
       if (selectedReportType.value === 'activeReservationsChange') {
         if (selectedHotels.value && selectedHotels.value.length > 0) {
+          // Ensure it's a single selection, typically [0] for "All Facilities"
           selectedHotels.value = [selectedHotels.value[0]];
         } else {
-          // If prop didn't set any hotel or set an empty array, default to "全施設"
-          selectedHotels.value = [0];
+          selectedHotels.value = [0]; // Default to "All Facilities"
         }
-      } else { // Not 'activeReservationsChange' (i.e., multi-select mode)
-        // If no hotels are selected via props (selectedHotels.value is empty after watcher)
-        // AND hotels are loaded, then select all hotels.
+      } else if (selectedReportType.value === 'monthlyReservationEvolution') {
+        // For Monthly Reservation Evolution, default to the first hotel if available and no specific hotel is selected or multiple are selected
+        if (hotels.value && hotels.value.length > 0) {
+          if (!selectedHotels.value || selectedHotels.value.length === 0 || selectedHotels.value.length > 1) {
+            selectedHotels.value = [hotels.value[0].id]; // Select the first hotel
+          }
+          // If a single hotel is already selected (e.g. via props), keep it.
+        } else {
+          selectedHotels.value = []; // No hotels available
+        }
+      } else { // For other reports like 'monthlySummary' (multi-select is fine)
         if ((!selectedHotels.value || selectedHotels.value.length === 0) && hotels.value && hotels.value.length > 0) {
-          selectedHotels.value = hotels.value.map(h => h.id);
+          selectedHotels.value = hotels.value.map(h => h.id); // Default to all hotels
         }
       }
 
