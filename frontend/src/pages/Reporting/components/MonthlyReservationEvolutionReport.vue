@@ -206,7 +206,7 @@ const heatmapData = computed(() => {
     matrixData.value.forEach(item => {
         const leadDay = item.lead_days;
         const stayDate = new Date(item.stay_date);
-        const dayOfMonth = String(stayDate.getUTCDate()).padStart(2, '0'); // Use getUTCDate for consistency if dates are UTC
+        const dayOfMonth = String(stayDate.getDate()).padStart(2, '0'); // Use getUTCDate for consistency if dates are UTC
 
         const count = parseInt(item.booked_room_nights_count, 10);
         if (isNaN(count)) return; // Should not happen with SQL COUNT
