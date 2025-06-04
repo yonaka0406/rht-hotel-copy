@@ -52,17 +52,27 @@
                 tableStyle="min-width: 50rem"
             >
                 <template #groupheader="slotProps">
-                    <div class="font-bold p-2"> <!-- Added padding for appearance -->
-                        {{ slotProps.data.yearMonth }}
-                    </div>
-                </template>
+                    <div class="flex p-2 cursor-pointer w-full items-center" @click="toggleRowGroup(slotProps.data.yearMonth)">
+                        <!-- Column 1: Month and Toggle Icon -->
+                        <div class="flex items-center flex-1">
+                            <i :class="expandedRowGroups.includes(slotProps.data.yearMonth) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" class="mr-2 text-blue-500 text-sm"></i>
+                            <span class="font-bold text-gray-800 text-sm">{{ slotProps.data.yearMonth }}</span>
+                        </div>
 
-                <template #groupfooter="slotProps">
-                    <div class="flex font-bold" style="padding: 0.5rem;"> <!-- Ensure consistent padding with header/cells -->
-                        <span style="flex: 1; text-align: left;">月合計:</span>
-                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span>
-                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span>
-                        <span style="flex: 1; text-align: right; padding-right: 0.5rem;">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span>
+                        <!-- Column 2: Previous Day Total (aligned right) -->
+                        <div class="flex-1 text-right pr-2">
+                            <span class="text-xs text-gray-500">前日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).prevDayTotal }}</span></span>
+                        </div>
+
+                        <!-- Column 3: Snapshot Day Total (aligned right) -->
+                        <div class="flex-1 text-right pr-2">
+                            <span class="text-xs text-gray-500">指定日合計: <span class="font-semibold text-gray-700">{{ calculateGroupTotals(slotProps.data.yearMonth).snapshotDayTotal }}</span></span>
+                        </div>
+
+                        <!-- Column 4: Daily Difference Total (aligned right, with color for positive/negative) -->
+                        <div class="flex-1 text-right pr-2">
+                            <span class="text-xs text-gray-500">日次差異合計: <span class="font-semibold" :class="{'text-red-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal < 0, 'text-green-500': calculateGroupTotals(slotProps.data.yearMonth).diffTotal >= 0}">{{ calculateGroupTotals(slotProps.data.yearMonth).diffTotal }}</span></span>
+                        </div>
                     </div>
                 </template>
 
@@ -390,18 +400,24 @@
                         daily_difference: (parseInt(item.count_as_of_snapshot_day_end, 10) || 0) - (parseInt(item.count_as_of_previous_day_end, 10) || 0)
                     };
                 });
-            } else {
-                // This case should ideally be handled within fetchActiveReservationsChange
-                // For safety, if it returns something unexpected:
-                console.warn("fetchActiveReservationsChange did not return an array:", data);
-                reportData.value = []; 
-            }
+
+            // Ensure groups are collapsed initially
+            expandedRowGroups.value = [];
+
+        } else {
+            // This case should ideally be handled within fetchActiveReservationsChange
+            // For safety, if it returns something unexpected:
+            console.warn("fetchActiveReservationsChange did not return an array:", data);
+            reportData.value = [];
+            expandedRowGroups.value = []; // Also clear if data fetch fails or is empty
+        }
             // console.log('Fetched data for room inventory report:', reportData.value);
 
         } catch (err) {
             console.error('Failed to fetch room inventory report:', err);
             error.value = err.message || 'データの取得中にエラーが発生しました。';
             reportData.value = []; // Clear data on error
+            expandedRowGroups.value = []; // Clear on error too
         } finally {
             loading.value = false;
         }
