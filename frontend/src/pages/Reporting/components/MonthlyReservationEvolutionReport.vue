@@ -380,7 +380,7 @@ const heatmapEchartsOptions = computed(() => {
             orient: 'horizontal',
             left: 'center',
             bottom: '5%',
-            color: ['#D3D3D3', 'yellow', 'red'], // Added/Updated color scheme
+            color: ['#F0F0F0', '#FFFFE0', '#B22222'], // Added/Updated color scheme
         },
         series: [{
             name: 'Booked Room Nights',
