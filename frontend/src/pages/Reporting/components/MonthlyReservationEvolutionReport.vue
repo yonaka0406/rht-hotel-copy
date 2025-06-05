@@ -345,7 +345,7 @@ const heatmapEchartsOptions = computed(() => {
                     const leadDay = hData.xAxisData[params.value[0]];
                     const dayOfMonth = hData.yAxisData[params.value[1]];
                     const count = params.value[2];
-                    return `Date: ${props.targetMonth.substring(0, 7)}-${dayOfMonth}<br/>Lead Day: ${leadDay}<br/>Reservations: ${count}`;
+                    return `日付: ${props.targetMonth.substring(0, 7)}-${dayOfMonth}<br/>リード日目: ${leadDay}<br/>宿泊数: ${count}`;
                 }
                 return '';
             }
@@ -388,7 +388,7 @@ const heatmapEchartsOptions = computed(() => {
             color: ['#D32F2F', '#FFEB3B', '#ECEFF1','#FFFFFF'],
         },
         series: [{
-            name: 'Booked Room Nights',
+            name: '宿泊数',
             type: 'heatmap',
             data: hData.seriesData, // [xIndex, yIndex, value]
             label: {
