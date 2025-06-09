@@ -29,7 +29,6 @@
                         <label class="ml-4 mr-2">終了日:</label>
                         <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
-                        <span class="ml-2 text-sm text-gray-500">(デフォルト: 過去6日間)</span>
                         <Button
                             label="全フィルタークリア"
                             icon="pi pi-filter-slash"
@@ -50,7 +49,13 @@
                     </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
-                <Column expander header="詳細" style="width: 1%;"/>                
+                <Column header="詳細" style="width: 1%;">
+                    <template #body="slotProps">
+                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button">
+                            <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
+                        </button>
+                    </template>
+                </Column>
                 <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
                 
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
@@ -577,11 +582,20 @@
         }
     });
 
+    const isRowExpanded = (rowData) => {
+        return expandedRows.value[rowData.id] === true;
+    };
+
+    const toggleRowExpansion = (rowData) => {
+        if (expandedRows.value[rowData.id]) {
+            delete expandedRows.value[rowData.id];
+        } else {
+            expandedRows.value[rowData.id] = true;
+        }
+        // No need to manually trigger @rowExpand or @rowCollapse unless other logic depends on it.
+        // The v-model:expandedRows on DataTable handles the state.
+    };
 </script>
 
 <style scoped>
-    /* Target the icon within the row toggler button */
-    ::v-deep(.p-datatable-tbody .p-column-row-toggler .p-datatable-row-toggle-icon path) {
-        fill: #3B82F6 !important; /* Directly set the fill color for the path */
-    }
 </style>
