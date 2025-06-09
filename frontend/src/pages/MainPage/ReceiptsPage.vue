@@ -36,32 +36,15 @@
                         </div>
                     </template>
                     <template #empty> 指定されている期間中に支払情報はありません。 </template> <!-- Changed empty message -->
-                    <Column expander header="詳細" style="width: 1%;"/>
-                    <!-- <Column selectionMode="multiple" headerStyle="width: 1%"></Column> --> <!-- Commented out multi-select for now -->
-
-                    <Column field="status" filterField="status" header="支払ステータス" style="width:1%" :showFilterMenu="false"> <!-- Changed header -->
-                        <template #filter="{ filterModel, filterCallback }">
-                            <Select
-                                v-model="filterModel.value"
-                                :options="paymentStatusOptions"
-                                optionLabel="label"
-                                optionValue="value"
-                                @change="filterCallback"
-                                placeholder="選択"
-                                showClear
-                                fluid
-                            />
-                        </template>
+                    <Column header="詳細" style="width: 1%;">
                         <template #body="slotProps">
-                            <!-- Assuming payment status might be different, e.g. 'completed', 'pending', 'failed' -->
-                            <div class="flex justify-center items-center">
-                                <span v-if="slotProps.data.status === 'completed'" class="px-2 py-1 rounded-md bg-green-200 text-green-700"><i class="pi pi-check-circle" v-tooltip="'完了'"></i></span>
-                                <span v-if="slotProps.data.status === 'pending'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-clock" v-tooltip="'処理中'"></i></span>
-                                <span v-if="slotProps.data.status === 'failed'" class="px-2 py-1 rounded-md bg-red-200 text-red-700"><i class="pi pi-times-circle" v-tooltip="'失敗'"></i></span>
-                                <!-- Add other payment statuses as needed -->
-                            </div>
+                            <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" v-tooltip.top="'詳細表示/非表示'">
+                                <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
+                            </button>
                         </template>
                     </Column>
+                    <!-- <Column selectionMode="multiple" headerStyle="width: 1%"></Column> --> <!-- Commented out multi-select for now -->
+
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false"> <!-- Changed from booker_name -->
                         <template #filter="{ filterModel }">
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
@@ -308,7 +291,7 @@
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
-    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, generateReceiptPdf } = useBillingStore(); // Added generateReceiptPdf and isLoadingPayments
+    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt } = useBillingStore(); // Ensure handleGenerateReceipt is added here
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     // Client store might still be needed for filtering by client name
@@ -327,14 +310,22 @@
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
-        return `\${year}-\${month}-\${day}`;
+        return year + '-' + month + '-' + day;
     };
-    const formatDateWithDay = (dateStr) => {
-        if (!dateStr) return '';
+    const formatDateWithDay = (dateInput) => {
+        if (!dateInput) return '';
         const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-        const parsedDate = new Date(dateStr);
-        if (isNaN(parsedDate.getTime())) return ''; // Handle invalid date strings
-        return `\${parsedDate.toLocaleDateString(undefined, options)}`;
+        let parsedDate;
+        if (dateInput instanceof Date) {
+            parsedDate = dateInput;
+        } else if (typeof dateInput === 'string') {
+            parsedDate = new Date(dateInput);
+        } else {
+            // Handle other unexpected types, or return empty/error
+            return '';
+        }
+        if (isNaN(parsedDate.getTime())) return ''; // Handle invalid dates
+        return parsedDate.toLocaleDateString(undefined, options);
     };
     const formatCurrency = (value) => {
         if (value == null || isNaN(Number(value))) return '';
@@ -355,7 +346,7 @@
         // tableLoading.value is still managed locally for now, could also be moved to store if needed globally for this component type
         tableLoading.value = true;
         await fetchPaymentsForReceipts(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
-        tableHeader.value = `領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`;
+        tableHeader.value = '領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value);
         tableLoading.value = false; // Reset local loading after fetch (store handles its own)
     }
 
@@ -401,58 +392,23 @@
         }
 
         isGeneratingReceiptId.value = paymentData.payment_id;
-        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: \${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
+        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: ${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
 
         try {
-            const response = await fetch(`/api/billing/res/generate-receipt/\${selectedHotelId.value}/\${paymentData.payment_id}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer \${localStorage.getItem('authToken')}`,
-                    // 'Content-Type': 'application/json', // Not needed if no body is sent
-                }
-            });
+            // Call the store action
+            const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id);
 
-            if (!response.ok) {
-                let errorDetail = `HTTP error! Status: \${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.message || errorData.error || errorDetail;
-                } catch (e) {
-                    // Failed to parse JSON, stick with status text or generic message
-                    errorDetail = response.statusText || 'サーバーエラーが発生しました。';
-                }
-                throw new Error(errorDetail);
+            // The store action now handles the download.
+            // It returns { success: true, filename: ... } or throws an error.
+            if (result.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (${result.filename}) が発行されました。`, life: 3000 });
+                await loadTableData(); // Refresh the list
             }
+            // Errors are caught by the catch block
 
-            const blob = await response.blob();
-            if (blob.type !== "application/pdf") {
-                throw new Error("受信したファイルはPDFではありません。");
-            }
-
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            // Try to get filename from Content-Disposition header first
-            const disposition = response.headers.get('content-disposition');
-            let filename = `領収書_\${paymentData.existing_receipt_number || paymentData.payment_id}.pdf`;
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    filename = matches[1].replace(/['"]/g, '');
-                }
-            }
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            toast.add({ severity: 'success', summary: '成功', detail: '領収書が発行されました。', life: 3000 });
-            await loadTableData(); // Refresh the list
         } catch (error) {
-            console.error("Error generating receipt:", error);
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 3000 });
+            console.error("Error generating receipt via store:", error);
+            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 }); // Increased life for error message
         } finally {
             isGeneratingReceiptId.value = null;
         }
@@ -468,11 +424,6 @@
     // Filters
     const startDateFilter = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // Default to start of current month
     const endDateFilter = ref(new Date()); // Default to today
-    const paymentStatusOptions = [ // Example statuses for payments
-        { label: '完了', value: 'completed' },
-        { label: '処理中', value: 'pending' },
-        { label: '失敗', value: 'failed' },
-    ];
 
     const applyDateFilters = async () => {
         if (startDateFilter.value && endDateFilter.value) {
@@ -489,10 +440,7 @@
                 (payment.client_name && payment.client_name.toLowerCase().includes(filterValue))
             );
         }
-        // Apply status filter
-        if (filters.value.status.value) {
-             list = list.filter(payment => payment.status === filters.value.status.value);
-        }
+        // Status filter logic removed
 
         // The backend already formats payment_date as 'YYYY-MM-DD'
         // and amount should be a number from the store mapping.
@@ -501,13 +449,29 @@
     });
 
     // Data Table
-    const tableHeader = ref(`領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`)
+    const tableHeader = ref('領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value));
     const tableLoading = ref(true);
     // const drawerVisible = ref(false);
     // const selectedPayment = ref(null);
     const expandedRows = ref({});
+
+    const toggleRowExpansion = (rowData) => {
+        const rowKey = rowData.payment_id; // Using the dataKey
+        const newExpandedRows = {...expandedRows.value};
+        if (newExpandedRows[rowKey]) {
+            delete newExpandedRows[rowKey];
+        } else {
+            newExpandedRows[rowKey] = true;
+        }
+        expandedRows.value = newExpandedRows;
+    };
+
+    const isRowExpanded = (rowData) => {
+        const rowKey = rowData.payment_id;
+        return expandedRows.value && expandedRows.value[rowKey];
+    };
+
     const filters = ref({
-        status: { value: null, matchMode: FilterMatchMode.EQUALS },
         client_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
         // Add other filters if columns are added back
     });

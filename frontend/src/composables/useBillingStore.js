@@ -38,6 +38,65 @@ export function useBillingStore() {
         }
     };
 
+    const handleGenerateReceipt = async (hotelId, paymentId) => {
+        //isLoadingPayments.value = true; // Consider if a specific loading state for this action is needed
+        try {
+            const authToken = localStorage.getItem('authToken');
+            // Use string concatenation for clarity and to avoid template literal issues in this context
+            const url = '/api/billing/res/generate-receipt/' + hotelId + '/' + paymentId;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`, // Corrected template literal
+                }
+            });
+
+            if (!response.ok) {
+                let errorDetail = `HTTP error! Status: ${response.status}`; // Corrected template literal
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.message || errorData.error || errorDetail;
+                } catch (e) {
+                    errorDetail = response.statusText || 'サーバーエラーが発生しました。';
+                }
+                throw new Error(errorDetail);
+            }
+
+            const blob = await response.blob();
+            if (blob.type !== "application/pdf") {
+                throw new Error("受信したファイルはPDFではありません。");
+            }
+
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+
+            let filename = `領収書_${paymentId}.pdf`; // Corrected template literal (or keep as string concat if preferred)
+            const disposition = response.headers.get('content-disposition');
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            return { success: true, filename: filename }; // Indicate success
+        } catch (error) {
+            console.error('Error in handleGenerateReceipt:', error);
+            throw error; // Re-throw the error to be caught by the component
+        } finally {
+            //isLoadingPayments.value = false; // Reset loading state if one was used
+        }
+    };
+
     const fetchBilledListView = async(hotelId, month) => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -155,5 +214,6 @@ export function useBillingStore() {
         fetchBilledListView,
         generateInvoicePdf,
         fetchPaymentsForReceipts, // Expose new action
+        handleGenerateReceipt, // Add this line
     };
 }

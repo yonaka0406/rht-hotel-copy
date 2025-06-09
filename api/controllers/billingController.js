@@ -381,24 +381,6 @@ const generateReceipt = async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
-    // Ensure images are loaded if any - similar to invoice generation if receipt has images
-    const imageSelector = 'img[alt="Company Stamp"]'; // Assuming similar stamp image
-    try {
-        await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for 5 seconds
-        await page.evaluate(async selector => {
-            const img = document.querySelector(selector);
-            if (img && !img.complete) {
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = reject;
-                });
-            }
-        }, imageSelector);
-    } catch (e) {
-        console.warn(`Image selector \${imageSelector} not found or image did not load within timeout: \${e.message}`);
-    }
-
-
     const pdfBuffer = await page.pdf({
         margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
         printBackground: true,

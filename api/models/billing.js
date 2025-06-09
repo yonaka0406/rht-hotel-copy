@@ -328,23 +328,22 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
   const query = `
     SELECT
         p.id as payment_id,
-        TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
-        p.value as amount, // Changed from p.amount
+        TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed p.payment_date to p.date
+        p.value as amount, -- Changed from p.amount
         COALESCE(c.name_kanji, c.name) as client_name,
-        p.status, -- Assuming reservation_payments table has a status column
         r.receipt_number as existing_receipt_number
     FROM
-        reservation_payments p // Changed from payments
+        reservation_payments p -- Changed from payments
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
-        receipts r ON p.id = r.payment_id
+        receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id -- Added p.hotel_id = r.hotel_id
     WHERE
         p.hotel_id = $1 AND
-        p.payment_date >= $2 AND
-        p.payment_date <= $3
+        p.date >= $2 AND -- Changed p.payment_date to p.date
+        p.date <= $3   -- Changed p.payment_date to p.date
     ORDER BY
-        p.payment_date DESC;
+        p.date DESC; -- Changed p.payment_date to p.date
   `;
   try {
     const result = await pool.query(query, [hotelId, startDate, endDate]);
@@ -367,7 +366,7 @@ async function getPaymentById(requestId, paymentId) {
       TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed from p.payment_date
       p.comment AS notes,                   -- Changed from p.notes
       c.name AS client_name,
-      c.customer_code,
+      c.id as customer_code, -- Use client UUID as customer_code for robustness
       h.name AS facility_name,
       h.bank_name,
       h.bank_branch_name,
@@ -426,9 +425,10 @@ async function getPaymentById(requestId, paymentId) {
 async function getReceiptByPaymentId(requestId, paymentId) {
   const pool = getPool(requestId);
   const query = `
-    SELECT receipt_number, TO_CHAR(receipt_date, 'YYYY-MM-DD') as receipt_date
-    FROM receipts
-    WHERE payment_id = $1;
+    SELECT r.receipt_number, TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date
+    FROM reservation_payments p
+    JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
+    WHERE p.id = $1;
   `;
   try {
     const result = await pool.query(query, [paymentId]);
@@ -467,12 +467,12 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (payment_id, hotel_id, receipt_number, receipt_date, amount, generated_by_user_id, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at)
+    VALUES ($1, $2, $3, $4, $5, NOW())
     RETURNING id;
   `;
   try {
-    const result = await pool.query(query, [paymentId, hotelId, receiptNumber, receiptDate, amount, userId]);
+    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId]);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
     console.error('Error in saveReceiptNumber:', err);
