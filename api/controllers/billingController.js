@@ -156,21 +156,28 @@ const generateConsolidatedReceipt = async (req, res) => {
         try {
             // Generate Consolidated Receipt Number and Date
             const receiptDate = new Date();
-            let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
-            let new_receipt_number;
+            const year = receiptDate.getFullYear() % 100; // YY
+            const month = receiptDate.getMonth() + 1; // 1-12
+            const sequenceLength = 4;
 
-            if (!max_receipt_number_data.last_receipt_number) {
-                const year = receiptDate.getFullYear() % 100;
-                const month = receiptDate.getMonth() + 1;
-                // Using BigInt for base number generation
-                new_receipt_number = (BigInt(hotelId) * BigInt(10000000) + BigInt(year) * BigInt(100000) + BigInt(month) * BigInt(1000) + BigInt(1)).toString();
+            const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+            let new_receipt_number_str;
+
+            let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+
+            if (!max_receipt_number_data.last_receipt_number || !max_receipt_number_data.last_receipt_number.toString().startsWith(prefixStr) ) {
+                // First receipt of the month for this hotel or if last number format is unexpected
+                const firstSequence = '1'.padStart(sequenceLength, '0');
+                new_receipt_number_str = prefixStr + firstSequence;
             } else {
-                // Using BigInt for incrementing existing number
-                new_receipt_number = (BigInt(max_receipt_number_data.last_receipt_number) + BigInt(1)).toString();
+                const lastReceiptStr = max_receipt_number_data.last_receipt_number.toString();
+                const lastSequenceStr = lastReceiptStr.substring(prefixStr.length);
+                const nextSequenceNum = BigInt(lastSequenceStr) + BigInt(1);
+                new_receipt_number_str = prefixStr + nextSequenceNum.toString().padStart(sequenceLength, '0');
             }
 
             // Update consolidatedReceiptData directly here as it's in the same scope
-            consolidatedReceiptData.receipt_number = new_receipt_number; // new_receipt_number is already a string
+            consolidatedReceiptData.receipt_number = new_receipt_number_str; // new_receipt_number_str is already a string
             consolidatedReceiptData.receipt_date = receiptDate.toISOString().split('T')[0];
 
             // Calculate total consolidated amount
@@ -254,7 +261,7 @@ const generateConsolidatedReceipt = async (req, res) => {
 
     const clientName = (paymentsData && paymentsData.length > 0 && paymentsData[0].client_name) ? paymentsData[0].client_name : 'UnknownClient';
     const sanitizedConsolidatedClientName = clientName.replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
-    const consolidatedFilename = `${consolidatedReceiptData.receipt_number} - ${sanitizedConsolidatedClientName}.pdf`;
+    const consolidatedFilename = `${consolidatedReceiptData.receipt_number}_${sanitizedConsolidatedClientName}.pdf`; // Updated separator
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(consolidatedFilename)}"`);
     res.contentType("application/pdf");
@@ -613,20 +620,27 @@ const generateReceipt = async (req, res) => {
                 break; // Exit retry loop, proceed to PDF generation
             } else {
                 const receiptDate = new Date();
-                let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
-                let new_receipt_number;
+                const year = receiptDate.getFullYear() % 100; // YY
+                const month = receiptDate.getMonth() + 1; // 1-12
+                const sequenceLength = 4;
 
-                if (!max_receipt_number_data.last_receipt_number) {
-                    const year = receiptDate.getFullYear() % 100;
-                    const month = receiptDate.getMonth() + 1;
-                    // Using BigInt for base number generation
-                    new_receipt_number = (BigInt(hotelId) * BigInt(10000000) + BigInt(year) * BigInt(100000) + BigInt(month) * BigInt(1000) + BigInt(1)).toString();
+                const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+                let new_receipt_number_str;
+
+                let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+
+                if (!max_receipt_number_data.last_receipt_number || !max_receipt_number_data.last_receipt_number.toString().startsWith(prefixStr)) {
+                    // First receipt of the month for this hotel or if last number format is unexpected
+                    const firstSequence = '1'.padStart(sequenceLength, '0');
+                    new_receipt_number_str = prefixStr + firstSequence;
                 } else {
-                    // Using BigInt for incrementing existing number
-                    new_receipt_number = (BigInt(max_receipt_number_data.last_receipt_number) + BigInt(1)).toString();
+                    const lastReceiptStr = max_receipt_number_data.last_receipt_number.toString();
+                    const lastSequenceStr = lastReceiptStr.substring(prefixStr.length);
+                    const nextSequenceNum = BigInt(lastSequenceStr) + BigInt(1);
+                    new_receipt_number_str = prefixStr + nextSequenceNum.toString().padStart(sequenceLength, '0');
                 }
 
-                receiptData.receipt_number = new_receipt_number; // new_receipt_number is already a string
+                receiptData.receipt_number = new_receipt_number_str; // new_receipt_number_str is already a string
                 receiptData.receipt_date = receiptDate.toISOString().split('T')[0];
 
                 // Attempt to save the new receipt number
@@ -693,7 +707,7 @@ const generateReceipt = async (req, res) => {
 
     // paymentData should be in scope here from the try block
     const sanitizedSingleClientName = (paymentData.client_name || 'UnknownClient').replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
-    const singleFilename = `${receiptData.receipt_number} - ${sanitizedSingleClientName}.pdf`;
+    const singleFilename = `${receiptData.receipt_number}_${sanitizedSingleClientName}.pdf`; // Updated separator
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(singleFilename)}"`);
     res.contentType("application/pdf");

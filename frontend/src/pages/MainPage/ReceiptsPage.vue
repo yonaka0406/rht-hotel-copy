@@ -255,7 +255,7 @@
         toast.add({
             severity: 'info',
             summary: '領収書発行中',
-            detail: `顧客「${paymentData.client_name}」様 (支払ID: ${paymentData.payment_id}) の領収書を準備しています...`,
+            detail: `顧客「${paymentData.client_name}」様の領収書を準備しています...`,
             life: 3000
         });
 
