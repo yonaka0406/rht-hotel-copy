@@ -109,12 +109,7 @@
             background-color: #fdfaf7; /* Light beige background */
             box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
             color: #888; /* Lighter text color for "印収紙入" */
-        }
-
-        /* Hide elements that are not in the reference image */
-        .details-table, .tax-details {
-            display: none;
-        }
+        }        
     </style>
 </head>
 <body>
@@ -128,13 +123,12 @@
         </div>
 
         <div class="customer-info">
-            <span class="customer-name">{{ customer_name }}</span> 御中
-            <!-- <small>取引先コード: {{ customer_code }}</small> Keep this if needed elsewhere, hidden for now -->
+            <span class="customer-name">{{ customer_name }}</span> 御中            
         </div>
 
         <div class="amount-section">
             <div class="received-amount">
-                ¥ {{ received_amount }} - (税込)
+                ¥ {{ received_amount }} (税込)
             </div>
             <div class="note-text">
                 但し {{ facility_name }} 宿泊料として
@@ -154,60 +148,18 @@
             <div class="company-contact">
                 TEL: 011-206-1831<br>
                 FAX: 050-3606-5764<br>
-                <!-- mail.OOO@ (add email if available from data) -->
             </div>
             <p>登録番号: T2430001042062</p>
-            <!-- <p>担当者: {{ company_contact_person }}</p> hidden as per image -->
+
+            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 0; width: 150px; opacity: 0.4;">        
 
             <!-- Company Stamp Placeholder -->
             <div class="stamp-box" style="right: 20px;">
-                印 収<br>
-                紙 入
+                収　入<br>
+                印　紙
             </div>
         </div>
-
-        <!-- The following sections are commented out/hidden as they are not present in the reference image -->
-        <!-- <div class="details-table">
-            <table class="table2" style="width: 99%;">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>摘要</th>
-                        <th>数量</th>
-                        <th class="price">金額</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{ detail_items }}
-                    <tr class="total-row">
-                        <td colspan="3" style="text-align: right;">領収金額</td>
-                        <td class="cell-right">¥ {{ details_total_value }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="tax-details">
-            <table class="table1" style="width: 90%;">
-                <tr>
-                    <td class="title-cell">消費税</td>
-                    <td class="cell-right">¥ {{ total_tax_value }}</td>
-                </tr>
-                {{ taxable_details }}
-            </table>
-        </div>
-
-        <div class="comments-section">
-            <table class="table1" style="width: 99%;">
-                <tr>
-                    <td class="title-cell" style="width: 10%">備考</td>
-                    <td>
-                        <p>{{ comments }}</p>
-                        <p>上記金額を正に領収いたしました。</p>
-                    </td>
-                </tr>
-            </table>
-        </div> -->
+        
     </div>
 </body>
 </html>
