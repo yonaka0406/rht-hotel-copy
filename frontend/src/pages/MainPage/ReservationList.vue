@@ -29,7 +29,15 @@
                         <label class="ml-4 mr-2">終了日:</label>
                         <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
-
+                        <span class="ml-2 text-sm text-gray-500">(デフォルト: 過去6日間)</span>
+                        <Button
+                            label="全フィルタークリア"
+                            icon="pi pi-filter-slash"
+                            severity="warning"
+                            class="ml-4"
+                            @click="clearAllFilters"
+                            v-tooltip.bottom="'全てのフィルターをリセットします'"
+                        />
                         <!-- Export -->
                         <SplitButton 
                             label="エクスポート" 
@@ -71,12 +79,12 @@
                 </Column>
                 <Column field="booker_name" filterField="booker_name" header="予約者" style="width:3%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
+                        <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" />
                     </template>
                 </Column>
                 <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <InputText v-model="clientsJsonFilter" type="text" placeholder="氏名・名称検索" />
+                        <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索" />
                     </template>
                     <template #body="{ data }">
                         <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
@@ -274,6 +282,17 @@
         return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
     };
 
+    // Helper function (can be placed near other helper functions like formatDate)
+    const debounce = (func, delay) => {
+        let timeoutId;
+        return (...args) => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                func.apply(this, args);
+            }, delay);
+        };
+    };
+
     // Load
     const loadTableData = async () => {
         tableLoading.value = true;
@@ -335,7 +354,9 @@
         { label: 'キャンセル', value: 'cancelled' }
     ];
     const clientFilter = ref(null);
+    const clientFilterInput = ref(null); // For booker_name filter
     const clientsJsonFilter = ref(null);
+    const clientsJsonFilterInput = ref(null); // For clients_json filter
     const priceFilter = ref(null);
     const priceFilterCondition = ref("=");
     const paymentFilter = ref(null);
@@ -345,6 +366,38 @@
             await loadTableData();
         }
     };
+
+    const clearAllFilters = async () => {
+        // Reset date filters to default (last 6 days to today)
+        startDateFilter.value = new Date(new Date().setDate(new Date().getDate() - 6));
+        endDateFilter.value = new Date();
+
+        // Reset status filter
+        if (filters.value.status) {
+            filters.value.status.value = null;
+        }
+
+        // Reset text input fields (which will trigger watchers to reset actual filters)
+        clientFilterInput.value = ''; // Or null, ensure consistency
+        clientsJsonFilterInput.value = ''; // Or null
+
+        // Reset price filter
+        priceFilter.value = null;
+        priceFilterCondition.value = "=";
+
+        // Reset payment filter
+        paymentFilter.value = null;
+        paymentFilterCondition.value = "=";
+
+        // Potentially, explicitly set the main filters if not relying purely on watchers for text inputs
+        // clientFilter.value = null;
+        // clientsJsonFilter.value = null;
+
+        // Reload table data
+        await loadTableData();
+        toast.add({ severity: 'info', summary: 'フィルタークリア', detail: '全てのフィルターをクリアしました。', life: 3000 });
+    };
+
     const filteredReservations = computed(() => {
         let filteredList = reservationList.value;
         // merged_clients
@@ -413,8 +466,8 @@
         }
         if (paymentFilter.value !== null) {
             filteredList = filteredList.filter(reservation => {
-                const payment = parseFloat(reservation.price);
-                const filterPayment = parseFloat(priceFilter.value); 
+                const payment = parseFloat(reservation.payment);
+                const filterPayment = parseFloat(paymentFilter.value);
                 if (paymentFilterCondition.value === ">") {                    
                     return payment > filterPayment;
                 } else if (paymentFilterCondition.value === "<") {                    
@@ -507,6 +560,16 @@
         { immediate: true }
     );  
     
+    // Watcher for Booker Name
+    watch(clientFilterInput, debounce((newValue) => {
+        clientFilter.value = newValue;
+    }, 400)); // 400ms debounce
+
+    // Watcher for Guest/Payer Name
+    watch(clientsJsonFilterInput, debounce((newValue) => {
+        clientsJsonFilter.value = newValue;
+    }, 400)); // 400ms debounce
+
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){
             drawerSelectVisible.value = newValue.length > 0;
