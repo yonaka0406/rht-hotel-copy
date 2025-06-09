@@ -26,7 +26,7 @@ const getBillableListView = async (req, res) => {
 // Function to generate HTML for consolidated receipts
 function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName) {
   let modifiedHTML = html;
-  const g = (key) => new RegExp(`{{ \${key} }}`, 'g'); // Helper for global regex replace
+  const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
   // Receipt Header
   modifiedHTML = modifiedHTML.replace(g('receipt_number'), consolidatedReceiptData.receipt_number || 'N/A');
@@ -434,7 +434,7 @@ function generateInvoiceHTML(html, data, userName) {
 
 function generateReceiptHTML(html, receiptData, paymentData, userName) {
   let modifiedHTML = html;
-  const g = (key) => new RegExp(`{{ \${key} }}`, 'g'); // Helper for global regex replace
+  const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
   // Active Placeholders in new receipt.html:
   // {{ receipt_date }}
