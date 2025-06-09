@@ -581,7 +581,7 @@
 
 <style scoped>
     /* Target the icon within the row toggler button */
-    ::v-deep(.p-datatable-tbody .p-column-row-toggler .p-datatable-row-toggle-icon) {
-        color: #3B82F6 !important; /* Blue color, try with !important first */
+    ::v-deep(.p-datatable-tbody .p-column-row-toggler .p-datatable-row-toggle-icon path) {
+        fill: #3B82F6 !important; /* Directly set the fill color for the path */
     }
 </style>
