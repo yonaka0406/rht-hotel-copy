@@ -43,7 +43,7 @@
                         <template #filter="{ filterModel, filterCallback }">
                             <Select
                                 v-model="filterModel.value"
-                                :options="paymentStatusOptions" <!-- Changed to paymentStatusOptions -->
+                                :options="paymentStatusOptions"
                                 optionLabel="label"
                                 optionValue="value"
                                 @change="filterCallback"
@@ -303,7 +303,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, /* Drawer, Card, */ DatePicker, /* AutoComplete, */ Select, InputText, Button, DataTable, Column, Badge, /* OverlayBadge, FloatLabel */ } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, AutoComplete, Select, InputText, Button, DataTable, Column, Badge, OverlayBadge, FloatLabel } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
