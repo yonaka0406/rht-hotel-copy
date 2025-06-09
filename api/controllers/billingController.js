@@ -202,8 +202,8 @@ const generateConsolidatedReceipt = async (req, res) => {
             if (consolidatedSaveResult && consolidatedSaveResult.id) {
                 const newConsolidatedReceiptRecordId = consolidatedSaveResult.id;
                 // Link this consolidated receipt record to all individual payments using the model function
-                for (const payment of paymentsData) { // Using paymentsData which contains full payment details including payment_id
-                    await linkPaymentToReceipt(req.requestId, payment.payment_id, newConsolidatedReceiptRecordId);
+                for (const payment of paymentsData) { // Using paymentsData which contains full payment details
+                    await linkPaymentToReceipt(req.requestId, payment.id, newConsolidatedReceiptRecordId); // Corrected: payment.id
                 }
                 break; // Successfully saved consolidated receipt and linked payments, exit retry loop
             } else {
