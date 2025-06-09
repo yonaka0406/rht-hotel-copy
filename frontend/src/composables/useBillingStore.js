@@ -214,6 +214,65 @@ export function useBillingStore() {
         fetchBilledListView,
         generateInvoicePdf,
         fetchPaymentsForReceipts, // Expose new action
-        handleGenerateReceipt, // Add this line
+        handleGenerateReceipt,
+        handleGenerateConsolidatedReceipt, // Add the new function here
     };
+}
+
+async function handleGenerateConsolidatedReceipt(hotelId, paymentIdsArray) {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const url = `/api/billing/res/generate-consolidated-receipt/${hotelId}`;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ payment_ids: paymentIdsArray }),
+        });
+
+        if (!response.ok) {
+            let errorDetail = `HTTP error! Status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorDetail = errorData.message || errorData.error || errorDetail;
+            } catch (e) {
+                errorDetail = response.statusText || 'Server error during consolidated receipt generation.';
+            }
+            throw new Error(errorDetail);
+        }
+
+        const blob = await response.blob();
+        if (blob.type !== "application/pdf") {
+            throw new Error("Received file is not a PDF.");
+        }
+
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+
+        let filename = `Consolidated_Receipt_${hotelId}_${new Date().getTime()}.pdf`;
+        const disposition = response.headers.get('content-disposition');
+        if (disposition && disposition.includes('attachment')) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        a.download = filename;
+
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+        return { success: true, filename: filename };
+    } catch (error) {
+        console.error('Error in handleGenerateConsolidatedReceipt:', error);
+        // Return a structured error object, or re-throw if the caller is expected to handle it.
+        return { success: false, error: error.message || 'An unexpected error occurred.' };
+    }
 }

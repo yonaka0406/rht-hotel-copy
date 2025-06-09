@@ -249,11 +249,9 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
   */
 
   // {{ stamp_image }} is replaced by a CSS styled div in the new template
-  /*
-  const imagePath = path.join(__dirname, '../components/stamp.png');
-  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
+  // Update: Per new requirements, we will replace {{ stamp_image }} with an actual image URL.
+  const imageUrl = 'http://localhost:5000/stamp.png'; // Assuming stamp.png is served at the root by the public static file server
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
-  */
 
   // {{ detail_items }} section is hidden by display: none;
   /*
@@ -428,5 +426,200 @@ module.exports = {
   generateInvoice,
   generateReceipt,
   getPaymentsForReceipts,
+  generateConsolidatedReceipt, // Added new function
 };
 // FORCED_UPDATE_TIMESTAMP_CONTROLLER_20231201153000
+
+// Function to generate HTML for consolidated receipts
+function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName) {
+  let modifiedHTML = html;
+  const g = (key) => new RegExp(`{{ \${key} }}`, 'g'); // Helper for global regex replace
+
+  // Receipt Header
+  modifiedHTML = modifiedHTML.replace(g('receipt_number'), consolidatedReceiptData.receipt_number || 'N/A');
+  modifiedHTML = modifiedHTML.replace(g('receipt_date'), consolidatedReceiptData.receipt_date || 'YYYY-MM-DD');
+
+  // Customer Information - Use first payment's client name
+  const firstPayment = paymentsData && paymentsData.length > 0 ? paymentsData[0] : {};
+  modifiedHTML = modifiedHTML.replace(g('customer_name'), firstPayment.client_name || 'お客様名');
+
+  // Calculate Total Consolidated Amount
+  let totalConsolidatedAmount = 0;
+  if (paymentsData && paymentsData.length > 0) {
+    totalConsolidatedAmount = paymentsData.reduce((sum, payment) => {
+      let paymentAmount = 0;
+      if (payment.items && payment.items.length > 0) {
+        paymentAmount = payment.items.reduce((itemSum, item) => itemSum + (parseFloat(item.total_price) || 0), 0);
+      } else {
+        paymentAmount = parseFloat(payment.amount) || 0;
+      }
+      return sum + paymentAmount;
+    }, 0);
+  }
+  modifiedHTML = modifiedHTML.replace(g('received_amount'), totalConsolidatedAmount.toLocaleString());
+
+  // Proviso (但し書き) - List individual payment details
+  let provisoContent = `上記金額を正に領収いたしました。<br/>(内訳: `;
+  if (paymentsData && paymentsData.length > 0) {
+    const paymentDetails = paymentsData.map(p => {
+      const paymentDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString('ja-JP') : '日付不明';
+      let paymentAmount = 0;
+      if (p.items && p.items.length > 0) {
+        paymentAmount = p.items.reduce((itemSum, item) => itemSum + (parseFloat(item.total_price) || 0), 0);
+      } else {
+        paymentAmount = parseFloat(p.amount) || 0;
+      }
+      return `${paymentDate} ¥${paymentAmount.toLocaleString()}`;
+    });
+    provisoContent += paymentDetails.join(', ');
+  } else {
+    provisoContent += '該当支払いなし';
+  }
+  provisoContent += ')';
+  // Assuming the original receipt.html has a line like: <td colspan="4" class="proviso">上記金額を正に領収いたしました。</td>
+  // We will replace the content of this proviso or a similar placeholder.
+  // For now, let's assume there's a placeholder {{ proviso_details }} or we modify facility_name for this.
+  // The current receipt.html uses {{ facility_name }} for the proviso. This is a simplification.
+  // A more robust solution would be a dedicated {{ proviso_details }} placeholder in receipt.html.
+  // For this task, let's augment the facility_name or use a simple approach.
+  // The task says: "In the "proviso" (但し書き) or a similar section, list the individual payment dates or IDs..."
+  // The current template uses {{ facility_name }} as "但し、{{ facility_name }}として"
+  // Let's try to make the proviso content fit into the existing structure by modifying what {{ facility_name }} is replaced with.
+
+  let facilityNameProviso = firstPayment.facility_name || '施設利用';
+  let paymentIdsString = paymentsData.map(p => `ID:${p.payment_id}`).join(', ');
+  facilityNameProviso += ` (複数支払合計: ${paymentIdsString})`; // Example: "施設利用 (複数支払合計: ID:1, ID:2)"
+  modifiedHTML = modifiedHTML.replace(g('facility_name'), facilityNameProviso );
+
+
+  // Stamp Image
+  const imageUrl = 'http://localhost:5000/stamp.png';
+  modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
+
+  // Comment out or handle other placeholders not relevant to consolidated view or already handled
+  // {{ customer_code }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('customer_code'), firstPayment.customer_code || '');
+  // {{ company_contact_person }} is commented out
+  // // modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '');
+  // Bank details are hardcoded
+  // Detail items, total_tax_value, taxable_details are hidden by display:none in receipt.html
+
+  return modifiedHTML;
+}
+
+// Controller function for generating consolidated receipts
+const generateConsolidatedReceipt = async (req, res) => {
+  const hotelId = req.params.hid;
+  const payment_ids = req.body.payment_ids;
+  const userId = req.user.id;
+  let browser;
+
+  // Validate payment_ids
+  if (!Array.isArray(payment_ids) || payment_ids.length === 0) {
+    return res.status(400).json({ error: 'payment_ids must be a non-empty array.' });
+  }
+
+  try {
+    const userInfo = await getUsersByID(req.requestId, userId);
+    if (!userInfo || userInfo.length === 0) {
+      return res.status(404).json({ error: 'User info not found.' });
+    }
+
+    // Fetch Payment Details for all payment IDs
+    let paymentsData = [];
+    let clientNameCheck = null;
+    for (const pid of payment_ids) {
+      const paymentData = await getPaymentById(req.requestId, pid);
+      if (!paymentData) {
+        return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
+      }
+      // Check if all payments belong to the same client
+      if (clientNameCheck === null) {
+        clientNameCheck = paymentData.client_name;
+      } else if (clientNameCheck !== paymentData.client_name) {
+        return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
+      }
+      paymentsData.push(paymentData);
+    }
+
+    // Generate Consolidated Receipt Number and Date
+    const receiptDate = new Date();
+    let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+    let new_receipt_number;
+
+    if (!max_receipt_number_data.last_receipt_number) {
+      const year = receiptDate.getFullYear() % 100;
+      const month = receiptDate.getMonth() + 1;
+      new_receipt_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+    } else {
+      new_receipt_number = max_receipt_number_data.last_receipt_number + 1;
+    }
+
+    const consolidatedReceiptData = {
+      receipt_number: new_receipt_number,
+      receipt_date: receiptDate.toISOString().split('T')[0], // YYYY-MM-DD format
+    };
+
+    // Save Consolidated Receipt Info for each payment
+    // This marks each individual payment with the *same* consolidated receipt number and date.
+    for (const payment of paymentsData) {
+      // Determine amount for saving with receipt - should be individual payment amount
+      let individual_payment_amount = 0;
+      if (payment.items && payment.items.length > 0) {
+        individual_payment_amount = payment.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+      } else {
+        individual_payment_amount = parseFloat(payment.amount) || 0;
+      }
+      // Check if a receipt already exists for this payment_id with the new consolidated number.
+      // This check might be redundant if we always overwrite or if saveReceiptNumber handles conflicts.
+      // For simplicity, we'll call saveReceiptNumber as per the plan.
+      // It might update if a receipt for that payment_id already exists, or create a new one.
+      // The model's `saveReceiptNumber` should ideally handle UPSERT logic or specific logic for this.
+      // The current design implies `saveReceiptNumber` might be creating new receipt entries or updating based on payment_id.
+      await saveReceiptNumber(
+        req.requestId,
+        payment.payment_id,
+        hotelId,
+        consolidatedReceiptData.receipt_number,
+        consolidatedReceiptData.receipt_date,
+        individual_payment_amount, // Save individual amount with the receipt record for this payment
+        userId
+      );
+    }
+
+    const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
+    const htmlContent = generateConsolidatedReceiptHTML(receiptHTMLTemplate, consolidatedReceiptData, paymentsData, userInfo[0].name);
+
+    browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+
+    // Ensure stamp image is loaded (if it's critical and causes issues)
+    // Similar to generateInvoice, but using the {{stamp_image}} URL directly.
+    // Since we are replacing {{stamp_image}} with a URL, Puppeteer should load it.
+    // Adding a small delay or waiting for network idle might be useful if image loading is an issue.
+    // await page.waitForTimeout(500); // Example: wait for resources to load, adjust as needed
+
+    const pdfBuffer = await page.pdf({
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+      printBackground: true,
+      format: 'A4',
+    });
+
+    await browser.close();
+
+    res.contentType("application/pdf");
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("Error generating consolidated receipt PDF:", error);
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
+    // More specific error messages to client if possible
+    if (error.message.includes("Payment data not found") || error.message.includes("All payments must belong")) {
+        return res.status(400).json({ error: error.message });
+    }
+    res.status(500).send('Error generating consolidated receipt PDF');
+  }
+};

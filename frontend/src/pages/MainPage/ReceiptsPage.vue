@@ -18,7 +18,28 @@
                     removableSort
                     v-model:expandedRows="expandedRows"
                     :rowExpansion="true"
+                    rowGroupMode="subheader"
+                    groupRowsBy="client_payment_date_group"
+                    sortMode="single"
+                    :sortField="'client_payment_date_group'"
+                    :sortOrder="1"
                 >
+                    <template #groupheader="slotProps">
+                        <div class="flex items-center justify-between gap-2 p-2 bg-gray-100">
+                            <span class="font-bold">Client: {{ slotProps.data.client_name }} - Date: {{ formatDateWithDay(slotProps.data.payment_date) }}</span>
+                            <Button
+                                v-if="getConsolidatablePayments(slotProps.data).length > 0"
+                                label="一括領収書発行"
+                                icon="pi pi-file-export"
+                                severity="success"
+                                class="p-button-sm ml-auto"
+                                :loading="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
+                                :disabled="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
+                                @click="generateConsolidatedReceiptForGroup(slotProps.data)"
+                                v-tooltip.top="'このグループの未発行の支払いをまとめて領収書発行'"
+                            />
+                        </div>
+                    </template>
                     <template #header>
                         <div class="flex justify-between">
                             <span class="font-bold text-lg mb-4">{{ tableHeader }}</span>
@@ -109,7 +130,7 @@
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
-    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt } = useBillingStore();
+    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt, handleGenerateConsolidatedReceipt } = useBillingStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
@@ -165,6 +186,55 @@
     const clientFilter = ref(null);    
 
     const isGeneratingReceiptId = ref(null); // For row-specific loading state
+    const generatingConsolidatedKey = ref(null); // For group-specific loading state
+
+    // Helper to get payments eligible for consolidation within a group
+    const getConsolidatablePayments = (groupItemData) => {
+        if (!groupItemData || !filteredPayments.value) return [];
+        // Ensure groupItemData has the synthetic key if it's coming directly from slotProps.data
+        const groupKey = groupItemData.client_payment_date_group || `${groupItemData.client_name} - ${groupItemData.payment_date}`;
+        return filteredPayments.value.filter(p =>
+            p.client_payment_date_group === groupKey &&
+            !p.existing_receipt_number
+        );
+    };
+
+    // Generate consolidated receipt for a group
+    async function generateConsolidatedReceiptForGroup(groupItemData) {
+        // Ensure groupKey is derived correctly from groupItemData, which is the first item of the group
+        const groupKey = groupItemData.client_payment_date_group;
+        const paymentsToConsolidate = getConsolidatablePayments(groupItemData);
+
+        if (paymentsToConsolidate.length === 0) {
+            toast.add({ severity: 'warn', summary: '対象なし', detail: 'このグループに一括発行対象の支払がありません。', life: 3000 });
+            return;
+        }
+
+        const paymentIds = paymentsToConsolidate.map(p => p.payment_id);
+
+        if (!selectedHotelId.value) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルが選択されていません。', life: 3000 });
+            return;
+        }
+
+        generatingConsolidatedKey.value = groupKey;
+        toast.add({ severity: 'info', summary: '処理中', detail: `グループ (${groupKey}) の一括領収書を発行しています...`, life: 4000 });
+
+        try {
+            const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds);
+            if (result.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: `一括領収書 (${result.filename}) が発行されました。データ再読み込み中...`, life: 3000 });
+                await loadTableData(); // Refresh data
+            } else {
+                throw new Error(result.error || '一括領収書の発行に失敗しました。');
+            }
+        } catch (error) {
+            console.error("Error generating consolidated receipt:", error);
+            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '一括領収書の発行中にエラーが発生しました。', life: 5000 });
+        } finally {
+            generatingConsolidatedKey.value = null;
+        }
+    }
 
     // Submitting/generating a single receipt
     const generateSingleReceipt = async (paymentData) => {
@@ -221,6 +291,25 @@
                 (payment.client_name && payment.client_name.toLowerCase().includes(filterValue))
             );
         }
+
+        // Create synthetic key and sort
+        list = list.map(payment => ({
+            ...payment,
+            client_payment_date_group: `${payment.client_name} - ${payment.payment_date}`
+        }));
+
+        list.sort((a, b) => {
+            // Primary sort by the synthetic group key
+            if (a.client_payment_date_group < b.client_payment_date_group) return -1;
+            if (a.client_payment_date_group > b.client_payment_date_group) return 1;
+
+            // Secondary sort: payments without existing receipts first
+            if (!a.existing_receipt_number && b.existing_receipt_number) return -1;
+            if (a.existing_receipt_number && !b.existing_receipt_number) return 1;
+
+            // Tertiary sort by payment_id for stable order within the same client/date/receipt status
+            return (a.payment_id || 0) - (b.payment_id || 0);
+        });
         
         return list;
     });
