@@ -467,7 +467,7 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, generated_by_user_id, created_at)
+      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at)
     VALUES ($1, $2, $3, $4, $5, NOW())
     RETURNING id;
   `;
