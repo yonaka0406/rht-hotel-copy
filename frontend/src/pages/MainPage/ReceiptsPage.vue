@@ -7,10 +7,10 @@
                 <!-- <div class="flex justify-end mr-4"><Button severity="help" @click="setIsBillingPage(true)">領収書発行</Button></div> -->
                 <DataTable
                     v-model:filters="filters"
-                    v-model:selection="selectedPayments" <!-- Renamed from selectedReservations -->
+                    v-model:selection="selectedPayments"
                     filterDisplay="row"
-                    :value="filteredPayments" <!-- Renamed from filteredReservations -->
-                    :loading="isLoadingPayments || tableLoading" <!-- Use isLoadingPayments from store -->
+                    :value="filteredPayments"
+                    :loading="isLoadingPayments || tableLoading"
                     size="small"
                     :paginator="true"
                     :rows="25"
