@@ -331,7 +331,6 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
         TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed p.payment_date to p.date
         p.value as amount, -- Changed from p.amount
         COALESCE(c.name_kanji, c.name) as client_name,
-        p.status, -- Assuming reservation_payments table has a status column
         r.receipt_number as existing_receipt_number
     FROM
         reservation_payments p -- Changed from payments
