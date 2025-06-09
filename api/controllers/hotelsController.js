@@ -53,6 +53,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         await createPartition('plans_hotel');
         await createPartition('addons_hotel');
         await createPartition('invoices');
+        await createPartition('receipts');
         await createPartition('xml_requests');
         await createPartition('xml_responses');
       };
