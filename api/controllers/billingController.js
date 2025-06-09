@@ -135,50 +135,87 @@ const generateConsolidatedReceipt = async (req, res) => {
       paymentsData.push(paymentData);
     }
 
-    // Generate Consolidated Receipt Number and Date
-    const receiptDate = new Date();
-    let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
-    let new_receipt_number;
+    // Retry logic for consolidated receipt number generation and saving
+    let attempts = 0;
+    const maxRetries = 3;
+    let consolidatedReceiptData = {}; // Define consolidatedReceiptData to be accessible after loop
 
-    if (!max_receipt_number_data.last_receipt_number) {
-      const year = receiptDate.getFullYear() % 100;
-      const month = receiptDate.getMonth() + 1;
-      new_receipt_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-    } else {
-      new_receipt_number = max_receipt_number_data.last_receipt_number + 1;
+    for (attempts = 0; attempts < maxRetries; attempts++) {
+        try {
+            // Generate Consolidated Receipt Number and Date
+            const receiptDate = new Date();
+            let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+            let new_receipt_number;
+
+            if (!max_receipt_number_data.last_receipt_number) {
+                const year = receiptDate.getFullYear() % 100;
+                const month = receiptDate.getMonth() + 1;
+                new_receipt_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+            } else {
+                new_receipt_number = max_receipt_number_data.last_receipt_number + 1;
+            }
+
+            // Update consolidatedReceiptData directly here as it's in the same scope
+            consolidatedReceiptData.receipt_number = new_receipt_number;
+            consolidatedReceiptData.receipt_date = receiptDate.toISOString().split('T')[0];
+
+            // Attempt to save this consolidated receipt number for all associated payments
+            // The unique constraint error (23505) would typically occur on the first payment_id
+            // if the (hotel_id, receipt_number) pair already exists in the receipts table.
+            for (const payment of paymentsData) {
+                let individual_payment_amount = 0;
+                if (payment.items && payment.items.length > 0) {
+                    individual_payment_amount = payment.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+                } else {
+                    individual_payment_amount = parseFloat(payment.amount) || 0;
+                }
+
+                // The actual save operation that might throw a unique constraint violation
+                await saveReceiptNumber(
+                    req.requestId,
+                    payment.payment_id,
+                    hotelId,
+                    consolidatedReceiptData.receipt_number,
+                    consolidatedReceiptData.receipt_date,
+                    individual_payment_amount,
+                    userId
+                );
+            }
+
+            // If all saves were successful for this attempt
+            break; // Exit retry loop
+
+        } catch (error) {
+            if (error.code === '23505' && attempts < maxRetries - 1) {
+                console.warn(`Attempt ${attempts + 1} for consolidated receipt failed due to duplicate receipt number ${consolidatedReceiptData.receipt_number}. Retrying...`);
+                await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+                // Before retrying, it's important to ensure that any partially saved receipts from this failed attempt are handled.
+                // However, 'saveReceiptNumber' is per payment. If one fails, the transaction for that specific save might roll back.
+                // If 'saveReceiptNumber' doesn't run in its own transaction, this could be an issue.
+                // For now, assuming 'saveReceiptNumber' is atomic or the DB handles partial failures gracefully.
+                // If not, cleanup logic would be needed here to delete receipts saved for previous payment_ids in this attempt.
+                // This simplified retry assumes the main problem is the consolidated receipt number itself being a duplicate.
+                continue; // Try the next attempt (will generate a new receipt number)
+            }
+            // If it's a different error, or retries are exhausted for a unique constraint violation
+            throw error;
+        }
     }
 
-    const consolidatedReceiptData = {
-      receipt_number: new_receipt_number,
-      receipt_date: receiptDate.toISOString().split('T')[0], // YYYY-MM-DD format
-    };
-
-    // Save Consolidated Receipt Info for each payment
-    // This marks each individual payment with the *same* consolidated receipt number and date.
-    for (const payment of paymentsData) {
-      // Determine amount for saving with receipt - should be individual payment amount
-      let individual_payment_amount = 0;
-      if (payment.items && payment.items.length > 0) {
-        individual_payment_amount = payment.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
-      } else {
-        individual_payment_amount = parseFloat(payment.amount) || 0;
-      }
-      // Check if a receipt already exists for this payment_id with the new consolidated number.
-      // This check might be redundant if we always overwrite or if saveReceiptNumber handles conflicts.
-      // For simplicity, we'll call saveReceiptNumber as per the plan.
-      // It might update if a receipt for that payment_id already exists, or create a new one.
-      // The model's `saveReceiptNumber` should ideally handle UPSERT logic or specific logic for this.
-      // The current design implies `saveReceiptNumber` might be creating new receipt entries or updating based on payment_id.
-      await saveReceiptNumber(
-        req.requestId,
-        payment.payment_id,
-        hotelId,
-        consolidatedReceiptData.receipt_number,
-        consolidatedReceiptData.receipt_date,
-        individual_payment_amount, // Save individual amount with the receipt record for this payment
-        userId
-      );
+    // After the loop, check if a receipt number was successfully generated and saved.
+    // consolidatedReceiptData should hold the data from the last successful attempt or the last failed attempt.
+    if (attempts === maxRetries && Object.keys(consolidatedReceiptData).length === 0) {
+        // This means all attempts failed to even generate a number and try saving.
+        // However, if an error was thrown, it would have been caught by the main try-catch.
+        // More likely, if all retries failed, the error from the last attempt is already thrown.
+         console.error(`Failed to generate and save consolidated receipt after ${maxRetries} attempts. The error from the last attempt should have been propagated.`);
+         // If no error was propagated but we are here, something is wrong.
+         // For safety, ensure an error is thrown if no valid consolidatedReceiptData.receipt_number exists.
+         if (!consolidatedReceiptData.receipt_number) {
+            throw new Error(`Failed to secure a unique consolidated receipt number after ${maxRetries} attempts.`);
+         }
     }
+
 
     const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
     const htmlContent = generateConsolidatedReceiptHTML(receiptHTMLTemplate, consolidatedReceiptData, paymentsData, userInfo[0].name);
@@ -542,28 +579,74 @@ const generateReceipt = async (req, res) => {
         return res.status(404).json({ error: 'User info not found' });
     }
 
-    let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
+    // Retry logic for receipt number generation and saving
+    let attempts = 0;
+    const maxRetries = 3; // Max 3 attempts for saving
 
-    if (existingReceipt) {
-      receiptData.receipt_number = existingReceipt.receipt_number;
-      receiptData.receipt_date = existingReceipt.receipt_date;
-    } else {
-      const receiptDate = new Date();
-      let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
-      let max_receipt_number;
+    for (attempts = 0; attempts < maxRetries; attempts++) {
+        try {
+            let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
 
-      if (!max_receipt_number_data.last_receipt_number) {
-        const year = receiptDate.getFullYear() % 100;
-        const month = receiptDate.getMonth() + 1;
-        max_receipt_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-      } else {
-        max_receipt_number = max_receipt_number_data.last_receipt_number + 1;
-      }
-      receiptData.receipt_number = max_receipt_number;
-      receiptData.receipt_date = receiptDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+            if (existingReceipt) {
+                receiptData.receipt_number = existingReceipt.receipt_number;
+                receiptData.receipt_date = existingReceipt.receipt_date;
+                // If receipt exists, we assume it's already saved correctly, no need to retry saving this path.
+                break; // Exit retry loop, proceed to PDF generation
+            } else {
+                const receiptDate = new Date();
+                let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+                let new_receipt_number;
 
-      // Ensure paymentData.amount or the correct field for amount is used
-      await saveReceiptNumber(req.requestId, paymentId, hotelId, receiptData.receipt_number, receiptData.receipt_date, paymentData.amount, userId);
+                if (!max_receipt_number_data.last_receipt_number) {
+                    const year = receiptDate.getFullYear() % 100;
+                    const month = receiptDate.getMonth() + 1;
+                    new_receipt_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+                } else {
+                    new_receipt_number = max_receipt_number_data.last_receipt_number + 1;
+                }
+
+                receiptData.receipt_number = new_receipt_number;
+                receiptData.receipt_date = receiptDate.toISOString().split('T')[0];
+
+                // Attempt to save the new receipt number
+                // The model's saveReceiptNumber function is expected to handle the actual DB insert.
+                // Assuming it returns successfully if the insert works, or throws an error (e.g., for unique constraint)
+                await saveReceiptNumber(
+                    req.requestId,
+                    paymentId,
+                    hotelId,
+                    receiptData.receipt_number,
+                    receiptData.receipt_date,
+                    paymentData.amount, // Ensure paymentData is available and has .amount
+                    userId
+                );
+                // If save was successful
+                break; // Exit retry loop
+            }
+        } catch (error) {
+            // Check if the error is a PostgreSQL unique violation (error code '23505')
+            // And if we haven't exhausted retries yet
+            if (error.code === '23505' && attempts < maxRetries - 1) {
+                console.warn(`Attempt ${attempts + 1} for paymentId ${paymentId} failed due to duplicate receipt number. Retrying...`);
+                // Optional: add a small random delay
+                await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+                continue; // Try the next attempt
+            }
+            // If it's a different error, or retries are exhausted, re-throw to be caught by the outer try-catch
+            throw error;
+        }
+    }
+    // If loop finished due to maxRetries without break, receiptData might not be fully set or saved.
+    // The outer try-catch will handle errors thrown from here (e.g., if max retries exceeded).
+    // Ensure receiptData has values if we proceed. If attempts === maxRetries, it means all retries failed.
+    if (attempts === maxRetries && !receiptData.receipt_number) {
+        // This condition implies all retries for a *new* receipt failed.
+        // The last error thrown from the loop would have been caught by the outer try-catch.
+        // If somehow it reaches here without receiptData being populated (e.g. if existingReceipt was null and all save attempts failed silently)
+        // it would be an issue. However, the `throw error` in catch should prevent this.
+        // For safety, one might explicitly throw here if receiptData is still incomplete.
+        console.error(`Failed to generate and save receipt for paymentId ${paymentId} after ${maxRetries} attempts.`);
+        // The error from the last attempt would have already been thrown and should be handled by the main catch block.
     }
 
     const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');

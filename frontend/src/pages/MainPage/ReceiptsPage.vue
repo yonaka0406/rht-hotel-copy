@@ -16,8 +16,6 @@
                     stripedRows
                     @row-dblclick="openDrawer"
                     removableSort
-                    v-model:expandedRows="expandedRows"
-                    :rowExpansion="true"
                     rowGroupMode="subheader"
                     groupRowsBy="client_payment_date_group"
                     sortMode="single"
@@ -54,13 +52,6 @@
                         </div>
                     </template>
                     <template #empty> 指定されている期間中に支払情報はありません。 </template>
-                    <Column header="詳細" style="width: 1%;">
-                        <template #body="slotProps">
-                            <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" v-tooltip.top="'詳細表示/非表示'">
-                                <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
-                            </button>
-                        </template>
-                    </Column>
                     
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false">
                         <template #filter="{ filterModel }">
@@ -106,13 +97,7 @@
                                 :disabled="isGeneratingReceiptId === slotProps.data.payment_id"
                             />
                         </template>
-                    </Column>                    
-
-                    <template #expansion="slotProps">
-                        <div class="mx-20">
-                            <p>支払ID: {{ slotProps.data.payment_id }}</p> 
-                        </div>
-                    </template>
+                    </Column>
                 </DataTable>
             </div>            
         </div>        
@@ -223,16 +208,19 @@
         try {
             const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds);
             if (result.success) {
-                toast.add({ severity: 'success', summary: '成功', detail: `一括領収書 (${result.filename}) が発行されました。データ再読み込み中...`, life: 3000 });
-                await loadTableData(); // Refresh data
+                toast.add({ severity: 'success', summary: '成功', detail: `一括領収書 (${result.filename}) が発行されました。`, life: 3000 });
+                // loadTableData will be called in finally
             } else {
-                throw new Error(result.error || '一括領収書の発行に失敗しました。');
+                // Ensure result.error is an Error object or string for the toast
+                const errorMessage = (result.error instanceof Error) ? result.error.message : result.error;
+                throw new Error(errorMessage || '一括領収書の発行に失敗しました。');
             }
         } catch (error) {
             console.error("Error generating consolidated receipt:", error);
             toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '一括領収書の発行中にエラーが発生しました。', life: 5000 });
         } finally {
             generatingConsolidatedKey.value = null;
+            await loadTableData(); // Ensure data is refreshed
         }
     }
 
@@ -256,14 +244,19 @@
             
             if (result.success) {
                 toast.add({ severity: 'success', summary: '成功', detail: `領収書 (${result.filename}) が発行されました。`, life: 3000 });
-                await loadTableData(); // Refresh the list
+                // loadTableData will be called in finally
             }
+            // If result.success is false, the store action should ideally throw an error or return an error object.
+            // The catch block will handle errors thrown by the store or by `handleGenerateReceipt` itself.
+            // No explicit `else { throw new Error(...) }` here if the store action consistently throws on failure.
             
         } catch (error) {
             console.error("Error generating receipt via store:", error);
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 }); // Increased life for error message
+            // Ensure error.message is used for the toast, which should come from the store's error handling.
+            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 });
         } finally {
             isGeneratingReceiptId.value = null;
+            await loadTableData(); // Ensure data is refreshed
         }
     };
 
@@ -317,23 +310,6 @@
     // Data Table
     const tableHeader = ref('領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value));
     const tableLoading = ref(true);    
-    const expandedRows = ref({});
-
-    const toggleRowExpansion = (rowData) => {
-        const rowKey = rowData.payment_id;
-        const newExpandedRows = {...expandedRows.value};
-        if (newExpandedRows[rowKey]) {
-            delete newExpandedRows[rowKey];
-        } else {
-            newExpandedRows[rowKey] = true;
-        }
-        expandedRows.value = newExpandedRows;
-    };
-
-    const isRowExpanded = (rowData) => {
-        const rowKey = rowData.payment_id;
-        return expandedRows.value && expandedRows.value[rowKey];
-    };
 
     const filters = ref({
         client_name: { value: null, matchMode: FilterMatchMode.CONTAINS },        
