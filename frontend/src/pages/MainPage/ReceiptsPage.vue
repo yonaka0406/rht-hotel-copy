@@ -401,7 +401,7 @@
             // The store action now handles the download.
             // It returns { success: true, filename: ... } or throws an error.
             if (result.success) {
-                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (\${result.filename}) が発行されました。`, life: 3000 });
+                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (${result.filename}) が発行されました。`, life: 3000 });
                 await loadTableData(); // Refresh the list
             }
             // Errors are caught by the catch block
