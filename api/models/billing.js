@@ -338,7 +338,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
-        receipts r ON p.id = r.payment_id
+        receipts r ON p.receipt_id = r.id -- This line is changed
     WHERE
         p.hotel_id = $1 AND
         p.payment_date >= $2 AND
