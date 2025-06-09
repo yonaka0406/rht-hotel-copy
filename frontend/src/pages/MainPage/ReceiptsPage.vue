@@ -36,7 +36,13 @@
                         </div>
                     </template>
                     <template #empty> 指定されている期間中に支払情報はありません。 </template> <!-- Changed empty message -->
-                    <Column expander header="詳細" style="width: 1%;"/>
+                    <Column header="詳細" style="width: 1%;">
+                        <template #body="slotProps">
+                            <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" v-tooltip.top="'詳細表示/非表示'">
+                                <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
+                            </button>
+                        </template>
+                    </Column>
                     <!-- <Column selectionMode="multiple" headerStyle="width: 1%"></Column> --> <!-- Commented out multi-select for now -->
 
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false"> <!-- Changed from booker_name -->
@@ -483,6 +489,23 @@
     // const drawerVisible = ref(false);
     // const selectedPayment = ref(null);
     const expandedRows = ref({});
+
+    const toggleRowExpansion = (rowData) => {
+        const rowKey = rowData.payment_id; // Using the dataKey
+        const newExpandedRows = {...expandedRows.value};
+        if (newExpandedRows[rowKey]) {
+            delete newExpandedRows[rowKey];
+        } else {
+            newExpandedRows[rowKey] = true;
+        }
+        expandedRows.value = newExpandedRows;
+    };
+
+    const isRowExpanded = (rowData) => {
+        const rowKey = rowData.payment_id;
+        return expandedRows.value && expandedRows.value[rowKey];
+    };
+
     const filters = ref({
         client_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
         // Add other filters if columns are added back
