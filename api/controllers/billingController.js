@@ -205,49 +205,63 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
-  // Stamp Image
-  const imagePath = path.join(__dirname, '../components/stamp.png');
-  // const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`; // For local file access if needed
-  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Assuming server serves it
-  modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
+  // Active Placeholders in new receipt.html:
+  // {{ receipt_date }}
+  // {{ receipt_number }}
+  // {{ customer_name }}
+  // {{ received_amount }}
+  // {{ facility_name }} (for 但し書き - proviso)
 
   // Receipt Header
-  modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number);
-  modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date);
+  modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number || 'N/A');
+  modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date || 'YYYY-MM-DD');
 
   // Customer Information
   modifiedHTML = modifiedHTML.replace(g('customer_name'), paymentData.client_name || 'お客様名');
-  modifiedHTML = modifiedHTML.replace(g('customer_code'), paymentData.customer_code || '取引先コード');
+  // {{ customer_code }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('customer_code'), paymentData.customer_code || '');
 
-  // Company & Contact
-  modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '担当者名');
-  // Assuming facility_name is on paymentData, if it's part of hotel_details, adjust path
-  modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設名');
+  // Facility Name (for "但し書き")
+  modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設利用');
 
-  // Bank Details (from paymentData.hotel_details or fallback)
+  // Received Amount (Total)
+  // This calculation is crucial and should remain.
+  let calculatedReceivedAmount = 0;
+  if (paymentData.items && paymentData.items.length > 0) {
+    calculatedReceivedAmount = paymentData.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+  } else {
+    calculatedReceivedAmount = parseFloat(paymentData.amount) || 0;
+  }
+  modifiedHTML = modifiedHTML.replace(g('received_amount'), calculatedReceivedAmount.toLocaleString());
+
+  // Obsolete Placeholders (commented out or removed as per plan)
+  // {{ company_contact_person }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '');
+
+  // Bank Details are hardcoded in the new template
+  /*
   const hotelDetails = paymentData.hotel_details || {};
   modifiedHTML = modifiedHTML.replace(g('bank_name'), hotelDetails.bank_name || 'ホテル銀行名');
   modifiedHTML = modifiedHTML.replace(g('bank_branch_name'), hotelDetails.bank_branch_name || '支店名');
   modifiedHTML = modifiedHTML.replace(g('bank_account_type'), hotelDetails.bank_account_type || '口座種別');
   modifiedHTML = modifiedHTML.replace(g('bank_account_number'), hotelDetails.bank_account_number || '口座番号');
   modifiedHTML = modifiedHTML.replace(g('bank_account_name'), hotelDetails.bank_account_name || '口座名義');
+  */
 
-  // Received Amount (Total)
-  // Prefer calculated total from items if available, otherwise use paymentData.amount
-  let totalReceivedAmount = 0;
-  if (paymentData.items && paymentData.items.length > 0) {
-    totalReceivedAmount = paymentData.items.reduce((sum, item) => sum + (item.total_price || 0), 0);
-  } else {
-    totalReceivedAmount = paymentData.amount || 0;
-  }
-  modifiedHTML = modifiedHTML.replace(g('received_amount'), totalReceivedAmount.toLocaleString());
+  // {{ stamp_image }} is replaced by a CSS styled div in the new template
+  /*
+  const imagePath = path.join(__dirname, '../components/stamp.png');
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
+  modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
+  */
 
-  // Detail Items
+  // {{ detail_items }} section is hidden by display: none;
+  /*
   let detailItemsHtml = '';
-  let detailsTotalValue = 0;
+  let detailsTotalValue = 0; // This variable is also for a hidden section
   if (paymentData.items && Array.isArray(paymentData.items)) {
     paymentData.items.forEach((item, index) => {
-      const itemTotalPrice = item.total_price || 0;
+      const itemTotalPrice = parseFloat(item.total_price) || 0;
       detailsTotalValue += itemTotalPrice;
       detailItemsHtml += `
         <tr>
@@ -258,39 +272,41 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
         </tr>
       `;
     });
-  } else { // Fallback if no items, use the main payment amount as a single line
-      detailsTotalValue = totalReceivedAmount; // paymentData.amount should be the total
+  } else {
+      detailsTotalValue = calculatedReceivedAmount;
       detailItemsHtml = `
         <tr>
             <td class="cell-center">1</td>
             <td>宿泊料として</td>
             <td class="cell-center">1 式</td>
-            <td class="cell-right">¥ ${totalReceivedAmount.toLocaleString()}</td>
+            <td class="cell-right">¥ ${calculatedReceivedAmount.toLocaleString()}</td>
         </tr>
       `;
   }
   modifiedHTML = modifiedHTML.replace(g('detail_items'), detailItemsHtml);
-  modifiedHTML = modifiedHTML.replace(g('details_total_value'), detailsTotalValue.toLocaleString());
+  */
 
-  // Tax Calculation (similar to invoice, assuming items have tax_rate and total_net_price)
+  // {{ details_total_value }} section is hidden by display: none;
+  // // modifiedHTML = modifiedHTML.replace(g('details_total_value'), detailsTotalValue.toLocaleString()); // detailsTotalValue would be from the block above
+
+  // {{ total_tax_value }} and {{ taxable_details }} sections are hidden by display: none;
+  /*
   let totalTaxValue = 0;
   const taxItemsMap = new Map();
-
   if (paymentData.items && Array.isArray(paymentData.items)) {
     paymentData.items.forEach(item => {
-      const itemNetPrice = item.total_net_price || item.total_price || 0; // Fallback if net price not available
-      const itemTotalPrice = item.total_price || 0;
-      const taxRate = item.tax_rate || 0; // Default to 0 if not specified
+      const itemNetPrice = parseFloat(item.total_net_price) || parseFloat(item.total_price) || 0;
+      const itemTotalPrice = parseFloat(item.total_price) || 0;
+      const taxRate = parseFloat(item.tax_rate) || 0;
       const taxDifference = itemTotalPrice - itemNetPrice;
       totalTaxValue += taxDifference;
 
-      if (taxRate > 0) { // Only include items with tax
+      if (taxRate > 0) {
         const currentTaxableAmount = taxItemsMap.get(taxRate) || 0;
         taxItemsMap.set(taxRate, currentTaxableAmount + itemNetPrice);
       }
     });
   }
-
   modifiedHTML = modifiedHTML.replace(g('total_tax_value'), totalTaxValue.toLocaleString());
 
   let taxableDetailsHtml = '';
@@ -303,11 +319,15 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
     `;
   });
   modifiedHTML = modifiedHTML.replace(g('taxable_details'), taxableDetailsHtml);
+  */
 
-  // Comments
-  let commentsText = paymentData.notes || '';
-  commentsText += (commentsText ? '<br/>' : '') + '上記金額を正に領収いたしました。';
-  modifiedHTML = modifiedHTML.replace(g('comments'), commentsText);
+  // {{ comments }} placeholder is not present in the new receipt.html in a general sense.
+  // The line "上記金額を正に領収いたしました" is hardcoded.
+  // paymentData.notes could be used for the "但し書き" if `facility_name` is not appropriate,
+  // but the current template uses `facility_name` there.
+  // // let commentsText = paymentData.notes || '';
+  // // commentsText += (commentsText ? '<br/>' : '') + '上記金額を正に領収いたしました。'; // This specific text is already in the template.
+  // // modifiedHTML = modifiedHTML.replace(g('comments'), commentsText); // No {{ comments }} placeholder in new template.
 
   return modifiedHTML;
 }
