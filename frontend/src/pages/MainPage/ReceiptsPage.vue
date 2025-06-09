@@ -24,7 +24,7 @@
                 >
                     <template #groupheader="slotProps">
                         <div class="flex items-center justify-between gap-2 p-2 bg-gray-100">
-                            <span class="font-bold">Client: {{ slotProps.data.client_name }} - Date: {{ formatDateWithDay(slotProps.data.payment_date) }}</span>
+                            <span class="font-bold">{{ slotProps.data.client_name }} - {{ formatDateWithDay(slotProps.data.payment_date) }}</span>
                             <Button
                                 v-if="getConsolidatablePayments(slotProps.data).length > 0"
                                 label="一括領収書発行"
@@ -203,12 +203,23 @@
         }
 
         generatingConsolidatedKey.value = groupKey;
-        toast.add({ severity: 'info', summary: '処理中', detail: `グループ (${groupKey}) の一括領収書を発行しています...`, life: 4000 });
+        toast.add({
+            severity: 'info',
+            summary: '処理中',
+            detail: `顧客「${groupItemData.client_name}」様 (支払日: ${formatDateWithDay(groupItemData.payment_date)}) の一括領収書を発行しています...`,
+            life: 4000
+        });
 
         try {
             const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds);
             if (result.success) {
-                toast.add({ severity: 'success', summary: '成功', detail: `一括領収書 (${result.filename}) が発行されました。`, life: 3000 });
+                const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: `顧客「${groupItemData.client_name}」様宛の一括領収書 (${formatCurrency(totalConsolidatedAmount)}) が発行されました。\nファイル名: ${result.filename}`,
+                    life: 5000
+                });
                 // loadTableData will be called in finally
             } else {
                 // Ensure result.error is an Error object or string for the toast
@@ -217,7 +228,12 @@
             }
         } catch (error) {
             console.error("Error generating consolidated receipt:", error);
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '一括領収書の発行中にエラーが発生しました。', life: 5000 });
+            toast.add({
+                severity: 'error',
+                summary: '発行失敗',
+                detail: `顧客「${groupItemData.client_name}」様 (支払日: ${formatDateWithDay(groupItemData.payment_date)}) の一括領収書発行に失敗しました: ${error.message}`,
+                life: 5000
+            });
         } finally {
             generatingConsolidatedKey.value = null;
             await loadTableData(); // Ensure data is refreshed
@@ -236,14 +252,24 @@
         }
 
         isGeneratingReceiptId.value = paymentData.payment_id;
-        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: ${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
+        toast.add({
+            severity: 'info',
+            summary: '領収書発行中',
+            detail: `顧客「${paymentData.client_name}」様 (支払ID: ${paymentData.payment_id}) の領収書を準備しています...`,
+            life: 3000
+        });
 
         try {
             // Call the store action
             const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id);
             
             if (result.success) {
-                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (${result.filename}) が発行されました。`, life: 3000 });
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: `顧客「${paymentData.client_name}」様宛の領収書 (${formatCurrency(paymentData.amount)}) が発行されました。\nファイル名: ${result.filename}`,
+                    life: 3000
+                });
                 // loadTableData will be called in finally
             }
             // If result.success is false, the store action should ideally throw an error or return an error object.
@@ -253,7 +279,12 @@
         } catch (error) {
             console.error("Error generating receipt via store:", error);
             // Ensure error.message is used for the toast, which should come from the store's error handling.
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 });
+            toast.add({
+                severity: 'error',
+                summary: '発行失敗',
+                detail: `顧客「${paymentData.client_name}」様 (${formatCurrency(paymentData.amount)}) の領収書発行に失敗しました: ${error.message}`,
+                life: 5000
+            });
         } finally {
             isGeneratingReceiptId.value = null;
             await loadTableData(); // Ensure data is refreshed

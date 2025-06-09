@@ -252,6 +252,11 @@ const generateConsolidatedReceipt = async (req, res) => {
 
     await browser.close();
 
+    const clientName = (paymentsData && paymentsData.length > 0 && paymentsData[0].client_name) ? paymentsData[0].client_name : 'UnknownClient';
+    const sanitizedConsolidatedClientName = clientName.replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
+    const consolidatedFilename = `${consolidatedReceiptData.receipt_number} - ${sanitizedConsolidatedClientName}.pdf`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(consolidatedFilename)}"`);
     res.contentType("application/pdf");
     res.send(pdfBuffer);
 
@@ -686,6 +691,11 @@ const generateReceipt = async (req, res) => {
     });
     await browser.close();
 
+    // paymentData should be in scope here from the try block
+    const sanitizedSingleClientName = (paymentData.client_name || 'UnknownClient').replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
+    const singleFilename = `${receiptData.receipt_number} - ${sanitizedSingleClientName}.pdf`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(singleFilename)}"`);
     res.contentType("application/pdf");
     res.send(pdfBuffer);
 
