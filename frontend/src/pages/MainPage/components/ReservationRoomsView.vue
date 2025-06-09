@@ -43,10 +43,18 @@
                     :rowStyle="rowStyle"
                     :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]"
+                    dataKey="id"
                     sortField="display_date"
                     :sortOrder=1
                 >
-                    <Column expander header="+/-" style="width: 1%;"/> 
+                    <Column header="詳細" style="width: 1%;"> <!-- Changed header, removed expander prop -->
+                        <template #body="slotProps">
+                            <!-- Pass group.room_id to the methods -->
+                            <button @click="toggleRowExpansion(group.room_id, slotProps.data)" class="p-button p-button-text p-button-rounded" type="button">
+                                <i :class="isRowExpanded(group.room_id, slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
+                            </button>
+                        </template>
+                    </Column>
                     <Column field="display_date" header="日付" class="text-xs" />  
                     <Column header="部屋" class="text-xs">                        
                         <template #body="slotProps">                            
@@ -663,6 +671,28 @@
         return matchingDetails;
     };
     const expandedRows = ref({});     
+
+    const isRowExpanded = (groupId, rowData) => {
+        // Check if the group's expansion state exists and then if the row is expanded
+        return expandedRows.value[groupId] && expandedRows.value[groupId][rowData.id] === true;
+    };
+
+    const toggleRowExpansion = (groupId, rowData) => {
+        // Ensure the group's expansion state object exists
+        if (!expandedRows.value[groupId]) {
+            expandedRows.value[groupId] = {};
+        }
+
+        const isExpanded = expandedRows.value[groupId][rowData.id];
+        if (isExpanded) {
+            delete expandedRows.value[groupId][rowData.id];
+        } else {
+            expandedRows.value[groupId][rowData.id] = true;
+        }
+        // Force reactivity if Vue struggles with deep object changes, though direct assignment should work.
+        // expandedRows.value = { ...expandedRows.value };
+    };
+
     const rowStyle = (data) => {
         const date = new Date(data.display_date);
         const day = date.getDay();
@@ -1294,25 +1324,5 @@
 </script>
 
 <style scoped>
-    ::v-deep(.p-datatable-row-toggle-button) {
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        width: 5px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: transparent;
-        border: 0px solid;
-        cursor: pointer;
-    }
-
-    ::v-deep(.p-datatable-row-toggle-icon) {
-        fill: #333 !important; /* Ensure it has a visible color */
-        display: block !important;
-        width: 2px !important;
-        height: 5px !important;
-        border: 2px solid black !important;
-    }
-
 </style>
 

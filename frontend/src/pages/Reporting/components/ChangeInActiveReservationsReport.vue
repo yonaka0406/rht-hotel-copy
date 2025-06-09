@@ -507,5 +507,7 @@
 </script>
 
 <style scoped>
-
+::v-deep(td[data-pc-section="rowgroupheadercell"] > button.p-datatable-row-toggle-button) {
+    display: none !important;
+}
 </style>
