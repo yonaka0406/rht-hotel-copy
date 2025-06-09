@@ -467,12 +467,12 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (payment_id, hotel_id, receipt_number, receipt_date, amount, generated_by_user_id, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      (hotel_id, receipt_number, receipt_date, amount, generated_by_user_id, created_at)
+    VALUES ($1, $2, $3, $4, $5, NOW())
     RETURNING id;
   `;
   try {
-    const result = await pool.query(query, [paymentId, hotelId, receiptNumber, receiptDate, amount, userId]);
+    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId]);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
     console.error('Error in saveReceiptNumber:', err);
