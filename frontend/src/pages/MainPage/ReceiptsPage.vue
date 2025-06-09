@@ -39,29 +39,6 @@
                     <Column expander header="詳細" style="width: 1%;"/>
                     <!-- <Column selectionMode="multiple" headerStyle="width: 1%"></Column> --> <!-- Commented out multi-select for now -->
 
-                    <Column field="status" filterField="status" header="支払ステータス" style="width:1%" :showFilterMenu="false"> <!-- Changed header -->
-                        <template #filter="{ filterModel, filterCallback }">
-                            <Select
-                                v-model="filterModel.value"
-                                :options="paymentStatusOptions"
-                                optionLabel="label"
-                                optionValue="value"
-                                @change="filterCallback"
-                                placeholder="選択"
-                                showClear
-                                fluid
-                            />
-                        </template>
-                        <template #body="slotProps">
-                            <!-- Assuming payment status might be different, e.g. 'completed', 'pending', 'failed' -->
-                            <div class="flex justify-center items-center">
-                                <span v-if="slotProps.data.status === 'completed'" class="px-2 py-1 rounded-md bg-green-200 text-green-700"><i class="pi pi-check-circle" v-tooltip="'完了'"></i></span>
-                                <span v-if="slotProps.data.status === 'pending'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-clock" v-tooltip="'処理中'"></i></span>
-                                <span v-if="slotProps.data.status === 'failed'" class="px-2 py-1 rounded-md bg-red-200 text-red-700"><i class="pi pi-times-circle" v-tooltip="'失敗'"></i></span>
-                                <!-- Add other payment statuses as needed -->
-                            </div>
-                        </template>
-                    </Column>
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false"> <!-- Changed from booker_name -->
                         <template #filter="{ filterModel }">
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
@@ -476,11 +453,6 @@
     // Filters
     const startDateFilter = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); // Default to start of current month
     const endDateFilter = ref(new Date()); // Default to today
-    const paymentStatusOptions = [ // Example statuses for payments
-        { label: '完了', value: 'completed' },
-        { label: '処理中', value: 'pending' },
-        { label: '失敗', value: 'failed' },
-    ];
 
     const applyDateFilters = async () => {
         if (startDateFilter.value && endDateFilter.value) {
@@ -497,10 +469,7 @@
                 (payment.client_name && payment.client_name.toLowerCase().includes(filterValue))
             );
         }
-        // Apply status filter
-        if (filters.value.status.value) {
-             list = list.filter(payment => payment.status === filters.value.status.value);
-        }
+        // Status filter logic removed
 
         // The backend already formats payment_date as 'YYYY-MM-DD'
         // and amount should be a number from the store mapping.
@@ -515,7 +484,6 @@
     // const selectedPayment = ref(null);
     const expandedRows = ref({});
     const filters = ref({
-        status: { value: null, matchMode: FilterMatchMode.EQUALS },
         client_name: { value: null, matchMode: FilterMatchMode.CONTAINS },
         // Add other filters if columns are added back
     });
