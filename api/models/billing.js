@@ -328,7 +328,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
   const query = `
     SELECT
         p.id as payment_id,
-        TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
+        TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed p.payment_date to p.date
         p.value as amount, -- Changed from p.amount
         COALESCE(c.name_kanji, c.name) as client_name,
         p.status, -- Assuming reservation_payments table has a status column
@@ -338,13 +338,13 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
-        receipts r ON p.receipt_id = r.id -- This line is changed
+        receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id -- Added p.hotel_id = r.hotel_id
     WHERE
         p.hotel_id = $1 AND
-        p.payment_date >= $2 AND
-        p.payment_date <= $3
+        p.date >= $2 AND -- Changed p.payment_date to p.date
+        p.date <= $3   -- Changed p.payment_date to p.date
     ORDER BY
-        p.payment_date DESC;
+        p.date DESC; -- Changed p.payment_date to p.date
   `;
   try {
     const result = await pool.query(query, [hotelId, startDate, endDate]);
