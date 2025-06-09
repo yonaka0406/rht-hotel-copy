@@ -329,12 +329,12 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
     SELECT
         p.id as payment_id,
         TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
-        p.amount,
+        p.value as amount, // Changed from p.amount
         COALESCE(c.name_kanji, c.name) as client_name,
-        p.status, -- Assuming payments table has a status column
+        p.status, -- Assuming reservation_payments table has a status column
         r.receipt_number as existing_receipt_number
     FROM
-        payments p
+        reservation_payments p // Changed from payments
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
@@ -363,9 +363,9 @@ async function getPaymentById(requestId, paymentId) {
   const paymentQuery = `
     SELECT
       p.id,
-      p.amount,
-      TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
-      p.notes,
+      p.value AS amount,                     -- Changed from p.amount
+      TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed from p.payment_date
+      p.comment AS notes,                   -- Changed from p.notes
       c.name AS client_name,
       c.customer_code,
       h.name AS facility_name,
@@ -374,23 +374,23 @@ async function getPaymentById(requestId, paymentId) {
       h.bank_account_type,
       h.bank_account_number,
       h.bank_account_name
-    FROM payments p
+    FROM reservation_payments p             -- Changed from payments
     JOIN clients c ON p.client_id = c.id
     JOIN hotels h ON p.hotel_id = h.id
     WHERE p.id = $1;
   `;
-  const itemsQuery = `
-    SELECT
-      description,
-      quantity,
-      unit,
-      unit_price,
-      total_price,
-      tax_rate,
-      total_net_price
-    FROM payment_items
-    WHERE payment_id = $1;
-  `;
+  // const itemsQuery = `
+  //   SELECT
+  //     description,
+  //     quantity,
+  //     unit,
+  //     unit_price,
+  //     total_price,
+  //     tax_rate,
+  //     total_net_price
+  //   FROM payment_items
+  //   WHERE payment_id = $1;
+  // `; // Removed itemsQuery
   try {
     const paymentResult = await pool.query(paymentQuery, [paymentId]);
     if (paymentResult.rows.length === 0) {
@@ -398,7 +398,7 @@ async function getPaymentById(requestId, paymentId) {
     }
     const paymentData = paymentResult.rows[0];
 
-    const itemsResult = await pool.query(itemsQuery, [paymentId]);
+    // const itemsResult = await pool.query(itemsQuery, [paymentId]); // Removed itemsResult execution
 
     return {
       id: paymentData.id,
@@ -415,15 +415,7 @@ async function getPaymentById(requestId, paymentId) {
         bank_account_number: paymentData.bank_account_number,
         bank_account_name: paymentData.bank_account_name
       },
-      items: itemsResult.rows.map(item => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit: item.unit, // Assuming 'unit' column exists in payment_items
-        unit_price: parseFloat(item.unit_price),
-        total_price: parseFloat(item.total_price),
-        tax_rate: parseFloat(item.tax_rate),
-        total_net_price: parseFloat(item.total_net_price)
-      }))
+      items: [] // No separate payment_items table
     };
   } catch (err) {
     console.error('Error in getPaymentById:', err);
