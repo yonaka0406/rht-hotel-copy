@@ -580,24 +580,21 @@
 </script>
 
 <style scoped>
-    ::v-deep(.p-datatable-row-toggle-button) {
-        display: flex !important;
+    /* Target the icon within the row toggler button */
+    ::v-deep(.p-datatable-tbody .p-column-row-toggler .p-row-toggler-icon) {
+        color: #3B82F6; /* This is Tailwind's text-blue-500 */
+        /* PrimeVue's default icon size is usually 1rem, which should be fine.
+           If it needs adjustment, uncomment and set the font-size here. */
+        /* font-size: 1rem; */
+    }
+
+    /* Optional: Ensure the button itself is aligned if necessary,
+       though PrimeVue defaults should handle this once old styles are gone. */
+    /*
+    ::v-deep(.p-datatable-tbody .p-column-row-toggler) {
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 5px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: transparent;
-        border: 0px solid;
-        cursor: pointer;
     }
-
-    ::v-deep(.p-datatable-row-toggle-icon) {
-        fill: #333 !important; /* Ensure it has a visible color */
-        display: block !important;
-        width: 2px !important;
-        height: 5px !important;
-        border: 2px solid black !important;
-    }
-
+    */
 </style>
