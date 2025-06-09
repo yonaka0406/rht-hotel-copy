@@ -15,7 +15,7 @@
                     :paginator="true"
                     :rows="25"
                     :rowsPerPageOptions="[5, 10, 25, 50, 100]"
-                    dataKey="id"
+                    dataKey="payment_id"
                     stripedRows
                     @row-dblclick="openDrawer"
                     removableSort
@@ -182,6 +182,7 @@
                             <div v-else>
                                 <p>支払項目はありません。</p>
                             </div>
+                            -->
                         </div>
                     </template>
                 </DataTable>
@@ -326,14 +327,14 @@
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
+        return `\${year}-\${month}-\${day}`;
     };
     const formatDateWithDay = (dateStr) => {
         if (!dateStr) return '';
         const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
         const parsedDate = new Date(dateStr);
         if (isNaN(parsedDate.getTime())) return ''; // Handle invalid date strings
-        return `${parsedDate.toLocaleDateString(undefined, options)}`;
+        return `\${parsedDate.toLocaleDateString(undefined, options)}`;
     };
     const formatCurrency = (value) => {
         if (value == null || isNaN(Number(value))) return '';
@@ -354,7 +355,7 @@
         // tableLoading.value is still managed locally for now, could also be moved to store if needed globally for this component type
         tableLoading.value = true;
         await fetchPaymentsForReceipts(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
-        tableHeader.value = `領収書発行対象一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
+        tableHeader.value = `領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`;
         tableLoading.value = false; // Reset local loading after fetch (store handles its own)
     }
 
@@ -400,19 +401,19 @@
         }
 
         isGeneratingReceiptId.value = paymentData.payment_id;
-        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: ${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
+        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: \${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
 
         try {
-            const response = await fetch(`/api/billing/res/generate-receipt/${selectedHotelId.value}/${paymentData.payment_id}`, {
+            const response = await fetch(`/api/billing/res/generate-receipt/\${selectedHotelId.value}/\${paymentData.payment_id}`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    'Authorization': `Bearer \${localStorage.getItem('authToken')}`,
                     // 'Content-Type': 'application/json', // Not needed if no body is sent
                 }
             });
 
             if (!response.ok) {
-                let errorDetail = `HTTP error! Status: ${response.status}`;
+                let errorDetail = `HTTP error! Status: \${response.status}`;
                 try {
                     const errorData = await response.json();
                     errorDetail = errorData.message || errorData.error || errorDetail;
@@ -433,9 +434,9 @@
             a.href = url;
             // Try to get filename from Content-Disposition header first
             const disposition = response.headers.get('content-disposition');
-            let filename = `領収書_${paymentData.existing_receipt_number || paymentData.payment_id}.pdf`;
+            let filename = `領収書_\${paymentData.existing_receipt_number || paymentData.payment_id}.pdf`;
             if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
                 const matches = filenameRegex.exec(disposition);
                 if (matches != null && matches[1]) {
                     filename = matches[1].replace(/['"]/g, '');
@@ -500,7 +501,7 @@
     });
 
     // Data Table
-    const tableHeader = ref(`領収書発行対象一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`)
+    const tableHeader = ref(`領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`)
     const tableLoading = ref(true);
     // const drawerVisible = ref(false);
     // const selectedPayment = ref(null);
@@ -574,4 +575,5 @@
         // }
     });
     */
+// FORCED_UPDATE_TIMESTAMP_RECEIPTSPAGE_20231201160000
 </script>
