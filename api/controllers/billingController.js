@@ -203,7 +203,7 @@ function generateInvoiceHTML(html, data, userName) {
 
 function generateReceiptHTML(html, receiptData, paymentData, userName) {
   let modifiedHTML = html;
-  const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
+  const g = (key) => new RegExp(`{{ \${key} }}`, 'g'); // Helper for global regex replace
 
   // Active Placeholders in new receipt.html:
   // {{ receipt_date }}
@@ -265,10 +265,10 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
       detailsTotalValue += itemTotalPrice;
       detailItemsHtml += `
         <tr>
-            <td class="cell-center">${index + 1}</td>
-            <td>${item.description || '品目'}</td>
-            <td class="cell-center">${item.quantity || 1} ${item.unit || ''}</td>
-            <td class="cell-right">¥ ${itemTotalPrice.toLocaleString()}</td>
+            <td class="cell-center">\${index + 1}</td>
+            <td>\${item.description || '品目'}</td>
+            <td class="cell-center">\${item.quantity || 1} \${item.unit || ''}</td>
+            <td class="cell-right">¥ \${itemTotalPrice.toLocaleString()}</td>
         </tr>
       `;
     });
@@ -279,7 +279,7 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
             <td class="cell-center">1</td>
             <td>宿泊料として</td>
             <td class="cell-center">1 式</td>
-            <td class="cell-right">¥ ${calculatedReceivedAmount.toLocaleString()}</td>
+            <td class="cell-right">¥ \${calculatedReceivedAmount.toLocaleString()}</td>
         </tr>
       `;
   }
@@ -313,8 +313,8 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
   taxItemsMap.forEach((amount, rate) => {
     taxableDetailsHtml += `
       <tr>
-        <td class="title-cell">${(rate * 100).toLocaleString()}%対象</td>
-        <td class="cell-right">¥ ${amount.toLocaleString()}</td>
+        <td class="title-cell">\${(rate * 100).toLocaleString()}%対象</td>
+        <td class="cell-right">¥ \${amount.toLocaleString()}</td>
       </tr>
     `;
   });
@@ -395,7 +395,7 @@ const generateReceipt = async (req, res) => {
             }
         }, imageSelector);
     } catch (e) {
-        console.warn(`Image selector ${imageSelector} not found or image did not load within timeout: ${e.message}`);
+        console.warn(`Image selector \${imageSelector} not found or image did not load within timeout: \${e.message}`);
     }
 
 
@@ -416,14 +416,6 @@ const generateReceipt = async (req, res) => {
     }
     res.status(500).send('Error generating receipt PDF');
   }
-};
-
-module.exports = { 
-  getBillableListView,
-  getBilledListView,
-  generateInvoice,
-  generateReceipt,
-  getPaymentsForReceipts,
 };
 
 const getPaymentsForReceipts = async (req, res) => {
@@ -447,3 +439,12 @@ const getPaymentsForReceipts = async (req, res) => {
     res.status(500).json({ error: 'Internal server error while fetching payments for receipts.' });
   }
 };
+
+module.exports = {
+  getBillableListView,
+  getBilledListView,
+  generateInvoice,
+  generateReceipt,
+  getPaymentsForReceipts,
+};
+// FORCED_UPDATE_TIMESTAMP_CONTROLLER_20231201153000

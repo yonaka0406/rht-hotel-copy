@@ -153,7 +153,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
       ORDER BY 5, 7;
     `;
     const values = [hotelId, dateStart, dateEnd]
-  
+
     try {
       const result = await pool.query(query, values);    
       return result.rows;
@@ -280,7 +280,7 @@ const selectMaxInvoiceNumber = async (requestId, hotelId, month) => {
       MAX(invoices.invoice_number) as last_invoice_number
     FROM      
       invoices
-        
+
     WHERE 
       invoices.hotel_id = $1  
       AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
@@ -321,18 +321,6 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
     console.error('Error updating data:', err);
     throw new Error('Database error');
   }
-};
-
-module.exports = {    
-  selectBillableListView,
-  selectBilledListView,
-  selectMaxInvoiceNumber,
-  updateInvoices,
-  getPaymentById,
-  selectMaxReceiptNumber,
-  getReceiptByPaymentId,
-  saveReceiptNumber,
-  selectPaymentsForReceiptsView,
 };
 
 async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
@@ -499,3 +487,16 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
     throw new Error('Database error while saving receipt number.');
   }
 }
+
+module.exports = {
+  selectBillableListView,
+  selectBilledListView,
+  selectMaxInvoiceNumber,
+  updateInvoices,
+  getPaymentById,
+  selectMaxReceiptNumber,
+  getReceiptByPaymentId,
+  saveReceiptNumber,
+  selectPaymentsForReceiptsView,
+};
+// FORCED_UPDATE_TIMESTAMP_MODEL_20231201153500
