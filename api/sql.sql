@@ -575,16 +575,22 @@ CREATE TABLE reservation_payments (
     date DATE NOT NULL,
     room_id INT,
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
-    payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table
+    payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table    
     value DECIMAL,
     comment TEXT,
     invoice_id UUID DEFAULT NULL,
+    receipt_id UUID DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
+    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
+    FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_payments ADD COLUMN receipt_id UUID NULL;
+COMMENT ON COLUMN reservation_payments.receipt_id IS 'Foreign key to the receipts table, linking multiple payments to a single receipt';
+ALTER TABLE reservation_payments ADD CONSTRAINT fk_reservation_payments_receipts FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL;
 
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
@@ -633,11 +639,6 @@ CREATE TABLE receipts (
 
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
--- RECEIPTS_TABLE_MODIFIED_DEF_20231201180000
-
-ALTER TABLE reservation_payments ADD COLUMN receipt_id UUID NULL;
-COMMENT ON COLUMN reservation_payments.receipt_id IS 'Foreign key to the receipts table, linking multiple payments to a single receipt';
-ALTER TABLE reservation_payments ADD CONSTRAINT fk_reservation_payments_receipts FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL;
 
 -- OTA / Site Controller
 
@@ -1067,6 +1068,7 @@ INSERT INTO xml_templates (name, template) VALUES
       </pms:execute>
    </soapenv:Body>
 </soapenv:Envelope>');
+
 CREATE TABLE xml_requests (
    id SERIAL,
    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -1083,7 +1085,9 @@ CREATE TABLE xml_responses (
    response XML NOT NULL,
    PRIMARY KEY (id, hotel_id)   
 ) PARTITION BY LIST (hotel_id);
+
 -- VIEW
+
 CREATE OR REPLACE VIEW vw_room_inventory AS
 WITH roomTotal AS (
     SELECT
@@ -1110,6 +1114,7 @@ FROM
     JOIN roomTotal ON roomTotal.hotel_id = rd.hotel_id AND roomTotal.room_type_id = r.room_type_id
 WHERE rd.cancelled IS NULL
 GROUP BY rd.hotel_id, rd.date, r.room_type_id, sc.netrmtypegroupcode, rt.name, roomTotal.total_rooms;
+
 CREATE OR REPLACE VIEW vw_booking_for_google AS
 SELECT
     h.id AS hotel_id,
@@ -1140,7 +1145,9 @@ WHERE
     rd.cancelled IS NULL
 ORDER BY
     h.id, rd.date, rooms.room_number;
+
 -- Financial data
+
 CREATE TABLE du_forecast (
    id SERIAL PRIMARY KEY,
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -1155,6 +1162,7 @@ CREATE TABLE du_forecast (
 );
 COMMENT ON TABLE du_forecast IS '施設ごと月ごとの売上と稼働率予算データ';
 COMMENT ON COLUMN du_forecast.hotel_id IS '施設テーブルを参照する外部キー (hotels.id)';
+
 CREATE TABLE du_accounting (
    id SERIAL PRIMARY KEY,
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -1165,6 +1173,7 @@ CREATE TABLE du_accounting (
    CONSTRAINT uq_hotel_month_accounting UNIQUE (hotel_id, accounting_month)
 );
 COMMENT ON TABLE du_accounting IS '施設ごと月ごとの売上会計データ';
+
 -- TODO: Review if these duplicate client handling scripts are necessary for initial production deployment. They appear to be for data cleanup after a specific import dated '2025-03-25'.
 /*
 --------------------------------------------------------------------
@@ -1306,4 +1315,4 @@ WHERE id IN (
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
 */
--- SQL_DDL_ORDER_FIXED_AGAIN_20231201191500
+
