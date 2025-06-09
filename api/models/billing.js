@@ -329,12 +329,12 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
     SELECT
         p.id as payment_id,
         TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
-        p.value as amount, // Changed from p.amount
+        p.value as amount, -- Changed from p.amount
         COALESCE(c.name_kanji, c.name) as client_name,
         p.status, -- Assuming reservation_payments table has a status column
         r.receipt_number as existing_receipt_number
     FROM
-        reservation_payments p // Changed from payments
+        reservation_payments p -- Changed from payments
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
