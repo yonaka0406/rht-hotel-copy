@@ -291,7 +291,7 @@
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
-    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, generateReceiptPdf } = useBillingStore(); // Added generateReceiptPdf and isLoadingPayments
+    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt } = useBillingStore(); // Ensure handleGenerateReceipt is added here
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     // Client store might still be needed for filtering by client name
@@ -395,55 +395,20 @@
         toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: \${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
 
         try {
-            const response = await fetch('/api/billing/res/generate-receipt/' + selectedHotelId.value + '/' + paymentData.payment_id, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer \${localStorage.getItem('authToken')}`,
-                    // 'Content-Type': 'application/json', // Not needed if no body is sent
-                }
-            });
+            // Call the store action
+            const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id);
 
-            if (!response.ok) {
-                let errorDetail = `HTTP error! Status: \${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.message || errorData.error || errorDetail;
-                } catch (e) {
-                    // Failed to parse JSON, stick with status text or generic message
-                    errorDetail = response.statusText || 'サーバーエラーが発生しました。';
-                }
-                throw new Error(errorDetail);
+            // The store action now handles the download.
+            // It returns { success: true, filename: ... } or throws an error.
+            if (result.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (\${result.filename}) が発行されました。`, life: 3000 });
+                await loadTableData(); // Refresh the list
             }
+            // Errors are caught by the catch block
 
-            const blob = await response.blob();
-            if (blob.type !== "application/pdf") {
-                throw new Error("受信したファイルはPDFではありません。");
-            }
-
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            // Try to get filename from Content-Disposition header first
-            const disposition = response.headers.get('content-disposition');
-            let filename = `領収書_\${paymentData.existing_receipt_number || paymentData.payment_id}.pdf`;
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    filename = matches[1].replace(/['"]/g, '');
-                }
-            }
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-            toast.add({ severity: 'success', summary: '成功', detail: '領収書が発行されました。', life: 3000 });
-            await loadTableData(); // Refresh the list
         } catch (error) {
-            console.error("Error generating receipt:", error);
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 3000 });
+            console.error("Error generating receipt via store:", error);
+            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 }); // Increased life for error message
         } finally {
             isGeneratingReceiptId.value = null;
         }
