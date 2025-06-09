@@ -1,6 +1,17 @@
-const { selectBillableListView, selectBilledListView, selectMaxInvoiceNumber, updateInvoices, getPaymentById, selectMaxReceiptNumber, getReceiptByPaymentId, saveReceiptNumber, selectPaymentsForReceiptsView } = require('../models/billing');
+const {
+    selectBillableListView,
+    selectBilledListView,
+    selectMaxInvoiceNumber,
+    updateInvoices,
+    getPaymentById,
+    selectMaxReceiptNumber,
+    getReceiptByPaymentId,
+    saveReceiptNumber,
+    selectPaymentsForReceiptsView,
+    linkPaymentToReceipt // Added new model function
+} = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const { getPool } = require('../utils/db'); // Assuming getPool is in utils/db
+// const { getPool } = require('../utils/db'); // No longer needed here
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
@@ -190,10 +201,9 @@ const generateConsolidatedReceipt = async (req, res) => {
 
             if (consolidatedSaveResult && consolidatedSaveResult.id) {
                 const newConsolidatedReceiptRecordId = consolidatedSaveResult.id;
-                const pool = getPool(req.requestId);
-                // Link this consolidated receipt record to all individual payments
+                // Link this consolidated receipt record to all individual payments using the model function
                 for (const payment of paymentsData) { // Using paymentsData which contains full payment details including payment_id
-                    await pool.query('UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2', [newConsolidatedReceiptRecordId, payment.payment_id]);
+                    await linkPaymentToReceipt(req.requestId, payment.payment_id, newConsolidatedReceiptRecordId);
                 }
                 break; // Successfully saved consolidated receipt and linked payments, exit retry loop
             } else {
@@ -627,8 +637,7 @@ const generateReceipt = async (req, res) => {
                 );
 
                 if (saveResult && saveResult.id) { // Check if saveResult and its id are valid
-                    const pool = getPool(req.requestId);
-                    await pool.query('UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2', [saveResult.id, paymentId]);
+                    await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
                     // If save and update were successful
                     break; // Exit retry loop
                 } else {

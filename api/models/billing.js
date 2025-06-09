@@ -490,5 +490,23 @@ module.exports = {
   getReceiptByPaymentId,
   saveReceiptNumber,
   selectPaymentsForReceiptsView,
+  linkPaymentToReceipt, // Added new function
 };
+
+async function linkPaymentToReceipt(requestId, paymentId, receiptId) {
+  const pool = getPool(requestId);
+  const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2';
+  try {
+    const result = await pool.query(query, [receiptId, paymentId]);
+    // Log if no row was updated, but still consider it a success if query executed
+    if (result.rowCount === 0) {
+      console.warn(`Attempted to link payment ${paymentId} to receipt ${receiptId}, but no payment row was updated. Payment ID might be incorrect or already linked.`);
+    }
+    return { success: true, rowCount: result.rowCount };
+  } catch (err) {
+    console.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
+    // Throw a more specific error or a generic one based on policy
+    throw new Error('Database error while linking payment to receipt.');
+  }
+}
 // FORCED_UPDATE_TIMESTAMP_MODEL_20231201153500
