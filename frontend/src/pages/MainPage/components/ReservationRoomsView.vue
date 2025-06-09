@@ -43,7 +43,7 @@
                     :rowStyle="rowStyle"
                     :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]"
-                    dataKey="id" <!-- Add this -->
+                    dataKey="id"
                     sortField="display_date"
                     :sortOrder=1
                 >
