@@ -366,7 +366,7 @@ async function getPaymentById(requestId, paymentId) {
       TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed from p.payment_date
       p.comment AS notes,                   -- Changed from p.notes
       c.name AS client_name,
-      c.customer_id as customer_code, -- Changed from c.customer_code to c.customer_id and aliased
+      c.id as customer_code, -- Use client UUID as customer_code for robustness
       h.name AS facility_name,
       h.bank_name,
       h.bank_branch_name,
