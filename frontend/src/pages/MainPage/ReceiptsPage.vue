@@ -363,7 +363,7 @@
         // tableLoading.value is still managed locally for now, could also be moved to store if needed globally for this component type
         tableLoading.value = true;
         await fetchPaymentsForReceipts(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
-        tableHeader.value = `領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`;
+        tableHeader.value = '領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value);
         tableLoading.value = false; // Reset local loading after fetch (store handles its own)
     }
 
@@ -509,7 +509,7 @@
     });
 
     // Data Table
-    const tableHeader = ref(`領収書発行対象一覧 \${formatDateWithDay(startDateFilter.value)} ～ \${formatDateWithDay(endDateFilter.value)}`)
+    const tableHeader = ref('領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value));
     const tableLoading = ref(true);
     // const drawerVisible = ref(false);
     // const selectedPayment = ref(null);
