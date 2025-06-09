@@ -392,7 +392,7 @@
         }
 
         isGeneratingReceiptId.value = paymentData.payment_id;
-        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: \${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
+        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: ${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
 
         try {
             // Call the store action
