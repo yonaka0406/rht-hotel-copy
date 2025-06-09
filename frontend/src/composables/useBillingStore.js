@@ -108,6 +108,44 @@ export function useBillingStore() {
         }
     };
 
+    const fetchPaymentsForReceipts = async (hotelId, startDate, endDate) => {
+        isLoadingPayments.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/billing/payments-for-receipts/${hotelId}/${startDate}/${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Log error or use a toast message if available
+                console.error('Failed to fetch payments for receipts:', data.error || response.statusText);
+                throw new Error(data.error || 'Failed to fetch payments for receipts');
+            }
+
+            paymentsList.value = data.map(payment => ({
+                ...payment,
+                // Ensure amount is a number for calculations/formatting if needed
+                amount: parseFloat(payment.amount),
+                // payment_date is already formatted YYYY-MM-DD from backend
+            }));
+
+        } catch (error) {
+            paymentsList.value = []; // Reset or keep previous data based on desired UX
+            console.error('Error in fetchPaymentsForReceipts:', error);
+            // Optionally, rethrow or use a toast notification service here
+            // Example: toast.add({ severity: 'error', summary: 'データ取得エラー', detail: error.message, life: 3000 });
+        } finally {
+            isLoadingPayments.value = false;
+        }
+    };
+
     return {
         billableList,
         billedList,
@@ -119,41 +157,3 @@ export function useBillingStore() {
         fetchPaymentsForReceipts, // Expose new action
     };
 }
-
-const fetchPaymentsForReceipts = async (hotelId, startDate, endDate) => {
-    isLoadingPayments.value = true;
-    try {
-        const authToken = localStorage.getItem('authToken');
-        const url = `/api/billing/payments-for-receipts/${hotelId}/${startDate}/${endDate}`;
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            // Log error or use a toast message if available
-            console.error('Failed to fetch payments for receipts:', data.error || response.statusText);
-            throw new Error(data.error || 'Failed to fetch payments for receipts');
-        }
-
-        paymentsList.value = data.map(payment => ({
-            ...payment,
-            // Ensure amount is a number for calculations/formatting if needed
-            amount: parseFloat(payment.amount),
-            // payment_date is already formatted YYYY-MM-DD from backend
-        }));
-
-    } catch (error) {
-        paymentsList.value = []; // Reset or keep previous data based on desired UX
-        console.error('Error in fetchPaymentsForReceipts:', error);
-        // Optionally, rethrow or use a toast notification service here
-        // Example: toast.add({ severity: 'error', summary: 'データ取得エラー', detail: error.message, life: 3000 });
-    } finally {
-        isLoadingPayments.value = false;
-    }
-};
