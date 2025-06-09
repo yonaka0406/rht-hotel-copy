@@ -395,7 +395,7 @@
         toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: \${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
 
         try {
-            const response = await fetch(`/api/billing/res/generate-receipt/\${selectedHotelId.value}/\${paymentData.payment_id}`, {
+            const response = await fetch('/api/billing/res/generate-receipt/' + selectedHotelId.value + '/' + paymentData.payment_id, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer \${localStorage.getItem('authToken')}`,
