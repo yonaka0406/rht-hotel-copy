@@ -1,5 +1,5 @@
 -- TODO: Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
+
 GRANT CREATE ON SCHEMA public TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
@@ -572,27 +572,24 @@ CREATE TABLE invoices (
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
-
-
-
 CREATE TABLE receipts (
    id UUID DEFAULT gen_random_uuid(),
    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-   payment_id UUID NOT NULL UNIQUE, -- Ensures one receipt per payment
    receipt_number TEXT NOT NULL,
    receipt_date DATE NOT NULL,
    amount DECIMAL,
-   generated_by_user_id INT REFERENCES users(id),
+   created_by INT REFERENCES users(id),
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    PRIMARY KEY (hotel_id, id),
-   FOREIGN KEY (payment_id, hotel_id) REFERENCES reservation_payments(id, hotel_id) ON DELETE CASCADE,
    UNIQUE (hotel_id, receipt_number) -- Ensures receipt number is unique within a hotel
 ) PARTITION BY LIST (hotel_id);
-
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
-COMMENT ON COLUMN receipts.payment_id IS 'Foreign key to the reservation_payments table, ensuring each payment has at most one receipt.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
--- RECEIPTS_TABLE_INSERT_20231201170000
+-- RECEIPTS_TABLE_MODIFIED_DEF_20231201180000
+
+ALTER TABLE reservation_payments ADD COLUMN receipt_id UUID NULL;
+COMMENT ON COLUMN reservation_payments.receipt_id IS 'Foreign key to the receipts table, linking multiple payments to a single receipt';
+ALTER TABLE reservation_payments ADD CONSTRAINT fk_reservation_payments_receipts FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL;
 
 -- OTA / Site Controller
 CREATE TABLE sc_user_info (
@@ -1256,3 +1253,4 @@ WHERE id IN (
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
 */
+-- SQL_DDL_REORDER_COMPLETE_20231201190500
