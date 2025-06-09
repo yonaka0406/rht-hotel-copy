@@ -1,5 +1,5 @@
 -- TODO: Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
-
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
 GRANT CREATE ON SCHEMA public TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
@@ -11,21 +11,26 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE logs_user TO rhtsys_user;
+
+
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,                
     status_name VARCHAR(50) NOT NULL UNIQUE, 
     description TEXT    
 );
+
 INSERT INTO user_status (status_name, description)
     VALUES 
         ('有効', '有効アカウント'),
         ('無効', '無効アカウント');
+
 CREATE TABLE user_roles (
     id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL UNIQUE, -- Role name (e.g., 'Admin', 'User')
     permissions JSONB DEFAULT '{}', -- Permissions in JSON format for flexibility
     description TEXT    
 );
+
 INSERT INTO user_roles (role_name, permissions, description)
     VALUES 
         ('アドミン', '{"manage_db": true, "manage_users": true, "manage_clients": true, "view_reports": true, "crud_ok": true}', '管理パネルにアクセスし、データベースとすべてのホテルの管理を含む、システムへのフルアクセス権。'),
@@ -33,6 +38,7 @@ INSERT INTO user_roles (role_name, permissions, description)
         ('エディター', '{"manage_db": false, "manage_users": false, "manage_clients": true, "view_reports": true, "crud_ok": true}', '顧客を編集し、レポートを閲覧できます。'),
         ('ユーザー', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": true}', 'データ追加・編集ができます。'),
         ('閲覧者', '{"manage_db": false, "manage_users": false, "manage_clients": false, "view_reports": true, "crud_ok": false}', 'デフォルトとして、特別な権限のないユーザーです。');
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -49,17 +55,23 @@ CREATE TABLE users (
     last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP    
 );
+
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     -- TODO: Replace with a secure method for initial admin user creation in production.
     -- INSERT INTO users (email, password_hash, role_id)
     -- VALUES ('root@wehub.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+
     ALTER TABLE users
     ADD COLUMN created_by INT REFERENCES users(id),
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
     ALTER TABLE user_status
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
     ALTER TABLE user_roles
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
+
+
     -- Temporary
    ALTER TABLE users
       ADD COLUMN auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
@@ -69,6 +81,7 @@ CREATE TABLE users (
       ADD COLUMN google_refresh_token TEXT NULL,
       ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
       ADD COLUMN last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL;
+
 -- Main Hotels Table
 CREATE TABLE hotels (
     id SERIAL PRIMARY KEY,
@@ -92,6 +105,7 @@ CREATE TABLE hotels (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
 CREATE TABLE room_types (
     id SERIAL,
     hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE, 
@@ -103,6 +117,7 @@ CREATE TABLE room_types (
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE rooms (
     id SERIAL,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -119,6 +134,7 @@ CREATE TABLE rooms (
     UNIQUE (hotel_id, room_type_id, room_number), -- Prevent duplicate room numbers in a single hotel
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE client_group (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT,
@@ -127,6 +143,7 @@ CREATE TABLE client_group (
   created_by INT REFERENCES users(id),
   updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
 CREATE TABLE clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     customer_id INT NULL,
@@ -147,15 +164,18 @@ CREATE TABLE clients (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
 VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1);
+
 CREATE TEMP TABLE temp_client_substitutions (
     pattern TEXT,
     replacement TEXT,
     kanji_match TEXT
 );
+
 INSERT INTO temp_client_substitutions (pattern, replacement, kanji_match) VALUES
    ('japan', ' Japan ', '%ジャパン%'),
    ('nihon', ' Nihon ', '%日本%'),
@@ -183,6 +203,7 @@ INSERT INTO temp_client_substitutions (pattern, replacement, kanji_match) VALUES
    ('hoorudeingusu', ' Holdings ', '%ホールディングス%'),
    ('konsarutanto', ' Consultant ', '%コンサルタント%')
    ;
+
 -- Bulk data treatment
 DO $$
 DECLARE
@@ -195,6 +216,7 @@ BEGIN
         WHERE created_at >= '2025-06-02'
     LOOP
         updated_name := client_row.name;
+
         FOR sub_row IN
             SELECT * FROM temp_client_substitutions
             WHERE client_row.name ILIKE '%' || pattern || '%'
@@ -202,7 +224,9 @@ BEGIN
         LOOP
             updated_name := regexp_replace(updated_name, '(?i)' || sub_row.pattern, sub_row.replacement, 'g');
         END LOOP;
+
         updated_name := regexp_replace(trim(updated_name), '\s+', ' ', 'g');
+
         IF updated_name IS DISTINCT FROM client_row.name THEN
             UPDATE clients
             SET name = INITCAP(updated_name)
@@ -210,6 +234,8 @@ BEGIN
         END IF;
     END LOOP;
 END $$;
+
+
 -- Mock data generator
 /*
 INSERT INTO clients (
@@ -238,6 +264,7 @@ FROM (
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
 */
+
 CREATE TABLE addresses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
@@ -255,6 +282,7 @@ CREATE TABLE addresses (
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
+
 CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note');
 CREATE TYPE crm_action_status_enum AS ENUM ('pending', 'scheduled', 'completed', 'cancelled', 'rescheduled');
 CREATE TABLE crm_actions (
@@ -277,6 +305,7 @@ CREATE TABLE crm_actions (
 );
 CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);
 CREATE INDEX idx_crm_actions_action_type ON crm_actions(action_type);
+
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,
    name TEXT NOT NULL,
@@ -293,6 +322,7 @@ VALUES
     ('非課税', 0, 1),
     ('課税8%', 0.08, 1),
     ('課税10%', 0.10, 1);
+
 CREATE TABLE plan_templates (
     id SERIAL PRIMARY KEY,
     hotel_id INT REFERENCES hotels(id) ON DELETE CASCADE NULL,
@@ -303,6 +333,7 @@ CREATE TABLE plan_templates (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (hotel_id, name)
 );
+
 CREATE TABLE plans_global (
     id SERIAL PRIMARY KEY,    
     name TEXT NOT NULL,
@@ -314,6 +345,7 @@ CREATE TABLE plans_global (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name)
 );
+
 INSERT INTO plans_global (name, description, created_by)
 VALUES
     ('素泊まり', '', 1),
@@ -321,6 +353,7 @@ VALUES
     ('2食', '', 1),
     ('3食', '', 1),
     ('荷物キープ', '', 1);
+
 CREATE TABLE plans_hotel (
     id SERIAL,
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -335,6 +368,7 @@ CREATE TABLE plans_hotel (
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE plans_rates (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- hotel, NULL for global adjustments
@@ -364,6 +398,7 @@ CREATE TABLE plans_rates (
         (plans_global_id IS NULL AND plans_hotel_id IS NOT NULL)
     )
 );
+
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -379,12 +414,14 @@ CREATE TABLE addons_global (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     UNIQUE (name)
 );
+
 INSERT INTO addons_global (name, description, price, created_by)
 VALUES
     ('朝食', '', 0, 1),
     ('夕食', '', 0, 1),
     ('駐車場', '', 0, 1),
     ('お弁当', '', 0, 1);
+
 CREATE TABLE addons_hotel (
     id SERIAL,    
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -403,6 +440,7 @@ CREATE TABLE addons_hotel (
     PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE plan_addons (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -431,6 +469,7 @@ CREATE TABLE plan_addons (
         (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
     )
 );
+
 CREATE TABLE payment_types (
     id SERIAL PRIMARY KEY, 
     hotel_id INT REFERENCES hotels(id) DEFAULT NULL, -- Reservation's hotel   
@@ -451,6 +490,7 @@ VALUES
     ('クレジットカード', 'credit', 1),
     ('請求書', 'bill', 1),
     ('割引', 'discount', 1);
+
 CREATE TABLE reservations (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel    
@@ -470,6 +510,7 @@ CREATE TABLE reservations (
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id)    
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- Reservation's hotel
@@ -493,6 +534,7 @@ CREATE TABLE reservation_details (
     FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
@@ -513,6 +555,7 @@ CREATE TABLE reservation_addons (
     FOREIGN KEY (reservation_detail_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
 	FOREIGN KEY (addons_hotel_id, hotel_id) REFERENCES addons_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE reservation_clients (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
@@ -524,6 +567,7 @@ CREATE TABLE reservation_clients (
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE reservation_payments (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INT NOT NULL REFERENCES hotels(id), -- Reservation's hotel
@@ -541,6 +585,7 @@ CREATE TABLE reservation_payments (
     PRIMARY KEY (hotel_id, id),
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -557,6 +602,7 @@ CREATE TABLE reservation_rates (
    PRIMARY KEY (hotel_id, id),
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE invoices (
    id UUID,
    hotel_id INT NOT NULL REFERENCES hotels(id),
@@ -572,6 +618,7 @@ CREATE TABLE invoices (
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
+
 CREATE TABLE receipts (
    id UUID DEFAULT gen_random_uuid(),
    hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
@@ -583,6 +630,7 @@ CREATE TABLE receipts (
    PRIMARY KEY (hotel_id, id),
    UNIQUE (hotel_id, receipt_number) -- Ensures receipt number is unique within a hotel
 ) PARTITION BY LIST (hotel_id);
+
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
 -- RECEIPTS_TABLE_MODIFIED_DEF_20231201180000
@@ -592,6 +640,7 @@ COMMENT ON COLUMN reservation_payments.receipt_id IS 'Foreign key to the receipt
 ALTER TABLE reservation_payments ADD CONSTRAINT fk_reservation_payments_receipts FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL;
 
 -- OTA / Site Controller
+
 CREATE TABLE sc_user_info (
     hotel_id INT NOT NULL REFERENCES hotels(id),
     name TEXT NOT NULL,    
@@ -599,6 +648,7 @@ CREATE TABLE sc_user_info (
     password TEXT NOT NULL,    
     PRIMARY KEY (hotel_id, name)
 );
+
 CREATE TABLE sc_tl_rooms (
    hotel_id INT NOT NULL REFERENCES hotels(id),
    room_type_id INT NULL,
@@ -613,6 +663,7 @@ CREATE TABLE sc_tl_rooms (
    lincolnUseFlag TEXT, --リンカーン上で扱うフラグ
    FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id)
 );
+
 CREATE TABLE sc_tl_plans (
    hotel_id INT NOT NULL REFERENCES hotels(id),
    plans_global_id INT REFERENCES plans_global(id),
@@ -621,11 +672,13 @@ CREATE TABLE sc_tl_plans (
    planGroupName TEXT NOT NULL, --プラングループ名      
    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 );
+
 CREATE TABLE xml_templates (
     id SERIAL PRIMARY KEY,    
     name TEXT UNIQUE NOT NULL,
     template XML NOT NULL
 );
+
 INSERT INTO xml_templates (name, template) VALUES 
 ('NetRoomTypeMasterSearchService', 
 '<?xml version="1.0" encoding="UTF-8"?>
@@ -1253,4 +1306,4 @@ WHERE id IN (
   WHERE row_num > 1 -- Delete all but the first row in each group of duplicates
 );
 */
--- SQL_DDL_REORDER_COMPLETE_20231201190500
+-- SQL_DDL_ORDER_FIXED_AGAIN_20231201191500
