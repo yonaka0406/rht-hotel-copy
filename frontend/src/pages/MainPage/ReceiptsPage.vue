@@ -327,14 +327,22 @@
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
-        return `\${year}-\${month}-\${day}`;
+        return year + '-' + month + '-' + day;
     };
-    const formatDateWithDay = (dateStr) => {
-        if (!dateStr) return '';
+    const formatDateWithDay = (dateInput) => {
+        if (!dateInput) return '';
         const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
-        const parsedDate = new Date(dateStr);
-        if (isNaN(parsedDate.getTime())) return ''; // Handle invalid date strings
-        return `\${parsedDate.toLocaleDateString(undefined, options)}`;
+        let parsedDate;
+        if (dateInput instanceof Date) {
+            parsedDate = dateInput;
+        } else if (typeof dateInput === 'string') {
+            parsedDate = new Date(dateInput);
+        } else {
+            // Handle other unexpected types, or return empty/error
+            return '';
+        }
+        if (isNaN(parsedDate.getTime())) return ''; // Handle invalid dates
+        return parsedDate.toLocaleDateString(undefined, options);
     };
     const formatCurrency = (value) => {
         if (value == null || isNaN(Number(value))) return '';
