@@ -328,4 +328,174 @@ module.exports = {
   selectBilledListView,
   selectMaxInvoiceNumber,
   updateInvoices,
+  getPaymentById,
+  selectMaxReceiptNumber,
+  getReceiptByPaymentId,
+  saveReceiptNumber,
+  selectPaymentsForReceiptsView,
 };
+
+async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+        p.id as payment_id,
+        TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
+        p.amount,
+        COALESCE(c.name_kanji, c.name) as client_name,
+        p.status, -- Assuming payments table has a status column
+        r.receipt_number as existing_receipt_number
+    FROM
+        payments p
+    JOIN
+        clients c ON p.client_id = c.id
+    LEFT JOIN
+        receipts r ON p.id = r.payment_id
+    WHERE
+        p.hotel_id = $1 AND
+        p.payment_date >= $2 AND
+        p.payment_date <= $3
+    ORDER BY
+        p.payment_date DESC;
+  `;
+  try {
+    const result = await pool.query(query, [hotelId, startDate, endDate]);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in selectPaymentsForReceiptsView:', err);
+    // It's often better to throw the error to be handled by the controller,
+    // allowing for more specific error responses.
+    throw new Error('Database error while fetching payments for receipts view.');
+  }
+}
+
+// Actual implementations
+async function getPaymentById(requestId, paymentId) {
+  const pool = getPool(requestId);
+  const paymentQuery = `
+    SELECT
+      p.id,
+      p.amount,
+      TO_CHAR(p.payment_date, 'YYYY-MM-DD') as payment_date,
+      p.notes,
+      c.name AS client_name,
+      c.customer_code,
+      h.name AS facility_name,
+      h.bank_name,
+      h.bank_branch_name,
+      h.bank_account_type,
+      h.bank_account_number,
+      h.bank_account_name
+    FROM payments p
+    JOIN clients c ON p.client_id = c.id
+    JOIN hotels h ON p.hotel_id = h.id
+    WHERE p.id = $1;
+  `;
+  const itemsQuery = `
+    SELECT
+      description,
+      quantity,
+      unit,
+      unit_price,
+      total_price,
+      tax_rate,
+      total_net_price
+    FROM payment_items
+    WHERE payment_id = $1;
+  `;
+  try {
+    const paymentResult = await pool.query(paymentQuery, [paymentId]);
+    if (paymentResult.rows.length === 0) {
+      return null;
+    }
+    const paymentData = paymentResult.rows[0];
+
+    const itemsResult = await pool.query(itemsQuery, [paymentId]);
+
+    return {
+      id: paymentData.id,
+      amount: parseFloat(paymentData.amount),
+      payment_date: paymentData.payment_date,
+      client_name: paymentData.client_name,
+      customer_code: paymentData.customer_code,
+      facility_name: paymentData.facility_name,
+      notes: paymentData.notes,
+      hotel_details: {
+        bank_name: paymentData.bank_name,
+        bank_branch_name: paymentData.bank_branch_name,
+        bank_account_type: paymentData.bank_account_type,
+        bank_account_number: paymentData.bank_account_number,
+        bank_account_name: paymentData.bank_account_name
+      },
+      items: itemsResult.rows.map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit: item.unit, // Assuming 'unit' column exists in payment_items
+        unit_price: parseFloat(item.unit_price),
+        total_price: parseFloat(item.total_price),
+        tax_rate: parseFloat(item.tax_rate),
+        total_net_price: parseFloat(item.total_net_price)
+      }))
+    };
+  } catch (err) {
+    console.error('Error in getPaymentById:', err);
+    throw new Error('Database error while fetching payment details.');
+  }
+}
+
+async function getReceiptByPaymentId(requestId, paymentId) {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT receipt_number, TO_CHAR(receipt_date, 'YYYY-MM-DD') as receipt_date
+    FROM receipts
+    WHERE payment_id = $1;
+  `;
+  try {
+    const result = await pool.query(query, [paymentId]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (err) {
+    console.error('Error in getReceiptByPaymentId:', err);
+    throw new Error('Database error while fetching receipt by payment ID.');
+  }
+}
+
+async function selectMaxReceiptNumber(requestId, hotelId, date) {
+  const pool = getPool(requestId);
+  // The date parameter is a JS Date object. We need to ensure it's formatted correctly for the query
+  // or use date_trunc with the passed date.
+  const query = `
+    SELECT receipt_number as last_receipt_number
+    FROM receipts
+    WHERE hotel_id = $1
+      AND receipt_date >= date_trunc('month', $2::date)
+      AND receipt_date < date_trunc('month', $2::date) + interval '1 month'
+    ORDER BY receipt_number DESC
+    LIMIT 1;
+  `;
+  try {
+    // Ensure 'date' is in a format PostgreSQL understands (e.g., YYYY-MM-DD) if it's not already a JS Date.
+    // If 'date' is a JS Date, $2::date should work.
+    const result = await pool.query(query, [hotelId, date]);
+    return result.rows.length > 0 ? result.rows[0] : { last_receipt_number: null };
+  } catch (err) {
+    console.error('Error in selectMaxReceiptNumber:', err);
+    throw new Error('Database error while selecting max receipt number.');
+  }
+}
+
+async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId) {
+  const pool = getPool(requestId);
+  const query = `
+    INSERT INTO receipts
+      (payment_id, hotel_id, receipt_number, receipt_date, amount, generated_by_user_id, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+    RETURNING id;
+  `;
+  try {
+    const result = await pool.query(query, [paymentId, hotelId, receiptNumber, receiptDate, amount, userId]);
+    return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
+  } catch (err) {
+    console.error('Error in saveReceiptNumber:', err);
+    throw new Error('Database error while saving receipt number.');
+  }
+}
