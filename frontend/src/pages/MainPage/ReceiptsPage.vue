@@ -272,13 +272,9 @@
                 });
                 // loadTableData will be called in finally
             }
-            // If result.success is false, the store action should ideally throw an error or return an error object.
-            // The catch block will handle errors thrown by the store or by `handleGenerateReceipt` itself.
-            // No explicit `else { throw new Error(...) }` here if the store action consistently throws on failure.
             
         } catch (error) {
             console.error("Error generating receipt via store:", error);
-            // Ensure error.message is used for the toast, which should come from the store's error handling.
             toast.add({
                 severity: 'error',
                 summary: '発行失敗',
@@ -287,7 +283,7 @@
             });
         } finally {
             isGeneratingReceiptId.value = null;
-            await loadTableData(); // Ensure data is refreshed
+            await loadTableData();
         }
     };
 
@@ -392,6 +388,6 @@
                 await loadTableData();
             }
         },
-        { immediate: true } // Run once on component mount
+        { immediate: true }
     );
 </script>

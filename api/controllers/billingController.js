@@ -8,10 +8,9 @@ const {
     getReceiptByPaymentId,
     saveReceiptNumber,
     selectPaymentsForReceiptsView,
-    linkPaymentToReceipt // Added new model function
+    linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-// const { getPool } = require('../utils/db'); // No longer needed here
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
@@ -96,9 +95,8 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
   facilityNameProviso += ` (複数支払合計: ${paymentIdsString})`; // Example: "施設利用 (複数支払合計: ID:1, ID:2)"
   modifiedHTML = modifiedHTML.replace(g('facility_name'), facilityNameProviso );
 
-
-  // Stamp Image
-  const imageUrl = 'http://localhost:5000/stamp.png';
+  // Stamp Image  
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
 
   // Comment out or handle other placeholders not relevant to consolidated view or already handled
@@ -507,7 +505,7 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
 
   // {{ stamp_image }} is replaced by a CSS styled div in the new template
   // Update: Per new requirements, we will replace {{ stamp_image }} with an actual image URL.
-  const imageUrl = 'http://localhost:5000/stamp.png'; // Assuming stamp.png is served at the root by the public static file server
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Assuming stamp.png is served at the root by the public static file server
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
 
   // {{ detail_items }} section is hidden by display: none;
@@ -752,4 +750,3 @@ module.exports = {
   getPaymentsForReceipts,
   generateConsolidatedReceipt,
 };
-// FORCED_UPDATE_TIMESTAMP_CONTROLLER_20231201153000
