@@ -350,7 +350,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
                 // Save consolidated receipt
                 const saveResult = await saveReceiptNumber(
-                    req.requestId, null, hotelId, receiptDataForPdf.receipt_number,
+                    req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
                 );
 
@@ -408,7 +408,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
                 // Save the new receipt
                 const saveResult = await saveReceiptNumber(
-                    req.requestId, paymentId, hotelId, receiptDataForPdf.receipt_number,
+                    req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf                
                 );
 
