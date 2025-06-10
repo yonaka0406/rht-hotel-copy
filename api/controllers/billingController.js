@@ -324,8 +324,24 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 paymentsArrayForPdf = fetchedPaymentsData;
                 receiptDataForPdf.client_name = clientNameCheck;
 
+                // Determine common payment date for consolidated receipt
+                let commonPaymentDate = null;
+                if (fetchedPaymentsData.length > 0) {
+                    commonPaymentDate = fetchedPaymentsData[0].payment_date;
+                    for (let i = 1; i < fetchedPaymentsData.length; i++) {
+                        if (fetchedPaymentsData[i].payment_date !== commonPaymentDate) {
+                            commonPaymentDate = null; // Dates are not common
+                            console.log('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
+                            break;
+                        }
+                    }
+                    if (commonPaymentDate) {
+                         console.log(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
+                    }
+                }
+
                 // Generate receipt number and date
-                const receiptDateObj = new Date();
+                const receiptDateObj = commonPaymentDate ? new Date(commonPaymentDate) : new Date();
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -382,7 +398,9 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 }
 
                 // Generate receipt number and date based on payment date
+                console.log(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
                 const receiptDateObj = new Date(paymentDataForPdf.payment_date);
+                console.log(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
