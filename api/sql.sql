@@ -631,6 +631,7 @@ CREATE TABLE receipts (
    receipt_number TEXT NOT NULL,
    receipt_date DATE NOT NULL,
    amount DECIMAL,
+   tax_breakdown JSONB NULL;
    created_by INT REFERENCES users(id),
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    PRIMARY KEY (hotel_id, id),
@@ -639,6 +640,9 @@ CREATE TABLE receipts (
 
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
+
+ALTER TABLE receipts
+ADD COLUMN tax_breakdown JSONB NULL;
 
 -- OTA / Site Controller
 
