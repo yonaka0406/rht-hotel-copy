@@ -458,7 +458,7 @@ async function selectMaxReceiptNumber(requestId, hotelId, date) {
   }
 }
 
-async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { // Added taxBreakdownData
+async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { 
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
