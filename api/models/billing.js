@@ -328,22 +328,22 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
   const query = `
     SELECT
         p.id as payment_id,
-        TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed p.payment_date to p.date
-        p.value as amount, -- Changed from p.amount
+        TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
+        p.value as amount,
         COALESCE(c.name_kanji, c.name) as client_name,
         r.receipt_number as existing_receipt_number
     FROM
-        reservation_payments p -- Changed from payments
+        reservation_payments p
     JOIN
         clients c ON p.client_id = c.id
     LEFT JOIN
         receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id -- Added p.hotel_id = r.hotel_id
     WHERE
         p.hotel_id = $1 AND
-        p.date >= $2 AND -- Changed p.payment_date to p.date
-        p.date <= $3   -- Changed p.payment_date to p.date
+        p.date >= $2 AND
+        p.date <= $3
     ORDER BY
-        p.date DESC; -- Changed p.payment_date to p.date
+        p.date DESC;
   `;
   try {
     const result = await pool.query(query, [hotelId, startDate, endDate]);
@@ -362,34 +362,23 @@ async function getPaymentById(requestId, paymentId) {
   const paymentQuery = `
     SELECT
       p.id,
-      p.value AS amount,                     -- Changed from p.amount
-      TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date, -- Changed from p.payment_date
-      p.comment AS notes,                   -- Changed from p.notes
+      p.value AS amount,
+      TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
+      p.comment AS notes,
       c.name AS client_name,
-      c.id as customer_code, -- Use client UUID as customer_code for robustness
+      c.id as customer_code,
       h.name AS facility_name,
       h.bank_name,
       h.bank_branch_name,
       h.bank_account_type,
       h.bank_account_number,
       h.bank_account_name
-    FROM reservation_payments p             -- Changed from payments
+    FROM reservation_payments p
     JOIN clients c ON p.client_id = c.id
     JOIN hotels h ON p.hotel_id = h.id
     WHERE p.id = $1;
   `;
-  // const itemsQuery = `
-  //   SELECT
-  //     description,
-  //     quantity,
-  //     unit,
-  //     unit_price,
-  //     total_price,
-  //     tax_rate,
-  //     total_net_price
-  //   FROM payment_items
-  //   WHERE payment_id = $1;
-  // `; // Removed itemsQuery
+
   try {
     const paymentResult = await pool.query(paymentQuery, [paymentId]);
     if (paymentResult.rows.length === 0) {
@@ -480,6 +469,23 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
   }
 }
 
+async function linkPaymentToReceipt(requestId, paymentId, receiptId) {
+  const pool = getPool(requestId);
+  const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2';
+  try {
+    const result = await pool.query(query, [receiptId, paymentId]);
+    // Log if no row was updated, but still consider it a success if query executed
+    if (result.rowCount === 0) {
+      console.warn(`Attempted to link payment ${paymentId} to receipt ${receiptId}, but no payment row was updated. Payment ID might be incorrect or already linked.`);
+    }
+    return { success: true, rowCount: result.rowCount };
+  } catch (err) {
+    console.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
+    // Throw a more specific error or a generic one based on policy
+    throw new Error('Database error while linking payment to receipt.');
+  }
+}
+
 module.exports = {
   selectBillableListView,
   selectBilledListView,
@@ -490,5 +496,7 @@ module.exports = {
   getReceiptByPaymentId,
   saveReceiptNumber,
   selectPaymentsForReceiptsView,
+  linkPaymentToReceipt,
 };
-// FORCED_UPDATE_TIMESTAMP_MODEL_20231201153500
+
+

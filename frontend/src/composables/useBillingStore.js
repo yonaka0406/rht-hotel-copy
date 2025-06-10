@@ -2,8 +2,8 @@ import { ref, watch } from 'vue';
 
 const billableList = ref(null);
 const billedList = ref(null);
-const paymentsList = ref([]); // New state property for payments for receipts
-const isLoadingPayments = ref(false); // Loading state for payments
+const paymentsList = ref([]);
+const isLoadingPayments = ref(false);
 
 export function useBillingStore() {
         
@@ -38,22 +38,20 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateReceipt = async (hotelId, paymentId) => {
-        //isLoadingPayments.value = true; // Consider if a specific loading state for this action is needed
+    const handleGenerateReceipt = async (hotelId, paymentId) => {        
         try {
-            const authToken = localStorage.getItem('authToken');
-            // Use string concatenation for clarity and to avoid template literal issues in this context
+            const authToken = localStorage.getItem('authToken');            
             const url = '/api/billing/res/generate-receipt/' + hotelId + '/' + paymentId;
 
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${authToken}`, // Corrected template literal
+                    'Authorization': `Bearer ${authToken}`,
                 }
             });
 
             if (!response.ok) {
-                let errorDetail = `HTTP error! Status: ${response.status}`; // Corrected template literal
+                let errorDetail = `HTTP error! Status: ${response.status}`;
                 try {
                     const errorData = await response.json();
                     errorDetail = errorData.message || errorData.error || errorDetail;
@@ -72,7 +70,7 @@ export function useBillingStore() {
             const a = document.createElement('a');
             a.href = downloadUrl;
 
-            let filename = `領収書_${paymentId}.pdf`; // Corrected template literal (or keep as string concat if preferred)
+            let filename = `領収書_${paymentId}.pdf`;
             const disposition = response.headers.get('content-disposition');
             if (disposition && disposition.indexOf('attachment') !== -1) {
                 const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
@@ -88,12 +86,11 @@ export function useBillingStore() {
             a.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            return { success: true, filename: filename }; // Indicate success
+            return { success: true, filename: filename };
         } catch (error) {
             console.error('Error in handleGenerateReceipt:', error);
             throw error; // Re-throw the error to be caught by the component
-        } finally {
-            //isLoadingPayments.value = false; // Reset loading state if one was used
+        } finally {            
         }
     };
 
@@ -144,8 +141,8 @@ export function useBillingStore() {
             let invoice_number = invoiceNumber;
             if (!invoiceNumber) {
                 const date = new Date(invoiceData.date);
-                const year = date.getFullYear() % 100; // last two digits of year
-                const month = date.getMonth() + 1; // getMonth returns 0-11
+                const year = date.getFullYear() % 100;
+                const month = date.getMonth() + 1;
                 
                 invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
             }
@@ -159,11 +156,10 @@ export function useBillingStore() {
             link.setAttribute('download', `請求書-${invoice_number}.pdf`);             
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link); // Clean up the DOM
+            document.body.removeChild(link);
     
         } catch (error) {
-            console.error("Error generating/downloading PDF:", error);
-            //  Handle error (e.g., show a message to the user)
+            console.error("Error generating/downloading PDF:", error);            
         }
     };
 
@@ -182,38 +178,91 @@ export function useBillingStore() {
 
             const data = await response.json();
 
-            if (!response.ok) {
-                // Log error or use a toast message if available
+            if (!response.ok) {                
                 console.error('Failed to fetch payments for receipts:', data.error || response.statusText);
                 throw new Error(data.error || 'Failed to fetch payments for receipts');
             }
 
             paymentsList.value = data.map(payment => ({
-                ...payment,
-                // Ensure amount is a number for calculations/formatting if needed
-                amount: parseFloat(payment.amount),
-                // payment_date is already formatted YYYY-MM-DD from backend
+                ...payment,                
+                amount: parseFloat(payment.amount),                
             }));
 
         } catch (error) {
-            paymentsList.value = []; // Reset or keep previous data based on desired UX
-            console.error('Error in fetchPaymentsForReceipts:', error);
-            // Optionally, rethrow or use a toast notification service here
-            // Example: toast.add({ severity: 'error', summary: 'データ取得エラー', detail: error.message, life: 3000 });
+            paymentsList.value = [];
+            console.error('Error in fetchPaymentsForReceipts:', error);            
         } finally {
             isLoadingPayments.value = false;
+        }
+    };
+
+    const handleGenerateConsolidatedReceipt = async (hotelId, paymentIdsArray) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/billing/res/generate-consolidated-receipt/${hotelId}`;
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ payment_ids: paymentIdsArray }),
+            });
+
+            if (!response.ok) {
+                let errorDetail = `HTTP error! Status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.message || errorData.error || errorDetail;
+                } catch (e) {
+                    errorDetail = response.statusText || 'Server error during consolidated receipt generation.';
+                }
+                throw new Error(errorDetail);
+            }
+
+            const blob = await response.blob();
+            if (blob.type !== "application/pdf") {
+                throw new Error("Received file is not a PDF.");
+            }
+
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+
+            let filename = `Consolidated_Receipt_${hotelId}_${new Date().getTime()}.pdf`;
+            const disposition = response.headers.get('content-disposition');
+            if (disposition && disposition.includes('attachment')) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+            a.download = filename;
+
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            return { success: true, filename: filename };
+        } catch (error) {
+            console.error('Error in handleGenerateConsolidatedReceipt:', error);            
+            return { success: false, error: error.message || 'An unexpected error occurred.' };
         }
     };
 
     return {
         billableList,
         billedList,
-        paymentsList, // Expose new state
-        isLoadingPayments, // Expose loading state
+        paymentsList,
+        isLoadingPayments,
         fetchBillableListView,
         fetchBilledListView,
         generateInvoicePdf,
-        fetchPaymentsForReceipts, // Expose new action
-        handleGenerateReceipt, // Add this line
+        fetchPaymentsForReceipts,
+        handleGenerateReceipt,
+        handleGenerateConsolidatedReceipt,
     };
 }

@@ -16,9 +16,28 @@
                     stripedRows
                     @row-dblclick="openDrawer"
                     removableSort
-                    v-model:expandedRows="expandedRows"
-                    :rowExpansion="true"
+                    rowGroupMode="subheader"
+                    groupRowsBy="client_payment_date_group"
+                    sortMode="single"
+                    :sortField="'client_payment_date_group'"
+                    :sortOrder="1"
                 >
+                    <template #groupheader="slotProps">
+                        <div class="flex items-center justify-between gap-2 p-2 bg-gray-100">
+                            <span class="font-bold">{{ slotProps.data.client_name }} - {{ formatDateWithDay(slotProps.data.payment_date) }}</span>
+                            <Button
+                                v-if="getConsolidatablePayments(slotProps.data).length > 0"
+                                label="一括領収書発行"
+                                icon="pi pi-file-export"
+                                severity="success"
+                                class="p-button-sm ml-auto"
+                                :loading="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
+                                :disabled="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
+                                @click="generateConsolidatedReceiptForGroup(slotProps.data)"
+                                v-tooltip.top="'このグループの未発行の支払いをまとめて領収書発行'"
+                            />
+                        </div>
+                    </template>
                     <template #header>
                         <div class="flex justify-between">
                             <span class="font-bold text-lg mb-4">{{ tableHeader }}</span>
@@ -33,13 +52,6 @@
                         </div>
                     </template>
                     <template #empty> 指定されている期間中に支払情報はありません。 </template>
-                    <Column header="詳細" style="width: 1%;">
-                        <template #body="slotProps">
-                            <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" v-tooltip.top="'詳細表示/非表示'">
-                                <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
-                            </button>
-                        </template>
-                    </Column>
                     
                     <Column field="client_name" filterField="client_name" header="顧客名" style="width:1%" :showFilterMenu="false">
                         <template #filter="{ filterModel }">
@@ -85,13 +97,7 @@
                                 :disabled="isGeneratingReceiptId === slotProps.data.payment_id"
                             />
                         </template>
-                    </Column>                    
-
-                    <template #expansion="slotProps">
-                        <div class="mx-20">
-                            <p>支払ID: {{ slotProps.data.payment_id }}</p> 
-                        </div>
-                    </template>
+                    </Column>
                 </DataTable>
             </div>            
         </div>        
@@ -109,7 +115,7 @@
 
     // Stores
     import { useBillingStore } from '@/composables/useBillingStore';
-    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt } = useBillingStore();
+    const { paymentsList, fetchPaymentsForReceipts, isLoadingPayments, handleGenerateReceipt, handleGenerateConsolidatedReceipt } = useBillingStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
@@ -165,6 +171,74 @@
     const clientFilter = ref(null);    
 
     const isGeneratingReceiptId = ref(null); // For row-specific loading state
+    const generatingConsolidatedKey = ref(null); // For group-specific loading state
+
+    // Helper to get payments eligible for consolidation within a group
+    const getConsolidatablePayments = (groupItemData) => {
+        if (!groupItemData || !filteredPayments.value) return [];
+        // Ensure groupItemData has the synthetic key if it's coming directly from slotProps.data
+        const groupKey = groupItemData.client_payment_date_group || `${groupItemData.client_name} - ${groupItemData.payment_date}`;
+        return filteredPayments.value.filter(p =>
+            p.client_payment_date_group === groupKey &&
+            !p.existing_receipt_number
+        );
+    };
+
+    // Generate consolidated receipt for a group
+    async function generateConsolidatedReceiptForGroup(groupItemData) {
+        // Ensure groupKey is derived correctly from groupItemData, which is the first item of the group
+        const groupKey = groupItemData.client_payment_date_group;
+        const paymentsToConsolidate = getConsolidatablePayments(groupItemData);
+
+        if (paymentsToConsolidate.length === 0) {
+            toast.add({ severity: 'warn', summary: '対象なし', detail: 'このグループに一括発行対象の支払がありません。', life: 3000 });
+            return;
+        }
+
+        const paymentIds = paymentsToConsolidate.map(p => p.payment_id);
+
+        if (!selectedHotelId.value) {
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルが選択されていません。', life: 3000 });
+            return;
+        }
+
+        generatingConsolidatedKey.value = groupKey;
+        toast.add({
+            severity: 'info',
+            summary: '処理中',
+            detail: `顧客「${groupItemData.client_name}」様 (支払日: ${formatDateWithDay(groupItemData.payment_date)}) の一括領収書を発行しています...`,
+            life: 4000
+        });
+
+        try {
+            const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds);
+            if (result.success) {
+                const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: `顧客「${groupItemData.client_name}」様宛の一括領収書 (${formatCurrency(totalConsolidatedAmount)}) が発行されました。\nファイル名: ${result.filename}`,
+                    life: 5000
+                });
+                // loadTableData will be called in finally
+            } else {
+                // Ensure result.error is an Error object or string for the toast
+                const errorMessage = (result.error instanceof Error) ? result.error.message : result.error;
+                throw new Error(errorMessage || '一括領収書の発行に失敗しました。');
+            }
+        } catch (error) {
+            console.error("Error generating consolidated receipt:", error);
+            toast.add({
+                severity: 'error',
+                summary: '発行失敗',
+                detail: `顧客「${groupItemData.client_name}」様 (支払日: ${formatDateWithDay(groupItemData.payment_date)}) の一括領収書発行に失敗しました: ${error.message}`,
+                life: 5000
+            });
+        } finally {
+            generatingConsolidatedKey.value = null;
+            await loadTableData(); // Ensure data is refreshed
+        }
+    }
 
     // Submitting/generating a single receipt
     const generateSingleReceipt = async (paymentData) => {
@@ -178,22 +252,38 @@
         }
 
         isGeneratingReceiptId.value = paymentData.payment_id;
-        toast.add({ severity: 'info', summary: '領収書発行中', detail: `支払ID: ${paymentData.payment_id} の領収書を準備しています...`, life: 3000 });
+        toast.add({
+            severity: 'info',
+            summary: '領収書発行中',
+            detail: `顧客「${paymentData.client_name}」様の領収書を準備しています...`,
+            life: 3000
+        });
 
         try {
             // Call the store action
             const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id);
             
             if (result.success) {
-                toast.add({ severity: 'success', summary: '成功', detail: `領収書 (${result.filename}) が発行されました。`, life: 3000 });
-                await loadTableData(); // Refresh the list
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: `顧客「${paymentData.client_name}」様宛の領収書 (${formatCurrency(paymentData.amount)}) が発行されました。\nファイル名: ${result.filename}`,
+                    life: 3000
+                });
+                // loadTableData will be called in finally
             }
             
         } catch (error) {
             console.error("Error generating receipt via store:", error);
-            toast.add({ severity: 'error', summary: '発行失敗', detail: error.message || '領収書の発行に失敗しました。', life: 5000 }); // Increased life for error message
+            toast.add({
+                severity: 'error',
+                summary: '発行失敗',
+                detail: `顧客「${paymentData.client_name}」様 (${formatCurrency(paymentData.amount)}) の領収書発行に失敗しました: ${error.message}`,
+                life: 5000
+            });
         } finally {
             isGeneratingReceiptId.value = null;
+            await loadTableData();
         }
     };
 
@@ -221,6 +311,25 @@
                 (payment.client_name && payment.client_name.toLowerCase().includes(filterValue))
             );
         }
+
+        // Create synthetic key and sort
+        list = list.map(payment => ({
+            ...payment,
+            client_payment_date_group: `${payment.client_name} - ${payment.payment_date}`
+        }));
+
+        list.sort((a, b) => {
+            // Primary sort by the synthetic group key
+            if (a.client_payment_date_group < b.client_payment_date_group) return -1;
+            if (a.client_payment_date_group > b.client_payment_date_group) return 1;
+
+            // Secondary sort: payments without existing receipts first
+            if (!a.existing_receipt_number && b.existing_receipt_number) return -1;
+            if (a.existing_receipt_number && !b.existing_receipt_number) return 1;
+
+            // Tertiary sort by payment_id for stable order within the same client/date/receipt status
+            return (a.payment_id || 0) - (b.payment_id || 0);
+        });
         
         return list;
     });
@@ -228,23 +337,6 @@
     // Data Table
     const tableHeader = ref('領収書発行対象一覧 ' + formatDateWithDay(startDateFilter.value) + ' ～ ' + formatDateWithDay(endDateFilter.value));
     const tableLoading = ref(true);    
-    const expandedRows = ref({});
-
-    const toggleRowExpansion = (rowData) => {
-        const rowKey = rowData.payment_id;
-        const newExpandedRows = {...expandedRows.value};
-        if (newExpandedRows[rowKey]) {
-            delete newExpandedRows[rowKey];
-        } else {
-            newExpandedRows[rowKey] = true;
-        }
-        expandedRows.value = newExpandedRows;
-    };
-
-    const isRowExpanded = (rowData) => {
-        const rowKey = rowData.payment_id;
-        return expandedRows.value && expandedRows.value[rowKey];
-    };
 
     const filters = ref({
         client_name: { value: null, matchMode: FilterMatchMode.CONTAINS },        
@@ -296,6 +388,6 @@
                 await loadTableData();
             }
         },
-        { immediate: true } // Run once on component mount
+        { immediate: true }
     );
 </script>
