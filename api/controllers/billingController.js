@@ -315,40 +315,38 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
             let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
 
-            let finalTaxBreakdownForPdf; // This will be passed to generateReceiptHTML
+            let finalTaxBreakdownForPdf;
             // finalReceiptNumber is already declared above this block
-            // let finalReceiptDate; // Not strictly needed as receiptDataForPdf.receipt_date will be set
-            // let finalReceiptAmount; // Not strictly needed as receiptDataForPdf.totalAmount will be set
 
-            // Check if this is a re-issue of an existing receipt without new tax breakdown data from dialog
+            // Ensure 'receiptDataForPdf' is initialized as an object (already done above)
+            // Ensure 'userId' is defined (already done above)
+            // Ensure 'hotelId' and 'paymentId' are defined (already done above)
+            // Ensure 'taxBreakdownData' is defined from req.body.taxBreakdownData (already done above)
+
             if (existingReceipt && (!taxBreakdownData || taxBreakdownData.length === 0) && !req.body.forceRegenerate) {
-                // RE-ISSUE PATH: Use data from the stored receipt
+                // RE-ISSUE PATH
                 console.log(`Re-issuing receipt for paymentId: ${paymentId} using existing receipt data.`);
                 receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
-                receiptDataForPdf.receipt_date = existingReceipt.receipt_date; // Already formatted YYYY-MM-DD
-                receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount); // Use stored amount
-
-                finalTaxBreakdownForPdf = existingReceipt.tax_breakdown; // Use stored tax_breakdown
-                finalReceiptNumber = existingReceipt.receipt_number;
-                // No need to call saveReceiptNumber or linkPaymentToReceipt again
+                receiptDataForPdf.receipt_date = existingReceipt.receipt_date;
+                receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount);
+                finalTaxBreakdownForPdf = existingReceipt.tax_breakdown; // ASSIGNMENT
+                // finalReceiptNumber variable might also need to be explicitly set here if used later for filename outside this direct scope.
+                // For now, assume receiptDataForPdf.receipt_number is used for filename context.
+                finalReceiptNumber = existingReceipt.receipt_number; // Ensure finalReceiptNumber is set for re-issue
 
             } else {
                 // NEW RECEIPT or REGENERATION WITH NEW DATA PATH
                 console.log(`Generating new receipt (or regenerating with new data) for paymentId: ${paymentId}.`);
-                let receiptTotalAmount;
-                if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                    receiptTotalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-                    finalTaxBreakdownForPdf = taxBreakdownData; // Use tax data from request
-                } else {
-                    // If no taxBreakdownData from request, and it's not a simple re-issue (e.g. forceRegenerate or no existing receipt)
-                    // then calculate total from payment, and tax breakdown is null/empty.
-                    receiptTotalAmount = parseFloat(paymentDataForPdf.amount || 0);
-                    finalTaxBreakdownForPdf = existingReceipt && existingReceipt.tax_breakdown ? existingReceipt.tax_breakdown : []; // Prefer existing if available and no new data, else empty
-                }
-                receiptDataForPdf.totalAmount = receiptTotalAmount;
 
-                // Generate new receipt number and save (this part of logic can remain similar to existing)
-                const receiptDateObj = new Date(paymentDataForPdf.payment_date); // Base new receipt date on payment date
+                if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+                    receiptDataForPdf.totalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
+                    finalTaxBreakdownForPdf = taxBreakdownData; // ASSIGNMENT
+                } else {
+                    receiptDataForPdf.totalAmount = parseFloat(paymentDataForPdf.amount || 0);
+                    finalTaxBreakdownForPdf = null; // ASSIGNMENT (or [] if preferred for consistency with saveReceiptNumber)
+                }
+
+                const receiptDateObj = new Date(paymentDataForPdf.payment_date);
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -366,18 +364,18 @@ const handleGenerateReceiptRequest = async (req, res) => {
                     hotelId,
                     receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date,
-                    receiptTotalAmount,
+                    receiptDataForPdf.totalAmount, // Use the calculated totalAmount
                     userId,
-                    finalTaxBreakdownForPdf // Pass the tax breakdown to be saved
+                    finalTaxBreakdownForPdf
                 );
                 if (!saveResult || !saveResult.id) {
                     throw new Error('Failed to save single receipt record during new generation.');
                 }
-                // Link payment to the new receipt if it's a new one or forced regenerate
                 await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
-                finalReceiptNumber = receiptDataForPdf.receipt_number; // Ensure this is set for the PDF filename
+                finalReceiptNumber = receiptDataForPdf.receipt_number; // Ensure finalReceiptNumber is set for new/regenerated
             }
-            // ensure finalReceiptNumber is set (already done inside blocks)
+            // The 'finalReceiptNumber' for filename is derived from 'receiptDataForPdf.receipt_number' which is set in both paths.
+            // So, the 'finalReceiptNumber = receiptDataForPdf.receipt_number;' line after this if/else block is fine.
         }
 
         const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
