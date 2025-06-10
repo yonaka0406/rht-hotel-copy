@@ -414,7 +414,11 @@ async function getPaymentById(requestId, paymentId) {
 async function getReceiptByPaymentId(requestId, paymentId) {
   const pool = getPool(requestId);
   const query = `
-    SELECT r.receipt_number, TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date
+    SELECT
+        r.receipt_number,
+        TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date,
+        r.amount,
+        r.tax_breakdown
     FROM reservation_payments p
     JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
     WHERE p.id = $1;
@@ -452,19 +456,24 @@ async function selectMaxReceiptNumber(requestId, hotelId, date) {
   }
 }
 
-async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId) {
+async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { // Added taxBreakdownData
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at)
-    VALUES ($1, $2, $3, $4, $5, NOW())
+      (hotel_id, receipt_number, receipt_date, amount, created_by, tax_breakdown, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW())
     RETURNING id;
   `;
   try {
-    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId]);
+    // Ensure taxBreakdownData is null if undefined, or an empty array if it's an empty array,
+    // which are both valid for JSONB. The pg driver should handle stringifying objects/arrays.
+    const values = [hotelId, receiptNumber, receiptDate, amount, userId, JSON.stringify(taxBreakdownData || [])]; // Pass taxBreakdownData
+    const result = await pool.query(query, values);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
     console.error('Error in saveReceiptNumber:', err);
+    // Add more context to the error if possible
+    console.error('Failed to save receipt with data:', { hotelId, receiptNumber, taxBreakdownData });
     throw new Error('Database error while saving receipt number.');
   }
 }

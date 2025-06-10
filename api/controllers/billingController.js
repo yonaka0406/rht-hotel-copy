@@ -217,12 +217,13 @@ function generateInvoiceHTML(html, data, userName) {
 
 const handleGenerateReceiptRequest = async (req, res) => {
     // Determine if it's single or consolidated
-    const isConsolidated = !!req.body.payment_ids; // True if payment_ids array exists in body
-    const paymentId = req.params.payment_id; // For single receipts from URL param
-    const paymentIds = req.body.payment_ids; // For consolidated from body
-    const hotelId = req.params.hid; // From URL param, common for both
+    const isConsolidated = !!req.body.payment_ids;
+    const paymentId = req.params.payment_id;
+    const paymentIds = req.body.payment_ids;
+    const hotelId = req.params.hid;
     const userId = req.user.id;
-    const taxBreakdownData = req.body.taxBreakdownData; // Expected as an array from the dialog
+    const taxBreakdownData = req.body.taxBreakdownData;
+    const forceRegenerate = req.body.forceRegenerate;
 
     let browser;
 
@@ -235,97 +236,123 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
         const userName = userInfo[0].name;
 
-        let receiptDataForPdf = {}; // Holds receipt_number, receipt_date, totalAmount (calculated)
-        let paymentDataForPdf;    // Holds client_name, facility_name, hotel_details for company info etc.
-                                  // For consolidated, this is the first payment's data.
-        let paymentsArrayForPdf;  // For consolidated, holds all payment objects for proviso.
+        // Variables for PDF generation
+        let receiptDataForPdf = {};
+        let paymentDataForPdf;
+        let paymentsArrayForPdf;
         let finalReceiptNumber;
+        let finalTaxBreakdownForPdf;
+        let isExistingReceipt = false;
 
-        if (isConsolidated) {
-            if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
-                return res.status(400).json({ error: 'payment_ids must be a non-empty array for consolidated receipts.' });
-            }
-
-            let fetchedPaymentsData = [];
-            let clientNameCheck = null;
-            for (const pid of paymentIds) {
-                const singlePaymentData = await getPaymentById(req.requestId, pid);
-                if (!singlePaymentData) return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
-                if (clientNameCheck === null) clientNameCheck = singlePaymentData.client_name;
-                else if (clientNameCheck !== singlePaymentData.client_name) {
-                    return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
-                }
-                fetchedPaymentsData.push(singlePaymentData);
-            }
-
-            paymentDataForPdf = fetchedPaymentsData[0];
-            paymentsArrayForPdf = fetchedPaymentsData;
-
-            const receiptDateObj = new Date();
-            const year = receiptDateObj.getFullYear() % 100;
-            const month = receiptDateObj.getMonth() + 1;
-            const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-            let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-            let sequence = 1;
-            if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-                sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
-            }
-            receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-            receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
-            finalReceiptNumber = receiptDataForPdf.receipt_number;
-            receiptDataForPdf.client_name = clientNameCheck;
-
-            let totalConsolidatedAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                totalConsolidatedAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-            } else {
-                totalConsolidatedAmount = fetchedPaymentsData.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-            }
-            receiptDataForPdf.totalAmount = totalConsolidatedAmount;
-
-            if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
-                receiptDataForPdf.hotel_company_name = paymentDataForPdf.hotel_details.company_name;
-                receiptDataForPdf.hotel_zip_code = paymentDataForPdf.hotel_details.zip_code;
-                receiptDataForPdf.hotel_address = paymentDataForPdf.hotel_details.address;
-                receiptDataForPdf.hotel_tel = paymentDataForPdf.hotel_details.tel;
-                receiptDataForPdf.hotel_fax = paymentDataForPdf.hotel_details.fax;
-                receiptDataForPdf.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
-            }
-
-            const saveResult = await saveReceiptNumber(
-                req.requestId, null, hotelId, receiptDataForPdf.receipt_number,
-                receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, taxBreakdownData
-            );
-
-            if (!saveResult || !saveResult.id) throw new Error('Failed to save consolidated receipt master record.');
-            const newConsolidatedReceiptRecordId = saveResult.id;
-
-            for (const pData of fetchedPaymentsData) {
-                await linkPaymentToReceipt(req.requestId, pData.id, newConsolidatedReceiptRecordId);
-            }
-        } else { // Single Receipt
-            if (!paymentId) {
-                 return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
-            }
-            const singlePaymentData = await getPaymentById(req.requestId, paymentId);
-            if (!singlePaymentData) {
-                return res.status(404).json({ error: 'Payment data not found for single receipt.' });
-            }
-            paymentDataForPdf = singlePaymentData;
-
-            let receiptTotalAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                receiptTotalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-            } else {
-                receiptTotalAmount = parseFloat(paymentDataForPdf.amount || 0);
-            }
-            receiptDataForPdf.totalAmount = receiptTotalAmount;
-
-            let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
-            if (existingReceipt && !req.body.forceRegenerate) {
+        // Early check for existing receipt (single receipts only)
+        let existingReceipt = null;
+        if (!isConsolidated && paymentId) {
+            existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
+            
+            // If receipt exists and we're not forcing regeneration with new data, use existing receipt
+            if (existingReceipt && !forceRegenerate && (!taxBreakdownData || taxBreakdownData.length === 0)) {
+                console.log(`Using existing receipt for paymentId: ${paymentId}`);
+                isExistingReceipt = true;
+                
+                // Populate data from existing receipt
                 receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
                 receiptDataForPdf.receipt_date = existingReceipt.receipt_date;
+                receiptDataForPdf.totalAmount = parseFloat(existingReceipt.amount);
+                finalTaxBreakdownForPdf = existingReceipt.tax_breakdown;
+                finalReceiptNumber = existingReceipt.receipt_number;
+                
+                // Still need payment data for PDF generation
+                paymentDataForPdf = await getPaymentById(req.requestId, paymentId);
+                if (!paymentDataForPdf) {
+                    return res.status(404).json({ error: 'Payment data not found' });
+                }
+            }
+        }
+
+        // Generate new receipt if not using existing one
+        if (!isExistingReceipt) {
+            if (isConsolidated) {
+                // Consolidated receipt logic
+                if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
+                    return res.status(400).json({ error: 'payment_ids must be a non-empty array for consolidated receipts.' });
+                }
+
+                let fetchedPaymentsData = [];
+                let clientNameCheck = null;
+                for (const pid of paymentIds) {
+                    const singlePaymentData = await getPaymentById(req.requestId, pid);
+                    if (!singlePaymentData) {
+                        return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
+                    }
+                    if (clientNameCheck === null) {
+                        clientNameCheck = singlePaymentData.client_name;
+                    } else if (clientNameCheck !== singlePaymentData.client_name) {
+                        return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
+                    }
+                    fetchedPaymentsData.push(singlePaymentData);
+                }
+
+                paymentDataForPdf = fetchedPaymentsData[0];
+                paymentsArrayForPdf = fetchedPaymentsData;
+                receiptDataForPdf.client_name = clientNameCheck;
+
+                // Generate receipt number and date
+                const receiptDateObj = new Date();
+                const year = receiptDateObj.getFullYear() % 100;
+                const month = receiptDateObj.getMonth() + 1;
+                const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+                let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
+                let sequence = 1;
+                if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
+                    sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
+                }
+                receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
+                receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
+                finalReceiptNumber = receiptDataForPdf.receipt_number;
+
+                // Calculate total amount
+                let totalConsolidatedAmount;
+                if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+                    totalConsolidatedAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
+                    finalTaxBreakdownForPdf = taxBreakdownData;
+                } else {
+                    totalConsolidatedAmount = fetchedPaymentsData.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                    finalTaxBreakdownForPdf = null;
+                }
+                receiptDataForPdf.totalAmount = totalConsolidatedAmount;
+
+                // Save consolidated receipt
+                const saveResult = await saveReceiptNumber(
+                    req.requestId, null, hotelId, receiptDataForPdf.receipt_number,
+                    receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
+                );
+
+                if (!saveResult || !saveResult.id) {
+                    throw new Error('Failed to save consolidated receipt master record.');
+                }
+
+                // Link all payments to the receipt
+                for (const pData of fetchedPaymentsData) {
+                    await linkPaymentToReceipt(req.requestId, pData.id, saveResult.id);
+                }
+
             } else {
+                // Single receipt logic - new receipt or regeneration
+                if (!paymentId) {
+                    return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
+                }
+
+                console.log(`Generating new receipt for paymentId: ${paymentId}`);
+
+                // Fetch payment data if not already fetched
+                if (!paymentDataForPdf) {
+                    paymentDataForPdf = await getPaymentById(req.requestId, paymentId);
+                    if (!paymentDataForPdf) {
+                        return res.status(404).json({ error: 'Payment data not found' });
+                    }
+                }
+
+                // Generate receipt number and date based on payment date
                 const receiptDateObj = new Date(paymentDataForPdf.payment_date);
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
@@ -337,22 +364,49 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 }
                 receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
                 receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
+                finalReceiptNumber = receiptDataForPdf.receipt_number;
 
+                // Calculate total amount and tax breakdown
+                if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+                    receiptDataForPdf.totalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
+                    finalTaxBreakdownForPdf = taxBreakdownData;
+                } else {
+                    receiptDataForPdf.totalAmount = parseFloat(paymentDataForPdf.amount || 0);
+                    // If regenerating existing receipt without new tax data, use existing tax breakdown
+                    finalTaxBreakdownForPdf = (existingReceipt && forceRegenerate) ? existingReceipt.tax_breakdown : null;
+                }
+
+                // Save the new receipt
                 const saveResult = await saveReceiptNumber(
                     req.requestId, paymentId, hotelId, receiptDataForPdf.receipt_number,
-                    receiptDataForPdf.receipt_date, receiptTotalAmount, userId, taxBreakdownData
+                    receiptDataForPdf.receipt_date, receiptDataForPdf.totalAmount, userId, finalTaxBreakdownForPdf
                 );
-                if (!saveResult || !saveResult.id) throw new Error('Failed to save single receipt record.');
+
+                if (!saveResult || !saveResult.id) {
+                    throw new Error('Failed to save single receipt record.');
+                }
+
+                // Link payment to receipt
                 await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
             }
-            finalReceiptNumber = receiptDataForPdf.receipt_number;
         }
 
+        // Populate hotel details for PDF generation
+        if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
+            receiptDataForPdf.hotel_company_name = paymentDataForPdf.hotel_details.company_name;
+            receiptDataForPdf.hotel_zip_code = paymentDataForPdf.hotel_details.zip_code;
+            receiptDataForPdf.hotel_address = paymentDataForPdf.hotel_details.address;
+            receiptDataForPdf.hotel_tel = paymentDataForPdf.hotel_details.tel;
+            receiptDataForPdf.hotel_fax = paymentDataForPdf.hotel_details.fax;
+            receiptDataForPdf.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
+        }
+
+        // Generate PDF
         const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
 
         const htmlContent = isConsolidated ?
-           generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, taxBreakdownData) :
-           generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, taxBreakdownData);
+            generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
+            generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
         browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();
@@ -392,26 +446,17 @@ const handleGenerateReceiptRequest = async (req, res) => {
         res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
     }
 };
-function generateReceiptHTML(html, receiptData, paymentData, userName) {
+function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
-
-  // Active Placeholders in new receipt.html:
-  // {{ receipt_date }}
-  // {{ receipt_number }}
-  // {{ customer_name }}
-  // {{ received_amount }}
-  // {{ facility_name }} (for 但し書き - proviso)
-
+  
   // Receipt Header
   modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number || 'N/A');
   modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date || 'YYYY-MM-DD');
 
   // Customer Information
   modifiedHTML = modifiedHTML.replace(g('customer_name'), paymentData.client_name || 'お客様名');
-  // {{ customer_code }} is commented out in the new template
-  // // modifiedHTML = modifiedHTML.replace(g('customer_code'), paymentData.customer_code || '');
-
+  
   // Facility Name (for "但し書き")
   modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設利用');
 
@@ -423,101 +468,48 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
   } else {
     calculatedReceivedAmount = parseFloat(paymentData.amount) || 0;
   }
-  modifiedHTML = modifiedHTML.replace(g('received_amount'), calculatedReceivedAmount.toLocaleString());
+  modifiedHTML = modifiedHTML.replace(g('received_amount'), calculatedReceivedAmount.toLocaleString()); 
 
-  // Obsolete Placeholders (commented out or removed as per plan)
-  // {{ company_contact_person }} is commented out in the new template
-  // // modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '');
-
-  // Bank Details are hardcoded in the new template
-  /*
-  const hotelDetails = paymentData.hotel_details || {};
-  modifiedHTML = modifiedHTML.replace(g('bank_name'), hotelDetails.bank_name || 'ホテル銀行名');
-  modifiedHTML = modifiedHTML.replace(g('bank_branch_name'), hotelDetails.bank_branch_name || '支店名');
-  modifiedHTML = modifiedHTML.replace(g('bank_account_type'), hotelDetails.bank_account_type || '口座種別');
-  modifiedHTML = modifiedHTML.replace(g('bank_account_number'), hotelDetails.bank_account_number || '口座番号');
-  modifiedHTML = modifiedHTML.replace(g('bank_account_name'), hotelDetails.bank_account_name || '口座名義');
-  */
-
-  // {{ stamp_image }} is replaced by a CSS styled div in the new template
-  // Update: Per new requirements, we will replace {{ stamp_image }} with an actual image URL.
+  
   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Assuming stamp.png is served at the root by the public static file server
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
-
-  // {{ detail_items }} section is hidden by display: none;
-  /*
-  let detailItemsHtml = '';
-  let detailsTotalValue = 0; // This variable is also for a hidden section
-  if (paymentData.items && Array.isArray(paymentData.items)) {
-    paymentData.items.forEach((item, index) => {
-      const itemTotalPrice = parseFloat(item.total_price) || 0;
-      detailsTotalValue += itemTotalPrice;
-      detailItemsHtml += `
-        <tr>
-            <td class="cell-center">\${index + 1}</td>
-            <td>\${item.description || '品目'}</td>
-            <td class="cell-center">\${item.quantity || 1} \${item.unit || ''}</td>
-            <td class="cell-right">¥ \${itemTotalPrice.toLocaleString()}</td>
-        </tr>
-      `;
-    });
-  } else {
-      detailsTotalValue = calculatedReceivedAmount;
-      detailItemsHtml = `
-        <tr>
-            <td class="cell-center">1</td>
-            <td>宿泊料として</td>
-            <td class="cell-center">1 式</td>
-            <td class="cell-right">¥ \${calculatedReceivedAmount.toLocaleString()}</td>
-        </tr>
-      `;
+  
+  let dynamicTaxDetailsHtml = '';
+  if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+      taxBreakdownData.forEach(item => {
+          // Only process items that have a taxable amount, or if all amounts are zero,
+          // behavior might depend on whether zero-amount entries should be shown.
+          // Current logic from consolidated receipt only shows if item.amount > 0. Let's replicate.
+          if (item.amount > 0 || item.tax_amount > 0) { // Show if either amount or tax_amount has value if item.amount itself can be 0 but still part of breakdown
+              const rateDisplay = (parseFloat(item.rate) * 100).toFixed(0) + '%';
+              dynamicTaxDetailsHtml += '<div class="tax-item" style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;">'; // Added inline style for clarity
+              dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;
+              if (parseFloat(item.rate) > 0) {
+                  dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">内消費税等 (${rateDisplay}) ¥ ${item.tax_amount.toLocaleString()}</p>`;
+              }
+              dynamicTaxDetailsHtml += '</div>';
+          }
+      });
   }
-  modifiedHTML = modifiedHTML.replace(g('detail_items'), detailItemsHtml);
-  */
 
-  // {{ details_total_value }} section is hidden by display: none;
-  // // modifiedHTML = modifiedHTML.replace(g('details_total_value'), detailsTotalValue.toLocaleString()); // detailsTotalValue would be from the block above
+  // Regex to find the placeholder div.
+  // This assumes receipt.html contains <div id="taxDetailsPlaceholder"></div> or <div id="taxDetailsPlaceholder" class="some-class"></div>
+  const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
 
-  // {{ total_tax_value }} and {{ taxable_details }} sections are hidden by display: none;
-  /*
-  let totalTaxValue = 0;
-  const taxItemsMap = new Map();
-  if (paymentData.items && Array.isArray(paymentData.items)) {
-    paymentData.items.forEach(item => {
-      const itemNetPrice = parseFloat(item.total_net_price) || parseFloat(item.total_price) || 0;
-      const itemTotalPrice = parseFloat(item.total_price) || 0;
-      const taxRate = parseFloat(item.tax_rate) || 0;
-      const taxDifference = itemTotalPrice - itemNetPrice;
-      totalTaxValue += taxDifference;
-
-      if (taxRate > 0) {
-        const currentTaxableAmount = taxItemsMap.get(taxRate) || 0;
-        taxItemsMap.set(taxRate, currentTaxableAmount + itemNetPrice);
+  if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
+      if (dynamicTaxDetailsHtml) {
+          modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
+      } else {
+          // If no tax breakdown data, replace placeholder with a "Not applicable" message or leave it empty.
+          // For consistency with consolidated, let's use a message.
+          modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1<p style="font-size: 0.8em;">税区分適用なし</p>$2');
       }
-    });
+  } else {
+      // If the placeholder isn't found, we should log a warning.
+      // This indicates that receipt.html might need to be updated.
+      console.warn('taxDetailsPlaceholder not found in receipt.html template for generateReceiptHTML.');      
   }
-  modifiedHTML = modifiedHTML.replace(g('total_tax_value'), totalTaxValue.toLocaleString());
-
-  let taxableDetailsHtml = '';
-  taxItemsMap.forEach((amount, rate) => {
-    taxableDetailsHtml += `
-      <tr>
-        <td class="title-cell">\${(rate * 100).toLocaleString()}%対象</td>
-        <td class="cell-right">¥ \${amount.toLocaleString()}</td>
-      </tr>
-    `;
-  });
-  modifiedHTML = modifiedHTML.replace(g('taxable_details'), taxableDetailsHtml);
-  */
-
-  // {{ comments }} placeholder is not present in the new receipt.html in a general sense.
-  // The line "上記金額を正に領収いたしました" is hardcoded.
-  // paymentData.notes could be used for the "但し書き" if `facility_name` is not appropriate,
-  // but the current template uses `facility_name` there.
-  // // let commentsText = paymentData.notes || '';
-  // // commentsText += (commentsText ? '<br/>' : '') + '上記金額を正に領収いたしました。'; // This specific text is already in the template.
-  // // modifiedHTML = modifiedHTML.replace(g('comments'), commentsText); // No {{ comments }} placeholder in new template.
-
+  
   return modifiedHTML;
 }
 function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName, taxBreakdownData) {
