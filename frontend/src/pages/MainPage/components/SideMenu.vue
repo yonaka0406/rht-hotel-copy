@@ -236,6 +236,7 @@
 
         { label: '請求', type: 'header', icon: 'pi pi-file-edit' },
         { label: '請求書', icon: 'pi pi-fw pi-file', route: '/billing/invoices', type: 'link', command: () => router.push('/billing/invoices') },
+        { label: '領収書', icon: 'pi pi-fw pi-receipt', route: '/billing/receipts', type: 'link', command: () => router.push({ name: 'Receipts' }) },
     ]);
 
     const menubarItems = computed(() => [

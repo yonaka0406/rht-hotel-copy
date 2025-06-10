@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>領収書 - {{ receipt_number }}</title>
+    <style>
+        body {
+            font-family: 'Noto Sans CJK JP', 'MS Gothic', 'Osaka-mono', monospace, sans-serif;
+            font-size: 10pt;
+            color: #000;
+            margin: 0;
+            padding: 20px; /* Add some overall padding to the body */
+            background-color: #fff;
+            line-height: 1.5;
+            box-sizing: border-box; /* Include padding in element's total width and height */
+            max-width: 800px; /* Limit width for better readability on large screens */
+            margin: 20px auto; /* Center the whole document */
+            border: 1px solid #eee; /* Light border around the whole receipt */            
+        }
+        .container {
+            width: 100%;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        h1 {
+            font-size: 24pt; /* Larger title */
+            margin: 0;
+            letter-spacing: 5px;
+            display: inline-block;
+            padding: 5px 20px;            
+            border-bottom: 2px solid #ccc;
+        }
+        .receipt-info {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 9pt;
+            text-align: right;
+            line-height: 1.2;
+        }        
+        .receipt-info p {
+            padding-right: 15px; /* Adjust this value as needed for more padding */
+        }
+        .customer-info {
+            margin-bottom: 30px;
+            font-size: 11pt;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ccc;
+        }
+        .customer-name {
+            font-size: 14pt;
+            font-weight: bold;
+            display: inline-block;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #000; /* Underline for customer name */
+        }
+        .amount-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .received-amount {
+            font-size: 28pt; /* Very prominent amount */
+            font-weight: bold;
+            display: inline-block;
+            padding: 10px 30px;
+            background-color: #f0f0f0; /* Light background for amount */
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .note-text {
+            font-size: 10pt;
+            text-align: left; /* Align to the left relative to its container */
+            margin-left: auto; /* Push to center if container is wider */
+            margin-right: auto;
+            width: fit-content; /* Shrink to content width */
+        }
+        .tax-section {
+            text-align: right; /* Align tax details to the right */
+            margin-top: 20px;
+            margin-bottom: 20px;
+            padding-right: 15px; /* Align with receipt-info padding */
+            border-top: 1px dashed #ccc; /* Subtle separator */
+            padding-top: 10px;
+        }        
+        .tax-item p {
+            font-size: 10pt;
+            margin: 0; /* Remove default paragraph margins */
+            line-height: 1.4; /* Adjust line spacing */
+        }
+        .company-info-block {
+            text-align: right;
+            margin-top: 50px;
+            position: relative; /* For stamp positioning */
+            padding-right: 150px; /* Space for the stamp */
+        }
+        .company-name {
+            font-size: 12pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .company-address, .company-contact {
+            font-size: 9pt;
+            line-height: 1.4;
+        }        
+        .company-info-block img {
+            position: absolute;
+            top: 0;
+            right: 5px;
+            width: 150px;
+            opacity: 0.4;
+        }
+        .stamp-box {
+            position: absolute;
+            bottom: 0; /* Align to bottom of company-info-block */
+            left: 0; /* Adjust as needed, possibly right: 0; if on the right */
+            width: 120px;
+            height: 120px;
+            border: 1px solid #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14pt;
+            writing-mode: vertical-rl; /* For vertical text */
+            text-orientation: upright; /* For upright characters in vertical text */
+            padding: 10px;
+            background-color: #fdfaf7; /* Light beige background */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+            color: #888; /* Lighter text color for "印収紙入" */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>領 収 書</h1>
+            <div class="receipt-info">
+                <p>発行日: {{ receipt_date }}</p>
+                <p>領収No.: {{ receipt_number }}</p>
+            </div>
+        </div>
+
+        <div class="customer-info">
+            <span class="customer-name">{{ customer_name }}</span> 御中
+        </div>
+
+        <div class="amount-section">
+            <div class="received-amount">
+                ¥ {{ received_amount }} (税込)
+            </div>
+            <div class="note-text">
+                但し {{ facility_name }} 宿泊料として
+            </div>
+            <div class="note-text">
+                上記金額を正に領収いたしました
+            </div>
+        </div>
+
+        <div class="tax-section">
+            <div id="taxDetailsPlaceholder">
+                <div class="tax-item">
+                    <p>税率{{ tax_percentage }} 対象 ¥ {{ taxable_amount }}</p>
+                    <p>内消費税等{{ tax_percentage }} ¥ {{ consumption_tax_amount }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="company-info-block">
+            <div class="company-name">レッドホーストラスト株式会社</div>
+            <div class="company-address">
+                〒060-0061<br>
+                札幌市中央区南1条西2丁目5番地<br>
+                南一条Kビル8階
+            </div>
+            <div class="company-contact">
+                TEL: 011-206-1831<br>
+                FAX: 050-3606-5764<br>
+            </div>
+            <p>登録番号: T2430001042062</p>
+
+            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 5px; width: 150px; opacity: 0.4;">
+
+            <div class="stamp-box" style="right: 20px;">
+                収　入<br>
+                印　紙
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

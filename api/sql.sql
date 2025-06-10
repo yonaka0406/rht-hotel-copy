@@ -168,7 +168,7 @@ CREATE TABLE clients (
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
 VALUES
-('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1)
+('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1);
 
 CREATE TEMP TABLE temp_client_substitutions (
     pattern TEXT,
@@ -575,16 +575,22 @@ CREATE TABLE reservation_payments (
     date DATE NOT NULL,
     room_id INT,
     client_id UUID NOT NULL REFERENCES clients(id), -- Reference to clients table
-    payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table
+    payment_type_id INT NOT NULL REFERENCES payment_types(id), -- Reference to payment_types table    
     value DECIMAL,
     comment TEXT,
     invoice_id UUID DEFAULT NULL,
+    receipt_id UUID DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id),
-    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
+    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
+    FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservation_payments ADD COLUMN receipt_id UUID NULL;
+COMMENT ON COLUMN reservation_payments.receipt_id IS 'Foreign key to the receipts table, linking multiple payments to a single receipt';
+ALTER TABLE reservation_payments ADD CONSTRAINT fk_reservation_payments_receipts FOREIGN KEY (receipt_id, hotel_id) REFERENCES receipts(id, hotel_id) ON DELETE SET NULL;
 
 CREATE TABLE reservation_rates (
    id UUID DEFAULT gen_random_uuid(),
@@ -618,6 +624,25 @@ CREATE TABLE invoices (
    created_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE receipts (
+   id UUID DEFAULT gen_random_uuid(),
+   hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+   receipt_number TEXT NOT NULL,
+   receipt_date DATE NOT NULL,
+   amount DECIMAL,
+   tax_breakdown JSONB NULL;
+   created_by INT REFERENCES users(id),
+   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+   PRIMARY KEY (hotel_id, id),
+   UNIQUE (hotel_id, receipt_number) -- Ensures receipt number is unique within a hotel
+) PARTITION BY LIST (hotel_id);
+
+COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
+COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
+
+ALTER TABLE receipts
+ADD COLUMN tax_breakdown JSONB NULL;
 
 -- OTA / Site Controller
 
