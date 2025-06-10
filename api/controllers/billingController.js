@@ -483,10 +483,10 @@ const handleGenerateReceiptRequest = async (req, res) => {
         await browser.close();
         
         const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient')
-            .replace(/[<>:"/\\|?*]/g, '_')
+            .replace(/[<>:"/\|?*]/g, '_')
             .trim()
             .substring(0, 50);
-
+        
         const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
         const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
 
@@ -496,9 +496,25 @@ const handleGenerateReceiptRequest = async (req, res) => {
         console.log('PDF filename before encoding:', pdfFilename);
         console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
 
-        // Proper UTF-8 encoding
-        res.setHeader('Content-Disposition', `attachment; filename=${encodeURIComponent(fallbackFilename)}`);
-        res.setHeader('Content-Type', 'application/pdf');
+        // The UTF-8 encoded filename for modern browsers
+        const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);
+
+        // The ASCII-safe filename for older browsers or as a robust fallback
+        // This should always be ASCII. If pdfFilename contains non-ASCII, use a generic fallback.
+        let asciiSafeFallbackFilename;
+        if (/^[\x00-\x7F]*$/.test(pdfFilename)) {
+            // If the original pdfFilename is already ASCII, use it for the fallback
+            asciiSafeFallbackFilename = pdfFilename;
+        } else {
+            // If not ASCII, use the predefined ASCII-only fallback
+            asciiSafeFallbackFilename = fallbackFilename;
+        }
+
+        // Set the Content-Disposition header
+        // Ensure correct concatenation and quoting.
+        res.set('Content-Disposition', `attachment; filename="${asciiSafeFallbackFilename}"; filename*=UTF-8''${encodedPdfFilenameForStar}`);
+
+        res.contentType("application/pdf");
         res.send(Buffer.from(pdfBuffer));
 
     } catch (error) {
