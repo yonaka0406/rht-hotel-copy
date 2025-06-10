@@ -452,19 +452,24 @@ async function selectMaxReceiptNumber(requestId, hotelId, date) {
   }
 }
 
-async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId) {
+async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData) { // Added taxBreakdownData
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at)
-    VALUES ($1, $2, $3, $4, $5, NOW())
+      (hotel_id, receipt_number, receipt_date, amount, created_by, tax_breakdown, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, NOW()) // Added $6 for tax_breakdown
     RETURNING id;
   `;
   try {
-    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId]);
+    // Ensure taxBreakdownData is null if undefined, or an empty array if it's an empty array,
+    // which are both valid for JSONB. The pg driver should handle stringifying objects/arrays.
+    const values = [hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData || null]; // Pass taxBreakdownData
+    const result = await pool.query(query, values);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
     console.error('Error in saveReceiptNumber:', err);
+    // Add more context to the error if possible
+    console.error('Failed to save receipt with data:', { hotelId, receiptNumber, taxBreakdownData });
     throw new Error('Database error while saving receipt number.');
   }
 }
