@@ -247,7 +247,21 @@ const generateConsolidatedReceipt = async (req, res) => {
     // Similar to generateInvoice, but using the {{stamp_image}} URL directly.
     // Since we are replacing {{stamp_image}} with a URL, Puppeteer should load it.
     // Adding a small delay or waiting for network idle might be useful if image loading is an issue.
-    // await page.waitForTimeout(500); // Example: wait for resources to load, adjust as needed
+    const imageSelector = 'img[alt="Company Stamp"]';
+    try {
+        await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for 5 seconds
+        await page.evaluate(async selector => {
+            const img = document.querySelector(selector);
+            if (img && !img.complete) {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            }
+        }, imageSelector);
+    } catch (e) {
+        console.warn('Stamp image selector not found or timed out in generateConsolidatedReceipt:', e.message);
+    }
 
     const pdfBuffer = await page.pdf({
       margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
@@ -263,7 +277,7 @@ const generateConsolidatedReceipt = async (req, res) => {
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(consolidatedFilename)}"`);
     res.contentType("application/pdf");
-    res.send(Buffer.from(pdfBuffer));
+    res.send(pdfBuffer);
 
   } catch (error) {
     console.error("Error generating consolidated receipt PDF:", error);
@@ -696,6 +710,22 @@ const generateReceipt = async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
 
+    const imageSelector = 'img[alt="Company Stamp"]';
+    try { // Add try-catch for robustness, though generateInvoice doesn't have it here, it's good practice
+        await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for 5 seconds
+        await page.evaluate(async selector => {
+            const img = document.querySelector(selector);
+            if (img && !img.complete) {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            }
+        }, imageSelector);
+    } catch (e) {
+        console.warn('Stamp image selector not found or timed out in generateReceipt:', e.message);
+    }
+
     const pdfBuffer = await page.pdf({
         margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
         printBackground: true,
@@ -709,7 +739,7 @@ const generateReceipt = async (req, res) => {
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(singleFilename)}"`);
     res.contentType("application/pdf");
-    res.send(Buffer.from(pdfBuffer));
+    res.send(pdfBuffer);
 
   } catch (error) {
     console.error("Error generating PDF for receipt:", error);
