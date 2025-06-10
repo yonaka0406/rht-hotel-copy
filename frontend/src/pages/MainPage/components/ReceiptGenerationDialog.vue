@@ -1,5 +1,16 @@
 <template>
-  <Dialog v-model:visible="dialogVisible" header="領収書発行" :modal="true" style="width: 50vw">
+  <Dialog v-model:visible="dialogVisible" :modal="true" style="width: 50vw">
+    <template #header>
+        <div>
+            <span class="p-dialog-title">領収書発行</span>
+            <div v-if="props.paymentData && props.paymentData.client_name" class="text-sm mt-1">
+                <span>顧客名: {{ props.paymentData.client_name }}</span>
+                <span v-if="props.paymentData.payment_date" class="ml-2">
+                    支払日: {{ formatDate(props.paymentData.payment_date) }}
+                </span>
+            </div>
+        </div>
+    </template>
     <div class="p-fluid grid">
       <div class="field col-span-12">
         <p><strong>合計支払額: {{ formatCurrency(props.totalAmount) }}</strong></p>
@@ -102,6 +113,17 @@
     const formatCurrency = (value) => {
     if (value == null || isNaN(Number(value))) return '';
     return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString; // Return original if invalid
+        // Simple YYYY/MM/DD format
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}/${month}/${day}`;
     };
 
     // Methods
