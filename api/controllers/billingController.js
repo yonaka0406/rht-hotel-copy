@@ -277,7 +277,7 @@ const generateConsolidatedReceipt = async (req, res) => {
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(consolidatedFilename)}"`);
     res.contentType("application/pdf");
-    res.send(pdfBuffer);
+    res.send(Buffer.from(pdfBuffer));
 
   } catch (error) {
     console.error("Error generating consolidated receipt PDF:", error);
@@ -739,7 +739,7 @@ const generateReceipt = async (req, res) => {
 
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(singleFilename)}"`);
     res.contentType("application/pdf");
-    res.send(pdfBuffer);
+    res.send(Buffer.from(pdfBuffer));
 
   } catch (error) {
     console.error("Error generating PDF for receipt:", error);
