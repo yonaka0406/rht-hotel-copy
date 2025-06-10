@@ -14,29 +14,35 @@
 
       <!-- Existing Tax UI and "Not Configured" Message -->
       <template v-else>
-        <template v-if="taxTypes && taxTypes.length > 0">
-          <div v-for="taxType in taxTypes.filter(t => t.visible)" :key="taxType.id" class="field col-12 md:col-6">
-            <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
-            <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
+        <!-- Tax Inputs Section -->
+        <template v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
+          <!-- This div will act as a row container for the tax inputs -->
+          <div class="grid formgrid col-12 p-0">
+              <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-12 md:col-6">
+                  <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
+                  <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
+              </div>
           </div>
         </template>
+        <!-- "Not Configured" Message -->
         <div v-else class="field col-12">
           <p>税区分が設定されていません。設定画面で税区分を登録してください。</p>
         </div>
 
-        <!-- This part (allocatedTotal, remainingAmount, error message) should also only show when not loading -->
-        <div class="field col-12 md:col-6">
-            <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
-            <p :class="{'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0}">
+        <!-- Allocation Summary Section (now full width and with top margin) -->
+        <div class="field col-12 mt-4" v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
+          <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
+          <p :class="{'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0}">
             残額: {{ formatCurrency(remainingAmount) }}
-            </p>
-            <small v-if="remainingAmount !== 0 && taxTypes.length > 0" class="p-error">割当額が合計支払額と一致していません。</small>
+          </p>
+          <small v-if="remainingAmount !== 0" class="p-error">割当額が合計支払額と一致していません。</small>
+          <!-- The sortedTaxTypes.length > 0 check for small is implicitly covered by the parent div's v-if -->
         </div>
       </template>
     </div>
     <template #footer>
-      <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text"/>
-      <Button label="発行" icon="pi pi-check" @click="generateReceipt" autofocus :disabled="remainingAmount !== 0 && taxTypes.length > 0" />
+      <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text p-button-danger p-button-sm"/>
+      <Button label="発行" icon="pi pi-check" @click="generateReceipt" autofocus :disabled="(sortedTaxTypes.length > 0 && remainingAmount !== 0) || (sortedTaxTypes.length === 0 && props.totalAmount > 0)" />
     </template>
   </Dialog>
 </template>
@@ -56,7 +62,14 @@
 
     // Refs
     const isLoadingTaxTypes = ref(false);
-    const taxTypes = computed(() => settingsStore.taxTypes.value || []);
+    const taxTypes = computed(() => settingsStore.taxTypes.value || []); // Keep for direct access to raw list if needed elsewhere
+
+    const sortedTaxTypes = computed(() => {
+        if (!settingsStore.taxTypes.value) return [];
+        return [...settingsStore.taxTypes.value]
+            .filter(tt => tt.visible)
+            .sort((a, b) => b.percentage - a.percentage);
+    });
 
     // Props & Emits
     const props = defineProps({
@@ -147,18 +160,14 @@
 
                 // Initialization logic
                 allocatedAmounts.value = {};
-                let firstEditableTaxType = null;
-                // Use the 'taxTypes' computed property here, it will be up-to-date
-                if (taxTypes.value && taxTypes.value.length > 0) {
-                    taxTypes.value.forEach(tt => {
-                        if (tt.visible) {
-                            allocatedAmounts.value[tt.id] = 0; // Initialize with 0
-                            if (!firstEditableTaxType) firstEditableTaxType = tt.id;
-                        }
+                if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
+                    // Initialize all visible tax types in allocatedAmounts to 0
+                    sortedTaxTypes.value.forEach(tt => {
+                        allocatedAmounts.value[tt.id] = 0;
                     });
-                    // Auto-allocate totalAmount to the first editable tax type
-                    if (firstEditableTaxType && props.totalAmount > 0) {
-                        allocatedAmounts.value[firstEditableTaxType] = props.totalAmount;
+                    // Default the totalAmount to the first tax type in the sorted list (highest rate)
+                    if (props.totalAmount > 0) {
+                        allocatedAmounts.value[sortedTaxTypes.value[0].id] = props.totalAmount;
                     }
                 }
                 updateAllocations(); // Recalculate totals
@@ -179,17 +188,15 @@
 
     watch(() => props.totalAmount, (newTotal) => {
         if (dialogVisible.value) {
-            allocatedAmounts.value = {};
-            let firstEditableTaxType = null;
-            if (taxTypes.value && taxTypes.value.length > 0) {
-                taxTypes.value.forEach(tt => {
-                    if (tt.visible) {
-                        allocatedAmounts.value[tt.id] = 0;
-                        if (!firstEditableTaxType) firstEditableTaxType = tt.id;
-                    }
+            allocatedAmounts.value = {}; // Reset allocations
+            if (sortedTaxTypes.value && sortedTaxTypes.value.length > 0) {
+                // Initialize all visible tax types in allocatedAmounts to 0
+                sortedTaxTypes.value.forEach(tt => {
+                    allocatedAmounts.value[tt.id] = 0;
                 });
-                if (firstEditableTaxType && newTotal > 0) {
-                    allocatedAmounts.value[firstEditableTaxType] = newTotal;
+                // Default the newTotal to the first tax type in the sorted list
+                if (newTotal > 0) {
+                    allocatedAmounts.value[sortedTaxTypes.value[0].id] = newTotal;
                 }
             }
             updateAllocations();
