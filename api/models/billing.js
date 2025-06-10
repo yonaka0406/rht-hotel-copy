@@ -463,7 +463,7 @@ async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, r
   try {
     // Ensure taxBreakdownData is null if undefined, or an empty array if it's an empty array,
     // which are both valid for JSONB. The pg driver should handle stringifying objects/arrays.
-    const values = [hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData || null]; // Pass taxBreakdownData
+    const values = [hotelId, receiptNumber, receiptDate, amount, userId, JSON.stringify(taxBreakdownData || [])]; // Pass taxBreakdownData
     const result = await pool.query(query, values);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
