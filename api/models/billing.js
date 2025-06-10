@@ -452,16 +452,16 @@ async function selectMaxReceiptNumber(requestId, hotelId, date) {
   }
 }
 
-async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId) {
+async function saveReceiptNumber(requestId, paymentId, hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData = null) {
   const pool = getPool(requestId);
   const query = `
     INSERT INTO receipts
-      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at)
-    VALUES ($1, $2, $3, $4, $5, NOW())
+      (hotel_id, receipt_number, receipt_date, amount, created_by, created_at, tax_breakdown_data)
+    VALUES ($1, $2, $3, $4, $5, NOW(), $6)
     RETURNING id;
   `;
   try {
-    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId]);
+    const result = await pool.query(query, [hotelId, receiptNumber, receiptDate, amount, userId, taxBreakdownData]);
     return result.rows.length > 0 ? { success: true, id: result.rows[0].id } : { success: false };
   } catch (err) {
     console.error('Error in saveReceiptNumber:', err);

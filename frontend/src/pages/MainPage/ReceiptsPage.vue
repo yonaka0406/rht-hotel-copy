@@ -33,7 +33,7 @@
                                 class="p-button-sm ml-auto"
                                 :loading="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
                                 :disabled="generatingConsolidatedKey === slotProps.data.client_payment_date_group"
-                                @click="generateConsolidatedReceiptForGroup(slotProps.data)"
+                                @click="openConsolidatedReceiptDialog(slotProps.data)"
                                 v-tooltip.top="'このグループの未発行の支払いをまとめて領収書発行'"
                             />
                         </div>
@@ -83,7 +83,7 @@
                                 v-if="!slotProps.data.existing_receipt_number"
                                 :icon="isGeneratingReceiptId === slotProps.data.payment_id ? 'pi pi-spin pi-spinner' : 'pi pi-file-pdf'"
                                 severity="warning"
-                                @click="generateSingleReceipt(slotProps.data)"
+                                @click="openSingleReceiptDialog(slotProps.data)"
                                 v-tooltip="'領収書発行'"
                                 :disabled="isGeneratingReceiptId === slotProps.data.payment_id"
                             />
@@ -100,12 +100,20 @@
                     </Column>
                 </DataTable>
             </div>            
-        </div>        
+        </div>
+        <ReceiptGenerationDialog
+            v-model:visible="showReceiptDialog"
+            :totalAmount="dialogTotalAmount"
+            :isConsolidated="dialogIsConsolidated"
+            :paymentData="dialogPaymentData"
+            @generate="handleDialogGenerateReceipt"
+        />
     </Panel>
 </template>
 <script setup>
     // Vue
     import { ref, shallowRef, watch, computed, onMounted } from 'vue';
+    import ReceiptGenerationDialog from '@/components/ReceiptGenerationDialog.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
@@ -120,6 +128,8 @@
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+    import { useSettingsStore } from '@/composables/useSettingsStore';
+    const settingsStore = useSettingsStore();
 
     // Helper function (can be moved to a utils file)
     const formatDate = (date) => {
@@ -173,6 +183,12 @@
     const isGeneratingReceiptId = ref(null); // For row-specific loading state
     const generatingConsolidatedKey = ref(null); // For group-specific loading state
 
+    // Dialog control and props
+    const showReceiptDialog = ref(false);
+    const dialogPaymentData = ref(null); // To store data for single or consolidated
+    const dialogIsConsolidated = ref(false);
+    const dialogTotalAmount = ref(0);
+
     // Helper to get payments eligible for consolidation within a group
     const getConsolidatablePayments = (groupItemData) => {
         if (!groupItemData || !filteredPayments.value) return [];
@@ -185,6 +201,7 @@
     };
 
     // Generate consolidated receipt for a group
+    /*
     async function generateConsolidatedReceiptForGroup(groupItemData) {
         // Ensure groupKey is derived correctly from groupItemData, which is the first item of the group
         const groupKey = groupItemData.client_payment_date_group;
@@ -211,7 +228,7 @@
         });
 
         try {
-            const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds);
+            const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds); // Old call without taxBreakdownData
             if (result.success) {
                 const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
                 toast.add({
@@ -220,9 +237,7 @@
                     detail: `顧客「${groupItemData.client_name}」様宛の一括領収書 (${formatCurrency(totalConsolidatedAmount)}) が発行されました。\nファイル名: ${result.filename}`,
                     life: 5000
                 });
-                // loadTableData will be called in finally
             } else {
-                // Ensure result.error is an Error object or string for the toast
                 const errorMessage = (result.error instanceof Error) ? result.error.message : result.error;
                 throw new Error(errorMessage || '一括領収書の発行に失敗しました。');
             }
@@ -236,11 +251,13 @@
             });
         } finally {
             generatingConsolidatedKey.value = null;
-            await loadTableData(); // Ensure data is refreshed
+            await loadTableData();
         }
     }
+    */
 
     // Submitting/generating a single receipt
+    /*
     const generateSingleReceipt = async (paymentData) => {
         if (!paymentData || !paymentData.payment_id) {
             toast.add({ severity: 'error', summary: 'エラー', detail: '有効な支払データがありません。', life: 3000 });
@@ -260,8 +277,7 @@
         });
 
         try {
-            // Call the store action
-            const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id);
+            const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id); // Old call without taxBreakdownData
             
             if (result.success) {
                 toast.add({
@@ -270,7 +286,6 @@
                     detail: `顧客「${paymentData.client_name}」様宛の領収書 (${formatCurrency(paymentData.amount)}) が発行されました。\nファイル名: ${result.filename}`,
                     life: 3000
                 });
-                // loadTableData will be called in finally
             }
             
         } catch (error) {
@@ -286,10 +301,15 @@
             await loadTableData();
         }
     };
+    */
 
     const viewReceipt = (paymentData) => {        
         console.log("Viewing/Re-generating receipt for payment:", paymentData);
-        generateSingleReceipt(paymentData);
+        // This function might need to be updated to also use the dialog if re-generation with new tax info is desired.
+        // For now, it would call the (now old) generateSingleReceipt.
+        // To use the dialog flow for re-generation:
+        openSingleReceiptDialog(paymentData);
+        // generateSingleReceipt(paymentData); // Old direct call
     };
 
     // Filters
@@ -371,7 +391,11 @@
              } finally {
                 setClientsIsLoading(false);
              }
-        }        
+        }
+
+        if (!settingsStore.taxTypes.value || settingsStore.taxTypes.value.length === 0) {
+            await settingsStore.fetchTaxTypes();
+        }
     });
 
     watch(() => selectedHotelId.value,
@@ -390,4 +414,112 @@
         },
         { immediate: true }
     );
+
+    const openSingleReceiptDialog = (paymentData) => {
+      dialogPaymentData.value = paymentData;
+      dialogTotalAmount.value = parseFloat(paymentData.amount);
+      dialogIsConsolidated.value = false;
+      showReceiptDialog.value = true;
+    };
+
+    const openConsolidatedReceiptDialog = (groupItemData) => {
+      // Consolidate payment data for the group
+      const paymentsToConsolidate = getConsolidatablePayments(groupItemData);
+      if (paymentsToConsolidate.length === 0) {
+        toast.add({ severity: 'warn', summary: '対象なし', detail: 'このグループに一括発行対象の支払がありません。', life: 3000 });
+        return;
+      }
+      // For consolidated, paymentData might be an array or specific summary
+      dialogPaymentData.value = { // Pass relevant info for the dialog
+          client_name: groupItemData.client_name,
+          payment_date: groupItemData.payment_date, // Or first payment date
+          payments: paymentsToConsolidate
+      };
+      dialogTotalAmount.value = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+      dialogIsConsolidated.value = true;
+      showReceiptDialog.value = true;
+    };
+
+    const handleDialogGenerateReceipt = async (eventPayload) => {
+      const { taxBreakdownData } = eventPayload;
+
+      if (!selectedHotelId.value) {
+          toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルが選択されていません。', life: 3000 });
+          return;
+      }
+
+      if (dialogIsConsolidated.value) {
+          const paymentsToConsolidate = dialogPaymentData.value.payments;
+          const paymentIds = paymentsToConsolidate.map(p => p.payment_id);
+
+          generatingConsolidatedKey.value = dialogPaymentData.value.client_name + '-' + dialogPaymentData.value.payment_date;
+          toast.add({
+              severity: 'info',
+              summary: '処理中',
+              detail: `顧客「${dialogPaymentData.value.client_name}」様の一括領収書を発行しています...`,
+              life: 4000
+          });
+
+          try {
+              const result = await handleGenerateConsolidatedReceipt(selectedHotelId.value, paymentIds, taxBreakdownData);
+              if (result && result.success) {
+                  const totalConsolidatedAmount = paymentsToConsolidate.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+                  toast.add({
+                      severity: 'success',
+                      summary: '成功',
+                      detail: `顧客「${dialogPaymentData.value.client_name}」様宛の一括領収書 (${formatCurrency(totalConsolidatedAmount)}) が発行されました。\nファイル名: ${result.filename}`,
+                      life: 5000
+                  });
+              } else if (result && result.error) {
+                 throw new Error(result.error);
+              }
+          } catch (error) {
+              console.error("Error generating consolidated receipt from dialog:", error);
+              toast.add({
+                  severity: 'error',
+                  summary: '発行失敗',
+                  detail: `一括領収書発行に失敗しました: ${error.message}`,
+                  life: 5000
+              });
+          } finally {
+              generatingConsolidatedKey.value = null;
+              await loadTableData();
+          }
+
+      } else { // Single receipt
+          const paymentData = dialogPaymentData.value;
+          isGeneratingReceiptId.value = paymentData.payment_id;
+          toast.add({
+              severity: 'info',
+              summary: '領収書発行中',
+              detail: `顧客「${paymentData.client_name}」様の領収書を準備しています...`,
+              life: 3000
+          });
+
+          try {
+              const result = await handleGenerateReceipt(selectedHotelId.value, paymentData.payment_id, taxBreakdownData);
+               if (result && result.success) {
+                  toast.add({
+                      severity: 'success',
+                      summary: '成功',
+                      detail: `顧客「${paymentData.client_name}」様宛の領収書 (${formatCurrency(paymentData.amount)}) が発行されました。\nファイル名: ${result.filename}`,
+                      life: 3000
+                  });
+              } else if (result && result.error) {
+                  throw new Error(result.error);
+              }
+          } catch (error) {
+              console.error("Error generating single receipt from dialog:", error);
+              toast.add({
+                  severity: 'error',
+                  summary: '発行失敗',
+                  detail: `領収書発行に失敗しました: ${error.message}`,
+                  life: 5000
+              });
+          } finally {
+              isGeneratingReceiptId.value = null;
+              await loadTableData();
+          }
+      }
+    };
 </script>

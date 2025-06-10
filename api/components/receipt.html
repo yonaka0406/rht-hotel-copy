@@ -6,130 +6,177 @@
     <style>
         body {
             font-family: 'Noto Sans CJK JP', 'MS Gothic', 'Osaka-mono', monospace, sans-serif;
-            font-size: 10pt;
+            font-size: 10pt; /* Base font size */
             color: #000;
             margin: 0;
-            padding: 20px; /* Add some overall padding to the body */
+            padding: 15px; /* Reduced padding */
             background-color: #fff;
             line-height: 1.5;
-            box-sizing: border-box; /* Include padding in element's total width and height */
-            max-width: 800px; /* Limit width for better readability on large screens */
-            margin: 20px auto; /* Center the whole document */
-            border: 1px solid #eee; /* Light border around the whole receipt */            
+            box-sizing: border-box;
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            margin: auto; /* Center page */
         }
         .container {
             width: 100%;
-            padding: 20px;
+            padding: 0; /* No extra padding for container if body has it */
         }
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px; /* Reduced margin */
             position: relative;
         }
         h1 {
-            font-size: 24pt; /* Larger title */
+            font-size: 22pt; /* Slightly reduced title size */
             margin: 0;
-            letter-spacing: 5px;
+            letter-spacing: 3px; /* Reduced letter spacing */
             display: inline-block;
-            padding: 5px 20px;            
-            border-bottom: 2px solid #ccc;
+            padding: 5px 15px; /* Reduced padding */
+            /* background-color: #f5f5f5; */ /* Removed background */
+            /* border-bottom: 2px solid #ccc; */ /* Removed border */
         }
         .receipt-info {
             position: absolute;
-            top: 0;
-            right: 0;
+            top: 5px; /* Adjusted for new layout */
+            right: 5px; /* Adjusted for new layout */
             font-size: 9pt;
             text-align: right;
-            line-height: 1.2;
-        }        
-        .receipt-info p {
-            padding-right: 15px; /* Adjust this value as needed for more padding */
+            line-height: 1.3; /* Adjusted line height */
         }
         .customer-info {
-            margin-bottom: 30px;
+            margin-bottom: 20px; /* Reduced margin */
             font-size: 11pt;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #ccc;
+            /* padding-bottom: 5px; */ /* Removed padding */
+            /* border-bottom: 1px solid #ccc; */ /* Removed border */
+            text-align: left; /* Explicitly align left */
         }
         .customer-name {
             font-size: 14pt;
             font-weight: bold;
-            display: inline-block;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #000; /* Underline for customer name */
+            display: inline-block; /* Keep inline-block if needed for specific styling */
+            padding-bottom: 3px; /* Reduced padding */
+            border-bottom: 1.5px solid #000; /* Slightly thinner underline */
+            margin-bottom: 5px; /* Space below name */
         }
         .amount-section {
             text-align: center;
-            margin: 40px 0;
+            margin: 25px 0; /* Reduced margin */
         }
         .received-amount {
-            font-size: 28pt; /* Very prominent amount */
+            font-size: 20pt; /* Reduced amount size for balance */
             font-weight: bold;
             display: inline-block;
-            padding: 10px 30px;
-            background-color: #f0f0f0; /* Light background for amount */
-            border-radius: 5px;
-            margin-bottom: 15px;
+            padding: 8px 25px; /* Adjusted padding */
+            background-color: #f0f0f0;
+            border-radius: 4px; /* Slightly reduced radius */
+            margin-bottom: 10px; /* Reduced margin */
         }
         .note-text {
             font-size: 10pt;
-            text-align: left; /* Align to the left relative to its container */
-            margin-left: auto; /* Push to center if container is wider */
+            text-align: left;
+            margin-left: auto;
             margin-right: auto;
-            width: fit-content; /* Shrink to content width */
+            width: fit-content;
+            margin-top: 5px; /* Add some space above */
         }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px; /* Reduced margin */
+            margin-bottom: 15px;
+            font-size: 9pt; /* Smaller font for table */
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #ccc;
+            padding: 6px; /* Adjusted padding */
+            text-align: left;
+        }
+        .items-table th {
+            background-color: #f9f9f9;
+            font-weight: bold;
+        }
+        .items-table .cell-center { text-align: center; }
+        .items-table .cell-right { text-align: right; }
+        .items-table .description { width: 40%; }
+        .items-table .quantity { width: 10%; }
+        .items-table .unit-price { width: 20%; }
+        .items-table .total-price { width: 20%; }
+
         .tax-section {
-            text-align: right; /* Align tax details to the right */
-            margin-top: 20px;
-            margin-bottom: 20px;
-            padding-right: 15px; /* Align with receipt-info padding */
-            border-top: 1px dashed #ccc; /* Subtle separator */
-            padding-top: 10px;
-        }        
-        .tax-item p {
-            font-size: 10pt;
-            margin: 0; /* Remove default paragraph margins */
-            line-height: 1.4; /* Adjust line spacing */
+            width: 100%;
+            margin-top: 10px; /* Reduced margin */
+            margin-bottom: 20px; /* Reduced margin */
+            font-size: 9pt;
+            display: none; /* Hidden by default, shown via JS if data exists */
         }
+        .tax-table {
+            width: 40%; /* Smaller table for tax, aligned right */
+            float: right;
+            border-collapse: collapse;
+        }
+        .tax-table td {
+            border: 1px solid #ccc;
+            padding: 5px; /* Adjusted padding */
+            text-align: right;
+        }
+        .tax-table .title-cell {
+            background-color: #f9f9f9;
+            font-weight: bold;
+            text-align: left;
+        }
+        .clearfix::after {
+            content: "";
+            clear: both;
+            display: table;
+        }
+
         .company-info-block {
             text-align: right;
-            margin-top: 50px;
-            position: relative; /* For stamp positioning */
-            padding-right: 150px; /* Space for the stamp */
+            margin-top: 30px; /* Reduced margin */
+            position: relative;
+            padding-right: 130px; /* Space for the stamp, reduced */
+            font-size: 9pt; /* Base for this block */
         }
         .company-name {
-            font-size: 12pt;
+            font-size: 11pt; /* Slightly reduced */
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 4px; /* Reduced margin */
         }
         .company-address, .company-contact {
-            font-size: 9pt;
-            line-height: 1.4;
-        }        
-        .company-info-block img {
-            position: absolute;
-            top: 0;
-            right: 5px;
-            width: 150px;
-            opacity: 0.4;
+            line-height: 1.3; /* Adjusted line height */
         }
-        .stamp-box {
+        .company-registration {
+            margin-top: 5px;
+        }
+        .stamp-image { /* Class for the actual stamp image */
             position: absolute;
-            bottom: 0; /* Align to bottom of company-info-block */
-            left: 0; /* Adjust as needed, possibly right: 0; if on the right */
-            width: 120px;
-            height: 120px;
+            top: -10px; /* Adjust to align with top of company text or slightly above */
+            right: 0;
+            width: 120px; /* Fixed width for stamp */
+            height: auto; /* Maintain aspect ratio */
+            opacity: 0.7; /* Slightly more visible */
+        }
+        .stamp-box-placeholder { /* Placeholder for "収入印紙" if no physical stamp */
+            position: absolute;
+            bottom: -20px; /* Position below the address block */
+            right: 20px; /* Align with stamp image area */
+            width: 100px; /* Reduced width */
+            height: 50px; /* Reduced height for a flatter box */
             border: 1px solid #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 14pt;
-            writing-mode: vertical-rl; /* For vertical text */
-            text-orientation: upright; /* For upright characters in vertical text */
-            padding: 10px;
-            background-color: #fdfaf7; /* Light beige background */
-            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-            color: #888; /* Lighter text color for "印収紙入" */
+            font-size: 10pt; /* Reduced font size */
+            /* writing-mode: vertical-rl; */ /* Removed vertical text for simplicity */
+            /* text-orientation: upright; */
+            padding: 5px;
+            background-color: #fdfaf7;
+            box-shadow: inset 0 0 3px rgba(0,0,0,0.1); /* Reduced shadow */
+            color: #777; /* Darker text */
+        }
+        /* Hide sections if no data by default */
+        .details-section, .taxable-summary-section {
+             /* display: none; */ /* Controlled by JS based on data */
         }
     </style>
 </head>
@@ -140,55 +187,118 @@
             <div class="receipt-info">
                 <p>発行日: {{ receipt_date }}</p>
                 <p>領収No.: {{ receipt_number }}</p>
+                <!-- Optional: <p>顧客コード: {{ customer_code }}</p> -->
             </div>
         </div>
 
         <div class="customer-info">
-            <span class="customer-name">{{ customer_name }}</span> 御中
+            <span class="customer-name">{{ customer_name }}</span> 様 <!-- Changed from 御中 to 様 -->
+            <!-- Optional: <p>会社担当者: {{ company_contact_person }}</p> -->
         </div>
 
         <div class="amount-section">
             <div class="received-amount">
-                ¥ {{ received_amount }} (税込)
+                ¥ {{ received_amount }}
             </div>
             <div class="note-text">
-                但し {{ facility_name }} 宿泊料として
+                但し、{{ facility_name }}として
             </div>
             <div class="note-text">
-                上記金額を正に領収いたしました
+                上記金額を正に領収いたしました。
             </div>
         </div>
 
-        <div class="tax-section">
-            <div id="taxDetailsPlaceholder">
-                <div class="tax-item">
-                    <p>税率{{ tax_percentage }} 対象 ¥ {{ taxable_amount }}</p>
-                    <p>内消費税等{{ tax_percentage }} ¥ {{ consumption_tax_amount }}</p>
-                </div>
-            </div>
+        <!-- Detailed Items Section (Initially hidden, shown if data exists) -->
+        <div class="details-section" style="display: {{#if detail_items_exist}}block{{else}}none{{/if}};">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th class="description">内容</th>
+                        <th class="quantity cell-center">数量</th>
+                        <th class="unit-price cell-right">単価</th>
+                        <th class="total-price cell-right">金額 (税込)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{{ detail_items }}} <!-- Handlebars triple stash for HTML -->
+                </tbody>
+            </table>
         </div>
+
+        <!-- Tax Summary Section (Initially hidden, shown if data exists) -->
+        <div class="taxable-summary-section clearfix" style="display: {{#if taxable_details_exist}}block{{else}}none{{/if}};">
+            <table class="tax-table">
+                <tbody>
+                    <tr>
+                        <td class="title-cell">小計 (税抜)</td>
+                        <td class="cell-right">¥ {{ details_subtotal_net }}</td>
+                    </tr>
+                    <tr>
+                        <td class="title-cell">消費税等 ({{ tax_rate_percentage }}%)</td>
+                        <td class="cell-right">¥ {{ total_tax_value }}</td>
+                    </tr>
+                    <tr>
+                        <td class="title-cell" style="font-weight: bold;">合計金額 (税込)</td>
+                        <td class="cell-right" style="font-weight: bold;">¥ {{ details_total_gross }}</td>
+                    </tr>
+                    <!-- This row is for showing different tax rates if applicable -->
+                    {{{ taxable_details_rows }}}
+                </tbody>
+            </table>
+        </div>
+
 
         <div class="company-info-block">
-            <div class="company-name">レッドホーストラスト株式会社</div>
+            <div class="company-name">{{ company_name }}</div>
             <div class="company-address">
-                〒060-0061<br>
-                札幌市中央区南1条西2丁目5番地<br>
-                南一条Kビル8階
+                〒{{ company_zip_code }}<br>
+                {{ company_address_full }}
             </div>
             <div class="company-contact">
-                TEL: 011-206-1831<br>
-                FAX: 050-3606-5764<br>
+                TEL: {{ company_tel }}<br>
+                FAX: {{ company_fax }}
             </div>
-            <p>登録番号: T2430001042062</p>
-
-            <img src="{{ stamp_image }}" alt="Company Stamp" style="position: absolute; top: 0; right: 5px; width: 150px; opacity: 0.4;">
-
-            <div class="stamp-box" style="right: 20px;">
-                収　入<br>
-                印　紙
+            <div class="company-registration">
+                登録番号: {{ company_registration_number }}
             </div>
+
+            <img src="{{ stamp_image }}" alt="Company Stamp" class="stamp-image">
+
+            <div class="stamp-box-placeholder">
+                収入印紙
+            </div>
+        </div>
+
+        <!-- Optional Comments Section -->
+        <div class="comments-section" style="margin-top: 20px; font-size: 9pt; {{#unless comments}}display: none;{{/unless}}">
+            <p>備考:</p>
+            <p>{{{ comments }}}</p>
         </div>
 
     </div>
+
+    <script>
+        // This script block is for potential client-side logic if needed for dynamic display.
+        // For pure Puppeteer PDF generation, this might not be strictly necessary
+        // if all display logic is handled by templating.
+        // Example: Force show sections if their respective handlebars variables exist
+        // (though this is better handled by the display: style attributes with Handlebars conditions)
+
+        // function showSectionIfData(sectionClass, dataExists) {
+        //     const section = document.querySelector('.' + sectionClass);
+        //     if (section && dataExists) {
+        //         section.style.display = 'block';
+        //     } else if (section) {
+        //         section.style.display = 'none';
+        //     }
+        // }
+
+        // Assuming these variables would be passed to the template engine
+        // For example, if detail_items_exist is true, then the section shows
+        // showSectionIfData('details-section', {{ detail_items_exist_js }}); // Pass boolean from server
+        // showSectionIfData('taxable-summary-section', {{ taxable_details_exist_js }});
+
+        // The Handlebars `style="display: {{#if ...}}block{{else}}none{{/if}}"` is generally preferred.
+    </script>
 </body>
 </html>
