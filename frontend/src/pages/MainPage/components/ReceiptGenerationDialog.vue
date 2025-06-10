@@ -1,12 +1,12 @@
 <template>
   <Dialog v-model:visible="dialogVisible" header="領収書発行" :modal="true" style="width: 50vw">
-    <div class="p-fluid grid formgrid">
-      <div class="field col-12">
+    <div class="p-fluid grid">
+      <div class="field col-span-12">
         <p><strong>合計支払額: {{ formatCurrency(props.totalAmount) }}</strong></p>
       </div>
 
       <!-- Loading Indicator -->
-      <div v-if="isLoadingTaxTypes" class="field col-12 text-center">
+      <div v-if="isLoadingTaxTypes" class="field col-span-12 text-center">
         <p>税区分を読み込み中...</p>
         <!-- Optionally, you could add a PrimeVue spinner component here if desired -->
         <!-- e.g., <ProgressSpinner style="width:50px;height:50px" strokeWidth="8" /> -->
@@ -17,20 +17,22 @@
         <!-- Tax Inputs Section -->
         <template v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
           <!-- This div will act as a row container for the tax inputs -->
-          <div class="grid formgrid col-12 p-0">
-              <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-12 md:col-6">
-                  <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
+          <div class="grid col-span-12 p-0">
+              <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-span-12 md:col-span-6">
+                <FloatLabel>
                   <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
+                  <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
+                </FloatLabel>
               </div>
           </div>
         </template>
         <!-- "Not Configured" Message -->
-        <div v-else class="field col-12">
+        <div v-else class="field col-span-12">
           <p>税区分が設定されていません。設定画面で税区分を登録してください。</p>
         </div>
 
         <!-- Allocation Summary Section (now full width and with top margin) -->
-        <div class="field col-12 mt-4" v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
+        <div class="field col-span-12 mt-4" v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
           <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
           <p :class="{'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0}">
             残額: {{ formatCurrency(remainingAmount) }}
@@ -55,6 +57,7 @@
     import Dialog from 'primevue/dialog';
     import Button from 'primevue/button';
     import InputNumber from 'primevue/inputnumber';
+    import FloatLabel from 'primevue/floatlabel';
 
     // Store
     import { useSettingsStore } from '@/composables/useSettingsStore';
