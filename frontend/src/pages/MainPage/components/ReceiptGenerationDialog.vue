@@ -1,13 +1,13 @@
 <template>
-  <Dialog v-model:visible="dialogVisible" :modal="true" style="width: 50vw">
+  <Dialog v-model:visible="dialogVisible" :modal="true" style="width: 35vw">
     <template #header>
         <div>
             <span class="p-dialog-title">領収書発行</span>
             <div v-if="props.paymentData && props.paymentData.client_name" class="text-sm mt-1">
-                <span>顧客名: {{ props.paymentData.client_name }}</span>
-                <span v-if="props.paymentData.payment_date" class="ml-2">
+                <p>顧客名: {{ props.paymentData.client_name }}</p>
+                <p v-if="props.paymentData.payment_date" class="ml-2">
                     支払日: {{ formatDate(props.paymentData.payment_date) }}
-                </span>
+                </p>
             </div>
         </div>
     </template>
