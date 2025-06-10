@@ -414,7 +414,11 @@ async function getPaymentById(requestId, paymentId) {
 async function getReceiptByPaymentId(requestId, paymentId) {
   const pool = getPool(requestId);
   const query = `
-    SELECT r.receipt_number, TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date
+    SELECT
+        r.receipt_number,
+        TO_CHAR(r.receipt_date, 'YYYY-MM-DD') as receipt_date,
+        r.amount,
+        r.tax_breakdown
     FROM reservation_payments p
     JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
     WHERE p.id = $1;
