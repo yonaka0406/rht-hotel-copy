@@ -365,7 +365,9 @@ async function getPaymentById(requestId, paymentId) {
       p.value AS amount,
       TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
       p.comment AS notes,
-      c.name AS client_name,
+      COALESCE(c.name_kanji, c.name) AS client_name,
+      c.name AS client_name_regular,
+      c.name_kanji AS client_name_kanji,
       c.id as customer_code,
       h.name AS facility_name,
       h.bank_name,
@@ -385,14 +387,14 @@ async function getPaymentById(requestId, paymentId) {
       return null;
     }
     const paymentData = paymentResult.rows[0];
-
-    // const itemsResult = await pool.query(itemsQuery, [paymentId]); // Removed itemsResult execution
-
+    
     return {
       id: paymentData.id,
       amount: parseFloat(paymentData.amount),
       payment_date: paymentData.payment_date,
       client_name: paymentData.client_name,
+      client_name_regular: paymentData.client_name_regular,
+      client_name_kanji: paymentData.client_name_kanji,
       customer_code: paymentData.customer_code,
       facility_name: paymentData.facility_name,
       notes: paymentData.notes,
