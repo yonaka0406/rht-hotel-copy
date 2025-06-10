@@ -392,7 +392,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
     }
 };
-function generateReceiptHTML(html, receiptData, paymentData, userName) {
+function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
@@ -518,6 +518,47 @@ function generateReceiptHTML(html, receiptData, paymentData, userName) {
   // // commentsText += (commentsText ? '<br/>' : '') + '上記金額を正に領収いたしました。'; // This specific text is already in the template.
   // // modifiedHTML = modifiedHTML.replace(g('comments'), commentsText); // No {{ comments }} placeholder in new template.
 
+  // --- Start of new logic for Tax Breakdown ---
+  let dynamicTaxDetailsHtml = '';
+  if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+      taxBreakdownData.forEach(item => {
+          // Only process items that have a taxable amount, or if all amounts are zero,
+          // behavior might depend on whether zero-amount entries should be shown.
+          // Current logic from consolidated receipt only shows if item.amount > 0. Let's replicate.
+          if (item.amount > 0 || item.tax_amount > 0) { // Show if either amount or tax_amount has value if item.amount itself can be 0 but still part of breakdown
+              const rateDisplay = (parseFloat(item.rate) * 100).toFixed(0) + '%';
+              dynamicTaxDetailsHtml += '<div class="tax-item" style="margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 5px;">'; // Added inline style for clarity
+              dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;
+              if (parseFloat(item.rate) > 0) {
+                  dynamicTaxDetailsHtml += `<p style="margin: 0; font-size: 0.8em;">内消費税等 (${rateDisplay}) ¥ ${item.tax_amount.toLocaleString()}</p>`;
+              }
+              dynamicTaxDetailsHtml += '</div>';
+          }
+      });
+  }
+
+  // Regex to find the placeholder div.
+  // This assumes receipt.html contains <div id="taxDetailsPlaceholder"></div> or <div id="taxDetailsPlaceholder" class="some-class"></div>
+  const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
+
+  if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
+      if (dynamicTaxDetailsHtml) {
+          modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
+      } else {
+          // If no tax breakdown data, replace placeholder with a "Not applicable" message or leave it empty.
+          // For consistency with consolidated, let's use a message.
+          modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1<p style="font-size: 0.8em;">税区分適用なし</p>$2');
+      }
+  } else {
+      // If the placeholder isn't found, we should log a warning.
+      // This indicates that receipt.html might need to be updated.
+      console.warn('taxDetailsPlaceholder not found in receipt.html template for generateReceiptHTML.');
+      // Optionally, append the tax details at the end if no placeholder, though less ideal:
+      // if (dynamicTaxDetailsHtml) {
+      // modifiedHTML += '<h2>税内訳</h2>' + dynamicTaxDetailsHtml; // Or some other fallback
+      // }
+  }
+  // --- End of new logic for Tax Breakdown ---
   return modifiedHTML;
 }
 function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName, taxBreakdownData) {
