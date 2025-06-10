@@ -380,9 +380,25 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
 
+        // Force re-assignment of finalTaxBreakdownForPdf for new/regenerated single receipts
+        // using 'taxBreakdownData' (which is req.body.taxBreakdownData)
+        // This is specifically for the single receipt path when it's NOT a simple re-issue.
+        if (!isConsolidated && !(existingReceipt && (!taxBreakdownData || taxBreakdownData.length === 0) && !req.body.forceRegenerate)) {
+            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
+                // finalTaxBreakdownForPdf was already set to taxBreakdownData in the new/regenerate path.
+                // This re-confirms. If it was set to existingReceipt.tax_breakdown (e.g. forceRegenerate without new taxBreakdownData), this overrides.
+                finalTaxBreakdownForPdf = taxBreakdownData;
+            } else {
+                // If no new taxBreakdownData from request for a new/forced-regenerate, it should be null.
+                finalTaxBreakdownForPdf = null;
+            }
+        }
+        // For consolidated receipts, taxBreakdownData (from req.body) is passed directly.
+        // For single re-issue, finalTaxBreakdownForPdf is already set from existingReceipt.tax_breakdown.
+
         const htmlContent = isConsolidated ?
-           generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, taxBreakdownData) : // For consolidated, original taxBreakdownData from request is passed
-           generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf); // For single, pass the determined finalTaxBreakdownForPdf
+           generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, taxBreakdownData) :
+           generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
         browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();
