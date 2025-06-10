@@ -216,10 +216,11 @@ function generateInvoiceHTML(html, data, userName) {
 };
 
 const handleGenerateReceiptRequest = async (req, res) => {
-    // Determine if it's single or consolidated
-    const isConsolidated = !!req.body.payment_ids;
     const paymentId = req.params.payment_id;
     const paymentIds = req.body.payment_ids;
+    // Determine if it's single or consolidated
+    const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
+    console.log(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
     const hotelId = req.params.hid;
     const userId = req.user.id;
     const taxBreakdownData = req.body.taxBreakdownData;
@@ -349,6 +350,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
                 // Save consolidated receipt
+                console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
                 const saveResult = await saveReceiptNumber(
                     req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
@@ -407,6 +409,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 }
 
                 // Save the new receipt
+                console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
                 const saveResult = await saveReceiptNumber(
                     req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf                
