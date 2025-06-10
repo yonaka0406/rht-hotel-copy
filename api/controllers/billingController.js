@@ -216,10 +216,11 @@ function generateInvoiceHTML(html, data, userName) {
 };
 
 const handleGenerateReceiptRequest = async (req, res) => {
-    // Determine if it's single or consolidated
-    const isConsolidated = !!req.body.payment_ids;
     const paymentId = req.params.payment_id;
     const paymentIds = req.body.payment_ids;
+    // Determine if it's single or consolidated
+    const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
+    console.log(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
     const hotelId = req.params.hid;
     const userId = req.user.id;
     const taxBreakdownData = req.body.taxBreakdownData;
@@ -323,8 +324,24 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 paymentsArrayForPdf = fetchedPaymentsData;
                 receiptDataForPdf.client_name = clientNameCheck;
 
+                // Determine common payment date for consolidated receipt
+                let commonPaymentDate = null;
+                if (fetchedPaymentsData.length > 0) {
+                    commonPaymentDate = fetchedPaymentsData[0].payment_date;
+                    for (let i = 1; i < fetchedPaymentsData.length; i++) {
+                        if (fetchedPaymentsData[i].payment_date !== commonPaymentDate) {
+                            commonPaymentDate = null; // Dates are not common
+                            console.log('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
+                            break;
+                        }
+                    }
+                    if (commonPaymentDate) {
+                         console.log(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
+                    }
+                }
+
                 // Generate receipt number and date
-                const receiptDateObj = new Date();
+                const receiptDateObj = commonPaymentDate ? new Date(commonPaymentDate) : new Date();
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -349,6 +366,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
                 // Save consolidated receipt
+                console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
                 const saveResult = await saveReceiptNumber(
                     req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
@@ -380,7 +398,9 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 }
 
                 // Generate receipt number and date based on payment date
+                console.log(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
                 const receiptDateObj = new Date(paymentDataForPdf.payment_date);
+                console.log(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
                 const year = receiptDateObj.getFullYear() % 100;
                 const month = receiptDateObj.getMonth() + 1;
                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -407,6 +427,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
                 }
 
                 // Save the new receipt
+                console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
                 const saveResult = await saveReceiptNumber(
                     req.requestId, hotelId, receiptDataForPdf.receipt_number,
                     receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf                
