@@ -73,13 +73,38 @@ export function useBillingStore() {
             const a = document.createElement('a');
             a.href = downloadUrl;
 
-            let filename = `領収書_${paymentId}.pdf`;
-            const disposition = response.headers.get('content-disposition');
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    filename = matches[1].replace(/['"]/g, '');
+            let filename = `領収書_${paymentId}.pdf`; // Default/fallback filename
+            const disposition = response.headers.get('content-disposition');            
+            
+            if (disposition) {
+                // Try to extract UTF-8 encoded filename (filename*) first
+                const utf8FilenameMatch = /filename\*=UTF-8''([^;]+)/.exec(disposition);
+                if (utf8FilenameMatch && utf8FilenameMatch[1]) {
+                    try {
+                        // Decode the URI component to get the actual filename
+                        filename = decodeURIComponent(utf8FilenameMatch[1]);
+                        console.log('Frontend: Extracted UTF-8 filename:', filename);
+                    } catch (e) {
+                        console.warn('Frontend: Failed to decode UTF-8 filename, falling back.', e);
+                    }
+                }
+
+                // If UTF-8 filename wasn't found or failed, try to extract ASCII filename (filename)
+                // This covers cases where only the ASCII filename is present or if decoding failed.
+                // We should only fall back to this if `filename` hasn't already been set by `filename*`
+                if (filename.startsWith(`領収書_${paymentId}.pdf`)) { // Check if it's still the default fallback
+                    const asciiFilenameMatch = /filename="([^"]+)"/.exec(disposition);
+                    if (asciiFilenameMatch && asciiFilenameMatch[1]) {
+                        filename = asciiFilenameMatch[1];
+                        console.log('Frontend: Extracted ASCII filename:', filename);
+                    } else {
+                        // Handle case where filename="something" might not have quotes, though less common
+                        const bareFilenameMatch = /filename=([^;]+)/.exec(disposition);
+                        if (bareFilenameMatch && bareFilenameMatch[1]) {
+                            filename = bareFilenameMatch[1].trim(); // Remove leading/trailing spaces
+                            console.log('Frontend: Extracted bare filename:', filename);
+                        }
+                    }
                 }
             }
             a.download = filename;
