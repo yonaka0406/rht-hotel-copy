@@ -5,23 +5,34 @@
         <p><strong>合計支払額: {{ formatCurrency(props.totalAmount) }}</strong></p>
       </div>
 
-      <template v-if="taxTypes && taxTypes.length > 0">
-        <div v-for="taxType in taxTypes.filter(t => t.visible)" :key="taxType.id" class="field col-12 md:col-6">
-          <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
-          <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
-        </div>
-      </template>
-      <div v-else class="field col-12">
-        <p>税区分が設定されていません。設定画面で税区分を登録してください。</p>
+      <!-- Loading Indicator -->
+      <div v-if="isLoadingTaxTypes" class="field col-12 text-center">
+        <p>税区分を読み込み中...</p>
+        <!-- Optionally, you could add a PrimeVue spinner component here if desired -->
+        <!-- e.g., <ProgressSpinner style="width:50px;height:50px" strokeWidth="8" /> -->
       </div>
 
-      <div class="field col-12 md:col-6">
-        <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
-        <p :class="{'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0}">
-          残額: {{ formatCurrency(remainingAmount) }}
-        </p>
-        <small v-if="remainingAmount !== 0 && taxTypes.length > 0" class="p-error">割当額が合計支払額と一致していません。</small>
-      </div>
+      <!-- Existing Tax UI and "Not Configured" Message -->
+      <template v-else>
+        <template v-if="taxTypes && taxTypes.length > 0">
+          <div v-for="taxType in taxTypes.filter(t => t.visible)" :key="taxType.id" class="field col-12 md:col-6">
+            <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
+            <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
+          </div>
+        </template>
+        <div v-else class="field col-12">
+          <p>税区分が設定されていません。設定画面で税区分を登録してください。</p>
+        </div>
+
+        <!-- This part (allocatedTotal, remainingAmount, error message) should also only show when not loading -->
+        <div class="field col-12 md:col-6">
+            <p>割当済み合計: {{ formatCurrency(allocatedTotal) }}</p>
+            <p :class="{'text-red-500': remainingAmount !== 0, 'text-green-500': remainingAmount === 0}">
+            残額: {{ formatCurrency(remainingAmount) }}
+            </p>
+            <small v-if="remainingAmount !== 0 && taxTypes.length > 0" class="p-error">割当額が合計支払額と一致していません。</small>
+        </div>
+      </template>
     </div>
     <template #footer>
       <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text"/>
@@ -44,6 +55,7 @@
     const settingsStore = useSettingsStore();
 
     // Refs
+    const isLoadingTaxTypes = ref(false);
     const taxTypes = computed(() => settingsStore.taxTypes.value || []);
 
     // Props & Emits
@@ -124,24 +136,41 @@
     };
 
     // Watchers
-    watch(() => props.visible, (isVisible) => {
+    watch(() => props.visible, async (isVisible) => {
         dialogVisible.value = isVisible;
         if (isVisible) {
-            allocatedAmounts.value = {};
-            let firstEditableTaxType = null;
-            if (taxTypes.value && taxTypes.value.length > 0) {
-                taxTypes.value.forEach(tt => {
-                    if (tt.visible) {
-                        allocatedAmounts.value[tt.id] = 0;
-                        if (!firstEditableTaxType) firstEditableTaxType = tt.id;
-                    }
-                });
-                if (firstEditableTaxType && props.totalAmount > 0) {
-                    allocatedAmounts.value[firstEditableTaxType] = props.totalAmount;
+            isLoadingTaxTypes.value = true;
+            try {
+                if (!settingsStore.taxTypes.value || settingsStore.taxTypes.value.length === 0) {
+                    await settingsStore.fetchTaxTypes();
                 }
+
+                // Initialization logic
+                allocatedAmounts.value = {};
+                let firstEditableTaxType = null;
+                // Use the 'taxTypes' computed property here, it will be up-to-date
+                if (taxTypes.value && taxTypes.value.length > 0) {
+                    taxTypes.value.forEach(tt => {
+                        if (tt.visible) {
+                            allocatedAmounts.value[tt.id] = 0; // Initialize with 0
+                            if (!firstEditableTaxType) firstEditableTaxType = tt.id;
+                        }
+                    });
+                    // Auto-allocate totalAmount to the first editable tax type
+                    if (firstEditableTaxType && props.totalAmount > 0) {
+                        allocatedAmounts.value[firstEditableTaxType] = props.totalAmount;
+                    }
+                }
+                updateAllocations(); // Recalculate totals
+
+            } catch (error) {
+                console.error("Failed to fetch tax types in ReceiptGenerationDialog:", error);
+                // Consider adding a user-facing error message via toast if available
+            } finally {
+                isLoadingTaxTypes.value = false;
             }
-            updateAllocations();
         } else {
+            // Reset when dialog is hidden
             allocatedAmounts.value = {};
             allocatedTotal.value = 0;
             remainingAmount.value = 0;
@@ -172,15 +201,6 @@
     if (props.visible !== newValue) {
         emit('update:visible', newValue);
     }
-    });
-
-    // onMounted: If settingsStore needs explicit fetching and it's not done by a parent
-    onMounted(async () => {
-    // Example: if taxTypes are not guaranteed to be loaded by a parent
-    // if (!settingsStore.taxTypes.value || settingsStore.taxTypes.value.length === 0) {
-    //   await settingsStore.fetchTaxTypes();
-    // }
-    // The subtask states parent will handle fetching, so this might not be needed.
     });
 
 </script>
