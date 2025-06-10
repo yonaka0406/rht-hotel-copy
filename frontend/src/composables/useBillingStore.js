@@ -38,19 +38,16 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateReceipt = async (hotelId, paymentId, taxBreakdownData) => {
+    const handleGenerateReceipt = async (hotelId, paymentId) => {        
         try {
             const authToken = localStorage.getItem('authToken');            
             const url = '/api/billing/res/generate-receipt/' + hotelId + '/' + paymentId;
-            const bodyPayload = { taxBreakdownData };
 
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(bodyPayload)
+                }
             });
 
             if (!response.ok) {
@@ -199,14 +196,10 @@ export function useBillingStore() {
         }
     };
 
-    const handleGenerateConsolidatedReceipt = async (hotelId, paymentIdsArray, taxBreakdownData) => {
+    const handleGenerateConsolidatedReceipt = async (hotelId, paymentIdsArray) => {
         try {
             const authToken = localStorage.getItem('authToken');
             const url = `/api/billing/res/generate-consolidated-receipt/${hotelId}`;
-            const bodyPayload = {
-                payment_ids: paymentIdsArray,
-                taxBreakdownData: taxBreakdownData
-            };
 
             const response = await fetch(url, {
                 method: 'POST',
@@ -214,7 +207,7 @@ export function useBillingStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(bodyPayload),
+                body: JSON.stringify({ payment_ids: paymentIdsArray }),
             });
 
             if (!response.ok) {

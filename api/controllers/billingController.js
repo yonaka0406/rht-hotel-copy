@@ -15,184 +15,6 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-const handleGenerateReceiptRequest = async (req, res) => {
-    // Determine if it's single or consolidated
-    const isConsolidated = !!req.body.payment_ids; // True if payment_ids array exists in body
-    const paymentId = req.params.payment_id; // For single receipts from URL param
-    const paymentIds = req.body.payment_ids; // For consolidated from body
-    const hotelId = req.params.hid; // From URL param, common for both
-    const userId = req.user.id;
-    const taxBreakdownData = req.body.taxBreakdownData; // Expected as an array from the dialog
-
-    let browser;
-
-    console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
-
-    try {
-        const userInfo = await getUsersByID(req.requestId, userId);
-        if (!userInfo || userInfo.length === 0) {
-            return res.status(404).json({ error: 'User info not found' });
-        }
-        const userName = userInfo[0].name;
-
-        let receiptDataForPdf = {}; // Holds receipt_number, receipt_date, totalAmount (calculated)
-        let paymentDataForPdf;    // Holds client_name, facility_name, hotel_details for company info etc.
-                                  // For consolidated, this is the first payment's data.
-        let paymentsArrayForPdf;  // For consolidated, holds all payment objects for proviso.
-        let finalReceiptNumber;
-
-        if (isConsolidated) {
-            if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
-                return res.status(400).json({ error: 'payment_ids must be a non-empty array for consolidated receipts.' });
-            }
-
-            let fetchedPaymentsData = [];
-            let clientNameCheck = null;
-            for (const pid of paymentIds) {
-                const singlePaymentData = await getPaymentById(req.requestId, pid);
-                if (!singlePaymentData) return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
-                if (clientNameCheck === null) clientNameCheck = singlePaymentData.client_name;
-                else if (clientNameCheck !== singlePaymentData.client_name) {
-                    return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
-                }
-                fetchedPaymentsData.push(singlePaymentData);
-            }
-
-            paymentDataForPdf = fetchedPaymentsData[0];
-            paymentsArrayForPdf = fetchedPaymentsData;
-
-            const receiptDateObj = new Date();
-            const year = receiptDateObj.getFullYear() % 100;
-            const month = receiptDateObj.getMonth() + 1;
-            const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-            let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-            let sequence = 1;
-            if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-                sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
-            }
-            receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-            receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
-            finalReceiptNumber = receiptDataForPdf.receipt_number;
-            receiptDataForPdf.client_name = clientNameCheck;
-
-            let totalConsolidatedAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                totalConsolidatedAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-            } else {
-                totalConsolidatedAmount = fetchedPaymentsData.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-            }
-            receiptDataForPdf.totalAmount = totalConsolidatedAmount;
-
-            if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
-                receiptDataForPdf.hotel_company_name = paymentDataForPdf.hotel_details.company_name;
-                receiptDataForPdf.hotel_zip_code = paymentDataForPdf.hotel_details.zip_code;
-                receiptDataForPdf.hotel_address = paymentDataForPdf.hotel_details.address;
-                receiptDataForPdf.hotel_tel = paymentDataForPdf.hotel_details.tel;
-                receiptDataForPdf.hotel_fax = paymentDataForPdf.hotel_details.fax;
-                receiptDataForPdf.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
-            }
-
-            const saveResult = await saveReceiptNumber(
-                req.requestId, null, hotelId, receiptDataForPdf.receipt_number,
-                receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, taxBreakdownData
-            );
-
-            if (!saveResult || !saveResult.id) throw new Error('Failed to save consolidated receipt master record.');
-            const newConsolidatedReceiptRecordId = saveResult.id;
-
-            for (const pData of fetchedPaymentsData) {
-                await linkPaymentToReceipt(req.requestId, pData.id, newConsolidatedReceiptRecordId);
-            }
-        } else { // Single Receipt
-            if (!paymentId) {
-                 return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
-            }
-            const singlePaymentData = await getPaymentById(req.requestId, paymentId);
-            if (!singlePaymentData) {
-                return res.status(404).json({ error: 'Payment data not found for single receipt.' });
-            }
-            paymentDataForPdf = singlePaymentData;
-
-            let receiptTotalAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                receiptTotalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-            } else {
-                receiptTotalAmount = parseFloat(paymentDataForPdf.amount || 0);
-            }
-            receiptDataForPdf.totalAmount = receiptTotalAmount;
-
-            let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
-            if (existingReceipt && !req.body.forceRegenerate) {
-                receiptDataForPdf.receipt_number = existingReceipt.receipt_number;
-                receiptDataForPdf.receipt_date = existingReceipt.receipt_date;
-            } else {
-                const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-                const year = receiptDateObj.getFullYear() % 100;
-                const month = receiptDateObj.getMonth() + 1;
-                const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-                let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-                let sequence = 1;
-                if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-                    sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
-                }
-                receiptDataForPdf.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-                receiptDataForPdf.receipt_date = receiptDateObj.toISOString().split('T')[0];
-
-                const saveResult = await saveReceiptNumber(
-                    req.requestId, paymentId, hotelId, receiptDataForPdf.receipt_number,
-                    receiptDataForPdf.receipt_date, receiptTotalAmount, userId, taxBreakdownData
-                );
-                if (!saveResult || !saveResult.id) throw new Error('Failed to save single receipt record.');
-                await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
-            }
-            finalReceiptNumber = receiptDataForPdf.receipt_number;
-        }
-
-        const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
-
-        const htmlContent = isConsolidated ?
-           generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, taxBreakdownData) :
-           generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, taxBreakdownData);
-
-        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-        const imageSelector = 'img[alt="Company Stamp"]';
-        try {
-            await page.waitForSelector(imageSelector, { timeout: 5000 });
-            await page.evaluate(async selector => {
-                const img = document.querySelector(selector);
-                if (img && !img.complete) {
-                    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-                }
-            }, imageSelector);
-        } catch (e) {
-            console.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
-        }
-
-        const pdfBuffer = await page.pdf({
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
-            printBackground: true, format: 'A4'
-        });
-        await browser.close();
-
-        const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient').replace(/[^a-z0-9_-\s]/gi, '_').substring(0, 50);
-        const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
-
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(pdfFilename)}"`);
-        res.contentType("application/pdf");
-        res.send(Buffer.from(pdfBuffer));
-
-    } catch (error) {
-        console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
-        if (browser) {
-            await browser.close().catch(err => console.error("Error closing browser:", err));
-        }
-        res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
-    }
-};
-
 const getBillableListView = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
@@ -213,7 +35,7 @@ const getBillableListView = async (req, res) => {
 };
 
 // Function to generate HTML for consolidated receipts
-function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName, taxBreakdownData) {
+function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, paymentsData, userName) {
   let modifiedHTML = html;
   const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
 
@@ -230,10 +52,9 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
   if (paymentsData && paymentsData.length > 0) {
     totalConsolidatedAmount = paymentsData.reduce((sum, payment) => {
       let paymentAmount = 0;
-      // Ensure payment.items is an array before trying to reduce it
-      if (payment.items && Array.isArray(payment.items) && payment.items.length > 0) {
+      if (payment.items && payment.items.length > 0) {
         paymentAmount = payment.items.reduce((itemSum, item) => itemSum + (parseFloat(item.total_price) || 0), 0);
-      } else if (payment.amount) { // Fallback to payment.amount if items are not available/applicable
+      } else {
         paymentAmount = parseFloat(payment.amount) || 0;
       }
       return sum + paymentAmount;
@@ -241,772 +62,721 @@ function generateConsolidatedReceiptHTML(html, consolidatedReceiptData, payments
   }
   modifiedHTML = modifiedHTML.replace(g('received_amount'), totalConsolidatedAmount.toLocaleString());
 
-  // Proviso (但し書き) - Use facility_name as a base and append payment IDs for clarity
-  let facilityNameProviso = firstPayment.facility_name || '施設利用'; // Default facility name
-  if (paymentsData && paymentsData.length > 1) { // Only add payment IDs if there's more than one payment
-      const paymentIdsString = paymentsData.map(p => `ID:${p.payment_id || p.id}`).join(', '); // Use payment_id or id
-      facilityNameProviso += ` (支払ID: ${paymentIdsString})`;
+  // Proviso (但し書き) - List individual payment details
+  let provisoContent = `上記金額を正に領収いたしました。<br/>(内訳: `;
+  if (paymentsData && paymentsData.length > 0) {
+    const paymentDetails = paymentsData.map(p => {
+      const paymentDate = p.payment_date ? new Date(p.payment_date).toLocaleDateString('ja-JP') : '日付不明';
+      let paymentAmount = 0;
+      if (p.items && p.items.length > 0) {
+        paymentAmount = p.items.reduce((itemSum, item) => itemSum + (parseFloat(item.total_price) || 0), 0);
+      } else {
+        paymentAmount = parseFloat(p.amount) || 0;
+      }
+      return `${paymentDate} ¥${paymentAmount.toLocaleString()}`;
+    });
+    provisoContent += paymentDetails.join(', ');
+  } else {
+    provisoContent += '該当支払いなし';
   }
-  modifiedHTML = modifiedHTML.replace(g('facility_name'), facilityNameProviso);
+  provisoContent += ')';
+  // Assuming the original receipt.html has a line like: <td colspan="4" class="proviso">上記金額を正に領収いたしました。</td>
+  // We will replace the content of this proviso or a similar placeholder.
+  // For now, let's assume there's a placeholder {{ proviso_details }} or we modify facility_name for this.
+  // The current receipt.html uses {{ facility_name }} for the proviso. This is a simplification.
+  // A more robust solution would be a dedicated {{ proviso_details }} placeholder in receipt.html.
+  // For this task, let's augment the facility_name or use a simple approach.
+  // The task says: "In the "proviso" (但し書き) or a similar section, list the individual payment dates or IDs..."
+  // The current template uses {{ facility_name }} as "但し、{{ facility_name }}として"
+  // Let's try to make the proviso content fit into the existing structure by modifying what {{ facility_name }} is replaced with.
 
+  let facilityNameProviso = firstPayment.facility_name || '施設利用';
+  let paymentIdsString = paymentsData.map(p => `ID:${p.payment_id}`).join(', ');
+  facilityNameProviso += ` (複数支払合計: ${paymentIdsString})`; // Example: "施設利用 (複数支払合計: ID:1, ID:2)"
+  modifiedHTML = modifiedHTML.replace(g('facility_name'), facilityNameProviso );
 
-  // Stamp Image - Ensure this placeholder exists in your receipt.html
-  // The actual image path should be resolvable by the server or converted to a data URI
-  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Example URL
+  // Stamp Image  
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
 
-  // Replace placeholders for company information - these should come from hotel details or a config
-  // For now, using example values if not available in firstPayment or consolidatedReceiptData
-  modifiedHTML = modifiedHTML.replace(g('company_name'), firstPayment.hotel_company_name || 'レッドホーストラスト株式会社');
-  modifiedHTML = modifiedHTML.replace(g('company_zip_code'), firstPayment.hotel_zip_code || '060-0061');
-  modifiedHTML = modifiedHTML.replace(g('company_address_full'), firstPayment.hotel_address || '札幌市中央区南1条西2丁目5番地 南一条Kビル8階');
-  modifiedHTML = modifiedHTML.replace(g('company_tel'), firstPayment.hotel_tel || '011-206-1831');
-  modifiedHTML = modifiedHTML.replace(g('company_fax'), firstPayment.hotel_fax || '050-3606-5764');
-  modifiedHTML = modifiedHTML.replace(g('company_registration_number'), firstPayment.hotel_registration_number || 'T2430001042062');
-
-  // Handle display of detail items and tax sections based on provided flags
-  // These flags should be set based on whether relevant data exists to show these sections
-  // For consolidated receipts, detail_items might be empty or represent a summary
-  modifiedHTML = modifiedHTML.replace(g('detail_items_exist'), 'false'); // Example: consolidated doesn't show item details
-  modifiedHTML = modifiedHTML.replace(g('taxable_details_exist'), 'false'); // Example: tax details handled differently or not shown
-
-  // Clear out placeholders that are not relevant or not populated for consolidated view
-  modifiedHTML = modifiedHTML.replace(g('detail_items'), '');
-  modifiedHTML = modifiedHTML.replace(g('taxable_details_rows'), '');
-  modifiedHTML = modifiedHTML.replace(g('details_subtotal_net'), '0'); // Default to 0 or calculated sum
-  modifiedHTML = modifiedHTML.replace(g('total_tax_value'), '0'); // Default to 0 or calculated sum
-  modifiedHTML = modifiedHTML.replace(g('details_total_gross'), totalConsolidatedAmount.toLocaleString());
-  modifiedHTML = modifiedHTML.replace(g('comments'), consolidatedReceiptData.comments || '');
-
-  // --- Corrected Tax Breakdown Logic for taxDetailsPlaceholder START ---
-  let dynamicTaxDetailsHtml = '';
-  if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-    taxBreakdownData.forEach(item => {
-      if (item.amount > 0) {
-        const rateDisplay = (item.rate * 100).toFixed(0) + '%';
-        dynamicTaxDetailsHtml += '<div class="tax-item">';
-        dynamicTaxDetailsHtml += `<p>${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;
-        if (item.rate > 0) {
-          dynamicTaxDetailsHtml += `<p>内消費税等 (${rateDisplay}) ¥ ${item.tax_amount.toLocaleString()}</p>`;
-        }
-        dynamicTaxDetailsHtml += '</div>';
-      }
-    });
-  }
-
-  const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
-  if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
-    if (dynamicTaxDetailsHtml) {
-      modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
-    } else {
-      modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1$2');
-    }
-  } else {
-    console.warn('taxDetailsPlaceholder not found in receipt.html for generateConsolidatedReceiptHTML');
-  }
-
-  // Clean up any old Handlebars-style placeholders related to tax table
-  modifiedHTML = modifiedHTML.replace(g('taxable_details_rows'), '');
-  modifiedHTML = modifiedHTML.replace(g('details_subtotal_net'), '');
-  modifiedHTML = modifiedHTML.replace(g('total_tax_value'), '');
-  // details_total_gross is part of the tax table, but received_amount is the main display.
-  // If details_total_gross was specifically for the table, it should be cleared.
-  // However, it might be used if the table is present but empty.
-  // For safety, let's clear if it was only for the Handlebars table.
-  // The main received_amount is handled separately.
-  // modifiedHTML = modifiedHTML.replace(g('details_total_gross'), ''); // Re-evaluating this, might be needed for overall total
-  modifiedHTML = modifiedHTML.replace(g('taxable_details_exist'), 'false');
-  // --- Corrected Tax Breakdown Logic for taxDetailsPlaceholder END ---
+  // Comment out or handle other placeholders not relevant to consolidated view or already handled
+  // {{ customer_code }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('customer_code'), firstPayment.customer_code || '');
+  // {{ company_contact_person }} is commented out
+  // // modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '');
+  // Bank details are hardcoded
+  // Detail items, total_tax_value, taxable_details are hidden by display:none in receipt.html
 
   return modifiedHTML;
 }
 
+// Controller function for generating consolidated receipts
+const generateConsolidatedReceipt = async (req, res) => {
+  const hotelId = req.params.hid;
+  const payment_ids = req.body.payment_ids;
+  const userId = req.user.id;
+  let browser;
 
-const handleGenerateReceiptRequest = async (req, res) => {
-    // Determine if it's single or consolidated
-    const isConsolidated = !!req.body.payment_ids; // True if payment_ids array exists in body
-    const paymentId = req.params.payment_id; // For single receipts from URL param
-    const paymentIds = req.body.payment_ids; // For consolidated from body
-    const hotelId = req.params.hid; // From URL param, common for both
-    const userId = req.user.id;
-    const taxBreakdownData = req.body.taxBreakdownData; // Expected as an array from the dialog
+  // Validate payment_ids
+  if (!Array.isArray(payment_ids) || payment_ids.length === 0) {
+    return res.status(400).json({ error: 'payment_ids must be a non-empty array.' });
+  }
 
-    let browser;
+  try {
+    const userInfo = await getUsersByID(req.requestId, userId);
+    if (!userInfo || userInfo.length === 0) {
+      return res.status(404).json({ error: 'User info not found.' });
+    }
 
-    console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
+    // Fetch Payment Details for all payment IDs
+    let paymentsData = [];
+    let clientNameCheck = null;
+    for (const pid of payment_ids) {
+      const paymentData = await getPaymentById(req.requestId, pid);
+      if (!paymentData) {
+        return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
+      }
+      // Check if all payments belong to the same client
+      if (clientNameCheck === null) {
+        clientNameCheck = paymentData.client_name;
+      } else if (clientNameCheck !== paymentData.client_name) {
+        return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
+      }
+      paymentsData.push(paymentData);
+    }
 
-    try {
-        const userInfo = await getUsersByID(req.requestId, userId);
-        if (!userInfo || userInfo.length === 0) {
-            return res.status(404).json({ error: 'User info not found' });
-        }
-        const userName = userInfo[0].name;
+    // Retry logic for consolidated receipt number generation and saving
+    let attempts = 0;
+    const maxRetries = 3;
+    let consolidatedReceiptData = {}; // Define consolidatedReceiptData to be accessible after loop
 
-        let receiptDataForPdf; // To hold data for generateReceiptHTML (receipt_number, receipt_date, totalAmount)
-        let paymentDataForPdf; // To hold data for generateReceiptHTML (client_name, facility_name, hotel_details, etc.)
-                               // For consolidated, this will be the first payment's data for header info.
-        // let paymentsArrayForPdf; // For consolidated list in HTML proviso, if generateReceiptHTML is adapted for it.
-                                 // Currently generateConsolidatedReceiptHTML takes this.
-        let finalReceiptNumber; // The main receipt number to be used for filename
+    for (attempts = 0; attempts < maxRetries; attempts++) {
+        try {
+            // Generate Consolidated Receipt Number and Date
+            const receiptDate = new Date();
+            const year = receiptDate.getFullYear() % 100; // YY
+            const month = receiptDate.getMonth() + 1; // 1-12
+            const sequenceLength = 4;
 
-        if (isConsolidated) {
-            // *** Start of Consolidated Logic (moved from generateConsolidatedReceipt) ***
-            if (!Array.isArray(paymentIds) || paymentIds.length === 0) {
-                return res.status(400).json({ error: 'payment_ids must be a non-empty array for consolidated receipts.' });
-            }
-
-            let fetchedPaymentsData = [];
-            let clientNameCheck = null;
-            for (const pid of paymentIds) {
-                const singlePaymentData = await getPaymentById(req.requestId, pid);
-                if (!singlePaymentData) {
-                    return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
-                }
-                if (clientNameCheck === null) clientNameCheck = singlePaymentData.client_name;
-                else if (clientNameCheck !== singlePaymentData.client_name) {
-                    return res.status(400).json({ error: 'All payments must belong to the same client for consolidation.' });
-                }
-                fetchedPaymentsData.push(singlePaymentData);
-            }
-
-            paymentDataForPdf = fetchedPaymentsData[0];
-            // paymentsArrayForPdf = fetchedPaymentsData; // Pass this to generateConsolidatedReceiptHTML if used
-
-            const consolidatedReceiptMaster = { client_name: clientNameCheck };
-            const receiptDateObj = new Date();
-            const year = receiptDateObj.getFullYear() % 100;
-            const month = receiptDateObj.getMonth() + 1;
             const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-            let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-            let sequence = 1;
-            if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-                sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
-            }
-            consolidatedReceiptMaster.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-            consolidatedReceiptMaster.receipt_date = receiptDateObj.toISOString().split('T')[0];
-            finalReceiptNumber = consolidatedReceiptMaster.receipt_number;
+            let new_receipt_number_str;
 
-            // Calculate total amount based on taxBreakdownData if provided (sum of item.amount)
-            // Otherwise, sum of p.amount (which might be less accurate if taxBreakdown is the source of truth)
-            let totalConsolidatedAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                totalConsolidatedAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
+            let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+
+            if (!max_receipt_number_data.last_receipt_number || !max_receipt_number_data.last_receipt_number.toString().startsWith(prefixStr) ) {
+                // First receipt of the month for this hotel or if last number format is unexpected
+                const firstSequence = '1'.padStart(sequenceLength, '0');
+                new_receipt_number_str = prefixStr + firstSequence;
             } else {
-                totalConsolidatedAmount = fetchedPaymentsData.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-            }
-            consolidatedReceiptMaster.totalAmount = totalConsolidatedAmount;
-
-
-            // Use hotel details from the first payment for company info on receipt
-             if (paymentDataForPdf && paymentDataForPdf.hotel_details) {
-                consolidatedReceiptMaster.hotel_company_name = paymentDataForPdf.hotel_details.company_name;
-                consolidatedReceiptMaster.hotel_zip_code = paymentDataForPdf.hotel_details.zip_code;
-                consolidatedReceiptMaster.hotel_address = paymentDataForPdf.hotel_details.address;
-                consolidatedReceiptMaster.hotel_tel = paymentDataForPdf.hotel_details.tel;
-                consolidatedReceiptMaster.hotel_fax = paymentDataForPdf.hotel_details.fax;
-                consolidatedReceiptMaster.hotel_registration_number = paymentDataForPdf.hotel_details.registration_number;
+                const lastReceiptStr = max_receipt_number_data.last_receipt_number.toString();
+                const lastSequenceStr = lastReceiptStr.substring(prefixStr.length);
+                const nextSequenceNum = BigInt(lastSequenceStr) + BigInt(1);
+                new_receipt_number_str = prefixStr + nextSequenceNum.toString().padStart(sequenceLength, '0');
             }
 
+            // Update consolidatedReceiptData directly here as it's in the same scope
+            consolidatedReceiptData.receipt_number = new_receipt_number_str; // new_receipt_number_str is already a string
+            consolidatedReceiptData.receipt_date = receiptDate.toISOString().split('T')[0];
 
-            const saveResult = await saveReceiptNumber(
-                req.requestId, null, hotelId, consolidatedReceiptMaster.receipt_number,
-                consolidatedReceiptMaster.receipt_date, totalConsolidatedAmount, userId, taxBreakdownData
+            // Calculate total consolidated amount
+            let totalConsolidatedAmount = 0;
+            if (paymentsData && paymentsData.length > 0) {
+                totalConsolidatedAmount = paymentsData.reduce((sum, payment) => {
+                    let paymentAmount = 0;
+                    if (payment.items && payment.items.length > 0) {
+                        paymentAmount = payment.items.reduce((itemSum, item) => itemSum + (parseFloat(item.total_price) || 0), 0);
+                    } else {
+                        paymentAmount = parseFloat(payment.amount) || 0;
+                    }
+                    return sum + paymentAmount;
+                }, 0);
+            }
+
+            // Save a single consolidated receipt record
+            const consolidatedSaveResult = await saveReceiptNumber(
+                req.requestId,
+                null, // No single payment_id for the consolidated record itself
+                hotelId,
+                consolidatedReceiptData.receipt_number,
+                consolidatedReceiptData.receipt_date,
+                totalConsolidatedAmount, // Save the total amount for the consolidated receipt
+                userId,
+                null // This consolidated receipt is not linked to another consolidated receipt
             );
 
-            if (!saveResult || !saveResult.id) throw new Error('Failed to save consolidated receipt master record.');
-            const newConsolidatedReceiptRecordId = saveResult.id;
-
-            for (const pData of fetchedPaymentsData) {
-                await linkPaymentToReceipt(req.requestId, pData.id, newConsolidatedReceiptRecordId);
-            }
-            receiptDataForPdf = consolidatedReceiptMaster;
-            // *** End of Consolidated Specific Logic ***
-        } else {
-            // *** Start of Single Receipt Logic (moved from generateReceipt) ***
-            if (!paymentId) {
-                 return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
-            }
-            const singlePaymentData = await getPaymentById(req.requestId, paymentId);
-            if (!singlePaymentData) {
-                return res.status(404).json({ error: 'Payment data not found for single receipt.' });
-            }
-            paymentDataForPdf = singlePaymentData;
-            // paymentsArrayForPdf = [singlePaymentData];
-
-            const singleReceiptMaster = {};
-            let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
-
-            // Calculate total amount based on taxBreakdownData if provided, otherwise use paymentDataForPdf.amount
-            let receiptTotalAmount;
-            if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-                receiptTotalAmount = taxBreakdownData.reduce((sum, item) => sum + (parseFloat(item.amount) || 0) + (parseFloat(item.tax_amount) || 0), 0);
-            } else {
-                receiptTotalAmount = parseFloat(paymentDataForPdf.amount || 0);
-            }
-            singleReceiptMaster.totalAmount = receiptTotalAmount;
-
-
-            if (existingReceipt && !req.body.forceRegenerate) { // TODO: Add forceRegenerate to UI if needed
-                singleReceiptMaster.receipt_number = existingReceipt.receipt_number;
-                singleReceiptMaster.receipt_date = existingReceipt.receipt_date;
-                // TODO: Fetch existing tax_breakdown_data if viewing, not regenerating
-            } else {
-                const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-                const year = receiptDateObj.getFullYear() % 100;
-                const month = receiptDateObj.getMonth() + 1;
-                const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-                let maxReceiptNumData = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDateObj);
-                let sequence = 1;
-                if (maxReceiptNumData.last_receipt_number && maxReceiptNumData.last_receipt_number.toString().startsWith(prefixStr)) {
-                    sequence = BigInt(maxReceiptNumData.last_receipt_number.toString().substring(prefixStr.length)) + BigInt(1);
+            if (consolidatedSaveResult && consolidatedSaveResult.id) {
+                const newConsolidatedReceiptRecordId = consolidatedSaveResult.id;
+                // Link this consolidated receipt record to all individual payments using the model function
+                for (const payment of paymentsData) { // Using paymentsData which contains full payment details
+                    await linkPaymentToReceipt(req.requestId, payment.id, newConsolidatedReceiptRecordId); // Corrected: payment.id
                 }
-                singleReceiptMaster.receipt_number = prefixStr + sequence.toString().padStart(4, '0');
-                singleReceiptMaster.receipt_date = receiptDateObj.toISOString().split('T')[0];
-
-                const saveResult = await saveReceiptNumber(
-                    req.requestId, paymentId, hotelId, singleReceiptMaster.receipt_number,
-                    singleReceiptMaster.receipt_date, receiptTotalAmount, userId, taxBreakdownData
-                );
-                if (!saveResult || !saveResult.id) throw new Error('Failed to save single receipt record.');
-                await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
+                break; // Successfully saved consolidated receipt and linked payments, exit retry loop
+            } else {
+                console.error('saveReceiptNumber for consolidated record did not return an ID.');
+                throw new Error('Failed to save consolidated receipt due to missing ID in result.');
             }
-            receiptDataForPdf = singleReceiptMaster;
-            finalReceiptNumber = singleReceiptMaster.receipt_number;
-            // *** End of Single Receipt Specific Logic ***
+
+        } catch (error) {
+            if (error.code === '23505' && attempts < maxRetries - 1) { // PostgreSQL unique constraint violation
+                console.warn(`Attempt ${attempts + 1} for consolidated receipt failed due to duplicate receipt number ${consolidatedReceiptData.receipt_number}. Retrying...`);
+                await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+                continue; // Try the next attempt (will generate a new receipt number)
+            }
+            throw error; // Max retries reached or different error
         }
-
-        // Common PDF Generation Logic
-        const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
-
-        // Using generateReceiptHTML for both, as it's designed to handle the main receipt data and tax breakdown.
-        // paymentDataForPdf contains client_name, facility_name, hotel_details (for company info).
-        // receiptDataForPdf contains receipt_number, receipt_date, totalAmount.
-        // taxBreakdownData is the array for tax details.
-        // For consolidated, generateConsolidatedReceiptHTML was also updated, so if it has specific formatting
-        // for consolidated receipts beyond what generateReceiptHTML provides (e.g. listing payment IDs), use it.
-        // For now, using generateReceiptHTML as the primary.
-        const htmlContent = isConsolidated ?
-           generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf /* pass full array for proviso */, userName, taxBreakdownData) :
-           generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, taxBreakdownData);
-
-
-        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' }); // Changed to networkidle0
-
-        const imageSelector = 'img[alt="Company Stamp"]';
-        try {
-            await page.waitForSelector(imageSelector, { timeout: 5000 });
-            await page.evaluate(async selector => {
-                const img = document.querySelector(selector);
-                if (img && !img.complete) {
-                    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-                }
-            }, imageSelector);
-        } catch (e) {
-            console.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
-        }
-
-        const pdfBuffer = await page.pdf({
-            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
-            printBackground: true, format: 'A4'
-        });
-        await browser.close();
-
-        const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient').replace(/[^a-z0-9_-\s]/gi, '_').substring(0, 50);
-        const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
-
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(pdfFilename)}"`);
-        res.contentType("application/pdf");
-        res.send(Buffer.from(pdfBuffer));
-
-    } catch (error) {
-        console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
-        if (browser) {
-            await browser.close().catch(err => console.error("Error closing browser:", err));
-        }
-        res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
     }
+
+    // After the loop, check if a receipt number was successfully generated and saved.
+    if (attempts === maxRetries && (!consolidatedReceiptData.receipt_number || Object.keys(consolidatedReceiptData).length === 0)) {
+         console.error(`Failed to generate and save consolidated receipt after ${maxRetries} attempts.`);
+         if (!consolidatedReceiptData.receipt_number) { // Ensure error is thrown if no number was even generated/set
+            throw new Error(`Failed to secure a unique consolidated receipt number after ${maxRetries} attempts.`);
+         }
+         // If consolidatedReceiptData.receipt_number exists but loop completed due to retries,
+         // the error from the last attempt inside the loop would have been thrown.
+    }
+
+    const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
+    const htmlContent = generateConsolidatedReceiptHTML(receiptHTMLTemplate, consolidatedReceiptData, paymentsData, userInfo[0].name);
+
+    browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+
+    // Ensure stamp image is loaded (if it's critical and causes issues)
+    // Similar to generateInvoice, but using the {{stamp_image}} URL directly.
+    // Since we are replacing {{stamp_image}} with a URL, Puppeteer should load it.
+    // Adding a small delay or waiting for network idle might be useful if image loading is an issue.
+    const imageSelector = 'img[alt="Company Stamp"]';
+    try {
+        await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for 5 seconds
+        await page.evaluate(async selector => {
+            const img = document.querySelector(selector);
+            if (img && !img.complete) {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            }
+        }, imageSelector);
+    } catch (e) {
+        console.warn('Stamp image selector not found or timed out in generateConsolidatedReceipt:', e.message);
+    }
+
+    const pdfBuffer = await page.pdf({
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+      printBackground: true,
+      format: 'A4',
+    });
+
+    await browser.close();
+
+    const clientName = (paymentsData && paymentsData.length > 0 && paymentsData[0].client_name) ? paymentsData[0].client_name : 'UnknownClient';
+    const sanitizedConsolidatedClientName = clientName.replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
+    const consolidatedFilename = `${consolidatedReceiptData.receipt_number}_${sanitizedConsolidatedClientName}.pdf`; // Updated separator
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(consolidatedFilename)}"`);
+    res.contentType("application/pdf");
+    res.send(Buffer.from(pdfBuffer));
+
+  } catch (error) {
+    console.error("Error generating consolidated receipt PDF:", error);
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
+    // More specific error messages to client if possible
+    if (error.message.includes("Payment data not found") || error.message.includes("All payments must belong")) {
+        return res.status(400).json({ error: error.message });
+    }
+    res.status(500).send('Error generating consolidated receipt PDF');
+  }
 };
 
+const getBilledListView = async (req, res) => {
+  const hotelId = req.params.hid;
+  const month = req.params.mdate;
 
-// const getBilledListView = async (req, res) => {
-//   const hotelId = req.params.hid;
-//   const month = req.params.mdate;
+  try {    
+    const data = await selectBilledListView(req.requestId, hotelId, month);    
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
+    }  
 
-// const getBilledListView = async (req, res) => {
-//   const hotelId = req.params.hid;
-//   const month = req.params.mdate;
-//
-//   try {
-//     const data = await selectBilledListView(req.requestId, hotelId, month);
-//
-//     if (!data || data.length === 0) {
-//       return res.status(404).json({ error: 'No data found' });
-//     }
-//
-//     res.json(data);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// };
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
-// const generateInvoice = async (req, res) => {
-//   const hotelId = req.params.hid;
-//   // const invoiceId = req.params.invoice; // Not used in provided logic
-//   const invoiceData = req.body;
-//   const userId = req.user.id; // Assuming userId is from req.user
-//   const invoiceHTMLPath = path.join(__dirname, '../components/invoice.html');
-//
-//   if (!fs.existsSync(invoiceHTMLPath)) {
-//     console.error("Invoice HTML template not found at:", invoiceHTMLPath);
-//     return res.status(500).send('Invoice template not found.');
-//   }
-//   const invoiceHTML = fs.readFileSync(invoiceHTMLPath, 'utf-8');
-//
-//   let browser;
-//
-//   try {
-//     // Generate invoice number if not provided
-//     if (!invoiceData.invoice_number) {
-//       let max_invoice_number_data = await selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
-//       let next_invoice_number;
-//       if (!max_invoice_number_data.last_invoice_number) {
-//         const date = new Date(invoiceData.date);
-//         const year = date.getFullYear() % 100;
-//         const month = date.getMonth() + 1;
-//         next_invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-//       } else {
-//         next_invoice_number = max_invoice_number_data.last_invoice_number + 1;
-//       }
-//       invoiceData.invoice_number = next_invoice_number;
-//     }
-//
-//     // Assuming updateInvoices saves or updates the invoice and returns necessary data.
-//     // The parameters for updateInvoices might need adjustment based on its definition.
-//     // For this example, I'm assuming it takes all necessary data from invoiceData.
-//     // This might be where you create the invoice record if it's not just an update.
-//     // await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
-//
-//     const userInfo = await getUsersByID(req.requestId, userId);
-//     if (!userInfo || userInfo.length === 0) {
-//         return res.status(404).json({ error: 'User info for contact person not found.' });
-//     }
-//
-//     browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
-//     const page = await browser.newPage();
-//
-//     const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData, userInfo[0].name);
-//     await page.setContent(htmlContent, { waitUntil: 'networkidle0' }); // networkidle0 for images
-//
-//     const imageSelector = 'img[alt="Company Stamp"]'; // Selector for the stamp image
-//     try {
-//         await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for the image
-//         await page.evaluate(async selector => { // Ensure image is fully loaded
-//             const img = document.querySelector(selector);
-//             if (img && !img.complete) {
-//                 await new Promise((resolve, reject) => {
-//                     img.onload = resolve;
-//                     img.onerror = reject;
-//                 });
-//             }
-//         }, imageSelector);
-//     } catch (e) {
-//         console.warn('Stamp image selector not found or timed out in generateInvoice:', e.message);
-//     }
-//
-//     const pdfBuffer = await page.pdf({
-//         margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
-//         printBackground: true,
-//         format: 'A4',
-//     });
-//
-//     await browser.close();
-//
-//     const filename = `invoice_${invoiceData.invoice_number}_${invoiceData.client_name.replace(/[\/:*?"<>|\s\r\n]/g, '_')}.pdf`;
-//     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-//     res.contentType("application/pdf");
-//     res.send(Buffer.from(pdfBuffer));
-//
-//   } catch (error) {
-//     console.error("Error generating PDF for invoice:", error);
-//     if (browser) {
-//       await browser.close().catch(err => console.error("Error closing browser when generating invoice:", err));
-//     }
-//     res.status(500).send(`Error generating invoice PDF: ${error.message}`);
-//   }
-// };
+const generateInvoice = async (req, res) => {
+  const hotelId = req.params.hid;
+  const invoiceId = req.params.invoice;
+  const invoiceData = req.body;  
+  const userId = req.user.id;
+  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');  
 
-// function generateInvoiceHTML(html, data, userName) {
-//   let modifiedHTML = html;
-//   const g = (key, value) => {
-//       modifiedHTML = modifiedHTML.replace(new RegExp(`{{ ${key} }}`, 'g'), value || '');
-//   };
-//
-//   // const imageUrl = `http://localhost:5000/your-hotel-stamp-image.png`; // Replace with actual image path or variable
-//   // Use a generic stamp for now, or make it hotel-specific via data
-//   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
-//   g('stamp_image', imageUrl);
-//
-//   // Header
-//   g('invoice_number', data.invoice_number);
-//   g('invoice_date', data.date ? new Date(data.date).toLocaleDateString('ja-JP') : '');
-//   g('customer_name', data.client_name);
-//   g('customer_code', data.customer_code); // Assuming client_id can be used as customer_code
-//   g('company_contact_person', userName); // User generating the invoice
-//
-//   // Company Info (from hotel details in `data` if available, otherwise placeholders or fixed values)
-//   g('company_name', data.hotel_company_name || 'レッドホーストラスト株式会社'); // Example
-//   g('company_zip_code', data.hotel_zip_code || '060-0061');
-//   g('company_address_full', data.hotel_address || '札幌市中央区南1条西2丁目5番地 南一条Kビル8階');
-//   g('company_tel', data.hotel_tel || '011-206-1831');
-//   g('company_fax', data.hotel_fax || '050-3606-5764');
-//   g('company_registration_number', data.hotel_registration_number || 'T2430001042062');
-//
-//
-//   // Main Table
-//   g('facility_name', data.facility_name); // This should be part of invoiceData from client
-//   g('payment_due_date', data.due_date ? new Date(data.due_date).toLocaleDateString('ja-JP') : '');
-//   g('total_amount', (data.invoice_total_value != null) ? data.invoice_total_value.toLocaleString() : '0');
-//
-//   // Bank Details (from hotel details in `data` if available)
-//   g('bank_name', data.bank_name);
-//   g('bank_branch_name', data.bank_branch_name);
-//   g('bank_account_type', data.bank_account_type);
-//   g('bank_account_number', data.bank_account_number);
-//   g('bank_account_name', data.bank_account_name);
-//
-//   // Details Table
-//   let detailItemsHtml = '';
-//   if (data.items && Array.isArray(data.items)) {
-//       data.items.forEach((item, index) => {
-//           detailItemsHtml += `
-//             <tr>
-//                 <td class="cell-center">${index + 1}</td>
-//                 <td>${item.description || '宿泊料'}</td>
-//                 <td class="cell-right">${item.quantity || data.invoice_total_stays || '1'} ${item.unit || (item.description === '宿泊料' ? '泊' : '式')}</td>
-//                 <td class="cell-right">¥ ${item.total_price != null ? item.total_price.toLocaleString() : '0'}</td>
-//             </tr>
-//           `;
-//       });
-//   } else { // Fallback if no items array, use main invoice data
-//     detailItemsHtml = `
-//         <tr>
-//             <td class="cell-center">1</td>
-//             <td>宿泊料</td>
-//             <td class="cell-right">${data.invoice_total_stays || '1'} 泊</td>
-//             <td class="cell-right">¥ ${data.invoice_total_value != null ? data.invoice_total_value.toLocaleString() : '0'}</td>
-//         </tr>
-//     `;
-//   }
-//   g('detail_items', detailItemsHtml);
-//   g('details_total_value', (data.invoice_total_value != null) ? data.invoice_total_value.toLocaleString() : '0');
-//
-//   // Taxable items
-//   let totalTaxValueCalculated = 0;
-//   let taxableDetailsHtml = '';
-//   if (data.items && Array.isArray(data.items)) {
-//       const taxSummary = {}; // To aggregate amounts by tax rate
-//
-//       data.items.forEach(item => {
-//           const itemNetPrice = parseFloat(item.total_net_price) || 0;
-//           const itemTotalPrice = parseFloat(item.total_price) || 0;
-//           const itemTax = itemTotalPrice - itemNetPrice;
-//           totalTaxValueCalculated += itemTax;
-//
-//           const rateKey = (parseFloat(item.tax_rate) * 100).toString();
-//           if (!taxSummary[rateKey]) {
-//               taxSummary[rateKey] = { net: 0, tax: 0 };
-//           }
-//           taxSummary[rateKey].net += itemNetPrice;
-//           taxSummary[rateKey].tax += itemTax;
-//       });
-//
-//       for (const rate in taxSummary) {
-//           taxableDetailsHtml += `
-//             <tr>
-//               <td class="title-cell">${rate}%対象</td>
-//               <td class="cell-right">¥ ${taxSummary[rate].net.toLocaleString()}</td>
-//               <!-- <td class="cell-right">¥ ${taxSummary[rate].tax.toLocaleString()}</td> -->
-//             </tr>
-//           `;
-//       }
-//   } else if (data.invoice_total_value != null && data.total_tax_value != null) {
-//       // Fallback if no items, but main invoice has tax info (assuming single tax rate)
-//       const net = data.invoice_total_value - (data.total_tax_value || 0);
-//       totalTaxValueCalculated = data.total_tax_value || 0;
-//       // Assuming 10% if not specified by items
-//       taxableDetailsHtml = `
-//         <tr>
-//           <td class="title-cell">10%対象</td>
-//           <td class="cell-right">¥ ${net.toLocaleString()}</td>
-//         </tr>
-//       `;
-//   }
-//   g('total_tax_value', totalTaxValueCalculated.toLocaleString());
-//   g('taxable_details', taxableDetailsHtml);
-//
-//   // Footer
-//   g('comments', data.comment ? data.comment.replace(/\n/g, '<br/>') : '');
-//
-//   return modifiedHTML;
-// };
+  let browser;
 
-// function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) { // taxBreakdownData is now an array
-//   let modifiedHTML = html;
-//   const g = (key) => new RegExp(`{{ ${key} }}`, 'g');
-//
-//   modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number || 'N/A');
-//   modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date ? new Date(receiptData.receipt_date).toLocaleDateString('ja-JP') : '');
-//   modifiedHTML = modifiedHTML.replace(g('customer_name'), paymentData.client_name || 'お客様名');
-//
-//   // Use totalAmount from receiptData (which should be the sum from taxBreakdown or payment amount)
-//   const receivedAmount = parseFloat(receiptData.totalAmount || paymentData.amount || 0);
-//   modifiedHTML = modifiedHTML.replace(g('received_amount'), receivedAmount.toLocaleString());
-//
-//   modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設利用');
-//
-//   // Stamp Image
-//   const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
-//   modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
-//
-//   // Company Info from paymentData (which should have hotel_details)
-//   modifiedHTML = modifiedHTML.replace(g('company_name'), paymentData.hotel_details?.company_name || 'レッドホーストラスト株式会社');
-//   modifiedHTML = modifiedHTML.replace(g('company_zip_code'), paymentData.hotel_details?.zip_code || '060-0061');
-//   modifiedHTML = modifiedHTML.replace(g('company_address_full'), paymentData.hotel_details?.address || '札幌市中央区南1条西2丁目5番地 南一条Kビル8階');
-//   modifiedHTML = modifiedHTML.replace(g('company_tel'), paymentData.hotel_details?.tel || '011-206-1831');
-//   modifiedHTML = modifiedHTML.replace(g('company_fax'), paymentData.hotel_details?.fax || '050-3606-5764');
-//   modifiedHTML = modifiedHTML.replace(g('company_registration_number'), paymentData.hotel_details?.registration_number || 'T2430001042062');
-//
-//   // Comments if any
-//   modifiedHTML = modifiedHTML.replace(g('comments'), paymentData.notes || '');
-//
-//
-//   // Tax Breakdown Logic
-//   // --- Corrected Tax Breakdown Logic for taxDetailsPlaceholder START ---
-//   let dynamicTaxDetailsHtml = '';
-//   if (taxBreakdownData && Array.isArray(taxBreakdownData) && taxBreakdownData.length > 0) {
-//     taxBreakdownData.forEach(item => {
-//       if (item.amount > 0) {
-//         const rateDisplay = (item.rate * 100).toFixed(0) + '%';
-//         dynamicTaxDetailsHtml += '<div class="tax-item">';
-//         dynamicTaxDetailsHtml += `<p>${item.name} 対象 ¥ ${item.amount.toLocaleString()}</p>`;
-//         if (item.rate > 0) {
-//           dynamicTaxDetailsHtml += `<p>内消費税等 (${rateDisplay}) ¥ ${item.tax_amount.toLocaleString()}</p>`;
-//         }
-//         dynamicTaxDetailsHtml += '</div>';
-//       }
-//     });
-//   }
-//
-//   const taxDetailsPlaceholderRegex = /(<div id="taxDetailsPlaceholder"[^>]*>)[\s\S]*?(<\/div>)/i;
-//   if (modifiedHTML.match(taxDetailsPlaceholderRegex)) {
-//     if (dynamicTaxDetailsHtml) {
-//       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, `$1${dynamicTaxDetailsHtml}$2`);
-//     } else {
-//       modifiedHTML = modifiedHTML.replace(taxDetailsPlaceholderRegex, '$1$2');
-//     }
-//   } else {
-//     console.warn('taxDetailsPlaceholder not found in receipt.html for generateReceiptHTML');
-//   }
-//
-//   // Clean up any old Handlebars-style placeholders related to tax table
-//   modifiedHTML = modifiedHTML.replace(g('taxable_details_rows'), '');
-//   modifiedHTML = modifiedHTML.replace(g('details_subtotal_net'), '');
-//   modifiedHTML = modifiedHTML.replace(g('total_tax_value'), '');
-//   // The main `received_amount` is set above. If `details_total_gross` was specifically for the old table, clear it.
-//   // If the new receipt.html (with taxDetailsPlaceholder) still has a {{ details_total_gross }} outside,
-//   // this might need to be updated based on sum of taxBreakdownData.amount + taxBreakdownData.tax_amount.
-//   // For now, assuming it's part of the old structure to be removed.
-//   modifiedHTML = modifiedHTML.replace(g('details_total_gross'), '');
-//   modifiedHTML = modifiedHTML.replace(g('taxable_details_exist'), 'false');
-//   // --- Corrected Tax Breakdown Logic for taxDetailsPlaceholder END ---
-//
-//   // For single receipts, detail_items are usually not applicable or handled differently.
-//   // If paymentData.items were relevant, logic similar to invoice would be here.
-//   // For now, assume single receipts don't show detailed item breakdown in this template.
-//   modifiedHTML = modifiedHTML.replace(g('detail_items'), ''); // Clear if not used
-//   modifiedHTML = modifiedHTML.replace(g('detail_items_exist'), 'false'); // Hide section
-//
-//   return modifiedHTML;
-// }
+  try {    
+    // Save the invoice data to the database
+    let max_invoice_number = await selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
+    console.log('invoice_number', max_invoice_number.last_invoice_number);
+    if (!max_invoice_number.last_invoice_number) {
+      const date = new Date(invoiceData.date);
+      const year = date.getFullYear() % 100; // last two digits of year
+      const month = date.getMonth() + 1; // getMonth returns 0-11
+      
+      max_invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+      
+    } else {
+      max_invoice_number += 1;
+    }
 
-// const generateReceipt = async (req, res) => {
-//   const hotelId = req.params.hid;
-//   const paymentId = req.params.payment_id;
-//   const { taxBreakdownData } = req.body; // taxBreakdownData from frontend
-//   const userId = req.user.id;
-//   let browser;
-//
-//   try {
-//     const paymentData = await getPaymentById(req.requestId, paymentId);
-//     if (!paymentData) {
-//       return res.status(404).json({ error: 'Payment data not found' });
-//     }
-//
-//     const userInfo = await getUsersByID(req.requestId, userId);
-//     if (!userInfo || userInfo.length === 0) {
-//         return res.status(404).json({ error: 'User info not found' });
-//     }
-//
-//     let receiptData = {};
-//     let attempts = 0;
-//     const maxRetries = 3;
-//
-//     // Calculate total amount based on taxBreakdownData if provided, otherwise use paymentData.amount
-//     let receiptTotalAmount = paymentData.amount;
-//     if (taxBreakdownData) {
-//         receiptTotalAmount = (taxBreakdownData.amount10Percent || 0) +
-//                              (taxBreakdownData.amount8Percent || 0) +
-//                              (taxBreakdownData.amountNonTaxable || 0);
-//     }
-//     receiptData.totalAmount = receiptTotalAmount; // Store for use in generateReceiptHTML
-//
-//
-//     for (attempts = 0; attempts < maxRetries; attempts++) {
-//         try {
-//             let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
-//             if (existingReceipt && !req.body.forceRegenerate) { // Allow forcing regeneration
-//                 receiptData.receipt_number = existingReceipt.receipt_number;
-//                 receiptData.receipt_date = existingReceipt.receipt_date;
-//                 // If we are "viewing" an existing receipt, we might not have new taxBreakdownData.
-//                 // The original taxBreakdownData (if any) should be fetched with existingReceipt.
-//                 // For now, if taxBreakdownData is passed, we assume it's for a new/updated receipt.
-//                 if (!taxBreakdownData && existingReceipt.tax_breakdown_data) {
-//                     // This part is tricky: if viewing, we should use OLD tax_breakdown_data
-//                     // This requires getReceiptByPaymentId to also return tax_breakdown_data
-//                     // For now, this path assumes taxBreakdownData is for new generation.
-//                 }
-//                 break;
-//             } else {
-//                 const currentDate = new Date();
-//                 const year = currentDate.getFullYear() % 100;
-//                 const month = currentDate.getMonth() + 1;
-//                 const sequenceLength = 4;
-//                 const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
-//
-//                 let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, currentDate);
-//                 let new_receipt_number_str;
-//
-//                 if (!max_receipt_number_data.last_receipt_number || !max_receipt_number_data.last_receipt_number.toString().startsWith(prefixStr) ) {
-//                     const firstSequence = '1'.padStart(sequenceLength, '0');
-//                     new_receipt_number_str = prefixStr + firstSequence;
-//                 } else {
-//                     const lastReceiptStr = max_receipt_number_data.last_receipt_number.toString();
-//                     const lastSequenceStr = lastReceiptStr.substring(prefixStr.length);
-//                     const nextSequenceNum = BigInt(lastSequenceStr) + BigInt(1);
-//                     new_receipt_number_str = prefixStr + nextSequenceNum.toString().padStart(sequenceLength, '0');
-//                 }
-//
-//                 receiptData.receipt_number = new_receipt_number_str;
-//                 receiptData.receipt_date = currentDate.toISOString().split('T')[0];
-//
-//                 const saveResult = await saveReceiptNumber(
-//                     req.requestId,
-//                     paymentId,
-//                     hotelId,
-//                     receiptData.receipt_number,
-//                     receiptData.receipt_date,
-//                     receiptTotalAmount, // Use the calculated total amount
-//                     userId,
-//                     taxBreakdownData // Pass taxBreakdownData to be saved
-//                 );
-//
-//                 if (saveResult && saveResult.id) {
-//                     await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
-//                     break;
-//                 } else {
-//                     console.error('saveReceiptNumber did not return an ID for paymentId:', paymentId);
-//                     throw new Error('Failed to save receipt number due to missing ID in result.');
-//                 }
-//             }
-//         } catch (error) {
-//             if (error.code === '23505' && attempts < maxRetries - 1) {
-//                 console.warn(`Attempt ${attempts + 1} for paymentId ${paymentId} failed due to duplicate receipt number. Retrying...`);
-//                 await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
-//                 continue;
-//             }
-//             throw error;
-//         }
-//     }
-//     if (attempts === maxRetries && !receiptData.receipt_number) {
-//          throw new Error(`Failed to generate and save receipt for paymentId ${paymentId} after ${maxRetries} attempts.`);
-//     }
-//
-//     const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
-//     // Pass taxBreakdownData to generateReceiptHTML
-//     const htmlContent = generateReceiptHTML(receiptHTMLTemplate, receiptData, paymentData, userInfo[0].name, taxBreakdownData);
-//
-//     browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-//     const page = await browser.newPage();
-//     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-//
-//     const imageSelector = 'img[alt="Company Stamp"]';
-//     try {
-//         await page.waitForSelector(imageSelector, { timeout: 5000 });
-//         await page.evaluate(async selector => {
-//             const img = document.querySelector(selector);
-//             if (img && !img.complete) {
-//                 await new Promise((resolve, reject) => {
-//                     img.onload = resolve;
-//                     img.onerror = reject;
-//                 });
-//             }
-//         }, imageSelector);
-//     } catch (e) {
-//         console.warn('Stamp image selector not found or timed out in generateReceipt:', e.message);
-//     }
-//
-//     const pdfBuffer = await page.pdf({
-//         margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
-//         printBackground: true,
-//         format: 'A4'
-//     });
-//     await browser.close();
-//
-//     const sanitizedClientName = (paymentData.client_name || 'UnknownClient').replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
-//     const filename = `${receiptData.receipt_number}_${sanitizedClientName}.pdf`;
-//
-//     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-//     res.contentType("application/pdf");
-//     res.send(Buffer.from(pdfBuffer));
-//
-//   } catch (error) {
-//     console.error("Error generating PDF for receipt:", error);
-//     if (browser) {
-//       await browser.close().catch(err => console.error("Error closing browser:", err));
-//     }
-//     res.status(500).send(`Error generating receipt PDF: ${error.message}`);
-//   }
-// };
+    if (!invoiceData.invoice_number) {
+      invoiceData.invoice_number = max_invoice_number;      
+    }
+    
+    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
+    
+    const userInfo = await getUsersByID(req.requestId, userId);    
+    
+    // Create a browser instance
+    browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
+    const page = await browser.newPage();
+    page.on('console', msg => {
+      console.log('PAGE LOG:', msg.type(), msg.text());
+    });
 
-// const getPaymentsForReceipts = async (req, res) => {
-//   const hotelId = req.params.hid;
-//   const startDate = req.params.sdate;
-//   const endDate = req.params.edate;
+    //  1. Create HTML content for the PDF
+    const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData, userInfo[0].name); 
+    //console.log("generateInvoice:", htmlContent);
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+    
+    const imageSelector = 'img[alt="Company Stamp"]';
+    await page.waitForSelector(imageSelector);
+    await page.evaluate(async selector => {
+      const img = document.querySelector(selector);
+      if (img && !img.complete) {
+          await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+          });
+      }
+    }, imageSelector);
+    const imageLoaded = await page.evaluate(selector => {
+        const img = document.querySelector(selector);
+        if (!img) {
+            return 'Image element not found';
+        }
+        return img.complete && img.naturalWidth > 0; //  Check if loaded
+    }, 'img[alt="Company Stamp"]'); //  Use a specific selector
+    
+    console.log('Image loaded:', imageLoaded);
+    
+    if (!imageLoaded) {
+        console.warn('Image might not have loaded correctly.');
+    }
+    
 
-//   try {
-//     const data = await selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
-//     if (!data) {
-//       return res.status(404).json({ error: 'No payment data found for the specified criteria or an error occurred.' });
-//     }
-//     res.json(data);
-//   } catch (err) {
-//     console.error('Error in getPaymentsForReceipts controller:', err);
-//     if (err.message.includes('Database error')) {
-//         return res.status(503).json({ error: 'Service unavailable or database error.' });
-//     }
-//     res.status(500).json({ error: 'Internal server error while fetching payments for receipts.' });
-//   }
-// };
+    //  2. Generate PDF
+    const pdfBuffer = await page.pdf({
+        margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+        printBackground: true,
+        format: 'A4',
+    });
+    
+    // Close the browser instance
+    await browser.close();
+
+    //  3. Send PDF as a download
+    res.contentType("application/pdf");    
+    res.send(Buffer.from(pdfBuffer));
+  } catch (error) {
+    console.error("Error generating PDF with Puppeteer:", error);
+    res.status(500).send('Error generating blank PDF');
+  } finally {
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
+  }
+};
+function generateInvoiceHTML(html, data, userName) {
+  const imagePath = path.join(__dirname, '../components/stamp.png');
+  //const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`;
+
+  let modifiedHTML = html;
+
+  // console.log("generateInvoiceHTML:", data);
+  
+  modifiedHTML = modifiedHTML.replace(/{{ stamp_image }}/g, imageUrl);
+
+  // Header
+  modifiedHTML = modifiedHTML.replace(/{{ invoice_number }}/g, data.invoice_number);
+  modifiedHTML = modifiedHTML.replace(/{{ invoice_date }}/g, data.date);
+  modifiedHTML = modifiedHTML.replace(/{{ customer_name }}/g, data.client_name);
+  modifiedHTML = modifiedHTML.replace(/{{ customer_code }}/g, data.customer_code);
+  modifiedHTML = modifiedHTML.replace(/{{ company_contact_person }}/g, userName);
+
+  // Main Table
+  modifiedHTML = modifiedHTML.replace(/{{ facility_name }}/g, data.facility_name);
+  modifiedHTML = modifiedHTML.replace(/{{ payment_due_date }}/g, data.due_date);
+  modifiedHTML = modifiedHTML.replace(/{{ total_amount }}/g, data.invoice_total_value.toLocaleString());
+  modifiedHTML = modifiedHTML.replace(/{{ bank_name }}/g, data.bank_name);
+  modifiedHTML = modifiedHTML.replace(/{{ bank_branch_name }}/g, data.bank_branch_name);
+  modifiedHTML = modifiedHTML.replace(/{{ bank_account_type }}/g, data.bank_account_type);
+  modifiedHTML = modifiedHTML.replace(/{{ bank_account_number }}/g, data.bank_account_number);
+  modifiedHTML = modifiedHTML.replace(/{{ bank_account_name }}/g, data.bank_account_name);
+
+  // Details Table
+  let dtlitems = data.items.map(item => `
+    <tr>
+        <td class="cell-center">1</td>
+        <td>宿泊料</td>                    
+        <td class="cell-right">${ data.invoice_total_stays } 泊</td>
+        <td class="cell-right">¥ ${ data.invoice_total_value.toLocaleString() }</td>
+    </tr>
+  `).join('');
+  modifiedHTML = modifiedHTML.replace(/{{ detail_items }}/g, dtlitems);
+  modifiedHTML = modifiedHTML.replace(/{{ details_total_value }}/g, data.invoice_total_value.toLocaleString());
+
+  // Taxable items
+  let taxValue = 0;
+  if (data.items && Array.isArray(data.items)) {
+    data.items.forEach(item => {
+      const difference = item.total_price - item.total_net_price;
+      taxValue += difference;
+    });
+  }
+  modifiedHTML = modifiedHTML.replace(/{{ total_tax_value }}/g, taxValue.toLocaleString());
+  let taxitems = data.items.map(item => `
+      <tr>        
+        <td class="title-cell">${(item.tax_rate * 100).toLocaleString()}％対象</td>
+        <td class="cell-right">¥ ${ item.total_net_price.toLocaleString() }</td>
+      </tr>
+  `).join('');
+  modifiedHTML = modifiedHTML.replace(/{{ taxable_details }}/g, taxitems);
+
+  // Footer
+  let comment = '';
+  if (data.comment) {
+    // Replace all occurrences of \n with <br/>
+    comment = data.comment.replace(/\n/g, '<br/>');
+  }
+  modifiedHTML = modifiedHTML.replace(/{{ comments }}/g, comment);  
+    
+  return modifiedHTML;  
+};
+
+function generateReceiptHTML(html, receiptData, paymentData, userName) {
+  let modifiedHTML = html;
+  const g = (key) => new RegExp(`{{ ${key} }}`, 'g'); // Helper for global regex replace
+
+  // Active Placeholders in new receipt.html:
+  // {{ receipt_date }}
+  // {{ receipt_number }}
+  // {{ customer_name }}
+  // {{ received_amount }}
+  // {{ facility_name }} (for 但し書き - proviso)
+
+  // Receipt Header
+  modifiedHTML = modifiedHTML.replace(g('receipt_number'), receiptData.receipt_number || 'N/A');
+  modifiedHTML = modifiedHTML.replace(g('receipt_date'), receiptData.receipt_date || 'YYYY-MM-DD');
+
+  // Customer Information
+  modifiedHTML = modifiedHTML.replace(g('customer_name'), paymentData.client_name || 'お客様名');
+  // {{ customer_code }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('customer_code'), paymentData.customer_code || '');
+
+  // Facility Name (for "但し書き")
+  modifiedHTML = modifiedHTML.replace(g('facility_name'), paymentData.facility_name || '施設利用');
+
+  // Received Amount (Total)
+  // This calculation is crucial and should remain.
+  let calculatedReceivedAmount = 0;
+  if (paymentData.items && paymentData.items.length > 0) {
+    calculatedReceivedAmount = paymentData.items.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0);
+  } else {
+    calculatedReceivedAmount = parseFloat(paymentData.amount) || 0;
+  }
+  modifiedHTML = modifiedHTML.replace(g('received_amount'), calculatedReceivedAmount.toLocaleString());
+
+  // Obsolete Placeholders (commented out or removed as per plan)
+  // {{ company_contact_person }} is commented out in the new template
+  // // modifiedHTML = modifiedHTML.replace(g('company_contact_person'), userName || '');
+
+  // Bank Details are hardcoded in the new template
+  /*
+  const hotelDetails = paymentData.hotel_details || {};
+  modifiedHTML = modifiedHTML.replace(g('bank_name'), hotelDetails.bank_name || 'ホテル銀行名');
+  modifiedHTML = modifiedHTML.replace(g('bank_branch_name'), hotelDetails.bank_branch_name || '支店名');
+  modifiedHTML = modifiedHTML.replace(g('bank_account_type'), hotelDetails.bank_account_type || '口座種別');
+  modifiedHTML = modifiedHTML.replace(g('bank_account_number'), hotelDetails.bank_account_number || '口座番号');
+  modifiedHTML = modifiedHTML.replace(g('bank_account_name'), hotelDetails.bank_account_name || '口座名義');
+  */
+
+  // {{ stamp_image }} is replaced by a CSS styled div in the new template
+  // Update: Per new requirements, we will replace {{ stamp_image }} with an actual image URL.
+  const imageUrl = `http://localhost:5000/34ba90cc-a65c-4a6e-93cb-b42a60626108/stamp.png`; // Assuming stamp.png is served at the root by the public static file server
+  modifiedHTML = modifiedHTML.replace(g('stamp_image'), imageUrl);
+
+  // {{ detail_items }} section is hidden by display: none;
+  /*
+  let detailItemsHtml = '';
+  let detailsTotalValue = 0; // This variable is also for a hidden section
+  if (paymentData.items && Array.isArray(paymentData.items)) {
+    paymentData.items.forEach((item, index) => {
+      const itemTotalPrice = parseFloat(item.total_price) || 0;
+      detailsTotalValue += itemTotalPrice;
+      detailItemsHtml += `
+        <tr>
+            <td class="cell-center">\${index + 1}</td>
+            <td>\${item.description || '品目'}</td>
+            <td class="cell-center">\${item.quantity || 1} \${item.unit || ''}</td>
+            <td class="cell-right">¥ \${itemTotalPrice.toLocaleString()}</td>
+        </tr>
+      `;
+    });
+  } else {
+      detailsTotalValue = calculatedReceivedAmount;
+      detailItemsHtml = `
+        <tr>
+            <td class="cell-center">1</td>
+            <td>宿泊料として</td>
+            <td class="cell-center">1 式</td>
+            <td class="cell-right">¥ \${calculatedReceivedAmount.toLocaleString()}</td>
+        </tr>
+      `;
+  }
+  modifiedHTML = modifiedHTML.replace(g('detail_items'), detailItemsHtml);
+  */
+
+  // {{ details_total_value }} section is hidden by display: none;
+  // // modifiedHTML = modifiedHTML.replace(g('details_total_value'), detailsTotalValue.toLocaleString()); // detailsTotalValue would be from the block above
+
+  // {{ total_tax_value }} and {{ taxable_details }} sections are hidden by display: none;
+  /*
+  let totalTaxValue = 0;
+  const taxItemsMap = new Map();
+  if (paymentData.items && Array.isArray(paymentData.items)) {
+    paymentData.items.forEach(item => {
+      const itemNetPrice = parseFloat(item.total_net_price) || parseFloat(item.total_price) || 0;
+      const itemTotalPrice = parseFloat(item.total_price) || 0;
+      const taxRate = parseFloat(item.tax_rate) || 0;
+      const taxDifference = itemTotalPrice - itemNetPrice;
+      totalTaxValue += taxDifference;
+
+      if (taxRate > 0) {
+        const currentTaxableAmount = taxItemsMap.get(taxRate) || 0;
+        taxItemsMap.set(taxRate, currentTaxableAmount + itemNetPrice);
+      }
+    });
+  }
+  modifiedHTML = modifiedHTML.replace(g('total_tax_value'), totalTaxValue.toLocaleString());
+
+  let taxableDetailsHtml = '';
+  taxItemsMap.forEach((amount, rate) => {
+    taxableDetailsHtml += `
+      <tr>
+        <td class="title-cell">\${(rate * 100).toLocaleString()}%対象</td>
+        <td class="cell-right">¥ \${amount.toLocaleString()}</td>
+      </tr>
+    `;
+  });
+  modifiedHTML = modifiedHTML.replace(g('taxable_details'), taxableDetailsHtml);
+  */
+
+  // {{ comments }} placeholder is not present in the new receipt.html in a general sense.
+  // The line "上記金額を正に領収いたしました" is hardcoded.
+  // paymentData.notes could be used for the "但し書き" if `facility_name` is not appropriate,
+  // but the current template uses `facility_name` there.
+  // // let commentsText = paymentData.notes || '';
+  // // commentsText += (commentsText ? '<br/>' : '') + '上記金額を正に領収いたしました。'; // This specific text is already in the template.
+  // // modifiedHTML = modifiedHTML.replace(g('comments'), commentsText); // No {{ comments }} placeholder in new template.
+
+  return modifiedHTML;
+}
+
+const generateReceipt = async (req, res) => {
+  const hotelId = req.params.hid;
+  const paymentId = req.params.payment_id; // Corrected variable name
+  const userId = req.user.id;
+  let browser;
+  const receiptData = {}; // Initialize receiptData
+
+  try {
+    const paymentData = await getPaymentById(req.requestId, paymentId);
+    if (!paymentData) {
+      return res.status(404).json({ error: 'Payment data not found' });
+    }
+
+    const userInfo = await getUsersByID(req.requestId, userId);
+    if (!userInfo || userInfo.length === 0) {
+        return res.status(404).json({ error: 'User info not found' });
+    }
+
+    // Retry logic for receipt number generation and saving
+    let attempts = 0;
+    const maxRetries = 3; // Max 3 attempts for saving
+
+    for (attempts = 0; attempts < maxRetries; attempts++) {
+        try {
+            let existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
+
+            if (existingReceipt) {
+                receiptData.receipt_number = existingReceipt.receipt_number;
+                receiptData.receipt_date = existingReceipt.receipt_date;
+                // If receipt exists, we assume it's already saved correctly, no need to retry saving this path.
+                break; // Exit retry loop, proceed to PDF generation
+            } else {
+                const receiptDate = new Date();
+                const year = receiptDate.getFullYear() % 100; // YY
+                const month = receiptDate.getMonth() + 1; // 1-12
+                const sequenceLength = 4;
+
+                const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
+                let new_receipt_number_str;
+
+                let max_receipt_number_data = await selectMaxReceiptNumber(req.requestId, hotelId, receiptDate);
+
+                if (!max_receipt_number_data.last_receipt_number || !max_receipt_number_data.last_receipt_number.toString().startsWith(prefixStr)) {
+                    // First receipt of the month for this hotel or if last number format is unexpected
+                    const firstSequence = '1'.padStart(sequenceLength, '0');
+                    new_receipt_number_str = prefixStr + firstSequence;
+                } else {
+                    const lastReceiptStr = max_receipt_number_data.last_receipt_number.toString();
+                    const lastSequenceStr = lastReceiptStr.substring(prefixStr.length);
+                    const nextSequenceNum = BigInt(lastSequenceStr) + BigInt(1);
+                    new_receipt_number_str = prefixStr + nextSequenceNum.toString().padStart(sequenceLength, '0');
+                }
+
+                receiptData.receipt_number = new_receipt_number_str; // new_receipt_number_str is already a string
+                receiptData.receipt_date = receiptDate.toISOString().split('T')[0];
+
+                // Attempt to save the new receipt number
+                const saveResult = await saveReceiptNumber(
+                    req.requestId,
+                    paymentId, // For single receipts, this is the payment_id to associate (or null if not directly linked here)
+                    hotelId,
+                    receiptData.receipt_number,
+                    receiptData.receipt_date,
+                    paymentData.amount, // Ensure paymentData is available and has .amount
+                    userId,
+                    null // consolidated_receipt_id is null for single receipts
+                );
+
+                if (saveResult && saveResult.id) { // Check if saveResult and its id are valid
+                    await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
+                    // If save and update were successful
+                    break; // Exit retry loop
+                } else {
+                    // This case implies saveReceiptNumber succeeded but didn't return an ID, which is unexpected.
+                    console.error('saveReceiptNumber did not return an ID for paymentId:', paymentId);
+                    throw new Error('Failed to save receipt number due to missing ID in result.');
+                }
+            }
+        } catch (error) {
+            // Check if the error is a PostgreSQL unique violation (error code '23505')
+            // And if we haven't exhausted retries yet
+            if (error.code === '23505' && attempts < maxRetries - 1) {
+                console.warn(`Attempt ${attempts + 1} for paymentId ${paymentId} failed due to duplicate receipt number. Retrying...`);
+                // Optional: add a small random delay
+                await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+                continue; // Try the next attempt
+            }
+            // If it's a different error, or retries are exhausted, re-throw to be caught by the outer try-catch
+            throw error;
+        }
+    }
+    // If loop finished due to maxRetries without break, receiptData might not be fully set or saved.
+    // The outer try-catch will handle errors thrown from here (e.g., if max retries exceeded).
+    // Ensure receiptData has values if we proceed. If attempts === maxRetries, it means all retries failed.
+    if (attempts === maxRetries && !receiptData.receipt_number) {
+        // This condition implies all retries for a *new* receipt failed.
+        // The last error thrown from the loop would have been caught by the outer try-catch.
+        // If somehow it reaches here without receiptData being populated (e.g. if existingReceipt was null and all save attempts failed silently)
+        // it would be an issue. However, the `throw error` in catch should prevent this.
+        // For safety, one might explicitly throw here if receiptData is still incomplete.
+        console.error(`Failed to generate and save receipt for paymentId ${paymentId} after ${maxRetries} attempts.`);
+        // The error from the last attempt would have already been thrown and should be handled by the main catch block.
+    }
+
+    const receiptHTMLTemplate = fs.readFileSync(path.join(__dirname, '../components/receipt.html'), 'utf-8');
+    const htmlContent = generateReceiptHTML(receiptHTMLTemplate, receiptData, paymentData, userInfo[0].name);
+
+    browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
+
+    const imageSelector = 'img[alt="Company Stamp"]';
+    try { // Add try-catch for robustness, though generateInvoice doesn't have it here, it's good practice
+        await page.waitForSelector(imageSelector, { timeout: 5000 }); // Wait for 5 seconds
+        await page.evaluate(async selector => {
+            const img = document.querySelector(selector);
+            if (img && !img.complete) {
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+            }
+        }, imageSelector);
+    } catch (e) {
+        console.warn('Stamp image selector not found or timed out in generateReceipt:', e.message);
+    }
+
+    const pdfBuffer = await page.pdf({
+        margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+        printBackground: true,
+        format: 'A4'
+    });
+    await browser.close();
+
+    // paymentData should be in scope here from the try block
+    const sanitizedSingleClientName = (paymentData.client_name || 'UnknownClient').replace(/[\/:*?"<>|\s\r\n]/g, '_').substring(0, 50);
+    const singleFilename = `${receiptData.receipt_number}_${sanitizedSingleClientName}.pdf`; // Updated separator
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(singleFilename)}"`);
+    res.contentType("application/pdf");
+    res.send(Buffer.from(pdfBuffer));
+
+  } catch (error) {
+    console.error("Error generating PDF for receipt:", error);
+    if (browser) {
+      await browser.close().catch(err => console.error("Error closing browser:", err));
+    }
+    res.status(500).send('Error generating receipt PDF');
+  }
+};
+
+const getPaymentsForReceipts = async (req, res) => {
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const data = await selectPaymentsForReceiptsView(req.requestId, hotelId, startDate, endDate);
+    if (!data) { // Changed from !data || data.length === 0 to handle cases where model might return null on error
+      return res.status(404).json({ error: 'No payment data found for the specified criteria or an error occurred.' });
+    }
+    // If data is an empty array, it's a valid response (no payments found), not a 404.
+    res.json(data);
+  } catch (err) {
+    console.error('Error in getPaymentsForReceipts controller:', err);
+    // Check if the error is a known type, e.g., from the model indicating a specific issue
+    if (err.message.includes('Database error')) { // Example check
+        return res.status(503).json({ error: 'Service unavailable or database error.' });
+    }
+    res.status(500).json({ error: 'Internal server error while fetching payments for receipts.' });
+  }
+};
 
 module.exports = {
   getBillableListView,
-  // getBilledListView, // Commented out as per new structure
-  // generateInvoice, // Commented out as per new structure
-  // generateReceipt, // To be replaced by handleGenerateReceiptRequest
-  // getPaymentsForReceipts, // Commented out as per new structure
-  // generateConsolidatedReceipt, // To be replaced by handleGenerateReceiptRequest
-  handleGenerateReceiptRequest, // Added new unified handler
+  getBilledListView,
+  generateInvoice,
+  generateReceipt,
+  getPaymentsForReceipts,
+  generateConsolidatedReceipt,
 };
