@@ -12,7 +12,7 @@
         </div>
     </template>
     <div class="p-fluid grid">
-      <div class="field col-span-12">
+      <div class="field col-span-12 my-2">
         <p><strong>合計支払額: {{ formatCurrency(props.totalAmount) }}</strong></p>
       </div>
 
@@ -29,9 +29,9 @@
         <template v-if="sortedTaxTypes && sortedTaxTypes.length > 0">
           <!-- This div will act as a row container for the tax inputs -->
           <div class="grid col-span-12 p-0">
-              <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-span-12 md:col-span-6">
+              <div v-for="taxType in sortedTaxTypes" :key="taxType.id" class="field col-span-12 md:col-span-6 mt-6 mb-1">
                 <FloatLabel>
-                  <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" />
+                  <InputNumber :id="'taxAmount-' + taxType.id" v-model="allocatedAmounts[taxType.id]" mode="currency" currency="JPY" locale="ja-JP" @update:modelValue="updateAllocations" fluid />
                   <label :for="'taxAmount-' + taxType.id">{{ taxType.name }} ({{ (taxType.percentage * 100).toFixed(0) }}%)</label>
                 </FloatLabel>
               </div>
