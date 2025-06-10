@@ -631,7 +631,7 @@ CREATE TABLE receipts (
    receipt_number TEXT NOT NULL,
    receipt_date DATE NOT NULL,
    amount DECIMAL,
-   tax_breakdown JSONB NULL;
+   tax_breakdown JSONB NULL,
    created_by INT REFERENCES users(id),
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    PRIMARY KEY (hotel_id, id),
