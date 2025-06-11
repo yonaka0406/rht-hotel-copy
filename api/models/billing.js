@@ -184,7 +184,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.name_kanji as client_kanji
       ,clients.name_kana as client_kana
       ,clients.name as client_name
-      ,COALESCE(clients.name_kanji, clients.name) as display_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as display_name
       ,clients.customer_id as customer_code
       ,clients.legal_or_natural_person
       ,clients.billing_preference
@@ -330,7 +330,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
         p.id as payment_id,
         TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
         p.value as amount,
-        COALESCE(c.name_kanji, c.name) as client_name,
+        COALESCE(c.name_kanji, c.name_kana, c.name) as client_name,
         r.receipt_number as existing_receipt_number
     FROM
         reservation_payments p
@@ -365,7 +365,7 @@ async function getPaymentById(requestId, paymentId) {
       p.value AS amount,
       TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
       p.comment AS notes,
-      COALESCE(c.name_kanji, c.name) AS client_name,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
       c.name AS client_name_regular,
       c.name_kanji AS client_name_kanji,
       c.id as customer_code,

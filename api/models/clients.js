@@ -238,7 +238,7 @@ const selectGroup = async (requestId, groupId) => {
       client_group.name as group_name
       ,client_group.comment as group_comment
       ,clients.*
-      ,COALESCE(clients.name_kanji, clients.name) as display_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as display_name
     FROM 
       clients
         JOIN
@@ -694,7 +694,7 @@ const selectClientReservations = async (requestId, clientId) => {
     SELECT	
       reservations.hotel_id
       ,hotels.formal_name
-      ,COALESCE(clients.name_kanji, clients.name) as client_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
       ,clients.name_kana as client_name_kana
       ,reservations.id 
       ,reservations.status
