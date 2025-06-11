@@ -87,29 +87,17 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,reservation_details.price
 
     FROM
-      rooms
-      ,room_types
-      ,reservations
-      ,clients
-      ,reservation_details
-        LEFT JOIN
-      plans_global
-        ON reservation_details.plans_global_id = plans_global.id
-        LEFT JOIN
-      plans_hotel
-        ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
-      
+      reservation_details
+      JOIN rooms ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
+      JOIN room_types ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
+      JOIN reservations ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
+      LEFT JOIN clients ON clients.id = reservations.reservation_client_id
+      LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
+      LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date <= $3
       AND reservation_details.cancelled IS NULL      
-      AND reservation_details.room_id = rooms.id
-      AND reservation_details.hotel_id = rooms.hotel_id
-      AND room_types.id = rooms.room_type_id
-      AND room_types.hotel_id = rooms.hotel_id
-      AND reservations.id = reservation_details.reservation_id
-      AND reservations.hotel_id = reservation_details.hotel_id
-      AND clients.id = reservations.reservation_client_id
     ORDER BY
       reservation_details.room_id
       ,reservation_details.date

@@ -123,7 +123,7 @@
                       </template>
                     </div>
                     <div class="ml-1">
-                      {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name }}
+                      {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name || '予約情報あり' }}
                     </div>
                   </div>
                   <div v-else>
@@ -205,7 +205,7 @@
               <template #content>
                 <div class="flex justify-between mb-2">
                   <span class="font-bold">お客様名:</span>
-                  <span>{{ reservationGroup.client_name }}</span>
+                  <span>{{ reservationGroup.client_name || '予約情報あり' }}</span>
                 </div>
                 <div class="flex justify-between mb-2">
                   <span class="font-bold">部屋番号:</span>
