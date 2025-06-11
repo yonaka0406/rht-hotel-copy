@@ -84,155 +84,151 @@
                 </AccordionPanel>
             </Accordion>
 
-            <Dialog header="新規アドオン" v-model:visible="showAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-                <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+            <Dialog header="新規アドオン" v-model:visible="showAddonDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+                <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                     <div class="col-span-2">
-                        <FloatLabel>
-                            <label for="AddonSelectEdit" class="block mb-2">アドオン一覧</label>
-                            <Select v-model="newAddon.addons_id" 
-                                id="AddonSelectEdit"                                
-                                :options="allAddons"
-                                optionLabel="addon_name"
-                                optionValue="id"
-                                placeholder="アドオンを選択する"
-                                filter 
-                                required
-                                @change="onAddonChange"
-                                fluid
-                            /> 
-                        </FloatLabel>
+                    <FloatLabel>
+                        <label for="AddonSelectEdit" class="block mb-2">アドオン一覧</label>
+                        <Select v-model="newAddon.addons_id"
+                        id="AddonSelectEdit"
+                        :options="allAddons"
+                        optionLabel="addon_name"
+                        optionValue="id"
+                        placeholder="アドオンを選択する"
+                        filter
+                        required
+                        @change="onAddonChange"
+                        fluid
+                        />
+                    </FloatLabel>
                     </div>
-                    <div class="col-6">
-                        <FloatLabel>
-                            <InputText 
-                                v-model="newAddon.tax_type"
-                                disabled
-                                fluid
-                            />            
-                            <label>税区分</label>
-                        </FloatLabel>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <InputText
+                        v-model="newAddon.tax_type"
+                        disabled
+                        fluid
+                        />
+                        <label>税区分</label>
+                    </FloatLabel>
                     </div>
-                    <div class="col-6">
-                        <FloatLabel>
-                            <InputNumber v-model="newAddon.price"                             
-                                mode="currency" 
-                                currency="JPY" 
-                                locale="ja-JP"
-                                fluid 
-                            />
-                            <label>価格</label>
-                        </FloatLabel>
-                        <small class="text-gray-500">
-                            税抜価格: {{ formatNumber(addonNetPrice, 'currency') }}
-                        </small>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <InputNumber v-model="newAddon.price"
+                        mode="currency"
+                        currency="JPY"
+                        locale="ja-JP"
+                        fluid
+                        />
+                        <label>価格</label>
+                    </FloatLabel>
+                    <small class="text-gray-500">
+                        税抜価格: {{ formatNumber(addonNetPrice, 'currency') }}
+                    </small>
+                    </div>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <label for="dateStart">開始日</label>
+                        <DatePicker v-model="newAddon.date_start"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="開始日"
+                        fluid
+                        required
+                        />
+                    </FloatLabel>
+                    </div>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <label for="dateEnd">終了日</label>
+                        <DatePicker v-model="newAddon.date_end"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="終了日"
+                        fluid
+                        />
+                    </FloatLabel>
                     </div>
                 </div>
-                <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
-                        <div class="col-6">
-                            <FloatLabel>
-                                <label for="dateStart">開始日</label>                
-                                <DatePicker v-model="newAddon.date_start" 
-                                    :showIcon="true" 
-                                    iconDisplay="input" 
-                                    dateFormat="yy-mm-dd"
-                                    :selectOtherMonths="true"
-                                    placeholder="開始日"
-                                    fluid
-                                    required 
-                                />
-                            </FloatLabel>
-                        </div>
-                        <div class="col-6">
-                            <FloatLabel>
-                                <label for="dateEnd">終了日</label>
-                                <DatePicker v-model="newAddon.date_end"
-                                    :showIcon="true" 
-                                    iconDisplay="input" 
-                                    dateFormat="yy-mm-dd"
-                                    :selectOtherMonths="true"
-                                    placeholder="終了日"
-                                    fluid
-                                />
-                            </FloatLabel>                
-                        </div>
-                    </div>
 
-                <template #footer>                    
+                <template #footer>
                     <Button label="追加" icon="pi pi-plus" @click="addAddon" class="p-button-success p-button-text p-button-sm" />
                     <Button label="閉じる" icon="pi pi-times" @click="showAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
-            </Dialog>
+                </Dialog>
 
-            <Dialog header="アドオン編集" v-model:visible="showEditAddonDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-                <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+            <Dialog header="アドオン編集" v-model:visible="showEditAddonDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+                <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                     <div class="col-span-2">
-                        <FloatLabel>
-                            <InputText v-model="editAddon.addon_name"
-                                disabled
-                                fluid
-                            />
-                            <label>アドオン名</label>
-                        </FloatLabel>
+                    <FloatLabel>
+                        <InputText v-model="editAddon.addon_name"
+                        disabled
+                        fluid
+                        />
+                        <label>アドオン名</label>
+                    </FloatLabel>
                     </div>
-                    <div>
-                        <FloatLabel>
-                            <InputText 
-                                v-model="editAddon.tax_type"
-                                disabled
-                                fluid
-                            />            
-                            <label>税区分</label>
-                        </FloatLabel>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <InputText
+                        v-model="editAddon.tax_type"
+                        disabled
+                        fluid
+                        />
+                        <label>税区分</label>
+                    </FloatLabel>
                     </div>
-                    <div>
-                        <FloatLabel>
-                            <InputNumber v-model="editAddon.price"                             
-                                mode="currency" 
-                                currency="JPY" 
-                                locale="ja-JP" 
-                                fluid
-                            />
-                            <label>価格</label>
-                        </FloatLabel>
-                        <small class="text-gray-500">
-                            税抜価格: {{ formatNumber(addonNetPrice, 'currency') }}
-                        </small>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <InputNumber v-model="editAddon.price"
+                        mode="currency"
+                        currency="JPY"
+                        locale="ja-JP"
+                        fluid
+                        />
+                        <label>価格</label>
+                    </FloatLabel>
+                    <small class="text-gray-500">
+                        税抜価格: {{ formatNumber(addonNetPrice, 'currency') }}
+                    </small>
+                    </div>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <label for="dateStart">開始日</label>
+                        <DatePicker v-model="editAddon.date_start"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="開始日"
+                        fluid
+                        required
+                        />
+                    </FloatLabel>
+                    </div>
+                    <div class="col-span-1">
+                    <FloatLabel>
+                        <label for="dateEnd">終了日</label>
+                        <DatePicker v-model="editAddon.date_end"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="終了日"
+                        fluid
+                        />
+                    </FloatLabel>
                     </div>
                 </div>
-                <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
-                        <div class="col-6">
-                            <FloatLabel>
-                                <label for="dateStart">開始日</label>                
-                                <DatePicker v-model="editAddon.date_start" 
-                                    :showIcon="true" 
-                                    iconDisplay="input" 
-                                    dateFormat="yy-mm-dd"
-                                    :selectOtherMonths="true"
-                                    placeholder="開始日"                 
-                                    fluid
-                                    required 
-                                />
-                            </FloatLabel>                
-                        </div>
-                        <div class="col-6">
-                            <FloatLabel>
-                                <label for="dateEnd">終了日</label>
-                                <DatePicker v-model="editAddon.date_end"
-                                    :showIcon="true" 
-                                    iconDisplay="input" 
-                                    dateFormat="yy-mm-dd"
-                                    :selectOtherMonths="true"
-                                    placeholder="終了日"                 
-                                    fluid
-                                />
-                            </FloatLabel>                
-                        </div>
-                    </div>
-                <template #footer>                    
+                <template #footer>
                     <Button label="更新" icon="pi pi-check" @click="updateAddon" class="p-button-success p-button-text p-button-sm" />
                     <Button label="閉じる" icon="pi pi-times" @click="showEditAddonDialog = false" class="p-button-danger p-button-text p-button-sm" />
                 </template>
-            </Dialog>
+                </Dialog>
         </div>
     </div>
     <div v-else>

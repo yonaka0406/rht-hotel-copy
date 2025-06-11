@@ -9,154 +9,154 @@
         </template>
         <template #content>                    
           <form @submit.prevent="saveClient">
-            <div class="grid xs:grid-cols-1 grid-cols-3 gap-2 gap-y-6 pt-6">
-                <!-- Name of the person making the reservation -->
-                <div class="col-span-3 mb-6">
-                    <FloatLabel>              
-                        <AutoComplete
-                            v-model="client"
-                            :suggestions="filteredClients"
-                            optionLabel="display_name"
-                            field="id"
-                            @complete="filterClients"
-                            @option-select="onClientSelect"
-                            @change="onClientChange"
-                            @clear="resetClient"
-                            fluid
-                            required
-                        >
-                          <template #option="slotProps">
-                            <div>
-                                <p>
-                                    <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                                    <i v-else class="pi pi-user"></i>
-                                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
-                                    <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                                </p>
-                                <div class="flex items-center gap-2">
-                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
-                                </div>
-                            </div>
-                          </template>
-                        </AutoComplete>
-                        <label>個人氏名　||　法人名称</label>
-                    </FloatLabel>
-                </div>
-                <div class="field">
-                    <FloatLabel>
-                        <InputText id="name" v-model="clientDetails.name" required />
-                        <label for="name">氏名・名称</label>
-                    </FloatLabel>
-                </div>
-                <div class="field">
-                    <FloatLabel>
-                        <label for="name_kana">カナ</label>
-                        <InputText id="name_kana" v-model="clientDetails.name_kana" />
-                    </FloatLabel>                        
-                </div>
-                <div class="field">
-                    <FloatLabel>
-                        <label for="name_kanji">漢字</label>
-                        <InputText v-model="clientDetails.name_kanji"
-                            id="name_kanji"              
-                        />
-                    </FloatLabel>                        
-                </div>
-                <div class="field">                        
-                    <FloatLabel>                            
-                        <label for="date_of_birth">生年月日・設立日</label>                            
-                        <DatePicker v-model="clientDetails.date_of_birth"                               
-                            :showIcon="true" 
-                            iconDisplay="input"                      
-                            dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true" 
-                            placeholder="生年月日・設立日"                
-                            fluid 
-                        />
-                    </FloatLabel>                        
-                </div>
-                <!-- Type of person (Legal or Natural) -->
-                <div class="field flex justify-center">
-                    <SelectButton v-model="clientDetails.legal_or_natural_person" 
-                        :options="personTypeOptions" 
-                        option-label="label" 
-                        option-value="value"
-                        fluid
-                        :disabled="isClientSelected"
-                    />
-                </div>
-                <!-- Gender input if person is natural -->                
-                <div class="field col-6">
-                  <div v-if="clientDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
-                      <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
-                          <RadioButton
-                              v-model="clientDetails.gender"
-                              :inputId="option.value"
-                              :value="option.value"
-                              :disabled="isClientSelected"
-                          />
-                          <label :for="option.value">{{ option.label }}</label>
+            <div class="grid grid-cols-3 gap-2 gap-y-6 pt-6">
+              <!-- Name of the person making the reservation -->
+              <div class="col-span-3 mb-6">
+                <FloatLabel>
+                  <AutoComplete
+                    v-model="client"
+                    :suggestions="filteredClients"
+                    optionLabel="display_name"
+                    field="id"
+                    @complete="filterClients"
+                    @option-select="onClientSelect"
+                    @change="onClientChange"
+                    @clear="resetClient"
+                    fluid
+                    required
+                  >
+                    <template #option="slotProps">
+                      <div>
+                        <p>
+                          <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
+                          <i v-else class="pi pi-user"></i>
+                          {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                          <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                        </p>
+                        <div class="flex items-center gap-2">
+                          <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                          <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                          <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+                        </div>
                       </div>
+                    </template>
+                  </AutoComplete>
+                  <label>個人氏名　||　法人名称</label>
+                </FloatLabel>
+              </div>
+              <div class="col-span-1">
+                <FloatLabel>
+                  <InputText id="name" v-model="clientDetails.name" required fluid />
+                  <label for="name">氏名・名称</label>
+                </FloatLabel>
+              </div>
+              <div class="col-span-1">
+                <FloatLabel>
+                  <label for="name_kana">カナ</label>
+                  <InputText id="name_kana" v-model="clientDetails.name_kana" fluid />
+                </FloatLabel>
+              </div>
+              <div class="col-span-1">
+                <FloatLabel>
+                  <label for="name_kanji">漢字</label>
+                  <InputText v-model="clientDetails.name_kanji"
+                    id="name_kanji"
+                    fluid
+                  />
+                </FloatLabel>
+              </div>
+              <div class="col-span-1">
+                <FloatLabel>
+                  <label for="date_of_birth">生年月日・設立日</label>
+                  <DatePicker v-model="clientDetails.date_of_birth"
+                    :showIcon="true"
+                    iconDisplay="input"
+                    dateFormat="yy-mm-dd"
+                    :selectOtherMonths="true"
+                    placeholder="生年月日・設立日"
+                    fluid
+                  />
+                </FloatLabel>
+              </div>
+              <!-- Type of person (Legal or Natural) -->
+              <div class="col-span-1 flex justify-center">
+                <SelectButton v-model="clientDetails.legal_or_natural_person"
+                  :options="personTypeOptions"
+                  option-label="label"
+                  option-value="value"
+                  fluid
+                  :disabled="isClientSelected"
+                />
+              </div>
+              <!-- Gender input if person is natural -->
+              <div class="col-span-1">
+                <div v-if="clientDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
+                  <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                    <RadioButton
+                      v-model="clientDetails.gender"
+                      :inputId="option.value"
+                      :value="option.value"
+                      :disabled="isClientSelected"
+                    />
+                    <label :for="option.value">{{ option.label }}</label>
                   </div>
                 </div>
-                <!-- Email input -->
-                <div class="field col-6">
-                    <FloatLabel>
-                        <InputText v-model="clientDetails.email"
-                            :pattern="emailPattern"
-                            :class="{'p-invalid': !isValidEmail}"
-                            @input="validateEmail(clientDetails.email)"
-                            fluid                         
-                        />
-                        <label>メールアドレス</label>
-                        <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
-                    </FloatLabel>
+              </div>
+              <!-- Email input -->
+              <div class="col-span-1">
+                <FloatLabel>
+                  <InputText v-model="clientDetails.email"
+                    :pattern="emailPattern"
+                    :class="{'p-invalid': !isValidEmail}"
+                    @input="validateEmail(clientDetails.email)"
+                    fluid
+                  />
+                  <label>メールアドレス</label>
+                  <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
+                </FloatLabel>
+              </div>
+              <!-- Phone number input -->
+              <div class="col-span-1">
+                <FloatLabel>
+                  <InputText v-model="clientDetails.phone"
+                    :pattern="phonePattern"
+                    :class="{'p-invalid': !isValidPhone}"
+                    @input="validatePhone(clientDetails.phone)"
+                    fluid
+                  />
+                  <label>電話番号</label>
+                  <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
+                </FloatLabel>
+              </div>
+              <!-- Phone number input -->
+              <div class="col-span-1">
+                <FloatLabel>
+                  <InputText v-model="clientDetails.fax"
+                    :pattern="phonePattern"
+                    :class="{'p-invalid': !isValidPhone}"
+                    @input="validatePhone(clientDetails.fax)"
+                    fluid
+                  />
+                  <label>FAX</label>
+                  <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
+                </FloatLabel>
+              </div>
+              <div class="col-span-3">
+                <Divider />
+                <ClientAddresses v-if="isClientSelected" :addresses="null" />
+              </div>
+              <div class="col-span-3">
+                <Divider />
+              </div>
+              <div class="col-span-3">
+                <!-- Save button -->
+                <div v-if="isClientSelected" class="col-span-3 flex justify-center items-center">
+                  <Button label="保存" severity="info" type="submit" />
                 </div>
-                <!-- Phone number input -->
-                <div class="field col-6">
-                    <FloatLabel>
-                      <InputText v-model="clientDetails.phone"
-                          :pattern="phonePattern"
-                          :class="{'p-invalid': !isValidPhone}"
-                          @input="validatePhone(clientDetails.phone)"
-                          fluid                        
-                      />
-                      <label>電話番号</label>
-                      <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
-                    </FloatLabel>
+                <div v-else class="col-span-3 flex justify-center items-center">
+                  <Button label="新規" severity="success" type="submit" />
                 </div>
-                <!-- Phone number input -->
-                <div class="field col-6">
-                    <FloatLabel>
-                      <InputText v-model="clientDetails.fax"
-                          :pattern="phonePattern"
-                          :class="{'p-invalid': !isValidPhone}"
-                          @input="validatePhone(clientDetails.fax)"
-                          fluid
-                      />
-                      <label>FAX</label>
-                      <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
-                    </FloatLabel>
-                </div>
-                <div class="col-span-3">
-                  <Divider />
-                
-                  <ClientAddresses v-if="isClientSelected" :addresses="null" />
-                </div>
-                <div class="col-span-3">
-                  <Divider />
-                </div>
-                <div class="col-span-3">
-                  <!-- Save button -->                
-                  <div v-if="isClientSelected" class="field col-span-2 flex justify-center items-center">
-                      <Button label="保存" severity="info" type="submit" />
-                  </div>
-                  <div v-else class="field col-span-2 flex justify-center items-center">
-                      <Button label="新規" severity="success" type="submit" />
-                  </div>
-                </div>
+              </div>
             </div>
           </form>
         </template>

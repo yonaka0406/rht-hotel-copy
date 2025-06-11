@@ -149,131 +149,130 @@
       </Tabs>
     </Panel>
 
-    <Dialog header="新規グローバルアドン" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-      <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-        <div class="col-6 mb-6">
+    <Dialog header="新規グローバルアドン" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+      <div class="grid grid-cols-2 gap-2 pt-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
             <InputText v-model="newGlobalAddon.name" fluid />
             <label>名称</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="newGlobalAddon.addon_type" 
+            <Select
+              v-model="newGlobalAddon.addon_type"
               :options="addonTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>アドオン区分</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputNumber 
-              v-model="newGlobalAddon.price" 
-              mode="currency" 
-              currency="JPY" 
-              locale="ja-JP" 
+            <InputNumber
+              v-model="newGlobalAddon.price"
+              mode="currency"
+              currency="JPY"
+              locale="ja-JP"
               fluid
-            />            
+            />
             <label>単価（税込）</label>
           </FloatLabel>
           <small class="text-gray-500">
             税抜価格: {{ formatCurrency(globalNetPrice) }}
           </small>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="newGlobalAddon.tax_type_id" 
+            <Select
+              v-model="newGlobalAddon.tax_type_id"
               :options="taxTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>税区分</label>
           </FloatLabel>
         </div>
+        <div class="col-span-2 mb-2">
+          <FloatLabel>
+            <Textarea v-model="newGlobalAddon.description" fluid />
+            <label>詳細</label>
+          </FloatLabel>
+        </div>
       </div>
-      <div class="mb-2">        
-        <FloatLabel>
-          <Textarea v-model="newGlobalAddon.description" fluid />
-          <label>詳細</label>
-        </FloatLabel>
-      </div>
-      
       <template #footer>
         <Button label="保存" icon="pi pi-check" @click="saveGlobalAddon" class="p-button-success p-button-text p-button-sm" />
         <Button label="閉じる" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
       </template>
     </Dialog>
 
-    <Dialog header="グローバルアドン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-      <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-        <div class="col-6">
+    <Dialog header="グローバルアドン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+      <div class="grid grid-cols-2 gap-2 pt-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputText v-model="editGlobalAddon.name" />
+            <InputText v-model="editGlobalAddon.name" fluid />
             <label>名称</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="editGlobalAddon.addon_type" 
+            <Select
+              v-model="editGlobalAddon.addon_type"
               :options="addonTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>アドオン区分</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputNumber 
-              v-model="editGlobalAddon.price" 
-              mode="currency" 
-              currency="JPY" 
-              locale="ja-JP" 
+            <InputNumber
+              v-model="editGlobalAddon.price"
+              mode="currency"
+              currency="JPY"
+              locale="ja-JP"
               fluid
-            />            
+            />
             <label>単価（税込）</label>
           </FloatLabel>
           <small class="text-gray-500">
             税抜価格: {{ formatCurrency(globalNetPrice) }}
           </small>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="editGlobalAddon.tax_type_id" 
+            <Select
+              v-model="editGlobalAddon.tax_type_id"
               :options="taxTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>税区分</label>
           </FloatLabel>
         </div>
-      </div>
-      <div class="pt-6">
-        <FloatLabel>
-          <Textarea v-model="editGlobalAddon.description" fluid />
-          <label>詳細</label>
-        </FloatLabel>
-      </div>
-      <div class="pt-2 flex items-center justify-center">
-        <ToggleButton 
-          id="visibleToggleEditGlobal"
-          v-model="editGlobalAddon.visible" 
-          onLabel="表示" 
-          offLabel="非表示" 
-          onIcon="pi pi-eye"                                 
-          offIcon="pi pi-eye-slash" 
-          aria-label="Status Toggle"
-        />
+        <div class="col-span-2 mb-2">
+          <FloatLabel>
+            <Textarea v-model="editGlobalAddon.description" fluid />
+            <label>詳細</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-2 pt-2 flex items-center justify-center">
+          <ToggleButton
+            id="visibleToggleEditGlobal"
+            v-model="editGlobalAddon.visible"
+            onLabel="表示"
+            offLabel="非表示"
+            onIcon="pi pi-eye"
+            offIcon="pi pi-eye-slash"
+            aria-label="Status Toggle"
+          />
+        </div>
       </div>
       <template #footer>
         <Button label="保存" icon="pi pi-check" @click="updateGlobalAddon" class="p-button-success p-button-text p-button-sm" />
@@ -281,73 +280,73 @@
       </template>
     </Dialog>
 
-    <Dialog header="新規ホテルアドオン" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-      <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-        <div class="col-6 mb-6">
+    <Dialog header="新規ホテルアドオン" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+      <div class="grid grid-cols-2 gap-2 pt-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
             <InputText v-model="newHotelAddon.name" fluid />
             <label>名称</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="newHotelAddon.addon_type" 
+            <Select
+              v-model="newHotelAddon.addon_type"
               :options="addonTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>アドオン区分</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputNumber 
-              v-model="newHotelAddon.price" 
-              mode="currency" 
-              currency="JPY" 
-              locale="ja-JP" 
+            <InputNumber
+              v-model="newHotelAddon.price"
+              mode="currency"
+              currency="JPY"
+              locale="ja-JP"
               fluid
-            />            
+            />
             <label>単価（税込）</label>
           </FloatLabel>
           <small class="text-gray-500">
             税抜価格: {{ formatCurrency(hotelNetPrice) }}
           </small>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="newHotelAddon.tax_type_id" 
+            <Select
+              v-model="newHotelAddon.tax_type_id"
               :options="taxTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>税区分</label>
           </FloatLabel>
-        </div> 
-      </div>
-      <div class="mb-2">        
-        <FloatLabel>
-          <Textarea v-model="newHotelAddon.description" fluid />
-          <label>詳細</label>
-        </FloatLabel>
-      </div>
-      <div class="pt-2">
-        <label for="globalAddonSelect" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
-        <Select 
-          id="globalAddonSelect"
-          v-model="newHotelAddon.addons_global_id" 
-          :options="globalAddons"
-          optionLabel="name" 
-          optionValue="id" 
-          placeholder="グローバルアドオンを選択する" 
-          class="w-full"
-          showClear
-          filter 
-        /> 
+        </div>
+        <div class="col-span-2 mb-2">
+          <FloatLabel>
+            <Textarea v-model="newHotelAddon.description" fluid />
+            <label>詳細</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-2 pt-2">
+          <label for="globalAddonSelect" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
+          <Select
+            id="globalAddonSelect"
+            v-model="newHotelAddon.addons_global_id"
+            :options="globalAddons"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="グローバルアドオンを選択する"
+            class="w-full"
+            showClear
+            filter
+          />
+        </div>
       </div>
       <template #footer>
         <Button label="保存" icon="pi pi-check" @click="saveHotelAddon" class="p-button-success p-button-text p-button-sm" />
@@ -355,84 +354,84 @@
       </template>
     </Dialog>
 
-    <Dialog header="ホテルアドオン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-      <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-        <div class="col-6 mb-6">
+    <Dialog header="ホテルアドオン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+      <div class="grid grid-cols-2 gap-2 pt-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputText v-model="editHotelAddon.name" />
+            <InputText v-model="editHotelAddon.name" fluid/>
             <label>名称</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="editHotelAddon.addon_type" 
+            <Select
+              v-model="editHotelAddon.addon_type"
               :options="addonTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>アドオン区分</label>
           </FloatLabel>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <InputNumber 
-              v-model="editHotelAddon.price" 
-              mode="currency" 
-              currency="JPY" 
-              locale="ja-JP" 
+            <InputNumber
+              v-model="editHotelAddon.price"
+              mode="currency"
+              currency="JPY"
+              locale="ja-JP"
               fluid
-            />            
+            />
             <label>単価（税込）</label>
           </FloatLabel>
           <small class="text-gray-500">
             税抜価格: {{ formatCurrency(hotelNetPrice) }}
           </small>
         </div>
-        <div class="col-6 mb-6">
+        <div class="col-span-1 mb-6">
           <FloatLabel>
-            <Select 
-              v-model="editHotelAddon.tax_type_id" 
+            <Select
+              v-model="editHotelAddon.tax_type_id"
               :options="taxTypes"
-              optionLabel="name" 
-              optionValue="id" 
+              optionLabel="name"
+              optionValue="id"
               fluid
-            />            
+            />
             <label>税区分</label>
           </FloatLabel>
         </div>
-      </div>
-      <div class="pt-6">
-        <FloatLabel>
-          <Textarea v-model="editHotelAddon.description" fluid />
-          <label>詳細</label>
-        </FloatLabel>
-      </div>      
-      <div class="pt-2">
-        <label for="globalAddonSelectEdit" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
-        <Select 
-          id="globalAddonSelectEdit"
-          v-model="editHotelAddon.addons_global_id" 
-          :options="globalAddons"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="グローバルアドオンを選択する" 
-          class="w-full"  
-          showClear
-          filter    
-        /> 
-      </div>
-      <div class="pt-2 flex items-center justify-center">        
-        <ToggleButton 
-          id="visibleToggleEditHotel"
-          v-model="editHotelAddon.visible" 
-          onLabel="表示" 
-          offLabel="非表示" 
-          onIcon="pi pi-eye"                                 
-          offIcon="pi pi-eye-slash" 
-          aria-label="ステータス切り替え"
-        />
+        <div class="col-span-2 mb-2">
+          <FloatLabel>
+            <Textarea v-model="editHotelAddon.description" fluid />
+            <label>詳細</label>
+          </FloatLabel>
+        </div>
+        <div class="col-span-2 pt-2">
+          <label for="globalAddonSelectEdit" class="block mb-2">グローバルアドオンにリンクする（任意）</label>
+          <Select
+            id="globalAddonSelectEdit"
+            v-model="editHotelAddon.addons_global_id"
+            :options="globalAddons"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="グローバルアドオンを選択する"
+            class="w-full"
+            showClear
+            filter
+          />
+        </div>
+        <div class="col-span-2 pt-2 flex items-center justify-center">
+          <ToggleButton
+            id="visibleToggleEditHotel"
+            v-model="editHotelAddon.visible"
+            onLabel="表示"
+            offLabel="非表示"
+            onIcon="pi pi-eye"
+            offIcon="pi pi-eye-slash"
+            aria-label="ステータス切り替え"
+          />
+        </div>
       </div>
       <template #footer>
         <Button label="保存" icon="pi pi-check" @click="updateHotelAddon" class="p-button-success p-button-text p-button-sm" />

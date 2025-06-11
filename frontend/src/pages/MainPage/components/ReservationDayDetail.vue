@@ -212,38 +212,37 @@
                             <!-- Tab 2: Move Rooms -->
                             <TabPanel value="1">
                                 <form @submit.prevent="saveRoom">
-                                
-                                    <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
-                                        <div class="field mt-6 col-6">
-                                            <FloatLabel>
-                                                <InputNumber
-                                                    id="move-people"
-                                                    v-model="numberOfPeopleToMove"
-                                                    :min="numberOfPeopleToMove"
-                                                    :max="numberOfPeopleToMove"
-                                                    filled
-                                                    disabled
-                                                />
-                                                <label for="move-people">人数</label>
-                                            </FloatLabel>
-                                        </div>
-                                        <div class="field mt-6 col-6">
-                                            <FloatLabel>
-                                                <Select
-                                                    id="move-room"
-                                                    v-model="targetRoom"
-                                                    :options="filteredRooms"
-                                                    optionLabel="label"
-                                                    showClear 
-                                                    fluid
-                                                />
-                                                <label for="move-room">部屋へ移動</label>
-                                            </FloatLabel>
-                                        </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                    <div class="mt-6 col-span-1">
+                                        <FloatLabel>
+                                        <InputNumber
+                                            id="move-people"
+                                            v-model="numberOfPeopleToMove"
+                                            :min="numberOfPeopleToMove"
+                                            :max="numberOfPeopleToMove"
+                                            filled
+                                            disabled
+                                        />
+                                        <label for="move-people">人数</label>
+                                        </FloatLabel>
+                                    </div>
+                                    <div class="mt-6 col-span-1">
+                                        <FloatLabel>
+                                        <Select
+                                            id="move-room"
+                                            v-model="targetRoom"
+                                            :options="filteredRooms"
+                                            optionLabel="label"
+                                            showClear
+                                            fluid
+                                        />
+                                        <label for="move-room">部屋へ移動</label>
+                                        </FloatLabel>
+                                    </div>
                                     </div>
                                     <Divider />
-                                    <div class="flex justify-center items-center">                                    
-                                        <Button label="保存" severity="info" type="submit" />
+                                    <div class="flex justify-center items-center">
+                                    <Button label="保存" severity="info" type="submit" />
                                     </div>
                                 </form>
                             </TabPanel>

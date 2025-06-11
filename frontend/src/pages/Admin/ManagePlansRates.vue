@@ -265,231 +265,237 @@
             <ManagePlansAddons :plan="planId" @update-filtered-conditions="handleFilteredAddons" />
         </div>
         
-        <Dialog header="新規調整" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+        <Dialog header="新規調整" v-model:visible="showAdjustmentDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+            <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-span-2">
-                    <FloatLabel>
-                        <label for="adjustmentType">調整種類 *</label>
-                        <Select v-model="newAdjustment.adjustment_type" 
-                            :options="adjustmentTypes" 
-                            optionLabel="label" 
-                            optionValue="value" 
-                            fluid 
-                            required />
-                    </FloatLabel>
-                </div>                
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="adjustmentValue">調整値 *</label>
-                        <div v-if="newAdjustment.adjustment_type !== 'percentage'">
-                            <InputNumber v-model="newAdjustment.adjustment_value" 
-                                mode="currency" 
-                                currency="JPY" 
-                                locale="ja-JP" 
-                                class="w-full"
-                                required 
-                            />
-
-                        </div>
-                        <div v-else>
-                            <InputNumber v-model="newAdjustment.adjustment_value" 
-                                :minFractionDigits="2"
-                                :maxFractionDigits="2"
-                                suffix="%"
-                                class="w-full"
-                                required 
-                            />
-                        </div>                        
-                    </FloatLabel> 
-                    <small class="text-gray-500">
-                        税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
-                    </small>               
+                <FloatLabel>
+                    <label for="adjustmentType">調整種類 *</label>
+                    <Select v-model="newAdjustment.adjustment_type"
+                    :options="adjustmentTypes"
+                    optionLabel="label"
+                    optionValue="value"
+                    fluid
+                    required />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <Select 
-                            v-model="newAdjustment.tax_type_id" 
-                            :options="taxTypes"
-                            optionLabel="name" 
-                            optionValue="id"
-                            @change="updateTaxRate"
-                            fluid
-                        />            
-                        <label>税区分</label>
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="adjustmentValue">調整値 *</label>
+                    <div v-if="newAdjustment.adjustment_type !== 'percentage'">
+                    <InputNumber v-model="newAdjustment.adjustment_value"
+                        mode="currency"
+                        currency="JPY"
+                        locale="ja-JP"
+                        class="w-full"
+                        required
+                        fluid
+                    />
+                    </div>
+                    <div v-else>
+                    <InputNumber v-model="newAdjustment.adjustment_value"
+                        :minFractionDigits="2"
+                        :maxFractionDigits="2"
+                        suffix="%"
+                        class="w-full"
+                        required
+                        fluid
+                    />
+                    </div>
+                </FloatLabel>
+                <small class="text-gray-500">
+                    税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
+                </small>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="conditionType">条件区分 *</label>
-                        <Select v-model="newAdjustment.condition_type" 
-                            :options="conditionTypes" 
-                            optionLabel="label" 
-                            optionValue="value" 
-                            class="w-full"
-                            @change="updateConditionValues" 
-                            required 
-                        />
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <Select
+                        v-model="newAdjustment.tax_type_id"
+                        :options="taxTypes"
+                        optionLabel="name"
+                        optionValue="id"
+                        @change="updateTaxRate"
+                        fluid
+                    />
+                    <label>税区分</label>
+                </FloatLabel>
                 </div>
-                <div class="col-6">                    
-                    <FloatLabel>
-                        <label for="conditionValue">条件</label>
-                        <MultiSelect v-model="newAdjustment.condition_value" 
-                            placeholder="条件"
-                            :options="conditionValues" 
-                            optionLabel="label" 
-                            optionValue="value"
-                            :maxSelectedLabels="3"
-                            fluid
-                        />
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="conditionType">条件区分 *</label>
+                    <Select v-model="newAdjustment.condition_type"
+                        :options="conditionTypes"
+                        optionLabel="label"
+                        optionValue="value"
+                        class="w-full"
+                        @change="updateConditionValues"
+                        required
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="dateStart">開始日</label>                
-                        <DatePicker v-model="newAdjustment.date_start" 
-                            :showIcon="true" 
-                            iconDisplay="input" 
-                            dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true"
-                            placeholder="開始日"
-                            fluid
-                            required 
-                        />
-                    </FloatLabel>                
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="conditionValue">条件</label>
+                    <MultiSelect v-model="newAdjustment.condition_value"
+                        placeholder="条件"
+                        :options="conditionValues"
+                        optionLabel="label"
+                        optionValue="value"
+                        :maxSelectedLabels="3"
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="dateEnd">終了日</label>
-                        <DatePicker v-model="newAdjustment.date_end"
-                            :showIcon="true" 
-                            iconDisplay="input" 
-                            dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true"
-                            placeholder="終了日"
-                            fluid
-                        />
-                    </FloatLabel>                
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="dateStart">開始日</label>
+                    <DatePicker v-model="newAdjustment.date_start"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="開始日"
+                        fluid
+                        required
+                    />
+                </FloatLabel>
+                </div>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="dateEnd">終了日</label>
+                    <DatePicker v-model="newAdjustment.date_end"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="終了日"
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
             </div>
             <template #footer>
                 <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
                 <Button label="キャンセル" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
             </template>
-        </Dialog>
+            </Dialog>
 
-        <Dialog header="調整編集" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-            <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+        <Dialog header="調整編集" v-model:visible="showEditAdjustmentDialog" :modal="true" :style="{ width: '60vw' }" class="p-fluid" :closable="true">
+            <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
                 <div class="col-span-2">
-                    <FloatLabel>
-                        <label for="adjustmentType">調整種類 *</label>
-                        <Select v-model="editAdjustment.adjustment_type" 
-                            :options="adjustmentTypes" 
-                            optionLabel="label" 
-                            optionValue="value" 
-                            fluid 
-                            required />
-                    </FloatLabel>
-                </div>                
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="adjustmentValue">調整値 *</label>
-                        <div v-if="editAdjustment.adjustment_type !== 'percentage'">
-                            <InputNumber v-model="editAdjustment.adjustment_value" 
-                                mode="currency" 
-                                currency="JPY" 
-                                locale="ja-JP" 
-                                class="w-full"
-                                required 
-                            />
-                        </div>
-                        <div v-else>
-                            <InputNumber v-model="editAdjustment.adjustment_value" 
-                                :minFractionDigits="2"
-                                :maxFractionDigits="2"
-                                suffix="%"
-                                class="w-full"
-                                required 
-                            />
-                        </div>                        
-                    </FloatLabel>
-                    <small class="text-gray-500">
-                        税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
-                    </small>                 
+                <FloatLabel>
+                    <label for="adjustmentType">調整種類 *</label>
+                    <Select v-model="editAdjustment.adjustment_type"
+                        :options="adjustmentTypes"
+                        optionLabel="label"
+                        optionValue="value"
+                        fluid
+                        required 
+                    />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <Select 
-                            v-model="editAdjustment.tax_type_id" 
-                            :options="taxTypes"
-                            optionLabel="name" 
-                            optionValue="id"
-                            @change="updateTaxRate"
-                            fluid
-                        />            
-                        <label>税区分</label>
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="adjustmentValue">調整値 *</label>
+                    <div v-if="editAdjustment.adjustment_type !== 'percentage'">
+                    <InputNumber v-model="editAdjustment.adjustment_value"
+                        mode="currency"
+                        currency="JPY"
+                        locale="ja-JP"
+                        class="w-full"
+                        required
+                        fluid
+                    />
+                    </div>
+                    <div v-else>
+                    <InputNumber v-model="editAdjustment.adjustment_value"
+                        :minFractionDigits="2"
+                        :maxFractionDigits="2"
+                        suffix="%"
+                        class="w-full"
+                        required
+                        fluid
+                    />
+                    </div>
+                </FloatLabel>
+                <small class="text-gray-500">
+                    税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
+                </small>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="conditionType">条件区分 *</label>
-                        <Select v-model="editAdjustment.condition_type" 
-                            :options="conditionTypes" 
-                            optionLabel="label" 
-                            optionValue="value" 
-                            class="w-full"
-                            @change="updateEditConditionValues" 
-                            required 
-                        />
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <Select
+                        v-model="editAdjustment.tax_type_id"
+                        :options="taxTypes"
+                        optionLabel="name"
+                        optionValue="id"
+                        @change="updateTaxRate"
+                        fluid
+                    />
+                    <label>税区分</label>
+                </FloatLabel>
                 </div>
-                <div class="col-6">                    
-                    <FloatLabel>
-                        <label for="conditionValue">条件</label>
-                        <MultiSelect  
-                            v-model="selectedEditConditions"                            
-                            :options="conditionValues" 
-                            optionLabel="label" 
-                            optionValue="value"
-                            :maxSelectedLabels="3"
-                            placeholder="条件"
-                            fluid
-                        />
-                    </FloatLabel>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="conditionType">条件区分 *</label>
+                    <Select v-model="editAdjustment.condition_type"
+                        :options="conditionTypes"
+                        optionLabel="label"
+                        optionValue="value"
+                        class="w-full"
+                        @change="updateEditConditionValues"
+                        required
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="dateStart">開始日</label>                
-                        <DatePicker v-model="editAdjustment.date_start" 
-                            :showIcon="true" 
-                            iconDisplay="input" 
-                            dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true"
-                            placeholder="開始日"
-                            fluid
-                            required 
-                        />
-                    </FloatLabel>                
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="conditionValue">条件</label>
+                    <MultiSelect
+                        v-model="selectedEditConditions"
+                        :options="conditionValues"
+                        optionLabel="label"
+                        optionValue="value"
+                        :maxSelectedLabels="3"
+                        placeholder="条件"
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
-                <div class="col-6">
-                    <FloatLabel>
-                        <label for="dateEnd">終了日</label>
-                        <DatePicker v-model="editAdjustment.date_end"
-                            :showIcon="true" 
-                            iconDisplay="input"     
-                            dateFormat="yy-mm-dd"
-                            :selectOtherMonths="true"
-                            placeholder="終了日"
-                            fluid
-                        />
-                    </FloatLabel>                
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="dateStart">開始日</label>
+                    <DatePicker v-model="editAdjustment.date_start"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="開始日"
+                        fluid
+                        required
+                    />
+                </FloatLabel>
+                </div>
+                <div class="col-span-1">
+                <FloatLabel>
+                    <label for="dateEnd">終了日</label>
+                    <DatePicker v-model="editAdjustment.date_end"
+                        :showIcon="true"
+                        iconDisplay="input"
+                        dateFormat="yy-mm-dd"
+                        :selectOtherMonths="true"
+                        placeholder="終了日"
+                        fluid
+                    />
+                </FloatLabel>
                 </div>
             </div>
             <template #footer>
                 <Button label="更新" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
                 <Button label="キャンセル" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
             </template>
-        </Dialog>
+            </Dialog>
 
     </div>
 </template>

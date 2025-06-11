@@ -226,53 +226,53 @@
         style="width: 50vw"
     >
         <div class="p-fluid">
-            <Tabs 
-                value ="0"                
+            <Tabs
+            value ="0"
             >
-                <TabList>                        
-                    <Tab value="0">部屋追加</Tab>                        
-                </TabList>
-                    
-                <TabPanels>                        
-                    <!-- Tab 1: Rooms -->
-                    <TabPanel value="0">
-                        <h4 class="mt-4 mb-3 font-bold">部屋追加</h4>
+            <TabList>
+                <Tab value="0">部屋追加</Tab>
+            </TabList>
 
-                        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
-                            <div class="field mt-6 col-6">
-                                <FloatLabel>
-                                    <InputNumber
-                                        id="move-people"
-                                        v-model="numberOfPeopleToMove"
-                                        :min="0"
-                                    />
-                                    <label for="move-people">人数</label>
-                                </FloatLabel>
-                            </div>
-                            <div class="field mt-6 col-6">
-                                <FloatLabel>
-                                    <Select
-                                        id="move-room"
-                                        v-model="targetRoom"
-                                        :options="filteredRooms"
-                                        optionLabel="label"
-                                        showClear 
-                                        fluid
-                                    />
-                                    <label for="move-room">部屋を追加</label>
-                                </FloatLabel>
-                            </div>
-                        </div>
-                    </TabPanel>
-                </TabPanels>                     
+            <TabPanels>
+                <!-- Tab 1: Rooms -->
+                <TabPanel value="0">
+                <h4 class="mt-4 mb-3 font-bold">部屋追加</h4>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="field mt-6 col-span-1">
+                    <FloatLabel>
+                        <InputNumber
+                            id="move-people"
+                            v-model="numberOfPeopleToMove"
+                            :min="0"
+                            fluid
+                        />
+                        <label for="move-people">人数</label>
+                    </FloatLabel>
+                    </div>
+                    <div class="field mt-6 col-span-1">
+                    <FloatLabel>
+                        <Select
+                            id="move-room"
+                            v-model="targetRoom"
+                            :options="filteredRooms"
+                            optionLabel="label"
+                            showClear
+                            fluid
+                        />
+                        <label for="move-room">部屋を追加</label>
+                    </FloatLabel>
+                    </div>
+                </div>
+                </TabPanel>
+            </TabPanels>
             </Tabs>
-        
+
         </div>
         <template #footer>
-            <Button label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyReservationRoomChanges" />                
-            
-            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeAddRoomDialog" />                
-        </template>            
+            <Button label="追加" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyReservationRoomChanges" />
+            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeAddRoomDialog" />
+        </template>
     </Dialog>
 
     <!-- Reservation Edit Dialog -->

@@ -129,83 +129,83 @@
       </div>
 
       <!-- Dialog -->
-      <Dialog 
-        v-model:visible="dialogVisible" 
-        :header="'予約'" 
+      <Dialog
+        v-model:visible="dialogVisible"
+        :header="'予約'"
         :closable="true"
         :modal="true"
-        :style="{ width: '600px' }"
+        :style="{ width: '50vw' }"
       >
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+        <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
           <!-- Name of the person making the reservation -->
           <div class="col-span-2 mb-6">
-            <FloatLabel>              
+            <FloatLabel>
               <AutoComplete
                 v-model="client"
                 :suggestions="filteredClients"
                 optionLabel="display_name"
                 @complete="filterClients"
-                field="id"                
-                @option-select="onClientSelect"                
+                field="id"
+                @option-select="onClientSelect"
                 fluid
-                required                
+                required
               >
-              <template #option="slotProps">
-                <div>
+                <template #option="slotProps">
+                  <div>
                     <p>
-                        <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                        <i v-else class="pi pi-user"></i>
-                        {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
-                        <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                      <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
+                      <i v-else class="pi pi-user"></i>
+                      {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                      <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                     </p>
                     <div class="flex items-center gap-2">
-                        <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                        <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                        <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                      <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
                     </div>
-                </div>
-              </template>
+                  </div>
+                </template>
               </AutoComplete>
               <label>個人氏名　||　法人名称</label>
             </FloatLabel>
           </div>
 
           <!-- Type of person (Legal or Natural) -->
-          <div class="col-6">
-              <SelectButton 
-                v-model="reservationDetails.legal_or_natural_person" 
-                :options="personTypeOptions" 
-                option-label="label" 
-                option-value="value"
-                fluid                  
-                :disabled="isClientSelected"
-              />
+          <div class="col-span-1">
+            <SelectButton
+              v-model="reservationDetails.legal_or_natural_person"
+              :options="personTypeOptions"
+              option-label="label"
+              option-value="value"
+              fluid
+              :disabled="isClientSelected"
+            />
           </div>
 
           <!-- Gender input if person is natural -->
-          <div class="field col-6">
+          <div class="col-span-1">
             <div v-if="reservationDetails.legal_or_natural_person === 'natural'" class="flex gap-3">
-                <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
-                    <RadioButton
-                        v-model="reservationDetails.gender"
-                        :inputId="option.value"
-                        :value="option.value"
-                        :disabled="isClientSelected"
-                    />
-                    <label :for="option.value">{{ option.label }}</label>
-                </div>
+              <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                <RadioButton
+                  v-model="reservationDetails.gender"
+                  :inputId="option.value"
+                  :value="option.value"
+                  :disabled="isClientSelected"
+                />
+                <label :for="option.value">{{ option.label }}</label>
+              </div>
             </div>
-          </div> 
+          </div>
 
           <!-- Email input -->
-          <div class="col-6">
+          <div class="col-span-1">
             <FloatLabel>
-              <InputText 
+              <InputText
                 v-model="reservationDetails.email"
                 :pattern="emailPattern"
                 :class="{'p-invalid': !isValidEmail}"
-                @input="validateEmail"
-                fluid 
+                @input="validateEmail(reservationDetails.email)"
+                fluid
                 :disabled="isClientSelected"
               />
               <label>メールアドレス</label>
@@ -214,16 +214,15 @@
           </div>
 
           <!-- Phone number input -->
-          <div class="col-6">
+          <div class="col-span-1">
             <FloatLabel>
               <InputText
                 v-model="reservationDetails.phone"
                 :pattern="phonePattern"
                 :class="{'p-invalid': !isValidPhone}"
-                @input="validatePhone"
+                @input="validatePhone(reservationDetails.phone)"
                 fluid
                 :disabled="isClientSelected"
-
               />
               <label>電話番号</label>
               <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
@@ -231,48 +230,50 @@
           </div>
 
           <!-- Additional fields for check-in, check-out, number of people -->
-          <div class="col-6">
+          <div class="col-span-1">
             <FloatLabel>
-              <InputText 
-                v-model="reservationDetails.check_in" 
-                type="date" 
-                variant="filled" 
-                fluid 
+              <InputText
+                v-model="reservationDetails.check_in"
+                type="date"
+                variant="filled"
+                fluid
                 disabled
               />
               <label>チェックイン</label>
             </FloatLabel>
           </div>
 
-          <div class="col-6">
+          <div class="col-span-1">
             <FloatLabel>
-              <InputText 
-                v-model="reservationDetails.check_out" 
-                type="date" 
-                variant="filled" 
-                fluid 
+              <InputText
+                v-model="reservationDetails.check_out"
+                type="date"
+                variant="filled"
+                fluid
                 disabled
               />
               <label>チェックアウト</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+
+          <div class="col-span-1">
             <FloatLabel>
-              <InputNumber 
-                v-model="reservationDetails.number_of_nights" 
-                variant="filled" 
-                fluid                
+              <InputNumber
+                v-model="reservationDetails.number_of_nights"
+                variant="filled"
+                fluid
                 disabled
               />
               <label>宿泊数</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+
+          <div class="col-span-1">
             <FloatLabel>
-              <InputNumber 
-                v-model="reservationDetails.number_of_people" 
-                variant="filled" 
-                fluid                
+              <InputNumber
+                v-model="reservationDetails.number_of_people"
+                variant="filled"
+                fluid
                 disabled
               />
               <label>人数</label>
@@ -282,7 +283,7 @@
         <template #footer>
           <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
           <Button label="保存" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
-        </template>        
+        </template>
       </Dialog>
       
     </Panel>

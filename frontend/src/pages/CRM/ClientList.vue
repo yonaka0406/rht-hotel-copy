@@ -107,90 +107,89 @@
         </div>
     </div>
 
-    <Dialog 
-        v-model:visible="dialogVisible" 
-        :header="'新規顧客登録'" 
+    <Dialog
+        v-model:visible="dialogVisible"
+        :header="'新規顧客登録'"
         :closable="true"
         :modal="true"
-        :style="{ width: '600px' }"
+        :style="{ width: '50vw' }"
     >
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 gap-y-6 pt-6">
+        <div class="grid grid-cols-2 gap-2 gap-y-6 pt-6">
             <!-- Name of the person -->
             <div class="col-span-2 mb-6">
-                <FloatLabel>
-                    <InputText
-                        v-model="newClient.name" 
-                        fluid
-                    />
-                    <label>個人氏名　||　法人名称　【漢字又はローマ字】</label>
-                </FloatLabel>
+            <FloatLabel>
+                <InputText
+                v-model="newClient.name"
+                fluid
+                />
+                <label>個人氏名　||　法人名称　【漢字又はローマ字】</label>
+            </FloatLabel>
             </div>
             <div class="col-span-2 mb-6">
-                <FloatLabel>
-                    <InputText
-                        v-model="newClient.name_kana" 
-                        fluid
-                    />
-                    <label>カナ</label>
-                </FloatLabel>
-            </div>            
-            <!-- Type of person (Legal or Natural) -->
-            <div class="col-6">
-                <SelectButton 
-                    v-model="newClient.legal_or_natural_person" 
-                    :options="personTypeOptions" 
-                    option-label="label" 
-                    option-value="value"
-                    fluid
+            <FloatLabel>
+                <InputText
+                v-model="newClient.name_kana"
+                fluid
                 />
+                <label>カナ</label>
+            </FloatLabel>
+            </div>
+            <!-- Type of person (Legal or Natural) -->
+            <div class="col-span-1">
+            <SelectButton
+                v-model="newClient.legal_or_natural_person"
+                :options="personTypeOptions"
+                option-label="label"
+                option-value="value"
+                fluid
+            />
             </div>
             <!-- Gender input if person is natural -->
-            <div class="field col-6">
-                <div v-if="newClient.legal_or_natural_person === 'natural'" class="flex gap-3">
-                    <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
-                        <RadioButton
-                            v-model="newClient.gender"
-                            :inputId="option.value"
-                            :value="option.value"                            
-                        />
-                        <label :for="option.value">{{ option.label }}</label>
-                    </div>
+            <div class="col-span-1">
+            <div v-if="newClient.legal_or_natural_person === 'natural'" class="flex gap-3">
+                <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                <RadioButton
+                    v-model="newClient.gender"
+                    :inputId="option.value"
+                    :value="option.value"
+                />
+                <label :for="option.value">{{ option.label }}</label>
                 </div>
             </div>
+            </div>
             <!-- Email input -->
-            <div class="col-6">
-                <FloatLabel>
-                <InputText 
-                    v-model="newClient.email"
-                    :pattern="emailPattern"
-                    :class="{'p-invalid': !isValidEmail}"
-                    @input="validateEmail(newClient.email)"
-                    fluid                    
+            <div class="col-span-1">
+            <FloatLabel>
+                <InputText
+                v-model="newClient.email"
+                :pattern="emailPattern"
+                :class="{'p-invalid': !isValidEmail}"
+                @input="validateEmail(newClient.email)"
+                fluid
                 />
                 <label>メールアドレス</label>
                 <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
-                </FloatLabel>
+            </FloatLabel>
             </div>
             <!-- Phone number input -->
-            <div class="col-6">
-                <FloatLabel>
+            <div class="col-span-1">
+            <FloatLabel>
                 <InputText
-                    v-model="newClient.phone"
-                    :pattern="phonePattern"
-                    :class="{'p-invalid': !isValidPhone}"
-                    @input="validatePhone(newClient.phone)"
-                    fluid
+                v-model="newClient.phone"
+                :pattern="phonePattern"
+                :class="{'p-invalid': !isValidPhone}"
+                @input="validatePhone(newClient.phone)"
+                fluid
                 />
                 <label>電話番号</label>
                 <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
-                </FloatLabel>
+            </FloatLabel>
             </div>
-            
         </div>
         <template #footer>
             <Button label="閉じる" icon="pi pi-times" @click="dialogOpenClose(false)" class="p-button-danger p-button-text p-button-sm" />
             <Button label="保存" icon="pi pi-check" @click="submitClient" class="p-button-success p-button-text p-button-sm" />
-        </template> 
+        </template>
     </Dialog>
 </template>
   

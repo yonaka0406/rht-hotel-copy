@@ -336,37 +336,45 @@
     </template>      
   </Dialog>
     
-  <Dialog v-model:visible="roomDialog" :modal="true" header="部屋追加" :style="{ width: '450px' }" class="p-fluid">
-    <div class="grid xs:grid-cols-1 grid-cols-2 gap-4">
-      <div class="col-6">
+  <Dialog v-model:visible="roomDialog" :modal="true" header="部屋追加" :style="{ width: '50vw' }" class="p-fluid">
+  <div class="grid grid-cols-2 gap-1">
+    <div class="col-span-2 mt-6">
+      <FloatLabel>
         <label for="floor" class="font-medium mb-2 block">階 *</label>
-        <InputNumber id="floor" v-model="newRoom.floor" :min="1" required />
-      </div>
-      <div class="col-6">
-        <label for="room_number" class="font-medium mb-2 block">部屋番号 *</label>
-        <InputText id="room_number" v-model="newRoom.room_number" required />
-      </div>
-      <div class="col-6">
-        <label for="room_type_id" class="font-medium mb-2 block">部屋タイプ *</label>
-        <Select id="room_type_id" v-model="newRoom.room_type_id" :options="roomTypes" optionLabel="name" optionValue="id" placeholder="Select a Room Type" required />
-      </div>
-      <div class="col-6">
-        <label for="capacity" class="font-medium mb-2 block">人数 *</label>
-        <InputNumber id="capacity" v-model="newRoom.capacity" :min="1" required />
-      </div>
-      <div class="col-6">
-        <label for="smoking" class="font-medium mb-2 block">喫煙</label>
-        <Checkbox id="smoking" v-model="newRoom.smoking" binary />
-      </div>
-      <div class="col-6">
-        <label for="for_sale" class="font-medium mb-2 block">販売用</label>
-        <Checkbox id="for_sale" v-model="newRoom.for_sale" binary />
-      </div>
+        <InputNumber id="floor" v-model="newRoom.floor" :min="1" required fluid />
+      </FloatLabel>
     </div>
-    <template #footer>
-      <Button label="追加" icon="pi pi-plus" @click="saveRoom" class="p-button-success p-button-text p-button-sm" />
-      <Button label="キャンセル" icon="pi pi-times" @click="roomDialog = false" class="p-button-danger p-button-text p-button-sm" />
-    </template>
+    <div class="col-span-2 mt-6">
+      <FloatLabel>
+        <label for="room_number" class="font-medium mb-2 block">部屋番号 *</label>
+        <InputText id="room_number" v-model="newRoom.room_number" required fluid />
+      </FloatLabel>
+    </div>
+    <div class="col-span-2 mt-6">
+      <FloatLabel>
+        <label for="room_type_id" class="font-medium mb-2 block">部屋タイプ *</label>
+        <Select id="room_type_id" v-model="newRoom.room_type_id" :options="roomTypes" optionLabel="name" optionValue="id" placeholder="部屋タイプ選択" required fluid />
+      </FloatLabel>
+    </div>
+    <div class="col-span-2 mt-6">
+      <FloatLabel>
+        <label for="capacity" class="font-medium mb-2 block">人数 *</label>
+        <InputNumber id="capacity" v-model="newRoom.capacity" :min="1" required fluid />
+      </FloatLabel>
+    </div>
+    <div class="col-span-1 mt-6">      
+      <label for="smoking" class="font-medium mb-2 block">喫煙</label>
+      <Checkbox id="smoking" v-model="newRoom.smoking" binary />      
+    </div>
+    <div class="col-span-1 mt-6">      
+      <label for="for_sale" class="font-medium mb-2 block">販売用</label>
+      <Checkbox id="for_sale" v-model="newRoom.for_sale" binary />      
+    </div>
+  </div>
+  <template #footer>
+    <Button label="追加" icon="pi pi-plus" @click="saveRoom" class="p-button-success p-button-text p-button-sm" />
+    <Button label="キャンセル" icon="pi pi-times" @click="roomDialog = false" class="p-button-danger p-button-text p-button-sm" />
+  </template>
   </Dialog>
   
 </template>

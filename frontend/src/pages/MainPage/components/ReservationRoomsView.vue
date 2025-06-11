@@ -284,30 +284,31 @@
                     <TabPanel value="1">
                         <h4 class="mt-4 mb-3 font-bold">部屋移動</h4>
 
-                        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2">
-                            <div class="field mt-6 col-6">
-                                <FloatLabel>
-                                    <InputNumber
-                                        id="move-people"
-                                        v-model="numberOfPeopleToMove"
-                                        :min="0"
-                                        :max="Math.max(...(selectedGroup?.details.map(item => item.number_of_people) || [0]))"
-                                    />
-                                    <label for="move-people">人数</label>
-                                </FloatLabel>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="field mt-6 col-span-1">
+                            <FloatLabel>
+                                <InputNumber
+                                    id="move-people"
+                                    v-model="numberOfPeopleToMove"
+                                    :min="0"
+                                    :max="Math.max(...(selectedGroup?.details.map(item => item.number_of_people) || [0]))"
+                                    fluid
+                                />
+                                <label for="move-people">人数</label>
+                            </FloatLabel>
                             </div>
-                            <div class="field mt-6 col-6">
-                                <FloatLabel>
-                                    <Select
-                                        id="move-room"
-                                        v-model="targetRoom"
-                                        :options="filteredRooms"
-                                        optionLabel="label"
-                                        showClear 
-                                        fluid
-                                    />
-                                    <label for="move-room">部屋へ移動</label>
-                                </FloatLabel>
+                            <div class="field mt-6 col-span-1">
+                            <FloatLabel>
+                                <Select
+                                    id="move-room"
+                                    v-model="targetRoom"
+                                    :options="filteredRooms"
+                                    optionLabel="label"
+                                    showClear
+                                    fluid
+                                />
+                                <label for="move-room">部屋へ移動</label>
+                            </FloatLabel>
                             </div>
                         </div>
                     </TabPanel>

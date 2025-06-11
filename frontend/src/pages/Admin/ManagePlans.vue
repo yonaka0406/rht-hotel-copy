@@ -185,82 +185,82 @@
         <ManagePlansPatterns />
       </Panel>
 
-      <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-          <div class="col-6">
+      <Dialog header="グローバルプラン追加" v-model:visible="showGlobalDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+        <div class="grid grid-cols-2 gap-2 pt-6">
+          <div class="col-span-1 mb-6">
             <FloatLabel>
               <InputText v-model="newGlobalPlan.name" fluid />
               <label>名称</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+          <div class="col-span-1 mb-6">
             <div class="flex grid-cols-2 justify-center items-center">
               <FloatLabel>
-                <InputText v-model="newGlobalPlan.colorHEX"></InputText>
+                <InputText v-model="newGlobalPlan.colorHEX" fluid />
                 <label>プラン表示HEX</label>
               </FloatLabel>
               <ColorPicker v-model="newGlobalPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
             </div>
           </div>
-          <div class="col-6">            
+          <div class="col-span-2">
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
-              <SelectButton 
-                v-model="newGlobalPlan.plan_type" 
+              <SelectButton
+                v-model="newGlobalPlan.plan_type"
                 :options="sb_options"
                 optionLabel="label"
                 optionValue="value"
               />
             </div>
           </div>
+          <div class="col-span-2 pt-6">
+            <FloatLabel>
+              <Textarea v-model="newGlobalPlan.description" fluid />
+              <label>詳細</label>
+            </FloatLabel>
+          </div>
         </div>
-        <div class="pt-6">        
-          <FloatLabel>
-            <Textarea v-model="newGlobalPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>
-        
+
         <template #footer>
           <Button label="保存" icon="pi pi-check" @click="saveGlobalPlan" class="p-button-success p-button-text p-button-sm" />
           <Button label="閉じる" icon="pi pi-times" @click="showGlobalDialog = false" class="p-button-danger p-button-text p-button-sm" text />
         </template>
       </Dialog>
 
-      <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-          <div class="col-6">
+      <Dialog header="グローバルプラン編集" v-model:visible="showEditGlobalDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+        <div class="grid grid-cols-2 gap-2 pt-6">
+          <div class="col-span-1 mb-6">
             <FloatLabel>
-              <InputText v-model="editGlobalPlan.name" />
+              <InputText v-model="editGlobalPlan.name" fluid />
               <label>名称</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+          <div class="col-span-1 mb-6">
             <div class="flex grid-cols-2 justify-center items-center">
               <FloatLabel>
-                <InputText v-model="editGlobalPlan.colorHEX"></InputText>
+                <InputText v-model="editGlobalPlan.colorHEX" fluid />
                 <label>プラン表示HEX</label>
               </FloatLabel>
               <ColorPicker v-model="editGlobalPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
             </div>
           </div>
-          <div class="col-6">            
+          <div class="col-span-2">
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
-              <SelectButton 
-                v-model="editGlobalPlan.plan_type" 
+              <SelectButton
+                v-model="editGlobalPlan.plan_type"
                 :options="sb_options"
                 optionLabel="label"
                 optionValue="value"
               />
             </div>
           </div>
-        </div>
-        <div class="pt-6">
-          <FloatLabel>
-            <Textarea v-model="editGlobalPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
+          <div class="col-span-2 pt-6">
+            <FloatLabel>
+              <Textarea v-model="editGlobalPlan.description" fluid />
+              <label>詳細</label>
+            </FloatLabel>
+          </div>
         </div>
         <template #footer>
           <Button label="保存" icon="pi pi-check" @click="updateGlobal" class="p-button-success p-button-text p-button-sm" />
@@ -268,55 +268,54 @@
         </template>
       </Dialog>
 
-      <Dialog header="ホテルプラン追加" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-          <div class="col-6">
+      <Dialog header="ホテルプラン追加" v-model:visible="showHotelDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+        <div class="grid grid-cols-2 gap-2 pt-6">
+          <div class="col-span-1 mb-6">
             <FloatLabel>
               <InputText v-model="newHotelPlan.name" fluid />
               <label>名称</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+          <div class="col-span-1 mb-6">
             <div class="flex grid-cols-2 justify-center items-center">
               <FloatLabel>
-                <InputText v-model="newHotelPlan.colorHEX"></InputText>
+                <InputText v-model="newHotelPlan.colorHEX" fluid />
                 <label>プラン表示HEX</label>
               </FloatLabel>
               <ColorPicker v-model="newHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
             </div>
           </div>
-          <div class="col-6">
+          <div class="col-span-2">
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
-              <SelectButton 
-                v-model="newHotelPlan.plan_type" 
+              <SelectButton
+                v-model="newHotelPlan.plan_type"
                 :options="sb_options"
                 optionLabel="label"
                 optionValue="value"
               />
             </div>
           </div>
-        </div>
-        <div class="pt-6">        
-          <FloatLabel>
-            <Textarea v-model="newHotelPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>
-        <div class="pt-2">
-          <label for="globalPlanSelect" class="block mb-2">グローバルプランにリンクする（任意）</label>
-          <Select 
-            id="globalPlanSelect"
-            v-model="newHotelPlan.plans_global_id" 
-            :options="globalPlans"
-            optionLabel="name" 
-            optionValue="id" 
-            placeholder="Select a Global Plan" 
-            class="w-full"
-            showClear
-            filter 
-          />            
-          
+          <div class="col-span-2 pt-6 mb-2">
+            <FloatLabel>
+              <Textarea v-model="newHotelPlan.description" fluid />
+              <label>詳細</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-2 pt-2">
+            <label for="globalPlanSelect" class="block mb-2">グローバルプランにリンクする（任意）</label>
+            <Select
+              id="globalPlanSelect"
+              v-model="newHotelPlan.plans_global_id"
+              :options="globalPlans"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select a Global Plan"
+              class="w-full"
+              showClear
+              filter
+            />
+          </div>
         </div>
         <template #footer>
           <Button label="保存" icon="pi pi-check" @click="saveHotelPlan" class="p-button-success p-button-text p-button-sm" />
@@ -324,54 +323,54 @@
         </template>
       </Dialog>
 
-      <Dialog header="ホテルプラン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '600px' }" class="p-fluid" :closable="true">
-        <div class="grid xs:grid-cols-1 grid-cols-2 gap-2 pt-6">
-          <div class="col-6">
+      <Dialog header="ホテルプラン編集" v-model:visible="showEditHotelDialog" :modal="true" :style="{ width: '50vw' }" class="p-fluid" :closable="true">
+        <div class="grid grid-cols-2 gap-2 pt-6">
+          <div class="col-span-1 mb-6">
             <FloatLabel>
-              <InputText v-model="editHotelPlan.name" />
+              <InputText v-model="editHotelPlan.name" fluid />
               <label>名称</label>
             </FloatLabel>
           </div>
-          <div class="col-6">
+          <div class="col-span-1 mb-6">
             <div class="flex grid-cols-2 justify-center items-center">
               <FloatLabel>
-                <InputText v-model="editHotelPlan.colorHEX"></InputText>
+                <InputText v-model="editHotelPlan.colorHEX" fluid />
                 <label>プラン表示HEX</label>
               </FloatLabel>
               <ColorPicker v-model="editHotelPlan.colorHEX" inputId="cp-hex" format="hex" class="ml-2" />
             </div>
           </div>
-          <div class="col-6">
+          <div class="col-span-2">
             <div class="p-float-label flex align-items-center gap-2">
               <span class="inline-block align-middle font-bold">請求種類：</span>
-              <SelectButton 
-                v-model="editHotelPlan.plan_type" 
+              <SelectButton
+                v-model="editHotelPlan.plan_type"
                 :options="sb_options"
                 optionLabel="label"
                 optionValue="value"
               />
             </div>
           </div>
-        </div>
-        <div class="pt-6">
-          <FloatLabel>
-            <Textarea v-model="editHotelPlan.description" fluid />
-            <label>詳細</label>
-          </FloatLabel>
-        </div>      
-        <div class="pt-2">
-          <label for="globalPlanSelectEdit" class="block mb-2">グローバルプランにリンクする（任意）</label>
-          <Select 
-            id="globalPlanSelectEdit"
-            v-model="editHotelPlan.plans_global_id" 
-            :options="globalPlans"
-            optionLabel="name"
-            optionValue="id"
-            placeholder="グローバルプランを選択する" 
-            class="w-full"  
-            showClear
-            filter    
-          /> 
+          <div class="col-span-2 pt-6 mb-2">
+            <FloatLabel>
+              <Textarea v-model="editHotelPlan.description" fluid />
+              <label>詳細</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-2 pt-2">
+            <label for="globalPlanSelectEdit" class="block mb-2">グローバルプランにリンクする（任意）</label>
+            <Select
+              id="globalPlanSelectEdit"
+              v-model="editHotelPlan.plans_global_id"
+              :options="globalPlans"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="グローバルプランを選択する"
+              class="w-full"
+              showClear
+              filter
+            />
+          </div>
         </div>
         <template #footer>
           <Button label="保存" icon="pi pi-check" @click="updateHotel" class="p-button-success p-button-text p-button-sm" />
