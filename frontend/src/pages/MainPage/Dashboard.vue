@@ -546,14 +546,14 @@
             const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
             return parsedClients
                 .slice(0, 1)
-                .map(client => client.name_kanji || client.name)
+                .map(client => client.name_kanji || client.name_kana || client.name)
                 .join("\n")
         };
         const formatClientNames = (clients) => {
             const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
             if (parsedClients.length <= 2) return "";
             return parsedClients
-                .map(client => client.name_kanji || client.name)
+                .map(client => client.name_kanji || client.name_kana || client.name)
                 .join("\n")
         };
 

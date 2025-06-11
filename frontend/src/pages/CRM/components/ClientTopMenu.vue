@@ -37,7 +37,7 @@
                             <p>
                                 <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                                 <i v-else class="pi pi-user"></i>
-                                {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                                {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                                 <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                             </p>
                             <div class="flex items-center gap-2">
@@ -189,7 +189,7 @@
     };
     const onClientSelect = (event) => {
         client.value = event.value;
-        client.value.display_name = event.value.name_kanji || event.value.name;        
+        client.value.display_name = event.value.name_kanji || event.value.name_kana || event.value.name;
         goToEditClientPage(client.value.id);
     };
 

@@ -116,7 +116,7 @@
                                 <DataTable :value="slotProps.data.merged_clients" size="small">
                                     <Column header="氏名・名称" sortable>
                                         <template #body="clientSlotProps">
-                                            {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name || '' }}
+                                            {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name_kana || clientSlotProps.data.name || '' }}
                                         </template>
                                     </Column>
                                     <Column header="カナ" sortable>
@@ -231,7 +231,7 @@
                                                 <p>
                                                     <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                                                     <i v-else class="pi pi-user"></i>
-                                                    {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                                                     <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                                                 </p>
                                                 <div class="flex items-center gap-2">
@@ -429,7 +429,7 @@
         
         billingForm.value.client = selectedClient.value;        
 
-        client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name };
+        client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
         
     };
     const normalizeKana = (str) => {
