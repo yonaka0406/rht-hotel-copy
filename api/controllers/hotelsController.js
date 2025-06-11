@@ -42,8 +42,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
       const createPartitionsSequentially = async () => {
         await createPartition('room_types');
-        await createPartition('rooms');
-        await createPartition('room_inventory');
+        await createPartition('rooms');        
         await createPartition('reservations');
         await createPartition('reservation_details');
         await createPartition('reservation_addons');
