@@ -339,54 +339,46 @@
     return dates;
   };
   const appendDaysToRange = async (direction) => {
-    const oldMinDate = minDate.value;
-    const oldMaxDate = maxDate.value;
-
     // console.log('appendDaysToRange calls fetchReservations', oldMinDate, oldMaxDate);
 
-    if (direction === "up") {          
+    if (direction === "up") {
+      const oldMinDateValue = minDate.value;
       const newMinDate = new Date(minDate.value);
-      const newMaxDate = new Date(minDate.value);
       newMinDate.setDate(newMinDate.getDate() - 7);
-      newMaxDate.setDate(newMaxDate.getDate() - 1);
+      minDate.value = formatDate(newMinDate);
+      
+      const newMaxDate = new Date(oldMinDateValue); // newMaxDate is oldMinDateValue
+      newMaxDate.setDate(newMaxDate.getDate() - 1); // Subtract one day
+
       const newDates = generateDateRange(newMinDate, newMaxDate);
       dateRange.value = [...newDates, ...dateRange.value];
-      minDate.value = formatDate(newMinDate);
-      await fetchReservations(oldMinDate, oldMaxDate);
+      
+      const fetchStartDate = minDate.value;
+      const fetchEndDate = formatDate(newMaxDate);
+      await fetchReservations(fetchStartDate, fetchEndDate);
+
     } else if (direction === "down") {
-      const newMinDate = new Date(maxDate.value);
+      const oldMaxDateValue = maxDate.value;
       const newMaxDate = new Date(maxDate.value);
-      newMinDate.setDate(newMinDate.getDate() + 1);
       newMaxDate.setDate(newMaxDate.getDate() + 7);
+      maxDate.value = formatDate(newMaxDate);
+
+      const newMinDate = new Date(oldMaxDateValue); // newMinDate is oldMaxDateValue
+      newMinDate.setDate(newMinDate.getDate() + 1); // Add one day
+      
       const newDates = generateDateRange(newMinDate, newMaxDate);
       dateRange.value = [...dateRange.value, ...newDates];
-      maxDate.value = formatDate(newMaxDate);
-      await fetchReservations(oldMinDate, oldMaxDate);
+      
+      const fetchStartDate = formatDate(newMinDate);
+      const fetchEndDate = maxDate.value;
+      await fetchReservations(fetchStartDate, fetchEndDate);
     }
   };
 
   // Fetch reserved rooms data
   const tempReservations = ref(null); 
-  const fetchReservations = async (oldMinDate = null, oldMaxDate = null) => {
+  const fetchReservations = async (startDate, endDate) => {
     try {
-      let startDate = dateRange.value[0];
-      let endDate = dateRange.value[dateRange.value.length - 1];
-      
-      let newEndDate = new Date(oldMinDate);
-      let newStartDate = new Date(oldMaxDate);
-
-      // Check if oldMinDate is provided and adjust the date range accordingly
-      if (oldMinDate && new Date(oldMinDate) > new Date(startDate)) {
-        newEndDate.setDate(newEndDate.getDate() - 1);
-        endDate = formatDate(newEndDate);
-      }
-
-      // Check if oldMaxDate is provided and adjust the date range accordingly
-      if (oldMaxDate && new Date(oldMaxDate) < new Date(endDate)) {            
-        newStartDate.setDate(newStartDate.getDate() + 1);
-        startDate = formatDate(newStartDate);
-      }
-
       if(!startDate && !endDate){
         // console.log('Dates undefined');
         return
