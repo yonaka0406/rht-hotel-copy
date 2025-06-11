@@ -548,7 +548,9 @@ const selectMyHoldReservations = async (requestId, user_id) => {
       hotels.name
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
-      ,COALESCE(clients.name_kanji, clients.name)
+      ,clients.name_kanji
+      ,clients.name_kana
+      ,clients.name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
