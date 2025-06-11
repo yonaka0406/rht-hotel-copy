@@ -30,7 +30,7 @@
                         <p>
                           <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                           <i v-else class="pi pi-user"></i>
-                          {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                          {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                           <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                         </p>
                         <div class="flex items-center gap-2">
@@ -301,10 +301,10 @@
         
         clientDetails.value = {
           ...selectedClient,
-          display_name: selectedClient.name_kanji || selectedClient.name,
+          display_name: selectedClient.name_kanji || selectedClient.name_kana || selectedClient.name,
         };
 
-        client.value = { display_name: selectedClient.name_kanji || selectedClient.name };
+        client.value = { display_name: selectedClient.name_kanji || selectedClient.name_kana || selectedClient.name };
         
       } else {
         resetClient();
@@ -388,13 +388,13 @@
 
       if (props.client_id) {
         await fetchClient(props.client_id);
-        selectedClient.value = clients.value.find((client) => client.id === props.client_id);
-        if (selectedClient) {
+        // selectedClient from the store is populated by fetchClient
+        if (useClientStore().selectedClient.value) { // Assuming selectedClient is the name in the store
           clientDetails.value = { 
-              ...selectedClient.value,
-              display_name: selectedClient.value.name_kanji || selectedClient.value.name,
+              ...useClientStore().selectedClient.value,
+              display_name: useClientStore().selectedClient.value.name_kanji || useClientStore().selectedClient.value.name_kana || useClientStore().selectedClient.value.name,
           };
-          client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name }
+          client.value = { display_name: useClientStore().selectedClient.value.name_kanji || useClientStore().selectedClient.value.name_kana || useClientStore().selectedClient.value.name };
 
           isClientSelected.value = true;
         }
