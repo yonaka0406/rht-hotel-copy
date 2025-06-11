@@ -369,6 +369,19 @@ CREATE TABLE plans_hotel (
     UNIQUE (hotel_id, name)
 ) PARTITION BY LIST (hotel_id);
 
+-- Table to explicitly hide a global plan for a specific hotel.
+CREATE TABLE hotel_plan_exclusions (
+    id SERIAL PRIMARY KEY,
+    hotel_id INTEGER NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+    global_plan_id INTEGER NOT NULL REFERENCES plans_global(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),    
+    UNIQUE (hotel_id, global_plan_id)
+);
+
+-- Create an index for faster lookups.
+CREATE INDEX idx_hotel_plan_exclusions_hotel_id_global_plan_id ON hotel_plan_exclusions (hotel_id, global_plan_id);
+
 CREATE TABLE plans_rates (
     id SERIAL PRIMARY KEY,
     hotel_id INT NULL REFERENCES hotels(id) ON DELETE CASCADE, -- hotel, NULL for global adjustments

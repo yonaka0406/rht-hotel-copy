@@ -264,3 +264,56 @@ $$ LANGUAGE plpgsql;
 -- the function will report dates from '2025-06-03' up to '2025-06-13'.
 --
 -- SELECT * FROM get_room_inventory_comparison_for_date_range(7, '2025-06-03');
+
+CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
+RETURNS TABLE(
+    plans_global_id INT,
+    plans_hotel_id INT,
+    name TEXT,
+    description TEXT,
+    plan_type TEXT,
+    color VARCHAR(7)
+) AS $$
+BEGIN
+    RETURN QUERY
+    -- 1. Get all hotel-specific plans for this hotel.
+    -- These always take precedence.
+    SELECT
+        ph.plans_global_id,
+        ph.id AS plans_hotel_id,
+        ph.name,
+        ph.description,
+        ph.plan_type,
+        ph.color
+    FROM
+        plans_hotel AS ph
+    WHERE
+        ph.hotel_id = p_hotel_id
+
+    UNION ALL
+
+    -- 2. Get all global plans that are not hidden and not overridden.
+    SELECT
+        pg.id AS plans_global_id,
+        NULL::INT AS plans_hotel_id, -- No hotel plan id for these
+        pg.name,
+        pg.description,
+        pg.plan_type,
+        pg.color
+    FROM
+        plans_global AS pg
+    WHERE
+        -- Condition A: The plan is NOT explicitly hidden for this hotel.
+        NOT EXISTS (
+            SELECT 1
+            FROM hotel_plan_exclusions hpe
+            WHERE hpe.global_plan_id = pg.id AND hpe.hotel_id = p_hotel_id
+        )
+        -- Condition B: The global plan is NOT overridden by a hotel-specific plan.
+        AND NOT EXISTS (
+            SELECT 1
+            FROM plans_hotel ph
+            WHERE ph.plans_global_id = pg.id AND ph.hotel_id = p_hotel_id
+        );
+END;
+$$ LANGUAGE plpgsql;
