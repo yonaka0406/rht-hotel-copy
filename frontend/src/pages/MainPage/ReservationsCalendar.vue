@@ -687,7 +687,7 @@
                   }                  
                   selectedRoomByDay.value = [];
                   isUpdating.value = false;
-                  await fetchReservations();
+                  await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
               },
               rejectProps: {
                   label: 'キャンセル',
@@ -916,7 +916,7 @@
     await setCalendarFreeChange(tempRoomData.value);
     
     // Reset
-    await fetchReservations();
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     dragMode.value = 'reservation'
     tempRoomData.value = {};
     hasChanges.value = false;
@@ -1172,7 +1172,7 @@
           await setCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.room_id, to.room_id, from.number_of_people, 'solo');
           await setReservationId(null);
           isUpdating.value = false; // Re-enable WebSocket updates
-          await fetchReservations();
+          await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
         } else {
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
         }
@@ -1289,7 +1289,7 @@
       }
       // Update the reservations data in your component
       // console.log('Received updated data:', data);
-      await fetchReservations();
+      await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     });
     
     await fetchHotels();
@@ -1305,7 +1305,7 @@
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
 
     nextTick(async () => {
-      await fetchReservations();      
+      await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);      
 
       // Scroll to 1/5 of the total scroll height
       const tableContainer = document.querySelector(".table-container");
@@ -1340,7 +1340,9 @@
     isLoading.value = true;
     if (oldVal !== null && newVal !== null) {
       await fetchHotel();    
-      await fetchReservations();      
+      if (dateRange.value && dateRange.value.length > 0) {
+        await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      }
       isLoading.value = false;
     }
   }, { immediate: true });
@@ -1348,7 +1350,7 @@
     if (newVal === false) {          
       // console.log('Edit drawer became false');
       isUpdating.value = false;
-      await fetchReservations();
+      await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     }
   });
   watch(centerDate, async (newVal, oldVal) => {
@@ -1363,13 +1365,13 @@
     minDate.value = initialMinDate;
     maxDate.value = initialMaxDate;        
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
-    await fetchReservations();
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     isLoading.value = false;
   }); 
   watch(dragMode, async (newVal, oldVal) => {
     selectedRoomByDay.value = [];
     tempRoomData.value = [];
-    await fetchReservations();
+    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     // console.log(newVal);
   }) 
 
