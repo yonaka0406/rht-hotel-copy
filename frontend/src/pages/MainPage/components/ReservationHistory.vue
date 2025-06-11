@@ -131,7 +131,7 @@
             for (const clientId of clientIds) {
                 // Call fetchClients for each individual clientId
                 const response = await fetchClient(clientId);
-                clientMap[clientId] = response.client.client.name_kanji || response.client.client.name;
+                clientMap[clientId] = response.client.client.name_kanji || response.client.client.name_kana || response.client.client.name;
             }
             // console.log('clientMap:',clientMap);
 

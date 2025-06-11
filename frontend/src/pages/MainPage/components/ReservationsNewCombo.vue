@@ -158,7 +158,7 @@
                         <p>
                             <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                             <i v-else class="pi pi-user"></i>
-                            {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                            {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                             <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
                         </p>
                         <div class="flex items-center gap-2">
@@ -616,9 +616,9 @@
         reservationDetails.value.phone = selectedClient.value.phone;        
 
         // Update the name field (optional, as it's already handled by v-model)
-        reservationDetails.value.name = selectedClient.value.name_kanji || selectedClient.value.name;
+        reservationDetails.value.name = selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name;
 
-        client.value = { display_name: reservationDetails.value.name_kanji || reservationDetails.value.name };
+        client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
     };
     const normalizeKana = (str) => {
         if (!str) return '';

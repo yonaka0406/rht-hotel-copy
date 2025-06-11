@@ -263,7 +263,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
       ,reservations.id
       ,reservations.status
       ,reservations.reservation_client_id AS booker_id
-      ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+      ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
       ,booker.name_kana AS booker_name_kana
       ,booker.name_kanji AS booker_name_kanji
       ,reservations.check_in
@@ -438,7 +438,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,reservations.id
       ,reservations.status
       ,reservations.reservation_client_id AS booker_id
-      ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+      ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
       ,booker.name_kana AS booker_name_kana
       ,booker.name_kanji AS booker_name_kanji
       ,reservations.check_in
@@ -621,7 +621,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.number_of_people
           ,reservations.status
           ,reservations.type
-          ,COALESCE(clients.name_kanji, clients.name, clients.name_kana) AS booker_name
+          ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS booker_name
           ,clients.name_kana AS booker_kana
 			    ,clients.name_kanji AS booker_kanji
           ,SUM(reservation_payments.value) as payments

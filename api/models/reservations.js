@@ -68,7 +68,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       reservation_details.id
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
-      ,COALESCE(clients.name_kanji, clients.name) as client_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
@@ -87,29 +87,17 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,reservation_details.price
 
     FROM
-      rooms
-      ,room_types
-      ,reservations
-      ,clients
-      ,reservation_details
-        LEFT JOIN
-      plans_global
-        ON reservation_details.plans_global_id = plans_global.id
-        LEFT JOIN
-      plans_hotel
-        ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
-      
+      reservation_details
+      JOIN rooms ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
+      JOIN room_types ON room_types.id = rooms.room_type_id AND room_types.hotel_id = rooms.hotel_id
+      JOIN reservations ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id
+      LEFT JOIN clients ON clients.id = reservations.reservation_client_id
+      LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
+      LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date <= $3
       AND reservation_details.cancelled IS NULL      
-      AND reservation_details.room_id = rooms.id
-      AND reservation_details.hotel_id = rooms.hotel_id
-      AND room_types.id = rooms.room_type_id
-      AND room_types.hotel_id = rooms.hotel_id
-      AND reservations.id = reservation_details.reservation_id
-      AND reservations.hotel_id = reservation_details.hotel_id
-      AND clients.id = reservations.reservation_client_id
     ORDER BY
       reservation_details.room_id
       ,reservation_details.date
@@ -135,7 +123,7 @@ const selectReservation = async (requestId, id) => {
       ,reservation_details.cancelled
       ,reservation_details.billable
       ,clients.id as client_id
-      ,COALESCE(clients.name_kanji, clients.name) as client_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
       ,reservations.check_in
       ,reservations.check_in_time
       ,reservations.check_out      
@@ -289,7 +277,7 @@ const selectReservationDetail = async (requestId, id) => {
       reservation_details.hotel_id,
       reservation_details.reservation_id,
       clients.id AS client_id,
-      COALESCE(clients.name_kanji, clients.name) AS client_name,
+      COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS client_name,
       reservations.check_in,
       reservations.check_out,
       reservations.number_of_people AS reservation_number_of_people,
@@ -521,7 +509,7 @@ const selectMyHoldReservations = async (requestId, user_id) => {
       reservation_details.hotel_id
       ,hotels.name
       ,reservation_details.reservation_id
-      ,COALESCE(clients.name_kanji, clients.name) as client_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
@@ -548,7 +536,9 @@ const selectMyHoldReservations = async (requestId, user_id) => {
       hotels.name
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
-      ,COALESCE(clients.name_kanji, clients.name)
+      ,clients.name_kanji
+      ,clients.name_kana
+      ,clients.name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
@@ -575,7 +565,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       reservations.hotel_id
       ,reservations.id
       ,reservations.reservation_client_id
-      ,COALESCE(r_client.name_kanji, r_client.name) as client_name
+      ,COALESCE(r_client.name_kanji, r_client.name_kana, r_client.name) as client_name
       ,reservations.check_in
       ,reservations.check_in_time
       ,reservations.check_out
@@ -691,7 +681,7 @@ const selectReservationClientIds = async(requestId, hotelId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT DISTINCT
-      id, name, name_kana, name_kanji, COALESCE(name_kanji, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
+      id, name, name_kana, name_kanji, COALESCE(name_kanji, name_kana, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
     FROM
     (
       SELECT clients.*
@@ -731,7 +721,7 @@ const selectReservationPayments = async(requestId, hotelId, reservationId) => {
       ,payment_types.name as payment_type_name
       ,payment_types.transaction as transaction_type
       ,rooms.room_number
-      ,COALESCE(clients.name_kanji, clients.name) AS payer_name
+      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS payer_name
     FROM 
       reservation_payments
       ,payment_types

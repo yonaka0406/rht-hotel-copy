@@ -149,7 +149,7 @@
                             <DataTable :value="slotProps.data.merged_clients" size="small">
                                 <Column header="氏名・名称" sortable>
                                     <template #body="clientSlotProps">
-                                        {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name || '' }}
+                                            {{ clientSlotProps.data.name_kanji || clientSlotProps.data.name_kana || clientSlotProps.data.name || '' }}
                                     </template>
                                 </Column>
                                 <Column header="カナ" sortable>
@@ -499,14 +499,14 @@
         const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
         return parsedClients
             .slice(0, 1)
-            .map(client => client.name_kanji || client.name)
+            .map(client => client.name_kanji || client.name_kana || client.name)
             .join("\n")
     };
     const formatClientNames = (clients) => {
         const parsedClients = Array.isArray(clients) ? clients : JSON.parse(clients);
         if (parsedClients.length <= 2) return "";
         return parsedClients
-            .map(client => client.name_kanji || client.name)
+            .map(client => client.name_kanji || client.name_kana || client.name)
             .join("\n")
     };
     const openDrawer = (event) => {    

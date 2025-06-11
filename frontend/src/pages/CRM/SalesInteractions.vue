@@ -253,7 +253,7 @@
                         <p class="font-medium">
                         <i v-if="slotProps.option.is_legal_person" class="pi pi-building mr-2 text-gray-500"></i>
                         <i v-else class="pi pi-user mr-2 text-gray-500"></i>
-                        {{ slotProps.option.name_kanji || slotProps.option.name || '' }}
+                        {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
                         <span v-if="slotProps.option.name_kana" class="text-sm text-gray-500"> ({{ slotProps.option.name_kana }})</span>
                         </p>
                         <div class="flex items-center gap-x-3 mt-1 text-xs">

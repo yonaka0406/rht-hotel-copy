@@ -6,7 +6,7 @@ const selectUserActions = async (requestId, id) => {
   const query = `
       SELECT 
         crm_actions.*
-        ,COALESCE(clients.name_kanji, clients.name) as client_name
+        ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
         ,users.name as assigned_to_name
       FROM 
         crm_actions  
@@ -34,7 +34,7 @@ const selectClientActions = async (requestId, id) => {
   const query = `
       SELECT 
         crm_actions.*
-        ,COALESCE(clients.name_kanji, clients.name) as client_name
+        ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
         ,users.name as assigned_to_name
       FROM 
         crm_actions  
@@ -62,7 +62,7 @@ const selectAllActions = async (requestId) => {
   const query = `
       SELECT 
           crm_actions.*
-          ,COALESCE(clients.name_kanji, clients.name) as client_name
+          ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
           ,users.name as assigned_to_name
       FROM 
         crm_actions
@@ -88,7 +88,7 @@ const getActionById = async (requestId, actionId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT crm_actions.*,
-           COALESCE(clients.name_kanji, clients.name) as client_name,
+           COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name,
            users.name as assigned_to_name
     FROM crm_actions
     LEFT JOIN clients ON clients.id = crm_actions.client_id

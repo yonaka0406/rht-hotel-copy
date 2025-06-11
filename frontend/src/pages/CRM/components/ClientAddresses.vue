@@ -162,7 +162,7 @@
         if (!selectedClient.value || selectedClient.value.length === 0) {
             return null;
         }
-        const name = selectedClient.value.client.name_kanji || selectedClient.value.client.name;
+        const name = selectedClient.value.client.name_kanji || selectedClient.value.client.name_kana || selectedClient.value.client.name;
         const name_kana = selectedClient.value.client.name_kana;
 
         return name_kana ? name + ' (' + name_kana + ')' : name;

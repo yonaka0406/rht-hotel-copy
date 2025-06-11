@@ -175,7 +175,7 @@
                                 </Column>
                                 <Column header="氏名・名称">
                                     <template #body="{ data }">
-                                        {{ data.name_kanji || data.name }}
+                                        {{ data.name_kanji || data.name_kana || data.name }}
                                     </template>
                                 </Column>
                                 <Column header="カナ">
