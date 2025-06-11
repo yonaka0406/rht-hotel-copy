@@ -415,12 +415,12 @@ CREATE TABLE addons_global (
     UNIQUE (name)
 );
 
-INSERT INTO addons_global (name, description, price, created_by)
+INSERT INTO addons_global (name, description, price, tax_type_id, tax_rate, created_by)
 VALUES
-    ('朝食', '', 0, 1),
-    ('夕食', '', 0, 1),
-    ('駐車場', '', 0, 1),
-    ('お弁当', '', 0, 1);
+    ('朝食', '', 0, 3, 0.1, 1),
+    ('夕食', '', 0, 3, 0.1, 1),
+    ('駐車場', '', 0, 3, 0.1, 1),
+    ('お弁当', '', 0, 3, 0.1, 1);
 
 CREATE TABLE addons_hotel (
     id SERIAL,    
