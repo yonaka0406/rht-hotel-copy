@@ -388,13 +388,13 @@
 
       if (props.client_id) {
         await fetchClient(props.client_id);
-        // selectedClient from the store is populated by fetchClient
-        if (useClientStore().selectedClient.value) { // Assuming selectedClient is the name in the store
+        selectedClient.value = clients.value.find((client) => client.id === props.client_id);
+        if (selectedClient.value) { // Assuming selectedClient is the name in the store
           clientDetails.value = { 
-              ...useClientStore().selectedClient.value,
-              display_name: useClientStore().selectedClient.value.name_kanji || useClientStore().selectedClient.value.name_kana || useClientStore().selectedClient.value.name,
+              ...selectedClient.value,
+              display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name,
           };
-          client.value = { display_name: useClientStore().selectedClient.value.name_kanji || useClientStore().selectedClient.value.name_kana || useClientStore().selectedClient.value.name };
+          client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
 
           isClientSelected.value = true;
         }
