@@ -196,6 +196,7 @@ module.exports = {
   getPool,
   getDevPool,
   getProdPool,
+  getEnvironment,
   setupRequestContext,
   isDomainProduction
 };
