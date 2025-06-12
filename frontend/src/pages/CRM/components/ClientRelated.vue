@@ -49,7 +49,7 @@
                     v-model="selectedClientForAutocomplete"
                     :suggestions="autocompleteSuggestions"
                     @complete="searchTargetClients"
-                    field="name"
+                    optionLabel="name"
                     placeholder="対象クライアントを選択・検索 (法人のみ)"
                     forceSelection
                     dropdown
