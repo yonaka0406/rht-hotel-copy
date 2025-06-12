@@ -298,8 +298,8 @@
         fetchHotels();
         await fetchUser();
         if (logged_user.value && logged_user.value[0] && logged_user.value[0].permissions) {
-            const permissions = logged_user.value[0].permissions;
-            isAdmin.value = !!(permissions.manage_db && permissions.manage_users);
+            const permissions = logged_user.value[0].permissions;            
+            isAdmin.value = !!(permissions.manage_db || permissions.manage_users);            
             isClientEditor.value = !!permissions.manage_clients;
             isReporting.value = !!permissions.view_reports;
         }
