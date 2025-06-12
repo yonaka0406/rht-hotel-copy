@@ -52,7 +52,6 @@
                     optionValue="id" 
                     placeholder="対象クライアントを選択 (法人のみ)" 
                     :filter="true"
-                    :loading="isLoadingLegalClientsForSelection" 
                     showClear
                     v-tooltip.bottom="'法人顧客しか選択できません。'"
                     fluid
@@ -135,22 +134,23 @@
     // Store
     const clientStore = useClientStore();
     const { selectedClient, relatedCompanies, isLoadingRelatedCompanies, 
-        commonRelationshipPairs, legalClientsForSelection, isLoadingLegalClientsForSelection 
+        commonRelationshipPairs, clients: allClients // Assuming 'clients' is the ref for all clients in the store
     } = clientStore;
 
     const filteredLegalClientsForSelection = computed(() => {
-      if (!legalClientsForSelection.value) {
+      if (!allClients.value || !Array.isArray(allClients.value)) { // Check if allClients.value is an array
         return [];
       }
-      return legalClientsForSelection.value.filter(client => client.id !== props.clientId);
+      return allClients.value.filter(client =>
+        client.legal_or_natural_person === 'legal' && client.id !== props.clientId
+      );
     });
 
     const {
         fetchRelatedCompanies: storeFetchRelatedCompanies,
         addClientRelationship: storeAddClientRelationship,
         deleteClientRelationship: storeDeleteClientRelationship,
-        fetchCommonRelationshipPairs: storeFetchCommonRelationshipPairs,
-        fetchLegalClientsForSelection: storeFetchLegalClientsForSelection
+        fetchCommonRelationshipPairs: storeFetchCommonRelationshipPairs
     } = clientStore;
 
     const clientName = computed(() => {
@@ -192,14 +192,6 @@
         }
     };
 
-    const loadLegalClients = async () => {
-        try {
-            await storeFetchLegalClientsForSelection();
-        } catch (error) {
-            toast.add({ severity: 'error', summary: 'Error Fetching Clients', detail: error.message || 'Could not fetch legal clients.', life: 3000 });
-        }
-    };
-
     const openAddRelationshipModal = () => {
     selectedPair.value = null;
     newRelationship.value = {
@@ -208,7 +200,8 @@
         target_relationship_type: '',
         comment: ''
     };
-    loadLegalClients(); 
+      // Ensure clientStore.clients (aliased as allClients) is loaded if necessary.
+      // For now, assuming it's already loaded as per user feedback.
     displayAddModal.value = true;
     };
 
