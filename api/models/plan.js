@@ -40,22 +40,8 @@ const getAllHotelPlans = async (requestId, hotel_id) => {
 };
 const getAllPlansByHotel = async (requestId, hotel_id) => {
     const pool = getPool(requestId);
-    const query = `
-        SELECT
-            CASE WHEN ph.plans_global_id = pg.id THEN NULL ELSE pg.id END as plans_global_id
-            ,ph.id as plans_hotel_id
-            ,COALESCE(ph.name, pg.name) as name
-            ,COALESCE(ph.description, pg.description) as description
-            ,COALESCE(ph.plan_type, pg.plan_type) as plan_type	
-            ,COALESCE(ph.color, pg.color) as color
-        FROM 
-            plans_global AS pg 
-                FULL JOIN 
-            (SELECT * FROM plans_hotel WHERE hotel_id = $1) AS ph on pg.id = ph.plans_global_id
-        ORDER BY
-            COALESCE(ph.plan_type, pg.plan_type)
-            ,COALESCE(ph.name, pg.name)
-    `;
+    const query = `SELECT * FROM get_available_plans_for_hotel($1)
+ORDER BY plan_type, name;`;
     const values = [hotel_id];
 
     try {
