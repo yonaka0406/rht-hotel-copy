@@ -2,7 +2,7 @@
   <div class="plan-visibility-settings">
     <Toast />
 
-    <div v.if="isLoading" class="p-d-flex p-jc-center p-ai-center" style="height: 200px;">
+    <div v-if="isLoading" class="p-d-flex p-jc-center p-ai-center" style="height: 200px;">
       <ProgressSpinner />
     </div>
 
