@@ -194,6 +194,20 @@ CREATE TABLE client_relationships (
 CREATE INDEX idx_cr_source_client_id ON client_relationships(source_client_id);
 CREATE INDEX idx_cr_target_client_id ON client_relationships(target_client_id);
 
+CREATE VIEW common_relationship_pairs AS
+SELECT 
+    source_relationship_type AS source_to_target_type,
+    target_relationship_type AS target_to_source_type,
+    CONCAT(source_relationship_type, ' / ', target_relationship_type) AS pair_name,
+    COUNT(*) AS occurrence_count
+FROM 
+    client_relationships 
+GROUP BY
+    source_relationship_type,
+    target_relationship_type
+ORDER BY 
+    occurrence_count DESC, pair_name ASC;
+
 CREATE TEMP TABLE temp_client_substitutions (
     pattern TEXT,
     replacement TEXT,
