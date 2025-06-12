@@ -6,6 +6,7 @@ const { sendResetEmail, sendAdminResetEmail } = require('../utils/emailUtils');
 const sessionService = require('../services/sessionService');
 
 const { findUserByEmail, updatePasswordHash, findUserByProviderId, linkGoogleAccount, createUserWithGoogle, updateUserGoogleTokens } = require('../models/user');
+const { getEnvironment } = require('../config/database'); // Added import
 
 const { OAuth2Client } = require('google-auth-library');
 const { getGoogleOAuth2Client } = require('../config/oauth');
@@ -280,7 +281,10 @@ const googleLogin = (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
-  const logger = req.app.locals.logger;
+  const logger = req.app.locals.logger; // Ensure logger is defined, it should be.
+  // Add this debug logging
+  logger.debug(`[OAUTH_DEBUG] Request ID: ${req.requestId}, Host: ${req.get('host')}, Origin: ${req.get('origin')}`);
+  logger.debug(`[OAUTH_DEBUG] Environment detected by getEnvironment: ${getEnvironment(req.requestId)}`);
   const { code, state: receivedState } = req.query;
   const storedState = req.session ? req.session.oauth_state : null;
   const isProduction = process.env.NODE_ENV === 'production';

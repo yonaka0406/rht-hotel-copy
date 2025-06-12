@@ -82,13 +82,20 @@ const setupRequestContext = (req, res, next) => {
   // Determine environment from multiple potential sources
   const origin = req.headers.origin || req.headers.referer || '';
   const host = req.headers.host || '';
-  
-  logger.debug(`Request #${requestId} - Origin: ${origin}, Host: ${host}`);
-  
+
+  // Log the extracted domain and host for debugging
+  logger.debug(`Request #${requestId} - Determining environment. Origin: '${origin}', Host: '${host}'`);
+
   // Check both origin and host to determine environment
-  const isProdOrigin = isDomainProduction(origin);
-  const isProd = isProdOrigin;
-  
+  // isDomainProduction logs details internally
+  const isProd = isDomainProduction(origin) || isDomainProduction(host);
+
+  if (isProd) {
+      logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on domain/host.`);
+  } else {
+      logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on domain/host.`);
+  }
+
   setEnvironment(requestId, isProd ? 'prod' : 'dev');
   
   // Add cleanup when response finishes

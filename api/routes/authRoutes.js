@@ -13,8 +13,10 @@ router.post('/forgot-password-admin', emailValidation, forgotAdmin); // Added em
 router.post('/reset-password', passwordResetValidation, reset);
 router.get('/active-users', getActiveUsers);
 
+const { setupRequestContext } = require('../config/database'); // Import the middleware
+
 // Google OAuth routes
-router.get('/google', googleLogin);
-router.get('/google/callback', googleCallback);
+router.get('/google', setupRequestContext, googleLogin); // Apply middleware
+router.get('/google/callback', setupRequestContext, googleCallback); // Apply middleware
 
 module.exports = router;
