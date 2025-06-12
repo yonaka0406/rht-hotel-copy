@@ -173,6 +173,27 @@ INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_na
 VALUES
 ('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1);
 
+CREATE TABLE client_relationships (
+    id SERIAL PRIMARY KEY,
+    source_client_id UUID NOT NULL,
+    source_relationship_type VARCHAR(255) NOT NULL,
+    target_client_id UUID NOT NULL,
+    target_relationship_type VARCHAR(255) NOT NULL,
+    comment TEXT,
+    CONSTRAINT fk_source_client
+        FOREIGN KEY(source_client_id)
+        REFERENCES clients(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_target_client
+        FOREIGN KEY(target_client_id)
+        REFERENCES clients(id)
+        ON DELETE CASCADE
+);
+
+-- Add indexes for performance on foreign key columns
+CREATE INDEX idx_cr_source_client_id ON client_relationships(source_client_id);
+CREATE INDEX idx_cr_target_client_id ON client_relationships(target_client_id);
+
 CREATE TEMP TABLE temp_client_substitutions (
     pattern TEXT,
     replacement TEXT,
