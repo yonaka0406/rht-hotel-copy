@@ -47,7 +47,7 @@
                 <Select 
                     id="targetClient" 
                     v-model="newRelationship.target_client_id"
-                    :options="legalClientsForSelection" 
+                    :options="filteredLegalClientsForSelection"
                     optionLabel="name"
                     optionValue="id" 
                     placeholder="対象クライアントを選択 (法人のみ)" 
@@ -137,6 +137,14 @@
     const { selectedClient, relatedCompanies, isLoadingRelatedCompanies, 
         commonRelationshipPairs, legalClientsForSelection, isLoadingLegalClientsForSelection 
     } = clientStore;
+
+    const filteredLegalClientsForSelection = computed(() => {
+      if (!legalClientsForSelection.value) {
+        return [];
+      }
+      return legalClientsForSelection.value.filter(client => client.id !== props.clientId);
+    });
+
     const {
         fetchRelatedCompanies: storeFetchRelatedCompanies,
         addClientRelationship: storeAddClientRelationship,
@@ -227,8 +235,12 @@
         toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Cannot relate a client to itself.', life: 3000 });
         return;
     }
-    if (!selectedPair.value || !newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
-        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Common Relationship Pair must be selected.', life: 3000 });
+    // if (!selectedPair.value || !newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
+    //     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Common Relationship Pair must be selected.', life: 3000 });
+    //     return;
+    // }
+    if (!newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
+        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Source and Target relationship types must be filled, either by selecting a common pair or by manual input.', life: 4000 });
         return;
     }
 

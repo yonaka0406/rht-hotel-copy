@@ -156,37 +156,55 @@ const processNameString = async (nameString) => {
 
 
 // Return all clients
-const getAllClients = async (requestId, limit, offset) => {
+const getAllClients = async (requestId, limit, offset, filterParams = {}) => {
   const pool = getPool(requestId);
+  let whereClauses = ["id <> '11111111-1111-1111-1111-111111111111'"];
+  let queryParams = [];
+
+  if (filterParams.legal_or_natural_person) {
+    queryParams.push(filterParams.legal_or_natural_person);
+    whereClauses.push(`clients.legal_or_natural_person = $${queryParams.length}`);
+  }
+
   const query = `
     SELECT 
       clients.*
       ,CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key 
       ,CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
-    WHERE id <> '11111111-1111-1111-1111-111111111111'
+    WHERE ${whereClauses.join(' AND ')}
     ORDER BY name ASC
-    LIMIT $1 OFFSET $2
+    LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
   `;
 
+  queryParams.push(limit, offset);
+
   try {
-    const result = await pool.query(query, [limit, offset]);    
+    const result = await pool.query(query, queryParams);
     return result.rows; // Return all
   } catch (err) {
     console.error('Error retrieving all clients:', err);
     throw new Error('Database error');
   }
 };
-const getTotalClientsCount = async (requestId) => {
+const getTotalClientsCount = async (requestId, filterParams = {}) => {
   const pool = getPool(requestId);
+  let whereClauses = ["id <> '11111111-1111-1111-1111-111111111111'"];
+  let queryParams = [];
+
+  if (filterParams.legal_or_natural_person) {
+    queryParams.push(filterParams.legal_or_natural_person);
+    whereClauses.push(`clients.legal_or_natural_person = $${queryParams.length}`);
+  }
+
   const query = `
     SELECT COUNT(*) 
     FROM clients
-    WHERE id <> '11111111-1111-1111-1111-111111111111'
+    WHERE ${whereClauses.join(' AND ')}
   `;
 
   try {
-    const result = await pool.query(query);
+    const result = await pool.query(query, queryParams);
     return parseInt(result.rows[0].count); // Return total count
   } catch (err) {
     console.error('Error retrieving total clients count:', err);
