@@ -330,24 +330,6 @@ const getAllRoomsByHotelId = async (requestId, id) => {
   }
 };
 
-module.exports = {
-  getAllHotels,
-  getHotelByID,
-  getAllHotelSiteController,
-  getHotelSiteController,
-  updateHotel,
-  updateHotelSiteController,
-  updateRoomType,
-  updateRoom,
-  updateHotelCalendar,
-  selectBlockedRooms,
-  deleteBlockedRooms,
-  getAllHotelRoomTypesById,
-  getAllRoomsByHotelId,
-  getPlanExclusionSettings,
-  updatePlanExclusions,
-};
-
 const getPlanExclusionSettings = async (requestId, hotel_id) => {
   const pool = getPool(requestId);
   try {
@@ -398,4 +380,22 @@ const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
   } finally {
     client.release();
   }
+};
+
+module.exports = {
+  getAllHotels,
+  getHotelByID,
+  getAllHotelSiteController,
+  getHotelSiteController,
+  updateHotel,
+  updateHotelSiteController,
+  updateRoomType,
+  updateRoom,
+  updateHotelCalendar,
+  selectBlockedRooms,
+  deleteBlockedRooms,
+  getAllHotelRoomTypesById,
+  getAllRoomsByHotelId,
+  getPlanExclusionSettings,
+  updatePlanExclusions,
 };
