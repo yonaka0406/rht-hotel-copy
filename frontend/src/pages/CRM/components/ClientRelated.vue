@@ -324,7 +324,11 @@
             return client.legal_or_natural_person === 'legal' &&
                    client.id !== props.clientId &&
                    !existingRelatedIds.has(client.id);
-        }).map(client => ({ ...client, is_legal_person: client.legal_or_natural_person === 'legal' })); // Ensure is_legal_person for template
+        }).map(client => ({
+          ...client,
+          name: client.name || '', // Ensure 'name' is a string, default to empty string if null/undefined
+          is_legal_person: client.legal_or_natural_person === 'legal'
+        }));
         return;
       }
 
@@ -349,7 +353,11 @@
                client.legal_or_natural_person === 'legal' &&
                client.id !== props.clientId &&
                !existingRelatedIds.has(client.id);
-      }).map(client => ({ ...client, is_legal_person: client.legal_or_natural_person === 'legal' })); // Ensure is_legal_person for template
+      }).map(client => ({
+        ...client,
+        name: client.name || '', // Ensure 'name' is a string, default to empty string if null/undefined
+        is_legal_person: client.legal_or_natural_person === 'legal'
+      }));
     };
 
     watch(selectedClientForAutocomplete, (newValue) => {
