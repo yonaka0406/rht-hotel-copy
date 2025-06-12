@@ -770,7 +770,7 @@ const { getPool } = require('../config/database');
             SELECT
                 cr.id AS relationship_id,
                 c.id AS related_company_id,
-                c.name AS related_company_name,
+                COALESCE(c.name_kanji, c.name_kana, c.name, '') AS related_company_name,
                 cr.source_relationship_type AS our_perspective_type,
                 cr.target_relationship_type AS their_perspective_type,
                 cr.comment
@@ -780,7 +780,7 @@ const { getPool } = require('../config/database');
             SELECT
                 cr.id AS relationship_id,
                 c.id AS related_company_id,
-                c.name AS related_company_name,
+                COALESCE(c.name_kanji, c.name_kana, c.name, '') AS related_company_name,
                 cr.target_relationship_type AS our_perspective_type,
                 cr.source_relationship_type AS their_perspective_type,
                 cr.comment
