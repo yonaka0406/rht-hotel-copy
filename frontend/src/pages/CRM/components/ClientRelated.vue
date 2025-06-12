@@ -56,7 +56,7 @@
                     style="width: 100%;"
                     panelClass="max-h-60 overflow-y-auto"
                     v-tooltip.bottom="'法人顧客しか選択できません。'"
-                    :loading="clientStore.clientsIsLoading"
+                    :loading="clientsIsLoading"
                 >
                     <template #option="slotProps">
                     <div class="client-option-item p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
@@ -146,7 +146,7 @@
     import ProgressSpinner from 'primevue/progressspinner';
     import Dialog from 'primevue/dialog';
     import InputText from 'primevue/inputtext';
-    // import Select from 'primevue/select'; // Keep if Select is used elsewhere, or remove
+    import Select from 'primevue/select';
     import AutoComplete from 'primevue/autocomplete';
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
@@ -155,8 +155,13 @@
 
     // Store
     const clientStore = useClientStore();
-    const { selectedClient, relatedCompanies, isLoadingRelatedCompanies, 
-        commonRelationshipPairs, clients: allClients // Assuming 'clients' is the ref for all clients in the store
+    const {
+        selectedClient,
+        relatedCompanies,
+        isLoadingRelatedCompanies,
+        commonRelationshipPairs,
+        clients: allClients,
+        clientsIsLoading // Add this
     } = clientStore;
 
     // const filteredLegalClientsForSelection = computed(() => { ... }); // REMOVE THIS
