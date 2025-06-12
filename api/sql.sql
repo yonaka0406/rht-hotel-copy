@@ -692,9 +692,6 @@ CREATE TABLE receipts (
 COMMENT ON TABLE receipts IS 'Stores generated receipt information, linked to payments.';
 COMMENT ON COLUMN receipts.receipt_number IS 'The unique sequential number generated for the receipt, specific to the hotel.';
 
-ALTER TABLE receipts
-ADD COLUMN tax_breakdown JSONB NULL;
-
 -- OTA / Site Controller
 
 CREATE TABLE sc_user_info (
