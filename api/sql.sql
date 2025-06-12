@@ -71,16 +71,19 @@ CREATE TABLE users (
     ALTER TABLE user_roles
     ADD COLUMN updated_by INT DEFAULT NULL REFERENCES users(id);
 
+    ALTER TABLE users ADD CONSTRAINT password_auth_consistency 
+      CHECK (
+         (auth_provider = 'local' AND password_hash IS NOT NULL) 
+         OR 
+         (auth_provider != 'local' AND password_hash IS NULL)
+      );
 
-    -- Temporary
-   ALTER TABLE users
-      ADD COLUMN auth_provider VARCHAR(50) NOT NULL DEFAULT 'local',
-      ADD COLUMN provider_user_id VARCHAR(255) NULL,
-      ADD COLUMN google_calendar_id TEXT NULL,
-      ADD COLUMN google_access_token TEXT NULL,
-      ADD COLUMN google_refresh_token TEXT NULL,
-      ADD COLUMN google_token_expiry_date TIMESTAMP WITH TIME ZONE NULL,
-      ADD COLUMN last_successful_google_sync TIMESTAMP WITH TIME ZONE NULL;
+   ALTER TABLE users ADD CONSTRAINT provider_id_consistency
+      CHECK (
+         (auth_provider = 'local' AND provider_user_id IS NULL)
+         OR 
+         (auth_provider != 'local' AND provider_user_id IS NOT NULL)
+      );
 
 -- Main Hotels Table
 CREATE TABLE hotels (
