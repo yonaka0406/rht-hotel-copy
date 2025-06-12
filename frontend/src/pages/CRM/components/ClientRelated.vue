@@ -49,7 +49,7 @@
                     v-model="selectedClientForAutocomplete"
                     :suggestions="autocompleteSuggestions"
                     @complete="searchTargetClients"
-                    optionLabel="name"
+                    optionLabel="preferred_display_name"
                     placeholder="対象クライアントを選択・検索 (法人のみ)"
                     forceSelection
                     dropdown
@@ -326,7 +326,8 @@
                    !existingRelatedIds.has(client.id);
         }).map(client => ({
           ...client,
-          name: client.name || '', // Ensure 'name' is a string, default to empty string if null/undefined
+          name: client.name || '', // Keep for safety/consistency
+          preferred_display_name: client.name_kanji || client.name_kana || client.name || '',
           is_legal_person: client.legal_or_natural_person === 'legal'
         }));
         return;
@@ -355,7 +356,8 @@
                !existingRelatedIds.has(client.id);
       }).map(client => ({
         ...client,
-        name: client.name || '', // Ensure 'name' is a string, default to empty string if null/undefined
+        name: client.name || '', // Keep for safety/consistency
+        preferred_display_name: client.name_kanji || client.name_kana || client.name || '',
         is_legal_person: client.legal_or_natural_person === 'legal'
       }));
     };
