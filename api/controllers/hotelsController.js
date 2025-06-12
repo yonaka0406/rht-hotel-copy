@@ -1,5 +1,5 @@
 const { getPool } = require('../config/database');
-const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms } = require('../models/hotel');
+const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions } = require('../models/hotel');
 
 // POST
   const hotels = async (req, res) => {
@@ -311,6 +311,43 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
   };
 
+// Controller for getting plan exclusion settings
+const getPlanExclusionSettingsController = async (req, res) => {
+  try {
+    const { hotel_id } = req.params;
+    if (!hotel_id) {
+      return res.status(400).json({ message: 'Hotel ID is required.' });
+    }
+
+    const settings = await getPlanExclusionSettings(req.requestId, parseInt(hotel_id, 10));
+    res.status(200).json(settings);
+  } catch (error) {
+    console.error('Error getting plan exclusion settings:', error);
+    res.status(500).json({ message: 'Internal server error while retrieving plan exclusion settings.' });
+  }
+};
+
+// Controller for updating plan exclusion settings
+const updatePlanExclusionSettingsController = async (req, res) => {
+  try {
+    const { hotel_id } = req.params;
+    const { global_plan_ids } = req.body; // e.g. { "global_plan_ids": [1, 2, 3] }
+
+    if (!hotel_id) {
+      return res.status(400).json({ message: 'Hotel ID is required.' });
+    }
+    if (!Array.isArray(global_plan_ids)) {
+      return res.status(400).json({ message: 'global_plan_ids must be an array.' });
+    }
+
+    await updatePlanExclusions(req.requestId, parseInt(hotel_id, 10), global_plan_ids);
+    res.status(200).json({ message: 'Plan exclusions updated successfully' });
+  } catch (error) {
+    console.error('Error updating plan exclusion settings:', error);
+    res.status(500).json({ message: 'Internal server error while updating plan exclusion settings.' });
+  }
+};
+
 module.exports = { 
   hotels, 
   roomTypeCreate, 
@@ -325,5 +362,7 @@ module.exports = {
   getHotelRooms, 
   getBlockedRooms, 
   fetchHotelSiteController, 
-  editBlockedRooms 
+  editBlockedRooms,
+  getPlanExclusionSettingsController,
+  updatePlanExclusionSettingsController
 };

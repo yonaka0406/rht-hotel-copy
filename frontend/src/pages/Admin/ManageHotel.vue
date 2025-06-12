@@ -171,6 +171,17 @@
       </template>
     </Card>
 
+    <Divider />
+
+    <Card>
+      <template #title>
+        プラン表示設定
+      </template>
+      <template #content>
+        <PlanVisibilitySettings :hotelId="selectedHotel.id" v-if="selectedHotel && selectedHotel.id" />
+      </template>
+    </Card>
+
     <template #footer>
       <Button label="保存" icon="pi pi-check" @click="saveHotel" class="p-button-success p-button-text p-button-sm" />
       <Button label="キャンセル" icon="pi pi-times" @click="dialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />        
@@ -391,6 +402,9 @@
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
   import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText, InputNumber, DatePicker, InputMask, Checkbox, Select, Button, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Divider} from 'primevue';
+
+  // Components
+  import PlanVisibilitySettings from './components/PlanVisibilitySettings.vue';
     
   const authToken = localStorage.getItem('authToken');
 

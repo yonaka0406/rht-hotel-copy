@@ -330,6 +330,58 @@ const getAllRoomsByHotelId = async (requestId, id) => {
   }
 };
 
+const getPlanExclusionSettings = async (requestId, hotel_id) => {
+  const pool = getPool(requestId);
+  try {
+    const allGlobalPlansQuery = 'SELECT id, name FROM plans_global ORDER BY id;';
+    const allGlobalPlansResult = await pool.query(allGlobalPlansQuery);
+
+    const excludedPlansQuery = 'SELECT global_plan_id FROM hotel_plan_exclusions WHERE hotel_id = $1;';
+    const excludedPlansResult = await pool.query(excludedPlansQuery, [hotel_id]);
+
+    const excludedPlanIds = excludedPlansResult.rows.map(row => row.global_plan_id);
+
+    return {
+      all_global_plans: allGlobalPlansResult.rows,
+      excluded_plan_ids: excludedPlanIds,
+    };
+  } catch (err) {
+    console.error('Error retrieving plan exclusion settings:', err);
+    throw new Error('Database error retrieving plan exclusion settings');
+  }
+};
+
+const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Delete existing exclusions for the hotel
+    const deleteQuery = 'DELETE FROM hotel_plan_exclusions WHERE hotel_id = $1;';
+    await client.query(deleteQuery, [hotel_id]);
+
+    // Insert new exclusions if any are provided
+    if (global_plan_ids && Array.isArray(global_plan_ids) && global_plan_ids.length > 0) {
+      const insertQuery = 'INSERT INTO hotel_plan_exclusions (hotel_id, global_plan_id) VALUES ($1, $2);';
+      for (const global_plan_id of global_plan_ids) {
+        await client.query(insertQuery, [hotel_id, global_plan_id]);
+      }
+    }
+
+    await client.query('COMMIT');
+    // Optionally return a success status or the updated list, though not strictly required by the prompt
+    // For now, let's not return anything specific for success, as the controller handles the response message.
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error updating plan exclusions:', err);
+    throw new Error('Database error updating plan exclusions');
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getAllHotels,
   getHotelByID,
@@ -344,4 +396,6 @@ module.exports = {
   deleteBlockedRooms,
   getAllHotelRoomTypesById,
   getAllRoomsByHotelId,
+  getPlanExclusionSettings,
+  updatePlanExclusions,
 };

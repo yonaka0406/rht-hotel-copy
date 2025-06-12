@@ -269,6 +269,7 @@ CREATE OR REPLACE FUNCTION get_available_plans_for_hotel(p_hotel_id INT)
 RETURNS TABLE(
     plans_global_id INT,
     plans_hotel_id INT,
+    plan_key TEXT, -- Added
     name TEXT,
     description TEXT,
     plan_type TEXT,
@@ -281,6 +282,7 @@ BEGIN
     SELECT
         ph.plans_global_id,
         ph.id AS plans_hotel_id,
+        COALESCE(ph.plans_global_id::TEXT, '') || 'h' || ph.id::TEXT AS plan_key, -- Added
         ph.name,
         ph.description,
         ph.plan_type,
@@ -295,7 +297,8 @@ BEGIN
     -- 2. Get all global plans that are not hidden and not overridden.
     SELECT
         pg.id AS plans_global_id,
-        NULL::INT AS plans_hotel_id, -- No hotel plan id for these
+        NULL::INT AS plans_hotel_id,
+        pg.id::TEXT || 'h' AS plan_key, -- Added
         pg.name,
         pg.description,
         pg.plan_type,
