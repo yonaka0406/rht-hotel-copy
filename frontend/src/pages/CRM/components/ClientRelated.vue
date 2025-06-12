@@ -138,12 +138,19 @@
     } = clientStore;
 
     const filteredLegalClientsForSelection = computed(() => {
-      if (!allClients.value || !Array.isArray(allClients.value)) { // Check if allClients.value is an array
+      if (!allClients.value || !Array.isArray(allClients.value)) {
         return [];
       }
-      return allClients.value.filter(client =>
-        client.legal_or_natural_person === 'legal' && client.id !== props.clientId
+      // Ensure relatedCompanies.value is also an array before trying to map over it
+      const existingRelatedIds = new Set(
+        Array.isArray(relatedCompanies.value) ? relatedCompanies.value.map(rc => rc.related_company_id) : []
       );
+
+      return allClients.value.filter(client => {
+        return client.legal_or_natural_person === 'legal' && // Must be a legal person
+               client.id !== props.clientId &&                 // Must not be the current client
+               !existingRelatedIds.has(client.id);             // Must not be already related
+      });
     });
 
     const {
