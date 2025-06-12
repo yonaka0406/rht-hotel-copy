@@ -33,7 +33,7 @@ const scopes = [
 
 const login = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -93,7 +93,7 @@ const login = async (req, res) => {
 
 const forgot = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   const errors = validationResult(req);
 
   // Log the start of the request
@@ -157,7 +157,7 @@ const forgot = async (req, res) => {
 
 const forgotAdmin = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -184,7 +184,7 @@ const forgotAdmin = async (req, res) => {
 
 const reset = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -228,7 +228,7 @@ const reset = async (req, res) => {
 
 const getActiveUsers = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   try {
     const count = await sessionService.getActiveSessions();
     logger.debug('Fetched active users count', { count });
@@ -245,7 +245,7 @@ const getActiveUsers = async (req, res) => {
 
 const googleLogin = (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
   const state = crypto.randomBytes(32).toString('hex');
 
   if (!req.session) {
@@ -283,7 +283,7 @@ const googleCallback = async (req, res) => {
   const logger = req.app.locals.logger;
   const { code, state: receivedState } = req.query;
   const storedState = req.session ? req.session.oauth_state : null;
-  const isProduction = false;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   logger.debug(`[AUTH_CTRL_GOOGLE_CALLBACK] Callback received. Code: ${code ? 'present' : 'missing'}, Received State (length: ${receivedState ? receivedState.length : 'missing'}), Stored State (length: ${storedState ? storedState.length : 'missing'})`, { ip: req.ip });
 
