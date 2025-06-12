@@ -833,6 +833,173 @@ const deleteAddress = async (requestId, addressId, updatedBy) => {
   }
 };
 
+// --- Client Relationship Data Access Functions ---
+
+const findRelationshipsByClientId = async (requestId, clientId) => {
+  const pool = getPool(requestId);
+  // SQL from relationship_queries.sql: get_related_companies_for_client
+  const sql = `
+    SELECT
+        cr.id AS relationship_id,
+        c.id AS related_company_id,
+        c.name AS related_company_name,
+        cr.source_relationship_type AS our_perspective_type,
+        cr.target_relationship_type AS their_perspective_type,
+        cr.comment
+    FROM client_relationships cr JOIN clients c ON cr.target_client_id = c.id
+    WHERE cr.source_client_id = $1
+    UNION ALL
+    SELECT
+        cr.id AS relationship_id,
+        c.id AS related_company_id,
+        c.name AS related_company_name,
+        cr.target_relationship_type AS our_perspective_type,
+        cr.source_relationship_type AS their_perspective_type,
+        cr.comment
+    FROM client_relationships cr JOIN clients c ON cr.source_client_id = c.id
+    WHERE cr.target_client_id = $1;
+  `;
+  try {
+    const result = await pool.query(sql, [clientId]);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in findRelationshipsByClientId:', err);
+    throw new Error('Database error finding client relationships');
+  }
+};
+
+const insertRelationship = async (requestId, relationshipData) => {
+  const pool = getPool(requestId);
+  // SQL from relationship_queries.sql: insert_client_relationship
+  const sql = `
+    INSERT INTO client_relationships (
+        source_client_id, source_relationship_type, 
+        target_client_id, target_relationship_type, comment
+    ) VALUES ($1, $2, $3, $4, $5)
+    RETURNING *;
+  `;
+  const { source_client_id, source_relationship_type, target_client_id, target_relationship_type, comment } = relationshipData;
+  const params = [source_client_id, source_relationship_type, target_client_id, target_relationship_type, comment];
+  try {
+    const result = await pool.query(sql, params);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error in insertRelationship:', err);
+    throw new Error('Database error inserting relationship');
+  }
+};
+
+const updateRelationshipById = async (requestId, relationshipId, dataToUpdate) => {
+  const pool = getPool(requestId);
+  
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+
+  if (typeof dataToUpdate.source_relationship_type !== 'undefined') {
+    fields.push(`source_relationship_type = $${paramIndex++}`);
+    values.push(dataToUpdate.source_relationship_type);
+  }
+  if (typeof dataToUpdate.target_relationship_type !== 'undefined') {
+    fields.push(`target_relationship_type = $${paramIndex++}`);
+    values.push(dataToUpdate.target_relationship_type);
+  }
+  if (typeof dataToUpdate.comment !== 'undefined') {
+    fields.push(`comment = $${paramIndex++}`);
+    values.push(dataToUpdate.comment);
+  }
+
+  if (fields.length === 0) {
+    throw new Error("No fields provided for update.");
+  }
+
+  values.push(relationshipId); // For the WHERE id = $N clause
+
+  const sql = `
+    UPDATE client_relationships 
+    SET ${fields.join(', ')} 
+    WHERE id = $${paramIndex}
+    RETURNING *;
+  `;
+  try {
+    const result = await pool.query(sql, values);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error in updateRelationshipById:', err);
+    throw new Error('Database error updating relationship');
+  }
+};
+
+const deleteRelationshipById = async (requestId, relationshipId) => {
+  const pool = getPool(requestId);
+  // SQL from relationship_queries.sql: delete_client_relationship_by_id
+  const sql = `DELETE FROM client_relationships WHERE id = $1 RETURNING *;`;
+  try {
+    const result = await pool.query(sql, [relationshipId]);
+    return result.rows[0]; // Or result.rowCount if just confirmation is needed
+  } catch (err) {
+    console.error('Error in deleteRelationshipById:', err);
+    throw new Error('Database error deleting relationship');
+  }
+};
+
+const findAllCommonRelationshipPairs = async (requestId) => {
+  const pool = getPool(requestId);
+  // SQL from relationship_queries.sql: get_all_common_relationship_pairs
+  const sql = `
+    SELECT pair_id, pair_name, source_to_target_type, target_to_source_type, description
+    FROM common_relationship_pairs;
+  `; // Note: This query might need to be updated if common_relationship_pairs view changed.
+     // The latest common_relationship_pairs view is dynamic:
+     // SELECT source_relationship_type AS source_to_target_type, target_relationship_type AS target_to_source_type, 
+     // CONCAT(source_relationship_type, ' / ', target_relationship_type) AS pair_name, COUNT(*) AS occurrence_count 
+     // FROM client_relationships GROUP BY source_relationship_type, target_relationship_type ORDER BY occurrence_count DESC, pair_name ASC;
+  const dynamic_common_pairs_sql = `
+    SELECT 
+        source_relationship_type AS source_to_target_type,
+        target_relationship_type AS target_to_source_type,
+        CONCAT(source_relationship_type, ' / ', target_relationship_type) AS pair_name,
+        COUNT(*) AS occurrence_count
+    FROM 
+        client_relationships 
+    GROUP BY
+        source_relationship_type,
+        target_relationship_type
+    ORDER BY 
+        occurrence_count DESC, pair_name ASC;
+  `;
+  try {
+    const result = await pool.query(dynamic_common_pairs_sql); // Using the dynamic version
+    return result.rows;
+  } catch (err) {
+    console.error('Error in findAllCommonRelationshipPairs:', err);
+    throw new Error('Database error finding common relationship pairs');
+  }
+};
+
+// findLegalPersonClients was modified in getAllClients to accept queryParams
+// This function will now just call getAllClients with the specific filter.
+const findLegalPersonClients = async (requestId, queryParams = {}) => {
+    const paramsForGetAll = { ...queryParams, legal_or_natural_person: 'legal' };
+    // Assuming limit and offset are handled by controller or default here if needed
+    const limit = queryParams.limit || 1000; // Default limit or from params
+    const offset = queryParams.offset || 0;   // Default offset or from params
+    return getAllClients(requestId, limit, offset, paramsForGetAll);
+};
+
+const getLegalStatusForClientIds = async (requestId, arrayOfClientIds) => {
+  const pool = getPool(requestId);
+  // SQL from relationship_queries.sql: get_legal_status_for_clients
+  const sql = `SELECT id, name, legal_or_natural_person FROM clients WHERE id = ANY($1::uuid[]);`;
+  try {
+    const result = await pool.query(sql, [arrayOfClientIds]);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in getLegalStatusForClientIds:', err);
+    throw new Error('Database error fetching legal status for clients');
+  }
+};
+
 module.exports = {
   toFullWidthKana,
   processNameString,  
@@ -854,4 +1021,5 @@ module.exports = {
   selectClientReservations,
   deleteClient,
   deleteAddress,
+  findRelationshipsByClientId, insertRelationship, updateRelationshipById, deleteRelationshipById, findAllCommonRelationshipPairs, findLegalPersonClients, getLegalStatusForClientIds,
 };

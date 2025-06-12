@@ -1,25 +1,34 @@
 const express = require('express');
 const router = express.Router();
-const { getClients, getClient, getGroup, getConvertedName, getClientReservations, getCustomerID, getClientGroups, createClientBasic, createClient, createAddress, createClientGroup, removeAddress, updateClient, updateClientFull, updateAddress, updateClientGroup, updateGroup, mergeClients } = require('../controllers/clientsController');
+const clientsController = require('../controllers/clientsController'); // Import the whole controller
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageClients } = require('../middleware/authMiddleware');
 
-router.get('/client-list/:page', authMiddleware, getClients);
-router.get('/client/:id', authMiddleware, getClient);
-router.get('/client/group/:id', authMiddleware, getGroup);
-router.get('/client/name/:name', authMiddleware, getConvertedName);
-router.get('/client/reservation/history/:id', authMiddleware, getClientReservations);
-router.get('/client/customer-id/:clientId/:customerId', authMiddleware, getCustomerID);
-router.get('/client/groups/all', authMiddleware, getClientGroups);
-router.post('/client/basic', authMiddlewareCRUDAccess, createClientBasic);
-router.post('/client/new', authMiddlewareCRUDAccess, createClient);
-router.post('/client/address/new', authMiddlewareCRUDAccess, createAddress);
-router.post('/client/group/new', authMiddlewareCRUDAccess, createClientGroup);
-router.put('/client/update/:id', authMiddlewareCRUDAccess, updateClient);
-router.put('/client/address/update/:id', authMiddlewareCRUDAccess, updateAddress);
-router.put('/client/group/:gid/update/:id', authMiddlewareCRUDAccess, updateClientGroup);
-router.put('/client/group/update/:gid', authMiddlewareCRUDAccess, updateGroup);
-router.put('/crm/client/update/:id', authMiddleware_manageClients, updateClientFull);
-router.put('/crm/client/:nid/merge/:oid', authMiddlewareCRUDAccess, mergeClients);
-router.delete('/client/address/del/:id', authMiddleware_manageClients, removeAddress);
+router.get('/client-list/:page', authMiddleware, clientsController.getClients);
+router.get('/client/:id', authMiddleware, clientsController.getClient);
+router.get('/client/group/:id', authMiddleware, clientsController.getGroup);
+router.get('/client/name/:name', authMiddleware, clientsController.getConvertedName);
+router.get('/client/reservation/history/:id', authMiddleware, clientsController.getClientReservations);
+router.get('/client/customer-id/:clientId/:customerId', authMiddleware, clientsController.getCustomerID);
+router.get('/client/groups/all', authMiddleware, clientsController.getClientGroups);
+router.post('/client/basic', authMiddlewareCRUDAccess, clientsController.createClientBasic);
+router.post('/client/new', authMiddlewareCRUDAccess, clientsController.createClient);
+router.post('/client/address/new', authMiddlewareCRUDAccess, clientsController.createAddress);
+router.post('/client/group/new', authMiddlewareCRUDAccess, clientsController.createClientGroup);
+router.put('/client/update/:id', authMiddlewareCRUDAccess, clientsController.updateClient);
+router.put('/client/address/update/:id', authMiddlewareCRUDAccess, clientsController.updateAddress);
+router.put('/client/group/:gid/update/:id', authMiddlewareCRUDAccess, clientsController.updateClientGroup);
+router.put('/client/group/update/:gid', authMiddlewareCRUDAccess, clientsController.updateGroup);
+router.put('/crm/client/:nid/merge/:oid', authMiddlewareCRUDAccess, clientsController.mergeClients);
+
+router.put('/crm/client/update/:id', authMiddleware_manageClients, clientsController.updateClientFull);
+router.delete('/client/address/del/:id', authMiddleware_manageClients, clientsController.removeAddress);
+
+// --- Client Relationship Routes ---
+router.get('/crm/common-relationship-pairs', authMiddleware, clientsController.handleGetCommonRelationshipPairs);
+router.get('/clients/legal-clients', authMiddleware, clientsController.handleGetLegalClients);
+router.get('/clients/:clientId/related', authMiddleware, clientsController.handleGetRelatedCompanies);
+router.post('/clients/:clientId/related', authMiddleware_manageClients, clientsController.handleAddClientRelationship);
+router.put('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleUpdateClientRelationship);
+router.delete('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleDeleteClientRelationship);
 
 module.exports = router;

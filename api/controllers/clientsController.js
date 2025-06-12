@@ -1,5 +1,5 @@
-const { processNameString, getAllClients, selectClient, selectGroup, selectCustomerID, selectClientGroups, getTotalClientsCount, addClientByName, addNewClient, addNewAddress, addClientGroup, editClient, editClientFull, editAddress, editClientGroup, editGroup, selectClientReservations, deleteClient, deleteAddress } = require('../models/clients');
-const { updateClientInReservation } = require('../models/reservations');
+const clientsModel = require('../models/clients');
+const reservationsModel = require('../models/reservations');
 
 // GET
 const getClients = async (req, res) => {
@@ -8,8 +8,8 @@ const getClients = async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    const clients = await getAllClients(req.requestId, limit, offset);
-    const totalClients = await getTotalClientsCount(req.requestId);
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset);
+    const totalClients = await clientsModel.getTotalClientsCount(req.requestId);
     res.status(200).json({
       clients,
       total: totalClients,
@@ -25,7 +25,7 @@ const getClient = async (req, res) => {
   const { id } = req.params;
     
   try{
-    const client = await selectClient(req.requestId, id);
+    const client = await clientsModel.selectClient(req.requestId, id);
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
@@ -36,7 +36,7 @@ const getGroup = async (req, res) => {
   const { id } = req.params;
     
   try{
-    const group = await selectGroup(req.requestId, id);
+    const group = await clientsModel.selectGroup(req.requestId, id);
     res.status(200).json( group );
   } catch (error) {
     console.error('Error getting group:', error);
@@ -50,7 +50,7 @@ const getConvertedName = async (req, res) => {
     return res.status(400).json({ error: 'getConvertedName: name is required' });
   }
   try {
-    const convertedName = await processNameString(name);
+    const convertedName = await clientsModel.processNameString(name);
     res.json(convertedName);
   } catch (error) {
     console.error('Error getting clients:', error);
@@ -61,7 +61,7 @@ const getClientReservations = async (req, res) => {
   const { id } = req.params;
     
   try{
-    const client = await selectClientReservations(req.requestId, id);
+    const client = await clientsModel.selectClientReservations(req.requestId, id);
     res.status(200).json(client);
   } catch (error) {
     console.error('Error getting client:', error);
@@ -72,7 +72,7 @@ const getCustomerID = async (req, res) => {
   const { clientId, customerId } = req.params;
     
   try{
-    const client = await selectCustomerID(req.requestId, clientId, customerId);
+    const client = await clientsModel.selectCustomerID(req.requestId, clientId, customerId);
     res.status(200).json({ client });
   } catch (error) {
     console.error('Error getting client:', error);
@@ -82,7 +82,7 @@ const getCustomerID = async (req, res) => {
 const getClientGroups = async (req, res) => {
       
   try{
-    const groups = await selectClientGroups(req.requestId);
+    const groups = await clientsModel.selectClientGroups(req.requestId);
     res.status(200).json(groups);
   } catch (error) {
     console.error('Error getting groups:', error);
@@ -112,8 +112,8 @@ const createClientBasic = async (req, res) => {
   };
 
   try {
-    const newClient = await addClientByName(req.requestId, client); // Call the model function with the client object
-    res.json(newClient); // Respond with the created client
+    const newClient = await clientsModel.addClientByName(req.requestId, client);
+    res.json(newClient);
   } catch (err) {
     console.error('Error creating client:', err);
     res.status(500).json({ error: 'Failed to create client' });
@@ -125,7 +125,7 @@ const createClient = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const newClient = await addNewClient(req.requestId, user_id, clientFields);
+    const newClient = await clientsModel.addNewClient(req.requestId, user_id, clientFields);
     res.json(newClient); 
   } catch (err) {
     console.error('Error creating client:', err);
@@ -137,7 +137,7 @@ const createAddress = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const newAddress = await addNewAddress(req.requestId, user_id, addressFields);
+    const newAddress = await clientsModel.addNewAddress(req.requestId, user_id, addressFields);
     res.json(newAddress); 
   } catch (err) {
     console.error('Error creating client address:', err);
@@ -149,7 +149,7 @@ const createClientGroup = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const newAddress = await addClientGroup(req.requestId, user_id, groupFields);
+    const newAddress = await clientsModel.addClientGroup(req.requestId, user_id, groupFields);
     res.json(newAddress); 
   } catch (err) {
     console.error('Error creating client address:', err);
@@ -164,7 +164,7 @@ const updateClient = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await editClient(req.requestId, clientId, updatedFields, user_id);
+    const updatedClient = await clientsModel.editClient(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -177,7 +177,7 @@ const updateClientFull = async (req, res) => {
   const user_id = req.user.id;
 
   try {    
-    const updatedClient = await editClientFull(req.requestId, clientId, updatedFields, user_id);
+    const updatedClient = await clientsModel.editClientFull(req.requestId, clientId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -190,7 +190,7 @@ const updateAddress = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await editAddress(req.requestId, addressId, updatedFields, user_id);
+    const updatedClient = await clientsModel.editAddress(req.requestId, addressId, updatedFields, user_id);
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating address:', err);
@@ -203,7 +203,7 @@ const updateClientGroup = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedClient = await editClientGroup(req.requestId, clientId, groupId, user_id) 
+    const updatedClient = await clientsModel.editClientGroup(req.requestId, clientId, groupId, user_id) 
     res.json(updatedClient);
   } catch (err) {
     console.error('Error updating client:', err);
@@ -217,7 +217,7 @@ const updateGroup = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    const updatedGroup = await editGroup(req.requestId, groupId, data, user_id) 
+    const updatedGroup = await clientsModel.editGroup(req.requestId, groupId, data, user_id) 
     res.json(updatedGroup);
   } catch (err) {
     console.error('Error updating group:', err);
@@ -233,9 +233,9 @@ const mergeClients = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await editClientFull(req.requestId, newClientId, updatedFields, user_id);
-    await updateClientInReservation(req.requestId, oldClientId, newClientId);
-    await deleteClient(req.requestId, oldClientId, user_id);
+    await clientsModel.editClientFull(req.requestId, newClientId, updatedFields, user_id);
+    await reservationsModel.updateClientInReservation(req.requestId, oldClientId, newClientId);
+    await clientsModel.deleteClient(req.requestId, oldClientId, user_id);
     res.json({message: 'Success'});
   } catch (err) {
   console.error('Error updating client:', err);
@@ -249,11 +249,152 @@ const removeAddress = async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    await deleteAddress(req.requestId, addressId, user_id);
+    await clientsModel.deleteAddress(req.requestId, addressId, user_id);
     res.json({message: 'Address deleted.'});
   } catch (err) {
     console.error('Error deleting address:', err);
     res.status(500).json({ error: 'Failed to delete address' });
+  }
+};
+
+// --- Client Relationship Controller Methods ---
+const handleGetRelatedCompanies = async (req, res) => {
+  const { clientId } = req.params; // Client ID (UUID string)
+  try {
+    const relationships = await clientsModel.findRelationshipsByClientId(req.requestId, clientId);
+    // The model already shapes the data as needed by the frontend based on SQL aliasing
+    // { relationship_id, related_company_id, related_company_name, our_perspective_type, their_perspective_type, comment }
+    // Frontend expects: type_from_source_perspective, type_from_target_perspective, comment_from_source
+    const mappedRelationships = relationships.map(r => ({
+        relationship_id: r.relationship_id,
+        related_company_id: r.related_company_id,
+        related_company_name: r.related_company_name,
+        type_from_source_perspective: r.our_perspective_type,
+        type_from_target_perspective: r.their_perspective_type,
+        comment_from_source: r.comment, // Assuming the single comment field is from source's view
+    }));
+    res.status(200).json(mappedRelationships);
+  } catch (error) {
+    console.error('Error in handleGetRelatedCompanies:', error);
+    res.status(500).json({ message: 'Failed to retrieve related companies', error: error.message });
+  }
+};
+
+const handleAddClientRelationship = async (req, res) => {
+  const { clientId: source_client_id } = req.params; // Source Client ID (UUID string)
+  const { target_client_id, source_relationship_type, target_relationship_type, comment } = req.body;
+
+  if (!target_client_id || !source_relationship_type || !target_relationship_type) {
+    return res.status(400).json({ message: 'Missing required fields: target_client_id, source_relationship_type, target_relationship_type' });
+  }
+  if (source_client_id === target_client_id) {
+    return res.status(400).json({ message: 'Cannot relate a client to itself.' });
+  }
+
+  try {
+    // Validate legal status of both clients
+    const clientStatuses = await clientsModel.getLegalStatusForClientIds(req.requestId, [source_client_id, target_client_id]);
+    
+    // Check if both clients were found by checking the length of the result
+    if (clientStatuses.length !== 2) {
+        // Determine which client was not found or if both were not found for a more specific message
+        const foundSource = clientStatuses.some(c => c.id === source_client_id);
+        const foundTarget = clientStatuses.some(c => c.id === target_client_id);
+        let errorMessage = 'One or both clients not found.';
+        if (!foundSource && !foundTarget) errorMessage = 'Source and target clients not found.';
+        else if (!foundSource) errorMessage = 'Source client not found.';
+        else if (!foundTarget) errorMessage = 'Target client not found.';
+        return res.status(404).json({ message: errorMessage }); // 404 for not found
+    }
+
+    for (const client of clientStatuses) {
+      if (client.legal_or_natural_person !== 'legal') {
+        return res.status(400).json({ message: `Client ${client.name || client.id} is not a 'legal' person. Both clients must be 'legal' persons to form a relationship.` });
+      }
+    }
+
+    const relationshipData = { source_client_id, source_relationship_type, target_client_id, target_relationship_type, comment };
+    const newRelationship = await clientsModel.insertRelationship(req.requestId, relationshipData);
+    res.status(201).json(newRelationship);
+  } catch (error) {
+    console.error('Error in handleAddClientRelationship:', error);
+    if (error.code === '23505') { // Unique violation for uq_client_relationship (from model or DB)
+        return res.status(409).json({ message: 'This client relationship already exists.' });
+    }
+    res.status(500).json({ message: 'Failed to add client relationship', error: error.message });
+  }
+};
+
+const handleUpdateClientRelationship = async (req, res) => {
+  const { relationshipId } = req.params; // Integer ID of the relationship row
+  const dataToUpdate = req.body; // { source_relationship_type, target_relationship_type, comment }
+
+  if (Object.keys(dataToUpdate).length === 0) {
+    return res.status(400).json({ message: 'No fields provided for update.' });
+  }
+  // Optional: Add more specific validation for the content of dataToUpdate fields
+
+  try {
+    const updatedRelationship = await clientsModel.updateRelationshipById(req.requestId, parseInt(relationshipId), dataToUpdate);
+    if (!updatedRelationship) { // Model's updateRelationshipById should return null/undefined if row not found
+      return res.status(404).json({ message: 'Relationship not found or no changes made.' });
+    }
+    res.status(200).json(updatedRelationship);
+  } catch (error) {
+    console.error('Error in handleUpdateClientRelationship:', error);
+    if (error.message.includes("No fields provided for update")) { // Error from model
+        return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: 'Failed to update client relationship', error: error.message });
+  }
+};
+
+const handleDeleteClientRelationship = async (req, res) => {
+  const { relationshipId } = req.params; // Integer ID
+  try {
+    const deletedRelationship = await clientsModel.deleteRelationshipById(req.requestId, parseInt(relationshipId));
+    if (!deletedRelationship) { // Model's deleteRelationshipById returns the deleted row or undefined
+      return res.status(404).json({ message: 'Relationship not found.' });
+    }
+    res.status(200).json({ message: 'Relationship deleted successfully.', deletedRelationship });
+  } catch (error) {
+    console.error('Error in handleDeleteClientRelationship:', error);
+    res.status(500).json({ message: 'Failed to delete client relationship', error: error.message });
+  }
+};
+
+const handleGetCommonRelationshipPairs = async (req, res) => {
+  try {
+    const pairs = await clientsModel.findAllCommonRelationshipPairs(req.requestId);
+    res.status(200).json(pairs);
+  } catch (error) {
+    console.error('Error in handleGetCommonRelationshipPairs:', error);
+    res.status(500).json({ message: 'Failed to retrieve common relationship pairs', error: error.message });
+  }
+};
+
+const handleGetLegalClients = async (req, res) => {
+  // This controller is specifically for ?legal_or_natural_person=legal
+  // It leverages the updated getClients model function which now accepts queryParams
+  const { page = 1 } = req.query;
+  // High limit for dropdowns, or make it configurable if full pagination is needed here
+  const limit = parseInt(req.query.limit) || 1000; 
+  const offset = (parseInt(page) - 1) * limit;
+
+  const filterParams = { ...req.query, legal_or_natural_person: 'legal' };
+  delete filterParams.page;
+  delete filterParams.limit;
+  
+  try {
+    // Use getAllClients from the model, which now supports filtering
+    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, filterParams);
+    // For a dropdown, typically just the list is needed. 
+    // If pagination for this specific filtered list is required, then also fetch total count.
+    // const totalClients = await clientsModel.getTotalClientsCount(req.requestId, filterParams);
+    res.status(200).json(clients); // Send array directly for dropdowns
+  } catch (error) {
+    console.error('Error in handleGetLegalClients:', error);
+    res.status(500).json({ message: 'Failed to retrieve legal clients', error: error.message });
   }
 };
 
@@ -276,4 +417,5 @@ module.exports = {
   updateClientGroup,
   updateGroup,
   mergeClients,
+  handleGetRelatedCompanies, handleAddClientRelationship, handleUpdateClientRelationship, handleDeleteClientRelationship, handleGetCommonRelationshipPairs, handleGetLegalClients,
 };
