@@ -11,7 +11,7 @@ const { syncCalendarFromGoogle } = require('../services/synchronizationService')
 
 const users = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = false;
   try {
     const users = await getAllUsers(req.requestId);
     if (!users || users.length === 0) { // Check for empty array too
@@ -28,7 +28,7 @@ const users = async (req, res) => {
 
 const getUser = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = false;
   const user_id = req.user.id;
   try {
       const user = await getUsersByID(req.requestId, user_id);
@@ -46,7 +46,7 @@ const getUser = async (req, res) => {
 
 const registerUser = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = false;
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -91,7 +91,7 @@ const registerUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = false;
   const { id, name, status_id, role_id } = req.body;
   const updated_by = req.user.id;
 
@@ -178,7 +178,7 @@ const createUserCalendar = async (req, res) => {
 
 const triggerGoogleCalendarSync = async (req, res) => {
   const logger = req.app.locals.logger;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = false;
   const userId = req.user.id;
 
   try {
