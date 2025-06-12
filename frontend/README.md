@@ -9,12 +9,15 @@ This directory contains the frontend application for the Hotel Management System
 *   **Vue.js (v3):** A progressive JavaScript framework for building user interfaces.
 *   **Vite:** A fast build tool and development server for modern web projects.
 *   **PrimeVue:** A comprehensive UI component library for Vue.js.
+*   **@primeuix/themes:** Theming library for PrimeVue, ensuring a consistent look and feel.
+*   **primeicons:** Icon library specifically designed for PrimeVue components.
 *   **Tailwind CSS:** A utility-first CSS framework for rapid UI development.
 *   **Axios:** A promise-based HTTP client for making API requests.
 *   **Socket.io-client:** Client-side library for real-time communication with the backend Socket.io server.
-*   **ECharts:** A powerful charting and visualization library.
-*   **Papaparse:** A fast and powerful CSV (Comma Separated Values) parser, likely used for data import functionalities.
+*   **ECharts & vue-echarts:** A powerful charting and visualization library, along with its Vue integration component.
+*   **Papaparse:** A fast and powerful CSV (Comma Separated Values) parser, used for client-side data import.
 *   **Vue Router:** For client-side routing and navigation within the SPA.
+*   **uuid:** For generating unique identifiers (UUIDs) on the client-side.
 *   **Pinia (assumed, based on `composables/use*Store.js`):** Vue Store pattern, likely used for state management. (If not Pinia, then Vuex or custom composables for state).
 
 ## Setup and Installation
@@ -28,12 +31,14 @@ This directory contains the frontend application for the Hotel Management System
     npm install
     ```
 3.  **Environment Variables:**
-    *   Create a `.env` file in the `frontend` directory (i.e., `frontend/.env`).
-    *   Add the following environment variable:
-        *   `VITE_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:3000/api`). This is used by Axios to make requests to the correct API endpoint.
+    *   Create a `.env` file in the `frontend` directory (i.e., `frontend/.env`) by copying `frontend/.env.example` if it exists, or creating it manually.
+    *   Add the following environment variables:
+        *   `VITE_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:3000/api`). This is used by Axios to make requests to the correct API endpoints.
+        *   `VITE_SOCKET_URL`: The URL for the backend Socket.io server (e.g., `http://localhost:3000`). This is used by the Socket.io client to establish a real-time connection. It might be the same as the API's base URL (excluding `/api`) if served from the same host and port, or a different URL if the socket server is separate.
     *   Example `frontend/.env` file:
-        ```
+        ```dotenv
         VITE_API_BASE_URL=http://localhost:3000/api
+        VITE_SOCKET_URL=http://localhost:3000
         ```
 4.  **Start the development server:**
     ```bash
@@ -67,13 +72,16 @@ The frontend codebase is organized as follows:
 
 ## Key Features Implemented by Frontend
 
-*   User login, registration, and password management.
-*   Dashboard for hotel overview.
-*   Management of hotel settings, rooms, rates, and plans.
-*   Reservation creation, modification, and tracking.
-*   Client relationship management (CRM) features.
-*   Billing and invoicing.
-*   Reporting and data visualization (using ECharts).
-*   User and role administration.
-*   Data import capabilities (likely using Papaparse for CSVs).
+This frontend application enables users to interact with the following core features of the Hotel Management System:
+
+*   **User Authentication:** Secure user login, registration, password management, and potentially Google Sign-In integration.
+*   **Dashboard:** An overview of key hotel metrics and activities.
+*   **Hotel Configuration:** Management of hotel-specific details, settings, room types, rate plans, and addons.
+*   **Reservation Management:** Tools for creating, viewing, modifying, and canceling guest reservations, possibly including a calendar view.
+*   **Client Relationship Management (CRM):** Functionalities for managing guest profiles, communication history, and preferences.
+*   **Billing and Invoicing:** Generation and management of guest invoices based on stays, plans, and addons.
+*   **Reporting & Analytics:** Visualization of hotel operational data, occupancy, revenue, and guest statistics using charts (via ECharts).
+*   **User Administration:** Management of system user accounts, roles, and permissions (for admin users).
+*   **Data Import:** Client-side processing of imported data, such as CSV files for various records (using Papaparse), and potentially interaction with backend Excel import/export.
+*   **Real-time Updates:** Display of live updates for relevant data through Socket.io (e.g., new reservations, notifications).
 ```
