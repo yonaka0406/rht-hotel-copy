@@ -6,16 +6,22 @@
       <TabPanel header="リピーター">
         <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
           <div class="col-span-12 md:col-span-6">
-            <label for="repeater-min-bookings">最低合計予約数</label>
-            <InputNumber id="repeater-min-bookings" v-model="repeaterSettings.min_bookings" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="repeater-min-bookings" v-model="repeaterSettings.min_bookings" class="w-full" />
+              <label for="repeater-min-bookings">最低合計予約数</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-3">
-            <label for="repeater-time-value">期間の値</label>
-            <InputNumber id="repeater-time-value" v-model="repeaterSettings.time_period_value" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="repeater-time-value" v-model="repeaterSettings.time_period_value" class="w-full" />
+              <label for="repeater-time-value">期間の値</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-3">
-            <label for="repeater-time-unit">期間の単位</label>
-            <Dropdown id="repeater-time-unit" v-model="repeaterSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="repeater-time-unit" v-model="repeaterSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
+              <label for="repeater-time-unit">期間の単位</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
             <Button label="リピーター設定を保存" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" />
@@ -26,28 +32,40 @@
       <TabPanel header="ホテルロイヤル">
         <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
           <div class="col-span-12 md:col-span-6">
-            <label for="hotel-loyal-hotel">ホテル</label>
-            <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" @change="loadHotelLoyalSettings" class="w-full md:w-14rem" />
+              <label for="hotel-loyal-hotel">ホテル</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-3">
-            <label for="hotel-loyal-min-bookings">最低ホテル予約数</label>
-            <InputNumber id="hotel-loyal-min-bookings" v-model="hotelLoyalSettings.min_bookings" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="hotel-loyal-min-bookings" v-model="hotelLoyalSettings.min_bookings" class="w-full" />
+              <label for="hotel-loyal-min-bookings">最低ホテル予約数</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-3">
-            <label for="hotel-loyal-min-spending">最低ホテル利用額</label>
-            <InputNumber id="hotel-loyal-min-spending" v-model="hotelLoyalSettings.min_spending" mode="currency" currency="JPY" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="hotel-loyal-min-spending" v-model="hotelLoyalSettings.min_spending" mode="currency" currency="JPY" class="w-full" />
+              <label for="hotel-loyal-min-spending">最低ホテル利用額</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-4">
-            <label for="hotel-loyal-logic">論理演算子</label>
-            <Dropdown id="hotel-loyal-logic" v-model="hotelLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="hotel-loyal-logic" v-model="hotelLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
+              <label for="hotel-loyal-logic">論理演算子</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-4">
-            <label for="hotel-loyal-time-value">期間の値</label>
-            <InputNumber id="hotel-loyal-time-value" v-model="hotelLoyalSettings.time_period_value" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="hotel-loyal-time-value" v-model="hotelLoyalSettings.time_period_value" class="w-full" />
+              <label for="hotel-loyal-time-value">期間の値</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-4">
-            <label for="hotel-loyal-time-unit">期間の単位</label>
-            <Dropdown id="hotel-loyal-time-unit" v-model="hotelLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="hotel-loyal-time-unit" v-model="hotelLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
+              <label for="hotel-loyal-time-unit">期間の単位</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
             <Button label="ホテルロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(hotelLoyalSettings)" :disabled="!hotelLoyalSettings.hotel_id" />
@@ -58,24 +76,34 @@
       <TabPanel header="ブランドロイヤル">
         <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
           <div class="col-span-12 md:col-span-4">
-            <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
-            <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" class="w-full" />
+              <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-4">
-            <label for="brand-loyal-min-spending">最低ブランド利用額</label>
-            <InputNumber id="brand-loyal-min-spending" v-model="brandLoyalSettings.min_spending" mode="currency" currency="JPY" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="brand-loyal-min-spending" v-model="brandLoyalSettings.min_spending" mode="currency" currency="JPY" class="w-full" />
+              <label for="brand-loyal-min-spending">最低ブランド利用額</label>
+            </FloatLabel>
           </div>
            <div class="col-span-12 md:col-span-4">
-            <label for="brand-loyal-logic">論理演算子</label>
-            <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
+              <label for="brand-loyal-logic">論理演算子</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label for="brand-loyal-time-value">期間の値</label>
-            <InputNumber id="brand-loyal-time-value" v-model="brandLoyalSettings.time_period_value" />
+            <FloatLabel class="mt-6">
+              <InputNumber id="brand-loyal-time-value" v-model="brandLoyalSettings.time_period_value" class="w-full" />
+              <label for="brand-loyal-time-value">期間の値</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 md:col-span-6">
-            <label for="brand-loyal-time-unit">期間の単位</label>
-            <Dropdown id="brand-loyal-time-unit" v-model="brandLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
+            <FloatLabel class="mt-6">
+              <Dropdown id="brand-loyal-time-unit" v-model="brandLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
+              <label for="brand-loyal-time-unit">期間の単位</label>
+            </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
             <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" />
@@ -96,6 +124,7 @@ import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import FloatLabel from 'primevue/floatlabel';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 
@@ -151,9 +180,22 @@ watch(currentHotelLoyalSettingForSelectedHotel, (newVal) => {
     }
 }, { deep: true });
 
-const loadHotelDropdown = async () => {
+const loadHotelDropdown = async () => { // This function was already here, used for populating hotel options
     await fetchHotelList();
     hotels.value = hotelListFromStore.value.map(h => ({ id: h.id, name: h.name }));
+};
+
+// This function is called on @change of the hotel dropdown for Hotel Loyal settings
+const loadHotelLoyalSettings = () => {
+    if (hotelLoyalSettings.value.hotel_id) {
+        // The watcher for hotelLoyalSettings.value.hotel_id already handles updating the form
+        // based on the selected hotel_id by finding the settings from loyaltyTiers.value.
+        // So, this function might not need to do much more if the watchers are effective.
+        // However, if a direct fetch for a specific hotel's settings was intended when dropdown changes,
+        // that logic would go here. For now, relying on watchers and the already fetched global list.
+    } else {
+        // If hotel is deselected, watcher for hotel_id already resets hotelLoyalSettings.
+    }
 };
 
 const handleSaveSettings = async (tierData) => {
