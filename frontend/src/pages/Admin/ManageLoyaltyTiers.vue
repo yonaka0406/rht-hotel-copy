@@ -95,54 +95,53 @@
       </TabPanel>
 
       <TabPanel header="ブランドロイヤル">
-        <div> <!-- New single root wrapper div -->
-          <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+          <div> <!-- New single root wrapper div -->
+            <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+              <div class="col-span-12 md:col-span-4">
+                <FloatLabel class="mt-6">
+                <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" class="w-full" />
+                <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
+              </FloatLabel>
+            </div>
             <div class="col-span-12 md:col-span-4">
               <FloatLabel class="mt-6">
-              <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" class="w-full" />
-              <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
-            </FloatLabel>
+                <InputNumber id="brand-loyal-min-spending" v-model="brandLoyalSettings.min_spending" mode="currency" currency="JPY" class="w-full" />
+                <label for="brand-loyal-min-spending">最低ブランド利用額</label>
+              </FloatLabel>
+            </div>
+             <div class="col-span-12 md:col-span-4">
+              <FloatLabel class="mt-6">
+                <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
+                <label for="brand-loyal-logic">論理演算子</label>
+              </FloatLabel>
+            </div>
+            <div class="col-span-12 md:col-span-6">
+              <FloatLabel class="mt-6">
+                <InputNumber id="brand-loyal-time-months" v-model="brandLoyalSettings.time_period_months" class="w-full" />
+                <label for="brand-loyal-time-months">期間 (月数)</label>
+              </FloatLabel>
+            </div>
+            <div class="col-span-12 mt-2">
+              <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" :disabled="isBrandLoyalSaveDisabled" />
+            </div>
           </div>
-          <div class="col-span-12 md:col-span-4">
-            <FloatLabel class="mt-6">
-              <InputNumber id="brand-loyal-min-spending" v-model="brandLoyalSettings.min_spending" mode="currency" currency="JPY" class="w-full" />
-              <label for="brand-loyal-min-spending">最低ブランド利用額</label>
-            </FloatLabel>
-          </div>
-           <div class="col-span-12 md:col-span-4">
-            <FloatLabel class="mt-6">
-              <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
-              <label for="brand-loyal-logic">論理演算子</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <FloatLabel class="mt-6">
-              <InputNumber id="brand-loyal-time-months" v-model="brandLoyalSettings.time_period_months" class="w-full" />
-              <label for="brand-loyal-time-months">期間 (月数)</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-12 mt-2">
-            <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" :disabled="isBrandLoyalSaveDisabled" />
-          </div>
-        </div>
-        <div class="mt-8" v-if="brandLoyalDisplayData.length > 0">
-          <h3 class="text-lg font-semibold mb-3">保存されたブランドロイヤル設定</h3>
-          <DataTable :value="brandLoyalDisplayData">
-            <Column field="min_bookings" header="最低ブランド予約数"></Column>
-            <Column field="min_spending" header="最低ブランド利用額" :bodyStyle="{textAlign: 'right'}">
-              <template #body="slotProps">{{ slotProps.data.min_spending !== null ? formatCurrency(slotProps.data.min_spending) : '' }}</template>
-            </Column>
-            <Column field="logic_operator" header="論理演算子"></Column>
-            <Column field="time_period_months" header="期間 (月数)"></Column>
-            <Column header="操作">
-              <template #body="slotProps">
-                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
-              </template>
-            </Column>
-          </DataTable>
+          <div class="mt-8" v-if="brandLoyalDisplayData.length > 0">
+            <h3 class="text-lg font-semibold mb-3">保存されたブランドロイヤル設定</h3>
+            <DataTable :value="brandLoyalDisplayData">
+              <Column field="min_bookings" header="最低ブランド予約数"></Column>
+              <Column field="min_spending" header="最低ブランド利用額" :bodyStyle="{textAlign: 'right'}">
+                <template #body="slotProps">{{ slotProps.data.min_spending !== null ? formatCurrency(slotProps.data.min_spending) : '' }}</template>
+              </Column>
+              <Column field="logic_operator" header="論理演算子"></Column>
+              <Column field="time_period_months" header="期間 (月数)"></Column>
+              <Column header="操作">
+                <template #body="slotProps">
+                    <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
+                </template>
+              </Column>
+            </DataTable>
           </div>
         </div>
-      </div> <!-- End new single root wrapper div -->
       </TabPanel>
     </TabView>
     <Toast />
