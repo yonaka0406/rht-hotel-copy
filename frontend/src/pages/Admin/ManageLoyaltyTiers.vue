@@ -141,6 +141,8 @@ const toast = useToast();
 const { loyaltyTiers, fetchLoyaltyTiers, saveLoyaltyTier } = useSettingsStore();
 const { hotels: hotelListFromStore, fetchHotels: fetchHotelList } = useHotelStore();
 
+let isEditingFromTable = false; // Add this flag
+
 const repeaterSettings = ref({});
 const hotelLoyalSettings = ref({ hotel_id: null, time_period_months: null });
 const brandLoyalSettings = ref({ time_period_months: null });
@@ -194,6 +196,10 @@ const resetHotelLoyalFormFields = (hotelId) => {
 
 // Modify the watcher for hotel_id selection
 watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
+    if (isEditingFromTable) { // If true, editTierSetting is handling it
+        return;
+    }
+
     let newSettings = resetHotelLoyalFormFields(newHotelId); // Reset first
     if (newHotelId) {
         const existingSetting = loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === newHotelId);
@@ -205,7 +211,10 @@ watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
             };
         }
     }
-    hotelLoyalSettings.value = newSettings;
+    // To prevent potential infinite loops if the new settings are identical to current
+    if (JSON.stringify(hotelLoyalSettings.value) !== JSON.stringify(newSettings)) {
+        hotelLoyalSettings.value = newSettings;
+    }
 }, { immediate: true, deep: true });
 
 // Modify the watcher for currentHotelLoyalSettingForSelectedHotel
@@ -286,12 +295,15 @@ const editTierSetting = (setting) => {
   if (setting.tier_name === 'repeater') {
     repeaterSettings.value = { ...setting };
   } else if (setting.tier_name === 'hotel_loyal') {
+    isEditingFromTable = true; // Set flag before updating
     const baseSettings = resetHotelLoyalFormFields(setting.hotel_id);
     hotelLoyalSettings.value = {
         ...baseSettings,
-        ...setting, // Spread the selected setting over the defaults
-        logic_operator: setting.logic_operator || 'OR' // Ensure default for logic_operator
+        ...setting,
+        logic_operator: setting.logic_operator || 'OR'
     };
+    // Reset the flag after Vue's reactivity cycle has processed the above change
+    setTimeout(() => { isEditingFromTable = false; }, 0);
   } else if (setting.tier_name === 'brand_loyal') {
     brandLoyalSettings.value = { ...setting };
   }
