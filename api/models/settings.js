@@ -158,6 +158,7 @@ module.exports = {
   upsertLoyaltyTier,
 };
 
+// Loyalty Tier functions moved before module.exports
 const getLoyaltyTiers = async (requestId) => {
   const pool = getPool(requestId);
   const query = 'SELECT * FROM loyalty_tiers ORDER BY tier_name, hotel_id;';
@@ -210,3 +211,4 @@ const upsertLoyaltyTier = async (requestId, tierData, userId) => {
     throw new Error('Database error while upserting loyalty tier');
   }
 };
+// End of Loyalty Tier functions
