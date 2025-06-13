@@ -12,8 +12,8 @@ const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
 const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
-const legalClientsForSelection = ref([]);
-const isLoadingLegalClientsForSelection = ref(false);
+// const legalClientsForSelection = ref([]); // Remove this line
+// const isLoadingLegalClientsForSelection = ref(false); // Remove this line
 
 export function useClientStore() {
     
@@ -540,28 +540,7 @@ export function useClientStore() {
             isLoadingCommonRelationshipPairs.value = false;
         }
     }
-
-    async function fetchLegalClientsForSelection() {
-        isLoadingLegalClientsForSelection.value = true;
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/clients/legal-clients`, { 
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-            }
-            legalClientsForSelection.value = await response.json();
-        } catch (error) {
-            console.error('Error fetching legal clients for selection:', error);
-            legalClientsForSelection.value = [];
-            throw error;
-        } finally {
-            isLoadingLegalClientsForSelection.value = false;
-        }
-    }
+    // async function fetchLegalClientsForSelection() { ... } // Remove this entire function
 
     return {
         groups,
@@ -575,8 +554,8 @@ export function useClientStore() {
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
         isLoadingCommonRelationshipPairs,
-        legalClientsForSelection,
-        isLoadingLegalClientsForSelection,
+        // legalClientsForSelection, // Remove this line
+        // isLoadingLegalClientsForSelection, // Remove this line
         setClientsIsLoading,
         fetchClients,
         fetchClient,
@@ -601,6 +580,6 @@ export function useClientStore() {
         deleteClientRelationship,
         updateClientRelationship,
         fetchCommonRelationshipPairs,
-        fetchLegalClientsForSelection,
+        // fetchLegalClientsForSelection, // Remove this line
     };
 }

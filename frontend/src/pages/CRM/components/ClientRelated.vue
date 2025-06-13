@@ -21,7 +21,16 @@
           </div>
         </template>
         
-        <Column field="related_company_name" header="関連会社名" sortable />
+        <Column field="related_company_name" header="関連会社名" sortable>
+            <template #body="slotProps">
+                <router-link
+                :to="{ name: 'ClientEdit', params: { clientId: slotProps.data.related_company_id } }"
+                class="text-blue-600 hover:text-blue-300 hover:underline inline-flex items-center"
+                >
+                {{ slotProps.data.related_company_name }}
+                <i class="pi pi-external-link ml-2 text-xs"></i> </router-link>
+            </template>
+        </Column>
         <Column field="type_from_source_perspective" header="自社との関係" sortable />
         <Column field="type_from_target_perspective" header="相手との関係" sortable />
         <Column field="comment_from_source" header="コメント" /> 
@@ -43,21 +52,41 @@
       <div class="grid grid-col-12 gap-2">
         <div class="col-span-12 my-6">
             <FloatLabel>
-                <label for="targetClient">対象クライアント</label>
-                <Select 
-                    id="targetClient" 
-                    v-model="newRelationship.target_client_id"
-                    :options="legalClientsForSelection" 
-                    optionLabel="name"
-                    optionValue="id" 
-                    placeholder="対象クライアントを選択 (法人のみ)" 
-                    :filter="true"
-                    :loading="isLoadingLegalClientsForSelection" 
-                    showClear
+                <label for="targetClientAutocomplete">対象クライアント</label>
+                <AutoComplete
+                    id="targetClientAutocomplete"
+                    v-model="selectedClientForAutocomplete"
+                    :suggestions="autocompleteSuggestions"
+                    @complete="searchTargetClients"
+                    optionLabel="preferred_display_name"
+                    placeholder="対象クライアントを選択・検索 (法人のみ)"
+                    forceSelection
+                    dropdown
+                    style="width: 100%;"
+                    panelClass="max-h-60 overflow-y-auto"
                     v-tooltip.bottom="'法人顧客しか選択できません。'"
-                    fluid
-                />
-             </FloatLabel>
+                    :loading="clientsIsLoading"
+                >
+                    <template #option="slotProps">
+                    <div class="client-option-item p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                        <p class="font-medium">
+                        <i v-if="slotProps.option.is_legal_person" class="pi pi-building mr-2 text-gray-500"></i>
+                        <i v-else class="pi pi-user mr-2 text-gray-500"></i>
+                        {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
+                        <span v-if="slotProps.option.name_kana && (slotProps.option.name_kanji || slotProps.option.name) && slotProps.option.name_kana !== (slotProps.option.name_kanji || slotProps.option.name)" class="text-sm text-gray-500"> ({{ slotProps.option.name_kana }})</span>
+                        </p>
+                        <div class="flex items-center gap-x-3 mt-1 text-xs">
+                        <span v-if="slotProps.option.phone" class="text-sky-700"><i class="pi pi-phone mr-1"></i>{{ slotProps.option.phone }}</span>
+                        <span v-if="slotProps.option.email" class="text-sky-700"><i class="pi pi-at mr-1"></i>{{ slotProps.option.email }}</span>
+                        <span v-if="slotProps.option.fax" class="text-sky-700"><i class="pi pi-send mr-1"></i>{{ slotProps.option.fax }}</span>
+                        </div>
+                    </div>
+                    </template>
+                    <template #empty>
+                    <div class="p-3 text-center text-gray-500">該当するクライアントが見つかりません。</div>
+                    </template>
+                </AutoComplete>
+            </FloatLabel>
         </div>
 
         <div class="col-span-12 mb-6">
@@ -127,6 +156,7 @@
     import Dialog from 'primevue/dialog';
     import InputText from 'primevue/inputtext';
     import Select from 'primevue/select';
+    import AutoComplete from 'primevue/autocomplete';
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useClientStore } from '@/composables/useClientStore';
@@ -134,15 +164,22 @@
 
     // Store
     const clientStore = useClientStore();
-    const { selectedClient, relatedCompanies, isLoadingRelatedCompanies, 
-        commonRelationshipPairs, legalClientsForSelection, isLoadingLegalClientsForSelection 
+    const {
+        selectedClient,
+        relatedCompanies,
+        isLoadingRelatedCompanies,
+        commonRelationshipPairs,
+        clients: allClients,
+        clientsIsLoading // Add this
     } = clientStore;
+
+    // const filteredLegalClientsForSelection = computed(() => { ... }); // REMOVE THIS
+
     const {
         fetchRelatedCompanies: storeFetchRelatedCompanies,
         addClientRelationship: storeAddClientRelationship,
         deleteClientRelationship: storeDeleteClientRelationship,
-        fetchCommonRelationshipPairs: storeFetchCommonRelationshipPairs,
-        fetchLegalClientsForSelection: storeFetchLegalClientsForSelection
+        fetchCommonRelationshipPairs: storeFetchCommonRelationshipPairs
     } = clientStore;
 
     const clientName = computed(() => {
@@ -159,6 +196,8 @@
     const isSavingNewRelationship = ref(false); 
     const displayAddModal = ref(false);
     const selectedPair = ref(null);
+    const selectedClientForAutocomplete = ref(null); // For v-model of AutoComplete
+    const autocompleteSuggestions = ref([]);       // For suggestions list
     const newRelationship = ref({
     target_client_id: null, 
     source_relationship_type: '', 
@@ -184,23 +223,19 @@
         }
     };
 
-    const loadLegalClients = async () => {
-        try {
-            await storeFetchLegalClientsForSelection();
-        } catch (error) {
-            toast.add({ severity: 'error', summary: 'Error Fetching Clients', detail: error.message || 'Could not fetch legal clients.', life: 3000 });
-        }
-    };
-
     const openAddRelationshipModal = () => {
     selectedPair.value = null;
+    selectedClientForAutocomplete.value = null; // Reset this
     newRelationship.value = {
         target_client_id: null, 
         source_relationship_type: '',
         target_relationship_type: '',
         comment: ''
     };
-    loadLegalClients(); 
+    autocompleteSuggestions.value = []; // Clear previous suggestions
+    // Optionally, pre-populate suggestions if desired, or let user type/click dropdown
+    // For example, to show initial list:
+    // searchTargetClients({ query: '' }); // This will populate if query is empty
     displayAddModal.value = true;
     };
 
@@ -227,8 +262,12 @@
         toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Cannot relate a client to itself.', life: 3000 });
         return;
     }
-    if (!selectedPair.value || !newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
-        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Common Relationship Pair must be selected.', life: 3000 });
+    // if (!selectedPair.value || !newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
+    //     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Common Relationship Pair must be selected.', life: 3000 });
+    //     return;
+    // }
+    if (!newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
+        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Source and Target relationship types must be filled, either by selecting a common pair or by manual input.', life: 4000 });
         return;
     }
 
@@ -282,6 +321,66 @@
             loadRelatedCompanies();
         }    
     }, { immediate: true });
+
+    const searchTargetClients = (event) => {
+      if (!event.query.trim().length && (!autocompleteSuggestions.value || autocompleteSuggestions.value.length === 0) ) {
+        // Populate with all valid clients if query is empty and suggestions are also empty (e.g. on first click of dropdown)
+        // Also apply all filters here
+        const existingRelatedIds = new Set(
+          Array.isArray(relatedCompanies.value) ? relatedCompanies.value.map(rc => rc.related_company_id) : []
+        );
+        autocompleteSuggestions.value = (allClients.value || []).filter(client => {
+            return client.legal_or_natural_person === 'legal' &&
+                   client.id !== props.clientId &&
+                   !existingRelatedIds.has(client.id);
+        }).map(client => ({
+          ...client,
+          name: client.name || '', // Keep for safety/consistency
+          preferred_display_name: client.name_kanji || client.name_kana || client.name || '',
+          is_legal_person: client.legal_or_natural_person === 'legal'
+        }));
+        return;
+      }
+
+      if (!allClients.value || !Array.isArray(allClients.value)) {
+        autocompleteSuggestions.value = [];
+        return;
+      }
+
+      const query = event.query.toLowerCase();
+      const existingRelatedIds = new Set(
+        Array.isArray(relatedCompanies.value) ? relatedCompanies.value.map(rc => rc.related_company_id) : []
+      );
+
+      autocompleteSuggestions.value = allClients.value.filter(client => {
+        const nameMatch = client.name && client.name.toLowerCase().includes(query);
+        const kanaMatch = client.name_kana && client.name_kana.toLowerCase().includes(query);
+        const kanjiMatch = client.name_kanji && client.name_kanji.toLowerCase().includes(query);
+        const emailMatch = client.email && client.email.toLowerCase().includes(query);
+        const phoneMatch = client.phone && client.phone.toLowerCase().includes(query);
+
+        return (nameMatch || kanaMatch || kanjiMatch || emailMatch || phoneMatch) &&
+               client.legal_or_natural_person === 'legal' &&
+               client.id !== props.clientId &&
+               !existingRelatedIds.has(client.id);
+      }).map(client => ({
+        ...client,
+        name: client.name || '', // Keep for safety/consistency
+        preferred_display_name: client.name_kanji || client.name_kana || client.name || '',
+        is_legal_person: client.legal_or_natural_person === 'legal'
+      }));
+    };
+
+    watch(selectedClientForAutocomplete, (newValue) => {
+      if (newValue && typeof newValue === 'object' && newValue.id) {
+        newRelationship.value.target_client_id = newValue.id;
+      } else if (!newValue) { // Cleared or not an object
+        newRelationship.value.target_client_id = null;
+      }
+      // If newValue is a string (e.g. user typed something but didn't select an object),
+      // target_client_id should ideally be null unless forceSelection works perfectly to clear it.
+      // The `forceSelection` prop should handle this; if user types and blurs, v-model should reset if no match.
+    });
 </script>
 
 <style scoped>
