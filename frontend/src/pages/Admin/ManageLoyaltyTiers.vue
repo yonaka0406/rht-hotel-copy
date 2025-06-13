@@ -18,8 +18,20 @@
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
-            <Button label="リピーター設定を保存" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" />
+            <Button label="リピーター設定を保存" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" :disabled="isRepeaterSaveDisabled" />
           </div>
+        </div>
+        <div class="mt-8" v-if="repeaterDisplayData.length > 0">
+          <h3 class="text-lg font-semibold mb-3">保存されたリピーター設定</h3>
+          <DataTable :value="repeaterDisplayData">
+            <Column field="min_bookings" header="最低合計予約数"></Column>
+            <Column field="time_period_months" header="期間 (月数)"></Column>
+            <Column header="操作">
+              <template #body="slotProps">
+                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
+              </template>
+            </Column>
+          </DataTable>
         </div>
       </TabPanel>
 
@@ -56,8 +68,25 @@
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
-            <Button label="ホテルロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(hotelLoyalSettings)" :disabled="!hotelLoyalSettings.hotel_id" />
+            <Button label="ホテルロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(hotelLoyalSettings)" :disabled="isHotelLoyalSaveDisabled" />
           </div>
+        </div>
+        <div class="mt-8" v-if="hotelLoyalDisplayData.length > 0">
+          <h3 class="text-lg font-semibold mb-3">保存されたホテルロイヤル設定</h3>
+          <DataTable :value="hotelLoyalDisplayData">
+            <Column field="hotel_name" header="ホテル"></Column>
+            <Column field="min_bookings" header="最低ホテル予約数"></Column>
+            <Column field="min_spending" header="最低ホテル利用額" :bodyStyle="{textAlign: 'right'}">
+              <template #body="slotProps">{{ slotProps.data.min_spending !== null ? formatCurrency(slotProps.data.min_spending) : '' }}</template>
+            </Column>
+            <Column field="logic_operator" header="論理演算子"></Column>
+            <Column field="time_period_months" header="期間 (月数)"></Column>
+            <Column header="操作">
+              <template #body="slotProps">
+                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
+              </template>
+            </Column>
+          </DataTable>
         </div>
       </TabPanel>
 
@@ -88,7 +117,24 @@
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
-            <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" />
+            <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" :disabled="isBrandLoyalSaveDisabled" />
+          </div>
+        </div>
+        <div class="mt-8" v-if="brandLoyalDisplayData.length > 0">
+          <h3 class="text-lg font-semibold mb-3">保存されたブランドロイヤル設定</h3>
+          <DataTable :value="brandLoyalDisplayData">
+            <Column field="min_bookings" header="最低ブランド予約数"></Column>
+            <Column field="min_spending" header="最低ブランド利用額" :bodyStyle="{textAlign: 'right'}">
+              <template #body="slotProps">{{ slotProps.data.min_spending !== null ? formatCurrency(slotProps.data.min_spending) : '' }}</template>
+            </Column>
+            <Column field="logic_operator" header="論理演算子"></Column>
+            <Column field="time_period_months" header="期間 (月数)"></Column>
+            <Column header="操作">
+              <template #body="slotProps">
+                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
+              </template>
+            </Column>
+          </DataTable>
           </div>
         </div>
       </TabPanel>
@@ -107,6 +153,8 @@ import Button from 'primevue/button';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
 import FloatLabel from 'primevue/floatlabel';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 import { useSettingsStore } from '@/composables/useSettingsStore';
 import { useHotelStore } from '@/composables/useHotelStore';
 
@@ -196,12 +244,64 @@ const loadHotelDropdown = async () => { // This function was already here, used 
 // This function is called on @change of the hotel dropdown for Hotel Loyal settings
 const loadHotelLoyalSettings = () => {
     if (hotelLoyalSettings.value.hotel_id) {
-        // The watcher for hotelLoyalSettings.value.hotel_id already handles updating the form
-        // based on the selected hotel_id by finding the settings from loyaltyTiers.value.
-        // So, this function might not need to do much more if the watchers are effective.
+        // Watcher handles form update
     } else {
-        // If hotel is deselected, watcher for hotel_id already resets hotelLoyalSettings.
+        // Watcher handles form reset
     }
+};
+
+const isRepeaterSaveDisabled = computed(() => {
+  return !(repeaterSettings.value.min_bookings !== null && repeaterSettings.value.min_bookings !== undefined &&
+            repeaterSettings.value.time_period_months !== null && repeaterSettings.value.time_period_months !== undefined);
+});
+
+const isHotelLoyalSaveDisabled = computed(() => {
+  return !(hotelLoyalSettings.value.hotel_id &&
+            (hotelLoyalSettings.value.time_period_months !== null && hotelLoyalSettings.value.time_period_months !== undefined) &&
+            ((hotelLoyalSettings.value.min_bookings !== null && hotelLoyalSettings.value.min_bookings !== undefined) ||
+            (hotelLoyalSettings.value.min_spending !== null && hotelLoyalSettings.value.min_spending !== undefined)));
+});
+
+const isBrandLoyalSaveDisabled = computed(() => {
+  return !((brandLoyalSettings.value.time_period_months !== null && brandLoyalSettings.value.time_period_months !== undefined) &&
+            ((brandLoyalSettings.value.min_bookings !== null && brandLoyalSettings.value.min_bookings !== undefined) ||
+            (brandLoyalSettings.value.min_spending !== null && brandLoyalSettings.value.min_spending !== undefined)));
+});
+
+const getHotelNameById = (id) => {
+  const hotel = hotels.value.find(h => h.id === id);
+  return hotel ? hotel.name : 'N/A';
+};
+
+const repeaterDisplayData = computed(() =>
+  loyaltyTiers.value.filter(t => t.tier_name === 'repeater')
+);
+
+const hotelLoyalDisplayData = computed(() =>
+  loyaltyTiers.value.filter(t => t.tier_name === 'hotel_loyal').map(t => ({
+    ...t,
+    hotel_name: getHotelNameById(t.hotel_id)
+  }))
+);
+
+const brandLoyalDisplayData = computed(() =>
+  loyaltyTiers.value.filter(t => t.tier_name === 'brand_loyal')
+);
+
+const formatCurrency = (value) => {
+  if (value === null || value === undefined) return '';
+  return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
+};
+
+const editTierSetting = (setting) => {
+  if (setting.tier_name === 'repeater') {
+    repeaterSettings.value = { ...setting };
+  } else if (setting.tier_name === 'hotel_loyal') {
+    hotelLoyalSettings.value = { ...setting };
+  } else if (setting.tier_name === 'brand_loyal') {
+    brandLoyalSettings.value = { ...setting };
+  }
+  toast.add({severity:'info', summary: '情報', detail: `${getTierNameJP(setting.tier_name)}設定がフォームに読み込まれました。`, life: 3000});
 };
 
 const handleSaveSettings = async (tierData) => {
