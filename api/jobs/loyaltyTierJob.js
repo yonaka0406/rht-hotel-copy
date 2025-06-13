@@ -52,7 +52,7 @@ const assignLoyaltyTiers = async () => {
                         SELECT r.reservation_client_id
                         FROM reservations r
                         JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
-                        WHERE r.status IN ('checked_out', 'confirmed') AND rd.date >= $1
+                        WHERE r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.date >= $1
                         GROUP BY r.reservation_client_id
                         HAVING ${havingClause}
                     )`;
@@ -87,7 +87,7 @@ const assignLoyaltyTiers = async () => {
                             SELECT r.reservation_client_id
                             FROM reservations r
                             JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
-                            WHERE r.status IN ('checked_out', 'confirmed') AND r.hotel_id = $1 AND rd.date >= $2
+                            WHERE r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.hotel_id = $1 AND rd.date >= $2
                             GROUP BY r.reservation_client_id
                             HAVING ${havingClause}
                         )`;
@@ -109,7 +109,7 @@ const assignLoyaltyTiers = async () => {
                     SELECT r.reservation_client_id
                     FROM reservations r
                     JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
-                    WHERE r.status IN ('checked_out', 'confirmed') AND rd.date >= $1
+                    WHERE r.status IN ('confirmed', 'checked_in', 'checked_out') AND rd.date >= $1
                     GROUP BY r.reservation_client_id
                     HAVING COUNT(DISTINCT r.id) >= $2
                 )
