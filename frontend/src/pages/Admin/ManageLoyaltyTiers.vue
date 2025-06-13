@@ -4,9 +4,10 @@
 
     <TabView>
       <TabPanel header="リピーター">
-        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
-          <div class="col-span-12 md:col-span-6">
-            <FloatLabel class="mt-6">
+        <div> <!-- New single root wrapper div -->
+          <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+            <div class="col-span-12 md:col-span-6">
+              <FloatLabel class="mt-6">
               <InputNumber id="repeater-min-bookings" v-model="repeaterSettings.min_bookings" class="w-full" />
               <label for="repeater-min-bookings">最低合計予約数</label>
             </FloatLabel>
@@ -33,12 +34,14 @@
             </Column>
           </DataTable>
         </div>
+      </div> <!-- End new single root wrapper div -->
       </TabPanel>
 
       <TabPanel header="ホテルロイヤル">
-        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
-          <div class="col-span-12 md:col-span-6">
-            <FloatLabel class="mt-6">
+        <div> <!-- New single root wrapper div -->
+          <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+            <div class="col-span-12 md:col-span-6">
+              <FloatLabel class="mt-6">
               <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" @change="loadHotelLoyalSettings" class="w-full md:w-14rem" />
               <label for="hotel-loyal-hotel">ホテル</label>
             </FloatLabel>
@@ -88,12 +91,14 @@
             </Column>
           </DataTable>
         </div>
+      </div> <!-- End new single root wrapper div -->
       </TabPanel>
 
       <TabPanel header="ブランドロイヤル">
-        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
-          <div class="col-span-12 md:col-span-4">
-            <FloatLabel class="mt-6">
+        <div> <!-- New single root wrapper div -->
+          <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+            <div class="col-span-12 md:col-span-4">
+              <FloatLabel class="mt-6">
               <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" class="w-full" />
               <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
             </FloatLabel>
@@ -137,6 +142,7 @@
           </DataTable>
           </div>
         </div>
+      </div> <!-- End new single root wrapper div -->
       </TabPanel>
     </TabView>
     <Toast />
