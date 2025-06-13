@@ -4,80 +4,80 @@
 
     <TabView>
       <TabPanel header="リピーター">
-        <div class="p-fluid grid formgrid">
-          <div class="field col-12 md:col-6">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+          <div class="col-span-12 md:col-span-6">
             <label for="repeater-min-bookings">最低合計予約数</label>
             <InputNumber id="repeater-min-bookings" v-model="repeaterSettings.min_bookings" />
           </div>
-          <div class="field col-12 md:col-3">
+          <div class="col-span-12 md:col-span-3">
             <label for="repeater-time-value">期間の値</label>
             <InputNumber id="repeater-time-value" v-model="repeaterSettings.time_period_value" />
           </div>
-          <div class="field col-12 md:col-3">
+          <div class="col-span-12 md:col-span-3">
             <label for="repeater-time-unit">期間の単位</label>
             <Dropdown id="repeater-time-unit" v-model="repeaterSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
           </div>
-          <div class="col-12">
+          <div class="col-span-12 mt-2">
             <Button label="リピーター設定を保存" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" />
           </div>
         </div>
       </TabPanel>
 
       <TabPanel header="ホテルロイヤル">
-        <div class="p-fluid grid formgrid">
-          <div class="field col-12 md:col-6">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+          <div class="col-span-12 md:col-span-6">
             <label for="hotel-loyal-hotel">ホテル</label>
             <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" />
           </div>
-          <div class="field col-12 md:col-3">
+          <div class="col-span-12 md:col-span-3">
             <label for="hotel-loyal-min-bookings">最低ホテル予約数</label>
             <InputNumber id="hotel-loyal-min-bookings" v-model="hotelLoyalSettings.min_bookings" />
           </div>
-          <div class="field col-12 md:col-3">
+          <div class="col-span-12 md:col-span-3">
             <label for="hotel-loyal-min-spending">最低ホテル利用額</label>
             <InputNumber id="hotel-loyal-min-spending" v-model="hotelLoyalSettings.min_spending" mode="currency" currency="JPY" />
           </div>
-          <div class="field col-12 md:col-4">
+          <div class="col-span-12 md:col-span-4">
             <label for="hotel-loyal-logic">論理演算子</label>
             <Dropdown id="hotel-loyal-logic" v-model="hotelLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" />
           </div>
-          <div class="field col-12 md:col-4">
+          <div class="col-span-12 md:col-span-4">
             <label for="hotel-loyal-time-value">期間の値</label>
             <InputNumber id="hotel-loyal-time-value" v-model="hotelLoyalSettings.time_period_value" />
           </div>
-          <div class="field col-12 md:col-4">
+          <div class="col-span-12 md:col-span-4">
             <label for="hotel-loyal-time-unit">期間の単位</label>
             <Dropdown id="hotel-loyal-time-unit" v-model="hotelLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
           </div>
-          <div class="col-12">
+          <div class="col-span-12 mt-2">
             <Button label="ホテルロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(hotelLoyalSettings)" :disabled="!hotelLoyalSettings.hotel_id" />
           </div>
         </div>
       </TabPanel>
 
       <TabPanel header="ブランドロイヤル">
-        <div class="p-fluid grid formgrid">
-          <div class="field col-12 md:col-3">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
+          <div class="col-span-12 md:col-span-4">
             <label for="brand-loyal-min-bookings">最低ブランド予約数</label>
             <InputNumber id="brand-loyal-min-bookings" v-model="brandLoyalSettings.min_bookings" />
           </div>
-          <div class="field col-12 md:col-3">
+          <div class="col-span-12 md:col-span-4">
             <label for="brand-loyal-min-spending">最低ブランド利用額</label>
             <InputNumber id="brand-loyal-min-spending" v-model="brandLoyalSettings.min_spending" mode="currency" currency="JPY" />
           </div>
-           <div class="field col-12 md:col-2">
+           <div class="col-span-12 md:col-span-4">
             <label for="brand-loyal-logic">論理演算子</label>
             <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" />
           </div>
-          <div class="field col-12 md:col-2">
+          <div class="col-span-12 md:col-span-6">
             <label for="brand-loyal-time-value">期間の値</label>
             <InputNumber id="brand-loyal-time-value" v-model="brandLoyalSettings.time_period_value" />
           </div>
-          <div class="field col-12 md:col-2">
+          <div class="col-span-12 md:col-span-6">
             <label for="brand-loyal-time-unit">期間の単位</label>
             <Dropdown id="brand-loyal-time-unit" v-model="brandLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" />
           </div>
-          <div class="col-12">
+          <div class="col-span-12 mt-2">
             <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" />
           </div>
         </div>
