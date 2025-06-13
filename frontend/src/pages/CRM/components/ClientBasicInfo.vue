@@ -455,12 +455,12 @@
     );
 
     const getTierDisplayName = (tier) => {
-        if (!tier) return 'N/A';
-        switch (tier) {
-        case 'newbie': return 'Newbie';
-        case 'repeater': return 'Repeater';
-        case 'hotel_loyal': return 'Hotel Loyal';
-        case 'brand_loyal': return 'Brand Loyal';
+        if (!tier) return 'N/A'; // Or '未分類' / '該当なし'
+        switch (tier) { // tier is already lowercase
+        case 'newbie': return '新規顧客';
+        case 'repeater': return 'リピーター';
+        case 'hotel_loyal': return 'ホテルロイヤル';
+        case 'brand_loyal': return 'ブランドロイヤル';
         default: return tier;
         }
     };

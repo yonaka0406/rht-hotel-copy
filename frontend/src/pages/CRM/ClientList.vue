@@ -337,13 +337,13 @@
     });
 
     const getTierDisplayName = (tier) => {
-        if (!tier) return 'N/A';
-        switch (tier) {
-        case 'newbie': return 'Newbie';
-        case 'repeater': return 'Repeater';
-        case 'hotel_loyal': return 'Hotel Loyal';
-        case 'brand_loyal': return 'Brand Loyal';
-        default: return tier;
+        if (!tier) return 'N/A'; // Or perhaps '未分類' (Uncategorized) or '該当なし' (Not Applicable)
+        switch (tier) { // tier is already lowercase
+        case 'newbie': return '新規顧客'; // New Customer
+        case 'repeater': return 'リピーター'; // Repeater
+        case 'hotel_loyal': return 'ホテルロイヤル'; // Hotel Loyal
+        case 'brand_loyal': return 'ブランドロイヤル'; // Brand Loyal
+        default: return tier; // Fallback, should not happen with current tiers
         }
     };
 
