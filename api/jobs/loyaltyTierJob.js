@@ -1,6 +1,6 @@
 // api/jobs/loyaltyTierJob.js
 const cron = require('node-cron');
-const db = require('../config/database'); // Assuming db connection pool
+const db = require('../config/database');
 const pgFormat = require('pg-format');
 
 // Helper function to calculate past date based on period
@@ -19,7 +19,7 @@ const assignLoyaltyTiers = async () => {
 
         // Disable trigger before any client updates
         await client.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
-        console.log('Temporarily disabled log_clients_trigger.'); // Simple console log for now
+        console.log('Temporarily disabled log_clients_trigger.');
 
         // 1. Initialize all clients to 'newbie'
         console.log('Initializing clients to newbie...');
@@ -132,9 +132,7 @@ const assignLoyaltyTiers = async () => {
             await client.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
             console.log('Re-enabled log_clients_trigger.');
         } catch (enableTriggerError) {
-            console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);
-            // This is a critical error. Triggers remaining disabled can have serious consequences.
-            // Consider more robust error handling/notification here for production systems.
+            console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);            
         }
         client.release();
     }
@@ -142,12 +140,11 @@ const assignLoyaltyTiers = async () => {
 
 // Schedule the job to run daily at 2 AM
 // Adjust cron expression as needed e.g. '0 2 * * *' for 2 AM daily.
-// For testing, you might use a more frequent schedule like '*/5 * * * *' (every 5 minutes)
 const scheduleLoyaltyTierJob = () => {
     // Runs daily at 2:00 AM
     cron.schedule('0 2 * * *', assignLoyaltyTiers, {
         scheduled: true,
-        timezone: "Asia/Tokyo" // Or your server's timezone
+        timezone: "Asia/Tokyo"
     });
     console.log('Loyalty tier assignment job scheduled daily at 2 AM.');
 };
