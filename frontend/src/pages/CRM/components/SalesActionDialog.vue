@@ -265,8 +265,8 @@ const populateForm = (data) => {
     due_date: data.due_date ? new Date(data.due_date) : null,
   };
 
-  if (data.client_id) {
-    const clientObj = props.allClients.find(c => c.id === data.client_id);
+  if (currentActionFormData.value.client_id) { // Use currentActionFormData.value.client_id here
+    const clientObj = props.allClients.find(c => c.id === currentActionFormData.value.client_id);
     if (clientObj) {
       selectedClientObjectForForm.value = {
         ...clientObj,
@@ -279,7 +279,15 @@ const populateForm = (data) => {
   } else {
     selectedClientObjectForForm.value = null;
   }
+
+  // Set default assigned_to for new actions if not already set by actionData
+  if (props.actionFormMode === 'create' && currentActionFormData.value.assigned_to === null) {
+    if (props.userOptions && props.userOptions.length > 0 && props.userOptions[0]) {
+      currentActionFormData.value.assigned_to = props.userOptions[0].id;
+    }
+  }
 };
+
 
 const save = () => {
   // --- Form Validation (Moved from SalesInteractions.vue) ---
@@ -311,17 +319,12 @@ const close = () => {
 // Watch for isOpen changes to manage form state when dialog opens/closes
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    // When dialog opens
-    if (props.actionFormMode === 'edit' && props.actionData) {
-      populateForm(props.actionData);
-    } else {
-      resetForm();
-      // Set default assigned_to for new actions
-      if (props.userOptions && props.userOptions.length > 0 && props.userOptions[0]) {
-        currentActionFormData.value.assigned_to = props.userOptions[0].id; // Assuming first user is current or default
-      }
-      currentActionFormData.value.action_datetime = new Date(); // Default to now for new actions
-    }
+    // Always populate form with actionData, whether in 'create' or 'edit' mode.
+    // In 'create' mode, actionData will contain initial defaults including client_id if pre-filled.
+    populateForm(props.actionData);
+    currentActionFormData.value.action_datetime = new Date(); // Always default to now on open, for both create and edit
+  } else {
+    resetForm(); // Reset form when dialog closes
   }
 }, { immediate: true }); // Run immediately to populate if dialog is initially open
 
