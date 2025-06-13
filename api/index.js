@@ -11,7 +11,8 @@ const https = require('https');
 const socketio = require('socket.io');
 const fs = require('fs');
 const db = require('./config/database');
-const { startScheduling } = require('./utils/scheduleUtils');
+const { startScheduling } = require('./jobs/otaReservationJob.js');
+const { scheduleLoyaltyTierJob } = require('./jobs/loyaltyTierJob');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
@@ -464,6 +465,11 @@ if (httpsServer) {
 }
 */
 
-// Start the scheduling
-startScheduling();
-
+// Start scheduled jobs only in production environment
+if (process.env.NODE_ENV === 'production') {
+    startScheduling();
+    scheduleLoyaltyTierJob();
+    logger.info('Scheduled jobs (OTA sync, Loyalty Tiers) started for production environment.');
+} else {
+    logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
+}
