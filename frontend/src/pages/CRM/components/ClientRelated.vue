@@ -21,7 +21,16 @@
           </div>
         </template>
         
-        <Column field="related_company_name" header="関連会社名" sortable />
+        <Column field="related_company_name" header="関連会社名" sortable>
+          <template #body="slotProps">
+            <router-link
+              :to="{ name: 'ClientEdit', params: { clientId: slotProps.data.related_company_id } }"
+              class="text-primary-600 hover:underline"
+            >
+              {{ slotProps.data.related_company_name }}
+            </router-link>
+          </template>
+        </Column>
         <Column field="type_from_source_perspective" header="自社との関係" sortable />
         <Column field="type_from_target_perspective" header="相手との関係" sortable />
         <Column field="comment_from_source" header="コメント" /> 
