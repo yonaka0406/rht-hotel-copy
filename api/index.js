@@ -205,7 +205,6 @@ const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
-const loyaltyTierRoutes = require('./routes/loyaltyTierRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -224,7 +223,6 @@ app.use('/api', importRoutes);
 app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', xmlRoutes);
-app.use('/api/loyalty-tiers', loyaltyTierRoutes);
 
 // Connect to PostgreSQL database
 const listenClient = new Pool({
