@@ -22,18 +22,7 @@
             <Button label="リピーター設定を保存" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" :disabled="isRepeaterSaveDisabled" />
           </div>
         </div>
-        <div class="mt-8" v-if="repeaterDisplayData.length > 0">
-          <h3 class="text-lg font-semibold mb-3">保存されたリピーター設定</h3>
-          <DataTable :value="repeaterDisplayData">
-            <Column field="min_bookings" header="最低合計予約数"></Column>
-            <Column field="time_period_months" header="期間 (月数)"></Column>
-            <Column header="操作">
-              <template #body="slotProps">
-                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
-              </template>
-            </Column>
-          </DataTable>
-        </div>
+        <!-- DataTable for Repeater removed -->
       </div> <!-- End new single root wrapper div -->
       </TabPanel>
 
@@ -86,7 +75,7 @@
             <Column field="time_period_months" header="期間 (月数)"></Column>
             <Column header="操作">
               <template #body="slotProps">
-                  <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
+                  <Button icon="pi pi-upload" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
               </template>
             </Column>
           </DataTable>
@@ -125,22 +114,7 @@
               <Button label="ブランドロイヤル設定を保存" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" :disabled="isBrandLoyalSaveDisabled" />
             </div>
           </div>
-          <div class="mt-8" v-if="brandLoyalDisplayData.length > 0">
-            <h3 class="text-lg font-semibold mb-3">保存されたブランドロイヤル設定</h3>
-            <DataTable :value="brandLoyalDisplayData">
-              <Column field="min_bookings" header="最低ブランド予約数"></Column>
-              <Column field="min_spending" header="最低ブランド利用額" :bodyStyle="{textAlign: 'right'}">
-                <template #body="slotProps">{{ slotProps.data.min_spending !== null ? formatCurrency(slotProps.data.min_spending) : '' }}</template>
-              </Column>
-              <Column field="logic_operator" header="論理演算子"></Column>
-              <Column field="time_period_months" header="期間 (月数)"></Column>
-              <Column header="操作">
-                <template #body="slotProps">
-                    <Button icon="pi pi-pencil" class="p-button-rounded p-button-text" @click="editTierSetting(slotProps.data)" />
-                </template>
-              </Column>
-            </DataTable>
-          </div>
+          <!-- DataTable for Brand Loyal removed -->
         </div>
       </TabPanel>
     </TabView>
@@ -206,37 +180,47 @@ watch(currentBrandLoyalSetting, (newVal) => {
     };
 }, { deep: true, immediate: true });
 
-watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
-    if (newHotelId) {
-        const setting = loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === newHotelId);
-        hotelLoyalSettings.value = {
-            ...setting,
-            hotel_id: newHotelId,
-            tier_name: 'hotel_loyal',
-            logic_operator: (setting && setting.logic_operator) || 'OR',
-            time_period_months: (setting && setting.time_period_months) || null // Ensure time_period_months is part of the reset
-        };
-    } else {
-        hotelLoyalSettings.value = {
-            hotel_id: null,
-            tier_name: 'hotel_loyal',
-            min_bookings: null,
-            min_spending: null,
-            logic_operator: 'OR',
-            time_period_months: null // Changed from time_period_value and time_period_unit removed
-        };
-    }
-}, { immediate: true });
+// Helper to reset specific fields of hotelLoyalSettings, keeping hotel_id and tier_name
+const resetHotelLoyalFormFields = (hotelId) => {
+  return {
+    hotel_id: hotelId,
+    tier_name: 'hotel_loyal',
+    min_bookings: null,
+    min_spending: null,
+    logic_operator: 'OR', // Default logic operator
+    time_period_months: null
+  };
+};
 
+// Modify the watcher for hotel_id selection
+watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
+    let newSettings = resetHotelLoyalFormFields(newHotelId); // Reset first
+    if (newHotelId) {
+        const existingSetting = loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === newHotelId);
+        if (existingSetting) {
+            newSettings = { // Spread existing over the reset defaults
+                ...newSettings, // Contains default logic_operator
+                ...existingSetting, // existingSetting might not have logic_operator if null in DB
+                logic_operator: existingSetting.logic_operator || 'OR' // Ensure default if null from DB
+            };
+        }
+    }
+    hotelLoyalSettings.value = newSettings;
+}, { immediate: true, deep: true });
+
+// Modify the watcher for currentHotelLoyalSettingForSelectedHotel
 watch(currentHotelLoyalSettingForSelectedHotel, (newVal) => {
-    if (hotelLoyalSettings.value.hotel_id) { // Only update if a hotel is selected
-        hotelLoyalSettings.value = {
+    if (hotelLoyalSettings.value.hotel_id) {
+        let freshSettings = resetHotelLoyalFormFields(hotelLoyalSettings.value.hotel_id);
+        freshSettings = {
+            ...freshSettings,
             ...newVal,
-            hotel_id: hotelLoyalSettings.value.hotel_id,
-            tier_name: 'hotel_loyal',
-            logic_operator: (newVal && newVal.logic_operator) || 'OR',
-            time_period_months: (newVal && newVal.time_period_months) || null // Ensure time_period_months is part of the reset
+            logic_operator: newVal.logic_operator || 'OR'
         };
+        // To avoid infinite loops if newVal is part of hotelLoyalSettings, compare before assigning
+        if (JSON.stringify(hotelLoyalSettings.value) !== JSON.stringify(freshSettings)) {
+            hotelLoyalSettings.value = freshSettings;
+        }
     }
 }, { deep: true });
 
@@ -302,7 +286,12 @@ const editTierSetting = (setting) => {
   if (setting.tier_name === 'repeater') {
     repeaterSettings.value = { ...setting };
   } else if (setting.tier_name === 'hotel_loyal') {
-    hotelLoyalSettings.value = { ...setting };
+    const baseSettings = resetHotelLoyalFormFields(setting.hotel_id);
+    hotelLoyalSettings.value = {
+        ...baseSettings,
+        ...setting, // Spread the selected setting over the defaults
+        logic_operator: setting.logic_operator || 'OR' // Ensure default for logic_operator
+    };
   } else if (setting.tier_name === 'brand_loyal') {
     brandLoyalSettings.value = { ...setting };
   }
