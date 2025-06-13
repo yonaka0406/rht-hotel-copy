@@ -12,8 +12,6 @@ const relatedCompanies = ref([]);
 const isLoadingRelatedCompanies = ref(false);
 const commonRelationshipPairs = ref([]);
 const isLoadingCommonRelationshipPairs = ref(false);
-// const legalClientsForSelection = ref([]); // Remove this line
-// const isLoadingLegalClientsForSelection = ref(false); // Remove this line
 
 export function useClientStore() {
     
@@ -540,8 +538,7 @@ export function useClientStore() {
             isLoadingCommonRelationshipPairs.value = false;
         }
     }
-    // async function fetchLegalClientsForSelection() { ... } // Remove this entire function
-
+    
     return {
         groups,
         selectedGroup,
@@ -553,9 +550,7 @@ export function useClientStore() {
         relatedCompanies,
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
-        isLoadingCommonRelationshipPairs,
-        // legalClientsForSelection, // Remove this line
-        // isLoadingLegalClientsForSelection, // Remove this line
+        isLoadingCommonRelationshipPairs,        
         setClientsIsLoading,
         fetchClients,
         fetchClient,
@@ -579,7 +574,6 @@ export function useClientStore() {
         addClientRelationship,
         deleteClientRelationship,
         updateClientRelationship,
-        fetchCommonRelationshipPairs,
-        // fetchLegalClientsForSelection, // Remove this line
+        fetchCommonRelationshipPairs,        
     };
 }
