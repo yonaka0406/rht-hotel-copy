@@ -177,11 +177,17 @@
                     </Column>
                     <Column headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center; overflow: visible">
                         <template #body="slotProps">
-                            <Button type="button" icon="pi pi-ellipsis-h" @click="toggleActionMenu(slotProps.data, $event)" aria-haspopup="true" aria-controls="overlay_menu" class="p-button-text"/>
+                            <SplitButton
+                                label="編集"
+                                icon="pi pi-pencil"
+                                @click="() => openEditActionDialog(slotProps.data)"
+                                :model="getSplitButtonModel(slotProps.data)"
+                                rounded outlined severity="info" size="small"
+                                aria-haspopup="true"
+                            />
                         </template>
                     </Column>
                 </DataTable>
-                <Menu ref="actionMenu" :model="actionMenuItems" :popup="true" />
             </template>
         </Card>
     </div>
@@ -221,6 +227,18 @@
             </Column>
             <Column field="assigned_to_name" header="担当者" :sortable="true"></Column>
             <Column field="details" header="詳細" style="min-width:200px; white-space: pre-wrap;"></Column>
+            <Column headerStyle="width: 5rem; text-align: center" bodyStyle="text-align: center; overflow: visible">
+                <template #body="slotProps">
+                    <SplitButton
+                        label="編集"
+                        icon="pi pi-pencil"
+                        @click="() => openEditActionDialog(slotProps.data)"
+                        :model="getSplitButtonModel(slotProps.data)"
+                        rounded outlined severity="info" size="small"
+                        aria-haspopup="true"
+                    />
+                </template>
+            </Column>
         </DataTable>
         <template #footer>
             <Button label="閉じる" icon="pi pi-times" @click="closeModal" class="p-button-text"/>
@@ -249,7 +267,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import SalesActionDialog from './components/SalesActionDialog.vue';
 
 // Primevue
-import { Card, Dialog, Menu, InputText, DatePicker, Textarea, AutoComplete, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner } from 'primevue';
+import { Card, Dialog, InputText, DatePicker, Textarea, AutoComplete, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner, SplitButton } from 'primevue';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
@@ -354,20 +372,21 @@ const translateStatus = (status, due_date) => {
     return statusTranslations[eStatus] || status;
 };
 
-// DataTable row actions menu
-const actionMenu = ref();
-const currentActionItem = ref(null); // To store the action item for the menu
-const actionMenuItems = ref([
-    { label: '編集', icon: 'pi pi-pencil', command: () => { if(currentActionItem.value) openEditActionDialog(currentActionItem.value); } },
-    { label: '削除', icon: 'pi pi-trash', command: () => { if(currentActionItem.value) deleteActionHandler(currentActionItem.value.id); } }
-]);
 const goToEditClientPage = (clientId) => {
     window.open(`/crm/clients/edit/${clientId}`, '_blank');
 };
 
-const toggleActionMenu = (action, event) => {
-    currentActionItem.value = action;
-    actionMenu.value.toggle(event);
+const getSplitButtonModel = (actionItem) => {
+    return [
+        {
+            label: '削除',
+            icon: 'pi pi-trash',
+            command: () => {
+                deleteActionHandler(actionItem.id);
+            }
+        }
+        // Add other actions here if needed in the future
+    ];
 };
 
 // --- Date Formatting Helpers ---
