@@ -176,19 +176,24 @@ const upsertLoyaltyTier = async (requestId, tierData, userId) => {
   const query = pgFormat(`
     INSERT INTO loyalty_tiers (
         tier_name, hotel_id, min_bookings, min_spending,
-        time_period_value, time_period_unit, logic_operator, created_by, updated_by, updated_at
+        time_period_value, time_period_unit, logic_operator,
+        created_by, updated_by, created_at, updated_at
     )
-    VALUES (%L, %L, %L, %L, %L, %L, %L, %L, %L, CURRENT_TIMESTAMP)
+    VALUES (%L, %L, %L, %L, %L, %L, %L, %L, %L, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT (tier_name, hotel_id) DO UPDATE SET
         min_bookings = EXCLUDED.min_bookings,
         min_spending = EXCLUDED.min_spending,
         time_period_value = EXCLUDED.time_period_value,
         time_period_unit = EXCLUDED.time_period_unit,
         logic_operator = EXCLUDED.logic_operator,
-        updated_by = EXCLUDED.updated_by,
+        updated_by = %L, -- Use userId directly for updated_by on update
         updated_at = CURRENT_TIMESTAMP
     RETURNING *;
-  `, tier_name, actualHotelId, min_bookings, min_spending, time_period_value, time_period_unit, logic_operator, userId, userId);
+  `, tier_name, actualHotelId, min_bookings, min_spending,
+     time_period_value, time_period_unit, logic_operator,
+     userId, userId, /* for created_by, updated_by in INSERT */
+     userId        /* for updated_by in UPDATE */
+  );
 
   try {
     const result = await pool.query(query);

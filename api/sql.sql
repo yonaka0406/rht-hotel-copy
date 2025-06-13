@@ -1154,10 +1154,12 @@ CREATE TABLE loyalty_tiers (
     time_period_unit VARCHAR(10) NOT NULL, -- e.g., 'MONTHS', 'YEARS'
     logic_operator VARCHAR(3), -- e.g., 'AND', 'OR'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT REFERENCES users(id)
 );
 
-COMMENT ON COLUMN loyalty_tiers.tier_name IS 'The name of the loyalty tier (REPEATER, HOTEL_LOYAL, BRAND_LOYAL)';
+COMMENT ON COLUMN loyalty_tiers.tier_name IS 'The name of the loyalty tier (repeater, hotel_loyal, brand_loyal)';
 COMMENT ON COLUMN loyalty_tiers.hotel_id IS 'Reference to hotels(id) for HOTEL_LOYAL tier, NULL otherwise';
 COMMENT ON COLUMN loyalty_tiers.min_bookings IS 'Minimum number of bookings required for the tier';
 COMMENT ON COLUMN loyalty_tiers.min_spending IS 'Minimum spending required for the tier';
