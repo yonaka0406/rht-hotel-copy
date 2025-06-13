@@ -17,8 +17,12 @@ const assignLoyaltyTiers = async () => {
     try {
         await client.query('BEGIN');
 
-        // 1. Initialize all clients to 'Newbie'
-        console.log('Initializing clients to Newbie...');
+        // Disable trigger before any client updates
+        await client.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
+        console.log('Temporarily disabled log_clients_trigger.'); // Simple console log for now
+
+        // 1. Initialize all clients to 'newbie'
+        console.log('Initializing clients to newbie...');
         await client.query("UPDATE clients SET loyalty_tier = 'newbie'");
 
         // Fetch all tier settings
@@ -124,6 +128,14 @@ const assignLoyaltyTiers = async () => {
         await client.query('ROLLBACK');
         console.error('Error in loyalty tier assignment job:', error);
     } finally {
+        try {
+            await client.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
+            console.log('Re-enabled log_clients_trigger.');
+        } catch (enableTriggerError) {
+            console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);
+            // This is a critical error. Triggers remaining disabled can have serious consequences.
+            // Consider more robust error handling/notification here for production systems.
+        }
         client.release();
     }
 };
