@@ -240,22 +240,7 @@ const changeTaxTypeDescription = async (req, res) => {
   }
 };
 
-
-module.exports = { 
-  getPaymentTypes, 
-  addPaymentType, 
-  changePaymentTypeVisibility,
-  changePaymentTypeDescription, 
-  getTaxTypes, 
-  addTaxType, 
-  changeTaxTypeVisibility,
-  changeTaxTypeDescription,
-  getCompanyStampImage, 
-  uploadStampImage,
-  handleGetLoyaltyTiers,
-  handleUpsertLoyaltyTiers,
-};
-
+// Loyalty Tier Controller Functions
 const handleGetLoyaltyTiers = async (req, res) => {
   try {
     const data = await getLoyaltyTiers(req.requestId);
@@ -321,4 +306,20 @@ const handleUpsertLoyaltyTiers = async (req, res) => {
     console.error('Error in handleUpsertLoyaltyTiers:', err);
     res.status(500).json({ error: err.message || 'Internal server error' });
   }
+};
+// End of Loyalty Tier Controller Functions
+
+module.exports = {
+  getPaymentTypes,
+  addPaymentType,
+  changePaymentTypeVisibility,
+  changePaymentTypeDescription,
+  getTaxTypes,
+  addTaxType,
+  changeTaxTypeVisibility,
+  changeTaxTypeDescription,
+  getCompanyStampImage,
+  uploadStampImage,
+  handleGetLoyaltyTiers,
+  handleUpsertLoyaltyTiers,
 };
