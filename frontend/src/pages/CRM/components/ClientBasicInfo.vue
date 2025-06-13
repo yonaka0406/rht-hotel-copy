@@ -132,6 +132,10 @@
                                 <label>顧客ID</label>
                             </FloatLabel>
                         </div>
+                        <div class="field col-span-1 flex items-center">
+                            <label class="mr-2 font-semibold">ロイヤルティ層:</label>
+                            <Tag :value="getTierDisplayName(client.loyalty_tier)" :severity="getTierSeverity(client.loyalty_tier)" />
+                        </div>
                         <div class="field col-span-1 md:col-span-2 xl:col-span-3">
                             <FloatLabel>
                                 <Textarea v-model="client.comment" fluid />                                        
@@ -449,4 +453,26 @@
             }            
         }
     );
+
+    const getTierDisplayName = (tier) => {
+        if (!tier) return 'N/A'; // Or '未分類' / '該当なし'
+        switch (tier) { // tier is already lowercase
+        case 'newbie': return '新規顧客';
+        case 'repeater': return 'リピーター';
+        case 'hotel_loyal': return 'ホテルロイヤル';
+        case 'brand_loyal': return 'ブランドロイヤル';
+        default: return tier;
+        }
+    };
+
+    const getTierSeverity = (tier) => {
+        if (!tier) return 'info';
+        switch (tier) {
+        case 'newbie': return 'info';
+        case 'repeater': return 'success';
+        case 'hotel_loyal': return 'warning';
+        case 'brand_loyal': return 'danger';
+        default: return 'secondary';
+        }
+    };
 </script>

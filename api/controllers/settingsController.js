@@ -1,5 +1,6 @@
 const { selectPaymentTypes, insertPaymentType, updatePaymentTypeVisibility, updatePaymentTypeDescription,
-  selectTaxTypes, insertTaxType, updateTaxTypeVisibility, updateTaxTypeDescription
+  selectTaxTypes, insertTaxType, updateTaxTypeVisibility, updateTaxTypeDescription,
+  getLoyaltyTiers, upsertLoyaltyTier
  } = require('../models/settings');
 const multer = require('multer');
 const sharp = require('sharp');
@@ -239,16 +240,89 @@ const changeTaxTypeDescription = async (req, res) => {
   }
 };
 
+// Loyalty Tier Controller Functions
+const handleGetLoyaltyTiers = async (req, res) => {
+  try {
+    const data = await getLoyaltyTiers(req.requestId);
+    res.status(200).json(data);
+  } catch (err) {
+    console.error('Error in handleGetLoyaltyTiers:', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+};
 
-module.exports = { 
-  getPaymentTypes, 
-  addPaymentType, 
+const handleUpsertLoyaltyTiers = async (req, res) => {
+  const tierData = req.body;
+  const userId = req.user.id;
+
+  // Convert tier_name to lowercase for consistent processing
+  const lowerTierName = tierData.tier_name ? tierData.tier_name.toLowerCase() : null;
+
+  // Basic Validation
+  if (!lowerTierName || !tierData.time_period_months) { // Changed from time_period_value, removed time_period_unit
+    return res.status(400).json({ message: 'tier_name and time_period_months are required.' });
+  }
+  // Assign the lowercased tier_name back to tierData for saving
+  tierData.tier_name = lowerTierName;
+
+  if (lowerTierName === 'hotel_loyal' && (tierData.hotel_id === null || tierData.hotel_id === undefined)) {
+    return res.status(400).json({ message: 'hotel_id is required for hotel_loyal tier.' });
+  }
+  // No specific validation for hotel_id on repeater/brand_loyal here, as model handles setting it to NULL.
+
+  // Removed validation block for time_period_unit
+
+  if (tierData.logic_operator && !['AND', 'OR'].includes(tierData.logic_operator.toUpperCase())) {
+    return res.status(400).json({ message: "logic_operator must be 'AND' or 'OR'." });
+  }
+  // Ensure logic_operator is stored in uppercase
+  if (tierData.logic_operator) {
+    tierData.logic_operator = tierData.logic_operator.toUpperCase();
+  }
+
+
+  if ((lowerTierName === 'hotel_loyal' || lowerTierName === 'brand_loyal') && (tierData.min_bookings === null || tierData.min_bookings === undefined) && (tierData.min_spending === null || tierData.min_spending === undefined) ) {
+    return res.status(400).json({ message: 'Either min_bookings or min_spending must be provided for hotel_loyal or brand_loyal tiers.' });
+  }
+  if (lowerTierName === 'repeater' && (tierData.min_bookings === null || tierData.min_bookings === undefined)) {
+    return res.status(400).json({ message: 'min_bookings must be provided for repeater tier.' });
+  }
+
+  // Ensure numeric values are numbers or null
+  tierData.min_bookings = tierData.min_bookings !== undefined && tierData.min_bookings !== null ? Number(tierData.min_bookings) : null;
+  tierData.min_spending = tierData.min_spending !== undefined && tierData.min_spending !== null ? Number(tierData.min_spending) : null;
+  tierData.time_period_months = Number(tierData.time_period_months); // Changed from time_period_value
+
+  const cleanTierData = {
+    tier_name: tierData.tier_name, // already lowercased
+    hotel_id: tierData.hotel_id,
+    min_bookings: tierData.min_bookings, // already Number or null
+    min_spending: tierData.min_spending, // already Number or null
+    time_period_months: tierData.time_period_months, // already Number
+    logic_operator: tierData.logic_operator, // already uppercased or null
+  };
+
+  try {
+    const result = await upsertLoyaltyTier(req.requestId, cleanTierData, userId);
+    res.status(201).json(result);
+  } catch (err) {
+    console.error('Error in handleUpsertLoyaltyTiers:', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+};
+// End of Loyalty Tier Controller Functions
+
+module.exports = {
+  getPaymentTypes,
+  addPaymentType,
   changePaymentTypeVisibility,
-  changePaymentTypeDescription, 
-  getTaxTypes, 
-  addTaxType, 
+  changePaymentTypeDescription,
+  getTaxTypes,
+  addTaxType,
   changeTaxTypeVisibility,
   changeTaxTypeDescription,
-  getCompanyStampImage, 
+  getCompanyStampImage,
   uploadStampImage,
+  handleGetLoyaltyTiers,
+  handleUpsertLoyaltyTiers,
 };

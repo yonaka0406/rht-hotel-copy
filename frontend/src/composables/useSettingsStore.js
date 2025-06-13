@@ -2,6 +2,7 @@ import { ref } from 'vue';
 
 const paymentTypes = ref(null);
 const taxTypes = ref(null);
+const loyaltyTiers = ref([]); // Store all loyalty tier rules
 
 export function useSettingsStore() {
     
@@ -283,6 +284,54 @@ export function useSettingsStore() {
         alterTaxTypeVisibility,
         alterTaxTypeDescription,
         getCompanyStampImageUrl,
-        uploadCompanyStamp
+        uploadCompanyStamp,
+        loyaltyTiers,
+        fetchLoyaltyTiers,
+        saveLoyaltyTier
     };
 }
+
+const fetchLoyaltyTiers = async () => {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch('/api/settings/loyalty-tiers', { // New endpoint
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        loyaltyTiers.value = await response.json();
+    } catch (error) {
+        console.error('Failed to fetch loyalty tiers', error);
+        loyaltyTiers.value = []; // Reset or handle error appropriately
+        // Optionally re-throw or show a toast
+    }
+};
+
+const saveLoyaltyTier = async (tierData) => {
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch('/api/settings/loyalty-tiers', { // New endpoint
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(tierData) // tierData is a single tier object
+        });
+        if (!response.ok) {
+             const errorData = await response.json();
+             throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+        // After successful save, refresh the local store's loyaltyTiers or update the specific item
+        await fetchLoyaltyTiers(); // Simplest way to ensure data consistency
+        return await response.json(); // Return the saved/updated tier data
+    } catch (error) {
+        console.error('Failed to save loyalty tier', error);
+        throw error; // Re-throw for the component to handle
+    }
+};
