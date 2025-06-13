@@ -321,7 +321,7 @@ CREATE TABLE addresses (
     updated_by INT DEFAULT NULL REFERENCES users(id)
 );
 
-CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note');
+CREATE TYPE crm_action_type_enum AS ENUM ('visit', 'call', 'email', 'meeting', 'task', 'note', 'other');
 CREATE TYPE crm_action_status_enum AS ENUM ('pending', 'scheduled', 'completed', 'cancelled', 'rescheduled');
 CREATE TABLE crm_actions (
    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -343,6 +343,8 @@ CREATE TABLE crm_actions (
 );
 CREATE INDEX idx_crm_actions_client_id ON crm_actions(client_id);
 CREATE INDEX idx_crm_actions_action_type ON crm_actions(action_type);
+
+ALTER TYPE crm_action_type_enum ADD VALUE 'other';
 
 CREATE TABLE tax_info (
    id SERIAL PRIMARY KEY,

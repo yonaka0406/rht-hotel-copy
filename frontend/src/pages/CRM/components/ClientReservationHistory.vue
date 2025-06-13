@@ -152,7 +152,8 @@
         'email': 'メール',
         'meeting': '会議',
         'task': 'タスク',
-        'note': 'メモ'
+        'note': 'メモ',
+        'other': 'その他'
     };
     const statusTranslations = {
         'pending': '保留中',
@@ -233,7 +234,8 @@
             email: 'info',
             meeting: 'primary',
             task: 'secondary',
-            note: 'warn'
+            note: 'warn',
+            other: 'secondary'
         };
         return severities[actionType] || 'info';
     };
