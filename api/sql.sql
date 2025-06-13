@@ -1150,8 +1150,7 @@ CREATE TABLE loyalty_tiers (
     hotel_id INTEGER REFERENCES hotels(id) ON DELETE CASCADE, -- Nullable for REPEATER and BRAND_LOYAL
     min_bookings INTEGER,
     min_spending DECIMAL,
-    time_period_value INTEGER NOT NULL,
-    time_period_unit VARCHAR(10) NOT NULL, -- e.g., 'MONTHS', 'YEARS'
+    time_period_months INTEGER NOT NULL, -- Formerly time_period_value, unit is now always months
     logic_operator VARCHAR(3), -- e.g., 'AND', 'OR'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -1163,8 +1162,7 @@ COMMENT ON COLUMN loyalty_tiers.tier_name IS 'The name of the loyalty tier (repe
 COMMENT ON COLUMN loyalty_tiers.hotel_id IS 'Reference to hotels(id) for HOTEL_LOYAL tier, NULL otherwise';
 COMMENT ON COLUMN loyalty_tiers.min_bookings IS 'Minimum number of bookings required for the tier';
 COMMENT ON COLUMN loyalty_tiers.min_spending IS 'Minimum spending required for the tier';
-COMMENT ON COLUMN loyalty_tiers.time_period_value IS 'Value for the time period (e.g., 6, 12)';
-COMMENT ON COLUMN loyalty_tiers.time_period_unit IS 'Unit for the time period (e.g., MONTHS, YEARS)';
+COMMENT ON COLUMN loyalty_tiers.time_period_months IS 'Duration of the time period in months (e.g., 6, 12)';
 COMMENT ON COLUMN loyalty_tiers.logic_operator IS 'Logic to combine bookings and spending criteria (AND/OR)';
 
 -- Add indexes for loyalty_tiers

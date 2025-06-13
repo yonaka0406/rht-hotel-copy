@@ -4,13 +4,9 @@ const db = require('../config/database'); // Assuming db connection pool
 const pgFormat = require('pg-format');
 
 // Helper function to calculate past date based on period
-const getStartDateForPeriod = (value, unit) => {
+const getStartDateForPeriod = (numberOfMonths) => {
     const date = new Date();
-    if (unit.toUpperCase() === 'MONTHS') {
-        date.setMonth(date.getMonth() - value);
-    } else if (unit.toUpperCase() === 'YEARS') {
-        date.setFullYear(date.getFullYear() - value);
-    }
+    date.setMonth(date.getMonth() - numberOfMonths);
     return date.toISOString().split('T')[0]; // YYYY-MM-DD
 };
 
@@ -35,7 +31,7 @@ const assignLoyaltyTiers = async () => {
         // 2. Evaluate 'BRAND_LOYAL'
         if (brandLoyalSetting) {
             console.log('Evaluating Brand Loyal tier...');
-            const startDate = getStartDateForPeriod(brandLoyalSetting.time_period_value, brandLoyalSetting.time_period_unit);
+            const startDate = getStartDateForPeriod(brandLoyalSetting.time_period_months);
 
             const conditions = [];
             if (brandLoyalSetting.min_bookings) {
@@ -69,7 +65,7 @@ const assignLoyaltyTiers = async () => {
         if (hotelLoyalSettings.length > 0) {
             console.log('Evaluating Hotel Loyal tier...');
             for (const setting of hotelLoyalSettings) {
-                const startDate = getStartDateForPeriod(setting.time_period_value, setting.time_period_unit);
+                const startDate = getStartDateForPeriod(setting.time_period_months);
                 const conditions = [];
                 if (setting.min_bookings) {
                     conditions.push(pgFormat('COUNT(DISTINCT r.id) >= %L', setting.min_bookings));
@@ -104,7 +100,7 @@ const assignLoyaltyTiers = async () => {
         // 4. Evaluate 'REPEATER' for clients still 'Newbie'
         if (repeaterSetting) {
             console.log('Evaluating Repeater tier...');
-            const startDate = getStartDateForPeriod(repeaterSetting.time_period_value, repeaterSetting.time_period_unit);
+            const startDate = getStartDateForPeriod(repeaterSetting.time_period_months);
             // Apply REPEATER only if client is currently Newbie.
             // Brand Loyal and Hotel Loyal are higher.
             let repeaterQuery = `

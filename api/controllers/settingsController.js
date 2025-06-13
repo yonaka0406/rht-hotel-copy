@@ -259,8 +259,8 @@ const handleUpsertLoyaltyTiers = async (req, res) => {
   const lowerTierName = tierData.tier_name ? tierData.tier_name.toLowerCase() : null;
 
   // Basic Validation
-  if (!lowerTierName || !tierData.time_period_value || !tierData.time_period_unit) {
-    return res.status(400).json({ message: 'tier_name, time_period_value, and time_period_unit are required.' });
+  if (!lowerTierName || !tierData.time_period_months) { // Changed from time_period_value, removed time_period_unit
+    return res.status(400).json({ message: 'tier_name and time_period_months are required.' });
   }
   // Assign the lowercased tier_name back to tierData for saving
   tierData.tier_name = lowerTierName;
@@ -270,12 +270,7 @@ const handleUpsertLoyaltyTiers = async (req, res) => {
   }
   // No specific validation for hotel_id on repeater/brand_loyal here, as model handles setting it to NULL.
 
-  if (!['months', 'years'].includes(tierData.time_period_unit.toLowerCase())) { // Also convert unit for robust check
-    return res.status(400).json({ message: "time_period_unit must be 'MONTHS' or 'YEARS'." });
-  }
-  // Ensure time_period_unit is stored in uppercase as per original DB design/plan
-  tierData.time_period_unit = tierData.time_period_unit.toUpperCase();
-
+  // Removed validation block for time_period_unit
 
   if (tierData.logic_operator && !['AND', 'OR'].includes(tierData.logic_operator.toUpperCase())) {
     return res.status(400).json({ message: "logic_operator must be 'AND' or 'OR'." });
@@ -296,11 +291,19 @@ const handleUpsertLoyaltyTiers = async (req, res) => {
   // Ensure numeric values are numbers or null
   tierData.min_bookings = tierData.min_bookings !== undefined && tierData.min_bookings !== null ? Number(tierData.min_bookings) : null;
   tierData.min_spending = tierData.min_spending !== undefined && tierData.min_spending !== null ? Number(tierData.min_spending) : null;
-  tierData.time_period_value = Number(tierData.time_period_value);
+  tierData.time_period_months = Number(tierData.time_period_months); // Changed from time_period_value
+
+  const cleanTierData = {
+    tier_name: tierData.tier_name, // already lowercased
+    hotel_id: tierData.hotel_id,
+    min_bookings: tierData.min_bookings, // already Number or null
+    min_spending: tierData.min_spending, // already Number or null
+    time_period_months: tierData.time_period_months, // already Number
+    logic_operator: tierData.logic_operator, // already uppercased or null
+  };
 
   try {
-    // tierData now has tier_name in lowercase, and time_period_unit/logic_operator in uppercase
-    const result = await upsertLoyaltyTier(req.requestId, tierData, userId);
+    const result = await upsertLoyaltyTier(req.requestId, cleanTierData, userId);
     res.status(201).json(result);
   } catch (err) {
     console.error('Error in handleUpsertLoyaltyTiers:', err);

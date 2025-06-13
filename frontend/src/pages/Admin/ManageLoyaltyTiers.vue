@@ -11,16 +11,10 @@
               <label for="repeater-min-bookings">最低合計予約数</label>
             </FloatLabel>
           </div>
-          <div class="col-span-12 md:col-span-3">
+          <div class="col-span-12 md:col-span-6">
             <FloatLabel class="mt-6">
-              <InputNumber id="repeater-time-value" v-model="repeaterSettings.time_period_value" class="w-full" />
-              <label for="repeater-time-value">期間の値</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <FloatLabel class="mt-6">
-              <Dropdown id="repeater-time-unit" v-model="repeaterSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
-              <label for="repeater-time-unit">期間の単位</label>
+              <InputNumber id="repeater-time-months" v-model="repeaterSettings.time_period_months" class="w-full" />
+              <label for="repeater-time-months">期間 (月数)</label>
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
@@ -57,14 +51,8 @@
           </div>
           <div class="col-span-12 md:col-span-4">
             <FloatLabel class="mt-6">
-              <InputNumber id="hotel-loyal-time-value" v-model="hotelLoyalSettings.time_period_value" class="w-full" />
-              <label for="hotel-loyal-time-value">期間の値</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-12 md:col-span-4">
-            <FloatLabel class="mt-6">
-              <Dropdown id="hotel-loyal-time-unit" v-model="hotelLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
-              <label for="hotel-loyal-time-unit">期間の単位</label>
+              <InputNumber id="hotel-loyal-time-months" v-model="hotelLoyalSettings.time_period_months" class="w-full" />
+              <label for="hotel-loyal-time-months">期間 (月数)</label>
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
@@ -95,14 +83,8 @@
           </div>
           <div class="col-span-12 md:col-span-6">
             <FloatLabel class="mt-6">
-              <InputNumber id="brand-loyal-time-value" v-model="brandLoyalSettings.time_period_value" class="w-full" />
-              <label for="brand-loyal-time-value">期間の値</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <FloatLabel class="mt-6">
-              <Dropdown id="brand-loyal-time-unit" v-model="brandLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="単位を選択" class="w-full" />
-              <label for="brand-loyal-time-unit">期間の単位</label>
+              <InputNumber id="brand-loyal-time-months" v-model="brandLoyalSettings.time_period_months" class="w-full" />
+              <label for="brand-loyal-time-months">期間 (月数)</label>
             </FloatLabel>
           </div>
           <div class="col-span-12 mt-2">
@@ -133,13 +115,8 @@ const { loyaltyTiers, fetchLoyaltyTiers, saveLoyaltyTier } = useSettingsStore();
 const { hotels: hotelListFromStore, fetchHotels: fetchHotelList } = useHotelStore();
 
 const repeaterSettings = ref({});
-const hotelLoyalSettings = ref({ hotel_id: null });
-const brandLoyalSettings = ref({});
-
-const timePeriodUnits = ref([
-  { name: '月', code: 'MONTHS' },
-  { name: '年', code: 'YEARS' },
-]);
+const hotelLoyalSettings = ref({ hotel_id: null, time_period_months: null });
+const brandLoyalSettings = ref({ time_period_months: null });
 
 const logicOperators = ref([
   { name: 'かつ (AND)', code: 'AND' },
@@ -158,27 +135,58 @@ const currentHotelLoyalSettingForSelectedHotel = computed(() => {
 });
 
 watch(currentRepeaterSetting, (newVal) => {
-    repeaterSettings.value = { ...newVal, tier_name: 'repeater', logic_operator: newVal.logic_operator || null };
+    repeaterSettings.value = {
+        min_bookings: newVal.min_bookings,
+        time_period_months: newVal.time_period_months,
+        tier_name: 'repeater',
+        logic_operator: newVal.logic_operator || null
+    };
 }, { deep: true, immediate: true });
 
 watch(currentBrandLoyalSetting, (newVal) => {
-    brandLoyalSettings.value = { ...newVal, tier_name: 'brand_loyal', logic_operator: newVal.logic_operator || 'OR' };
+    brandLoyalSettings.value = {
+        min_bookings: newVal.min_bookings,
+        min_spending: newVal.min_spending,
+        time_period_months: newVal.time_period_months,
+        tier_name: 'brand_loyal',
+        logic_operator: newVal.logic_operator || 'OR'
+    };
 }, { deep: true, immediate: true });
 
 watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
     if (newHotelId) {
         const setting = loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === newHotelId);
-        hotelLoyalSettings.value = { ...setting, hotel_id: newHotelId, tier_name: 'hotel_loyal', logic_operator: (setting && setting.logic_operator) || 'OR' };
+        hotelLoyalSettings.value = {
+            ...setting,
+            hotel_id: newHotelId,
+            tier_name: 'hotel_loyal',
+            logic_operator: (setting && setting.logic_operator) || 'OR',
+            time_period_months: (setting && setting.time_period_months) || null // Ensure time_period_months is part of the reset
+        };
     } else {
-        hotelLoyalSettings.value = { hotel_id: null, tier_name: 'hotel_loyal', min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
+        hotelLoyalSettings.value = {
+            hotel_id: null,
+            tier_name: 'hotel_loyal',
+            min_bookings: null,
+            min_spending: null,
+            logic_operator: 'OR',
+            time_period_months: null // Changed from time_period_value and time_period_unit removed
+        };
     }
 }, { immediate: true });
 
 watch(currentHotelLoyalSettingForSelectedHotel, (newVal) => {
-    if (hotelLoyalSettings.value.hotel_id) {
-        hotelLoyalSettings.value = { ...newVal, hotel_id: hotelLoyalSettings.value.hotel_id, tier_name: 'hotel_loyal', logic_operator: (newVal && newVal.logic_operator) || 'OR' };
+    if (hotelLoyalSettings.value.hotel_id) { // Only update if a hotel is selected
+        hotelLoyalSettings.value = {
+            ...newVal,
+            hotel_id: hotelLoyalSettings.value.hotel_id,
+            tier_name: 'hotel_loyal',
+            logic_operator: (newVal && newVal.logic_operator) || 'OR',
+            time_period_months: (newVal && newVal.time_period_months) || null // Ensure time_period_months is part of the reset
+        };
     }
 }, { deep: true });
+
 
 const loadHotelDropdown = async () => { // This function was already here, used for populating hotel options
     await fetchHotelList();
@@ -191,16 +199,14 @@ const loadHotelLoyalSettings = () => {
         // The watcher for hotelLoyalSettings.value.hotel_id already handles updating the form
         // based on the selected hotel_id by finding the settings from loyaltyTiers.value.
         // So, this function might not need to do much more if the watchers are effective.
-        // However, if a direct fetch for a specific hotel's settings was intended when dropdown changes,
-        // that logic would go here. For now, relying on watchers and the already fetched global list.
     } else {
         // If hotel is deselected, watcher for hotel_id already resets hotelLoyalSettings.
     }
 };
 
 const handleSaveSettings = async (tierData) => {
-  if (!tierData.time_period_value || !tierData.time_period_unit) {
-    toast.add({ severity: 'warn', summary: '検証エラー', detail: '期間の値と単位は必須です。', life: 3000 });
+  if (tierData.time_period_months === null || tierData.time_period_months === undefined) {
+    toast.add({ severity: 'warn', summary: '検証エラー', detail: '期間 (月数) は必須です。', life: 3000 });
     return;
   }
   // tierData.tier_name should already be lowercase due to watchers
