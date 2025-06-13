@@ -145,20 +145,7 @@ const updateTaxTypeDescription = async (requestId, id, description, userId) => {
   }
 };
 
-module.exports = {
-  selectPaymentTypes,
-  insertPaymentType,
-  updatePaymentTypeVisibility,
-  updatePaymentTypeDescription,
-  selectTaxTypes,
-  insertTaxType,
-  updateTaxTypeVisibility,
-  updateTaxTypeDescription,
-  getLoyaltyTiers,
-  upsertLoyaltyTier,
-};
-
-// Loyalty Tier functions moved before module.exports
+// Loyalty Tier functions
 const getLoyaltyTiers = async (requestId) => {
   const pool = getPool(requestId);
   const query = 'SELECT * FROM loyalty_tiers ORDER BY tier_name, hotel_id;';
@@ -212,3 +199,16 @@ const upsertLoyaltyTier = async (requestId, tierData, userId) => {
   }
 };
 // End of Loyalty Tier functions
+
+module.exports = {
+  selectPaymentTypes,
+  insertPaymentType,
+  updatePaymentTypeVisibility,
+  updatePaymentTypeDescription,
+  selectTaxTypes,
+  insertTaxType,
+  updateTaxTypeVisibility,
+  updateTaxTypeDescription,
+  getLoyaltyTiers,
+  upsertLoyaltyTier,
+};
