@@ -20,6 +20,7 @@ const ManageSettings = () => import('@/pages/Admin/ManageSettings.vue');
 const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 const ManagePMSImport = () => import('@/pages/Admin/ManagePMSImport.vue');
 const ManageFinancesImport = () => import('@/pages/Admin/ManageFinancesImport.vue');
+const LoyaltyTiersSettings = () => import('@/pages/Admin/LoyaltyTiersSettings.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
@@ -93,6 +94,7 @@ const routes = [
       { path: 'ota', component: ManageOTA },
       { path: 'pms-import', component: ManagePMSImport },
       { path: 'finances', component: ManageFinancesImport },
+      { path: 'loyalty-tiers', name: 'LoyaltyTiersSettings', component: LoyaltyTiersSettings },
     ],
     meta: { requiresAuth: true },
   },
