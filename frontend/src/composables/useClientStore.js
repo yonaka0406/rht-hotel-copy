@@ -8,6 +8,11 @@ const selectedClient = ref(null);
 const selectedClientAddress = ref(null);
 const selectedClientGroup = ref(null);
 
+const relatedCompanies = ref([]);
+const isLoadingRelatedCompanies = ref(false);
+const commonRelationshipPairs = ref([]);
+const isLoadingCommonRelationshipPairs = ref(false);
+
 export function useClientStore() {
     
     const setClients = (newClients) => {
@@ -22,7 +27,7 @@ export function useClientStore() {
 
     // Fetch the list of clients
     const fetchClients = async (page) => {
-        // console.log('From Client Store => fetchClients page:', page);
+        clientsIsLoading.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/client-list/${page}`, {
@@ -54,6 +59,10 @@ export function useClientStore() {
 
         } catch (error) {
             console.error('Failed to fetch clients', error);
+            setClients([]);            
+            throw error;
+        } finally {
+            clientsIsLoading.value = false;
         }
     };
 
@@ -429,6 +438,107 @@ export function useClientStore() {
         }
     };
 
+    // --- Client Relationship Store Methods (defined inside useClientStore) ---
+    async function fetchRelatedCompanies(clientId) {
+        isLoadingRelatedCompanies.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/clients/${clientId}/related`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+            relatedCompanies.value = await response.json();
+        } catch (error) {
+            console.error(`Error fetching related companies for ${clientId}:`, error);
+            relatedCompanies.value = [];
+            throw error;
+        } finally {
+            isLoadingRelatedCompanies.value = false;
+        }
+    }
+
+    async function addClientRelationship(clientId, payload) {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/clients/${clientId}/related`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error adding client relationship:', error);
+            throw error;
+        }
+    }
+
+    async function deleteClientRelationship(relationshipId) {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/crm/client-relationships/${relationshipId}`, { // MODIFIED PATH
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error deleting client relationship:', error);
+            throw error;
+        }
+    }
+    
+    async function updateClientRelationship(relationshipId, payload) {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/crm/client-relationships/${relationshipId}`, { // MODIFIED PATH
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error updating client relationship:', error);
+            throw error;
+        }
+    }
+
+    async function fetchCommonRelationshipPairs() {
+        isLoadingCommonRelationshipPairs.value = true;
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/crm/common-relationship-pairs`, { // MODIFIED PATH
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+            }
+            commonRelationshipPairs.value = await response.json();
+        } catch (error) {
+            console.error('Error fetching common relationship pairs:', error);
+            commonRelationshipPairs.value = [];
+            throw error;
+        } finally {
+            isLoadingCommonRelationshipPairs.value = false;
+        }
+    }
+    
     return {
         groups,
         selectedGroup,
@@ -437,6 +547,10 @@ export function useClientStore() {
         selectedClient,
         selectedClientAddress,
         selectedClientGroup,
+        relatedCompanies,
+        isLoadingRelatedCompanies,
+        commonRelationshipPairs,
+        isLoadingCommonRelationshipPairs,        
         setClientsIsLoading,
         fetchClients,
         fetchClient,
@@ -456,5 +570,10 @@ export function useClientStore() {
         updateClientGroup,
         updateGroup,
         mergeClientsCRM,
+        fetchRelatedCompanies,
+        addClientRelationship,
+        deleteClientRelationship,
+        updateClientRelationship,
+        fetchCommonRelationshipPairs,        
     };
 }

@@ -14,7 +14,10 @@
           <Tab value="2" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">予約歴</span>
           </Tab>
-          <Tab value="3" as="div" class="flex items-center gap-2">
+          <Tab v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="div" class="flex items-center gap-2">
+            <span class="font-bold whitespace-nowrap">関連企業</span>
+          </Tab>
+          <Tab value="5" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">変更履歴</span>
           </Tab>
         </TabList>
@@ -29,7 +32,10 @@
           <TabPanel value="2" as="p" class="m-0">
             <ClientReservationHistory />
           </TabPanel>
-          <TabPanel value="3" as="p" class="m-0">
+          <TabPanel v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="p" class="m-0">
+            <ClientRelated :client-id="clientId" />
+          </TabPanel>
+          <TabPanel value="5" as="p" class="m-0">
             <ClientEditHistory />
           </TabPanel>
         </TabPanels>
@@ -46,7 +52,8 @@
     import ClientBasicInfo from './components/ClientBasicInfo.vue';
     import ClientAddresses from './components/ClientAddresses.vue';
     import ClientReservationHistory from './components/ClientReservationHistory.vue';
-    import ClientEditHistory from './components/ClientEditHistory.vue';
+    import ClientEditHistory from './components/ClientEditHistory.vue';    
+    import ClientRelated from './components/ClientRelated.vue'; 
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
