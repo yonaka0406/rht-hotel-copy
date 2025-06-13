@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { getPaymentTypes, addPaymentType, changePaymentTypeVisibility, changePaymentTypeDescription,
-    getTaxTypes, addTaxType, changeTaxTypeVisibility, changeTaxTypeDescription, getCompanyStampImage, uploadStampImage
+    getTaxTypes, addTaxType, changeTaxTypeVisibility, changeTaxTypeDescription, getCompanyStampImage, uploadStampImage,
+    handleGetLoyaltyTiers, handleUpsertLoyaltyTiers
  } = require('../controllers/settingsController');
 const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
@@ -17,5 +18,9 @@ router.put('/settings/tax/description/:id', authMiddlewareAdmin, changeTaxTypeDe
 // Routes for stamp image
 router.get('/settings/stamp/get', authMiddleware, getCompanyStampImage); 
 router.post('/settings/stamp/upload', authMiddlewareAdmin, uploadStampImage);
+
+// Routes for Loyalty Tiers
+router.get('/settings/loyalty-tiers', authMiddleware, handleGetLoyaltyTiers);
+router.post('/settings/loyalty-tiers', authMiddlewareAdmin, handleUpsertLoyaltyTiers);
 
 module.exports = router;

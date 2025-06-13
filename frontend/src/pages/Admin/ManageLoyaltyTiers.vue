@@ -18,7 +18,7 @@
             <Dropdown id="repeater-time-unit" v-model="repeaterSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="Select Unit" />
           </div>
           <div class="col-12">
-            <Button label="Save Repeater Settings" icon="pi pi-save" @click="saveTierSettings('REPEATER', repeaterSettings)" />
+            <Button label="Save Repeater Settings" icon="pi pi-save" @click="handleSaveSettings(repeaterSettings)" />
           </div>
         </div>
       </TabPanel>
@@ -27,7 +27,7 @@
         <div class="p-fluid grid formgrid">
           <div class="field col-12 md:col-6">
             <label for="hotel-loyal-hotel">Hotel</label>
-            <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="Select Hotel" @change="loadHotelLoyalSettings" />
+            <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="Select Hotel" />
           </div>
           <div class="field col-12 md:col-3">
             <label for="hotel-loyal-min-bookings">Min. Hotel Bookings</label>
@@ -50,7 +50,7 @@
             <Dropdown id="hotel-loyal-time-unit" v-model="hotelLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="Select Unit" />
           </div>
           <div class="col-12">
-            <Button label="Save Hotel Loyal Settings" icon="pi pi-save" @click="saveTierSettings('HOTEL_LOYAL', hotelLoyalSettings)" :disabled="!hotelLoyalSettings.hotel_id" />
+            <Button label="Save Hotel Loyal Settings" icon="pi pi-save" @click="handleSaveSettings(hotelLoyalSettings)" :disabled="!hotelLoyalSettings.hotel_id" />
           </div>
         </div>
       </TabPanel>
@@ -78,7 +78,7 @@
             <Dropdown id="brand-loyal-time-unit" v-model="brandLoyalSettings.time_period_unit" :options="timePeriodUnits" optionLabel="name" optionValue="code" placeholder="Select Unit" />
           </div>
           <div class="col-12">
-            <Button label="Save Brand Loyal Settings" icon="pi pi-save" @click="saveTierSettings('BRAND_LOYAL', brandLoyalSettings)" />
+            <Button label="Save Brand Loyal Settings" icon="pi pi-save" @click="handleSaveSettings(brandLoyalSettings)" />
           </div>
         </div>
       </TabPanel>
@@ -88,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import InputNumber from 'primevue/inputnumber';
@@ -96,30 +96,16 @@ import Dropdown from 'primevue/dropdown';
 import Button from 'primevue/button';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
-import api from '@/services/api'; // Assuming an API service module
+import { useSettingsStore } from '@/composables/useSettingsStore';
+import { useHotelStore } from '@/composables/useHotelStore';
 
 const toast = useToast();
+const { loyaltyTiers, fetchLoyaltyTiers, saveLoyaltyTier } = useSettingsStore();
+const { hotels: hotelListFromStore, fetchHotels: fetchHotelList } = useHotelStore();
 
-const repeaterSettings = ref({
-  min_bookings: null,
-  time_period_value: null,
-  time_period_unit: null,
-});
-const hotelLoyalSettings = ref({
-  hotel_id: null,
-  min_bookings: null,
-  min_spending: null,
-  logic_operator: 'OR',
-  time_period_value: null,
-  time_period_unit: null,
-});
-const brandLoyalSettings = ref({
-  min_bookings: null,
-  min_spending: null,
-  logic_operator: 'OR',
-  time_period_value: null,
-  time_period_unit: null,
-});
+const repeaterSettings = ref({});
+const hotelLoyalSettings = ref({ hotel_id: null });
+const brandLoyalSettings = ref({});
 
 const timePeriodUnits = ref([
   { name: 'Months', code: 'MONTHS' },
@@ -131,109 +117,86 @@ const logicOperators = ref([
   { name: 'OR', code: 'OR' },
 ]);
 
-const hotels = ref([]); // To be fetched from API
+const hotels = ref([]);
 
-const fetchHotels = async () => {
-  try {
-    const response = await api.get('/api/hotels'); // Adjust endpoint if necessary
-    hotels.value = response.data.map(h => ({ id: h.id, name: h.name }));
-  } catch (error) {
-    console.error('Error fetching hotels:', error);
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to fetch hotels.', life: 3000 });
-  }
-};
-
-const fetchTierSettings = async (tierName, hotelId = null) => {
-  try {
-    let url = `/api/loyalty-tiers/${tierName}`;
-    if (tierName === 'HOTEL_LOYAL' && hotelId) {
-      url += `?hotel_id=${hotelId}`;
-    } else if (tierName === 'HOTEL_LOYAL' && !hotelId) {
-      // For HOTEL_LOYAL, if no hotel is selected, clear current settings or don't fetch
-      hotelLoyalSettings.value = { hotel_id: null, min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-      return;
+const currentRepeaterSetting = computed(() => loyaltyTiers.value.find(t => t.tier_name === 'repeater') || {});
+const currentBrandLoyalSetting = computed(() => loyaltyTiers.value.find(t => t.tier_name === 'brand_loyal') || {});
+const currentHotelLoyalSettingForSelectedHotel = computed(() => {
+    if (hotelLoyalSettings.value.hotel_id) {
+        return loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === hotelLoyalSettings.value.hotel_id) || {};
     }
+    return {};
+});
 
-    const response = await api.get(url);
-    const settings = response.data; // API returns an array, even for specific tier/hotel. We take the first if exists.
+watch(currentRepeaterSetting, (newVal) => {
+    repeaterSettings.value = { ...newVal, tier_name: 'repeater', logic_operator: newVal.logic_operator || null };
+}, { deep: true, immediate: true });
 
-    if (settings && settings.length > 0) {
-      const data = settings[0];
-      if (tierName === 'REPEATER') {
-        repeaterSettings.value = { ...data };
-      } else if (tierName === 'HOTEL_LOYAL') {
-        hotelLoyalSettings.value = { ...data };
-      } else if (tierName === 'BRAND_LOYAL') {
-        brandLoyalSettings.value = { ...data };
-      }
+watch(currentBrandLoyalSetting, (newVal) => {
+    brandLoyalSettings.value = { ...newVal, tier_name: 'brand_loyal', logic_operator: newVal.logic_operator || 'OR' };
+}, { deep: true, immediate: true });
+
+watch(() => hotelLoyalSettings.value.hotel_id, (newHotelId) => {
+    if (newHotelId) {
+        const setting = loyaltyTiers.value.find(t => t.tier_name === 'hotel_loyal' && t.hotel_id === newHotelId);
+        hotelLoyalSettings.value = { ...setting, hotel_id: newHotelId, tier_name: 'hotel_loyal', logic_operator: (setting && setting.logic_operator) || 'OR' };
     } else {
-      // Reset to defaults if no settings found
-      if (tierName === 'REPEATER') {
-        repeaterSettings.value = { min_bookings: null, time_period_value: null, time_period_unit: null };
-      } else if (tierName === 'HOTEL_LOYAL') {
-         // Keep hotel_id if selected, reset others
-        hotelLoyalSettings.value = { hotel_id: hotelId, min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-      } else if (tierName === 'BRAND_LOYAL') {
-        brandLoyalSettings.value = { min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-      }
+        hotelLoyalSettings.value = { hotel_id: null, tier_name: 'hotel_loyal', min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
     }
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      // Reset to defaults if no settings found (404)
-      if (tierName === 'REPEATER') repeaterSettings.value = { min_bookings: null, time_period_value: null, time_period_unit: null };
-      else if (tierName === 'HOTEL_LOYAL') hotelLoyalSettings.value = { hotel_id: hotelId, min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-      else if (tierName === 'BRAND_LOYAL') brandLoyalSettings.value = { min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-    } else {
-      console.error(`Error fetching ${tierName} settings:`, error);
-      toast.add({ severity: 'error', summary: 'Error', detail: `Failed to fetch ${tierName} settings.`, life: 3000 });
+}, { immediate: true });
+
+watch(currentHotelLoyalSettingForSelectedHotel, (newVal) => {
+    if (hotelLoyalSettings.value.hotel_id) {
+        hotelLoyalSettings.value = { ...newVal, hotel_id: hotelLoyalSettings.value.hotel_id, tier_name: 'hotel_loyal', logic_operator: (newVal && newVal.logic_operator) || 'OR' };
     }
-  }
+}, { deep: true });
+
+const loadHotelDropdown = async () => {
+    await fetchHotelList();
+    hotels.value = hotelListFromStore.value.map(h => ({ id: h.id, name: h.name }));
 };
 
-const loadHotelLoyalSettings = () => {
-  if (hotelLoyalSettings.value.hotel_id) {
-    fetchTierSettings('HOTEL_LOYAL', hotelLoyalSettings.value.hotel_id);
-  } else {
-     // Clear settings if no hotel is selected
-    hotelLoyalSettings.value = { hotel_id: null, min_bookings: null, min_spending: null, logic_operator: 'OR', time_period_value: null, time_period_unit: null };
-  }
-};
-
-const saveTierSettings = async (tierName, settings) => {
-  // Basic client-side validation
-  if (!settings.time_period_value || !settings.time_period_unit) {
+const handleSaveSettings = async (tierData) => {
+  if (!tierData.time_period_value || !tierData.time_period_unit) {
     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Time period value and unit are required.', life: 3000 });
     return;
   }
-  if (tierName === 'HOTEL_LOYAL' && !settings.hotel_id) {
+  // tierData.tier_name should already be lowercase due to watchers
+  if (tierData.tier_name === 'hotel_loyal' && !tierData.hotel_id) {
     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Hotel is required for Hotel Loyal tier.', life: 3000 });
     return;
   }
-   if ((tierName === 'HOTEL_LOYAL' || tierName === 'BRAND_LOYAL') && settings.min_bookings === null && settings.min_spending === null) {
+  if ((tierData.tier_name === 'hotel_loyal' || tierData.tier_name === 'brand_loyal') && (tierData.min_bookings === null || tierData.min_bookings === undefined ) && (tierData.min_spending === null || tierData.min_spending === undefined)) {
     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Either minimum bookings or minimum spending must be set.', life: 3000 });
     return;
   }
-  if (tierName === 'REPEATER' && settings.min_bookings === null) {
+  if (tierData.tier_name === 'repeater' && (tierData.min_bookings === null || tierData.min_bookings === undefined )) {
     toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Minimum bookings must be set for Repeater tier.', life: 3000 });
     return;
   }
 
+  const payload = { ...tierData };
+  if (payload.tier_name === 'repeater' || payload.tier_name === 'brand_loyal') {
+      payload.hotel_id = null;
+  }
+  if (payload.tier_name === 'repeater') {
+      payload.logic_operator = null;
+  } else if (!payload.logic_operator && (payload.tier_name === 'hotel_loyal' || payload.tier_name === 'brand_loyal')) {
+      payload.logic_operator = 'OR';
+  }
 
   try {
-    const payload = { ...settings, tier_name: tierName };
-    await api.post('/api/loyalty-tiers', payload);
-    toast.add({ severity: 'success', summary: 'Success', detail: `${tierName} settings saved.`, life: 3000 });
+    await saveLoyaltyTier(payload);
+    toast.add({ severity: 'success', summary: 'Success', detail: `${payload.tier_name} settings saved.`, life: 3000 });
   } catch (error) {
-    console.error(`Error saving ${tierName} settings:`, error);
-    toast.add({ severity: 'error', summary: 'Error', detail: `Failed to save ${tierName} settings. ${error.response?.data?.message || ''}`, life: 4000 });
+    console.error(`Error saving ${payload.tier_name} settings:`, error);
+    toast.add({ severity: 'error', summary: 'Error', detail: `Failed to save ${payload.tier_name} settings. ${error.message || ''}`, life: 4000 });
   }
 };
 
-onMounted(() => {
-  fetchHotels();
-  fetchTierSettings('REPEATER');
-  // For HOTEL_LOYAL, settings will be fetched when a hotel is selected
-  fetchTierSettings('BRAND_LOYAL');
+onMounted(async () => {
+  await loadHotelDropdown();
+  await fetchLoyaltyTiers();
 });
 
 </script>

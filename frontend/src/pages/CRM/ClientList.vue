@@ -73,6 +73,11 @@
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（カナ）検索" />
                             </template>
                         </Column>
+                        <Column field="loyalty_tier" header="ロイヤルティ層" sortable>
+                            <template #body="{ data }">
+                            <Tag :value="getTierDisplayName(data.loyalty_tier)" :severity="getTierSeverity(data.loyalty_tier)" />
+                            </template>
+                        </Column>
                         <Column field="legal_or_natural_person" header="法人 / 個人">
                             <template #body="slotProps">
                                 <span v-if="slotProps.data.is_legal_person">                                    
@@ -331,6 +336,27 @@
         newClientReset();
     });
 
+    const getTierDisplayName = (tier) => {
+        if (!tier) return 'N/A';
+        switch (tier) {
+        case 'newbie': return 'Newbie';
+        case 'repeater': return 'Repeater';
+        case 'hotel_loyal': return 'Hotel Loyal';
+        case 'brand_loyal': return 'Brand Loyal';
+        default: return tier;
+        }
+    };
+
+    const getTierSeverity = (tier) => {
+        if (!tier) return 'info';
+        switch (tier) {
+        case 'newbie': return 'info';
+        case 'repeater': return 'success';
+        case 'hotel_loyal': return 'warning';
+        case 'brand_loyal': return 'danger';
+        default: return 'secondary';
+        }
+    };
 </script>
 <style scoped>
 </style>

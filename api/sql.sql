@@ -170,7 +170,8 @@ CREATE TABLE clients (
 
 -- Add loyalty_tier to clients table
 ALTER TABLE clients
-ADD COLUMN loyalty_tier VARCHAR(50) DEFAULT 'Newbie';
+ADD COLUMN loyalty_tier VARCHAR(50) DEFAULT 'newbie';
+UPDATE clients SET loyalty_tier = 'newbie' WHERE loyalty_tier = 'Newbie';
 
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
@@ -1142,8 +1143,8 @@ CREATE TABLE xml_responses (
    PRIMARY KEY (id, hotel_id)   
 ) PARTITION BY LIST (hotel_id);
 
--- Loyalty Tier Settings Table
-CREATE TABLE loyalty_tier_settings (
+-- Loyalty Tiers Table
+CREATE TABLE loyalty_tiers (
     id SERIAL PRIMARY KEY,
     tier_name VARCHAR(50) NOT NULL, -- e.g., 'REPEATER', 'HOTEL_LOYAL', 'BRAND_LOYAL'
     hotel_id INTEGER REFERENCES hotels(id) ON DELETE CASCADE, -- Nullable for REPEATER and BRAND_LOYAL
@@ -1156,21 +1157,25 @@ CREATE TABLE loyalty_tier_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-COMMENT ON COLUMN loyalty_tier_settings.tier_name IS 'The name of the loyalty tier (REPEATER, HOTEL_LOYAL, BRAND_LOYAL)';
-COMMENT ON COLUMN loyalty_tier_settings.hotel_id IS 'Reference to hotels(id) for HOTEL_LOYAL tier, NULL otherwise';
-COMMENT ON COLUMN loyalty_tier_settings.min_bookings IS 'Minimum number of bookings required for the tier';
-COMMENT ON COLUMN loyalty_tier_settings.min_spending IS 'Minimum spending required for the tier';
-COMMENT ON COLUMN loyalty_tier_settings.time_period_value IS 'Value for the time period (e.g., 6, 12)';
-COMMENT ON COLUMN loyalty_tier_settings.time_period_unit IS 'Unit for the time period (e.g., MONTHS, YEARS)';
-COMMENT ON COLUMN loyalty_tier_settings.logic_operator IS 'Logic to combine bookings and spending criteria (AND/OR)';
+COMMENT ON COLUMN loyalty_tiers.tier_name IS 'The name of the loyalty tier (REPEATER, HOTEL_LOYAL, BRAND_LOYAL)';
+COMMENT ON COLUMN loyalty_tiers.hotel_id IS 'Reference to hotels(id) for HOTEL_LOYAL tier, NULL otherwise';
+COMMENT ON COLUMN loyalty_tiers.min_bookings IS 'Minimum number of bookings required for the tier';
+COMMENT ON COLUMN loyalty_tiers.min_spending IS 'Minimum spending required for the tier';
+COMMENT ON COLUMN loyalty_tiers.time_period_value IS 'Value for the time period (e.g., 6, 12)';
+COMMENT ON COLUMN loyalty_tiers.time_period_unit IS 'Unit for the time period (e.g., MONTHS, YEARS)';
+COMMENT ON COLUMN loyalty_tiers.logic_operator IS 'Logic to combine bookings and spending criteria (AND/OR)';
 
--- Add indexes for loyalty_tier_settings
-CREATE INDEX idx_loyalty_tier_settings_tier_name ON loyalty_tier_settings(tier_name);
-CREATE INDEX idx_loyalty_tier_settings_hotel_id ON loyalty_tier_settings(hotel_id);
+-- Add indexes for loyalty_tiers
+CREATE INDEX idx_loyalty_tiers_tier_name ON loyalty_tiers(tier_name);
+CREATE INDEX idx_loyalty_tiers_hotel_id ON loyalty_tiers(hotel_id);
+
+-- Add unique constraint for UPSERT operations
+ALTER TABLE loyalty_tiers
+ADD CONSTRAINT loyalty_tiers_tier_name_hotel_id_key UNIQUE (tier_name, hotel_id);
 
 -- Assuming a trigger function like 'update_updated_at_column' exists
--- CREATE TRIGGER update_loyalty_tier_settings_updated_at
--- BEFORE UPDATE ON loyalty_tier_settings
+-- CREATE TRIGGER update_loyalty_tiers_updated_at
+-- BEFORE UPDATE ON loyalty_tiers
 -- FOR EACH ROW
 -- EXECUTE FUNCTION update_updated_at_column();
 -- If the function does not exist, this part will be commented out or handled in a later step.

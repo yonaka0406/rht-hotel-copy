@@ -23,14 +23,14 @@ const assignLoyaltyTiers = async () => {
 
         // 1. Initialize all clients to 'Newbie'
         console.log('Initializing clients to Newbie...');
-        await client.query("UPDATE clients SET loyalty_tier = 'Newbie'");
+        await client.query("UPDATE clients SET loyalty_tier = 'newbie'");
 
         // Fetch all tier settings
-        const { rows: settings } = await client.query('SELECT * FROM loyalty_tier_settings ORDER BY tier_name, hotel_id');
+        const { rows: settings } = await client.query('SELECT * FROM loyalty_tiers ORDER BY tier_name, hotel_id');
 
-        const brandLoyalSetting = settings.find(s => s.tier_name === 'BRAND_LOYAL');
-        const hotelLoyalSettings = settings.filter(s => s.tier_name === 'HOTEL_LOYAL');
-        const repeaterSetting = settings.find(s => s.tier_name === 'REPEATER');
+        const brandLoyalSetting = settings.find(s => s.tier_name === 'brand_loyal');
+        const hotelLoyalSettings = settings.filter(s => s.tier_name === 'hotel_loyal');
+        const repeaterSetting = settings.find(s => s.tier_name === 'repeater');
 
         // 2. Evaluate 'BRAND_LOYAL'
         if (brandLoyalSetting) {
@@ -51,7 +51,7 @@ const assignLoyaltyTiers = async () => {
             if (conditions.length > 0) {
                 const havingClause = conditions.join(pgFormat(' %s ', brandLoyalSetting.logic_operator || 'OR'));
                 const brandLoyalQuery = `
-                    UPDATE clients c SET loyalty_tier = 'Brand Loyal'
+                    UPDATE clients c SET loyalty_tier = 'brand_loyal'
                     WHERE c.id IN (
                         SELECT r.reservation_client_id
                         FROM reservations r
@@ -86,8 +86,8 @@ const assignLoyaltyTiers = async () => {
                     // Apply HOTEL_LOYAL only if client is currently Newbie.
                     // Brand Loyal is higher, so we don't want to overwrite it.
                     const hotelLoyalQuery = `
-                        UPDATE clients c SET loyalty_tier = 'Hotel Loyal'
-                        WHERE c.loyalty_tier = 'Newbie' AND c.id IN (
+                        UPDATE clients c SET loyalty_tier = 'hotel_loyal'
+                        WHERE c.loyalty_tier = 'newbie' AND c.id IN (
                             SELECT r.reservation_client_id
                             FROM reservations r
                             JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
@@ -108,8 +108,8 @@ const assignLoyaltyTiers = async () => {
             // Apply REPEATER only if client is currently Newbie.
             // Brand Loyal and Hotel Loyal are higher.
             let repeaterQuery = `
-                UPDATE clients c SET loyalty_tier = 'Repeater'
-                WHERE c.loyalty_tier = 'Newbie' AND c.id IN (
+                UPDATE clients c SET loyalty_tier = 'repeater'
+                WHERE c.loyalty_tier = 'newbie' AND c.id IN (
                     SELECT r.reservation_client_id
                     FROM reservations r
                     JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
