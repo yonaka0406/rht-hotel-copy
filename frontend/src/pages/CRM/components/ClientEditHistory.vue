@@ -84,6 +84,7 @@
             email: 'メールアドレス',
             phone: '電話番号',
             fax: 'FAX',
+            loyalty_tier: 'ロイヤルティ層',
             client_group_id: '所属グループ',
             website: 'ウェブサイト',
             billing_preference: '請求書希望',            
@@ -113,6 +114,16 @@
                 digital: '電子請求'                
             };
             return billingLabels[value] || value;
+        }
+        if (key === 'loyalty_tier') {
+            const loyaltyLabels = {
+                prospect: '潜在顧客',
+                newbie: '新規顧客',
+                repeater: 'リピーター',
+                hotel_loyal: 'ホテルロイヤル',
+                brand_loyal: 'ブランドロイヤル'                
+            };
+            return loyaltyLabels[value] || value;
         }
 
         return value;
