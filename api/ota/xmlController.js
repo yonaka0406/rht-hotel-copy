@@ -184,6 +184,10 @@ const getOTAReservations = async (req, res) => {
             const formattedReservations = [];
             // Process each bookingInfo to parse the inner infoTravelXML
             for (const bookingInfo of Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]) {
+                if (!bookingInfo) { // Add this check
+                    console.warn('Skipping undefined or null bookingInfo object');
+                    continue; // Skip to the next iteration
+                }
                 const infoTravelXML = bookingInfo.infoTravelXML;
                 // console.log('getOTAReservations infoTravelXML', infoTravelXML);
         
