@@ -94,14 +94,20 @@
                                 </Select>
                             </template>
                         </Column>
-                        <Column field="legal_or_natural_person" header="法人 / 個人">
+                        <!-- Legal or Natural Person Column with Filter -->
+                        <Column field="legal_or_natural_person" header="法人 / 個人" :showFilterMenu="false">
                             <template #body="slotProps">
-                                <span v-if="slotProps.data.is_legal_person">
+                                <span v-if="slotProps.data.legal_or_natural_person === 'legal'">
                                     <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                 </span>
                                 <span v-else>
                                     <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
                                 </span>
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <Select v-model="filterModel.value" @change="filterCallback()" :options="personTypeOptions"
+                                    optionLabel="label" optionValue="value" placeholder="全て" class="p-column-filter" :showClear="true">
+                                </Select>
                             </template>
                         </Column>
                         <Column header="電話番号" filterField="phone">
@@ -188,7 +194,7 @@
                 fluid
                 />
                 <label>メールアドレス</label>
-                <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
+            <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
             </FloatLabel>
             </div>
             <!-- Phone number input -->
@@ -241,7 +247,9 @@
         name_kana: { value: null, matchMode: FilterMatchMode.CONTAINS },
         phone: { value: null, matchMode: FilterMatchMode.CONTAINS },
         email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        loyalty_tier: { value: null, matchMode: FilterMatchMode.EQUALS } // Added loyalty_tier filter
+        loyalty_tier: { value: null, matchMode: FilterMatchMode.EQUALS },
+        // Added filter for legal_or_natural_person
+        legal_or_natural_person: { value: null, matchMode: FilterMatchMode.EQUALS }
     });
 
     // Loyalty Tier Filter Options
@@ -381,7 +389,7 @@
             case 'prospect': return 'secondary';
             case 'newbie': return 'info';
             case 'repeater': return 'success';
-            case 'hotel_loyal': return 'warn';
+            case 'hotel_loyal': return 'warning';
             case 'brand_loyal': return 'danger';
             default: return 'secondary';
         }
