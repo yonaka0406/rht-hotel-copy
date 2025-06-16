@@ -159,6 +159,7 @@ CREATE TABLE clients (
     email TEXT,
     phone TEXT,
     fax TEXT,
+    loyalty_tier VARCHAR(50) DEFAULT 'prospect',
     client_group_id UUID DEFAULT NULL REFERENCES client_group(id),
     website TEXT NULL,
     billing_preference TEXT DEFAULT 'paper' CHECK (billing_preference IN ('paper', 'digital')),
@@ -170,8 +171,7 @@ CREATE TABLE clients (
 
 -- Add loyalty_tier to clients table
 ALTER TABLE clients
-ADD COLUMN loyalty_tier VARCHAR(50) DEFAULT 'newbie';
-UPDATE clients SET loyalty_tier = 'newbie' WHERE loyalty_tier = 'Newbie';
+ADD COLUMN loyalty_tier VARCHAR(50) DEFAULT 'prospect';
 
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)

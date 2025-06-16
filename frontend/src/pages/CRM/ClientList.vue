@@ -1,19 +1,19 @@
 <template>
     <div class="min-h-screen">
-        <div class="grid grid-cols-12 gap-4">            
+        <div class="grid grid-cols-12 gap-4">
             <Card class="flex col-span-12">
                 <template #title>
                     顧客一覧
-                </template>                
-                <template #content>                    
+                </template>
+                <template #content>
                     <div class="flex justify-end mb-6">
-                        <Button                             
-                            label="新規顧客" 
-                            icon="pi pi-plus"                            
+                        <Button
+                            label="新規顧客"
+                            icon="pi pi-plus"
                             @click="dialogOpenClose(true)"
                             class="mr-6"
                         />
-                        <SelectButton v-model="tableSize" :options="tableSizeOptions" 
+                        <SelectButton v-model="tableSize" :options="tableSizeOptions"
                         optionLabel="label" dataKey="label" />
                     </div>
                     <DataTable
@@ -24,23 +24,23 @@
                         :loading="clientsIsLoading"
                         :size="tableSize.value"
                         tableStyle="min-width: 50rem"
-                        stripedRows 
-                        paginator 
+                        stripedRows
+                        paginator
                         :rows="10"
                         :rowsPerPageOptions="[5, 10, 25, 50]"
-                        removableSort 
+                        removableSort
                     >
                     <template #empty> 顧客見つかりません </template>
-                    <template v-if="clientsIsLoading">                            
-                        <Skeleton class="mb-3" width="100%" height="3rem" />                                
-                        <div class="grid grid-cols-6 gap-3 mb-3" v-for="i in 10":key="i"> 
-                            <Skeleton width="100%" height="1.5rem" v-for="j in 6":key="j" /> 
-                        </div>                            
+                    <template v-if="clientsIsLoading">
+                        <Skeleton class="mb-3" width="100%" height="3rem" />
+                        <div class="grid grid-cols-6 gap-3 mb-3" v-for="i in 10" :key="i">
+                            <Skeleton width="100%" height="1.5rem" v-for="j in 6" :key="j" />
+                        </div>
                     </template>
                     <template v-else>
                         <Column field="id" header="操作">
                             <template #body="slotProps">
-                                <Button 
+                                <Button
                                     @click="goToEditClientPage(slotProps.data.id)"
                                     severity="info"
                                     class="p-button-rounded p-button-text p-button-sm"
@@ -73,20 +73,36 @@
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="氏名・名称（カナ）検索" />
                             </template>
                         </Column>
-                        <Column field="loyalty_tier" header="ロイヤルティ層" sortable>
+                        <!-- Loyalty Tier Column with Filter -->
+                        <Column field="loyalty_tier" header="ロイヤルティ層" sortable :showFilterMenu="false">
                             <template #body="{ data }">
-                            <Tag :value="getTierDisplayName(data.loyalty_tier)" :severity="getTierSeverity(data.loyalty_tier)" />
+                                <Tag :value="getTierDisplayName(data.loyalty_tier)" :severity="getTierSeverity(data.loyalty_tier)" />
+                            </template>
+                            <template #filter="{ filterModel, filterCallback }">
+                                <Select v-model="filterModel.value" 
+                                    @change="filterCallback()"
+                                    :options="loyaltyTierFilterOptions"
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    placeholder="全て" 
+                                    class="p-column-filter" 
+                                    :showClear="true"
+                                >
+                                    <template #option="slotProps">
+                                        <Tag :value="getTierDisplayName(slotProps.option.value)" :severity="getTierSeverity(slotProps.option.value)" />
+                                    </template>
+                                </Select>
                             </template>
                         </Column>
                         <Column field="legal_or_natural_person" header="法人 / 個人">
                             <template #body="slotProps">
-                                <span v-if="slotProps.data.is_legal_person">                                    
+                                <span v-if="slotProps.data.is_legal_person">
                                     <Tag icon="pi pi-building" severity="secondary" value="法人"></Tag>
                                 </span>
                                 <span v-else>
                                     <Tag icon="pi pi-user" severity="info" value="個人"></Tag>
-                                </span>                                
-                            </template>                                                       
+                                </span>
+                            </template>
                         </Column>
                         <Column header="電話番号" filterField="phone">
                             <template #body="{ data }">
@@ -95,7 +111,7 @@
                             <template #filter="{ filterModel, filterCallback }">
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="電話番号検索" />
                             </template>
-                        </Column>                        
+                        </Column>
                         <Column header="メールアドレス" filterField="email" sortable>
                             <template #body="{ data }">
                                 {{ data.email }}
@@ -104,11 +120,10 @@
                                 <InputText v-model="filterModel.value" type="text" @input="filterCallback()" placeholder="メールアドレス検索" />
                             </template>
                         </Column>
-                    </template>                         
-                        
-                    </DataTable>                    
+                    </template>
+                    </DataTable>
                 </template>
-            </Card>            
+            </Card>
         </div>
     </div>
 
@@ -197,18 +212,20 @@
         </template>
     </Dialog>
 </template>
-  
+
 <script setup>
     import { ref, onMounted } from "vue";
     import { useRouter } from 'vue-router';
-    import { useClientStore } from '@/composables/useClientStore';
-    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton,  InputText, Button, Tag } from 'primevue';
+    import { useClientStore } from '@/composables/useClientStore';    
+    import { Card, Skeleton, DataTable, Column, Dialog, FloatLabel, SelectButton, RadioButton, InputText, Button, Tag, Select } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
+    import { useToast } from 'primevue/usetoast'; // Import useToast
 
     const router = useRouter();
     const { clients, clientsIsLoading, createBasicClient } = useClientStore();
+    const toast = useToast(); // Initialize toast
 
-    // Data table            
+    // Data table
     const tableSize = ref({ label: '中', value: 'null' });
     const tableSizeOptions = ref([
         { label: '小', value: 'small' },
@@ -217,16 +234,26 @@
     const person_type = ref([
         { name: 'legal', value: 'legal' },
         { name: 'natural', value: 'natural' },
-    ]);    
-    const filters = ref({        
+    ]);
+    const filters = ref({
         name: { value: null, matchMode: FilterMatchMode.CONTAINS },
         name_kanji: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        name_kana: { value: null, matchMode: FilterMatchMode.CONTAINS },        
+        name_kana: { value: null, matchMode: FilterMatchMode.CONTAINS },
         phone: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        email: { value: null, matchMode: FilterMatchMode.CONTAINS }
+        email: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        loyalty_tier: { value: null, matchMode: FilterMatchMode.EQUALS } // Added loyalty_tier filter
     });
 
-    const goToEditClientPage = (clientId) => {        
+    // Loyalty Tier Filter Options
+    const loyaltyTierFilterOptions = ref([
+        { label: '潜在顧客', value: 'prospect' },
+        { label: '新規顧客', value: 'newbie' },
+        { label: 'リピーター', value: 'repeater' },
+        { label: 'ホテルロイヤル', value: 'hotel_loyal' },
+        { label: 'ブランドロイヤル', value: 'brand_loyal' }
+    ]);
+
+    const goToEditClientPage = (clientId) => {
         router.push({ name: 'ClientEdit', params: { clientId: clientId } });
     };
 
@@ -243,15 +270,15 @@
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const isValidEmail = ref(true);
     const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
-    const isValidPhone = ref(true); 
+    const isValidPhone = ref(true);
     const dialogVisible = ref(false);
     const dialogOpenClose = (bool) => {
-        dialogVisible.value = bool;        
+        dialogVisible.value = bool;
     };
     const newClient = ref({});
     const newClientReset = () => {
         newClient.value = {
-            name: null,            
+            name: null,
             name_kana: null,
             legal_or_natural_person: null,
             gender: 'other',
@@ -262,16 +289,16 @@
     const normalizeKana = (str) => {
         if (!str) return '';
         let normalizedStr = str.normalize('NFKC');
-        
+
         // Convert Hiragana to Katakana
-        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) => 
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
+        String.fromCharCode(char.charCodeAt(0) + 0x60) // Convert Hiragana to Katakana
         );
         // Convert half-width Katakana to full-width Katakana
-        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) => 
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
+        String.fromCharCode(char.charCodeAt(0) - 0xFEC0) // Convert half-width to full-width Katakana
         );
-        
+
         return normalizedStr;
     };
     const validateEmail = (email) => {
@@ -283,9 +310,9 @@
     const submitClient = async () => {
         // Validate email and phone
         validateEmail(newClient.value.email);
-        validatePhone(newClient.value.phone);        
+        validatePhone(newClient.value.phone);
 
-        // Check if either email or phone is filled
+        // Check if either name or name_kana is filled
         if (!newClient.value.name && !newClient.value.name_kana) {
             toast.add({
                 severity: 'warn',
@@ -324,14 +351,14 @@
                 life: 3000,
             });
             return;
-        }      
-        
+        }
+
         const newBasicClient = await createBasicClient(newClient.value.name, newClient.value.name_kana, newClient.value.legal_or_natural_person, newClient.value.gender, newClient.value.email, newClient.value.phone);
 
         goToEditClientPage(newBasicClient.id);
     };
 
-    onMounted( async () => {  
+    onMounted( async () => {
         // console.log(clients);
         newClientReset();
     });
@@ -339,22 +366,24 @@
     const getTierDisplayName = (tier) => {
         if (!tier) return 'N/A'; // Or perhaps '未分類' (Uncategorized) or '該当なし' (Not Applicable)
         switch (tier) { // tier is already lowercase
-        case 'newbie': return '新規顧客'; // New Customer
-        case 'repeater': return 'リピーター'; // Repeater
-        case 'hotel_loyal': return 'ホテルロイヤル'; // Hotel Loyal
-        case 'brand_loyal': return 'ブランドロイヤル'; // Brand Loyal
-        default: return tier; // Fallback, should not happen with current tiers
+            case 'prospect': return '潜在顧客';
+            case 'newbie': return '新規顧客'; // New Customer
+            case 'repeater': return 'リピーター'; // Repeater
+            case 'hotel_loyal': return 'ホテルロイヤル'; // Hotel Loyal
+            case 'brand_loyal': return 'ブランドロイヤル'; // Brand Loyal
+            default: return tier; // Fallback, should not happen with current tiers
         }
     };
 
     const getTierSeverity = (tier) => {
         if (!tier) return 'info';
         switch (tier) {
-        case 'newbie': return 'info';
-        case 'repeater': return 'success';
-        case 'hotel_loyal': return 'warning';
-        case 'brand_loyal': return 'danger';
-        default: return 'secondary';
+            case 'prospect': return 'secondary';
+            case 'newbie': return 'info';
+            case 'repeater': return 'success';
+            case 'hotel_loyal': return 'warn';
+            case 'brand_loyal': return 'danger';
+            default: return 'secondary';
         }
     };
 </script>

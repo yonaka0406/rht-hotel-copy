@@ -25,6 +25,22 @@ const assignLoyaltyTiers = async () => {
         console.log('Initializing clients to newbie...');
         await client.query("UPDATE clients SET loyalty_tier = 'newbie'");
 
+        // 2. Assign 'prospect' to clients with no reservations, reservation_clients, or reservation_payments entries
+        console.log('Assigning "prospect" tier to clients with no reservation-related entries...');
+        const prospectQuery = `
+            UPDATE clients c SET loyalty_tier = 'prospect'
+            WHERE c.id NOT IN (
+                SELECT DISTINCT reservation_client_id FROM reservations
+                UNION
+                SELECT DISTINCT client_id FROM reservation_clients
+                UNION
+                SELECT DISTINCT client_id FROM reservation_payments
+            );
+        `;
+        const { rowCount: prospectCount } = await client.query(prospectQuery);
+        console.log(`Prospect update affected ${prospectCount} rows.`);
+
+
         // Fetch all tier settings
         const { rows: settings } = await client.query('SELECT * FROM loyalty_tiers ORDER BY tier_name, hotel_id');
 
@@ -32,7 +48,7 @@ const assignLoyaltyTiers = async () => {
         const hotelLoyalSettings = settings.filter(s => s.tier_name === 'hotel_loyal');
         const repeaterSetting = settings.find(s => s.tier_name === 'repeater');
 
-        // 2. Evaluate 'BRAND_LOYAL'
+        // 3. Evaluate 'BRAND_LOYAL'
         if (brandLoyalSetting) {
             console.log('Evaluating Brand Loyal tier...');
             const startDate = getStartDateForPeriod(brandLoyalSetting.time_period_months);
@@ -60,12 +76,12 @@ const assignLoyaltyTiers = async () => {
                         GROUP BY r.reservation_client_id
                         HAVING ${havingClause}
                     )`;
-                await client.query(brandLoyalQuery, [startDate]);
-                console.log(`Brand Loyal update affected ${client.rowCount} rows.`);
+                const { rowCount: brandLoyalCount } = await client.query(brandLoyalQuery, [startDate]);
+                console.log(`Brand Loyal update affected ${brandLoyalCount} rows.`);
             }
         }
 
-        // 3. Evaluate 'HOTEL_LOYAL' for clients still 'Newbie' or other configurable previous tiers
+        // 4. Evaluate 'HOTEL_LOYAL' for clients still 'Newbie' or other configurable previous tiers
         if (hotelLoyalSettings.length > 0) {
             console.log('Evaluating Hotel Loyal tier...');
             for (const setting of hotelLoyalSettings) {
@@ -83,11 +99,11 @@ const assignLoyaltyTiers = async () => {
 
                 if (conditions.length > 0) {
                     const havingClause = conditions.join(pgFormat(' %s ', setting.logic_operator || 'OR'));
-                    // Apply HOTEL_LOYAL only if client is currently Newbie.
+                    // Apply HOTEL_LOYAL only if client is currently Newbie or Prospect.
                     // Brand Loyal is higher, so we don't want to overwrite it.
                     const hotelLoyalQuery = `
                         UPDATE clients c SET loyalty_tier = 'hotel_loyal'
-                        WHERE c.loyalty_tier = 'newbie' AND c.id IN (
+                        WHERE c.loyalty_tier IN ('newbie', 'prospect') AND c.id IN (
                             SELECT r.reservation_client_id
                             FROM reservations r
                             JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
@@ -95,21 +111,21 @@ const assignLoyaltyTiers = async () => {
                             GROUP BY r.reservation_client_id
                             HAVING ${havingClause}
                         )`;
-                    await client.query(hotelLoyalQuery, [setting.hotel_id, startDate]);
-                    console.log(`Hotel Loyal update for hotel ${setting.hotel_id} affected ${client.rowCount} rows.`);
+                    const { rowCount: hotelLoyalCount } = await client.query(hotelLoyalQuery, [setting.hotel_id, startDate]);
+                    console.log(`Hotel Loyal update for hotel ${setting.hotel_id} affected ${hotelLoyalCount} rows.`);
                 }
             }
         }
 
-        // 4. Evaluate 'REPEATER' for clients still 'Newbie'
+        // 5. Evaluate 'REPEATER' for clients still 'Newbie' or 'Prospect'
         if (repeaterSetting) {
             console.log('Evaluating Repeater tier...');
             const startDate = getStartDateForPeriod(repeaterSetting.time_period_months);
-            // Apply REPEATER only if client is currently Newbie.
+            // Apply REPEATER only if client is currently Newbie or Prospect.
             // Brand Loyal and Hotel Loyal are higher.
             let repeaterQuery = `
                 UPDATE clients c SET loyalty_tier = 'repeater'
-                WHERE c.loyalty_tier = 'newbie' AND c.id IN (
+                WHERE c.loyalty_tier IN ('newbie', 'prospect') AND c.id IN (
                     SELECT r.reservation_client_id
                     FROM reservations r
                     JOIN reservation_details rd ON r.id = rd.reservation_id AND r.hotel_id = rd.hotel_id
@@ -118,8 +134,8 @@ const assignLoyaltyTiers = async () => {
                     HAVING COUNT(DISTINCT r.id) >= $2
                 )
             `;
-             await client.query(repeaterQuery, [startDate, repeaterSetting.min_bookings]);
-             console.log(`Repeater update affected ${client.rowCount} rows.`);
+            const { rowCount: repeaterCount } = await client.query(repeaterQuery, [startDate, repeaterSetting.min_bookings]);
+            console.log(`Repeater update affected ${repeaterCount} rows.`);
         }
 
         await client.query('COMMIT');
@@ -132,7 +148,7 @@ const assignLoyaltyTiers = async () => {
             await client.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
             console.log('Re-enabled log_clients_trigger.');
         } catch (enableTriggerError) {
-            console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);            
+            console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);
         }
         client.release();
     }
