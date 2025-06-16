@@ -56,6 +56,12 @@ const login = async (req, res) => {
       return res.status(401).json({ error: isProduction ? 'Invalid credentials.' : specificError });
     }
 
+    // Check if the account is Google-linked
+    if (user && user.auth_provider === 'google') {
+      logger.warn('Login attempt for Google-linked account with password', { userId: user.id, email, ip: req.ip });
+      return res.status(403).json({ error: "このアカウントはGoogleで登録されています。Googleログインをご利用ください。" });
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       const specificError = 'パスワードの誤差がありました。'; // Password error
