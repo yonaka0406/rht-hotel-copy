@@ -99,4 +99,29 @@ module.exports = {
     handleCreateProject,
     handleGetClientProjects,
     handleGetAllProjects,
+    handleDeleteProject // Add new handler here
+};
+
+// Add this function with other handlers
+const handleDeleteProject = async (req, res) => {
+    const { projectId } = req.params;
+    const requestId = req.requestId; // Assuming requestId is available on req
+
+    try {
+        const deletedProject = await projectsModel.deleteProjectById(requestId, projectId);
+
+        if (!deletedProject) {
+            return res.status(404).json({ message: 'Project not found' });
+        }
+
+        // Successfully deleted
+        // Option 1: Send back the deleted project data
+        // res.status(200).json({ message: 'Project deleted successfully', data: deletedProject });
+        // Option 2: Send 204 No Content (common for DELETE)
+        res.status(204).send();
+
+    } catch (error) {
+        console.error(`[${requestId}] Error in handleDeleteProject for project ID ${projectId}:`, error);
+        res.status(500).json({ message: 'Failed to delete project', error: error.message });
+    }
 };

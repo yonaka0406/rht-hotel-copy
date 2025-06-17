@@ -1,6 +1,5 @@
 <template>
-    <div class="p-fluid card">
-        <h5 class="text-xl font-semibold mb-4">新規プロジェクト追加</h5>
+    <div class="p-fluid"> <!-- Removed card class, h5 title. Dialog will provide chrome. -->
         <div class="grid grid-cols-12 gap-4">
             <div class="field col-span-12 md:col-span-6">
                 <FloatLabel class="mt-6">
@@ -71,7 +70,7 @@
                     <InputNumber id="budget" v-model="budget" mode="currency" currency="JPY" locale="ja-JP" class="w-full" />
                 </FloatLabel>
             </div>
-            
+
             <div class="field col-span-12">
                 <FloatLabel class="mt-6">
                     <label for="assignedWorkContent">作業内容</label>
@@ -149,33 +148,45 @@
             </div>
         </div>
 
-        <div class="flex justify-end mt-4">
-            <Button label="プロジェクト追加" icon="pi pi-plus" @click="handleAddProject" :loading="isSubmitting" />
+        <div class="flex justify-end mt-6 gap-2">
+            <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text" :disabled="isSubmitting"/>
+            <Button :label="submitButtonLabel" :icon="submitButtonIcon" @click="handleSubmit" :loading="isSubmitting" />
         </div>
     </div>
 </template>
 
 <script setup>
     // Vue
-    import { ref, reactive, computed, watch, getCurrentInstance, onMounted } from 'vue';
-    
+    import { ref, computed, watch, onMounted } from 'vue';
+
     const props = defineProps({
-        currentClientId: {
+        // isVisible prop removed as dialog visibility will be controlled by parent v-model:visible
+        projectDataToEdit: {
+            type: Object,
+            default: null
+        },
+        currentClientId: { // Kept for now for defaulting prime contractor logic
             type: String,
             default: null,
         }
     });
 
-    const emit = defineEmits(['project-added']);
-    
+    const emit = defineEmits(['close-dialog', 'project-saved']);
+
     // Stores
     import { useProjectStore } from '@/composables/useProjectStore';
-    const { createProject } = useProjectStore(); // Removed clientSearchResults, isLoadingClientSearch, searchClients
+    // const { createProject, updateProject } = useProjectStore(); // updateProject will be added later
+    const { createProject } = useProjectStore();
     import { useClientStore } from '@/composables/useClientStore';
-    const clientStore = useClientStore(); // Instantiate
-    const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore; // Updated to fetchAllClientsForFiltering
+    const clientStore = useClientStore();
+    const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore;
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
+
+    const mode = computed(() => props.projectDataToEdit && props.projectDataToEdit.id ? 'edit' : 'add');
+    // Dialog title will be handled by parent. Button labels are dynamic:
+    const submitButtonLabel = computed(() => mode.value === 'edit' ? '更新' : 'プロジェクト追加');
+    const submitButtonIcon = computed(() => mode.value === 'edit' ? 'pi pi-check' : 'pi pi-plus');
 
     const showHotelMultiSelect = computed(() => {
         const list = hotelList.value;
@@ -228,6 +239,68 @@
     const isSubmitting = ref(false);
     const projectNameError = ref('');
 
+    // Helper to safely convert date strings to Date objects for DatePicker
+    const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        return isNaN(date.getTime()) ? null : date;
+    };
+
+    watch(() => props.projectDataToEdit, (newData) => {
+        // This watch triggers when projectDataToEdit changes (or on initial load due to immediate: true).
+        // The parent component (SalesProjectList) will set projectDataToEdit to null for 'add' mode
+        // or to an object for 'edit' mode, right before making the dialog visible.
+        // The 'isVisible' prop is removed, so this watch implicitly relies on the parent managing visibility
+        // and setting/clearing projectDataToEdit when the dialog opens/closes.
+
+        if (mode.value === 'edit' && newData) {
+            projectName.value = newData.project_name || '';
+            bidDate.value = parseDate(newData.bid_date);
+            orderSource.value = newData.order_source || '';
+            projectLocation.value = newData.project_location || '';
+            budget.value = newData.budget !== null ? Number(newData.budget) : 0;
+            assignedWorkContent.value = newData.assigned_work_content || '';
+            specificSpecializedWorkApplicable.value = newData.specific_specialized_work_applicable || false;
+            startDate.value = parseDate(newData.start_date);
+            endDate.value = parseDate(newData.end_date);
+
+            if (newData.target_store && Array.isArray(newData.target_store) && hotelList.value?.length) {
+                selectedHotels.value = newData.target_store.map(tsHotel =>
+                    hotelList.value.find(h => h.id === tsHotel.hotelId) || tsHotel
+                ).filter(Boolean);
+            } else {
+                selectedHotels.value = [];
+            }
+
+            if (newData.related_clients && Array.isArray(newData.related_clients) && allClientsList.value?.length) {
+                const pcData = newData.related_clients.find(rc => rc.role === '元請業者');
+                const foundPc = pcData ? allClientsList.value.find(c => c.id === pcData.clientId) : null;
+                primeContractor.value = foundPc ? { ...foundPc, preferred_display_name: foundPc.name_kanji || foundPc.name_kana || foundPc.name || '' } : null;
+
+                subContractors.value = newData.related_clients
+                    .filter(rc => rc.role === '下請業者')
+                    .map(scData => {
+                        const foundSc = allClientsList.value.find(c => c.id === scData.clientId);
+                        return foundSc ? { ...foundSc, preferred_display_name: foundSc.name_kanji || foundSc.name_kana || foundSc.name || '' } : null;
+                    })
+                    .filter(Boolean);
+            } else {
+                primeContractor.value = null;
+                subContractors.value = [];
+            }
+        } else { // This will cover mode === 'add' or when newData is null (signaling a reset or preparation for add)
+            resetForm();
+            // Default prime contractor if currentClientId is provided in add mode
+            // This check should be part of resetForm or specifically for 'add' mode initialization when projectDataToEdit is null
+            if (mode.value === 'add' && props.currentClientId && allClientsList.value?.length) {
+                 const client = allClientsList.value.find(c => c.id === props.currentClientId);
+                 if (client) {
+                      primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+                 }
+            }
+        }
+    }, { immediate: true, deep: true });
+
     const onPrimeSearchLocal = (event) => {
         if (!event.query.trim().length) {
             primeContractorSuggestions.value = allClientsList.value?.map(client => ({
@@ -271,57 +344,62 @@
         if (!projectName.value) {
             projectNameError.value = 'プロジェクト名は必須です。';
             return false;
-        }    
+        }
         return true;
     };
 
     const resetForm = () => {
+        projectName.value = '';
         bidDate.value = null;
         orderSource.value = '';
-        projectName.value = '';
         projectLocation.value = '';
-        // targetStore.value = ''; // Removed
-        selectedHotels.value = []; // Reset selectedHotels
-        budget.value = 0;
+        selectedHotels.value = [];
+        budget.value = 0; // Default to 0 as per previous change
         assignedWorkContent.value = '';
         specificSpecializedWorkApplicable.value = false;
         startDate.value = null;
         endDate.value = null;
-        // primeContractor.value = null; // Keep default if set
         subContractors.value = [];
         projectNameError.value = '';
 
-        // Reset prime contractor if not default
-        if (props.currentClientId && primeContractor.value?.id !== props.currentClientId) {
+        // Handle primeContractor reset carefully based on currentClientId
+        if (props.currentClientId && allClientsList.value?.length) {
+             const client = allClientsList.value.find(c => c.id === props.currentClientId);
+             if (client) {
+                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+             } else {
+                primeContractor.value = null;
+             }
+        } else {
             primeContractor.value = null;
-        } else if (!props.currentClientId) {
-            primeContractor.value = null;
-        }
-        // Re-fetch default prime contractor if currentClientId is set
-        if (props.currentClientId) {
-            getClientById(props.currentClientId).then(client => {
-                if(client) primeContractor.value = client;
-            }).catch(err => console.error("Error re-fetching default prime contractor:", err));
         }
     };
 
-    const handleAddProject = async () => {
+    const closeDialog = () => {
+        // It's good practice to reset form when dialog is explicitly closed,
+        // especially if it might be reopened for a new "add" operation.
+        // However, if just hiding, might not want to reset if user might reopen to continue editing.
+        // For now, let's not reset here, rely on the watchEffect forisVisible=true & mode=add.
+        emit('close-dialog');
+    };
+
+    const handleSubmit = async () => {
         if (!validateForm()) {
             return;
         }
         isSubmitting.value = true;
 
-        const relatedClients = [];
+        const relatedClientsPayload = [];
         if (primeContractor.value && primeContractor.value.id) {
-            relatedClients.push({ clientId: primeContractor.value.id, role: '元請業者', responsibility: '' });
+            relatedClientsPayload.push({ clientId: primeContractor.value.id, role: '元請業者', responsibility: '' });
         }
         subContractors.value.forEach(client => {
             if (client && client.id) {
-                relatedClients.push({ clientId: client.id, role: '下請業者', responsibility: '' });
+                relatedClientsPayload.push({ clientId: client.id, role: '下請業者', responsibility: '' });
             }
         });
 
-        const projectData = {
+        const projectPayload = {
             bid_date: bidDate.value ? new Date(bidDate.value).toISOString().split('T')[0] : null,
             order_source: orderSource.value,
             project_name: projectName.value,
@@ -332,32 +410,39 @@
             specific_specialized_work_applicable: specificSpecializedWorkApplicable.value,
             start_date: startDate.value ? new Date(startDate.value).toISOString().split('T')[0] : null,
             end_date: endDate.value ? new Date(endDate.value).toISOString().split('T')[0] : null,
-            related_clients: relatedClients,        
+            related_clients: relatedClientsPayload,
         };
 
         try {
-            const newProject = await createProject(projectData);
-            if (toast) {
+            if (mode.value === 'add') {
+                const newProject = await createProject(projectPayload);
                 toast.add({ severity: 'success', summary: '成功', detail: `プロジェクト「${newProject.project_name}」が正常に作成されました。`, life: 3000 });
-            } else {
-                console.log('Project created successfully:', newProject);
+            } else if (mode.value === 'edit' && props.projectDataToEdit) {
+                // const updatedProject = await updateProject(props.projectDataToEdit.id, projectPayload); // To be implemented in store
+                // toast.add({ severity: 'success', summary: '成功', detail: `プロジェクト「${updatedProject.project_name}」が正常に更新されました。`, life: 3000 });
+                console.log('Update project called (placeholder):', props.projectDataToEdit.id, projectPayload);
+                toast.add({ severity: 'info', summary: 'お知らせ', detail: `プロジェクト更新処理 (ID: ${props.projectDataToEdit.id}) は未実装です。`, life: 3000 });
             }
-            resetForm();
-            emit('project-added', newProject); 
+            emit('project-saved');
+            emit('close-dialog');
+            // resetForm(); // Reset form after successful submission and dialog close
         } catch (error) {
-            if (toast) {
-                toast.add({ severity: 'error', summary: 'エラー', detail: error.message || 'プロジェクトの作成に失敗しました。', life: 3000 });
-            } else {
-                console.error('Failed to create project:', error.message);
-            }
+            toast.add({ severity: 'error', summary: 'エラー', detail: error.message || `プロジェクトの${mode.value === 'add' ? '作成' : '更新'}に失敗しました。`, life: 5000 });
         } finally {
             isSubmitting.value = false;
         }
     };
 
-    onMounted(async () => { 
-        await fetchHotels();
-        await fetchAllClientsForFiltering(); // Updated to use fetchAllClientsForFiltering
+    onMounted(async () => {
+        // Fetch initial data required for the form, like hotel list or all clients list
+        // This might be better handled if data is already available from parent or fetched conditionally
+        if (!hotelList.value || hotelList.value.length === 0) {
+           await fetchHotels();
+        }
+        if (!allClientsList.value || allClientsList.value.length === 0) {
+           await fetchAllClientsForFiltering();
+        }
+
         console.log('[ProjectAddForm] isLoadingHotelList after fetch:', isLoadingHotelList.value);
         console.log('[ProjectAddForm] hotelList.value after fetch:', hotelList.value);
         if (hotelList.value && hotelList.value.length > 0) {

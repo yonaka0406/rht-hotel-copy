@@ -151,5 +151,33 @@ async function getAllProjects(requestId, { limit = 10, offset = 0, searchTerm = 
 module.exports = {
     createProject,
     getProjectsByClientId,
-    getAllProjects, 
+    getAllProjects,
+    deleteProjectById // Add new function here
 };
+
+async function deleteProjectById(requestId, projectId) {
+    const pool = getPool(requestId);
+    const query = `
+        DELETE FROM projects
+        WHERE id = $1
+        RETURNING *;
+    `;
+    // RETURNING * is optional, but useful to confirm what was deleted or if anything was deleted.
+    // If not needed, it can be just DELETE FROM projects WHERE id = $1;
+    const values = [projectId];
+
+    try {
+        console.log(`[${requestId}] Attempting to delete project with ID: ${projectId}`);
+        const result = await pool.query(query, values);
+        if (result.rowCount === 0) {
+            // No project was deleted, likely because the ID was not found.
+            console.warn(`[${requestId}] No project found with ID: ${projectId} to delete.`);
+            return null; // Or throw an error: throw new Error('Project not found');
+        }
+        console.log(`[${requestId}] Project deleted successfully: ${result.rows[0].id}`);
+        return result.rows[0]; // Return the deleted project data
+    } catch (error) {
+        console.error(`[${requestId}] Error deleting project with ID: ${projectId}`, error);
+        throw new Error(`Error deleting project: ${error.message}`);
+    }
+}

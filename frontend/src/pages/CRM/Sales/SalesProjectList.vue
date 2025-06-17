@@ -1,5 +1,7 @@
 <template>
   <div class="project-list-all-page">
+    <ConfirmDialog />
+    <Toast position="top-right" />
     <h1>PJ・工事一覧</h1>
     <!-- Search and Filter UI will go here -->
     <div class="search-filters my-4 flex justify-between items-center">
@@ -15,7 +17,7 @@
     <div class="add-project-form-container my-4">
       <Accordion :activeIndex="null"> <!-- :activeIndex="null" makes all tabs collapsed by default, use 0 to open the first tab -->
         <AccordionTab header="新規プロジェクト追加">
-          <ProjectAddForm @project-added="handleProjectAdded" />
+          <ProjectFormDialog @project-added="handleProjectAdded" />
         </AccordionTab>
       </Accordion>
     </div>
@@ -142,12 +144,24 @@ import Calendar from 'primevue/calendar'; // Import Calendar
 import InputNumber from 'primevue/inputnumber'; // Import InputNumber
 import Accordion from 'primevue/accordion'; // Import Accordion
 import AccordionTab from 'primevue/accordiontab'; // Import AccordionTab
-import ProjectAddForm from '@/pages/CRM/components/ProjectAddForm.vue'; // Import ProjectAddForm
+import { useConfirm } from 'primevue/useconfirm'; // Import useConfirm
+import ConfirmDialog from 'primevue/confirmdialog'; // Import ConfirmDialog
+import { useToast } from 'primevue/usetoast'; // Import useToast
+import Toast from 'primevue/toast'; // Import Toast
+import ProjectFormDialog from '@/pages/CRM/components/ProjectFormDialog.vue'; // Updated import
 
 const projectStore = useProjectStore();
+const confirm = useConfirm();
+const toast = useToast(); // Get toast service instance
+
 // Destructure reactive properties and methods from the store
-// Need to use store directly or toRefs for reactive updates from the store
-const { allProjects, isLoadingAllProjects, allProjectsTotalCount, fetchAllProjects } = projectStore;
+const {
+    allProjects,
+    isLoadingAllProjects,
+    allProjectsTotalCount,
+    fetchAllProjects,
+    deleteProjectById // Destructure deleteProjectById
+} = projectStore;
 
 const clientStore = useClientStore(); // Instantiate ClientStore
 const { clients: allClientsList, fetchAllClientsForFiltering: fetchAllClientsListAction } = clientStore; // Destructure client list and fetch action
@@ -226,11 +240,39 @@ const handleEditProject = (project) => {
 };
 
 const handleDeleteProject = (project) => {
-  console.log('Delete project:', project);
-  if (confirm(`Are you sure you want to delete project: ${project.project_name} (ID: ${project.id})? This action cannot be undone.`)) {
-    alert(`Deleting project: ${project.project_name} (ID: ${project.id}) - Implementation pending.`);
-    // Actual delete logic (API call, refresh list) will be implemented later.
-  }
+  confirm.require({
+    message: `プロジェクト「${project.project_name}」を削除してもよろしいですか？この操作は元に戻せません。`, // Are you sure you want to delete project X? This action cannot be undone.
+    header: '削除の確認', // Delete Confirmation
+    icon: 'pi pi-info-circle',
+    rejectClass: 'p-button-text p-button-text',
+    acceptClass: 'p-button-danger',
+    acceptLabel: 'はい、削除します', // Yes, delete
+    rejectLabel: 'キャンセル', // Cancel
+    accept: async () => { // Make accept callback async
+      try {
+        await deleteProjectById(project.id); // Call the store action
+        toast.add({
+          severity: 'success',
+          summary: '成功', // Success
+          detail: `プロジェクト「${project.project_name}」が削除されました。`, // Project X was deleted.
+          life: 3000
+        });
+        loadProjects(); // Refresh the project list
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'エラー', // Error
+          detail: error.message || 'プロジェクトの削除に失敗しました。', // Failed to delete project.
+          life: 5000
+        });
+      }
+    },
+    reject: () => {
+      console.log('User rejected deletion for project:', project);
+      toast.add({ severity: 'info', summary: 'キャンセルされました', detail: '削除処理はキャンセルされました。', life: 3000 }); // Deletion cancelled.
+    }
+  });
 };
 
 const projectActionItems = ref([
