@@ -78,11 +78,11 @@ app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: {    
-    secure: process.env.NODE_ENV === ('production' || 'development'), // Secure cookies for HTTPS (in localhost it should be false)
+  cookie: {
+    secure: true, // Set to true as test.wehub.work is HTTPS (and prod is also HTTPS)
     httpOnly: true,
-    maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
-    sameSite: 'lax', // Use lax to allow cookies in same-site requests
+    maxAge: 30 * 60 * 1000, // 30 minutes (increased from 5 mins for testing stability)
+    sameSite: 'Lax', // Use lax to allow cookies in same-site requests
     // domain: 'test.wehub.work'
   }
 }));
