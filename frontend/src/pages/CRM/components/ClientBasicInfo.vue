@@ -457,22 +457,24 @@
     const getTierDisplayName = (tier) => {
         if (!tier) return 'N/A'; // Or '未分類' / '該当なし'
         switch (tier) { // tier is already lowercase
-        case 'newbie': return '新規顧客';
-        case 'repeater': return 'リピーター';
-        case 'hotel_loyal': return 'ホテルロイヤル';
-        case 'brand_loyal': return 'ブランドロイヤル';
-        default: return tier;
+            case 'prospect': return '潜在顧客';
+            case 'newbie': return '新規顧客';
+            case 'repeater': return 'リピーター';
+            case 'hotel_loyal': return 'ホテルロイヤル';
+            case 'brand_loyal': return 'ブランドロイヤル';
+            default: return tier;
         }
     };
 
     const getTierSeverity = (tier) => {
         if (!tier) return 'info';
         switch (tier) {
-        case 'newbie': return 'info';
-        case 'repeater': return 'success';
-        case 'hotel_loyal': return 'warning';
-        case 'brand_loyal': return 'danger';
-        default: return 'secondary';
+            case 'prospect': return 'secondary';
+            case 'newbie': return 'info';
+            case 'repeater': return 'success';
+            case 'hotel_loyal': return 'warning';
+            case 'brand_loyal': return 'danger';
+            default: return 'secondary';
         }
     };
 </script>
