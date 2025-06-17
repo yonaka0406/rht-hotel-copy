@@ -35,7 +35,7 @@
                 <FloatLabel class="mt-6">
                     <label for="targetHotels">対象店舗</label>
                     <MultiSelect
-                        v-if="showHotelMultiSelect" <!-- Changed -->
+                        v-if="showHotelMultiSelect"
                         id="targetHotels"
                         key="hotel-multiselect-loaded"
                         v-model="selectedHotels"
@@ -46,6 +46,7 @@
                         display="chip"
                         class="w-full"
                         :loading="isLoadingHotelList.value"
+                        :maxSelectedLabels="3"
                     />
                     <InputText
                         v-else-if="isLoadingHotelList.value"
