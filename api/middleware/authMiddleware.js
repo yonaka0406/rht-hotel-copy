@@ -93,7 +93,9 @@ const authMiddleware = async (req, res, next) => {
     console.error('Original token not available for session refresh in authMiddleware.');
   }
 
-  next();    
+  logger.debug('About to call next() in authMiddleware');
+  next();
+  logger.debug('Called next() in authMiddleware');
 };
 
 /**
