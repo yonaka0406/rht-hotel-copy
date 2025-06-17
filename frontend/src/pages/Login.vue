@@ -1,7 +1,7 @@
 <template>
   <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
     <Card class="w-full max-w-md">
-      
+
       <template #title>
         <img src="/logo.jpg" alt="Logo" class="block mx-auto mb-6 max-w-[150px] h-auto" />        
       </template>
@@ -84,9 +84,10 @@
 
 <script setup>
   // Vue
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
+  import { ref, onMounted } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
   const router = useRouter();
+  const route = useRoute();
 
   // Primevue
   import { useToast } from 'primevue/usetoast';
@@ -100,6 +101,45 @@
   const emailError = ref(null);
   const passwordError = ref(null);
   const showPasswordLogin = ref(false);
+
+  // Handle error messages from URL parameters
+  onMounted(() => {
+    const errorParam = route.query.error;
+    if (errorParam) {
+      let message = '';
+      let severity = 'warn';
+
+      switch(errorParam) {
+        case 'token_malformed':
+          message = 'セッションが無効です。再度ログインしてください。';
+          break;
+        case 'token_expired':
+          message = 'セッションの有効期限が切れました。再度ログインしてください。';
+          break;
+        case 'auth_failed':
+          message = '認証に失敗しました。再度ログインしてください。';
+          break;
+        case 'google_auth_failed':
+          message = 'Googleログインに失敗しました。再度お試しください。';
+          severity = 'error';
+          break;
+        default:
+          message = '再度ログインしてください。';
+      }
+
+      if (message) {
+        toast.add({
+          severity,
+          summary: 'ログイン必要',
+          detail: message,
+          life: 5000
+        });
+      }
+
+      // Clear the error parameter from URL
+      router.replace({ query: {} });
+    }
+  });
 
   const handleGoogleLogin = () => { // Added
     // Redirect to the backend Google OAuth endpoint
@@ -128,7 +168,7 @@
       toast.add({ severity: 'error', summary: '入力エラー', detail: emailError.value, life: 3000 });
       return;
     }
-    
+
     if (passwordError.value) {
       toast.add({ severity: 'error', summary: '入力エラー', detail: passwordError.value, life: 3000 });
       return;
@@ -142,7 +182,7 @@
         email: email.value,
         password: password.value,
       };
-      
+
       const url = `/api/auth/login`;
       const response = await fetch(url, {
           method: 'POST',
@@ -167,7 +207,7 @@
         // ✅ Edge case: No token in response
         throw new Error('サーバーエラーが発生しました。');
       }
-      
+
     } catch (err) {
       error.value = err.message || '予期しないエラーが発生しました。';
 
