@@ -37,15 +37,15 @@
                     <MultiSelect
                         v-if="!isLoadingHotelList.value && hotelList.value && hotelList.value.length > 0"
                         id="targetHotels"
-                        key="hotel-multiselect-loaded" <!-- Added key -->
+                        key="hotel-multiselect-loaded"
                         v-model="selectedHotels"
-                        :options="JSON.parse(JSON.stringify(hotelList.value))" <!-- Simplified from || [], as v-if guarantees hotelList.value is not null/empty -->
+                        :options="JSON.parse(JSON.stringify(hotelList.value))"
                         optionLabel="formal_name"
                         dataKey="id"
                         placeholder="店舗を選択 (複数可)"
                         display="chip"
                         class="w-full"
-                        :loading="isLoadingHotelList.value" /* This might seem redundant with v-if but harmless */
+                        :loading="isLoadingHotelList.value"
                     />
                     <InputText
                         v-else-if="isLoadingHotelList.value"
