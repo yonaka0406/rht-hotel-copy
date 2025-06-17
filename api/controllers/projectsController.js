@@ -95,13 +95,6 @@ async function handleGetAllProjects(req, res) {
     }
 }
 
-module.exports = {
-    handleCreateProject,
-    handleGetClientProjects,
-    handleGetAllProjects,
-    handleDeleteProject // Add new handler here
-};
-
 // Add this function with other handlers
 const handleDeleteProject = async (req, res) => {
     const { projectId } = req.params;
@@ -124,4 +117,11 @@ const handleDeleteProject = async (req, res) => {
         console.error(`[${requestId}] Error in handleDeleteProject for project ID ${projectId}:`, error);
         res.status(500).json({ message: 'Failed to delete project', error: error.message });
     }
+};
+
+module.exports = {
+    handleCreateProject,
+    handleGetClientProjects,
+    handleGetAllProjects,
+    handleDeleteProject
 };
