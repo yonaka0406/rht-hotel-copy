@@ -37,9 +37,9 @@
                     <MultiSelect
                         id="targetHotels"
                         v-model="selectedHotels"
-                        :options="hotelList.value || []" /* Simplified options binding */
+                        :options="hotelList.value || []"
                         optionLabel="formal_name"
-                        dataKey="id" /* Added dataKey */
+                        dataKey="id"
                         placeholder="店舗を選択 (複数可)"
                         display="chip"
                         class="w-full" 
@@ -90,15 +90,18 @@
                     <AutoComplete
                         id="primeContractor"
                         v-model="primeContractor"
-                        :suggestions="clientSearchResults"
-                        @complete="onPrimeSearch"
-                        field="name" 
+                        :suggestions="primeContractorSuggestions"
+                        @complete="onPrimeSearchLocal"
+                        optionLabel="preferred_display_name"
                         placeholder="クライアントを検索"
                         forceSelection
                         fluid
                     >
                         <template #option="slotProps">
-                            <div>{{ slotProps.option.name }} ({{ slotProps.option.name_kana }})</div>
+                            <div class="flex flex-col">
+                                <div>{{ slotProps.option.preferred_display_name }}</div>
+                                <small class="text-gray-500">{{ slotProps.option.name_kana }}</small>
+                            </div>
                         </template>
                     </AutoComplete>
                 </FloatLabel>
@@ -110,16 +113,19 @@
                     <AutoComplete
                         id="subContractors"
                         v-model="subContractors"
-                        :suggestions="clientSearchResults"
-                        @complete="onSubSearch"
-                        field="name"
+                        :suggestions="subContractorSuggestions"
+                        @complete="onSubSearchLocal"
+                        optionLabel="preferred_display_name"
                         placeholder="クライアントを検索"
                         multiple
                         forceSelection
                         fluid
                     >
                         <template #option="slotProps">
-                            <div>{{ slotProps.option.name }} ({{ slotProps.option.name_kana }})</div>
+                            <div class="flex flex-col">
+                                <div>{{ slotProps.option.preferred_display_name }}</div>
+                                <small class="text-gray-500">{{ slotProps.option.name_kana }}</small>
+                            </div>
                         </template>
                     </AutoComplete>
                 </FloatLabel>
@@ -147,9 +153,10 @@
     
     // Stores
     import { useProjectStore } from '@/composables/useProjectStore';
-    const { clientSearchResults, isLoadingClientSearch, searchClients, createProject } = useProjectStore();
+    const { createProject } = useProjectStore(); // Removed clientSearchResults, isLoadingClientSearch, searchClients
     import { useClientStore } from '@/composables/useClientStore';
-    const { getClientById } = useClientStore();
+    const clientStore = useClientStore(); // Instantiate
+    const { clients: allClientsList, fetchClients: fetchAllClientsAction, getClientById } = clientStore; // Destructure
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
 
@@ -181,21 +188,48 @@
     const primeContractor = ref(null);
     const subContractors = ref([]);
 
+    const primeContractorSuggestions = ref([]);
+    const subContractorSuggestions = ref([]);
+
     const isSubmitting = ref(false);
     const projectNameError = ref('');
 
-    const onPrimeSearch = async (event) => {
-        if (!event.query.trim().length) {        
-            return;
+    const onPrimeSearchLocal = (event) => {
+        if (!event.query.trim().length) {
+            primeContractorSuggestions.value = allClientsList.value?.map(client => ({
+                ...client,
+                preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
+            })) || [];
+        } else {
+            const query = event.query.toLowerCase();
+            primeContractorSuggestions.value = allClientsList.value?.filter(client =>
+                (client.name?.toLowerCase().includes(query)) ||
+                (client.name_kana?.toLowerCase().includes(query)) ||
+                (client.name_kanji?.toLowerCase().includes(query))
+            ).map(client => ({
+                ...client,
+                preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
+            })) || [];
         }
-        await searchClients(event.query);
     };
 
-    const onSubSearch = async (event) => {
-        if (!event.query.trim().length) {        
-            return;
+    const onSubSearchLocal = (event) => {
+        if (!event.query.trim().length) {
+            subContractorSuggestions.value = allClientsList.value?.map(client => ({
+                ...client,
+                preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
+            })) || [];
+        } else {
+            const query = event.query.toLowerCase();
+            subContractorSuggestions.value = allClientsList.value?.filter(client =>
+                (client.name?.toLowerCase().includes(query)) ||
+                (client.name_kana?.toLowerCase().includes(query)) ||
+                (client.name_kanji?.toLowerCase().includes(query))
+            ).map(client => ({
+                ...client,
+                preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
+            })) || [];
         }
-        await searchClients(event.query);
     };
 
     const validateForm = () => {
@@ -288,7 +322,8 @@
     };
 
     onMounted(async () => { 
-        await fetchHotels(); 
+        await fetchHotels();
+        await fetchAllClientsAction(); // Fetch all clients
         console.log('[ProjectAddForm] isLoadingHotelList after fetch:', isLoadingHotelList.value);
         console.log('[ProjectAddForm] hotelList.value after fetch:', hotelList.value);
         if (hotelList.value && hotelList.value.length > 0) {
@@ -297,14 +332,20 @@
         } else {
             console.log('[ProjectAddForm] hotelList.value is empty or not an array after fetch.');
         }
+        // Initialize suggestions for empty query state if needed, or let AutoComplete handle it.
+        // onPrimeSearchLocal({ query: '' });
+        // onSubSearchLocal({ query: '' });
     });
 
     watch(() => props.currentClientId, async (newVal) => {
         if (newVal) {
             try {
-                const client = await getClientById(newVal); 
+                const client = await getClientById(newVal);
                 if (client) {
-                    primeContractor.value = client; 
+                    primeContractor.value = {
+                        ...client,
+                        preferred_display_name: client.name_kanji || client.name_kana || client.name || ''
+                    };
                 }
             } catch (error) {
                 console.error("Error fetching default prime contractor:", error);
