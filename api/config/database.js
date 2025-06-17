@@ -35,7 +35,10 @@ let requestCounter = 0;
 
 // Add domain-based detection function
 const isDomainProduction = (domain) => {
-  if (!domain) return false;
+  if (!domain) {
+    // logger.debug('isDomainProduction: No domain provided, returning false.');
+    return false;
+  }
   
   // Parse the domain from a full URL if needed
   try {
@@ -44,15 +47,16 @@ const isDomainProduction = (domain) => {
       domain = parsedUrl.hostname;
     }
   } catch (e) {
-    logger.warn('Error parsing URL for domain check', { domain, errorMessage: e.message });
+    logger.warn(`Error parsing URL for domain check: '${domain}', Error: ${e.message}`);
+    return false; // Treat as non-production if parsing fails
   }
   
-  // Log the extracted domain
-  // logger.debug('Checking domain:', { domain });
+  // Log the extracted domain being checked
+  logger.debug(`isDomainProduction: Checking domain '${domain}'`);
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
-  // logger.debug(`Domain ${domain} identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  logger.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
   
   return isProd;
 };
@@ -66,6 +70,7 @@ const setEnvironment = (requestId, env) => {
   if (requestEnv.size > 1000) {
     const oldestKey = requestEnv.keys().next().value;
     requestEnv.delete(oldestKey);
+    logger.debug(`Cleaned up oldest request ID: ${oldestKey}`);
   }
 };
 
@@ -80,20 +85,21 @@ const setupRequestContext = (req, res, next) => {
   req.requestId = requestId;
   
   // Determine environment from multiple potential sources
-  const origin = req.headers.origin || req.headers.referer || '';
+  // Prioritize Host header as it's typically more reliable for domain identification
   const host = req.headers.host || '';
+  const origin = req.headers.origin || '';
+  const referer = req.headers.referer || '';
 
-  // Log the extracted domain and host for debugging
-  logger.debug(`Request #${requestId} - Determining environment. Origin: '${origin}', Host: '${host}'`);
+  logger.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
 
-  // Check both origin and host to determine environment
-  // isDomainProduction logs details internally
-  const isProd = isDomainProduction(origin) || isDomainProduction(host);
+  // Check host first, then origin, then referer for production domain
+  // This order makes it more robust against stripped referer/origin headers
+  const isProd = isDomainProduction(host) || isDomainProduction(origin) || isDomainProduction(referer);
 
   if (isProd) {
-      logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on domain/host.`);
+      logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
   } else {
-      logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on domain/host.`);
+      logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
   }
 
   setEnvironment(requestId, isProd ? 'prod' : 'dev');
@@ -103,73 +109,45 @@ const setupRequestContext = (req, res, next) => {
     setTimeout(() => {
       requestEnv.delete(requestId);
       logger.debug(`Cleaned up request #${requestId} context`);
-    }, 10000); // Keep the context for 10 seconds after response
+    }, 10000); // Keep the context for 10 seconds after response for potential async operations
   });
   
-  // Pass the requestId to the client for socket connections
+  // Pass the environment info to the client via a custom header
   res.setHeader('X-Request-Environment', isProd ? 'prod' : 'dev');
   
   next();
 };
 
 // Get appropriate pool based on the requestId
-// Update the getPool function in your database.js
-
 const getPool = (requestId) => {
   // Validate that requestId is provided
   if (!requestId) {
-    throw new Error('RequestId is required to select the correct database pool');
-  }
-  // If we have a requestId, use it to determine the environment
-  if (requestId) {
-    const env = getEnvironment(requestId);
-    logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
-    
-    if (env === 'prod') {
-      return prodPool;
-    }
-  } else {
-    logger.warn('No requestId provided to getPool(), checking global.currentRequest as fallback');
-    
-    // As a fallback, check the global.currentRequest
-    if (global.currentRequest) {
-      const origin = global.currentRequest.headers.origin || global.currentRequest.headers.referer || '';
-      
-      if (origin && origin.includes('wehub.work') && !origin.includes('test.wehub')) {
-        logger.debug('Using PROD pool based on global.currentRequest origin');
-        return prodPool;
-      }
-    }
-    
-    // Last resort: check if we're in a route that suggests production
-    try {
-      const error = new Error();
-      const stack = error.stack || '';
-      
-      // Check if the URL in the stack trace suggests production
-      if (stack.includes('wehub.work') && !stack.includes('test.wehub')) {
-        logger.debug('Using PROD pool based on stack trace analysis');
-        return prodPool;
-      }
-    } catch (e) {
-      logger.warn('Error analyzing stack trace for pool selection:', { errorMessage: e.message });
-    }
+    logger.error('RequestId is required to select the correct database pool in getPool()');
+    // Fallback to default pool if requestId is missing, to prevent application crash
+    return pool; 
   }
   
-  // Default to development pool
-  logger.debug('Defaulting to development pool');
+  const env = getEnvironment(requestId);
+  logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
+  
+  if (env === 'prod') {
+    return prodPool;
+  } 
+  
+  // Default to development pool if environment is 'dev' or not found
+  logger.debug('Defaulting to development pool for request #' + requestId);
   return pool;
 };
 
 // Create a function to explicitly select prod pool for socket connections
 const getProdPool = () => {
-  logger.debug('Explicitly selecting production pool');
+  logger.debug('Explicitly selecting production pool for socket/manual use.');
   return prodPool;
 };
 
 // Create a function to explicitly select dev pool for socket connections
 const getDevPool = () => {
-  logger.debug('Explicitly selecting development pool');
+  logger.debug('Explicitly selecting development pool for socket/manual use.');
   return pool;
 };
 
