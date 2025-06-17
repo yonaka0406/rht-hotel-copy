@@ -175,8 +175,7 @@
 
     // Stores
     import { useProjectStore } from '@/composables/useProjectStore';
-    // const { createProject, updateProject } = useProjectStore(); // updateProject will be added later
-    const { createProject } = useProjectStore();
+    const { createProject, updateProject } = useProjectStore();
     import { useClientStore } from '@/composables/useClientStore';
     const clientStore = useClientStore();
     const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore;
@@ -422,10 +421,10 @@
                 const newProject = await createProject(projectPayload);
                 toast.add({ severity: 'success', summary: '成功', detail: `プロジェクト「${newProject.project_name}」が正常に作成されました。`, life: 3000 });
             } else if (mode.value === 'edit' && props.projectDataToEdit) {
-                // const updatedProject = await updateProject(props.projectDataToEdit.id, projectPayload); // To be implemented in store
-                // toast.add({ severity: 'success', summary: '成功', detail: `プロジェクト「${updatedProject.project_name}」が正常に更新されました。`, life: 3000 });
-                console.log('Update project called (placeholder):', props.projectDataToEdit.id, projectPayload);
-                toast.add({ severity: 'info', summary: 'お知らせ', detail: `プロジェクト更新処理 (ID: ${props.projectDataToEdit.id}) は未実装です。`, life: 3000 });
+                const updatedProject = await updateProject(props.projectDataToEdit.id, projectPayload);
+                toast.add({ severity: 'success', summary: '成功', detail: `プロジェクト「${updatedProject.project_name}」が正常に更新されました。`, life: 3000 });
+                // console.log('Update project called (placeholder):', props.projectDataToEdit.id, projectPayload);
+                // toast.add({ severity: 'info', summary: 'お知らせ', detail: `プロジェクト更新処理 (ID: ${props.projectDataToEdit.id}) は未実装です。`, life: 3000 });
             }
             emit('project-saved');
             emit('close-dialog');
