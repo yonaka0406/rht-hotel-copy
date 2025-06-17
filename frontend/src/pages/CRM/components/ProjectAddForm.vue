@@ -35,15 +35,31 @@
                 <FloatLabel class="mt-6">
                     <label for="targetHotels">対象店舗</label>
                     <MultiSelect
+                        v-if="!isLoadingHotelList.value && hotelList.value && hotelList.value.length > 0"
                         id="targetHotels"
+                        key="hotel-multiselect-loaded" <!-- Added key -->
                         v-model="selectedHotels"
-                        :options="hotelList.value || []"
+                        :options="JSON.parse(JSON.stringify(hotelList.value))" <!-- Simplified from || [], as v-if guarantees hotelList.value is not null/empty -->
                         optionLabel="formal_name"
                         dataKey="id"
                         placeholder="店舗を選択 (複数可)"
                         display="chip"
-                        class="w-full" 
-                        :loading="isLoadingHotelList.value"
+                        class="w-full"
+                        :loading="isLoadingHotelList.value" /* This might seem redundant with v-if but harmless */
+                    />
+                    <InputText
+                        v-else-if="isLoadingHotelList.value"
+                        id="targetHotelsLoading"
+                        disabled
+                        placeholder="ホテル情報を読込中..."
+                        class="w-full"
+                    />
+                    <InputText
+                        v-else
+                        id="targetHotelsEmpty"
+                        disabled
+                        placeholder="利用可能なホテルがありません"
+                        class="w-full"
                     />
                 </FloatLabel>
             </div>
