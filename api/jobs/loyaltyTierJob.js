@@ -12,7 +12,7 @@ const getStartDateForPeriod = (numberOfMonths) => {
 
 const assignLoyaltyTiers = async () => {
     console.log('Starting loyalty tier assignment job...');
-    const client = await db.getClient(); // Get a client from the pool for transaction
+    const client = await db.getProdPool().connect(); // Get a client from the pool for transaction
 
     try {
         await client.query('BEGIN');
