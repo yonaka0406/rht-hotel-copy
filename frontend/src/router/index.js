@@ -178,8 +178,18 @@ router.beforeEach((to, from, next) => {
       }
 
       return true;
-    } catch (error) {
-      console.error('Authentication verification failed:', error);
+    } catch (error) {      
+      console.error('Authentication verification failed in verifyToken catch block:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        fileName: error.fileName, // Often useful in Firefox
+        lineNumber: error.lineNumber,
+        columnNumber: error.columnNumber,
+        result: error.result, // For NS_ERROR_... codes
+        errorObjectToString: error.toString(),
+        properties: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      });
       localStorage.removeItem('authToken');
       next({ name: 'Login' });
       return false;
