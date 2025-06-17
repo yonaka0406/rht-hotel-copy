@@ -56,6 +56,16 @@ const verifyTokenFromHeader = (req) => {
  */
 
 const authMiddleware = async (req, res, next) => {
+  logger.debug('Request received from:', req.headers['user-agent']);
+
+  // Add response logging
+  const originalSend = res.send;
+  res.send = function(data) {
+    logger.debug('Response being sent:', data);
+    logger.debug('Response headers:', res.getHeaders());
+    return originalSend.call(this, data);
+  };
+
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
