@@ -12,6 +12,17 @@
                     <div ref="halfPie" class="w-full h-40"></div>
                 </template>
             </Card>
+            <Card class="flex col-span-6">
+                <template #title>
+                    <span>顧客ロイヤリティ階層</span>
+                </template>
+                <template #subtitle>
+                    <span>総顧客数：{{ loyaltyClientsCount }}</span>
+                </template>
+                <template #content>
+                    <div ref="loyaltyTierChartRef" class="w-full h-40"></div>
+                </template>
+            </Card>
             <!--
             <Card class="flex col-span-6">
                 <template #title>
@@ -61,6 +72,28 @@
             legalPercentage: ((legal / total) * 100).toFixed(1),
         };
     });
+
+    const loyaltyClientsCount = computed(() => {
+        return clients.value.filter(client => client.loyalty_tier && client.loyalty_tier !== 'N/A').length;
+    });
+
+    const loyaltyTierDistribution = computed(() => {
+        const distribution = clients.value.reduce((acc, client) => {
+            if (client.loyalty_tier && client.loyalty_tier !== 'N/A') {
+                const tier = client.loyalty_tier;
+                if (!acc[tier]) {
+                    acc[tier] = {
+                        name: getTierDisplayName(tier),
+                        value: 0,
+                        severity: getTierSeverity(tier),
+                    };
+                }
+                acc[tier].value++;
+            }
+            return acc;
+        }, {});
+        return Object.values(distribution);
+    });
   
     // eCharts
     import * as echarts from 'echarts/core';
@@ -78,6 +111,35 @@
 
     let myHalfPie;
     const halfPie = ref(null);
+
+    // Loyalty Tier Chart
+    const loyaltyTierChartRef = ref(null);
+    let loyaltyTierChartInstance;
+
+    const loyaltyTierChartOption = computed(() => ({
+        tooltip: {
+            trigger: 'item',
+            formatter: "{b}: {c} ({d}%)",
+        },
+        legend: {
+            orient: 'vertical',
+            left: 'left',
+            data: loyaltyTierDistribution.value.map(item => item.name),
+        },
+        series: [
+            {
+                name: 'ロイヤリティ階層',
+                type: 'pie',
+                radius: ['40%', '70%'],
+                center: ['65%', '50%'], // Adjusted center to accommodate legend
+                data: loyaltyTierDistribution.value,
+                label: {
+                    show: true,
+                    formatter: "{b}: {d}%",
+                },
+            },
+        ],
+    }));
 
     const halfPieOption = computed(() => ({
         tooltip: {
@@ -127,10 +189,56 @@
         }
     };  
 
+    const initLoyaltyTierChart = () => {
+        if (!loyaltyTierChartRef.value || loyaltyClientsCount.value === 0) {
+            return;
+        }
+
+        let currentChartInstance = echarts.getInstanceByDom(loyaltyTierChartRef.value);
+        if (currentChartInstance) {
+            loyaltyTierChartInstance = currentChartInstance;
+        } else {
+            loyaltyTierChartInstance = echarts.init(loyaltyTierChartRef.value);
+        }
+        loyaltyTierChartInstance.setOption(loyaltyTierChartOption.value);
+    };
+
+    const handleLoyaltyTierResize = () => {
+        if (loyaltyTierChartInstance) {
+            loyaltyTierChartInstance.resize();
+        }
+    };
+
+    const getTierDisplayName = (tier) => {
+        if (!tier) return 'N/A'; // Or perhaps '未分類' (Uncategorized) or '該当なし' (Not Applicable)
+        switch (tier) { // tier is already lowercase
+            case 'prospect': return '潜在顧客';
+            case 'newbie': return '新規顧客'; // New Customer
+            case 'repeater': return 'リピーター'; // Repeater
+            case 'hotel_loyal': return 'ホテルロイヤル'; // Hotel Loyal
+            case 'brand_loyal': return 'ブランドロイヤル'; // Brand Loyal
+            default: return tier; // Fallback, should not happen with current tiers
+        }
+    };
+
+    const getTierSeverity = (tier) => {
+        if (!tier) return 'info';
+        switch (tier) {
+            case 'prospect': return 'secondary';
+            case 'newbie': return 'info';
+            case 'repeater': return 'success';
+            case 'hotel_loyal': return 'warning';
+            case 'brand_loyal': return 'danger';
+            default: return 'secondary';
+        }
+    };
+
     onMounted(async () => {
         await nextTick(); // Wait for DOM updates
         initHalfPie(); 
+        initLoyaltyTierChart();
         window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', handleLoyaltyTierResize);
     });
 
     watch(clientsCount, async (newCounts) => {
@@ -139,7 +247,12 @@
             initHalfPie();
         }
         // If total is 0, initHalfPie will be guarded by clients.value.length === 0 anyway
-    }, { deep: true }); // immediate: false is default, so not explicitly set.
+    }, { deep: true });
+
+    watch(clients, async () => {
+        await nextTick();
+        initLoyaltyTierChart();
+    }, { deep: true });
 
 /*
 Future Dashboard Enhancements Suggestions:
@@ -170,6 +283,7 @@ Some of these metrics might require fetching and processing additional data beyo
 
     onBeforeUnmount(() => {
         window.removeEventListener('resize', handleResize);
+        window.removeEventListener('resize', handleLoyaltyTierResize);
     });
     
 </script>
