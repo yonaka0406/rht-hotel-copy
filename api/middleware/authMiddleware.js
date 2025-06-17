@@ -2,7 +2,6 @@
 
 const { verifyToken } = require('../utils/jwtUtils');
 const sessionService = require('../services/sessionService');
-const logger = require('./config/logger'); 
 
 /**
  * Verifies the JWT token from the Authorization header.
@@ -15,7 +14,7 @@ const verifyTokenFromHeader = (req) => {
   logger.debug(`[AUTH_MIDDLEWARE] Request to: ${req.path}`);
   logger.debug(`[AUTH_MIDDLEWARE] All Headers: ${JSON.stringify(req.headers)}`);
   logger.debug(`[AUTH_MIDDLEWARE] Authorization Header: ${req.headers.authorization}`);
-
+  
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return { error: 'Authorization header required', errorType: 'NO_AUTH_HEADER' };
