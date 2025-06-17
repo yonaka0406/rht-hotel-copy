@@ -37,8 +37,9 @@
                     <MultiSelect
                         id="targetHotels"
                         v-model="selectedHotels"
-                        :options="hotelList && Array.isArray(hotelList.value) ? hotelList.value : []"
+                        :options="hotelList.value || []" /* Simplified options binding */
                         optionLabel="formal_name"
+                        dataKey="id" /* Added dataKey */
                         placeholder="店舗を選択 (複数可)"
                         display="chip"
                         class="w-full" 
@@ -77,7 +78,7 @@
             </div>
 
             <div class="field col-span-12 md:col-span-4">
-                <div class="mt-6 flex items-center"> {/* Adjusted for vertical alignment and spacing */}
+                <div class="mt-6 flex items-center">
                     <Checkbox id="specificSpecializedWorkApplicable" v-model="specificSpecializedWorkApplicable" :binary="true" />
                     <label for="specificSpecializedWorkApplicable" class="ml-2">専門工事該当</label>
                 </div>
