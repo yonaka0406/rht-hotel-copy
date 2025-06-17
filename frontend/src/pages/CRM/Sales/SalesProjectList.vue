@@ -36,7 +36,15 @@
         <Column field="project_location" header="工事場所" :sortable="true"></Column>
         <Column field="target_store" header="対象店舗" :sortable="true">
           <template #body="slotProps">
-            <pre>{{ formatJsonDisplay(slotProps.data.target_store) }}</pre>
+            <div v-if="Array.isArray(slotProps.data.target_store) && slotProps.data.target_store.length > 0" class="flex flex-wrap gap-1">
+              <Tag
+                v-for="(hotel, index) in slotProps.data.target_store"
+                :key="hotel.hotelId || index"
+                :value="hotel.formal_name"
+                severity="info"
+              ></Tag>
+            </div>
+            <span v-else>N/A</span>
           </template>
         </Column>
         <Column field="budget" header="予算" :sortable="true">
@@ -71,6 +79,7 @@ import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Divider from 'primevue/divider';
 import FloatLabel from 'primevue/floatlabel'; // Import FloatLabel
+import Tag from 'primevue/tag'; // Import Tag
 import ProjectAddForm from '@/pages/CRM/components/ProjectAddForm.vue'; // Import ProjectAddForm
 
 const projectStore = useProjectStore();
