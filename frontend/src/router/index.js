@@ -160,6 +160,7 @@ router.beforeEach((to, from, next) => {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
+        credentials: 'include'
       });
 
       if (!response.ok) {
