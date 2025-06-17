@@ -53,6 +53,36 @@ This document outlines common issues, preferred patterns, and best practices to 
         // }
         ```
 
+### 2.3. Database Client for Background Jobs
+
+*   **Context:** When database operations are needed outside of the standard Express request-response cycle (e.g., in background jobs, cron tasks, or standalone scripts), the `requestId` used for context-aware pool selection (`getPool(requestId)`) is not available.
+*   **Guideline:** For such scenarios, you must explicitly choose the database pool:
+    *   For tasks intended to run against the **production** database, use `require('../config/database').getProdPool().connect()`.
+    *   For tasks intended for the **development** database (e.g., local scripts, testing utilities), use `require('../config/database').getDevPool().connect()`.
+*   **Example (`loyaltyTierJob.js`):**
+    ```javascript
+    // api/jobs/loyaltyTierJob.js
+    const db = require('../config/database');
+    // ...
+    const assignLoyaltyTiers = async () => {
+        console.log('Starting loyalty tier assignment job...');
+        // Correctly get a client from the production pool
+        const client = await db.getProdPool().connect();
+
+        try {
+            await client.query('BEGIN');
+            // ... rest of the job logic
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error in loyalty tier assignment job:', error);
+        } finally {
+            // ... ensure client.release() and other cleanup
+            client.release();
+        }
+    };
+    ```
+*   **Important:** Always ensure the client is released (`client.release()`) in a `finally` block to return it to the pool.
+
 ## 3. Frontend (Vue.js / PrimeVue)
 
 ### 3.1. UI Language
