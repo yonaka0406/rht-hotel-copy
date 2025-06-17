@@ -101,9 +101,16 @@
   const emailError = ref(null);
   const passwordError = ref(null);
   const showPasswordLogin = ref(false);
+  const showBrowserWarning = ref(false);
 
-  // Handle error messages from URL parameters
+  // Handle error messages from URL parameters & Browser Check
   onMounted(() => {
+    // Browser check
+    const userAgent = navigator.userAgent;
+    if (!userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+      showBrowserWarning.value = true;
+    }
+
     const errorParam = route.query.error;
     if (errorParam) {
       let message = '';
