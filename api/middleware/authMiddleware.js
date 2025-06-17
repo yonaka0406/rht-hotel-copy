@@ -11,6 +11,10 @@ const sessionService = require('../services/sessionService');
  */
 
 const verifyTokenFromHeader = (req) => {
+  logger.debug(`[AUTH_MIDDLEWARE] Request to: ${req.path}`);
+  logger.debug(`[AUTH_MIDDLEWARE] All Headers: ${JSON.stringify(req.headers)}`);
+  logger.debug(`[AUTH_MIDDLEWARE] Authorization Header: ${req.headers.authorization}`);
+  
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return { error: 'Authorization header required', errorType: 'NO_AUTH_HEADER' };
@@ -29,9 +33,9 @@ const verifyTokenFromHeader = (req) => {
   const verificationResult = verifyToken(token);
 
   if (!verificationResult.success) {
-    return {
-      error: verificationResult.message,
-      errorType: verificationResult.error
+    return { 
+      error: verificationResult.message, 
+      errorType: verificationResult.error 
     };
   }
 
@@ -60,9 +64,9 @@ const authMiddleware = async (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }  
 
@@ -97,9 +101,9 @@ const authMiddlewareCRUDAccess = (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }
 
@@ -141,9 +145,9 @@ const authMiddlewareAdmin = (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }
 
@@ -184,9 +188,9 @@ const authMiddleware_manageUsers = (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }
 
@@ -221,9 +225,9 @@ const authMiddleware_manageDB = (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }
 
@@ -258,9 +262,9 @@ const authMiddleware_manageClients = (req, res, next) => {
       statusCode = 403;
     }
 
-    return res.status(statusCode).json({
+    return res.status(statusCode).json({ 
       error: tokenVerification.error,
-      errorType: tokenVerification.errorType
+      errorType: tokenVerification.errorType 
     });
   }
 
