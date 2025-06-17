@@ -56,6 +56,12 @@ const verifyTokenFromHeader = (req) => {
  */
 
 const authMiddleware = async (req, res, next) => {  
+  // Prevent duplicate processing
+  if (req.processed) {
+    return;
+  }
+  req.processed = true;
+  
   logger.debug(`[AUTH_MIDDLEWARE_ENTRY] Path: ${req.path}, SessionID: ${req.sessionID}, Session available: ${!!req.session}, JWT Present: ${!!req.headers.authorization}`); if (req.session) { logger.debug(`[AUTH_MIDDLEWARE_SESSION_DATA] Session data: ${JSON.stringify(req.session)}`); }  
 
   // Add response logging
