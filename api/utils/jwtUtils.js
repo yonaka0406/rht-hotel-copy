@@ -45,7 +45,13 @@ const verifyToken = (token) => {
     console.error('Token Verification Detailed Error:', {
       name: error.name,
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
+      fileName: error.fileName,
+      lineNumber: error.lineNumber, 
+      columnNumber: error.columnNumber, 
+      result: error.result,
+      errorObjectToString: error.toString(),
+      properties: JSON.stringify(error, Object.getOwnPropertyNames(error))
     });
 
     // Return specific error types for better handling

@@ -73,6 +73,10 @@ try {
     logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
 }
 
+app.use((req, res, next) => { 
+  logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
+});
+
 app.use(session({
   store: sessionStore, // Use the created sessionStore
   secret: sessionSecret,

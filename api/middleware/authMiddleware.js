@@ -55,8 +55,8 @@ const verifyTokenFromHeader = (req) => {
  * Ensures user is authenticated and active. Refreshes session.
  */
 
-const authMiddleware = async (req, res, next) => {
-  logger.debug('Request received from:', req.headers['user-agent']);
+const authMiddleware = async (req, res, next) => {  
+  logger.debug(`[AUTH_MIDDLEWARE_ENTRY] Path: ${req.path}, SessionID: ${req.sessionID}, Session available: ${!!req.session}, JWT Present: ${!!req.headers.authorization}`); if (req.session) { logger.debug(`[AUTH_MIDDLEWARE_SESSION_DATA] Session data: ${JSON.stringify(req.session)}`); }  
 
   // Add response logging
   const originalSend = res.send;
