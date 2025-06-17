@@ -6,6 +6,7 @@
         <img src="/logo.jpg" alt="Logo" class="block mx-auto mb-6 max-w-[150px] h-auto" />        
       </template>
       <template #content>
+        <Message severity="warn" :closable="false" v-if="showBrowserWarning" class="mb-4">このウェブアプリケーションは、現在のブラウザに最適化されていません。最高の体験を得るには、Google ChromeまたはMicrosoft Edgeを使用してください。</Message>
         <form @submit.prevent="handleLogin">
           <div v-if="showPasswordLogin">
             <div class="field mb-6">
@@ -92,7 +93,12 @@
   // Primevue
   import { useToast } from 'primevue/usetoast';
   const toast = useToast();
-  import { Card, FloatLabel, InputText, Password, Button } from 'primevue';
+  import Card from 'primevue/card';
+  import FloatLabel from 'primevue/floatlabel';
+  import InputText from 'primevue/inputtext';
+  import Password from 'primevue/password';
+  import Button from 'primevue/button';
+  import Message from 'primevue/message';
 
   const email = ref('');
   const password = ref('');
@@ -101,9 +107,16 @@
   const emailError = ref(null);
   const passwordError = ref(null);
   const showPasswordLogin = ref(false);
+  const showBrowserWarning = ref(false);
 
-  // Handle error messages from URL parameters
+  // Handle error messages from URL parameters & Browser Check
   onMounted(() => {
+    // Browser check
+    const userAgent = navigator.userAgent;
+    if (!userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+      showBrowserWarning.value = true;
+    }
+
     const errorParam = route.query.error;
     if (errorParam) {
       let message = '';
