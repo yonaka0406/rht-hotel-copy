@@ -2,6 +2,7 @@
 
 const { verifyToken } = require('../utils/jwtUtils');
 const sessionService = require('../services/sessionService');
+const logger = require('../config/logger'); 
 
 /**
  * Verifies the JWT token from the Authorization header.
