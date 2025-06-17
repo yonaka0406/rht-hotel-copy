@@ -14,12 +14,9 @@
     </div>
 
     <!-- Project Add Form will go here (Step 3 of plan) -->
-    <div class="add-project-form-container my-4">
-      <Accordion :activeIndex="null"> <!-- :activeIndex="null" makes all tabs collapsed by default, use 0 to open the first tab -->
-        <AccordionTab header="新規プロジェクト追加">
-          <ProjectFormDialog @project-added="handleProjectAdded" />
-        </AccordionTab>
-      </Accordion>
+    <!-- Removed Accordion for Project Add Form -->
+    <div class="toolbar-container my-4 flex justify-start">
+        <Button label="新規プロジェクト追加" icon="pi pi-plus" class="p-button-success" @click="openAddNewProjectDialog" />
     </div>
     
     <Divider />
@@ -111,7 +108,7 @@
             <span v-else>N/A</span>
           </template>
         </Column>
-        <Column header="操作" style="min-width: 130px; text-align: center;"> <!-- Adjusted min-width and added text-align -->
+        <Column header="操作" style="min-width: 130px; text-align: center;">
           <template #body="slotProps">
             <SplitButton
               label="編集"
@@ -124,6 +121,26 @@
         </Column>
       </DataTable>
     </div>
+
+    <Dialog
+      v-model:visible="displayProjectDialog"
+      :header="projectDialogHeader"
+      :modal="true"
+      :style="{ width: '70vw', 'min-width': '600px', 'max-width': '900px' }"
+      @hide="onDialogClose"
+      :draggable="false"
+      position="top"
+      class="p-fluid"
+    >
+      <ProjectFormDialog
+        v-if="displayProjectDialog"
+        :projectDataToEdit="projectToEdit"
+        @close-dialog="onDialogClose"
+        @project-saved="onProjectSaved"
+        :currentClientId="null"
+        />
+    </Dialog>
+
   </div>
 </template>
 
@@ -142,8 +159,9 @@ import Tag from 'primevue/tag'; // Import Tag
 import SplitButton from 'primevue/splitbutton'; // Import SplitButton
 import Calendar from 'primevue/calendar'; // Import Calendar
 import InputNumber from 'primevue/inputnumber'; // Import InputNumber
-import Accordion from 'primevue/accordion'; // Import Accordion
-import AccordionTab from 'primevue/accordiontab'; // Import AccordionTab
+import Accordion from 'primevue/accordion'; // Import Accordion - This might be removable if no other accordions
+import AccordionTab from 'primevue/accordiontab'; // Import AccordionTab - This might be removable
+import Dialog from 'primevue/dialog'; // Import Dialog
 import { useConfirm } from 'primevue/useconfirm'; // Import useConfirm
 import ConfirmDialog from 'primevue/confirmdialog'; // Import ConfirmDialog
 import { useToast } from 'primevue/usetoast'; // Import useToast
@@ -160,15 +178,20 @@ const {
     isLoadingAllProjects,
     allProjectsTotalCount,
     fetchAllProjects,
-    deleteProjectById // Destructure deleteProjectById
+    deleteProjectById
 } = projectStore;
 
-const clientStore = useClientStore(); // Instantiate ClientStore
+const clientStore = useClientStore();
 const { clients: allClientsList, fetchAllClientsForFiltering: fetchAllClientsListAction } = clientStore; // Destructure client list and fetch action
 
 const localSearchTerm = ref('');
-const currentPage = ref(1); // Tracks the current page number for the API request
-const currentRowsPerPage = ref(10); // Default rows per page
+const currentPage = ref(1);
+const currentRowsPerPage = ref(10);
+
+const displayProjectDialog = ref(false);
+const projectToEdit = ref(null);
+const dialogMode = computed(() => projectToEdit.value && projectToEdit.value.id ? 'edit' : 'add');
+const projectDialogHeader = computed(() => dialogMode.value === 'edit' ? 'プロジェクト編集' : '新規プロジェクト追加');
 
 const filters = ref({
     'project_name': { value: null, matchMode: 'contains' },
@@ -226,17 +249,33 @@ const onPageChange = (event) => {
   loadProjects();
 };
 
-const handleProjectAdded = () => {
-  // Optionally, show a toast or message
-  console.log('Project added event received, refreshing project list...');
-  currentPage.value = 1; // Reset to first page to ensure the new item is visible
+const handleProjectAdded = () => { // This function might be replaced by onProjectSaved
+  console.log('Project added event received (handleProjectAdded), refreshing project list...');
+  currentPage.value = 1;
   loadProjects();
 };
 
+const openAddNewProjectDialog = () => {
+  projectToEdit.value = null;
+  displayProjectDialog.value = true;
+};
+
 const handleEditProject = (project) => {
-  console.log('Edit project:', project);
-  alert(`Editing project: ${project.project_name} (ID: ${project.id}) - Implementation pending.`);
-  // Actual edit logic (e.g., open dialog, navigate to edit page) will be implemented later.
+  console.log('Opening edit dialog for project:', project);
+  projectToEdit.value = { ...project };
+  displayProjectDialog.value = true;
+};
+
+const onDialogClose = () => {
+  displayProjectDialog.value = false;
+  projectToEdit.value = null;
+};
+
+const onProjectSaved = () => {
+  onDialogClose();
+  loadProjects();
+  // Toast for save can be added here if not handled inside ProjectFormDialog, or if a generic message is preferred.
+  // toast.add({ severity: 'success', summary: '成功', detail: 'プロジェクトが保存されました。', life: 3000 });
 };
 
 const handleDeleteProject = (project) => {

@@ -246,12 +246,11 @@
         return isNaN(date.getTime()) ? null : date;
     };
 
-    watch(() => props.projectDataToEdit, (newData) => {
-        // This watch triggers when projectDataToEdit changes (or on initial load due to immediate: true).
-        // The parent component (SalesProjectList) will set projectDataToEdit to null for 'add' mode
-        // or to an object for 'edit' mode, right before making the dialog visible.
-        // The 'isVisible' prop is removed, so this watch implicitly relies on the parent managing visibility
-        // and setting/clearing projectDataToEdit when the dialog opens/closes.
+    watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (values) => {
+        const [newData, currentAllClients, currentHotelList] = values;
+        // This watch triggers when projectDataToEdit, allClientsList, or hotelList changes.
+        // This helps ensure that if master data (clients, hotels) loads after projectDataToEdit is set,
+        // the form pre-filling logic correctly runs.
 
         if (mode.value === 'edit' && newData) {
             projectName.value = newData.project_name || '';
@@ -264,36 +263,41 @@
             startDate.value = parseDate(newData.start_date);
             endDate.value = parseDate(newData.end_date);
 
-            if (newData.target_store && Array.isArray(newData.target_store) && hotelList.value?.length) {
-                selectedHotels.value = newData.target_store.map(tsHotel =>
-                    hotelList.value.find(h => h.id === tsHotel.hotelId) || tsHotel
-                ).filter(Boolean);
+            // Hotels: Ensure currentHotelList is populated before mapping
+            if (newData.target_store && Array.isArray(newData.target_store) && currentHotelList && currentHotelList.length > 0) {
+                selectedHotels.value = newData.target_store
+                    .map(tsHotel => currentHotelList.find(h => h.id === tsHotel.hotelId))
+                    .filter(Boolean); // Only include hotels found in the master list
             } else {
                 selectedHotels.value = [];
             }
 
-            if (newData.related_clients && Array.isArray(newData.related_clients) && allClientsList.value?.length) {
+            // Prime Contractor & Subcontractors: Ensure currentAllClients is populated
+            if (newData.related_clients && Array.isArray(newData.related_clients) && currentAllClients && currentAllClients.length > 0) {
                 const pcData = newData.related_clients.find(rc => rc.role === '元請業者');
-                const foundPc = pcData ? allClientsList.value.find(c => c.id === pcData.clientId) : null;
-                primeContractor.value = foundPc ? { ...foundPc, preferred_display_name: foundPc.name_kanji || foundPc.name_kana || foundPc.name || '' } : null;
+                if (pcData) {
+                    const client = currentAllClients.find(c => c.id === pcData.clientId);
+                    primeContractor.value = client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
+                } else {
+                    primeContractor.value = null;
+                }
 
                 subContractors.value = newData.related_clients
                     .filter(rc => rc.role === '下請業者')
                     .map(scData => {
-                        const foundSc = allClientsList.value.find(c => c.id === scData.clientId);
-                        return foundSc ? { ...foundSc, preferred_display_name: foundSc.name_kanji || foundSc.name_kana || foundSc.name || '' } : null;
+                        const client = currentAllClients.find(c => c.id === scData.clientId);
+                        return client ? { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' } : null;
                     })
                     .filter(Boolean);
             } else {
                 primeContractor.value = null;
                 subContractors.value = [];
             }
-        } else { // This will cover mode === 'add' or when newData is null (signaling a reset or preparation for add)
+        } else if (mode.value === 'add') {
             resetForm();
             // Default prime contractor if currentClientId is provided in add mode
-            // This check should be part of resetForm or specifically for 'add' mode initialization when projectDataToEdit is null
-            if (mode.value === 'add' && props.currentClientId && allClientsList.value?.length) {
-                 const client = allClientsList.value.find(c => c.id === props.currentClientId);
+            if (props.currentClientId && currentAllClients && currentAllClients.length > 0) {
+                 const client = currentAllClients.find(c => c.id === props.currentClientId);
                  if (client) {
                       primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
                  }

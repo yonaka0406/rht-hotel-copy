@@ -123,5 +123,38 @@ module.exports = {
     handleCreateProject,
     handleGetClientProjects,
     handleGetAllProjects,
-    handleDeleteProject
+    handleDeleteProject,
+    handleUpdateProject // Add new handler here
+};
+
+// Add this function with other handlers
+const handleUpdateProject = async (req, res) => {
+    const { projectId } = req.params;
+    const projectData = req.body;
+    const userId = req.user?.id;
+    const requestId = req.requestId;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized: User ID not found.' });
+    }
+    if (!projectData || Object.keys(projectData).length === 0) {
+        return res.status(400).json({ message: 'Bad Request: Project data is required for update.' });
+    }
+     // Basic validation for project_name if it's part of the update and required
+     if (projectData.hasOwnProperty('project_name') && !projectData.project_name) {
+         return res.status(400).json({ message: 'Bad Request: Project name cannot be empty if provided for update.' });
+     }
+
+    try {
+        const updatedProject = await projectsModel.updateProject(requestId, projectId, projectData, userId);
+
+        if (!updatedProject) {
+            return res.status(404).json({ message: 'Project not found or no changes made' });
+        }
+
+        res.status(200).json(updatedProject);
+    } catch (error) {
+        console.error(`[${requestId}] Error in handleUpdateProject for project ID ${projectId}:`, error);
+        res.status(500).json({ message: 'Failed to update project', error: error.message });
+    }
 };

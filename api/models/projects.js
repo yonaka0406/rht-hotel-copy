@@ -152,8 +152,79 @@ module.exports = {
     createProject,
     getProjectsByClientId,
     getAllProjects,
-    deleteProjectById // Add new function here
+    deleteProjectById,
+    updateProject // Add new function here
 };
+
+async function updateProject(requestId, projectId, projectData, userId) {
+    const pool = getPool(requestId);
+    const {
+        bid_date,
+        order_source,
+        project_name,
+        project_location,
+        target_store, // Expected as an array of objects or null
+        budget,
+        assigned_work_content,
+        specific_specialized_work_applicable, // Should have a default if not provided
+        start_date,
+        end_date,
+        related_clients // Expected as an array of objects or null
+    } = projectData;
+
+    // Explicitly stringify JSONB fields
+    let targetStoreJson;
+    if (target_store && Array.isArray(target_store) && target_store.length > 0) {
+        targetStoreJson = JSON.stringify(target_store);
+    } else if (Array.isArray(target_store) && target_store.length === 0) {
+        targetStoreJson = JSON.stringify([]);
+    } else {
+        targetStoreJson = null;
+    }
+
+    const relatedClientsJson = related_clients ? JSON.stringify(related_clients) : JSON.stringify([]);
+
+    const query = `
+        UPDATE projects
+        SET
+            bid_date = $1,
+            order_source = $2,
+            project_name = $3,
+            project_location = $4,
+            target_store = $5,
+            budget = $6,
+            assigned_work_content = $7,
+            specific_specialized_work_applicable = $8,
+            start_date = $9,
+            end_date = $10,
+            related_clients = $11,
+            updated_by = $12,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $13
+        RETURNING *;
+    `;
+    const values = [
+        bid_date, order_source, project_name, project_location, targetStoreJson,
+        budget, assigned_work_content,
+        specific_specialized_work_applicable === undefined ? false : specific_specialized_work_applicable, // Ensure boolean default
+        start_date, end_date, relatedClientsJson,
+        userId, projectId
+    ];
+
+    try {
+        console.log(`[${requestId}] Attempting to update project with ID: ${projectId}`);
+        const result = await pool.query(query, values);
+        if (result.rowCount === 0) {
+            console.warn(`[${requestId}] No project found with ID: ${projectId} to update.`);
+            return null; // Or throw an error
+        }
+        console.log(`[${requestId}] Project updated successfully: ${result.rows[0].id}`);
+        return result.rows[0]; // Return the updated project data
+    } catch (error) {
+        console.error(`[${requestId}] Error updating project with ID: ${projectId}`, error);
+        throw new Error(`Error updating project: ${error.message}`);
+    }
+}
 
 async function deleteProjectById(requestId, projectId) {
     const pool = getPool(requestId);
