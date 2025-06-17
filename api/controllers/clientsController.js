@@ -373,31 +373,6 @@ const handleGetCommonRelationshipPairs = async (req, res) => {
   }
 };
 
-const handleGetLegalClients = async (req, res) => {
-  // This controller is specifically for ?legal_or_natural_person=legal
-  // It leverages the updated getClients model function which now accepts queryParams
-  const { page = 1 } = req.query;
-  // High limit for dropdowns, or make it configurable if full pagination is needed here
-  const limit = parseInt(req.query.limit) || 1000; 
-  const offset = (parseInt(page) - 1) * limit;
-
-  const filterParams = { ...req.query, legal_or_natural_person: 'legal' };
-  delete filterParams.page;
-  delete filterParams.limit;
-  
-  try {
-    // Use getAllClients from the model, which now supports filtering
-    const clients = await clientsModel.getAllClients(req.requestId, limit, offset, filterParams);
-    // For a dropdown, typically just the list is needed. 
-    // If pagination for this specific filtered list is required, then also fetch total count.
-    // const totalClients = await clientsModel.getTotalClientsCount(req.requestId, filterParams);
-    res.status(200).json(clients); // Send array directly for dropdowns
-  } catch (error) {
-    console.error('Error in handleGetLegalClients:', error);
-    res.status(500).json({ message: 'Failed to retrieve legal clients', error: error.message });
-  }
-};
-
 module.exports = { 
   getClients, 
   getClient,
@@ -417,5 +392,5 @@ module.exports = {
   updateClientGroup,
   updateGroup,
   mergeClients,
-  handleGetRelatedCompanies, handleAddClientRelationship, handleUpdateClientRelationship, handleDeleteClientRelationship, handleGetCommonRelationshipPairs, handleGetLegalClients,
+  handleGetRelatedCompanies, handleAddClientRelationship, handleUpdateClientRelationship, handleDeleteClientRelationship, handleGetCommonRelationshipPairs,
 };

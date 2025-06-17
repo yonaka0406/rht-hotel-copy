@@ -41,7 +41,8 @@ const ClientDuplicates = () => import('@/pages/CRM/ClientDuplicates.vue');
 const ClientEdit = () => import('@/pages/CRM/ClientEdit.vue');
 const ClientGroupList = () => import('@/pages/CRM/ClientGroupList.vue');
 const ClientGroupEdit = () => import('@/pages/CRM/ClientGroupEdit.vue');
-const SalesInteractions = () => import('@/pages/CRM/SalesInteractions.vue');
+const SalesInteractions = () => import('@/pages/CRM/Sales/SalesInteractions.vue');
+const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
 
 const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 
@@ -107,7 +108,13 @@ const routes = [
       { path: 'clients/edit/:clientId', name: 'ClientEdit', component: ClientEdit, props: true },      
       { path: 'groups/all', component: ClientGroupList },
       { path: 'groups/edit/:groupId', name: 'ClientGroupEdit', component: ClientGroupEdit, props: true },
-      { path: 'sales/interactions', component: SalesInteractions },
+      { path: 'sales/interactions', name: 'SalesInteractions', component: SalesInteractions },
+      { 
+        path: 'sales/projects', 
+        name: 'ProjectListAll', 
+        component: SalesProjectList,
+        meta: { title: 'PJ・工事一覧' }
+      },
     ],
     meta: { requiresAuth: true },
   },

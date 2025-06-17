@@ -145,7 +145,7 @@
     const actionFormMode = ref('create'); // 'create' or 'edit'
     const actionDataForDialog = ref(null); // Data passed to the SalesActionDialog for editing
 
-    // --- Translation Mappings (Consistent with SalesInteractions.vue) ---
+    // --- Translation Mappings ---
     const actionTypeTranslations = {
         'visit': '訪問',
         'call': '電話',
@@ -189,7 +189,7 @@
             .map(([value, label]) => ({ label, value }))
     );
 
-    // --- Helper Functions (Replicated or adapted from SalesInteractions.vue for consistency) ---
+    // --- Helper Functions ---
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);

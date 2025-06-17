@@ -125,7 +125,11 @@
                 {
                     label: 'やり取り一覧',
                     route: '/crm/sales/interactions'
-                },                        
+                },
+                {
+                    label: 'PJ・工事一覧',
+                    route: { name: 'ProjectListAll' }
+                }                        
             ]
         },                
     ]);

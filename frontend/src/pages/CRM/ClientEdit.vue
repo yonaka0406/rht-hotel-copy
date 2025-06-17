@@ -17,6 +17,9 @@
           <Tab v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">関連企業</span>
           </Tab>
+          <Tab value="4" as="div" class="flex items-center gap-2">
+            <span class="font-bold whitespace-nowrap">関連プロジェクト</span>
+          </Tab>
           <Tab value="5" as="div" class="flex items-center gap-2">
             <span class="font-bold whitespace-nowrap">変更履歴</span>
           </Tab>
@@ -34,6 +37,13 @@
           </TabPanel>
           <TabPanel v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="p" class="m-0">
             <ClientRelated :client-id="clientId" />
+          </TabPanel>
+          <TabPanel value="4" as="p" class="m-0">
+            <div class="mt-2">
+              <RelatedProjectsList 
+                :current-client-id="clientId" 
+              />
+            </div>
           </TabPanel>
           <TabPanel value="5" as="p" class="m-0">
             <ClientEditHistory />
@@ -53,18 +63,22 @@
     import ClientAddresses from './components/ClientAddresses.vue';
     import ClientReservationHistory from './components/ClientReservationHistory.vue';
     import ClientEditHistory from './components/ClientEditHistory.vue';    
-    import ClientRelated from './components/ClientRelated.vue'; 
+    import ClientRelated from './components/ClientRelated.vue';    
+    import RelatedProjectsList from './components/RelatedProjectsList.vue';
 
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
     const { selectedClient, selectedClientAddress, fetchClient } = useClientStore();
-
+    import { useProjectStore } from '@/composables/useProjectStore';
+    const projectStore = useProjectStore();
+    
     // Primevue
     import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
     import { Badge } from 'primevue';
-    
+        
     const clientId = ref(route.params.clientId);
-    const loadingBasicInfo = ref(false);    
+    const loadingBasicInfo = ref(false);   
+        
     const addressCount = computed(() => {
       if (!selectedClientAddress.value) {
           return 0;
