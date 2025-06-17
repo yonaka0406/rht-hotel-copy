@@ -19,10 +19,20 @@ async function createProject(requestId, projectData, userId) {
     // Ensure related_clients is stringified to JSON for JSONB column
     const relatedClientsJson = JSON.stringify(related_clients || []);
 
-    // Handle empty string for target_store, convert to null for DB
-    let targetStoreValue = target_store;
-    if (targetStoreValue === '') {
-        targetStoreValue = null;
+    // Explicitly stringify target_store for the JSONB column
+    let targetStoreJson;
+    if (target_store && Array.isArray(target_store) && target_store.length > 0) {
+        try {
+            targetStoreJson = JSON.stringify(target_store);
+        } catch (jsonError) {
+            // Log with requestId if available, or adapt logging
+            console.error(`[${requestId}] Invalid JSON structure for target_store:`, jsonError, projectData.target_store);
+            throw new Error('Invalid target_store data provided');
+        }
+    } else if (Array.isArray(target_store) && target_store.length === 0) {
+        targetStoreJson = JSON.stringify([]); // Store as empty JSON array '[]'
+    } else {
+        targetStoreJson = null; // Default to NULL if not a populated array
     }
 
     const query = `
@@ -35,13 +45,13 @@ async function createProject(requestId, projectData, userId) {
         ) RETURNING *;
     `;
     const values = [
-        bid_date, order_source, project_name, project_location, targetStoreValue, // Use potentially modified targetStoreValue
+        bid_date, order_source, project_name, project_location, targetStoreJson, // Changed from targetStoreValue
         budget, assigned_work_content, specific_specialized_work_applicable,
         start_date, end_date, relatedClientsJson, userId, userId
     ];
 
     try {
-        console.log(`[${requestId}] Creating project: ${project_name}`);
+        console.log(`[${requestId}] Creating project: ${project_name} with target_store (stringified): ${targetStoreJson}`);
         const result = await pool.query(query, values);
         console.log(`[${requestId}] Project created successfully: ${result.rows[0].id}`);
         return result.rows[0];
