@@ -135,5 +135,43 @@ export function useProjectStore() {
         allProjectsSearchTerm,
         allProjectsFilters,
         fetchAllProjects,
+        deleteProjectById, // Add new action
     };
 }
+
+const deleteProjectById = async (projectId) => {
+    // isLoadingAllProjects.value = true; // Or a specific loading state for delete
+    try {
+        const authToken = localStorage.getItem('authToken');
+        const response = await fetch(`/api/projects/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                // 'Content-Type': 'application/json' // Not typically needed for DELETE if no body
+            },
+        });
+
+        if (!response.ok) {
+            // Try to parse error message from backend if available
+            let errorData = { message: `HTTP error! Status: ${response.status}` };
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                // Ignore if response is not JSON or already handled
+            }
+            throw new Error(errorData.message || `Failed to delete project. Status: ${response.status}`);
+        }
+
+        // response.status should be 204 (No Content) if successful from backend
+        // No JSON body expected for 204, so no need to parse response.json() here
+        // If backend sends 200 with deleted object, then: return await response.json();
+
+        return { success: true, message: 'Project deleted successfully' }; // Or simply return void/true
+
+    } catch (error) {
+        console.error(`Error deleting project with ID ${projectId}:`, error);
+        throw error; // Re-throw to be caught by the component
+    } finally {
+        // isLoadingAllProjects.value = false; // Reset loading state
+    }
+};

@@ -1,5 +1,7 @@
 <template>
   <div class="project-list-all-page">
+    <ConfirmDialog />
+    <Toast position="top-right" />
     <h1>PJ・工事一覧</h1>
     <!-- Search and Filter UI will go here -->
     <div class="search-filters my-4 flex justify-between items-center">
@@ -12,8 +14,9 @@
     </div>
 
     <!-- Project Add Form will go here (Step 3 of plan) -->
-    <div class="add-project-form-container my-4">
-      <ProjectAddForm @project-added="handleProjectAdded" />
+    <!-- Removed Accordion for Project Add Form -->
+    <div class="toolbar-container my-4 flex justify-start">
+        <Button label="新規プロジェクト追加" icon="pi pi-plus" class="p-button-success" @click="openAddNewProjectDialog" />
     </div>
     
     <Divider />
@@ -26,44 +29,125 @@
       該当するプロジェクトが見つかりません。
     </div>
     <div v-else class="project-table-container">
-      <DataTable :value="allProjects" :paginator="true" :rows="currentRowsPerPage" :totalRecords="allProjectsTotalCount"
-                 @page="onPageChange" lazy responsiveLayout="scroll" class="p-datatable-sm">
-        <Column field="project_name" header="プロジェクト名" :sortable="true" style="min-width: 200px;"></Column>
-        <Column field="bid_date" header="入札日" :sortable="true">
-            <template #body="slotProps">{{ formatDateDisplay(slotProps.data.bid_date) }}</template>
-        </Column>
-        <Column field="order_source" header="発注元" :sortable="true"></Column>
-        <Column field="project_location" header="工事場所" :sortable="true"></Column>
-        <Column field="target_store" header="対象店舗" :sortable="true">
-          <template #body="slotProps">
-            <pre>{{ formatJsonDisplay(slotProps.data.target_store) }}</pre>
+      <DataTable :value="allProjects" :paginator="true" :rows="currentRowsPerPage"
+                 :totalRecords="allProjectsTotalCount"
+                 @page="onPageChange" @filter="onFilter" lazy responsiveLayout="scroll"
+                 class="p-datatable-sm"
+                 v-model:filters="filters" filterDisplay="menu"
+                 stateStorage="session" stateKey="dt-salesprojects-filters"
+                 removableSort>
+        <Column field="project_name" header="プロジェクト名" :sortable="true" style="min-width: 200px;"
+                :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}, {label: '完全一致', value: 'equals'}]">
+          <template #body="slotProps">{{ slotProps.data.project_name }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="プロジェクト名で検索"/>
           </template>
         </Column>
-        <Column field="budget" header="予算" :sortable="true">
-           <template #body="slotProps">{{ formatCurrency(slotProps.data.budget) }}</template>
+        <Column field="derived_prime_contractor_name" header="元請け企業" :sortable="true" style="min-width: 150px;"
+                :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+          <template #body="slotProps">
+            <span v-if="slotProps.data.related_clients && Array.isArray(slotProps.data.related_clients)">
+              {{
+                getClientNameById(
+                  (slotProps.data.related_clients.find(rc => rc.role === '元請業者') || {}).clientId
+                )
+              }}
+            </span>
+            <span v-else>N/A</span>
+          </template>
+          <template #filter="{filterModel, filterCallback}">
+            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="元請け企業名で検索"/>
+          </template>
         </Column>
-        <Column field="assigned_work_content" header="作業内容" :sortable="true" style="white-space: pre-wrap; min-width: 250px;"></Column>
-        <Column field="specific_specialized_work_applicable" header="専門工事該当" :sortable="true" style="min-width: 150px;">
-          <template #body="slotProps">{{ slotProps.data.specific_specialized_work_applicable ? '該当' : '非該当' }}</template>
+        <Column field="bid_date" header="入札日" :sortable="true" :showFilterMenu="true" dataType="date">
+          <template #body="slotProps">{{ formatDateDisplay(slotProps.data.bid_date) }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
+          </template>
         </Column>
-        <Column field="start_date" header="開始日" :sortable="true">
-            <template #body="slotProps">{{ formatDateDisplay(slotProps.data.start_date) }}</template>
+        <Column field="budget" header="予算" :sortable="true" :showFilterMenu="true" dataType="numeric">
+          <template #body="slotProps">{{ formatCurrency(slotProps.data.budget) }}</template>
+          <template #filter="{filterModel, filterCallback}">
+             <InputNumber v-model="filterModel.value" @input="filterCallback()" placeholder="予算で検索" mode="currency" currency="JPY" locale="ja-JP" showButtons/>
+          </template>
         </Column>
-        <Column field="end_date" header="終了日" :sortable="true">
-            <template #body="slotProps">{{ formatDateDisplay(slotProps.data.end_date) }}</template>
+        <Column field="order_source" header="発注元" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+          <template #body="slotProps">{{ slotProps.data.order_source }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="発注元で検索"/>
+          </template>
         </Column>
-        <Column field="created_at" header="作成日時" :sortable="true" style="min-width: 150px;">
-            <template #body="slotProps">{{ formatDateTimeDisplay(slotProps.data.created_at) }}</template>
+        <Column field="project_location" header="工事場所" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+          <template #body="slotProps">{{ slotProps.data.project_location }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="工事場所で検索"/>
+          </template>
         </Column>
-         <!-- Consider adding an actions column for edit/view details later -->
+        <Column field="start_date" header="開始日" :sortable="true" :showFilterMenu="true" dataType="date">
+          <template #body="slotProps">{{ formatDateDisplay(slotProps.data.start_date) }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
+          </template>
+        </Column>
+        <Column field="end_date" header="終了日" :sortable="true" :showFilterMenu="true" dataType="date">
+          <template #body="slotProps">{{ formatDateDisplay(slotProps.data.end_date) }}</template>
+          <template #filter="{filterModel, filterCallback}">
+            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
+          </template>
+        </Column>
+        <Column field="target_store" header="対象店舗" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+          <template #body="slotProps">
+            <div v-if="Array.isArray(slotProps.data.target_store) && slotProps.data.target_store.length > 0" class="flex flex-wrap gap-1">
+              <Tag
+                v-for="(hotel, index) in slotProps.data.target_store"
+                :key="hotel.hotelId || index"
+                :value="hotel.formal_name"
+                severity="info"
+              ></Tag>
+            </div>
+            <span v-else>N/A</span>
+          </template>
+        </Column>
+        <Column header="操作" style="min-width: 130px; text-align: center;">
+          <template #body="slotProps">
+            <SplitButton
+              label="編集"
+              icon="pi pi-pencil"
+              @click="() => handleEditProject(slotProps.data)"
+              :model="projectActionItems.map(item => ({ ...item, command: () => item.command(slotProps.data) }))"
+              class="p-button-sm p-button-raised p-button-rounded"
+            />
+          </template>
+        </Column>
       </DataTable>
     </div>
+
+    <Dialog
+      v-model:visible="displayProjectDialog"
+      :header="projectDialogHeader"
+      :modal="true"
+      :style="{ width: '70vw', 'min-width': '600px', 'max-width': '900px' }"
+      @hide="onDialogClose"
+      :draggable="false"
+      position="top"
+      class="p-fluid"
+    >
+      <ProjectFormDialog
+        v-if="displayProjectDialog"
+        :projectDataToEdit="projectToEdit"
+        @close-dialog="onDialogClose"
+        @project-saved="onProjectSaved"
+        :currentClientId="null"
+        />
+    </Dialog>
+
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { useProjectStore } from '@/composables/useProjectStore'; 
+import { useProjectStore } from '@/composables/useProjectStore';
+import { useClientStore } from '@/composables/useClientStore'; // Import useClientStore
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -71,29 +155,87 @@ import InputText from 'primevue/inputtext';
 import ProgressSpinner from 'primevue/progressspinner';
 import Divider from 'primevue/divider';
 import FloatLabel from 'primevue/floatlabel'; // Import FloatLabel
-import ProjectAddForm from '@/pages/CRM/components/ProjectAddForm.vue'; // Import ProjectAddForm
+import Tag from 'primevue/tag'; // Import Tag
+import SplitButton from 'primevue/splitbutton'; // Import SplitButton
+import Calendar from 'primevue/calendar'; // Import Calendar
+import InputNumber from 'primevue/inputnumber'; // Import InputNumber
+import Accordion from 'primevue/accordion'; // Import Accordion - This might be removable if no other accordions
+import AccordionTab from 'primevue/accordiontab'; // Import AccordionTab - This might be removable
+import Dialog from 'primevue/dialog'; // Import Dialog
+import { useConfirm } from 'primevue/useconfirm'; // Import useConfirm
+import ConfirmDialog from 'primevue/confirmdialog'; // Import ConfirmDialog
+import { useToast } from 'primevue/usetoast'; // Import useToast
+import Toast from 'primevue/toast'; // Import Toast
+import ProjectFormDialog from '@/pages/CRM/components/ProjectFormDialog.vue'; // Updated import
 
 const projectStore = useProjectStore();
+const confirm = useConfirm();
+const toast = useToast(); // Get toast service instance
+
 // Destructure reactive properties and methods from the store
-// Need to use store directly or toRefs for reactive updates from the store
-const { allProjects, isLoadingAllProjects, allProjectsTotalCount, fetchAllProjects } = projectStore;
+const {
+    allProjects,
+    isLoadingAllProjects,
+    allProjectsTotalCount,
+    fetchAllProjects,
+    deleteProjectById
+} = projectStore;
+
+const clientStore = useClientStore();
+const { clients: allClientsList, fetchAllClientsForFiltering: fetchAllClientsListAction } = clientStore; // Destructure client list and fetch action
 
 const localSearchTerm = ref('');
-const currentPage = ref(1); // Tracks the current page number for the API request
-const currentRowsPerPage = ref(10); // Default rows per page
+const currentPage = ref(1);
+const currentRowsPerPage = ref(10);
+
+const displayProjectDialog = ref(false);
+const projectToEdit = ref(null);
+const dialogMode = computed(() => projectToEdit.value && projectToEdit.value.id ? 'edit' : 'add');
+const projectDialogHeader = computed(() => dialogMode.value === 'edit' ? 'プロジェクト編集' : '新規プロジェクト追加');
+
+const filters = ref({
+    'project_name': { value: null, matchMode: 'contains' },
+    'derived_prime_contractor_name': { value: null, matchMode: 'contains' },
+    'bid_date': { value: null, matchMode: 'dateIs' },
+    'budget': { value: null, matchMode: 'equals' },
+    'order_source': { value: null, matchMode: 'contains' },
+    'project_location': { value: null, matchMode: 'contains' },
+    'start_date': { value: null, matchMode: 'dateIs' },
+    'end_date': { value: null, matchMode: 'dateIs' },
+    'target_store': { value: null, matchMode: 'contains'}
+});
 
 const loadProjects = async () => {
   await fetchAllProjects({
     page: currentPage.value,
     limit: currentRowsPerPage.value,
     searchTerm: localSearchTerm.value,
-    // filters: {} // Add filters later if implemented
+    filters: filters.value // Pass the filters object
   });
 };
 
-onMounted(() => {
-  loadProjects(); // Load initial data
+const onFilter = (event) => {
+    currentPage.value = 1;
+    loadProjects();
+};
+
+onMounted(async () => { // Make onMounted async
+  await loadProjects(); // Load initial project data
+  try {
+    await fetchAllClientsListAction(); // Fetch all clients
+  } catch (error) {
+    console.error("Failed to fetch all clients for SalesProjectList:", error);
+    // Optionally, show a toast message to the user
+  }
 });
+
+const getClientNameById = (clientId) => {
+  if (!allClientsList.value || allClientsList.value.length === 0 || !clientId) {
+    return 'N/A';
+  }
+  const client = allClientsList.value.find(c => c.id === clientId);
+  return client ? (client.name_kanji || client.name_kana || client.name || 'Unknown Client') : 'Client Not Found';
+};
 
 const applySearch = () => {
   currentPage.value = 1; // Reset to first page on new search/filter
@@ -107,12 +249,78 @@ const onPageChange = (event) => {
   loadProjects();
 };
 
-const handleProjectAdded = () => {
-  // Optionally, show a toast or message
-  console.log('Project added event received, refreshing project list...');
-  currentPage.value = 1; // Reset to first page to ensure the new item is visible
+const handleProjectAdded = () => { // This function might be replaced by onProjectSaved
+  console.log('Project added event received (handleProjectAdded), refreshing project list...');
+  currentPage.value = 1;
   loadProjects();
 };
+
+const openAddNewProjectDialog = () => {
+  projectToEdit.value = null;
+  displayProjectDialog.value = true;
+};
+
+const handleEditProject = (project) => {
+  console.log('Opening edit dialog for project:', project);
+  projectToEdit.value = { ...project };
+  displayProjectDialog.value = true;
+};
+
+const onDialogClose = () => {
+  displayProjectDialog.value = false;
+  projectToEdit.value = null;
+};
+
+const onProjectSaved = () => {
+  onDialogClose();
+  loadProjects();
+  // Toast for save can be added here if not handled inside ProjectFormDialog, or if a generic message is preferred.
+  // toast.add({ severity: 'success', summary: '成功', detail: 'プロジェクトが保存されました。', life: 3000 });
+};
+
+const handleDeleteProject = (project) => {
+  confirm.require({
+    message: `プロジェクト「${project.project_name}」を削除してもよろしいですか？この操作は元に戻せません。`, // Are you sure you want to delete project X? This action cannot be undone.
+    header: '削除の確認', // Delete Confirmation
+    icon: 'pi pi-info-circle',
+    rejectClass: 'p-button-text p-button-text',
+    acceptClass: 'p-button-danger',
+    acceptLabel: 'はい、削除します', // Yes, delete
+    rejectLabel: 'キャンセル', // Cancel
+    accept: async () => { // Make accept callback async
+      try {
+        await deleteProjectById(project.id); // Call the store action
+        toast.add({
+          severity: 'success',
+          summary: '成功', // Success
+          detail: `プロジェクト「${project.project_name}」が削除されました。`, // Project X was deleted.
+          life: 3000
+        });
+        loadProjects(); // Refresh the project list
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'エラー', // Error
+          detail: error.message || 'プロジェクトの削除に失敗しました。', // Failed to delete project.
+          life: 5000
+        });
+      }
+    },
+    reject: () => {
+      console.log('User rejected deletion for project:', project);
+      toast.add({ severity: 'info', summary: 'キャンセルされました', detail: '削除処理はキャンセルされました。', life: 3000 }); // Deletion cancelled.
+    }
+  });
+};
+
+const projectActionItems = ref([
+  {
+    label: '削除', // Delete
+    icon: 'pi pi-trash',
+    command: (project) => handleDeleteProject(project) // Command will be called with the project
+  }
+]);
 
 const formatJsonDisplay = (data) => {
   if (typeof data === 'object' && data !== null) {
