@@ -224,6 +224,33 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', xmlRoutes);
 
+// API Error Handler
+app.use('/api', (err, req, res, next) => {
+  // Use the app's logger if available, otherwise console.error
+  const logger = req.app.locals.logger || console;
+  logger.error('API Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  // If headers have already been sent, delegate to the default Express error handler
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.status || err.statusCode || 500; // Prefer err.status or err.statusCode if available
+  res.status(statusCode).json({
+    error: {
+      message: err.message || 'An unexpected API error occurred.',
+      // Optionally, include stack trace in development only for security
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      ...(err.errorType && { type: err.errorType }) // Include errorType if present
+    }
+  });
+});
+
 // Connect to PostgreSQL database
 const listenClient = new Pool({
   user: process.env.PG_USER,
