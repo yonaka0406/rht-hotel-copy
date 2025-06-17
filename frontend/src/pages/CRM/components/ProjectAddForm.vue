@@ -35,11 +35,11 @@
                 <FloatLabel class="mt-6">
                     <label for="targetHotels">対象店舗</label>
                     <MultiSelect
-                        v-if="!isLoadingHotelList.value && hotelList.value && hotelList.value.length > 0"
+                        v-if="showHotelMultiSelect" <!-- Changed -->
                         id="targetHotels"
                         key="hotel-multiselect-loaded"
                         v-model="selectedHotels"
-                        :options="JSON.parse(JSON.stringify(hotelList.value))"
+                        :options="hotelList"
                         optionLabel="formal_name"
                         dataKey="id"
                         placeholder="店舗を選択 (複数可)"
@@ -175,6 +175,23 @@
     const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore; // Updated to fetchAllClientsForFiltering
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
+
+    const showHotelMultiSelect = computed(() => {
+        const list = hotelList.value;
+        const isLoading = isLoadingHotelList.value;
+        const hasLength = list ? list.length > 0 : false;
+
+        console.log(
+            '[ProjectAddForm] computed showHotelMultiSelect evaluating:',
+            {
+                isLoading: isLoading,
+                hotelListIsTruthy: !!list,
+                hotelListLength: list ? list.length : 'N/A',
+                conditionResult: !isLoading && list && hasLength
+            }
+        );
+        return !isLoading && list && hasLength;
+    });
 
     // Primevue
     import InputText from 'primevue/inputtext';
