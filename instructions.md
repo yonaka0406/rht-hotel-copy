@@ -79,6 +79,7 @@ This document outlines common issues, preferred patterns, and best practices to 
         ```
     *   Ensure the `id` on the input matches the `for` attribute on the label.
     *   Remove placeholder text from inputs like `<InputText>` if the floating label makes it redundant. Placeholders on components like `<AutoComplete>` or `<Select>` that indicate "no selection" or provide search hints can be retained.
+    *   For numeric inputs like `<InputNumber>`, especially when used with `mode="currency"` and `<FloatLabel>`, relying on a textual `placeholder` prop might not provide the best user experience (as it can conflict with formatting or `FloatLabel`'s own behavior). Consider setting a default numeric value (e.g., `0`) instead, which will be displayed in the component's formatted style (e.g., "¥0").
 *   **Spacing:** When using `<FloatLabel>`, apply a top margin for spacing, e.g., by wrapping it or applying a class like `mt-6` (Tailwind example for margin-top: 1.5rem) or equivalent if it improves layout, especially in dense forms. This should be applied contextually.
 *   **Form Layout:** 
     *   Prefer using **Tailwind CSS's grid system** (e.g., `class="grid grid-cols-12 gap-4"` for the container, and `class="col-span-6"` for elements spanning half the width) for structuring forms. Avoid PrimeVue's `p-formgrid` and `p-field` layout classes, and prefer Tailwind utilities over PrimeFlex (e.g., `p-grid`, `p-col-*`) for new layouts or when refactoring. This approach provides more direct control and consistency with Tailwind's utility-first methodology.

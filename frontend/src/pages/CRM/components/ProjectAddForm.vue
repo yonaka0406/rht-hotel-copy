@@ -61,23 +61,26 @@
                 </FloatLabel>
             </div>
 
-            <div class="field col-span-12 md:col-span-6">
+            <!-- Row for Start Date, End Date, Specific Specialized Work -->
+            <div class="field col-span-12 md:col-span-4">
                 <FloatLabel class="mt-6">
                     <label for="startDate">開始日</label>
                     <DatePicker id="startDate" v-model="startDate" dateFormat="yy-mm-dd" showIcon fluid />
                 </FloatLabel>
             </div>
 
-            <div class="field col-span-12 md:col-span-6">
+            <div class="field col-span-12 md:col-span-4">
                 <FloatLabel class="mt-6">
                     <label for="endDate">終了日</label>
                     <DatePicker id="endDate" v-model="endDate" dateFormat="yy-mm-dd" showIcon fluid />
                 </FloatLabel>
             </div>
 
-            <div class="field col-span-12 flex items-center">
-                <Checkbox id="specificSpecializedWorkApplicable" v-model="specificSpecializedWorkApplicable" :binary="true" class="mr-2"/>
-                <label for="specificSpecializedWorkApplicable">専門工事該当</label>
+            <div class="field col-span-12 md:col-span-4">
+                <div class="mt-6 flex items-center"> {/* Adjusted for vertical alignment and spacing */}
+                    <Checkbox id="specificSpecializedWorkApplicable" v-model="specificSpecializedWorkApplicable" :binary="true" />
+                    <label for="specificSpecializedWorkApplicable" class="ml-2">専門工事該当</label>
+                </div>
             </div>
 
             <div class="field col-span-12 md:col-span-6">
@@ -169,7 +172,7 @@
     const projectName = ref('');
     const projectLocation = ref('');
     const selectedHotels = ref([]);
-    const budget = ref(null);
+    const budget = ref(0);
     const assignedWorkContent = ref('');
     const specificSpecializedWorkApplicable = ref(false);
     const startDate = ref(null);
@@ -210,7 +213,7 @@
         projectLocation.value = '';
         // targetStore.value = ''; // Removed
         selectedHotels.value = []; // Reset selectedHotels
-        budget.value = null;
+        budget.value = 0;
         assignedWorkContent.value = '';
         specificSpecializedWorkApplicable.value = false;
         startDate.value = null;
