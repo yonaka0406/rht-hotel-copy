@@ -439,6 +439,35 @@ export function useClientStore() {
     };
 
     // --- Client Relationship Store Methods (defined inside useClientStore) ---
+
+    const fetchAllClientsForFiltering = async () => {
+        clientsIsLoading.value = true;
+        try {
+            // Fetch the first page to get totalPages and initial client set
+            const totalPages = await fetchClients(1); // fetchClients already sets clients.value for page 1
+
+            if (totalPages && totalPages > 1) {
+                const pagePromises = [];
+                for (let page = 2; page <= totalPages; page++) {
+                    // N.B.: fetchClients appends for page > 1
+                    pagePromises.push(fetchClients(page));
+                }
+                await Promise.all(pagePromises);
+                // All clients are now appended to clients.value
+            }
+            // clients.value now contains all clients
+        } catch (error) {
+            console.error('Failed to fetch all clients for filtering:', error);
+            // clients.value might be partially populated or just page 1;
+            // fetchClients itself handles setting clients to [] on error for its own scope.
+            // Depending on desired behavior, could clear clients.value here if any part fails.
+            // For now, rely on fetchClients' error handling per page.
+            throw error; // Re-throw to allow caller to handle
+        } finally {
+            clientsIsLoading.value = false;
+        }
+    };
+
     async function fetchRelatedCompanies(clientId) {
         isLoadingRelatedCompanies.value = true;
         try {
@@ -550,7 +579,8 @@ export function useClientStore() {
         relatedCompanies,
         isLoadingRelatedCompanies,
         commonRelationshipPairs,
-        isLoadingCommonRelationshipPairs,        
+        isLoadingCommonRelationshipPairs,
+        fetchAllClientsForFiltering, // add new function
         setClientsIsLoading,
         fetchClients,
         fetchClient,

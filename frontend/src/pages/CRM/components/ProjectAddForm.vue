@@ -156,7 +156,7 @@
     const { createProject } = useProjectStore(); // Removed clientSearchResults, isLoadingClientSearch, searchClients
     import { useClientStore } from '@/composables/useClientStore';
     const clientStore = useClientStore(); // Instantiate
-    const { clients: allClientsList, fetchClients: fetchAllClientsAction, getClientById } = clientStore; // Destructure
+    const { clients: allClientsList, fetchAllClientsForFiltering, getClientById } = clientStore; // Updated to fetchAllClientsForFiltering
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels: hotelList, isLoadingHotelList, fetchHotels } = useHotelStore();
 
@@ -323,7 +323,7 @@
 
     onMounted(async () => { 
         await fetchHotels();
-        await fetchAllClientsAction(); // Fetch all clients
+        await fetchAllClientsForFiltering(); // Updated to use fetchAllClientsForFiltering
         console.log('[ProjectAddForm] isLoadingHotelList after fetch:', isLoadingHotelList.value);
         console.log('[ProjectAddForm] hotelList.value after fetch:', hotelList.value);
         if (hotelList.value && hotelList.value.length > 0) {
