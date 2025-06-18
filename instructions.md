@@ -53,12 +53,92 @@ This document outlines common issues, preferred patterns, and best practices to 
         // }
         ```
 
-### 2.3. PostgreSQL JSON/JSONB Data Handling
+### 2.3. Database Client for Background Jobs
 
-*   **Guideline:** When inserting or updating `JSON` or `JSONB` columns in PostgreSQL using the `pg` (node-postgres) driver, it is generally more robust to explicitly stringify your JavaScript objects or arrays using `JSON.stringify()` *before* passing them as parameters to your database query.
-    *   **Example:** If you have a JavaScript array `const dataArray = [{ id: 1, name: "Test" }];` intended for a `JSONB` column, pass `JSON.stringify(dataArray)` as the query parameter.
-    *   **Rationale:** While `node-postgres` can often automatically convert JavaScript objects/arrays to the correct JSON string format, explicit stringification provides a more predictable and well-formed JSON string literal to the database, reducing the chances of syntax errors during insertion or updates (e.g., `json型に対する不正な入力構文`). This also makes debugging easier as you can log the exact JSON string being sent.
-    *   Handle `null` values appropriately; if a field should be SQL `NULL`, ensure `null` (not the string `"null"`) is passed as the parameter value after stringification logic. For empty arrays you want to store as `[]`, pass `JSON.stringify([])`.
+*   **Context:** When database operations are needed outside of the standard Express request-response cycle (e.g., in background jobs, cron tasks, or standalone scripts), the `requestId` used for context-aware pool selection (`getPool(requestId)`) is not available.
+*   **Guideline:** For such scenarios, you must explicitly choose the database pool:
+    *   For tasks intended to run against the **production** database, use `require('../config/database').getProdPool().connect()`.
+    *   For tasks intended for the **development** database (e.g., local scripts, testing utilities), use `require('../config/database').getDevPool().connect()`.
+*   **Example (`loyaltyTierJob.js`):**
+    ```javascript
+    // api/jobs/loyaltyTierJob.js
+    const db = require('../config/database');
+    // ...
+    const assignLoyaltyTiers = async () => {
+        console.log('Starting loyalty tier assignment job...');
+        // Correctly get a client from the production pool
+        const client = await db.getProdPool().connect();
+
+        try {
+            await client.query('BEGIN');
+            // ... rest of the job logic
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error in loyalty tier assignment job:', error);
+        } finally {
+            // ... ensure client.release() and other cleanup
+            client.release();
+        }
+    };
+    ```
+*   **Important:** Always ensure the client is released (`client.release()`) in a `finally` block to return it to the pool.
+
+### 2.4. Input Validation Utilities
+
+To ensure robust and consistent input validation in API controllers, a set of helper functions is available in `api/utils/validationUtils.js`. These should be used at the beginning of controller functions to validate request parameters (from `req.params`, `req.query`, or `req.body`).
+
+**Available Helper Functions:**
+
+*   `validateNumericParam(idString, paramName)`:
+    *   Validates if `idString` is a positive integer.
+    *   `paramName` is used in the error message (e.g., 'Hotel ID', 'User ID').
+    *   Throws an error if invalid, otherwise returns the numeric ID.
+    *   Example: `const hotelId = validateNumericParam(req.params.hid, 'Hotel ID');`
+
+*   `validateUuidParam(uuidString, paramName)`:
+    *   Validates if `uuidString` is a valid UUID.
+    *   Throws an error if invalid, otherwise returns the UUID string.
+    *   Example: `const reservationId = validateUuidParam(req.params.id, 'Reservation ID');`
+
+*   `validateDateStringParam(dateString, paramName)`:
+    *   Validates if `dateString` is a valid date in 'YYYY-MM-DD' format and represents a real calendar date.
+    *   Throws an error if invalid, otherwise returns the date string.
+    *   Example: `const startDate = validateDateStringParam(req.query.sdate, 'Start Date');`
+
+*   `validateNonEmptyStringParam(str, paramName)`:
+    *   Validates if `str` is not undefined, null, empty, or only whitespace.
+    *   Throws an error if invalid, otherwise returns the trimmed string.
+    *   Example: `const clientName = validateNonEmptyStringParam(req.body.name, 'Client Name');`
+
+*   `validateIntegerParam(intString, paramName)`:
+    *   Validates if `intString` is a valid integer (positive, negative, or zero). Checks for empty/null/undefined, `isNaN`, and ensures the string strictly represents a whole integer (no decimals or trailing non-numeric characters).
+    *   `paramName` is used in error messages.
+    *   Throws an error if invalid, otherwise returns the numeric integer.
+    *   Example: `const totalRooms = validateIntegerParam(req.body.total_rooms, 'Total Rooms');`
+
+**Usage in Controllers:**
+
+```javascript
+const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
+
+// Inside an async controller function:
+// ...
+let numericHotelId;
+let validatedStartDate;
+try {
+  numericHotelId = validateNumericParam(req.params.hotelId, 'Hotel ID');
+  validatedStartDate = validateDateStringParam(req.query.startDate, 'Start Date');
+  // ... other validations
+} catch (error) {
+  // console.error(`Validation error: ${error.message}`); // Optional: for server logs
+  return res.status(400).json({ error: error.message });
+}
+
+// Proceed with controller logic using numericHotelId, validatedStartDate, etc.
+// ...
+```
+This approach centralizes validation logic, making controllers cleaner and ensuring consistent error responses (HTTP 400 for validation failures).
+
 
 ## 3. Frontend (Vue.js / PrimeVue)
 
@@ -136,6 +216,26 @@ This document outlines common issues, preferred patterns, and best practices to 
         *   When using `filterDisplay="menu"`, providing a custom (and potentially very short) list of options to a column's `:filterMatchModeOptions` prop has occasionally led to internal TypeErrors (e.g., `Cannot read properties of undefined (reading '0')` in `onMenuMatchModeChange`).
         *   If such errors occur, consider removing `:filterMatchModeOptions` from the problematic column. This allows PrimeVue to use its full default set of match modes for that column's data type. The desired default `matchMode` can still be set in the main `filters` ref.
         *   Alternatively, ensure that if `filterMatchModeOptions` is used, it provides a list that is well-handled by PrimeVue's internal components (e.g., typically two or more options). Thorough testing is advised for custom, short lists of match modes with menu-based filtering.
+
+### 3.6. User Permissions and UI Behavior
+
+This section details how user permissions affect the user interface and what users can expect based on their access level.
+
+*   **Global Read-Only Indicator:**
+    *   If a user does not possess full CRUD (Create, Read, Update, Delete) capabilities, specifically if their `logged_user.value[0]?.permissions?.crud_ok` flag is `false`, a "閲覧者" (Viewer/Browser) text will be displayed.
+    *   This text appears in a small, red tag (rendered via a `<small>` HTML tag with red styling) directly next to the user's name within the greeting message (e.g., "こんにちは、User Name <small style='color: red;'>閲覧者</small>") in the top menu bar.
+    *   This provides an immediate and persistent visual cue to the user regarding their restricted access level across the application.
+
+*   **Conditional Access to Reservation Creation:**
+    *   Users lacking the `crud_ok` permission are prevented from initiating the creation of new reservations. This restriction is enforced in the following ways:
+        *   **Calendar View:** When attempting to create a new reservation from the calendar interface (e.g., by double-clicking an empty cell, which would normally open a new reservation form), users without `crud_ok` permission will instead see a toast notification. This message will typically state "権限エラー" (Permission Error) with details like "予約作成の権限がありません。" (You do not have permission to create reservations.). The reservation creation drawer/modal will not open.
+        *   **New Reservation Page:** If a user without `crud_ok` permission navigates directly to the dedicated "New Reservation" page (usually found at a route like `/reservations/new`), the page will not display the standard reservation creation form. Instead, it will show an access error message. This message will typically be within a card titled "アクセスエラー" (Access Error) and state "予約作成の権限がありません。" (You do not have permission to create reservations.), often with a suggestion to contact an administrator.
+
+### 3.6. Hotel Store (`useHotelStore.js`) Behavior
+
+*   **`selectedHotelId` Persistence:** The `selectedHotelId` within the `useHotelStore` is persisted to `localStorage` (under the key `wehub_selectedHotelId_v1`). This means the user's last selected hotel will be remembered across page loads and sessions.
+    *   The store handles initialization from `localStorage`, validation against available hotels, and updates to `localStorage` when the ID changes.
+    *   Components relying on `selectedHotelId` should expect it to be potentially pre-populated from `localStorage` on initialization.
 
 ## 4. General
 

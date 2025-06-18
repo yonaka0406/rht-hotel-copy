@@ -2,41 +2,51 @@
 
 const { verifyToken } = require('../utils/jwtUtils');
 const sessionService = require('../services/sessionService');
+const logger = require('../config/logger'); 
 
 /**
  * Verifies the JWT token from the Authorization header.
  * Checks if the token is present, valid, not expired, and if the user is active.
  * @param {Object} req - Express request object.
- * @returns {Object} An object containing { decoded, token } on success, or { error } on failure.
+ * @returns {Object} An object containing { decoded, token } on success, or { error, errorType } on failure.
  */
 
 const verifyTokenFromHeader = (req) => {
+  logger.debug(`[AUTH_MIDDLEWARE] Request to: ${req.path}`);
+  logger.debug(`[AUTH_MIDDLEWARE] All Headers: ${JSON.stringify(req.headers)}`);
+  logger.debug(`[AUTH_MIDDLEWARE] Authorization Header: ${req.headers.authorization}`);
+  
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    return { error: 'Authorization header required' };
+    return { error: 'Authorization header required', errorType: 'NO_AUTH_HEADER' };
   }
 
   const headerParts = authHeader.split(' ');
   if (headerParts.length !== 2 || headerParts[0].toLowerCase() !== 'bearer') {
-    return { error: 'Invalid Authorization header format. Expected "Bearer <token>"' };
+    return { error: 'Invalid Authorization header format. Expected "Bearer <token>"', errorType: 'INVALID_AUTH_FORMAT' };
   }
 
   const token = headerParts[1];
   if (!token) {
-    return { error: 'Bearer token missing' };
+    return { error: 'Bearer token missing', errorType: 'NO_TOKEN' };
   }
-  
-  const decoded = verifyToken(token);
 
-  if (!decoded) {
-    return { error: 'Invalid or expired token' };
+  const verificationResult = verifyToken(token);
+
+  if (!verificationResult.success) {
+    return { 
+      error: verificationResult.message, 
+      errorType: verificationResult.error 
+    };
   }
+
+  const { decoded } = verificationResult;
 
   // Check if user is active (status_id = 1)
   if (!decoded.status_id || decoded.status_id !== 1) {
-    return { error: 'User not active. Access denied.' };
+    return { error: 'User not active. Access denied.', errorType: 'USER_INACTIVE' };
   }
-  
+
   return { decoded, token };
 };
 
@@ -45,11 +55,36 @@ const verifyTokenFromHeader = (req) => {
  * Ensures user is authenticated and active. Refreshes session.
  */
 
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {  
+  // Prevent duplicate processing
+  if (req.processed) {
+    return;
+  }
+  req.processed = true;
+  
+  logger.debug(`[AUTH_MIDDLEWARE_ENTRY] Path: ${req.path}, SessionID: ${req.sessionID}, Session available: ${!!req.session}, JWT Present: ${!!req.headers.authorization}`); if (req.session) { logger.debug(`[AUTH_MIDDLEWARE_SESSION_DATA] Session data: ${JSON.stringify(req.session)}`); }  
+
+  // Add response logging
+  const originalSend = res.send;
+  res.send = function(data) {
+    logger.debug('Response being sent:', data);
+    logger.debug('Response headers:', res.getHeaders());
+    return originalSend.call(this, data);
+  };
+
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    // Return specific status codes based on error type
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }  
 
   const { decoded, token: originalToken } = tokenVerification;
@@ -64,8 +99,9 @@ const authMiddleware = async (req, res, next) => {
     console.error('Original token not available for session refresh in authMiddleware.');
   }
 
-  next();    
-  
+  logger.debug('About to call next() in authMiddleware');
+  next();
+  logger.debug('Called next() in authMiddleware');
 };
 
 /**
@@ -79,12 +115,20 @@ const authMiddlewareCRUDAccess = (req, res, next) => {
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }
-  
+
   const { decoded, token: originalToken } = tokenVerification;
   req.user = decoded;
-  
+
   if (originalToken) {
     sessionService.refreshSession(decoded.id, originalToken)
       .catch(error => console.error('Session refresh error in authMiddlewareGeneralAccess:', error));
@@ -115,7 +159,15 @@ const authMiddlewareAdmin = (req, res, next) => {
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }
 
   const { decoded, token: originalToken } = tokenVerification;
@@ -137,7 +189,7 @@ const authMiddlewareAdmin = (req, res, next) => {
       error: 'Insufficient permissions: You are authenticated but not authorized to access the Admin Dashboard. Requires manage_users or manage_db permission.' 
     });
   }
-  
+
   next();  
 };
 
@@ -150,7 +202,15 @@ const authMiddleware_manageUsers = (req, res, next) => {
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }
 
   const { decoded, token: originalToken } = tokenVerification;
@@ -179,7 +239,15 @@ const authMiddleware_manageDB = (req, res, next) => {
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }
 
   const { decoded, token: originalToken } = tokenVerification;
@@ -208,7 +276,15 @@ const authMiddleware_manageClients = (req, res, next) => {
   const tokenVerification = verifyTokenFromHeader(req);
 
   if (tokenVerification.error) {
-    return res.status(401).json({ error: tokenVerification.error });
+    let statusCode = 401;
+    if (tokenVerification.errorType === 'USER_INACTIVE') {
+      statusCode = 403;
+    }
+
+    return res.status(statusCode).json({ 
+      error: tokenVerification.error,
+      errorType: tokenVerification.errorType 
+    });
   }
 
   const { decoded, token: originalToken } = tokenVerification;
@@ -220,7 +296,7 @@ const authMiddleware_manageClients = (req, res, next) => {
   } else {
     console.error('Original token not available for session refresh in authMiddleware_manageClients.');
   }
-  
+
   if (!decoded.permissions || decoded.permissions.manage_clients !== true) {
     return res.status(403).json({ error: 'Forbidden: You do not have permission to manage clients.' });
   }

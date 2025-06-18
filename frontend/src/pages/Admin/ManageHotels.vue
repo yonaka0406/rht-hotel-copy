@@ -203,7 +203,7 @@
                     <template #title>
                       <div class="flex justify-between items-center">
                         <span>部屋プレビュー</span>
-                        <Button label="Clear Preview" icon="pi pi-times" @click="clearRoomPreview" class="p-button-danger" />
+                        <Button label="クリア" icon="pi pi-times" @click="clearRoomPreview" class="p-button-danger" />
                       </div>
                     </template>
                     <template #content>
@@ -358,39 +358,39 @@
 </template>
 
 <script setup>
+  // Vue
   import { ref, reactive, computed, watch } from 'vue';
   import { useRouter } from 'vue-router';
-  // Primevue  
-    import { useToast } from 'primevue/usetoast';
-    import { useConfirm } from "primevue/useconfirm";
-    import Card from 'primevue/card';
-    import Button from 'primevue/button';
-    import InputText from 'primevue/inputtext';
-    import Select from 'primevue/select';
-    import InputMask from 'primevue/inputmask';
-    import DataTable from 'primevue/datatable';
-    import Column from 'primevue/column';
-    import DatePicker from 'primevue/datepicker';
-    import Dialog from 'primevue/dialog';
-    import Textarea from 'primevue/textarea';
-    import InputNumber from 'primevue/inputnumber';
-    import ConfirmDialog from 'primevue/confirmdialog';
-    import Stepper from 'primevue/stepper';
-    import StepList from 'primevue/steplist';
-    import StepPanels from 'primevue/steppanels';
-    import StepItem from 'primevue/stepitem';
-    import Step from 'primevue/step';
-    import StepPanel from 'primevue/steppanel';
-    import Accordion from 'primevue/accordion';
-    import AccordionPanel from 'primevue/accordionpanel';
-    import AccordionHeader from 'primevue/accordionheader';
-    import AccordionContent from 'primevue/accordioncontent';
-    import Badge from 'primevue/badge';
-    import Checkbox from 'primevue/checkbox';
-
-  const toast = useToast();
-  const confirm = useConfirm();
   const router = useRouter();
+
+  // Primevue  
+  import { useToast } from 'primevue/usetoast';
+  const toast = useToast();
+  import { useConfirm } from "primevue/useconfirm";
+  const confirm = useConfirm();
+  import Card from 'primevue/card';
+  import Button from 'primevue/button';
+  import InputText from 'primevue/inputtext';
+  import Select from 'primevue/select';
+  import InputMask from 'primevue/inputmask';
+  import DataTable from 'primevue/datatable';
+  import Column from 'primevue/column';  
+  import Dialog from 'primevue/dialog';
+  import Textarea from 'primevue/textarea';
+  import InputNumber from 'primevue/inputnumber';
+  import ConfirmDialog from 'primevue/confirmdialog';
+  import Stepper from 'primevue/stepper';
+  import StepList from 'primevue/steplist';
+  import StepPanels from 'primevue/steppanels';  
+  import Step from 'primevue/step';
+  import StepPanel from 'primevue/steppanel';
+  import Accordion from 'primevue/accordion';
+  import AccordionPanel from 'primevue/accordionpanel';
+  import AccordionHeader from 'primevue/accordionheader';
+  import AccordionContent from 'primevue/accordioncontent';
+  import Badge from 'primevue/badge';
+  import Checkbox from 'primevue/checkbox';
+  
   const frontendUrl = import.meta.env.VITE_FRONTEND_URL;  
   const currentStep = ref('1');
   const loading = ref(false);
@@ -775,27 +775,16 @@
       // console.log('Formatted hotel.open_date:', hotel.open_date); // Verify the correct format
     }
   );
-// Watchers
-/*
-  
 
-  watch(roomTypes, (newVal, oldVal) => {
-    // console.log('roomTypes changed from', oldVal, 'to', newVal);
-  });
-
-  watch(generatedRooms, (newVal, oldVal) => {
-    // console.log('generatedRooms changed from', oldVal, 'to', newVal);
-  });
-*/
 </script>
 
 <style scoped>
-.fade-in {
-  animation: fadeIn 0.3s ease-in;
-}
+  .fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 </style>

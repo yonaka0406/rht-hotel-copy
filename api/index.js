@@ -21,7 +21,62 @@ const crypto = require('crypto'); // Added for session secret
 const app = express();
 app.locals.logger = logger; // Make logger globally available
 app.set('trust proxy', 1);
-app.use(db.setupRequestContext);
+
+// Environment configuration helper - Keep this function as is
+const getEnvConfig = (req) => {
+  // Default to dev configuration
+  let config = {
+    pgDatabase: process.env.PG_DATABASE,
+    frontendUrl: process.env.FRONTEND_URL,
+    frontendUrlHttp: process.env.FRONTEND_URL_HTTP
+  };
+  
+  // If request exists and comes from production domain
+  // Note: req.headers.origin might be empty for same-origin requests or affected by browser policies.
+  // The setupRequestContext middleware already handles robust environment detection.
+  if (req && req.headers.origin) {
+    const origin = req.headers.origin;
+    if (origin.includes('wehub.work') && !origin.includes('test.wehub.work')) {
+      // Use production configuration
+      config = {
+        pgDatabase: process.env.PROD_PG_DATABASE,
+        frontendUrl: process.env.PROD_FRONTEND_URL,
+        frontendUrlHttp: process.env.PROD_FRONTEND_URL_HTTP
+      };
+    }
+  }
+  
+  return config;
+};
+
+// *** IMPORTANT: CORS middleware should typically come very early ***
+// It needs to handle OPTIONS preflight requests before other middleware process the actual request.
+// Use dynamic origin based on request for more flexibility if needed,
+// but ensure it explicitly matches your frontend URL(s).
+app.use(cors((req, callback) => {
+  const envConfig = getEnvConfig(req);
+  const allowedOrigins = [envConfig.frontendUrl, envConfig.frontendUrlHttp]; // Use the determined frontend URL(s)
+  // Add other specific origins if necessary, e.g., for local development: 'http://localhost:8080'
+
+  let corsOptions;
+  const origin = req.header('Origin');
+  if (allowedOrigins.indexOf(origin) !== -1 || !origin) { // !origin allows same-origin requests
+    corsOptions = {
+      origin: origin || 'https://test.wehub.work', // Reflect back the request origin if allowed, or your default
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Include OPTIONS for preflight requests
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Environment'], // Allow all custom headers
+      credentials: true, // Crucial: Allow cookies and Authorization header
+      optionsSuccessStatus: 200 // Some older browsers (IE11, various SmartTVs) choke on 204
+    };
+  } else {
+    // Block requests from unauthorized origins
+    corsOptions = { origin: false };
+  }
+  callback(null, corsOptions);
+}));
+
+
+app.use(db.setupRequestContext); // This middleware determines the environment and populates req.requestId
 
 // console.log('STAMP_COMPONENTS_DIR', process.env.STAMP_COMPONENTS_DIR)
 const stampDirEnvPath = process.env.STAMP_COMPONENTS_DIR;
@@ -44,11 +99,11 @@ if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || pro
 let sessionPool;
 try {
     const poolConfig = {
-        user: process.env.PG_USER,
-        host: process.env.PG_HOST,
-        database: process.env.PG_DATABASE,
-        password: process.env.PG_PASSWORD,
-        port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
+      user: process.env.PG_USER,
+      host: process.env.PG_HOST,
+      database: process.env.PG_DATABASE,
+      password: process.env.PG_PASSWORD,
+      port: parseInt(process.env.PG_PORT, 10), // Ensure port is an integer
     };
     
     sessionPool = new Pool(poolConfig);
@@ -63,54 +118,33 @@ try {
 let sessionStore;
 try {
     const storeOptions = {
-        pool: sessionPool,
-        tableName: 'user_sessions',
-        createTableIfMissing: true,
-        //ttl: 60 * 5 // 5 minutes for testing if needed
+      pool: sessionPool,
+      tableName: 'user_sessions',
+      createTableIfMissing: true,
+      //ttl: 60 * 5 // 5 minutes for testing if needed
     };    
     sessionStore = new pgSession(storeOptions);
 } catch (error) {
     logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
 }
 
+app.use((req, res, next) => { 
+  logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
+});
+
 app.use(session({
   store: sessionStore, // Use the created sessionStore
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: {    
-    secure: process.env.NODE_ENV === ('production' || 'development'), // Secure cookies for HTTPS (in localhost it should be false)
+  cookie: {
+    secure: true, // Set to true as test.wehub.work is HTTPS (and prod is also HTTPS)
     httpOnly: true,
-    maxAge: 300000, // 5 minutes, consistent with existing app.js logic if applicable
-    sameSite: 'lax', // Use lax to allow cookies in same-site requests
-    // domain: 'test.wehub.work'
+    maxAge: 30 * 60 * 1000, // 30 minutes (increased from 5 mins for testing stability)
+    sameSite: 'None',   // Changed from 'Lax' // Use lax to allow cookies in same-site requests
+    // domain: 'test.wehub.work' // No need to set domain if same-domain
   }
 }));
-
-// Environment configuration helper
-const getEnvConfig = (req) => {
-  // Default to dev configuration
-  let config = {
-    pgDatabase: process.env.PG_DATABASE,
-    frontendUrl: process.env.FRONTEND_URL,
-    frontendUrlHttp: process.env.FRONTEND_URL_HTTP
-  };
-  
-  // If request exists and comes from production domain
-  if (req && req.headers.origin) {
-    const origin = req.headers.origin;
-    if (origin.includes('wehub.work') && !origin.includes('test.wehub.work')) {
-      // Use production configuration
-      config = {
-        pgDatabase: process.env.PROD_PG_DATABASE,
-        frontendUrl: process.env.PROD_FRONTEND_URL,
-        frontendUrlHttp: process.env.PROD_FRONTEND_URL_HTTP
-      };
-    }
-  }
-  
-  return config;
-};
 
 // HTTP Server setup
 const httpServer = http.createServer(app);
@@ -142,7 +176,8 @@ try {
 const ioHttp = socketio(httpServer, {
   cors: {
     origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Ensure OPTIONS is here too
+    credentials: true // Important for Socket.IO HTTP polling
   }
 });
 
@@ -160,21 +195,7 @@ if (httpsServer) {
 */
 
 const PORT = process.env.PORT || 5000;
-const baseUrl = `http://localhost:${PORT}`;
-const HTTPS_PORT = 443;
-
-// Dynamic CORS middleware
-app.use((req, res, next) => {
-  const config = getEnvConfig(req);
-  
-  const corsOptions = {
-    origin: [process.env.FRONTEND_URL, process.env.PROD_FRONTEND_URL],
-    methods: 'GET, POST, PUT, DELETE',
-    allowedHeaders: 'Content-Type, Authorization',
-  };
-  
-  cors(corsOptions)(req, res, next);
-});
+const baseUrl = `http://localhost:${PORT}`; // This should point to your backend directly if accessed internally.
 
 app.use(express.json());
 app.use(express.raw({ type: 'text/xml' }));
@@ -226,6 +247,33 @@ app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
 
+// API Error Handler
+app.use('/api', (err, req, res, next) => {
+  // Use the app's logger if available, otherwise console.error
+  const logger = req.app.locals.logger || console;
+  logger.error('API Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method
+  });
+
+  // If headers have already been sent, delegate to the default Express error handler
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const statusCode = err.status || err.statusCode || 500; // Prefer err.status or err.statusCode if available
+  res.status(statusCode).json({
+    error: {
+      message: err.message || 'An unexpected API error occurred.',
+      // Optionally, include stack trace in development only for security
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      ...(err.errorType && { type: err.errorType }) // Include errorType if present
+    }
+  });
+});
+
 // Connect to PostgreSQL database
 const listenClient = new Pool({
   user: process.env.PG_USER,
@@ -246,165 +294,145 @@ const prodListenClient = new Pool({
 
 // Function to listen for changes in a specific table
 const listenForTableChanges = async () => {
-  const client = await listenClient.connect();
-  
-  client.on('notification', async (msg) => {
-    if (msg.channel === 'logs_reservation_changed') {
-      logger.debug('Notification received: logs_reservation_changed (dev)');
-      ioHttp.emit('tableUpdate', 'Reservation update detected');
-      /*
-      if (ioHttps) {
-        ioHttps.emit('tableUpdate', 'Reservation update detected');
+  // --- Development database listener ---
+  let devClient;
+  try {
+    devClient = await listenClient.connect();
+    devClient.on('notification', async (msg) => {
+      if (msg.channel === 'logs_reservation_changed') {
+        logger.debug('Notification received: logs_reservation_changed (dev)');
+        ioHttp.emit('tableUpdate', 'Reservation update detected');
       }
-      */
-    }
-    if (msg.channel === 'reservation_log_inserted') {
-      const logId = parseInt(msg.payload, 10);
-      logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
-
-      let response = null;
-
-      // Fetch log data to check if inventory has changed
-      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const googleData = await response.json();
-      if (googleData && Object.keys(googleData).length > 0) {
-        // Update Google Sheets
-        const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
-        response = await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+      if (msg.channel === 'reservation_log_inserted') {
+        const logId = parseInt(msg.payload, 10);
+        logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
+                
+        let response = null;
+        response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            // No Authorization header needed for internal calls if backend doesn't require it for these specific log routes
           }
         });
-      }
-
-      // Fetch log data to check if inventory has changed
-      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-        // logger.debug('report/res/inventor', data);
-        // Fetch inventory data from view
-        response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        const inventory = await response.json();
-
-        // Update Site Controller
-        try {
-          await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-            method: 'POST',
+        const googleData = await response.json();
+        if (googleData && Object.keys(googleData).length > 0) {
+          const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
+          await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(inventory),
+            }
           });
-          logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
-        } catch (siteControllerError) {
-          logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
         }
-      }
-    }
-  });
 
-  await client.query('LISTEN logs_reservation_changed');
-  await client.query('LISTEN reservation_log_inserted');
-  logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
-
-  // Prod database listener
-  const prodClient = await prodListenClient.connect();
-  prodClient.on('notification', async (msg) => {
-    if (msg.channel === 'logs_reservation_changed') {
-      logger.info('Notification received: logs_reservation_changed (prod)');
-      ioHttp.emit('tableUpdate', {
-        message: 'Reservation update detected',
-        environment: 'prod'
-      });
-      /*
-      if (ioHttps) {
-        ioHttps.emit('tableUpdate', {
-          message: 'Reservation update detected',
-          environment: 'prod'
-        });
-      }
-      */
-    }
-    if (msg.channel === 'reservation_log_inserted') {
-      const logId = parseInt(msg.payload, 10);
-      logger.info('Notification received: reservation_log_inserted (prod)', { logId });
-
-      let response = null;
-
-      // Fetch log data to check if inventory has changed
-      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const googleData = await response.json();
-      if (googleData && Object.keys(googleData).length > 0) {
-        // Update Google Sheets
-        const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
-        response = await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+        response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           }
         });
-      }
-
-      // Fetch log data to check if inventory has changed
-      response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      const data = await response.json();
-      if (data && Object.keys(data).length > 0) {
-
-        // Fetch inventory data from view
-        response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-        const inventory = await response.json();
-
-        // Update Site Controller
-        try {
-          await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
-            method: 'POST',
+        const data = await response.json();
+        if (data && Object.keys(data).length > 0) {
+          response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(inventory),
+            }
           });
-          logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
-        } catch (siteControllerError) {
-          logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+          const inventory = await response.json();
+
+          try {
+            await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(inventory),
+            });
+            logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
+          } catch (siteControllerError) {
+            logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+          }
         }
       }
+    });
+
+    await devClient.query('LISTEN logs_reservation_changed');
+    await devClient.query('LISTEN reservation_log_inserted');
+    logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
+  } catch (error) {
+    logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
+  }
+
+  // --- Production database listener ---
+  // Ensure this block only runs if NODE_ENV is production, or if prod pool config is valid
+  if (process.env.NODE_ENV === 'production') { // Or condition to check if prodListenClient is valid
+    try {
+      const prodClient = await prodListenClient.connect();
+      prodClient.on('notification', async (msg) => {
+        if (msg.channel === 'logs_reservation_changed') {
+          logger.info('Notification received: logs_reservation_changed (prod)');
+          ioHttp.emit('tableUpdate', {
+            message: 'Reservation update detected',
+            environment: 'prod'
+          });
+        }
+        if (msg.channel === 'reservation_log_inserted') {
+          const logId = parseInt(msg.payload, 10);
+          logger.info('Notification received: reservation_log_inserted (prod)', { logId });
+
+          let response = null;
+          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const googleData = await response.json();
+          if (googleData && Object.keys(googleData).length > 0) {
+            const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
+            await fetch(`${baseUrl}/api/report/res/google/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+
+          response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          const data = await response.json();
+          if (data && Object.keys(data).length > 0) {
+            response = await fetch(`${baseUrl}/api/report/res/inventory/${data[0].hotel_id}/${data[0].check_in}/${data[0].check_out}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const inventory = await response.json();
+
+            try {
+              await fetch(`${baseUrl}/api/sc/tl/inventory/multiple/${data[0].hotel_id}/${logId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(inventory),
+              });
+              logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
+            } catch (siteControllerError) {
+              logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+            }
+          }
+        }
+      });
+      
+      await prodClient.query('LISTEN logs_reservation_changed');
+      await prodClient.query('LISTEN reservation_log_inserted');
+      logger.info('Listening for changes on logs_reservation_changed and reservation_log_inserted (prod)');
+    } catch (error) {
+      logger.error('Failed to connect to PROD database for LISTEN:', { errorMessage: error.message, stack: error.stack });
     }
-  });
-  
-  await prodClient.query('LISTEN logs_reservation_changed');
-  await prodClient.query('LISTEN reservation_log_inserted');
+  } else {
+    logger.info('Not listening to production database as NODE_ENV is not production.');
+  }
 };
+
 
 // Start listening for table changes
 listenForTableChanges();
