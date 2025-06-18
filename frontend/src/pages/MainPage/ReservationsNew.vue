@@ -1,35 +1,64 @@
 <template>
   <div class="p-2">
     <Card>
+      <template #title v-if="!isLoadingPermissions && !canCreateReservations">アクセスエラー</template>
       <template #content>
-        <div class="flex items-center justify-between mb-2">
-          <div class="justify-start">
-            <span class="font-bold text-xl">新規予約</span>
-          </div>
-          <div class="flex items-center">
-            <span class="mr-2">最適化モード</span>
-            <ToggleButton v-model="showMinimal" onLabel="オン" offLabel="オフ" size="small" class="min-w-16" />
-          </div>
+        <div v-if="isLoadingPermissions">
+          <p>権限を確認中...</p>
         </div>
-        <ReservationsNewMinimal v-if="showMinimal" />
-        <ReservationsNewCombo v-else />
+        <div v-else-if="canCreateReservations">
+          <div class="flex items-center justify-between mb-2">
+            <div class="justify-start">
+              <span class="font-bold text-xl">新規予約</span>
+            </div>
+            <div class="flex items-center">
+              <span class="mr-2">最適化モード</span>
+              <ToggleButton v-model="showMinimal" onLabel="オン" offLabel="オフ" size="small" class="min-w-16" />
+            </div>
+          </div>
+          <ReservationsNewMinimal v-if="showMinimal" />
+          <ReservationsNewCombo v-else />
+        </div>
+        <div v-else>
+          <p class="text-red-500 font-bold">予約作成の権限がありません。</p>
+          <p>管理者に連絡して権限をリクエストしてください。</p>
+        </div>
       </template>
     </Card>
-    </div>
+  </div>
 </template>
 
 <script setup>
   // Vue
-  import { ref } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import ReservationsNewMinimal from '@/pages/MainPage/components/ReservationsNewMinimal.vue';
   import ReservationsNewCombo from '@/pages/MainPage/components/ReservationsNewCombo.vue';
+
+  // Stores
+  import { useUserStore } from '@/composables/useUserStore';
 
   // Primevue
   import { Card, ToggleButton } from 'primevue';
 
+  const { logged_user, fetchUser } = useUserStore();
+  const isLoadingPermissions = ref(true);
+
+  const canCreateReservations = computed(() => {
+    if (isLoadingPermissions.value) {
+      return false; // Don't allow access while loading
+    }
+    return logged_user.value && logged_user.value.length > 0 && logged_user.value[0]?.permissions?.crud_ok === true;
+  });
+
+  onMounted(async () => {
+    await fetchUser();
+    isLoadingPermissions.value = false;
+  });
+
   const showMinimal = ref(false);
 
-  const toggleMinimal = () => {
-    showMinimal.value = !showMinimal.value;
-  };
+  // This function is not strictly necessary anymore as the toggle button handles its state directly
+  // const toggleMinimal = () => {
+  //   showMinimal.value = !showMinimal.value;
+  // };
 </script>
