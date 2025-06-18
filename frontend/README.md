@@ -12,13 +12,14 @@ This directory contains the frontend application for the Hotel Management System
 *   **@primeuix/themes:** Theming library for PrimeVue, ensuring a consistent look and feel.
 *   **primeicons:** Icon library specifically designed for PrimeVue components.
 *   **Tailwind CSS:** A utility-first CSS framework for rapid UI development.
+*   **PrimeVue & Tailwind CSS Interplay:** PrimeVue is used as the primary component library, providing a rich set of pre-built UI elements. Tailwind CSS is utilized for utility-first styling, allowing for rapid customization and fine-tuning of the appearance of components and layouts.
 *   **Axios:** A promise-based HTTP client for making API requests.
 *   **Socket.io-client:** Client-side library for real-time communication with the backend Socket.io server.
 *   **ECharts & vue-echarts:** A powerful charting and visualization library, along with its Vue integration component.
 *   **Papaparse:** A fast and powerful CSV (Comma Separated Values) parser, used for client-side data import.
 *   **Vue Router:** For client-side routing and navigation within the SPA.
 *   **uuid:** For generating unique identifiers (UUIDs) on the client-side.
-*   **Pinia (assumed, based on `composables/use*Store.js`):** Vue Store pattern, likely used for state management. (If not Pinia, then Vuex or custom composables for state).
+*   **State Management (Pinia):** The application uses Pinia for state management, as indicated by the composable store structure (e.g., `composables/useUserStore.js`).
 
 ## Setup and Installation
 
@@ -32,7 +33,9 @@ This directory contains the frontend application for the Hotel Management System
     ```
 3.  **Environment Variables:**
     *   Create a `.env` file in the `frontend` directory (i.e., `frontend/.env`) by copying `frontend/.env.example` if it exists, or creating it manually.
-    *   Add the following environment variables:
+    *   These variables are crucial for connecting the frontend to the backend services. They are grouped by their purpose:
+
+        **API and Socket URLs:**
         *   `VITE_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:3000/api`). This is used by Axios to make requests to the correct API endpoints.
         *   `VITE_SOCKET_URL`: The URL for the backend Socket.io server (e.g., `http://localhost:3000`). This is used by the Socket.io client to establish a real-time connection. It might be the same as the API's base URL (excluding `/api`) if served from the same host and port, or a different URL if the socket server is separate.
     *   Example `frontend/.env` file:
@@ -49,7 +52,7 @@ This directory contains the frontend application for the Hotel Management System
     ```bash
     npm run build
     ```
-    This command compiles and minifies the application for deployment into the `dist` directory.
+    This command compiles and minifies the application into the `dist` directory. This `dist` directory contains static assets (HTML, CSS, JavaScript) that can be deployed to any static web hosting service (like Netlify, Vercel, GitHub Pages) or served by a backend server (e.g., Node.js/Express, Apache, Nginx).
 
 ## Project Structure
 
@@ -59,7 +62,7 @@ The frontend codebase is organized as follows:
 *   **`src/`**: Contains the main source code for the Vue application.
     *   **`assets/`**: Static assets processed by Vite (e.g., images, global styles).
     *   **`components/`**: Reusable Vue components used across different pages.
-    *   **`composables/`**: Vue Composition API functions, often used for state management (e.g., `useUserStore.js`, `useHotelStore.js`) and reusable logic. These suggest a Pinia-like pattern or custom state management.
+    *   **`composables/`**: Vue Composition API functions. This is where Pinia stores (e.g., `useUserStore.js`, `useHotelStore.js`) are typically defined, providing a centralized state management solution. Also used for other reusable logic.
     *   **`pages/`**: Vue components that represent different pages or views of the application, organized by feature (e.g., `Admin`, `CRM`, `MainPage`, `Reporting`).
     *   **`router/`**: Contains the Vue Router configuration (`index.js`), defining the application's routes.
     *   **`App.vue`**: The root Vue component of the application.

@@ -47,31 +47,48 @@ This directory contains the backend API for the Hotel Management System. It is a
         *   `sql.sql` (main schema)
         *   `sql_logs.sql` (logging tables)
         *   `sql_triggers.sql` (database triggers)
-    *   **Note:** The `LOGIN_WITH_GOOGLE.md` guide refers to an additional `migration_script.sql` for Google Authentication specific database changes. Please verify its location (expected in `api/`) and apply if necessary for Google Sign-In functionality. This script was not found during the last automated review of the `api/` directory.
+    *   **Note:** An earlier version of documentation referred to a `migration_script.sql` for Google Authentication specific database changes. This script is not present in the current version of the `api/` directory. Google Authentication setup relies on the main SQL scripts (`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`) and environment variable configuration as detailed in `LOGIN_WITH_GOOGLE.md`.
 4.  **Environment Variables:**
     *   Create a `.env` file in the `api` directory (i.e., `api/.env`).
-    *   Add the following environment variables, adjusting values as necessary:
+    *   Populate the `.env` file with the following variables, adjusting values as necessary. Refer to `config/database.js`, `config/oauth.js`, `config/redis.js`, `config/session.js`, and `utils/emailUtils.js` for more context on their usage.
+
+        **Database:**
         *   `DB_USER`: PostgreSQL username
         *   `DB_HOST`: PostgreSQL host (e.g., `localhost`)
         *   `DB_DATABASE`: PostgreSQL database name
         *   `DB_PASSWORD`: PostgreSQL password
         *   `DB_PORT`: PostgreSQL port (e.g., `5432`)
-        *   `JWT_SECRET`: Secret key for signing JWTs
-        *   `REFRESH_TOKEN_SECRET`: Secret key for refresh tokens
+
+        **JWT (JSON Web Tokens):**
+        *   `JWT_SECRET`: Secret key for signing JWTs.
+        *   `REFRESH_TOKEN_SECRET`: Secret key for signing refresh tokens.
+
+        **Session Management:**
         *   `SESSION_SECRET`: Secret key for `express-session`, used for session management and OAuth state.
-        *   `EMAIL_HOST`: SMTP server host for sending emails
-        *   `EMAIL_PORT`: SMTP server port
-        *   `EMAIL_USER`: SMTP username
-        *   `EMAIL_PASS`: SMTP password
-        *   `GOOGLE_CLIENT_ID`: Google OAuth Client ID from Google Cloud Console.
-        *   `GOOGLE_CLIENT_SECRET`: Google OAuth Client Secret from Google Cloud Console.
-        *   `GOOGLE_CALLBACK_URL`: The "Authorized redirect URI" you configured in Google Cloud Console for the OAuth client (e.g., `http://localhost:3000/api/auth/google/callback`). This is where Google redirects after authentication.
-        *   `YOUR_WORKSPACE_DOMAIN`: Optional. If you want to restrict Google Sign-In to a specific Google Workspace domain, provide it here (e.g., `yourdomain.com`). This is used for the `hd` (hosted domain) parameter.
-        *   `REDIS_HOST`: Redis host (e.g., `localhost`)
-        *   `REDIS_PORT`: Redis port (e.g., `6379`)
-        *   `API_BASE_URL`: Base URL for the API itself (e.g., `http://localhost:3000/api`)
-        *   `FRONTEND_URL`: Base URL for the frontend application that will interact with this API (e.g., `http://localhost:5173`)
-    *   Refer to `config/database.js`, `config/oauth.js` (for Google settings), `config/redis.js`, `config/session.js` and `utils/emailUtils.js` for more context on these variables.
+
+        **Email (Nodemailer):**
+        *   `EMAIL_HOST`: SMTP server host for sending emails.
+        *   `EMAIL_PORT`: SMTP server port.
+        *   `EMAIL_USER`: SMTP username.
+        *   `EMAIL_PASS`: SMTP password.
+
+        **Google OAuth:**
+        *   `GOOGLE_CLIENT_ID`: Your Google OAuth Client ID from the Google Cloud Console.
+        *   `GOOGLE_CLIENT_SECRET`: Your Google OAuth Client Secret from the Google Cloud Console.
+        *   `GOOGLE_CALLBACK_URL`: The "Authorized redirect URI" you configured in Google Cloud Console for the OAuth client (e.g., `http://localhost:3000/api/auth/google/callback`). This is where Google redirects after successful authentication.
+        *   `YOUR_WORKSPACE_DOMAIN`: Optional. If you wish to restrict Google Sign-In to a specific Google Workspace domain (e.g., `yourdomain.com`), provide it here. This value is used for the `hd` (hosted domain) parameter in the Google OAuth flow.
+
+        **Redis:**
+        *   `REDIS_HOST`: Redis server host (e.g., `localhost`).
+        *   `REDIS_PORT`: Redis server port (e.g., `6379`).
+
+        **API & Frontend URLs:**
+        *   `API_BASE_URL`: The base URL for the API itself (e.g., `http://localhost:3000/api`). This is used for constructing self-referential URLs if needed.
+        *   `FRONTEND_URL`: The base URL of the frontend application that will interact with this API (e.g., `http://localhost:5173`). This is used for CORS configuration and potentially in email links.
+
+        **TL-Lincoln Integration (OTA):**
+        *   `XML_SYSTEM_ID`: Your system's unique identifier provided by TL-Lincoln.
+        *   `XML_REQUEST_URL`: The base URL for the TL-Lincoln API (e.g., `https://www.tl-lincoln.net/pmsservice/V1/`).
 5.  **Start the server:**
     *   For development (with automatic restarts via Nodemon):
         ```bash
@@ -120,3 +137,12 @@ The following environment variables must be set in the `.env` file:
 Hotel-specific credentials for TL-Lincoln (user ID and password) are stored in the `sc_user_info` database table. Each entry should be linked to the respective hotel and have the `name` field set to 'TL-リンカーン'.
 
 The system utilizes XML templates stored in the `xml_templates` database table to construct requests sent to TL-Lincoln. These templates are populated with the necessary credentials and dynamic data at runtime.
+
+## Troubleshooting
+
+If you encounter issues during setup or operation, first check the following:
+*   **Environment Variable Configuration:** Ensure all required environment variables in your `.env` file are correctly set for your specific environment. Pay close attention to database credentials, API keys, and service URLs.
+*   **Service Availability:** Verify that essential services like PostgreSQL and Redis are running and accessible to the API.
+*   **Logs:** Check the application logs for more specific error messages. If running in development mode (`npm run dev`), logs will typically appear in the console. For production deployments, check the configured log files or logging service.
+*   **Database Schema:** Confirm that all SQL scripts (`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`) have been executed successfully against your database.
+*   **Port Conflicts:** Ensure the port specified for the API (`SERVER_PORT`, defaulting to the port used by `npm start` or `npm run dev` if not set) is not already in use by another application.
