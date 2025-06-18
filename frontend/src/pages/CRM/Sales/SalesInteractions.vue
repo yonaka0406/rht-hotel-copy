@@ -264,7 +264,7 @@
 // Vue
 import { ref, computed, onMounted, watch } from "vue";
 // Import the new SalesActionDialog component
-import SalesActionDialog from './components/SalesActionDialog.vue';
+import SalesActionDialog from '../components/SalesActionDialog.vue';
 
 // Primevue
 import { Card, Dialog, InputText, DatePicker, Textarea, AutoComplete, Select, SelectButton, Button, DataTable, Column, Tag, ProgressSpinner, SplitButton } from 'primevue';

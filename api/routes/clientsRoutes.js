@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const clientsController = require('../controllers/clientsController'); // Import the whole controller
+const clientsController = require('../controllers/clientsController');
+const { handleGetClientProjects } = require('../controllers/projectsController');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageClients } = require('../middleware/authMiddleware');
 
 router.get('/client-list/:page', authMiddleware, clientsController.getClients);
@@ -25,10 +26,11 @@ router.delete('/client/address/del/:id', authMiddleware_manageClients, clientsCo
 
 // --- Client Relationship Routes ---
 router.get('/crm/common-relationship-pairs', authMiddleware, clientsController.handleGetCommonRelationshipPairs);
-router.get('/clients/legal-clients', authMiddleware, clientsController.handleGetLegalClients);
 router.get('/clients/:clientId/related', authMiddleware, clientsController.handleGetRelatedCompanies);
 router.post('/clients/:clientId/related', authMiddleware_manageClients, clientsController.handleAddClientRelationship);
 router.put('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleUpdateClientRelationship);
 router.delete('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleDeleteClientRelationship);
+
+router.get('/clients/:clientId/projects', authMiddleware, handleGetClientProjects);
 
 module.exports = router;

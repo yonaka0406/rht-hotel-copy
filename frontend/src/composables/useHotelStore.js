@@ -5,6 +5,7 @@ const selectedHotel = ref(null);
 const selectedHotelId = ref(null);
 const hotelRooms = ref([]);
 const hotelBlockedRooms = ref([]);
+const isLoadingHotelList = ref(false);
 
 export function useHotelStore() {
 
@@ -14,6 +15,7 @@ export function useHotelStore() {
 
     // Hotel
     const fetchHotels = async () => {
+        isLoadingHotelList.value = true;
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch('/api/hotel-list', {
@@ -35,6 +37,9 @@ export function useHotelStore() {
 
         } catch (error) {
             console.error('Failed to fetch hotels', error);
+            hotels.value = [];
+        } finally {
+            isLoadingHotelList.value = false;
         }
     };
     const fetchHotel = async () => {
@@ -220,6 +225,7 @@ export function useHotelStore() {
         selectedHotelId,
         selectedHotelRooms,
         hotelBlockedRooms,
+        isLoadingHotelList,
         setHotelId,
         fetchHotels,
         fetchHotel,

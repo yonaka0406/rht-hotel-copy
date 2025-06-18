@@ -225,6 +225,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const importRoutes = require('./routes/importRoutes');
 const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
 
 app.use('/api', protectedRoutes);
@@ -243,6 +244,7 @@ app.use('/api', settingsRoutes);
 app.use('/api', importRoutes);
 app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
+app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
 
 // API Error Handler
