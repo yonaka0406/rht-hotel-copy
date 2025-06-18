@@ -68,6 +68,10 @@
     const showDrawer = ref(false);
 
     // --- Computed Properties ---
+    const isReadOnly = computed(() => {
+        return logged_user.value && logged_user.value.length > 0 && logged_user.value[0]?.permissions?.crud_ok === false;
+    });
+
     const userGreeting = computed(() => {
         const now = new Date();
         const hour = now.getHours();

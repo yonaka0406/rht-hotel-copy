@@ -132,6 +132,20 @@ This document outlines common issues, preferred patterns, and best practices to 
 *   **Dropdown Component:** For dropdown selection lists, use PrimeVue's `<Select>` component (imported as `import Select from 'primevue/select';`). Note that `<Dropdown>` may be a name used in older PrimeVue versions or other libraries, but for this project (PrimeVue 4+), `<Select>` is the standard component.
 *   **Date Component:** For date selection, use PrimeVue's `<DatePicker>` component (imported as `import DatePicker from 'primevue/datepicker';`). Avoid using the older `<Calendar>` component, as it is deprecated in PrimeVue v4+.
 
+### 3.6. User Permissions and UI Behavior
+
+This section details how user permissions affect the user interface and what users can expect based on their access level.
+
+*   **Global Read-Only Indicator:**
+    *   If a user does not possess full CRUD (Create, Read, Update, Delete) capabilities, specifically if their `logged_user.value[0]?.permissions?.crud_ok` flag is `false`, a prominent "閲覧権限のみ" (Read-only access) message will be displayed.
+    *   This message appears in **red and bold text** in the top menu bar, typically after the user greeting.
+    *   This provides an immediate and persistent visual cue to the user regarding their restricted access level across the application.
+
+*   **Conditional Access to Reservation Creation:**
+    *   Users lacking the `crud_ok` permission are prevented from initiating the creation of new reservations. This restriction is enforced in the following ways:
+        *   **Calendar View:** When attempting to create a new reservation from the calendar interface (e.g., by double-clicking an empty cell, which would normally open a new reservation form), users without `crud_ok` permission will instead see a toast notification. This message will typically state "権限エラー" (Permission Error) with details like "予約作成の権限がありません。" (You do not have permission to create reservations.). The reservation creation drawer/modal will not open.
+        *   **New Reservation Page:** If a user without `crud_ok` permission navigates directly to the dedicated "New Reservation" page (usually found at a route like `/reservations/new`), the page will not display the standard reservation creation form. Instead, it will show an access error message. This message will typically be within a card titled "アクセスエラー" (Access Error) and state "予約作成の権限がありません。" (You do not have permission to create reservations.), often with a suggestion to contact an administrator.
+
 ## 4. General
 
 *   (More guidelines can be added here as they are identified)

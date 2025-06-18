@@ -272,6 +272,8 @@
   const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();  
   import { useReservationStore } from '@/composables/useReservationStore';
   const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
+  import { useUserStore } from '@/composables/useUserStore';
+  const { logged_user } = useUserStore();
 
   // Helper function
   const formatDate = (date) => {
@@ -538,6 +540,14 @@
   const selectedRoom = ref(null);
   const selectedDate = ref(null);
   const openDrawer = (roomId, date) => {
+    // Check for CRUD permissions before opening the drawer for a new reservation
+    if (!fillRoomInfo(roomId, date, dragMode.value === 'reorganizeRooms').reservation_id) {
+      if (!logged_user.value || !logged_user.value.length || logged_user.value[0]?.permissions?.crud_ok !== true) {
+        toast.add({ severity: 'warn', summary: '権限エラー', detail: '予約作成の権限がありません。', life: 3000 });
+        return;
+      }
+    }
+
     isUpdating.value = true; // Disable WebSocket updates
     selectedRoom.value = selectedHotelRooms.value.find(room => room.room_id === roomId);
     selectedDate.value = date;
