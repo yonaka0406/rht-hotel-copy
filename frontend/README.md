@@ -8,17 +8,18 @@ This directory contains the frontend application for the Hotel Management System
 
 *   **Vue.js (v3):** A progressive JavaScript framework for building user interfaces.
 *   **Vite:** A fast build tool and development server for modern web projects.
-*   **PrimeVue:** A comprehensive UI component library for Vue.js.
+*   **PrimeVue (v4.3.2+):** A comprehensive UI component library for Vue.js.
 *   **@primeuix/themes:** Theming library for PrimeVue, ensuring a consistent look and feel.
 *   **primeicons:** Icon library specifically designed for PrimeVue components.
-*   **Tailwind CSS:** A utility-first CSS framework for rapid UI development.
+*   **Tailwind CSS (v4.1.8+):** A utility-first CSS framework for rapid UI development.
+*   **PrimeVue & Tailwind CSS Interplay:** PrimeVue is used as the primary component library, providing a rich set of pre-built UI elements. Tailwind CSS is utilized for utility-first styling, allowing for rapid customization and fine-tuning of the appearance of components and layouts.
 *   **Axios:** A promise-based HTTP client for making API requests.
 *   **Socket.io-client:** Client-side library for real-time communication with the backend Socket.io server.
-*   **ECharts & vue-echarts:** A powerful charting and visualization library, along with its Vue integration component.
+*   **ECharts (v5.6.0+) & vue-echarts (v7.0.3+):** A powerful charting and visualization library, along with its Vue integration component.
 *   **Papaparse:** A fast and powerful CSV (Comma Separated Values) parser, used for client-side data import.
 *   **Vue Router:** For client-side routing and navigation within the SPA.
 *   **uuid:** For generating unique identifiers (UUIDs) on the client-side.
-*   **Pinia (assumed, based on `composables/use*Store.js`):** Vue Store pattern, likely used for state management. (If not Pinia, then Vuex or custom composables for state).
+*   **State Management:** Utilizes Vue's built-in reactivity and Composition API features (custom composable stores like `composables/useUserStore.js`) for managing application state.
 
 ## Setup and Installation
 
@@ -32,7 +33,9 @@ This directory contains the frontend application for the Hotel Management System
     ```
 3.  **Environment Variables:**
     *   Create a `.env` file in the `frontend` directory (i.e., `frontend/.env`) by copying `frontend/.env.example` if it exists, or creating it manually.
-    *   Add the following environment variables:
+    *   These variables are crucial for connecting the frontend to the backend services. They are grouped by their purpose:
+
+        **API and Socket URLs:**
         *   `VITE_API_BASE_URL`: The base URL for the backend API (e.g., `http://localhost:3000/api`). This is used by Axios to make requests to the correct API endpoints.
         *   `VITE_SOCKET_URL`: The URL for the backend Socket.io server (e.g., `http://localhost:3000`). This is used by the Socket.io client to establish a real-time connection. It might be the same as the API's base URL (excluding `/api`) if served from the same host and port, or a different URL if the socket server is separate.
     *   Example `frontend/.env` file:
@@ -49,7 +52,7 @@ This directory contains the frontend application for the Hotel Management System
     ```bash
     npm run build
     ```
-    This command compiles and minifies the application for deployment into the `dist` directory.
+    This command compiles and minifies the application into the `dist` directory. This `dist` directory contains static assets (HTML, CSS, JavaScript) that can be deployed to any static web hosting service (like Netlify, Vercel, GitHub Pages) or served by a backend server (e.g., Node.js/Express, Apache, Nginx).
 
 ## Project Structure
 
@@ -59,7 +62,7 @@ The frontend codebase is organized as follows:
 *   **`src/`**: Contains the main source code for the Vue application.
     *   **`assets/`**: Static assets processed by Vite (e.g., images, global styles).
     *   **`components/`**: Reusable Vue components used across different pages.
-    *   **`composables/`**: Vue Composition API functions, often used for state management (e.g., `useUserStore.js`, `useHotelStore.js`) and reusable logic. These suggest a Pinia-like pattern or custom state management.
+    *   **`composables/`**: Vue Composition API functions, used for state management (e.g., `useUserStore.js`, `useHotelStore.js`) and reusable logic.
     *   **`pages/`**: Vue components that represent different pages or views of the application, organized by feature (e.g., `Admin`, `CRM`, `MainPage`, `Reporting`).
     *   **`router/`**: Contains the Vue Router configuration (`index.js`), defining the application's routes.
     *   **`App.vue`**: The root Vue component of the application.
@@ -99,4 +102,26 @@ Key management features include:
 *   **Inventory Adjustment (在庫調整):** Tools to manage and synchronize room inventory/availability with TL-Lincoln (interacts with `otaInventory.vue`).
 
 These functionalities are primarily managed through the `ManageOTA.vue` page, which dynamically loads components like `otaRoomMaster.vue`, `otaPlanMaster.vue`, and `otaInventory.vue`. The `useXMLStore.js` composable handles state and communication with the backend API for these OTA operations.
+
+## UI Guidelines and Key Behaviors
+
+This section outlines important UI/UX conventions and specific behaviors implemented in the frontend.
+
+### Language
+*   **Language:** All user-facing UI text *must* be in Japanese. This includes labels, button text, table headers, placeholders, titles, and all messages (confirmations, errors, notifications). This applies to all new and modified components.
+
+### User Permissions Indicator
+*   **User Permissions Indicator:** Users with read-only access (i.e., lacking full CRUD permissions, specifically if their `logged_user.value[0]?.permissions?.crud_ok` flag is `false`) will see a red '閲覧者' (Viewer) tag next to their name in the top menu bar. This provides a persistent visual cue of their restricted access. Additionally, such users will be prevented from accessing reservation creation functions (e.g., via calendar or direct navigation), typically receiving a 'Permission Error' notification.
+
+### Charting
+*   **Charting:** ECharts is the standard library for all data visualizations. Avoid using other charting libraries to maintain consistency.
+
+### Key Component Usage
+*   **Key Component Usage:** Refer to `instructions.md` for specific guidelines on using PrimeVue components like `<FloatLabel>`, `<Select>`, `<DatePicker>`, form layouts with Tailwind CSS, and dialogs.
+
+## Development Guidelines and Best Practices
+
+For detailed coding guidelines, component usage conventions, specific patterns to follow (like `requestId` handling in the backend or UI component best practices in the frontend), and other essential best practices for this project, please consult the **`instructions.md`** file located in the root of this repository.
+
+It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
 ```

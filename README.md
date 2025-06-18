@@ -1,5 +1,21 @@
 # Hotel Management System
 
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Technologies Used](#technologies-used)
+- [Setup and Installation](#setup-and-installation)
+  - [Prerequisites](#prerequisites)
+  - [Backend Setup](#backend-setup)
+  - [Frontend Setup](#frontend-setup)
+  - [Database Setup](#database-setup)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Project Overview
 
 This project is a comprehensive Hotel Management System designed to streamline various aspects of hotel operations. It includes a backend API for managing data and a frontend interface for user interaction. The system supports functionalities from reservations and client management to billing and reporting, with additional capabilities like OTA (Online Travel Agency) integration.
@@ -74,17 +90,19 @@ This project is a comprehensive Hotel Management System designed to streamline v
 * PostgreSQL
 * Redis (Ensure a Redis server is running)
 
-**Backend (API):**
-1. Navigate to the `api` directory: `cd api`
-2. Install dependencies: `npm install`
-3. Set up the PostgreSQL database:
+**Database Setup:**
+1. Set up the PostgreSQL database:
     * Create a PostgreSQL database (e.g., `hotel_system_db`).
     * Connect to your database and execute the SQL scripts located in the `api/` directory in the following order:
         * `sql.sql` (for main schema and tables)
         * `sql_logs.sql` (for logging tables)
         * `sql_triggers.sql` (for database triggers)
     * **Note:** The `api/LOGIN_WITH_GOOGLE.md` guide may refer to an additional `migration_script.sql` for Google Authentication specific database changes. Please verify its location within the `api/` directory and apply if necessary for Google Sign-In functionality.
-4. Configure environment variables:
+
+**Backend Setup (API):**
+1. Navigate to the `api` directory: `cd api`
+2. Install dependencies: `npm install`
+3. Configure environment variables:
     * Create a `.env` file in the `api` directory by copying or renaming `.env.example` if it exists.
     * Populate the `.env` file with necessary environment variables, including:
         * `DB_USER`, `DB_HOST`, `DB_DATABASE`, `DB_PASSWORD`, `DB_PORT`
@@ -100,9 +118,9 @@ This project is a comprehensive Hotel Management System designed to streamline v
         * `SERVER_PORT` (e.g., 3000)
         * `API_BASE_URL` (e.g., `http://localhost:3000/api`)
         * `FRONTEND_URL` (e.g., `http://localhost:5173`)
-5. Start the backend server: `npm start` (for production/daemon) or `npm run dev` (for development with Nodemon, if configured).
+4. Start the backend server: `npm start` (for production/daemon) or `npm run dev` (for development with Nodemon, if configured).
 
-**Frontend:**
+**Frontend Setup:**
 1. Navigate to the `frontend` directory: `cd frontend`
 2. Install dependencies: `npm install`
 3. Configure environment variables:
@@ -139,10 +157,16 @@ For specific instructions on setting up and using Google login, refer to the gui
 *   `package.json`: Root level `package.json`. It may manage workspace dependencies or define top-level scripts for coordinating frontend/backend tasks.
 *   **Note:** The root directory also contains several other `.md` files such as `data_aggregation_strategies_postgresql.md`, `key_reservation_metrics_recommendations.md`, and `multi_hotel_presentation_strategy.md` which may contain further design and architectural notes.
 
+## Development Guidelines and Best Practices
+
+For detailed coding guidelines, component usage conventions, specific patterns to follow (like `requestId` handling in the backend or UI component best practices in the frontend), and other essential best practices for this project, please consult the **`instructions.md`** file located in the root of this repository.
+
+It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
+
 ## Contributing
 
-Information on contributing to this project will be updated here soon. Please check back later or contact the maintainers for details.
+[Details to be added by project maintainers]
 
 ## License
 
-The project license details will be updated here soon.
+[Details to be added by project maintainers]
