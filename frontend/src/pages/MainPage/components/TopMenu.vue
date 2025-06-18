@@ -3,7 +3,7 @@
         <!-- Left Section -->
         <template #start>
             <div class="flex items-center gap-4">                
-                <span class="ml-4">{{ userGreeting }}</span>
+                <span class="ml-4" v-html="userGreeting"></span>
             </div>
         </template>
         <!-- Right Section -->
@@ -80,13 +80,19 @@
                         ? logged_user.value[0].name
                         : 'User'; // Default name if not available or structure is different
 
+        let greetingText;
         if (hour >= 5 && hour < 10) {
-            return `おはようございます、${userName}`; // Good morning (5:00 AM - 9:59 AM)
+            greetingText = `おはようございます、${userName}`; // Good morning (5:00 AM - 9:59 AM)
         } else if (hour >= 10 && hour < 17) {
-            return `こんにちは、${userName}`; // Good afternoon (10:00 AM - 4:59 PM)
+            greetingText = `こんにちは、${userName}`; // Good afternoon (10:00 AM - 4:59 PM)
         } else {
-            return `こんばんは、${userName}`; // Good evening (5:00 PM - 4:59 AM)
+            greetingText = `こんばんは、${userName}`; // Good evening (5:00 PM - 4:59 AM)
         }
+
+        if (isReadOnly.value) {
+            greetingText += ` <small style="color: red; margin-left: 8px;">閲覧者</small>`;
+        }
+        return greetingText;
     });
 
     // Computed property for dynamic severity string based on notification count    

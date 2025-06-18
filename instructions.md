@@ -137,8 +137,8 @@ This document outlines common issues, preferred patterns, and best practices to 
 This section details how user permissions affect the user interface and what users can expect based on their access level.
 
 *   **Global Read-Only Indicator:**
-    *   If a user does not possess full CRUD (Create, Read, Update, Delete) capabilities, specifically if their `logged_user.value[0]?.permissions?.crud_ok` flag is `false`, a prominent "閲覧権限のみ" (Read-only access) message will be displayed.
-    *   This message appears in **red and bold text** in the top menu bar, typically after the user greeting.
+    *   If a user does not possess full CRUD (Create, Read, Update, Delete) capabilities, specifically if their `logged_user.value[0]?.permissions?.crud_ok` flag is `false`, a "閲覧者" (Viewer/Browser) text will be displayed.
+    *   This text appears in a small, red tag (rendered via a `<small>` HTML tag with red styling) directly next to the user's name within the greeting message (e.g., "こんにちは、User Name <small style='color: red;'>閲覧者</small>") in the top menu bar.
     *   This provides an immediate and persistent visual cue to the user regarding their restricted access level across the application.
 
 *   **Conditional Access to Reservation Creation:**
