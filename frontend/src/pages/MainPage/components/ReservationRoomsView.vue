@@ -555,7 +555,7 @@
     const formatDateWithDay = (date) => {
         const options = { weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' };
         const parsedDate = new Date(date);
-        return `${parsedDate.toLocaleDateString(undefined, options)}`;
+        return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
     };
     const formatCurrency = (value) => {
         if (value == null) return '';
@@ -831,7 +831,7 @@
         const generateAddonPreview = () => {
             // Check
             if(!selectedAddonOption.value){
-                toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
+                toast.add({ severity: 'warn', summary: '警告', detail: 'アドオン選択されていません。', life: 3000 });
                 return
             }
 
@@ -867,11 +867,11 @@
                 closeRoomEditDialog();
     
                 // Provide feedback to the user
-                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
                 
             } catch (error) {
                 console.error('Failed to apply changes:', error);                
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+                toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
             }
         };
         const applyPatternChanges = async () => {
@@ -887,11 +887,11 @@
                 closeRoomEditDialog();
     
                 // Provide feedback to the user
-                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
                 
             } catch (error) {
                 console.error('Failed to apply changes:', error);                
-                toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+                toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
             }
         };
 
@@ -911,11 +911,11 @@
         });
         const applyRoomChanges = async () => {
             if(numberOfPeopleToMove.value <= 0) {
-                toast.add({ severity: 'warn', summary: 'Warning', detail: `少なくとも一人入力してください。`, life: 3000 });
+                toast.add({ severity: 'warn', summary: '警告', detail: `少なくとも一人入力してください。`, life: 3000 });
                 return;                        
             }
             if(targetRoom.value === null) {
-                toast.add({ severity: 'warn', summary: 'Warning', detail: `部屋を選択してください。`, life: 3000 });
+                toast.add({ severity: 'warn', summary: '警告', detail: `部屋を選択してください。`, life: 3000 });
                 return;                        
             }
 
@@ -932,7 +932,7 @@
             closeRoomEditDialog();
 
             // Provide feedback to the user (optional)                
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
         };
 
         // Tab Set Clients
@@ -1058,7 +1058,7 @@
             if (guestCount > number_of_people) {
                 toast.add({
                     severity: 'warn',
-                    summary: 'Warning',
+                    summary: '警告',
                     detail: `予約の宿泊人数を超えています。 (最大: ${number_of_people}人)`,
                     life: 3000
                 });
@@ -1075,27 +1075,27 @@
             }            
 
             if (hasDuplicates) {
-                toast.add({ severity: 'warn', summary: 'Warning', detail: `重複宿泊者:${duplicatedGuest.value.name}が選択されました。`, life: 3000 });
+                toast.add({ severity: 'warn', summary: '警告', detail: `重複宿泊者:${duplicatedGuest.value.name}が選択されました。`, life: 3000 });
                 return;
             } else {                
                 // console.log('No duplicates found, checking fields...');
                 for (const guest of guests.value) {
                     if (guest.name) {
                         if(!guest.email && !guest.phone){                        
-                            toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
+                            toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
                             return;                        
                         }
                         if(guest.email){
                             const emailValid = validateEmail(guest.email);                        
                             if (!emailValid) {
-                                toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
+                                toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
                                 return;
                             }
                         }
                         if(guest.phone){
                             const phoneValid = validatePhone(guest.phone);
                             if (!phoneValid) {
-                                toast.add({ severity: 'warn', summary: 'Warning', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
+                                toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
                                 return;
                             }
                         }
@@ -1123,7 +1123,7 @@
                                 
                 closeRoomEditDialog();
                 
-                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });                
+                toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
             }
         };
 
@@ -1140,7 +1140,7 @@
             closeRoomEditDialog();
 
             // Provide feedback to the user
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
         };
         const changeGuestNumber = async (group, mode) => {
             // Add operation_mode to each detail in the group
@@ -1152,10 +1152,10 @@
                 const response = await changeReservationRoomGuestNumber(group.details[0].reservation_id, group);
 
                 // Provide feedback to the user
-                toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+                toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
             } catch (error) {
                 console.error('Error updating reservation details:', error);
-                toast.add({ severity: 'error', summary: 'Error', detail: '予約明細の更新に失敗しました。', life: 3000 });
+                toast.add({ severity: 'error', summary: 'エラー', detail: '予約明細の更新に失敗しました。', life: 3000 });
             }            
         };
 
@@ -1170,7 +1170,7 @@
             if (!newCheckIn.value) {
                 toast.add({
                     severity: 'warn',
-                    summary: 'Warning',
+                    summary: '警告',
                     detail: `チェックイン日を指定してください。`,
                     life: 3000
                 });
@@ -1179,7 +1179,7 @@
             if (!newCheckOut.value) {
                 toast.add({
                     severity: 'warn',
-                    summary: 'Warning',
+                    summary: '警告',
                     detail: `チェックアウト日を指定してください。`,
                     life: 3000
                 });
@@ -1188,7 +1188,7 @@
             if (newCheckOut.value <= newCheckIn.value) {
                 toast.add({
                     severity: 'warn',
-                    summary: 'Warning',
+                    summary: '警告',
                     detail: `チェックアウト日がチェックイン日以前になっています。`,
                     life: 3000
                 });
@@ -1208,7 +1208,7 @@
 
             closeRoomEditDialog();
 
-            toast.add({ severity: 'success', summary: 'Success', detail: '部屋の宿泊期間が更新されました。', life: 3000 });  
+            toast.add({ severity: 'success', summary: '成功', detail: '部屋の宿泊期間が更新されました。', life: 3000 });
             
         };
     

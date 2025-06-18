@@ -678,7 +678,8 @@
         }
         
         // console.log(reservationDetails.value, consolidatedCombos.value);
-        const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);        
+        const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);
+        toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
         await fetchMyHoldReservations();
         await goToEditReservationPage(reservation.reservation.id); 
         reservationCombos.value = [];

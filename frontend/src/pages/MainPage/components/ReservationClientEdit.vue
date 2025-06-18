@@ -320,14 +320,14 @@
         // console.log('saveClient:',clientDetails.value);
         await updateClientInfo(clientDetails.value.id, clientDetails.value);
         await setReservationClient(clientDetails.value.id);          
-        toast.add({ severity: 'success', summary: 'Success', detail: '予約者が編集されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '予約者が編集されました。', life: 3000 });
       } else {
         // console.log('newClient:',clientDetails.value);
         const newClient = await createClient(clientDetails.value);
         // console.log(newClient);
         // console.log('New client id:', newClient.id);
         await setReservationClient(newClient.id);          
-        toast.add({ severity: 'success', summary: 'Success', detail: '新規予約者が登録されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '新規予約者が登録されました。', life: 3000 });
       }
     };
     const onClientChange = async (event) => {

@@ -705,11 +705,11 @@
             await setReservationType(selectedType);
 
             // Handle success, e.g., show a success message
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約種類更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約種類更新されました。', life: 3000 });
             
         } catch (error) {
             console.error('Error updating reservation type:', error);
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update reservation type.', life: 3000 });
+            toast.add({ severity: 'error', summary: 'エラー', detail: '予約タイプの更新に失敗しました。', life: 3000 });
         }
     };
 
@@ -731,7 +731,7 @@
         if (!allRoomsHavePlan.value) {                                
             toast.add({ 
                 severity: 'warn', 
-                summary: 'Warn', 
+                summary: '警告',
                 detail: '部屋の予約にプランを追加してください。', life: 3000 
             });
             return; 
@@ -810,7 +810,7 @@
                     setReservationStatus(status);                   
                     toast.add({
                         severity: 'success',
-                        summary: 'Success',
+                        summary: '成功',
                         detail: `復活されました。`,
                         life: 3000
                     });
@@ -857,7 +857,7 @@
                 deleteHoldReservation(reservation_id);                    
                 toast.add({
                     severity: 'success',
-                    summary: 'Success',
+                    summary: '成功',
                     detail: `保留中予約削除されました。`,
                     life: 3000
                 });                
@@ -909,11 +909,11 @@
     // Check-in and Check-out
     const checkInChange = async (event) => {        
         await setReservationTime('in', reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, formatTime(event));
-        toast.add({ severity: 'success', summary: 'Success', detail: `チェックイン時刻を${formatTime(event)}に更新されました。`, life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: `チェックイン時刻を${formatTime(event)}に更新されました。`, life: 3000 });
     }
     const checkOutChange = async (event) => {
         await setReservationTime('out', reservationInfo.value.reservation_id, reservationInfo.value.hotel_id, formatTime(event));
-        toast.add({ severity: 'success', summary: 'Success', detail: `チェックアウト時刻を${formatTime(event)}に更新されました。`, life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: `チェックアウト時刻を${formatTime(event)}に更新されました。`, life: 3000 });
     }
 
     // Comment update
@@ -967,11 +967,11 @@
     };
     const applyReservationRoomChanges = async () => {
         if(numberOfPeopleToMove.value <= 0) {
-            toast.add({ severity: 'warn', summary: 'Warning', detail: `少なくとも一人入力してください。`, life: 3000 });
+            toast.add({ severity: 'warn', summary: '警告', detail: `少なくとも一人入力してください。`, life: 3000 });
             return;                        
         }
         if(targetRoom.value === null) {
-            toast.add({ severity: 'warn', summary: 'Warning', detail: `部屋を選択してください。`, life: 3000 });
+            toast.add({ severity: 'warn', summary: '警告', detail: `部屋を選択してください。`, life: 3000 });
             return;                        
         }
 
@@ -987,7 +987,7 @@
 
         closeAddRoomDialog();
             
-        toast.add({ severity: 'success', summary: 'Success', detail: '部屋追加されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '部屋追加されました。', life: 3000 });
 
     };
 
@@ -1170,11 +1170,11 @@
             closeReservationBulkEditDialog();
 
             // Provide feedback to the user
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
             
         } catch (error) {
             console.error('Failed to apply changes:', error);                
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+            toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
         }
     };
     const applyPatternChangesToAll = async () => {
@@ -1187,11 +1187,11 @@
             closeReservationBulkEditDialog();
 
             // Provide feedback to the user
-            toast.add({ severity: 'success', summary: 'Success', detail: '予約明細が更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
             
         } catch (error) {
             console.error('Failed to apply changes:', error);                
-            toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to apply changes.', life: 3000 });
+            toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
         }
     };
 
@@ -1206,7 +1206,7 @@
         if (!newCheckIn.value) {
             toast.add({
                 severity: 'warn',
-                summary: 'Warning',
+                summary: '警告',
                 detail: `チェックイン日を指定してください。`,
                 life: 3000
             });
@@ -1215,7 +1215,7 @@
         if (!newCheckOut.value) {
             toast.add({
                 severity: 'warn',
-                summary: 'Warning',
+                summary: '警告',
                 detail: `チェックアウト日を指定してください。`,
                 life: 3000
             });
@@ -1224,7 +1224,7 @@
         if (newCheckOut.value <= newCheckIn.value) {
             toast.add({
                 severity: 'warn',
-                summary: 'Warning',
+                summary: '警告',
                 detail: `チェックアウト日がチェックイン日以前になっています。`,
                 life: 3000
             });
@@ -1248,7 +1248,7 @@
         
         closeReservationBulkEditDialog();
 
-        toast.add({ severity: 'success', summary: 'Success', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });  
+        toast.add({ severity: 'success', summary: '成功', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });
         
     };
 
