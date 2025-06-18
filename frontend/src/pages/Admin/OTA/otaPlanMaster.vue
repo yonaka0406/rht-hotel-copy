@@ -75,11 +75,11 @@
             await insertTLPlanMaster(updatedFilteredData);
             toast.add({severity: 'success', summary: '成功', detail: 'プランマスター保存されました。', life: 3000});
         } catch (error) {
-            console.error('Failed to save plan master:', error);
+            console.error('プランマスターの保存失敗:', error);
             toast.add({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save plan master',
+                summary: 'エラー',
+                detail: 'プランマスターの保存に失敗しました',
                 life: 3000,
             });
         }
@@ -138,11 +138,10 @@
 
         roomTypes.value = await fetchPlansForHotel(props.hotel_id);        
         
-        console.log('onMounted planMaster', planMaster.value);
-        console.log('onMounted plans', plans.value);
+        console.log('onMounted プランマスター', planMaster.value);
+        console.log('onMounted プラン', plans.value);
         
         
     });
 
 </script>
-

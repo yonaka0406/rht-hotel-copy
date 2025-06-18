@@ -310,7 +310,7 @@
               :options="globalPlans"
               optionLabel="name"
               optionValue="id"
-              placeholder="Select a Global Plan"
+              placeholder="グローバルプランを選択"
               class="w-full"
               showClear
               filter
@@ -454,8 +454,8 @@
       if (PlanSet.has(newGlobalPlan.name)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
-          detail: 'Plan name must be unique', life: 3000 
+          summary: 'エラー',
+          detail: 'プラン名はユニークである必要があります。', life: 3000
         });
         return;
       }
@@ -472,10 +472,10 @@
         plan_type: 'per_room',
         colorHEX: 'D3D3D3' 
       };
-      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'グローバルプラン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error saving global plan:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global plan', life: 3000 });
+      console.error('グローバルプランの保存エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルプランの保存に失敗しました', life: 3000 });
     }
   };
   const updateGlobal = async () => {            
@@ -489,8 +489,8 @@
       if (PlanSet.has(editGlobalPlan.name)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
-          detail: 'Plan name must be unique', life: 3000 
+          summary: 'エラー',
+          detail: 'プラン名はユニークである必要があります。', life: 3000
         });
         return;
       }
@@ -507,10 +507,10 @@
         description: '',
         colorHEX: 'D3D3D3'            
       };
-      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルプラン更新されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'グローバルプラン更新されました。', life: 3000 });
     } catch (err) {
-      console.error('Error updating global plan:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global plan', life: 3000 });
+      console.error('グローバルプランの更新エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルプランの更新に失敗しました', life: 3000 });
     }
   };
 
@@ -563,8 +563,8 @@
       if (PlanSet.has(newPlanKey)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
-          detail: 'Plan name must be unique for the selected hotel', life: 3000 
+          summary: 'エラー',
+          detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
         });
         return;
       }
@@ -582,10 +582,10 @@
         colorHEX: 'D3D3D3', 
         plans_global_id: null 
       };
-      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error saving hotel plan:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel plan', life: 3000 });
+      console.error('ホテルプランの保存エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの保存に失敗しました', life: 3000 });
     }
   };
   const updateHotel = async () => {
@@ -603,8 +603,8 @@
       if (PlanSet.has(newPlanKey)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
-          detail: 'Plan name must be unique for the selected hotel', life: 3000 
+          summary: 'エラー',
+          detail: '選択したホテルに対してプラン名はユニークである必要があります。', life: 3000
         });
         return;
       }
@@ -623,10 +623,10 @@
         description: '',
         colorHEX: 'D3D3D3'
       };
-      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルプラン更新されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルプラン更新されました。', life: 3000 });
     } catch (err) {
-      console.error('Error updating hotel plan:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel plan', life: 3000 });
+      console.error('ホテルプランの更新エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルプランの更新に失敗しました', life: 3000 });
     }
   };
       

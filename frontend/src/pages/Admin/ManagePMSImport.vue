@@ -193,7 +193,7 @@
         const room = selectedHotelRooms.value.find(r => r.room_number * 1 === roomNumber * 1);
         if(room){return room.room_id;}
 
-        console.log('Unknown room number:', roomNumber);
+        console.log('不明な部屋番号:', roomNumber);
         return null;
     };
     const getPlanId = (planName) => {        
@@ -217,7 +217,7 @@
         if(planName.includes("3食")){return 4;}
         if(planName.includes("荷物")){return 5;}
         
-        console.log('Unknown plan name:', planName);
+        console.log('不明なプラン名:', planName);
         return null;        
     };
     const getPaymentTypeId = (paymentType, paymentName) => {
@@ -231,7 +231,7 @@
         }
         if(paymentName === '割引'){return 6;}        
         
-        console.log('Unknown payment type:', paymentType, paymentName);
+        console.log('不明な支払いタイプ:', paymentType, paymentName);
         return null;        
     };
     const getAddonId = (addonName) => {        
@@ -240,7 +240,7 @@
         if(addonName.includes("駐車場")){return 3;}
         if(addonName.includes("弁当")){return 4;}
         
-        console.log('Unknown addon name:', addonName);
+        console.log('不明なアドオン名:', addonName);
         return null;        
     };
     const getAddonType = (addonName) => {        
@@ -249,7 +249,7 @@
         if(addonName.includes("駐車場")){return 'other';}
         if(addonName.includes("弁当")){return 'other';}
         
-        console.log('Unknown addon type:', addonName);
+        console.log('不明なアドオンタイプ:', addonName);
         return null;        
     };    
     const isLegalPerson = (name) => {
@@ -292,12 +292,12 @@
                         }));
                         }
                         loading.value = false;                        
-                        toast.add({ severity: 'success', summary: 'Success', detail: 'CSVファイルアップロードされました!', life: 4000 });
+                        toast.add({ severity: 'success', summary: '成功', detail: 'CSVファイルアップロードされました!', life: 4000 });
                     },
                     error: (error) => {
                         loading.value = false;
-                        toast.add({ severity: 'error', summary: 'Error', detail: 'Error parsing CSV file.', life: 3000 });
-                        console.error('CSV Parsing Error:', error);
+                        toast.add({ severity: 'error', summary: 'エラー', detail: 'CSVファイルの解析中にエラーが発生しました。', life: 3000 });
+                        console.error('CSV解析エラー:', error);
                     }
                 });
             };
@@ -667,7 +667,7 @@
 
     // Database
     const databaseAction = async () => {
-        console.log('yadomasterReservationsSQL:', yadomasterReservationsSQL.value);
+        console.log('Yadomaster予約SQL:', yadomasterReservationsSQL.value);
         // Validation
         let hasErrors = false;
         let errorMessage = "";
@@ -727,7 +727,7 @@
                 addReservations(yadomasterReservationsSQL.value);                
                 toast.add({
                     severity: 'success',
-                    summary: 'Success',
+                    summary: '成功',
                     detail: `データベースインポート操作されました。`,
                     life: 3000
                 });
@@ -823,7 +823,7 @@
                 await yadomasterAddReservationRates(chunk);
             }
         } catch (error) {
-            console.error("Database operation failed during import:", error);
+            console.error("インポート中のデータベース操作に失敗しました:", error);
             toast.add({
                 severity: 'error',
                 summary: 'インポートエラー',
@@ -849,7 +849,7 @@
         payments: []
     });
     const openDialog = (reservation) => {
-        console.log('openDialog:', reservation);
+        console.log('ダイアログを開く:', reservation);
         selectedReservation.value = {
             ...reservation,
             details: reservation.details || [],
@@ -859,7 +859,7 @@
         isDialogVisible.value = true;
     };
     const showLogs = () => {
-        console.log('yadomasterReservationsSQL:', yadomasterReservationsSQL.value);        
+        console.log('Yadomaster予約SQL:', yadomasterReservationsSQL.value);
     };
 
     onMounted(async () => {

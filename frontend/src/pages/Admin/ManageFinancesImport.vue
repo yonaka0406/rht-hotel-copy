@@ -201,7 +201,7 @@
     
         // Generate data rows
         if (!hotels.value || hotels.value.length === 0) {
-            console.warn('Hotel data is not available for CSV generation.');
+            console.warn('CSV生成のためのホテルデータが利用できません。');
             return "";
         }
         hotels.value.forEach(hotel => {
@@ -268,7 +268,7 @@
         // This is a simplified parser.
         const lines = csvText.trim().split('\n');
         if (lines.length < 2) {
-            throw new Error("CSV data is too short or invalid.");
+            throw new Error("CSVデータが短すぎるか、無効です。");
         }
 
         const headerLine = lines[0].trim();        
@@ -336,7 +336,7 @@
                     // Set the value using the English key
                     hotelMonthDataMap[mapKey][englishKey] = value;
                 } else {
-                    console.warn(`Unknown budget_item from CSV: '${budgetItemFromCsv}' for hotel ${hotelId}, month ${monthString}. No English key mapping found.`);
+                    console.warn(`CSVからの不明な予算項目: '${budgetItemFromCsv}' ホテルID ${hotelId}, 月 ${monthString}. 対応する英語キーが見つかりません。`);
                 }
             });
         }
@@ -348,7 +348,7 @@
         // Try to parse the date in various formats, fallback if needed
         const parsed = new Date(input);
         if (isNaN(parsed)) {
-            console.warn(`Invalid month string: ${input}`);
+            console.warn(`無効な月文字列: ${input}`);
             return input; // fallback: return the raw input
         }
 
@@ -413,10 +413,10 @@
                         toast.add({ severity: 'success', summary: '成功', detail: `${typeText}データがアップロードされました。`, life: 3000 });
                         resolvePromise();
                     } else {
-                        throw new Error("APIアップロード失敗");
+                        throw new Error("APIアップロードに失敗しました");
                     }
                 } catch (error) {
-                    console.error(`Error processing or uploading ${type} file:`, error);
+                    console.error(`${type}ファイルの処理中またはアップロード中にエラーが発生しました:`, error);
                     statusRef.value = { message: `${typeText}データ「${file.name}」の処理中またはアップロード中にエラーが発生しました: ${error.message}`, type: 'error' };
                     toast.add({ severity: 'error', summary: 'エラー', detail: 'アップロードに失敗しました。', life: 5000 });
                     rejectPromise(error);
@@ -424,7 +424,7 @@
             };
 
             reader.onerror = (error) => {
-                console.error("Error reading file:", error);
+                console.error("ファイル読み取りエラー:", error);
                 statusRef.value = { message: `ファイル読み取りエラー: ${file.name}`, type: 'error' };
                 toast.add({ severity: 'error', summary: 'ファイルエラー', detail: 'ファイルの読み取りに失敗しました。', life: 3000 });
                 if (event.options && typeof event.options.clear === 'function') {

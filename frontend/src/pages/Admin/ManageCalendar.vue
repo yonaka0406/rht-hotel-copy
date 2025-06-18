@@ -130,7 +130,7 @@
     const formatDate = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
             console.error("Invalid Date object:", date);
-            throw new Error("The provided input is not a valid Date object:");
+            throw new Error("提供された入力は有効なDateオブジェクトではありません:");
         }
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");

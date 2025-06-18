@@ -99,7 +99,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="flex flex-col items-center">
                             <p class="font-semibold mb-2">現在の印鑑</p>
-                            <Image :src="currentStampImageUrl" alt="Company Stamp" width="150" preview />
+                            <Image :src="currentStampImageUrl" alt="会社印鑑" width="150" preview @load="handleStampImageLoad" @error="handleStampImageError" />
                             <small v-if="!currentStampImageUrl" class="mt-2">アップロードされていません</small>
                         </div>
                         <div class="flex flex-col items-center justify-center">
@@ -191,7 +191,7 @@
             </div>
             <div class="col-span-2 mb-4">
                 <FloatLabel>
-                    <Textarea v-model="newPaymentData.description" fluid />
+                    <Textarea v-model="newTaxData.description" fluid />
                     <label>詳細</label>
                 </FloatLabel>                
             </div>             
@@ -247,7 +247,7 @@
                 stampImageLoaded.value = false; // Explicitly set if no URL
             }
         } catch (error) {
-            console.error("Failed to get stamp image URL from store:", error);
+            console.error("ストアからの会社印鑑URL取得失敗:", error);
             currentStampImageUrl.value = ''; // Clear or set to placeholder on error
             stampImageLoaded.value = false;
             toast.add({ severity: 'error', summary: '印鑑取得エラー', detail: error.message || '印鑑画像の読み込みに失敗しました。', life: 3000 });
@@ -261,7 +261,7 @@
     const handleStampImageError = () => {
         // This means the image at currentStampImageUrl (likely /api/components/stamp.png)
         // could not be loaded. It might not exist, or there was a server error.
-        console.warn('Failed to load company stamp image from:', currentStampImageUrl.value);
+        console.warn('会社印鑑画像の読み込み失敗 元URL:', currentStampImageUrl.value);
         stampImageLoaded.value = false;
         // currentStampImageUrl.value = ''; // Optionally clear the URL if it's known to be invalid
     };
@@ -330,7 +330,7 @@
                 fileInputRef.value.value = ''; 
             }
         } catch (error) {
-            console.error("Stamp upload error (from component):", error);
+            console.error("印鑑アップロードエラー (コンポーネントより):", error);
             toast.add({ severity: 'error', summary: 'アップロード失敗', detail: error.message || '不明なエラーが発生しました。', life: 4000 });
         } finally {
             isLoading.value = false;

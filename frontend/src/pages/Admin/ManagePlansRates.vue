@@ -705,7 +705,7 @@
             if (newAdjustment.value.date_end && new Date(newAdjustment.value.date_end) < new Date(newAdjustment.value.date_start)) {                    
                 toast.add({ 
                     severity: 'error', 
-                    summary: 'Error', 
+                    summary: 'エラー',
                     detail: '終了日と開始日の順番を確認してください。', life: 3000 
                 });
                 return;
@@ -713,7 +713,7 @@
             if (newAdjustment.value.adjustment_value === 0) {
                 toast.add({
                     severity: 'error',
-                    summary: 'Error',
+                    summary: 'エラー',
                     detail: '「0」ではない数値に設定してください。',
                     life: 3000
                 });
@@ -746,7 +746,7 @@
                 body: JSON.stringify(formattedAdjustment),
             });
             if (!response.ok) {
-                throw new Error('Failed to save adjustment');
+                throw new Error('調整の保存に失敗しました');
             } 
 
             fetchRates();
@@ -765,12 +765,12 @@
 
             toast.add({
                 severity: 'success',
-                summary: 'Success',
-                detail: 'Rate created successfully',
+                summary: '成功',
+                detail: '料金作成成功',
                 life: 3000
             });
         } catch (error) {
-            console.error('Error saving adjustment:', error);
+            console.error('調整保存エラー:', error);
         }
     };
     const updateAdjustment = async () => {
@@ -778,8 +778,8 @@
         if (editAdjustment.value.date_end && new Date(editAdjustment.value.date_end) < new Date(editAdjustment.value.date_start)) {
             toast.add({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'End date must be equal to or greater than start date.',
+                summary: 'エラー',
+                detail: '終了日と開始日の順番を確認してください。', // Corrected from: 'End date must be equal to or greater than start date.'
                 life: 3000
             });
             return;
@@ -787,8 +787,8 @@
         if (editAdjustment.value.adjustment_value === 0) {
             toast.add({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'Adjustment value must be different than 0.',
+                summary: 'エラー',
+                detail: '「0」ではない数値に設定してください。', // Corrected from: 'Adjustment value must be different than 0.'
                 life: 3000
             });
             return;
@@ -822,7 +822,7 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update adjustment');
+                throw new Error('調整の更新に失敗しました');
             }
 
             fetchRates(); // Refresh the rates
@@ -842,16 +842,16 @@
 
             toast.add({
                 severity: 'success',
-                summary: 'Success',
-                detail: 'Rate updated successfully',
+                summary: '成功',
+                detail: '料金更新成功',
                 life: 3000
             });
         } catch (error) {
-            console.error('Error updating adjustment:', error);
+            console.error('調整更新エラー:', error);
             toast.add({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'An error occurred while updating the rate.',
+                summary: 'エラー',
+                detail: '料金の更新中にエラーが発生しました。',
                 life: 3000
             });
         }
@@ -1082,7 +1082,7 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch rates');
+                throw new Error('料金の取得に失敗しました');
             }
 
             const data = await response.json();
@@ -1092,7 +1092,7 @@
                 date_end: formatDate(rate.date_end)
             }));
         } catch (error) {
-            console.error('Error fetching rates:', error);
+            console.error('料金取得エラー:', error);
         }
     };
 
@@ -1118,7 +1118,7 @@
 
                 selectedEditConditions.value = Array.isArray(parsedValue) ? parsedValue : [];
             } catch (error) {
-                console.error('Error parsing condition_value:', error);
+                console.error('condition_value の解析エラー:', error);
                 selectedEditConditions.value = [];
             }
         } else {
