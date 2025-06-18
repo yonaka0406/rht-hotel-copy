@@ -83,6 +83,20 @@ This document outlines common issues, preferred patterns, and best practices to 
     ```
 *   **Important:** Always ensure the client is released (`client.release()`) in a `finally` block to return it to the pool.
 
+#### Troubleshooting: `TypeError: db.getClient is not a function`
+
+If you encounter a `TypeError: db.getClient is not a function` in a background job (like a cron task), particularly when the relevant line of code appears to correctly use `await db.getProdPool().connect()` (or `getDevPool()` for development environments):
+
+1.  **Verify Code:** Double-check the specific line mentioned in the error stack trace in your deployed code. Ensure it is indeed using `db.getProdPool().connect()` or `db.getDevPool().connect()`.
+2.  **Suspect Version Mismatch:** This error is a strong indicator that the version of the job file being executed by the Node.js process is different from the version you are examining in your repository or editor. The executed file might be an older version that contained a call to `db.getClient()`.
+3.  **Potential Causes & Solutions for Version Mismatch:**
+    *   **Deployment Issues:** Ensure your deployment scripts are correctly pulling and deploying the latest version of all job files.
+    *   **Caching:** Server-side caching (e.g., by PM2, Nodemon in a production-like watch mode, or other process managers) might be serving an outdated version. Try restarting the process manager or clearing relevant caches.
+    *   **Incorrect File Path:** Verify that the cron job or scheduler is configured to execute the correct path to the latest version of the job script.
+    *   **Manual Verification:** If possible, access the server where the job runs and manually inspect the content of the job file being executed to confirm if it matches your current codebase.
+
+The `db` module itself (from `api/config/database.js`) exports `getProdPool()` and `getDevPool()`, which return pool objects. These pool objects have a `.connect()` method. The `db` module does *not* export a `getClient()` method. Thus, a literal call to `db.getClient()` would cause this error.
+
 ## 3. Frontend (Vue.js / PrimeVue)
 
 ### 3.1. UI Language
