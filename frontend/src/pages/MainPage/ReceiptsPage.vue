@@ -154,7 +154,7 @@
             return '';
         }
         if (isNaN(parsedDate.getTime())) return '';
-        return parsedDate.toLocaleDateString(undefined, options);
+        return parsedDate.toLocaleDateString('ja-JP', options);
     };
     const formatCurrency = (value) => {
         if (value == null || isNaN(Number(value))) return '';

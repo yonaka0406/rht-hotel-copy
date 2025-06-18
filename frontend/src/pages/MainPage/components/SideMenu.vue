@@ -11,16 +11,16 @@
     <div :class="['p-4 border-b border-emerald-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
       <div v-if="!isCollapsed" class="flex items-center">
         <!-- Logo -->
-        <img src="@/assets/logo-simple.png" alt="Hotel PMS" class="h-8 mr-1" />
+        <img src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
         <span class="text-2xl font-semibold">WeHub</span>
       </div>      
-      <img v-else="isCollapsed" src="@/assets/logo-simple.png" alt="Hotel PMS" class="h-8 mr-1" />
+      <img v-else="isCollapsed" src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
       
       <Button
         @click="toggleSidebar"
         class="p-2 text-white rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
         :class="isCollapsed ? 'w-full justify-center' : ''"
-        aria-label="Toggle Sidebar"
+        aria-label="サイドバーの切り替え"
       >
         <i class="pi" :class="isCollapsed ? 'pi-arrow-right' : 'pi-arrow-left'"></i>
       </Button>

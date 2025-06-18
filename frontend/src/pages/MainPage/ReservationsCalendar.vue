@@ -289,12 +289,12 @@
   const formatDateWithDay = (date) => {
       const options = { weekday: 'short', year: '2-digit', month: '2-digit', day: '2-digit' };
       const parsedDate = new Date(date);
-      return `${parsedDate.toLocaleDateString(undefined, options)}`;
+      return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
   };
   const formatDateMonthDay = (date) => {
       const options = { weekday: 'short', month: '2-digit', day: '2-digit' };
       const parsedDate = new Date(date);
-      return `${parsedDate.toLocaleDateString(undefined, options)}`;
+      return `${parsedDate.toLocaleDateString('ja-JP', options)}`;
   };
   const goToReservation = () => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });

@@ -501,7 +501,7 @@
         if (response.ok) {
             const data = await response.json();
             const { reservation, reservationDetails } = data;
-            toast.add({ severity: 'success', summary: 'Success', detail: '保留中予約作成されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
             
             await fetchMyHoldReservations();
             await goToEditReservationPage(reservation.id);            
@@ -510,7 +510,7 @@
 
         } else {
             console.warn("No data returned from fetchAvailableRooms. Not updating room availability.");
-            toast.add({ severity: 'warn', summary: 'Warning', detail: 'No data returned for available rooms.', life: 3000 });
+            toast.add({ severity: 'warn', summary: '警告', detail: '利用可能な部屋のデータが返されませんでした。', life: 3000 });
         }
 
             //dialogVisible.value = false;

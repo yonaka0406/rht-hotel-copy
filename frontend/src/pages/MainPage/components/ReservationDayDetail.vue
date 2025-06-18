@@ -321,7 +321,7 @@
         return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(value);
     };
 
-    const drawerHeader = ref('Loading...');
+    const drawerHeader = ref('読込中...');
     const reservationDetail = ref(null);
 
     // Plan
@@ -506,7 +506,7 @@
         const data = await fetchReservationDetail(props.reservation_details.id);
         reservationDetail.value = data.reservation[0];
         
-        toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 });            
+        toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
     };
 
     // Room
@@ -520,7 +520,7 @@
         const data = await fetchReservationDetail(props.reservation_details.id);
         reservationDetail.value = data.reservation[0];
 
-        toast.add({ severity: 'success', summary: 'Success', detail: '予約が編集されました。', life: 3000 }); 
+        toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
 
     };
 
@@ -543,7 +543,7 @@
 
         reservationCancelled.value = false;
 
-        toast.add({ severity: 'success', summary: 'Success', detail: '予約が復活されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '予約が復活されました。', life: 3000 });
     };
 
     onMounted(async() => {   
