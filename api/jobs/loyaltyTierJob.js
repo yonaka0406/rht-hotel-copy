@@ -92,10 +92,10 @@ const assignLoyaltyTiers = async () => {
 
         // 4. Evaluate 'HOTEL_LOYAL' for clients still 'Newbie' or other configurable previous tiers
         if (hotelLoyalSettings.length > 0) {
-            console.log(\`Evaluating Hotel Loyal tier for \${hotelLoyalSettings.length} hotels...\`);
+            console.log(`Evaluating Hotel Loyal tier for ${hotelLoyalSettings.length} hotels...`);
             for (const setting of hotelLoyalSettings) {
                 const startDate = getStartDateForPeriod(setting.time_period_months);
-                console.log(\`Hotel Loyal evaluation for hotel \${setting.hotel_id}: from \${startDate}\`);
+                console.log(`Hotel Loyal evaluation for hotel ${setting.hotel_id}: from ${startDate}`);
 
                 const conditions = [];
                 if (setting.min_bookings) {
@@ -126,9 +126,9 @@ const assignLoyaltyTiers = async () => {
                             HAVING ${havingClause}
                         )`;
                     const { rowCount: hotelLoyalCount } = await client.query(hotelLoyalQuery, [setting.hotel_id, startDate]);
-                    console.log(\`Hotel Loyal update for hotel \${setting.hotel_id} affected \${hotelLoyalCount} rows.\`);
+                    console.log(`Hotel Loyal update for hotel ${setting.hotel_id} affected ${hotelLoyalCount} rows.`);
                 } else {
-                    console.log(\`No conditions defined for Hotel Loyal tier (hotel \${setting.hotel_id}), skipping.\`);
+                    console.log(`No conditions defined for Hotel Loyal tier (hotel ${setting.hotel_id}), skipping.`);
                 }
             }
         } else {
@@ -139,7 +139,7 @@ const assignLoyaltyTiers = async () => {
         if (repeaterSetting && repeaterSetting.min_bookings) {
             console.log('Evaluating Repeater tier...');
             const startDate = getStartDateForPeriod(repeaterSetting.time_period_months);
-            console.log(\`Repeater evaluation period: from \${startDate}, min bookings: \${repeaterSetting.min_bookings}\`);
+            console.log(`Repeater evaluation period: from ${startDate}, min bookings: ${repeaterSetting.min_bookings}`);
 
             // Apply REPEATER only if client is currently Newbie or Prospect.
             // Brand Loyal and Hotel Loyal are higher.
@@ -157,7 +157,7 @@ const assignLoyaltyTiers = async () => {
                 )
             `;
             const { rowCount: repeaterCount } = await client.query(repeaterQuery, [startDate, repeaterSetting.min_bookings]);
-            console.log(\`Repeater update affected \${repeaterCount} rows.\`);
+            console.log(`Repeater update affected ${repeaterCount} rows.`);
         } else {
             console.log('No Repeater tier configuration found or min_bookings not set, skipping.');
         }
@@ -166,12 +166,12 @@ const assignLoyaltyTiers = async () => {
         console.log('Loyalty tier assignment job completed successfully.');
 
         // Log final counts for verification
-        const finalCounts = await client.query(\`
+        const finalCounts = await client.query(`
             SELECT loyalty_tier, COUNT(*) as count
             FROM clients
             GROUP BY loyalty_tier
             ORDER BY loyalty_tier
-        \`);
+        `);
         console.log('Final loyalty tier counts:', finalCounts.rows);
 
     } catch (error) {
