@@ -105,8 +105,18 @@ The API codebase is organized into the following main directories:
 
 ## Online Travel Agency (OTA) Integration
 
-The `api/ota/` directory is dedicated to integrating with Online Travel Agencies. This typically involves:
-*   Receiving and processing XML requests from OTAs.
-*   Sending XML responses back to OTAs.
-*   Managing hotel inventory, rates, and availability through these XML interfaces.
+The `api/ota/` directory is dedicated to integrating with Online Travel Agencies, specifically with the **TL-Lincoln** channel manager. This integration facilitates:
+*   Automated fetching and processing of reservations from TL-Lincoln.
+*   Real-time updates of inventory (room availability/stock) to TL-Lincoln.
+*   Synchronization and mapping of room type master data (via `sc_tl_rooms` table) and plan master data (via `sc_tl_plans` table) with TL-Lincoln.
 The `xmlController.js`, `xmlModel.js`, and `xmlRoutes.js` files within this directory manage these operations.
+
+**Configuration for TL-Lincoln Integration:**
+
+The following environment variables must be set in the `.env` file:
+*   `XML_SYSTEM_ID`: Your system's unique identifier provided by TL-Lincoln.
+*   `XML_REQUEST_URL`: The base URL for the TL-Lincoln API (e.g., `https://www.tl-lincoln.net/pmsservice/V1/`).
+
+Hotel-specific credentials for TL-Lincoln (user ID and password) are stored in the `sc_user_info` database table. Each entry should be linked to the respective hotel and have the `name` field set to 'TL-リンカーン'.
+
+The system utilizes XML templates stored in the `xml_templates` database table to construct requests sent to TL-Lincoln. These templates are populated with the necessary credentials and dynamic data at runtime.

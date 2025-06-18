@@ -84,4 +84,19 @@ This frontend application enables users to interact with the following core feat
 *   **User Administration:** Management of system user accounts, roles, and permissions (for admin users).
 *   **Data Import:** Client-side processing of imported data, such as CSV files for various records (using Papaparse), and potentially interaction with backend Excel import/export.
 *   **Real-time Updates:** Display of live updates for relevant data through Socket.io (e.g., new reservations, notifications).
+
+## OTA (TL-Lincoln) Integration Management
+
+The frontend includes an administration section for managing the integration with the TL-Lincoln channel manager. This interface can typically be found under an "OTA Management" or similar section in the admin panel.
+
+Key management features include:
+
+*   **Transaction Monitoring:** Viewing a log of recent XML requests and responses exchanged with TL-Lincoln, including their status (success/error).
+*   **Manual XML Operations:** Ability to select a hotel, fetch specific XML request templates, manually input or modify parameters, and send the XML request directly to TL-Lincoln. This is useful for testing or specific manual interventions.
+*   **Master Data Management:**
+    *   **Room Master (ネット室マスター):** Interface to view and manage the mapping of local hotel room types to TL-Lincoln's room type codes (interacts with `otaRoomMaster.vue`).
+    *   **Plan Master (プランマスター):** Interface to view and manage the mapping of local rate plans to TL-Lincoln's plan codes (interacts with `otaPlanMaster.vue`).
+*   **Inventory Adjustment (在庫調整):** Tools to manage and synchronize room inventory/availability with TL-Lincoln (interacts with `otaInventory.vue`).
+
+These functionalities are primarily managed through the `ManageOTA.vue` page, which dynamically loads components like `otaRoomMaster.vue`, `otaPlanMaster.vue`, and `otaInventory.vue`. The `useXMLStore.js` composable handles state and communication with the backend API for these OTA operations.
 ```
