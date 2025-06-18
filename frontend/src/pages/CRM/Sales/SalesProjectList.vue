@@ -37,7 +37,7 @@
                  stateStorage="session" stateKey="dt-salesprojects-filters"
                  removableSort>
         <Column field="project_name" header="プロジェクト名" :sortable="true" style="min-width: 200px;"
-                :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}, {label: '完全一致', value: 'equals'}]">
+                :showFilterMenu="true">
           <template #body="slotProps">{{ slotProps.data.project_name }}</template>
           <template #filter="{filterModel, filterCallback}">
             <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="プロジェクト名で検索"/>
@@ -71,13 +71,13 @@
              <InputNumber v-model="filterModel.value" @input="filterCallback()" placeholder="予算で検索" mode="currency" currency="JPY" locale="ja-JP" showButtons/>
           </template>
         </Column>
-        <Column field="order_source" header="発注元" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+        <Column field="order_source" header="発注元" :sortable="true" :showFilterMenu="true">
           <template #body="slotProps">{{ slotProps.data.order_source }}</template>
           <template #filter="{filterModel, filterCallback}">
             <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="発注元で検索"/>
           </template>
         </Column>
-        <Column field="project_location" header="工事場所" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+        <Column field="project_location" header="工事場所" :sortable="true" :showFilterMenu="true">
           <template #body="slotProps">{{ slotProps.data.project_location }}</template>
           <template #filter="{filterModel, filterCallback}">
             <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="工事場所で検索"/>
@@ -95,7 +95,7 @@
             <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
           </template>
         </Column>
-        <Column field="target_store" header="対象店舗" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+        <Column field="target_store" header="対象店舗" :sortable="true" :showFilterMenu="true">
           <template #body="slotProps">
             <div v-if="Array.isArray(slotProps.data.target_store) && slotProps.data.target_store.length > 0" class="flex flex-wrap gap-1">
               <Tag
