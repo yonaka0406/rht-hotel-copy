@@ -29,9 +29,12 @@ Most key metrics displayed on the dashboard, especially those showing trends or 
     *   Actual Check-ins and Check-outs can also be aggregated daily for historical reporting.
 *   **Daily Performance Metrics:**
     *   Occupancy Rate per hotel, per day/night. This requires knowing occupied/booked rooms and available rooms for each day.
+        *   **Current Implementation Note:** Monthly and yearly cumulative occupancy rates, comparing actual vs. forecast, are available in the reporting section (`frontend/src/pages/Reporting/components/ReportingSingleMonthHotel.vue` and `frontend/src/pages/Reporting/components/ReportingSingleMonthAllHotels.vue`). The main dashboard (`frontend/src/pages/MainPage/Dashboard.vue`) also displays occupancy rate gauges for the current and next two months.
     *   Revenue Per Available Room (RevPAR) per hotel, per day. This requires daily room revenue and available rooms.
+        *   **Current Implementation Note:** Monthly and yearly cumulative RevPAR (and ADR) figures, comparing actual vs. forecast, are available in the reporting section (`frontend/src/pages/Reporting/components/ReportingSingleMonthHotel.vue` and `frontend/src/pages/Reporting/components/ReportingSingleMonthAllHotels.vue`).
 *   **Periodic Calculation Metrics:**
     *   Average Lead Time: Calculated over a rolling period (e.g., last 30 days of new bookings), so daily snapshots of this average can be stored, or it can be calculated based on daily booking aggregates.
+        *   **Current Implementation Note:** A detailed lead day analysis (average room nights booked X days prior to stay for a target month, and a heatmap) is available in `frontend/src/pages/Reporting/components/MonthlyReservationEvolutionReport.vue`. Additionally, `frontend/src/pages/Admin/AdminPanel.vue` displays a weighted average lead time specifically for "Today's Bookings," aggregated across all hotels. The single aggregated "Average Lead Time" metric as defined in section 6 under "Key Reservation Metrics Recommendations" (calculated over a broader period like 30 days for general users) is still a recommended enhancement.
     *   Average Length of Stay (ALOS): Similar to Lead Time, calculated over a period for departed stays or new bookings. Daily snapshots of this average can be stored.
 
 Metrics like "Check-ins expected *right now*" or "Occupancy *right now*" might involve more real-time components, discussed later. However, their daily totals/averages are prime for aggregation.
@@ -129,7 +132,7 @@ PostgreSQL offers several ways to implement pre-aggregation. The primary methods
     ```
 *   **Population Strategy:**
     *   **Scheduled Jobs:** Use `pg_cron`, OS-level cron jobs, or an application scheduler to run SQL scripts (e.g., stored procedures or ad-hoc DML statements) that calculate and then `INSERT ... ON CONFLICT ... UPDATE` or `TRUNCATE` and `INSERT` data into these tables.
-    *   **Application-Level Logic:** Background workers in the application can perform calculations and update these tables. This is useful if the logic is very complex or involves external data sources.
+    *   **Application-Level Logic:** Background processes in the application can perform calculations and update these tables. This is useful if the logic is very complex or involves external data sources.
     *   **Frequency:** Similar to MVs; daily for most historical trends, hourly or more frequently for "today's" key figures if needed. For `daily_hotel_metrics`, a common approach is to update records for the current day more frequently (e.g., hourly) and records for past days once (e.g., nightly).
 
 ### c. Choosing Between Materialized Views and Summary Tables
@@ -258,6 +261,7 @@ This document outlines the recommended key reservation metrics to be displayed o
     *   The PMS must have an accurate count of `Total Available Rooms for Sale`. This means rooms marked as "Out of Order" or "Not Available" should be excluded from the denominator.
     *   Clarity is needed on whether "confirmed reservations" includes tentative or non-guaranteed bookings. Generally, only guaranteed/confirmed bookings are included.
     *   **Optional Extension:** Display occupancy for the next 3 (or X) days to help with forecasting and yield management. The calculation for future dates would be: `(Total Confirmed Reservations for Date X) / Total Available Rooms for Sale on Date X * 100%`.
+        *   **Current Implementation Note:** Future occupancy for the current and next two months is displayed via gauge charts in `frontend/src/pages/MainPage/Dashboard.vue`. Detailed monthly actual vs. forecast occupancy is available in the reporting section at `frontend/src/pages/Reporting/components/ReportingSingleMonthHotel.vue` and `frontend/src/pages/Reporting/components/ReportingSingleMonthAllHotels.vue`.
     *   The definition of "occupied" should be clear (e.g., includes day-use rooms if applicable, or only overnight stays).
 
 ---
@@ -273,6 +277,8 @@ This document outlines the recommended key reservation metrics to be displayed o
     *   The "Calculation Period" (e.g., last 7 days, last 30 days, last 90 days) should be clearly defined and potentially configurable.
     *   Consider if filtering by market segment or booking source would provide more actionable insights (this could be an advanced feature).
     *   Ensure `Reservation Creation Date` and `Arrival Date` are consistently defined (e.g., using the hotel's local time zone).
+    *   **Current Implementation Note (from previous update):** While a single aggregated "Average Lead Time" as defined above is not yet displayed as a standalone KPI for general users, `frontend/src/pages/Reporting/components/MonthlyReservationEvolutionReport.vue` provides an "Average OTB by Lead Days" chart (平均OTB (リード日数別)). This chart shows the trend of average booked room nights based on each specific lead day (0, 1, 2... days prior to stay) for a selected target month, offering detailed insights into booking pace and lead time distribution.
+    *   **Additional Current Implementation Note:** `frontend/src/pages/Admin/AdminPanel.vue` displays an "平均リードタイム" (Average Lead Time) card. This value is a weighted average (by total nights) of lead times for reservations made on the current day ("本日の予約"), aggregated across all hotels. This provides a "today-centered" lead time insight for administrators. The display of a general, single aggregated Average Lead Time (calculated over a broader period like 30 days for non-admin users) in the main dashboard or reporting section remains a separate, recommended enhancement.
 
 ---
 
@@ -287,6 +293,7 @@ This document outlines the recommended key reservation metrics to be displayed o
 *   **Importance:** RevPAR is a standard industry metric that provides a comprehensive view of how well a hotel is filling its rooms and how much revenue it's generating from those bookings. It helps in comparing performance over time and against competitors.
 *   **Considerations:**
     *   The period for RevPAR calculation (e.g., daily, weekly, monthly, YTD) should be clearly specified and ideally configurable. For a "Today" view, it would be based on revenue earned from rooms occupied last night or for the current day if day-use is significant.
+        *   **Current Implementation Note:** Monthly and yearly cumulative RevPAR and ADR are displayed in the reporting section (specifically in `frontend/src/pages/Reporting/components/ReportingSingleMonthHotel.vue` and `frontend/src/pages/Reporting/components/ReportingSingleMonthAllHotels.vue`), comparing actual vs. forecast figures.
     *   Consistency in calculating `Total Room Revenue` (e.g., including or excluding taxes, treatment of complimentary rooms) is crucial.
     *   Ensure `Total Available Rooms` accurately reflects rooms that *could* have been sold.
 
@@ -307,6 +314,47 @@ This document outlines the recommended key reservation metrics to be displayed o
     *   Consider if ALOS should be segmented by market segment, room type, or booking source for more granular insights (advanced feature).
     *   Ensure that the calculation of nights is accurate (e.g., a 1-night stay is Arrival Date X, Departure Date X+1).
 
+---
+
+## 9. Dashboard KPI Card Display Recommendations
+
+While the metrics above are crucial, their presentation on the main operational dashboard (`frontend/src/pages/MainPage/Dashboard.vue`) should prioritize immediate, "at-a-glance" insights for daily operations. The following "today-focused" KPIs are recommended for display as prominent summary cards on the dashboard:
+
+*   **Reservations Made Today:**
+    *   **Content:** Count of new reservations and their total booking value for the current day.
+    *   **Source:** Requires a dedicated API endpoint serving pre-aggregated data (e.g., from an hourly refreshed summary table).
+    *   **Importance:** Real-time pulse on booking activity.
+
+*   **New Cancellations Today:**
+    *   **Content:** Count of cancellations and total lost booking value for the current day.
+    *   **Source:** Similar dedicated API and backend aggregation.
+    *   **Importance:** Monitors cancellation trends and immediate revenue impact.
+
+*   **Check-ins Expected Today:**
+    *   **Content:** Count of unique reservations scheduled for arrival today.
+    *   **Source:** Dedicated API from aggregated data.
+    *   **Importance:** Crucial for front desk planning.
+
+*   **Check-outs Expected Today:**
+    *   **Content:** Count of unique reservations scheduled for departure today (currently in-house).
+    *   **Source:** Dedicated API from aggregated data.
+    *   **Importance:** Essential for housekeeping and room turnover planning.
+
+*   **Occupancy Rate (Tonight):**
+    *   **Content:** Percentage of available rooms occupied or confirmed for the current night.
+    *   **Source:** Dedicated API. (Note: `Dashboard.vue` currently has monthly occupancy gauges; this card would be specific for "tonight").
+    *   **Importance:** Primary indicator of immediate hotel performance.
+
+*   **RevPAR (Recent - e.g., Yesterday):**
+    *   **Content:** Revenue Per Available Room for the most recent completed day (e.g., yesterday).
+    *   **Source:** Dedicated API, calculated from finalized daily revenue and room availability.
+    *   **Importance:** Comprehensive performance indicator.
+
+**Portfolio View for Dashboard KPIs:**
+For users with multi-hotel access, these dashboard KPI cards should also support a "Portfolio View," displaying aggregated totals (e.g., sum of reservations today across all hotels) or weighted averages (for rates like Occupancy/RevPAR) for their entire accessible portfolio. This requires the backend APIs for these KPIs to handle requests for portfolio-wide data.
+
+**Current Dashboard State (`frontend/src/pages/MainPage/Dashboard.vue`):**
+As of the last review, `Dashboard.vue` includes charts for 7-day reservation trends, plan/addon breakdowns, and monthly occupancy gauges. However, it does not yet feature the specific "today-focused" summary KPI cards listed above. Implementing these cards is a key recommended enhancement to align with this architectural vision for an operational dashboard.
 
 # Multi-Hotel Presentation Strategy
 
@@ -326,17 +374,21 @@ This document outlines the recommended strategy for presenting reservation metri
 ## 2. Aggregated (Portfolio) View
 
 *   **Default Display:** This view should be the default upon login for users managing multiple hotels, unless a user-specific default hotel is set (see section 4). It can also be accessed via a clear "All Hotels" or "Portfolio View" option in the main navigation or hotel selection mechanism.
+    *   **Current Implementation Note:** The reporting section (`frontend/src/pages/Reporting/ReportingMainPage.vue` via `frontend/src/pages/Reporting/components/ReportingTopMenu.vue`) allows selection of multiple hotels to view aggregated data in components like `frontend/src/pages/Reporting/components/ReportingSingleMonthAllHotels.vue`. A specific "default to portfolio view on login" is not yet implemented.
 *   **Metrics Displayed:**
     *   **Total Reservations Made Today (Count & Value):** Sum of counts and values across all hotels.
     *   **Total Check-ins Expected Today:** Sum of counts across all hotels.
     *   **Total Check-outs Expected Today:** Sum of counts across all hotels.
     *   **Total New Cancellations Today (Count & Value):** Sum of counts and lost values across all hotels.
     *   **Average Occupancy Rate (Portfolio):** Weighted average occupancy across all hotels (e.g., `(Sum of all occupied rooms across all hotels) / (Sum of all available rooms across all hotels) * 100%`). Alternatively, a simple average of individual hotel occupancy rates can be shown, but this should be clearly labeled.
+        *   **Current Implementation Note:** `ReportingSingleMonthAllHotels.vue` displays aggregated Occupancy, ADR, and RevPAR for selected hotels (using `hotel_id=0` data from `ReportingMainPage.vue` which represents totals, effectively leading to weighted averages for rates).
     *   **Average RevPAR (Portfolio):** Weighted average RevPAR (e.g., `Total Portfolio Room Revenue / Total Portfolio Available Rooms`).
+        *   **Current Implementation Note:** Implemented in `ReportingSingleMonthAllHotels.vue` as described above.
     *   **Average ALOS (Portfolio):** Weighted average ALOS, likely based on departed stays for portfolio-wide historical view, or new bookings for a forward-looking view.
     *   **Average Lead Time (Portfolio):** Weighted average lead time for new bookings across all hotels.
 *   **Rationale:** This view provides a quick, consolidated snapshot of the overall business performance across the entire hotel group or managed portfolio. It helps in identifying broad trends, overall revenue generation, and occupancy levels at a glance.
 *   **Visualisation:** Consider using summary cards or a dashboard overview that highlights these key aggregated figures. Charts showing trends (e.g., portfolio occupancy over the last 7 days) can also be very effective here.
+    *   **Current Implementation Note:** `ReportingSingleMonthAllHotels.vue` uses KPI cards for aggregated ADR/RevPAR and includes charts comparing individual hotels within the selected portfolio for revenue and occupancy. The main `Dashboard.vue` is planned to have portfolio-level KPI cards for "today-focused" metrics.
 
 ---
 
@@ -344,14 +396,21 @@ This document outlines the recommended strategy for presenting reservation metri
 
 *   **Selection Mechanism:**
     *   **Primary Recommendation:** A prominent, clearly labeled dropdown menu, perhaps titled "Select Hotel" or showing the currently selected hotel's name, located in a consistent position in the dashboard header (e.g., top navigation bar).
+        *   **Current Implementation Note:** A hotel selector is available in `frontend/src/pages/MainPage/components/TopMenu.vue` which sets the context for `Dashboard.vue`. The reporting section uses `frontend/src/pages/Reporting/components/ReportingTopMenu.vue` for its hotel selection (single or multiple).
     *   This dropdown should list all hotels the user has access to, plus an "All Hotels" or "Portfolio View" option to switch back to the aggregated view.
+        *   **Current Implementation Note:** The selector in `ReportingTopMenu.vue` allows selecting multiple hotels, implicitly creating a portfolio view for reports like `ReportingSingleMonthAllHotels.vue`. A specific "All Hotels" option to view aggregated dashboard KPIs is part of the enhancement plan for `Dashboard.vue`.
     *   **Alternative/Complementary:** For users managing a smaller number of properties, a quickly accessible sidebar or a section on the dashboard could list the hotels, each clickable to filter the view.
 *   **Behavior:**
     *   Upon selecting a specific hotel, the entire dashboard context switches to that property.
+        *   **Current Implementation Note:** This is the behavior for `Dashboard.vue` (reacts to `selectedHotelId` from `useHotelStore`) and for single-hotel reports like `ReportingSingleMonthHotel.vue`.
     *   All metrics defined in `key_reservation_metrics_recommendations.md` (Reservations Made Today, Check-ins, Check-outs, Cancellations, Occupancy, Avg. Lead Time, RevPAR, ALOS) should be displayed for this single selected hotel.
+        *   **Current Implementation Note:** Some of these (Occupancy, RevPAR, ADR) are present in `ReportingSingleMonthHotel.vue`. The "today-focused" metrics are planned additions to `Dashboard.vue`. ALOS and a single aggregated Lead Time metric (for general users, over a period like 30 days) are planned for the reporting views.
     *   The name of the currently selected hotel should be prominently displayed (e.g., "Now Viewing: [Hotel Name] Dashboard") to avoid confusion.
+        *   **Current Implementation Note:** Reporting components display the hotel name. `Dashboard.vue` is planned to have a dynamic title.
     *   If the user navigates to other sections of the PMS (e.g., reservations list, reporting) after selecting a hotel, the PMS should ideally retain the context of that selected hotel until explicitly changed.
+        *   **Current Implementation Note:** The hotel context from `TopMenu.vue` is generally maintained across `MainPage` views. The reporting section has its own context.
 *   **Data Display:** The metrics displayed should be identical in definition to those in `key_reservation_metrics_recommendations.md`, but calculated only for the selected property.
+    *   **Current Implementation Note:** This is the case for metrics like Occupancy and RevPAR in `ReportingSingleMonthHotel.vue`.
 
 ---
 
