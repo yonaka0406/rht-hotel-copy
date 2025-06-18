@@ -31,20 +31,14 @@
     <div v-else class="project-table-container">
       <DataTable :value="allProjects" :paginator="true" :rows="currentRowsPerPage"
                  :totalRecords="allProjectsTotalCount"
-                 @page="onPageChange" @filter="onFilter" lazy responsiveLayout="scroll"
+                 @page="onPageChange" lazy responsiveLayout="scroll"
                  class="p-datatable-sm"
-                 v-model:filters="filters" filterDisplay="menu"
-                 stateStorage="session" stateKey="dt-salesprojects-filters"
+                 stateStorage="session"
                  removableSort>
-        <Column field="project_name" header="プロジェクト名" :sortable="true" style="min-width: 200px;"
-                :showFilterMenu="true">
+        <Column field="project_name" header="プロジェクト名" :sortable="true" style="min-width: 200px;">
           <template #body="slotProps">{{ slotProps.data.project_name }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="プロジェクト名で検索"/>
-          </template>
         </Column>
-        <Column field="derived_prime_contractor_name" header="元請け企業" :sortable="true" style="min-width: 150px;"
-                :showFilterMenu="true">
+        <Column field="derived_prime_contractor_name" header="元請け企業" :sortable="true" style="min-width: 150px;">
           <template #body="slotProps">
             <span v-if="slotProps.data.related_clients && Array.isArray(slotProps.data.related_clients)">
               {{
@@ -55,47 +49,26 @@
             </span>
             <span v-else>N/A</span>
           </template>
-          <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="元請け企業名で検索"/>
-          </template>
         </Column>
-        <Column field="bid_date" header="入札日" :sortable="true" :showFilterMenu="true" dataType="date">
+        <Column field="bid_date" header="入札日" :sortable="true" dataType="date">
           <template #body="slotProps">{{ formatDateDisplay(slotProps.data.bid_date) }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
-          </template>
         </Column>
-        <Column field="budget" header="予算" :sortable="true" :showFilterMenu="true" dataType="numeric">
+        <Column field="budget" header="予算" :sortable="true" dataType="numeric">
           <template #body="slotProps">{{ formatCurrency(slotProps.data.budget) }}</template>
-          <template #filter="{filterModel, filterCallback}">
-             <InputNumber v-model="filterModel.value" @input="filterCallback()" placeholder="予算で検索" mode="currency" currency="JPY" locale="ja-JP" showButtons/>
-          </template>
         </Column>
-        <Column field="order_source" header="発注元" :sortable="true" :showFilterMenu="true">
+        <Column field="order_source" header="発注元" :sortable="true">
           <template #body="slotProps">{{ slotProps.data.order_source }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="発注元で検索"/>
-          </template>
         </Column>
-        <Column field="project_location" header="工事場所" :sortable="true" :showFilterMenu="true">
+        <Column field="project_location" header="工事場所" :sortable="true">
           <template #body="slotProps">{{ slotProps.data.project_location }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="工事場所で検索"/>
-          </template>
         </Column>
-        <Column field="start_date" header="開始日" :sortable="true" :showFilterMenu="true" dataType="date">
+        <Column field="start_date" header="開始日" :sortable="true" dataType="date">
           <template #body="slotProps">{{ formatDateDisplay(slotProps.data.start_date) }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
-          </template>
         </Column>
-        <Column field="end_date" header="終了日" :sortable="true" :showFilterMenu="true" dataType="date">
+        <Column field="end_date" header="終了日" :sortable="true" dataType="date">
           <template #body="slotProps">{{ formatDateDisplay(slotProps.data.end_date) }}</template>
-          <template #filter="{filterModel, filterCallback}">
-            <Calendar v-model="filterModel.value" @date-select="filterCallback()" dateFormat="yy-mm-dd" placeholder="YYYY-MM-DD" showIcon showClear/>
-          </template>
         </Column>
-        <Column field="target_store" header="対象店舗" :sortable="true" :showFilterMenu="true">
+        <Column field="target_store" header="対象店舗" :sortable="true">
           <template #body="slotProps">
             <div v-if="Array.isArray(slotProps.data.target_store) && slotProps.data.target_store.length > 0" class="flex flex-wrap gap-1">
               <Tag
@@ -194,30 +167,12 @@ const projectToEdit = ref(null);
 const dialogMode = computed(() => projectToEdit.value && projectToEdit.value.id ? 'edit' : 'add');
 const projectDialogHeader = computed(() => dialogMode.value === 'edit' ? 'プロジェクト編集' : '新規プロジェクト追加');
 
-const filters = ref({
-    'project_name': { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'derived_prime_contractor_name': { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'bid_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
-    'budget': { value: null, matchMode: FilterMatchMode.EQUALS },
-    'order_source': { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'project_location': { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'start_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
-    'end_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
-    'target_store': { value: null, matchMode: FilterMatchMode.CONTAINS }
-});
-
 const loadProjects = async () => {
   await fetchAllProjects({
     page: currentPage.value,
     limit: currentRowsPerPage.value,
-    searchTerm: localSearchTerm.value,
-    filters: filters.value // Pass the filters object
+    searchTerm: localSearchTerm.value
   });
-};
-
-const onFilter = (event) => {
-    currentPage.value = 1;
-    loadProjects();
 };
 
 onMounted(async () => { // Make onMounted async
