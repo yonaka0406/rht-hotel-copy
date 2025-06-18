@@ -195,21 +195,19 @@ const assignLoyaltyTiers = async () => {
 };
 
 // Schedule the job to run daily at 2 AM
-const scheduleLoyaltyTierJob = () => {
-    // Runs hourly at the start of the hour
-    cron.schedule('0 * * * *', async () => {
+const scheduleLoyaltyTierJob = () => {    
+    cron.schedule('0 2 * * *', async () => {
         try {
             console.log('Loyalty tier assignment job triggered by cron schedule.');
             await assignLoyaltyTiers();
         } catch (error) {
-            console.error('Loyalty tier assignment job failed:', error);
-            // You might want to send an alert or notification here
+            console.error('Loyalty tier assignment job failed:', error);            
         }
     }, {
         scheduled: true,
         timezone: "Asia/Tokyo"
     });
-    console.log('Loyalty tier assignment job scheduled hourly at the start of the hour (JST).');
+    console.log('Loyalty tier assignment job scheduled daily at 2 AM.');
 };
 
 module.exports = { assignLoyaltyTiers, scheduleLoyaltyTierJob };
