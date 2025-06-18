@@ -372,10 +372,10 @@
         try {
             if (!formData.id) {
                 await addAction(formData);
-                toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
+                toast.add({ severity: "success", summary: "成功", detail: "新規アクション登録されました。", life: 3000 });
             } else {
                 await editAction(formData.id, formData);
-                toast.add({ severity: "info", summary: "Edit", detail: "アクション編集されました。", life: 3000 });
+                toast.add({ severity: "info", summary: "編集", detail: "アクション編集されました。", life: 3000 });
             }
             await fetchData(); // Refresh data after save/edit
         } catch (error) {
@@ -396,7 +396,7 @@
         loadingData.value = true;
         try {
             await removeAction(id);
-            toast.add({ severity: "success", summary: "Success", detail: "アクションが削除されました。", life: 3000 });
+            toast.add({ severity: "success", summary: "成功", detail: "アクションが削除されました。", life: 3000 });
             await fetchData(); // Refresh data after deletion
         } catch (error) {
             console.error('Failed to delete action:', error);

@@ -19,7 +19,7 @@
                 </AccordionHeader>
                 <AccordionContent>
                     <div v-if="loading">
-                        <p>Loading addresses...</p>
+                        <p>住所情報を読み込み中...</p>
                     </div>
                     <div v-else class="text-left">
                         <div v-if="address.address_name"><span class="font-bold">送り先：</span>{{ address.address_name }} </div>
@@ -353,7 +353,7 @@
         // console.log('Deleting address:', address);
         confirm.require({
             message: `「"${address.address_name}」"を削除してもよろしいですか?`,
-            header: 'Delete Confirmation',                    
+            header: '削除確認',
             icon: 'pi pi-info-circle',
             acceptLabel: '削除',
             acceptClass: 'p-button-danger',

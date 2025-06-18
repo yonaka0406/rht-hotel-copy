@@ -26,7 +26,7 @@
         </TabList>
         <TabPanels>
           <TabPanel value="0" as="p" class="m-0">
-            <div v-if="loadingBasicInfo">Loading from ClientEdit...</div>
+            <div v-if="loadingBasicInfo">編集中ページから読み込み中...</div>
             <ClientBasicInfo v-else/>
           </TabPanel>
           <TabPanel value="1" as="p" class="m-0">

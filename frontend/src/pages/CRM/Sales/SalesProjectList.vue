@@ -187,10 +187,10 @@ onMounted(async () => { // Make onMounted async
 
 const getClientNameById = (clientId) => {
   if (!allClientsList.value || allClientsList.value.length === 0 || !clientId) {
-    return 'N/A';
+    return '該当なし';
   }
   const client = allClientsList.value.find(c => c.id === clientId);
-  return client ? (client.name_kanji || client.name_kana || client.name || 'Unknown Client') : 'Client Not Found';
+  return client ? (client.name_kanji || client.name_kana || client.name || '不明なクライアント') : 'クライアントが見つかりません';
 };
 
 const applySearch = () => {
