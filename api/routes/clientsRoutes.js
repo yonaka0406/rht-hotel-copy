@@ -31,6 +31,6 @@ router.post('/clients/:clientId/related', authMiddleware_manageClients, clientsC
 router.put('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleUpdateClientRelationship);
 router.delete('/crm/client-relationships/:relationshipId', authMiddleware_manageClients, clientsController.handleDeleteClientRelationship);
 
-router.get('/client/:clientId/projects', authMiddleware, handleGetClientProjects);
+router.get('/clients/:clientId/projects', authMiddleware, handleGetClientProjects);
 
 module.exports = router;

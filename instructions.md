@@ -132,6 +132,10 @@ This document outlines common issues, preferred patterns, and best practices to 
         6.  Handle the DataTable's `@filter` event to call your data loading function, passing the updated `filters.value`.
         7.  Your backend data fetching logic will then need to receive these filter parameters and apply them to the database query.
         8.  Consider using `stateStorage="session"` and `stateKey` on the DataTable for filter persistence.
+    *   **Note on `filterMatchModeOptions` with `filterDisplay="menu"`:**
+        *   When using `filterDisplay="menu"`, providing a custom (and potentially very short) list of options to a column's `:filterMatchModeOptions` prop has occasionally led to internal TypeErrors (e.g., `Cannot read properties of undefined (reading '0')` in `onMenuMatchModeChange`).
+        *   If such errors occur, consider removing `:filterMatchModeOptions` from the problematic column. This allows PrimeVue to use its full default set of match modes for that column's data type. The desired default `matchMode` can still be set in the main `filters` ref.
+        *   Alternatively, ensure that if `filterMatchModeOptions` is used, it provides a list that is well-handled by PrimeVue's internal components (e.g., typically two or more options). Thorough testing is advised for custom, short lists of match modes with menu-based filtering.
 
 ## 4. General
 

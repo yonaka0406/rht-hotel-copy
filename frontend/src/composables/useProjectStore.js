@@ -120,6 +120,42 @@ export function useProjectStore() {
             isLoadingAllProjects.value = false;
         }
     }
+
+    /**
+     * Updates an existing project.
+     */
+    async function updateProject(projectId, projectData) {
+        // Consider adding a loading state specific to project update if needed
+        // isLoadingUpdateProject.value = true;
+        const token = localStorage.getItem('authToken');
+        try {
+            const response = await fetch(`/api/projects/${projectId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(projectData),
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                console.error('Failed to update project. Server response:', responseData);
+                throw new Error(responseData.message || `Failed to update project: ${response.status}`);
+            }
+            // Optionally, refresh the specific project in the allProjects list or refetch if necessary
+            // For example:
+            // const index = allProjects.value.findIndex(p => p.id === projectId);
+            // if (index !== -1) {
+            //   allProjects.value[index] = { ...allProjects.value[index], ...responseData };
+            // }
+            return responseData;
+        } catch (error) {
+            console.error(`Error updating project with ID ${projectId}:`, error);
+            throw error;
+        } finally {
+            // isLoadingUpdateProject.value = false;
+        }
+    }
     
     return {
         relatedProjects,
@@ -136,6 +172,7 @@ export function useProjectStore() {
         allProjectsFilters,
         fetchAllProjects,
         deleteProjectById, // Add new action
+        updateProject, // Add the new updateProject function
     };
 }
 
