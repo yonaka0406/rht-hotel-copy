@@ -245,6 +245,33 @@
         return isNaN(date.getTime()) ? null : date;
     };
 
+    const resetForm = () => {
+        projectName.value = '';
+        bidDate.value = null;
+        orderSource.value = '';
+        projectLocation.value = '';
+        selectedHotels.value = [];
+        budget.value = 0; // Default to 0 as per previous change
+        assignedWorkContent.value = '';
+        specificSpecializedWorkApplicable.value = false;
+        startDate.value = null;
+        endDate.value = null;
+        subContractors.value = [];
+        projectNameError.value = '';
+
+        // Handle primeContractor reset carefully based on currentClientId
+        if (props.currentClientId && allClientsList.value?.length) {
+             const client = allClientsList.value.find(c => c.id === props.currentClientId);
+             if (client) {
+                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
+             } else {
+                primeContractor.value = null;
+             }
+        } else {
+            primeContractor.value = null;
+        }
+    };
+
     watch(() => [props.projectDataToEdit, allClientsList.value, hotelList.value], (values) => {
         const [newData, currentAllClients, currentHotelList] = values;
         // This watch triggers when projectDataToEdit, allClientsList, or hotelList changes.
@@ -349,33 +376,6 @@
             return false;
         }
         return true;
-    };
-
-    const resetForm = () => {
-        projectName.value = '';
-        bidDate.value = null;
-        orderSource.value = '';
-        projectLocation.value = '';
-        selectedHotels.value = [];
-        budget.value = 0; // Default to 0 as per previous change
-        assignedWorkContent.value = '';
-        specificSpecializedWorkApplicable.value = false;
-        startDate.value = null;
-        endDate.value = null;
-        subContractors.value = [];
-        projectNameError.value = '';
-
-        // Handle primeContractor reset carefully based on currentClientId
-        if (props.currentClientId && allClientsList.value?.length) {
-             const client = allClientsList.value.find(c => c.id === props.currentClientId);
-             if (client) {
-                primeContractor.value = { ...client, preferred_display_name: client.name_kanji || client.name_kana || client.name || '' };
-             } else {
-                primeContractor.value = null;
-             }
-        } else {
-            primeContractor.value = null;
-        }
     };
 
     const closeDialog = () => {
