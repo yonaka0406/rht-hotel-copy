@@ -470,10 +470,10 @@ const handleSaveAction = async (formData) => {
     try {
         if (!formData.id) {
             await addAction(formData);
-            toast.add({ severity: "success", summary: "Success", detail: "新規アクション登録されました。", life: 3000 });
+            toast.add({ severity: "success", summary: "成功", detail: "新規アクション登録されました。", life: 3000 });
         } else {
             await editAction(formData.id, formData);
-            toast.add({ severity: "info", summary: "Edit", detail: "アクション編集されました。", life: 3000 });
+            toast.add({ severity: "info", summary: "編集", detail: "アクション編集されました。", life: 3000 });
         }
 
         // Refresh data after save/edit
@@ -498,7 +498,7 @@ const deleteActionHandler = async (id) => {
     try {
         await removeAction(id); // This now comes from useCRMStore
 
-        toast.add({ severity: "success", summary: "Success", detail: "アクションが削除されました。", life: 3000 });
+        toast.add({ severity: "success", summary: "成功", detail: "アクションが削除されました。", life: 3000 });
 
         await fetchDataBasedOnScope(); // Refresh data after deletion
 
@@ -531,10 +531,10 @@ const setupDedicatedCalendar = async () => {
     try {
         await createUserCalendar();
         await fetchUser(); // Re-fetch user to update hasGoogleCalendarId
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Googleカレンダー作成されました。', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: 'Googleカレンダー作成されました。', life: 3000 });
     } catch (err) {
-        const error = err.message || 'Failed to setup dedicated calendar.';
-        toast.add({ severity: 'error', summary: 'Setup Error', detail: error, life: 3000 });
+        const error = err.message || '専用カレンダーの設定に失敗しました。';
+        toast.add({ severity: 'error', summary: '設定エラー', detail: error, life: 3000 });
     } finally {
         isSubmitting.value = false;
     }
@@ -547,21 +547,21 @@ const handleManualSync = async () => {
         const response = await triggerCalendarSyncStore();
         toast.add({
             severity: 'success',
-            summary: 'Calendar Sync',
-            detail: response.message || 'Synchronization with Google Calendar has completed.',
+            summary: 'カレンダー同期',
+            detail: response.message || 'Googleカレンダーとの同期が完了しました。',
             life: 5000
         });
         if (response.details) {
             console.log("Sync details:", response.details);
-            let detailMsg = `Created: ${response.details.actionsCreated}, Updated: ${response.details.actionsUpdated}, Failed: ${response.details.actionsFailed}`;
-            toast.add({ severity: 'info', summary: 'Sync Stats', detail: detailMsg, life: 6000 });
+            let detailMsg = `作成済み: ${response.details.actionsCreated}, 更新済み: ${response.details.actionsUpdated}, 失敗: ${response.details.actionsFailed}`;
+            toast.add({ severity: 'info', summary: '同期統計', detail: detailMsg, life: 6000 });
         }
         await fetchDataBasedOnScope(); // Refresh data after sync
     } catch (err) {
         toast.add({
             severity: 'error',
-            summary: 'Sync Error',
-            detail: err.message || 'Could not sync with Google Calendar.',
+            summary: '同期エラー',
+            detail: err.message || 'Googleカレンダーと同期できませんでした。',
             life: 5000
         });
     } finally {

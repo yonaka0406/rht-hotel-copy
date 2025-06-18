@@ -184,7 +184,7 @@
 
     const clientName = computed(() => {
         if (!selectedClient.value || !selectedClient.value.client) {
-            return `Client ID: ${props.clientId}`; 
+            return `クライアントID: ${props.clientId}`;
         }
         const clientData = selectedClient.value.client; 
         const name = clientData.name_kanji || clientData.name_kana || clientData.name;
@@ -211,7 +211,7 @@
         try {
             await storeFetchRelatedCompanies(props.clientId);
         } catch (error) {
-            toast.add({ severity: 'error', summary: 'Error Fetching Relations', detail: error.message || 'Could not fetch related companies.', life: 3000 });
+            toast.add({ severity: 'error', summary: '関連取得エラー', detail: error.message || '関連企業の取得に失敗しました。', life: 3000 });
         }
     };
 
@@ -219,7 +219,7 @@
         try {
             await storeFetchCommonRelationshipPairs();
         } catch (error) {
-            toast.add({ severity: 'error', summary: 'Error Fetching Pairs', detail: error.message || 'Could not fetch common pairs.', life: 3000 });
+            toast.add({ severity: 'error', summary: 'ペア取得エラー', detail: error.message || '共通関係ペアの取得に失敗しました。', life: 3000 });
         }
     };
 
@@ -255,11 +255,11 @@
 
     const saveNewRelationship = async () => {
     if (!newRelationship.value.target_client_id) {
-        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Target Client must be selected.', life: 3000 });
+        toast.add({ severity: 'warn', summary: '入力エラー', detail: '対象クライアントを選択してください。', life: 3000 });
         return;
     }
     if (props.clientId === newRelationship.value.target_client_id) {
-        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Cannot relate a client to itself.', life: 3000 });
+        toast.add({ severity: 'warn', summary: '入力エラー', detail: '自己参照はできません。', life: 3000 });
         return;
     }
     // if (!selectedPair.value || !newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
@@ -267,7 +267,7 @@
     //     return;
     // }
     if (!newRelationship.value.source_relationship_type || !newRelationship.value.target_relationship_type) {
-        toast.add({ severity: 'warn', summary: 'Validation Error', detail: 'Source and Target relationship types must be filled, either by selecting a common pair or by manual input.', life: 4000 });
+        toast.add({ severity: 'warn', summary: '入力エラー', detail: '自社との関係および相手との関係を入力してください（共通ペア選択または手入力）。', life: 4000 });
         return;
     }
 
@@ -280,12 +280,12 @@
         comment: newRelationship.value.comment,
         };
         await storeAddClientRelationship(props.clientId, payload);
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Relationship saved successfully.', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '関係を保存しました。', life: 3000 });
         closeAddModal();
         loadRelatedCompanies(); 
     } catch (error) {
         console.error('Error saving new relationship:', error);
-        toast.add({ severity: 'error', summary: 'Error Saving Relationship', detail: error.message || 'Could not save relationship.', life: 4000 });
+        toast.add({ severity: 'error', summary: '関係保存エラー', detail: error.message || '関係の保存に失敗しました。', life: 4000 });
     } finally {
         isSavingNewRelationship.value = false;
     }
@@ -294,20 +294,20 @@
     const deleteRelationship = async (relationshipData) => {
     const relationshipIdToDelete = relationshipData.relationship_id; 
     if (!relationshipIdToDelete) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Cannot delete: Relationship ID is missing.', life: 4000 });
+        toast.add({ severity: 'error', summary: 'エラー', detail: '削除不可: 関係IDがありません。', life: 4000 });
         return;
     }
 
-    if (window.confirm(`Are you sure you want to delete this relationship with ${relationshipData.related_company_name}?`)) {
+    if (window.confirm(`「${relationshipData.related_company_name}」との関連を削除してもよろしいですか？`)) {
         // If per-row deleting state is needed, it should be handled locally on `relationshipData` object.
         // For now, we rely on the global isLoadingRelatedCompanies for feedback during the data refresh.
         try {
         await storeDeleteClientRelationship(relationshipIdToDelete);
-        toast.add({ severity: 'success', summary: 'Success', detail: 'Relationship deleted.', life: 3000 });
+        toast.add({ severity: 'success', summary: '成功', detail: '関係を削除しました。', life: 3000 });
         loadRelatedCompanies(); 
         } catch (error) {
         console.error('Error deleting relationship:', error);
-        toast.add({ severity: 'error', summary: 'Error Deleting Relationship', detail: error.message || 'Could not delete relationship.', life: 3000 });
+        toast.add({ severity: 'error', summary: '関係削除エラー', detail: error.message || '関係の削除に失敗しました。', life: 3000 });
         }
     }
     };

@@ -237,7 +237,7 @@
                 
             </div>
             <div v-else>
-                <p>Loading...</p>
+                <p>読み込み中...</p>
             </div>
         </template>
     </Card>
