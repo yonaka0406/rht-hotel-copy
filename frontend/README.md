@@ -19,7 +19,7 @@ This directory contains the frontend application for the Hotel Management System
 *   **Papaparse:** A fast and powerful CSV (Comma Separated Values) parser, used for client-side data import.
 *   **Vue Router:** For client-side routing and navigation within the SPA.
 *   **uuid:** For generating unique identifiers (UUIDs) on the client-side.
-*   **State Management (Pinia):** The application uses Pinia for state management, as indicated by the composable store structure (e.g., `composables/useUserStore.js`).
+*   **State Management:** Utilizes Vue's built-in reactivity and Composition API features (custom composable stores like `composables/useUserStore.js`) for managing application state.
 
 ## Setup and Installation
 
@@ -62,7 +62,7 @@ The frontend codebase is organized as follows:
 *   **`src/`**: Contains the main source code for the Vue application.
     *   **`assets/`**: Static assets processed by Vite (e.g., images, global styles).
     *   **`components/`**: Reusable Vue components used across different pages.
-    *   **`composables/`**: Vue Composition API functions. This is where Pinia stores (e.g., `useUserStore.js`, `useHotelStore.js`) are typically defined, providing a centralized state management solution. Also used for other reusable logic.
+    *   **`composables/`**: Vue Composition API functions, used for state management (e.g., `useUserStore.js`, `useHotelStore.js`) and reusable logic.
     *   **`pages/`**: Vue components that represent different pages or views of the application, organized by feature (e.g., `Admin`, `CRM`, `MainPage`, `Reporting`).
     *   **`router/`**: Contains the Vue Router configuration (`index.js`), defining the application's routes.
     *   **`App.vue`**: The root Vue component of the application.
