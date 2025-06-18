@@ -451,8 +451,8 @@
     if (!newRoomType.name) {
       toast.add({
         severity: 'error',
-        summary: 'Validation Error',
-        detail: 'Name is required',
+        summary: 'バリデーションエラー',
+        detail: '名称は必須です。',
         life: 3000
       });
       return;
@@ -483,18 +483,18 @@
 
       toast.add({
         severity: 'success',
-        summary: 'Success',
+        summary: '成功',
         detail: '部屋タイプ追加されました。',
         life: 3000
       });
     } catch (error) {
-      let errorMessage = 'Failed to add room type';
+      let errorMessage = '部屋タイプの追加に失敗しました';
       if (error.code === '23505') { // PostgreSQL unique violation
-        errorMessage = 'Room type name already exists';
+        errorMessage = 'その部屋タイプ名は既に存在します。';
       }
       toast.add({
         severity: 'error',
-        summary: 'Error',
+        summary: 'エラー',
         detail: errorMessage,
         life: 3000
       });
@@ -515,7 +515,7 @@
   const deleteRoomType = async (roomType) => {
     confirm.require({
       message: 'この部屋タイプを削除してもよろしいですか?',
-      header: 'Delete Confirmation',
+      header: '削除確認',
       icon: 'pi pi-exclamation-triangle',
       accept: async () => {
         try {
@@ -524,7 +524,7 @@
             roomTypes.value.splice(index, 1);
             toast.add({
               severity: 'success',
-              summary: 'Success',
+              summary: '成功',
               detail: '部屋タイプ削除されました。',
               life: 3000
             });
@@ -532,8 +532,8 @@
         } catch (error) {
           toast.add({
             severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to delete room type',
+            summary: 'エラー',
+            detail: '部屋タイプの削除に失敗しました',
             life: 3000
           });
         }
@@ -549,7 +549,7 @@
     if (!roomGenerator.value.room_type) {
       toast.add({
         severity: 'warn',
-        summary: 'Warning',
+        summary: '警告',
         detail: 'プレビューを生成する前に部屋タイプを選択してください。',
         life: 3000
       });
@@ -576,7 +576,7 @@
       }else {        
         toast.add({
           severity: 'error',
-          summary: 'Validation Error',
+          summary: 'バリデーションエラー',
           detail: '部屋番号「' + newRoomNumber + '」既に存在されます。',
           life: 3000
         });        
@@ -605,7 +605,7 @@
     if (!hotelFieldsFilled) {
       toast.add({
         severity: 'warn',
-        summary: 'Warning',
+        summary: '警告',
         detail: 'ホテルに関するすべてのフィールドを記入してください。',
         life: 3000
       });
@@ -617,7 +617,7 @@
     if (!roomTypesFilled) {
       toast.add({
         severity: 'warn',
-        summary: 'Warning',
+        summary: '警告',
         detail: '少なくとも1つの部屋タイプを追加してください。',
         life: 3000
       });
@@ -629,7 +629,7 @@
     if (!generatedRoomsFilled) {
       toast.add({
         severity: 'warn',
-        summary: 'Warning',
+        summary: '警告',
         detail: '少なくとも1つの部屋を作成してください。',
         life: 3000
       });
@@ -642,7 +642,7 @@
   const showError = (message) => {
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: 'エラー',
       detail: message,
       life: 3000
     });
@@ -687,7 +687,7 @@
         body: JSON.stringify(hotel)
       });
 
-      if (!hotelResponse.ok) throw new Error('Failed to create hotel');
+      if (!hotelResponse.ok) throw new Error('ホテルの作成に失敗しました');
       
       const hotelData = await hotelResponse.json();      
       
@@ -721,7 +721,7 @@
       
       toast.add({
         severity: 'success',
-        summary: 'Success',
+        summary: '成功',
         detail: 'ホテル作成されました。',
         life: 3000
       });
@@ -733,11 +733,11 @@
     } catch (error) {
       toast.add({
         severity: 'error',
-        summary: 'Error',
-        detail: 'An error occured.',
+        summary: 'エラー',
+        detail: 'エラーが発生しました。',
         life: 3000
       });
-      throw new Error('Error saving hotel: ' + error.message);      
+      throw new Error('ホテルの保存中にエラーが発生しました: ' + error.message);
     }
   };
 

@@ -219,7 +219,7 @@
       );
     });
 
-    console.log('Modified Template:', modifiedTemplate);
+    console.log('変更されたテンプレート:', modifiedTemplate);
     await insertXMLResponse(selectedHotelId.value, templateName.value, modifiedTemplate);
     await fetchXMLRecentResponses();
   };
@@ -263,7 +263,7 @@
         dialogContent.value = getErrorContent(response);
       }    
       
-      console.log('getDialogContent result:', dialogContent.value);
+      console.log('getDialogContentの結果:', dialogContent.value);
   };
   const getErrorContent = (response) => {
     const translatedResponse = {};
@@ -274,7 +274,7 @@
   };
   const getSuccessContent = (response) => {
     if (!response) {
-      return [{ label: 'Success', value: 'Operation successful, but no data to display.' }];
+      return [{ label: '成功', value: '処理は成功しましたが、表示するデータがありません。' }];
     }
     const translatedResponse = {};
     for (const key in response) {

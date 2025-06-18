@@ -232,7 +232,7 @@
         </div>
     </div>
     <div v-else>
-        <p>Loading... or not!</p>
+        <p>読み込み中...</p>
     </div>
 </template>
 
@@ -389,7 +389,7 @@
                 body: JSON.stringify(formattedAdjustment),
             });
             if (!response.ok) {
-                throw new Error('Failed to save addon');
+                throw new Error('アドオンの保存に失敗しました');
             } 
 
             fetchPlanAddons();
@@ -398,12 +398,13 @@
 
             toast.add({
                 severity: 'success',
-                summary: 'Success',
+                summary: '成功',
                 detail: 'アドオン作成されました。',
                 life: 3000
             });
         } catch (error) {
-            console.error('Error saving adjustment:', error);
+            console.error('アドオン保存エラー:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'アドオンの保存に失敗しました', life: 3000 });
         }
 
     };
@@ -447,7 +448,7 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update adjustment');
+                throw new Error('アドオンの更新に失敗しました');
             }
 
             fetchPlanAddons(); // Refresh the rates
@@ -456,16 +457,16 @@
 
             toast.add({
                 severity: 'success',
-                summary: 'Success',
+                summary: '成功',
                 detail: 'アドオン更新されました。',
                 life: 3000
             });
         } catch (error) {
-            console.error('Error updating addon:', error);
+            console.error('アドオン更新エラー:', error);
             toast.add({
                 severity: 'error',
-                summary: 'Error',
-                detail: 'An error occurred while updating the addon.',
+                summary: 'エラー',
+                detail: 'アドオンの更新中にエラーが発生しました。',
                 life: 3000
             });
         }
@@ -551,7 +552,7 @@
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch addons');
+                throw new Error('アドオンの取得に失敗しました');
             }
 
             const data = await response.json();
@@ -562,7 +563,7 @@
             }));
             sendFilteredConditions();
         } catch (error) {
-            console.error('Error fetching addons:', error);
+            console.error('アドオン取得エラー:', error);
         }
     };
 

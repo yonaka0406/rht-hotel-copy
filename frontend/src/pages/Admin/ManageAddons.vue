@@ -138,7 +138,7 @@
                       icon="pi pi-pencil" 
                       class="p-button-text p-button-sm" 
                       @click="openEditHotelDialog(slotProps.data)"
-                      v-tooltip="'Edit Addon'"
+                      v-tooltip="'アドオン編集'"
                     />
                   </div>
                 </template>
@@ -270,7 +270,7 @@
             offLabel="非表示"
             onIcon="pi pi-eye"
             offIcon="pi pi-eye-slash"
-            aria-label="Status Toggle"
+            aria-label="ステータス切り替え"
           />
         </div>
       </div>
@@ -541,7 +541,7 @@
       if (AddonSet.has(editGlobalAddon.name)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
+          summary: 'エラー',
           detail: '唯一アドオン名称が必要', life: 3000 
         });
         return;
@@ -568,10 +568,10 @@
       }
       showEditGlobalDialog.value = false;
       editGlobalAddonReset();
-      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'グローバルアドオン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error updating global addon:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update global addon', life: 3000 });
+      console.error('グローバルアドオンの更新エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルアドオンの更新に失敗しました', life: 3000 });
     }
   };  
   const saveGlobalAddon = async () => {
@@ -585,7 +585,7 @@
       if (AddonSet.has(newGlobalAddon.name)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
+          summary: 'エラー',
           detail: '雄一アドオン名はを使ってください。', life: 3000 
         });
         return;
@@ -609,10 +609,10 @@
       globalAddons.value.push(data);
       showGlobalDialog.value = false;
       newGlobalAddonReset();
-      toast.add({ severity: 'success', summary: 'Success', detail: 'グローバルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'グローバルアドオン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error saving global addon:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save global addon', life: 3000 });
+      console.error('グローバルアドオンの保存エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'グローバルアドオンの保存に失敗しました', life: 3000 });
     }
   };
 
@@ -689,7 +689,7 @@
       if (AddonSet.has(newAddonKey)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
+          summary: 'エラー',
           detail: '唯一アドオン名称が必要', life: 3000 
         });
         return;
@@ -716,10 +716,10 @@
       }
       showEditHotelDialog.value = false;
       editHotelAddonReset();
-      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error updating hotel addon:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to update hotel addon', life: 3000 });
+      console.error('ホテルアドオンの更新エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルアドオンの更新に失敗しました', life: 3000 });
     }
   };
   const saveHotelAddon = async () => {
@@ -736,7 +736,7 @@
       if (AddonSet.has(newAddonKey)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
+          summary: 'エラー',
           detail: '唯一アドオン名称が必要', life: 3000 
         });
         return;
@@ -759,10 +759,10 @@
       hotelAddons.value.push(data);
       showHotelDialog.value = false;
       newHotelAddonReset();
-      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテルアドオン追加されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテルアドオン追加されました。', life: 3000 });
     } catch (err) {
-      console.error('Error saving hotel addon:', err);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel addon', life: 3000 });
+      console.error('ホテルアドオンの保存エラー:', err);
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルアドオンの保存に失敗しました', life: 3000 });
     }
   };
           
@@ -785,8 +785,8 @@
       globalAddons.value = data
       //console.log('Fetched Global Addons:', globalAddons.value);
     } catch (err) {
-      console.error('Error fetching global addons:', err)
-      error.value = err.message || 'Failed to fetch global addons'
+      console.error('グローバルアドオンの取得エラー:', err)
+      error.value = err.message || 'グローバルアドオンの取得に失敗しました'
     } finally {
       loading.value = false
     }
@@ -809,8 +809,8 @@
       hotelAddons.value = data
       //console.log('Fetched Hotel Addons:', hotelAddons.value);
     } catch (err) {
-      console.error('Error fetching hotel addons:', err)
-      error.value = err.message || 'Failed to fetch hotel addons'
+      console.error('ホテルアドオンの取得エラー:', err)
+      error.value = err.message || 'ホテルアドオンの取得に失敗しました'
     } finally {
       loading.value = false
     }

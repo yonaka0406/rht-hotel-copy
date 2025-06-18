@@ -343,7 +343,7 @@ const handleSaveSettings = async (tierData) => {
     await saveLoyaltyTier(payload);
     toast.add({ severity: 'success', summary: '成功', detail: `${getTierNameJP(payload.tier_name)} 設定が保存されました。`, life: 3000 });
   } catch (error) {
-    console.error(`Error saving ${payload.tier_name} settings:`, error);
+    console.error(`${getTierNameJP(payload.tier_name)} 設定の保存エラー:`, error);
     toast.add({ severity: 'error', summary: 'エラー', detail: `${getTierNameJP(payload.tier_name)} 設定の保存に失敗しました。 ${error.message || ''}`, life: 4000 });
   }
 };

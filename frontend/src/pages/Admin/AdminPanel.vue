@@ -3,10 +3,10 @@
         <div :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
             <div :class="['p-4 border-b border-yellow-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
                 <div v-if="!isCollapsed" class="flex items-center">
-                    <img src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8 mr-2" />
+                    <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
                     <span class="text-xl font-semibold">管理者パネル</span>
                 </div>
-                <img v-else src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8" />
+                <img v-else src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8" />
                 <Button
                     @click="toggleSidebar"
                     :icon="isCollapsed ? 'pi pi-arrow-right' : 'pi pi-arrow-left'"
@@ -14,7 +14,7 @@
                     rounded
                     class="p-button-secondary text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500"
                     :class="isCollapsed ? 'w-full justify-center mt-2' : ''"
-                    aria-label="Toggle Sidebar"
+                    aria-label="サイドバーの切り替え"
                 />
             </div>
 
@@ -75,13 +75,13 @@
             <template #start>
                 <div class="flex items-center">
                 <Button icon="pi pi-bars" @click="mobileSidebarVisible = true" text class="mr-1 !text-gray-600" />
-                <img src="@/assets/logo-simple.png" alt="Admin" class="h-7" />
+                <img src="@/assets/logo-simple.png" alt="管理者" class="h-7" />
                 </div>
             </template>
             <template #end>
                 <div class="flex items-center gap-2">
                 <span class="text-sm text-gray-700">{{ userNameDisplayShort }}</span>
-                <Button @click="handleLogout" icon="pi pi-sign-out" severity="danger" text rounded aria-label="Logout" class="!text-red-500" />
+                <Button @click="handleLogout" icon="pi pi-sign-out" severity="danger" text rounded aria-label="ログアウト" class="!text-red-500" />
                 </div>
             </template>
             </Menubar>
@@ -90,7 +90,7 @@
         <Drawer v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
             <div class="flex flex-col h-full">
                 <div class="flex items-center p-4 border-b">
-                    <img src="@/assets/logo-simple.png" alt="Admin Panel" class="h-8 mr-2" />
+                    <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
                     <span class="text-xl font-semibold text-gray-800">管理者パネル</span>
                 </div>
                 <nav class="flex-1 space-y-1 p-4 overflow-y-auto">
@@ -254,12 +254,12 @@
         try {
             const response = await fetch('/api/auth/active-users'); 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTPエラー！ステータス: ${response.status}`);
             }
             const data = await response.json();
             activeUsers.value = data.activeUsers;
         } catch (err) {
-            console.error('Failed to fetch active users:', err);
+            console.error('アクティブユーザーの取得に失敗しました:', err);
         }
     };
     
@@ -311,7 +311,7 @@
                                 accumulatedReservationsCount += Number(reservationsToday.value.reservationsCount) || 0;                             
                                 accumulatedReservationsValue += Number(reservationsToday.value.reservationsValue) || 0;
                             } else {
-                                console.warn(`No reservation data found for hotel ${hotel.id} after fetch.`);
+                                console.warn(`ホテル ${hotel.id} の予約データが見つかりませんでした。`);
                             }
 
                             // --- Fetch and process booking lead time data ---
@@ -325,17 +325,17 @@
                                     accumulatedTotalNights += nights;
                                 }
                             } else {
-                                console.warn(`No booking lead time data found for hotel ${hotel.id} after fetchBookingLeadTime.`);
+                                console.warn(`ホテル ${hotel.id} の予約リードタイムデータが見つかりませんでした。`);
                             }
                         } catch (error) {                            
-                            console.error(`Error fetching reservations for hotel ${hotel.id}:`, error);                            
+                            console.error(`ホテル ${hotel.id} の予約取得エラー:`, error);
                         }
                     } else {
-                        console.warn("Skipping a hotel due to missing id:", hotel);
+                        console.warn("IDがないためホテルをスキップします:", hotel);
                     }
                 }
             } else {
-                console.warn("hotels.value is not an array or is undefined. Cannot process reservations.");
+                console.warn("hotels.valueが配列ではないか、未定義です。予約を処理できません。");
             }
             
             // After iterating through all hotels update the final reactive variables that store the total count and value.

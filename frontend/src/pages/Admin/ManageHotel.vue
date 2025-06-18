@@ -477,9 +477,9 @@
       await editHotelSiteController(selectedHotel.value.id, siteController.value);
       await fetchHotels();
       dialogVisible.value = false;
-      toast.add({ severity: 'success', summary: 'Success', detail: 'ホテル更新されました。', life: 3000 });
+      toast.add({ severity: 'success', summary: '成功', detail: 'ホテル更新されました。', life: 3000 });
     } catch (error) {
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to save hotel', life: 3000 });
+      toast.add({ severity: 'error', summary: 'エラー', detail: 'ホテルの保存に失敗しました', life: 3000 });
     }
   };
 
@@ -514,7 +514,7 @@
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch room types');
+        throw new Error('部屋タイプの取得に失敗しました');
       }
 
       const data = await response.json();
@@ -549,8 +549,8 @@
       roomTypes.value = Array.from(roomTypesMap.values());
       rooms.value = roomsList;
     } catch (error) {
-      console.error('Error fetching room types:', error);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to fetch room types', life: 3000 });
+      console.error('部屋タイプ取得エラー:', error);
+      toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプの取得に失敗しました', life: 3000 });
     }
   };
   const editRooms = async (hotel) => {
@@ -561,8 +561,8 @@
     } catch (error) {
       toast.add({ 
         severity: 'error', 
-        summary: 'Error', 
-        detail: 'Failed to fetch rooms', 
+        summary: 'エラー',
+        detail: '部屋の取得に失敗しました',
         life: 3000 
       });
     }
@@ -575,7 +575,7 @@
         if (roomNumberSet.has(room.room_number)) {
           toast.add({ 
             severity: 'error', 
-            summary: 'Error', 
+            summary: 'エラー',
             detail: '唯一の部屋番号が必要です。', life: 3000 
           });
           return;
@@ -607,13 +607,13 @@
         if (response.status === 200) {
           // console.log(`Room ${room.room_number} updated successfully`);
         } else {
-          console.error(`Failed to update room ${room.room_number}`);
+          console.error(`部屋 ${room.room_number} の更新に失敗しました`);
         }            
       }
 
       toast.add({ 
         severity: 'success', 
-        summary: 'Success', 
+        summary: '成功',
         detail: '部屋更新されました。', 
         life: 3000 
       });
@@ -631,8 +631,8 @@
     } catch (error) {
       toast.add({ 
         severity: 'error', 
-        summary: 'Error', 
-        detail: 'Failed to fetch rooms', 
+        summary: 'エラー',
+        detail: '部屋の取得に失敗しました',
         life: 3000 
       });
     }        
@@ -643,7 +643,7 @@
       const nameSet = new Set();
       for (const roomType of roomTypes.value) {
         if (nameSet.has(roomType.name)) {
-          toast.add({ severity: 'error', summary: 'Error', detail: 'Room type names must be unique', life: 3000 });
+          toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプ名はユニークである必要があります。', life: 3000 });
           return;
         }
         nameSet.add(roomType.name);
@@ -670,20 +670,20 @@
           if (response.status === 200) {
             // console.log(`Room type ${roomType.name} updated successfully`);
           } else {
-            console.error(`Failed to update room type ${roomType.name}`);
+            console.error(`部屋タイプ ${roomType.name} の更新に失敗しました`);
           }
         }
       }
 
       toast.add({ 
         severity: 'success', 
-        summary: 'Success', 
+        summary: '成功',
         detail: '部屋タイプ更新されました。', 
         life: 3000 
       });
       roomTypesDialogVisible.value = false;
     } catch (error) {
-      console.error('Error updating room types:', error);
+      console.error('部屋タイプ更新エラー:', error);
     }
   };
   const openRoomTypeDialog = () => {
@@ -700,7 +700,7 @@
     for (const roomType of roomTypes.value) {
       nameSet.add(roomType.name);
       if (nameSet.has(newRoomType.name)) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Room type names must be unique', life: 3000 });
+        toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプ名はユニークである必要があります。', life: 3000 });
         return;
       }
     }
@@ -732,12 +732,12 @@
         await fetchRoomTypes();
         roomTypesDialogVisible.value = true;            
       } else {
-        console.error(`Failed to create room type ${newRoomType.name}`);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room type', life: 3000 });
+        console.error(`部屋タイプ ${newRoomType.name} の作成に失敗しました`);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプの作成に失敗しました', life: 3000 });
       }
     } catch (error) {
-      console.error('Error creating room type:', error);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room type', life: 3000 });
+      console.error('部屋タイプ作成エラー:', error);
+      toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプの作成に失敗しました', life: 3000 });
     }
   };
   const openRoomDialog = () => {
@@ -760,7 +760,7 @@
       if (roomNumberSet.has(newRoom.room_number)) {
         toast.add({ 
           severity: 'error', 
-          summary: 'Error', 
+          summary: 'エラー',
           detail: '唯一の部屋番号が必要です。', life: 3000 
         });
         return;
@@ -791,7 +791,7 @@
         // console.log(`Room ${newRoom.room_number} created successfully`);
         toast.add({ 
           severity: 'success', 
-          summary: 'Success', 
+          summary: '成功',
           detail: '部屋作成されました。', 
           life: 3000 
         });
@@ -799,12 +799,12 @@
         await fetchRoomTypes();
         roomsDialogVisible.value = true;            
       } else {
-        console.error(`Failed to create room ${newRoomType.name}`);
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room', life: 3000 });
+        console.error(`部屋 ${newRoomType.name} の作成に失敗しました`);
+        toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
       }
     } catch (error) {
-      console.error('Error creating room:', error);
-      toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to create room', life: 3000 });
+      console.error('部屋作成エラー:', error);
+      toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
     }
   };
 
