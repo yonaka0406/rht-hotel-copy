@@ -44,7 +44,7 @@
           </template>
         </Column>
         <Column field="derived_prime_contractor_name" header="元請け企業" :sortable="true" style="min-width: 150px;"
-                :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
+                :showFilterMenu="true">
           <template #body="slotProps">
             <span v-if="slotProps.data.related_clients && Array.isArray(slotProps.data.related_clients)">
               {{
