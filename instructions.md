@@ -110,6 +110,12 @@ To ensure robust and consistent input validation in API controllers, a set of he
     *   Throws an error if invalid, otherwise returns the trimmed string.
     *   Example: `const clientName = validateNonEmptyStringParam(req.body.name, 'Client Name');`
 
+*   `validateIntegerParam(intString, paramName)`:
+    *   Validates if `intString` is a valid integer (positive, negative, or zero). Checks for empty/null/undefined, `isNaN`, and ensures the string strictly represents a whole integer (no decimals or trailing non-numeric characters).
+    *   `paramName` is used in error messages.
+    *   Throws an error if invalid, otherwise returns the numeric integer.
+    *   Example: `const totalRooms = validateIntegerParam(req.body.total_rooms, 'Total Rooms');`
+
 **Usage in Controllers:**
 
 ```javascript
