@@ -336,4 +336,18 @@ Implementing a payment integration requires careful attention to security to pro
         - Any Square SDKs or client libraries used.
     - Regularly scan for vulnerabilities in dependencies and apply patches promptly.
 - **Regular Security Assessments:** Consider periodic security assessments or penetration testing of the PMS application and its integration points.
+
+## 6. Implementation Guidelines
+
+The conceptual design outlined in this document describes the architecture and flow for integrating Square payment links. The actual implementation of these features, including backend API development, frontend UI work, database interactions, and error handling, must adhere to the specific coding standards, development guidelines, and best practices established for this project.
+
+These are detailed in the `instructions.md` file located in the root of the repository. Developers should consult `instructions.md` for guidance on:
+
+- Backend conventions (e.g., `requestId` handling, database client usage, input validation).
+- Frontend UI/UX standards (e.g., language, component usage for PrimeVue and Tailwind CSS, form layouts).
+- Error handling patterns.
+- Code commenting and style.
+- Any other project-specific development practices.
+
+Adherence to `instructions.md` will ensure consistency, maintainability, and quality in the implemented solution.
 ```
