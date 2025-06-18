@@ -40,7 +40,7 @@
                 :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}, {label: '完全一致', value: 'equals'}]">
           <template #body="slotProps">{{ slotProps.data.project_name }}</template>
           <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="プロジェクト名で検索"/>
+            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="プロジェクト名で検索"/>
           </template>
         </Column>
         <Column field="derived_prime_contractor_name" header="元請け企業" :sortable="true" style="min-width: 150px;"
@@ -56,7 +56,7 @@
             <span v-else>N/A</span>
           </template>
           <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="元請け企業名で検索"/>
+            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="元請け企業名で検索"/>
           </template>
         </Column>
         <Column field="bid_date" header="入札日" :sortable="true" :showFilterMenu="true" dataType="date">
@@ -74,13 +74,13 @@
         <Column field="order_source" header="発注元" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
           <template #body="slotProps">{{ slotProps.data.order_source }}</template>
           <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="発注元で検索"/>
+            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="発注元で検索"/>
           </template>
         </Column>
         <Column field="project_location" header="工事場所" :sortable="true" :showFilterMenu="true" :filterMatchModeOptions="[{label: '部分一致', value: 'contains'}]">
           <template #body="slotProps">{{ slotProps.data.project_location }}</template>
           <template #filter="{filterModel, filterCallback}">
-            <InputText type="text" v-model="filterModel.value" @keydown.enter="filterCallback()" placeholder="工事場所で検索"/>
+            <InputText type="text" v-model="filterModel.value" @input="filterCallback()" placeholder="工事場所で検索"/>
           </template>
         </Column>
         <Column field="start_date" header="開始日" :sortable="true" :showFilterMenu="true" dataType="date">
@@ -148,6 +148,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useProjectStore } from '@/composables/useProjectStore';
 import { useClientStore } from '@/composables/useClientStore'; // Import useClientStore
+import { FilterMatchMode } from '@primevue/core/api';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
@@ -194,15 +195,15 @@ const dialogMode = computed(() => projectToEdit.value && projectToEdit.value.id 
 const projectDialogHeader = computed(() => dialogMode.value === 'edit' ? 'プロジェクト編集' : '新規プロジェクト追加');
 
 const filters = ref({
-    'project_name': { value: null, matchMode: 'contains' },
-    'derived_prime_contractor_name': { value: null, matchMode: 'contains' },
-    'bid_date': { value: null, matchMode: 'dateIs' },
-    'budget': { value: null, matchMode: 'equals' },
-    'order_source': { value: null, matchMode: 'contains' },
-    'project_location': { value: null, matchMode: 'contains' },
-    'start_date': { value: null, matchMode: 'dateIs' },
-    'end_date': { value: null, matchMode: 'dateIs' },
-    'target_store': { value: null, matchMode: 'contains'}
+    'project_name': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'derived_prime_contractor_name': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'bid_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
+    'budget': { value: null, matchMode: FilterMatchMode.EQUALS },
+    'order_source': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'project_location': { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'start_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
+    'end_date': { value: null, matchMode: FilterMatchMode.DATE_IS },
+    'target_store': { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 
 const loadProjects = async () => {
