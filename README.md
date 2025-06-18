@@ -18,7 +18,7 @@ This project is a comprehensive Hotel Management System designed to streamline v
     *   Supports CSV import (using Papaparse client-side and fast-csv backend-side).
     *   Enables **Excel data import and export** capabilities (via `exceljs`).
 * **File Uploads:** General purpose file upload functionality for various modules (e.g., attaching documents to client profiles) using `multer`.
-* **OTA XML Integration:** Seamless communication with Online Travel Agencies via XML (leveraging `xml2js` and `soap`).
+* **OTA XML Integration:** Seamless communication with Online Travel Agencies via XML (leveraging `xml2js` and `soap`), including integration with the TL-Lincoln channel manager.
 * **Real-time Updates:** Employs Socket.io for instant communication between the frontend and backend (e.g., for live notifications or dynamic data updates).
 * **Email Notifications:** Integrated with nodemailer for automated email notifications such as booking confirmations and password resets.
 * **Japanese Language Support:** Incorporates Kuroshiro for Japanese text processing, including conversion between Kanji, Hiragana, and Romaji.
