@@ -83,6 +83,56 @@ This document outlines common issues, preferred patterns, and best practices to 
     ```
 *   **Important:** Always ensure the client is released (`client.release()`) in a `finally` block to return it to the pool.
 
+### 2.4. Input Validation Utilities
+
+To ensure robust and consistent input validation in API controllers, a set of helper functions is available in `api/utils/validationUtils.js`. These should be used at the beginning of controller functions to validate request parameters (from `req.params`, `req.query`, or `req.body`).
+
+**Available Helper Functions:**
+
+*   `validateNumericParam(idString, paramName)`:
+    *   Validates if `idString` is a positive integer.
+    *   `paramName` is used in the error message (e.g., 'Hotel ID', 'User ID').
+    *   Throws an error if invalid, otherwise returns the numeric ID.
+    *   Example: `const hotelId = validateNumericParam(req.params.hid, 'Hotel ID');`
+
+*   `validateUuidParam(uuidString, paramName)`:
+    *   Validates if `uuidString` is a valid UUID.
+    *   Throws an error if invalid, otherwise returns the UUID string.
+    *   Example: `const reservationId = validateUuidParam(req.params.id, 'Reservation ID');`
+
+*   `validateDateStringParam(dateString, paramName)`:
+    *   Validates if `dateString` is a valid date in 'YYYY-MM-DD' format and represents a real calendar date.
+    *   Throws an error if invalid, otherwise returns the date string.
+    *   Example: `const startDate = validateDateStringParam(req.query.sdate, 'Start Date');`
+
+*   `validateNonEmptyStringParam(str, paramName)`:
+    *   Validates if `str` is not undefined, null, empty, or only whitespace.
+    *   Throws an error if invalid, otherwise returns the trimmed string.
+    *   Example: `const clientName = validateNonEmptyStringParam(req.body.name, 'Client Name');`
+
+**Usage in Controllers:**
+
+```javascript
+const { validateNumericParam, validateDateStringParam } = require('../utils/validationUtils');
+
+// Inside an async controller function:
+// ...
+let numericHotelId;
+let validatedStartDate;
+try {
+  numericHotelId = validateNumericParam(req.params.hotelId, 'Hotel ID');
+  validatedStartDate = validateDateStringParam(req.query.startDate, 'Start Date');
+  // ... other validations
+} catch (error) {
+  // console.error(`Validation error: ${error.message}`); // Optional: for server logs
+  return res.status(400).json({ error: error.message });
+}
+
+// Proceed with controller logic using numericHotelId, validatedStartDate, etc.
+// ...
+```
+This approach centralizes validation logic, making controllers cleaner and ensuring consistent error responses (HTTP 400 for validation failures).
+
 ## 3. Frontend (Vue.js / PrimeVue)
 
 ### 3.1. UI Language
@@ -131,6 +181,12 @@ This document outlines common issues, preferred patterns, and best practices to 
 
 *   **Dropdown Component:** For dropdown selection lists, use PrimeVue's `<Select>` component (imported as `import Select from 'primevue/select';`). Note that `<Dropdown>` may be a name used in older PrimeVue versions or other libraries, but for this project (PrimeVue 4+), `<Select>` is the standard component.
 *   **Date Component:** For date selection, use PrimeVue's `<DatePicker>` component (imported as `import DatePicker from 'primevue/datepicker';`). Avoid using the older `<Calendar>` component, as it is deprecated in PrimeVue v4+.
+
+### 3.6. Hotel Store (`useHotelStore.js`) Behavior
+
+*   **`selectedHotelId` Persistence:** The `selectedHotelId` within the `useHotelStore` is persisted to `localStorage` (under the key `wehub_selectedHotelId_v1`). This means the user's last selected hotel will be remembered across page loads and sessions.
+    *   The store handles initialization from `localStorage`, validation against available hotels, and updates to `localStorage` when the ID changes.
+    *   Components relying on `selectedHotelId` should expect it to be potentially pre-populated from `localStorage` on initialization.
 
 ## 4. General
 
