@@ -111,7 +111,8 @@ The API codebase is organized into the following main directories:
 *   **`/public`**: Static assets served by the API.
 *   **`/routes`**: Defines the API endpoints and maps them to the appropriate controllers.
 *   **`/services`**: Contains business logic that is shared across controllers (e.g., session management, specific business operations).
-*   **`/utils`**: Utility functions used throughout the application (e.g., for email, JWT handling, Japanese text processing via Kuroshiro/wanakana, date formatting, etc.).
+*   **`/utils`**: Utility functions used throughout the application. This includes helpers for email (`emailUtils.js`), JWT handling, Japanese text processing (Kuroshiro/wanakana), date formatting, and input validation.
+    *   **Input Validation:** The `api/utils/validationUtils.js` module provides helper functions for robust and consistent validation of request parameters (e.g., numeric IDs, UUIDs, date strings). It is recommended to use these utilities in controllers to ensure data integrity and standardized error responses. For detailed usage, refer to `instructions.md`.
 
 ## Key Files
 
@@ -137,6 +138,12 @@ The following environment variables must be set in the `.env` file:
 Hotel-specific credentials for TL-Lincoln (user ID and password) are stored in the `sc_user_info` database table. Each entry should be linked to the respective hotel and have the `name` field set to 'TL-リンカーン'.
 
 The system utilizes XML templates stored in the `xml_templates` database table to construct requests sent to TL-Lincoln. These templates are populated with the necessary credentials and dynamic data at runtime.
+
+## Development Guidelines and Best Practices
+
+For detailed coding guidelines, component usage conventions, specific patterns to follow (like `requestId` handling in the backend or UI component best practices in the frontend), and other essential best practices for this project, please consult the **`instructions.md`** file located in the root of this repository.
+
+It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
 
 ## Troubleshooting
 

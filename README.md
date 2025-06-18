@@ -157,6 +157,12 @@ For specific instructions on setting up and using Google login, refer to the gui
 *   `package.json`: Root level `package.json`. It may manage workspace dependencies or define top-level scripts for coordinating frontend/backend tasks.
 *   **Note:** The root directory also contains several other `.md` files such as `data_aggregation_strategies_postgresql.md`, `key_reservation_metrics_recommendations.md`, and `multi_hotel_presentation_strategy.md` which may contain further design and architectural notes.
 
+## Development Guidelines and Best Practices
+
+For detailed coding guidelines, component usage conventions, specific patterns to follow (like `requestId` handling in the backend or UI component best practices in the frontend), and other essential best practices for this project, please consult the **`instructions.md`** file located in the root of this repository.
+
+It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
+
 ## Contributing
 
 [Details to be added by project maintainers]
