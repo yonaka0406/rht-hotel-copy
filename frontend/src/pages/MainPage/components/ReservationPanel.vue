@@ -776,7 +776,7 @@
         }
         
         // Check if reservation is being recovered from cancellation
-        if(reservationStatus.value === 'キャンセル' && status === 'confirmed'){
+        if(reservationStatus.value === 'キャンセル'){
             // Check availability for each detail in groupedRooms
             let allRoomsAvailable = true;
             for (const group of groupedRooms.value) {
