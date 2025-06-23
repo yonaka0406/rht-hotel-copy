@@ -12,9 +12,9 @@ const logger = require('../config/logger');
  */
 
 const verifyTokenFromHeader = (req) => {
-  logger.debug(`[AUTH_MIDDLEWARE] Request to: ${req.path}`);
-  logger.debug(`[AUTH_MIDDLEWARE] All Headers: ${JSON.stringify(req.headers)}`);
-  logger.debug(`[AUTH_MIDDLEWARE] Authorization Header: ${req.headers.authorization}`);
+  // logger.debug(`[AUTH_MIDDLEWARE] Request to: ${req.path}`);
+  // logger.debug(`[AUTH_MIDDLEWARE] All Headers: ${JSON.stringify(req.headers)}`);
+  // logger.debug(`[AUTH_MIDDLEWARE] Authorization Header: ${req.headers.authorization}`);
   
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -62,7 +62,7 @@ const authMiddleware = async (req, res, next) => {
   }
   req.processed = true;
   
-  logger.debug(`[AUTH_MIDDLEWARE_ENTRY] Path: ${req.path}, SessionID: ${req.sessionID}, Session available: ${!!req.session}, JWT Present: ${!!req.headers.authorization}`); if (req.session) { logger.debug(`[AUTH_MIDDLEWARE_SESSION_DATA] Session data: ${JSON.stringify(req.session)}`); }  
+  // logger.debug(`[AUTH_MIDDLEWARE_ENTRY] Path: ${req.path}, SessionID: ${req.sessionID}, Session available: ${!!req.session}, JWT Present: ${!!req.headers.authorization}`); if (req.session) { logger.debug(`[AUTH_MIDDLEWARE_SESSION_DATA] Session data: ${JSON.stringify(req.session)}`); }  
 
   // Add response logging
   const originalSend = res.send;

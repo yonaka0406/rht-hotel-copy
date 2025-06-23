@@ -120,7 +120,8 @@
                     class="p-button-rounded p-button-text"
                     @click="showHistoryDialog"
                 />
-            </div>                     
+    </div>
+    <ConfirmDialog group="default"></ConfirmDialog>
             <div class="grid grid-cols-4 gap-x-6">
                 <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
@@ -145,6 +146,15 @@
                         icon="pi pi-sign-in"
                         fluid
                         @click="updateReservationStatus('checked_in')"
+                    />
+                </div>
+                <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
+                    <Button
+                        label="確定に戻す"
+                        severity="info"
+                        icon="pi pi-undo"
+                        fluid
+                        @click="updateReservationStatus('confirmed')"
                     />
                 </div>
                 <div v-if="reservationStatus === 'チェックイン'" class="field flex flex-col">
@@ -575,11 +585,12 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
+    const confirm = useConfirm(); // General confirm
     const confirmDelete = useConfirm();
     const confirmCancel = useConfirm();
     const confirmRecovery = useConfirm();
     import { 
-        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider
+        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog
      } from 'primevue';
 
     const props = defineProps({
@@ -736,9 +747,36 @@
             });
             return; 
         }
+
+        // Specific confirmation for Checked In -> Confirmed
+        if (reservationStatus.value === 'チェックイン' && status === 'confirmed') {
+            confirm.require({
+                group: 'default',
+                message: 'チェックイン済みの予約を確定済みに戻しますか？',
+                header: 'ステータス変更確認',
+                icon: 'pi pi-exclamation-triangle',
+                acceptLabel: '変更する',
+                rejectLabel: 'キャンセル',
+                acceptClass: 'p-button-warning',
+                rejectClass: 'p-button-secondary p-button-outlined',
+                accept: async () => {
+                    try {
+                        await setReservationStatus(status);
+                        toast.add({ severity: 'success', summary: '成功', detail: '予約ステータスが更新されました。', life: 3000 });
+                    } catch (error) {
+                        console.error('Error updating reservation status:', error);
+                        toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
+                    }
+                },
+                reject: () => {
+                    toast.add({ severity: 'info', summary: 'キャンセル', detail: 'ステータス変更はキャンセルされました。', life: 3000 });
+                }
+            });
+            return; // Stop further execution for this specific case
+        }
         
         // Check if reservation is being recovered from cancellation
-        if(reservationStatus.value === 'キャンセル'){            
+        if(reservationStatus.value === 'キャンセル'){
             // Check availability for each detail in groupedRooms
             let allRoomsAvailable = true;
             for (const group of groupedRooms.value) {
