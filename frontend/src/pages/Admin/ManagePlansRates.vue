@@ -766,8 +766,10 @@
                 ...newAdjustment.value,
                 date_start: formatDate(newAdjustment.value.date_start),
                 date_end: formatDate(newAdjustment.value.date_end),
+                condition_value: JSON.stringify(newAdjustment.value.condition_value),
             };
 
+        console.log('[saveAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
@@ -841,8 +843,10 @@
             ...editAdjustment.value,
             date_start: formatDate(editAdjustment.value.date_start),
             date_end: formatDate(editAdjustment.value.date_end),
+            condition_value: JSON.stringify(editAdjustment.value.condition_value),
         };
 
+        console.log('[updateAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/rates/${editAdjustment.value.id}`, {  // Use adjustment ID for PUT request
