@@ -895,17 +895,15 @@
 
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'base_rate') {
-                // Directly check if the day is included in condition_value string
-                const conditionDays = rate.condition_value;
+                const conditionDays = toArray(rate.condition_value);
                 if (conditionDays.includes(selectedDay)) {
                     return true;
                 }
             }
 
             if (rate.condition_type === 'month' && rate.adjustment_type === 'base_rate') {
-                // Directly check if the month is included in condition_value string
-                const conditionMonths = rate.condition_value;
-                if (conditionMonths.includes(selectedMonth.toString())) {
+                const conditionMonths = toArray(rate.condition_value);
+                if (conditionMonths.includes(selectedMonth)) {
                     return true;
                 }
             }
@@ -927,7 +925,6 @@
     });
     const filteredFlatFeeSum = computed(() => {
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) { 
-            // console.log('No filtered current conditions found.');
             return null; 
         }
 
@@ -935,43 +932,21 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();                
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
 
-        // console.log('Selected Date:', selectedDate.value);
-        // console.log('Selected Day:', selectedDay);
-        // console.log('Selected Month:', selectedMonth);
-
         // Filter for flat_fee adjustments
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
-            // console.log('Checking rate:', rate);
-
             // Handle day_of_week condition
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'flat_fee') {
-                try {
-                    // Directly check if the day is included in condition_value string
-                    const conditionDays = rate.condition_value; // Condition is in string format now
-                    // console.log('Condition Days (raw):', conditionDays);
-
-                    if (conditionDays.includes(selectedDay)) {
-                        // console.log('Selected day is in condition:', selectedDay);
-                        return true;
-                    }
-                } catch (e) {
-                    console.log('Error checking day_of_week condition:', e);
+                const conditionDays = toArray(rate.condition_value);
+                if (conditionDays.includes(selectedDay)) {
+                    return true;
                 }
             }
 
             // Handle month condition
             if (rate.condition_type === 'month' && rate.adjustment_type === 'flat_fee') {
-                try {
-                    // Directly check if the month is included in condition_value string
-                    const conditionMonths = rate.condition_value; // Condition is in string format now
-                    // console.log('Condition Months (raw):', conditionMonths);
-
-                    if (conditionMonths.includes(selectedMonth.toString())) {
-                        // console.log('Selected month is in condition:', selectedMonth);
-                        return true;
-                    }
-                } catch (e) {
-                    console.log('Error checking month condition:', e);
+                const conditionMonths = toArray(rate.condition_value);
+                if (conditionMonths.includes(selectedMonth)) {
+                    return true;
                 }
             }
 
@@ -983,16 +958,11 @@
             return false;
         });
 
-        // console.log('Filtered Flat Fee Rates:', filteredRates);
-
         // Sum the adjustment_value of all flat_fee rates                
         const sum = filteredRates.reduce((total, rate) => {
             const adjustmentValue = parseFloat(rate.adjustment_value) || 0;
-            // console.log('Adding adjustment_value:', adjustmentValue);
             return total + adjustmentValue;
         }, 0);
-
-        // console.log('Final sum:', sum);
 
         return sum > 0 ? sum : null;
     });
@@ -1004,7 +974,7 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
-            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
+            const condVal = toArray(rate.condition_value);
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'percentage') {
                 return condVal.includes(selectedDay);
             }
@@ -1163,7 +1133,7 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         filteredCurrentConditions.value.forEach(rate => {
-            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
+            const condVal = toArray(rate.condition_value);
             let match = false;
             if (rate.condition_type === 'day_of_week') {
                 match = condVal.includes(selectedDay);
