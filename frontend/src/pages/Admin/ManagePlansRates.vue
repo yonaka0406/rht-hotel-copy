@@ -1144,6 +1144,21 @@
         const finalPrice = priceWithPercentage + flatFee;
         return finalPrice > 0 ? finalPrice : null;
     });
+
+    // Utility function to ensure value is always an array
+    const toArray = (val) => {
+        if (Array.isArray(val)) return val;
+        if (val == null) return [];
+        if (typeof val === 'string') {
+            try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+                return [val];
+            }
+        }
+        return [val];
+    };
  
 </script>
   
