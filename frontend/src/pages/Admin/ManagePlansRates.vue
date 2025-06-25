@@ -571,7 +571,7 @@
     ];
     const adjustmentTypes = [
         { label: '基本料金', value: 'base_rate' },
-        { label: 'パーセント', value: 'パーセント' },
+        { label: 'パーセント', value: 'percentage' },
         { label: '定額料金', value: 'flat_fee' },
     ];
     const conditionTypes = [
