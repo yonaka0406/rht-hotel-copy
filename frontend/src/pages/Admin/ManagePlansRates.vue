@@ -1,18 +1,29 @@
 <template>
     <div v-if="plan">
         <!-- Panel -->
-        <div class="flex gap-4 mb-4">
-            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
-                <h3 class="text-xl font-semibold">日付を選択:</h3>
-                <DatePicker v-model="selectedDate" 
-                    :showIcon="true" 
-                    iconDisplay="input" 
-                    :selectOtherMonths="true"                 
-                    fluid
-                    dateFormat="yy-mm-dd" 
-                />
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="col-span-1 md:col-span-1 flex flex-col gap-4">
+                <div class="p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
+                    <h3 class="text-xl font-semibold">日付を選択:</h3>
+                    <DatePicker v-model="selectedDate" 
+                        :showIcon="true" 
+                        iconDisplay="input" 
+                        :selectOtherMonths="true"                 
+                        fluid
+                        dateFormat="yy-mm-dd" 
+                    />
+                </div>
+                <div class="p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between mt-4">
+                    <h3 class="text-xl font-semibold">合計料金:</h3>
+                    <div>
+                        <p v-if="totalPriceForSelectedDay !== null">
+                            合計料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の料金が見つかりません。</p>
+                    </div>
+                </div>
             </div>
-            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
+            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
                 <h3 class="text-xl font-semibold">現在の基本料金:</h3>
                 <div>
                     <p v-if="filteredBaseRateSum !== null">
@@ -21,7 +32,7 @@
                     <p v-else>選択した日付の基本料金が見つかりません。</p>
                 </div>
             </div>
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
                 <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
                 <div>
                     <p v-if="filteredFlatFeeSum !== null">
@@ -30,31 +41,20 @@
                     <p v-else>選択した日付の定額料金調整が見つかりません。</p>
                 </div>
             </div>
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">合計料金:</h3>
-                <div>
-                    <p v-if="totalPriceForSelectedDay !== null">
-                        合計料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
-                    </p>
-                    <p v-else>選択した日付の料金が見つかりません。</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex gap-4">
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
                 <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
                 <div>
                     <p v-if="filteredPercentageSum !== null">
-                    合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
+                        合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
                     </p>
                     <p v-else>選択した日付のパーセント調整が見つかりません。</p>
                 </div>
             </div>
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
                 <h3 class="text-xl font-semibold">現在のアドオン:</h3>
-                <div>                    
+                <div>
                     <p>カウント: {{ filteredAddonCount }}</p>
-                    <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>                    
+                    <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>
                 </div>
             </div>
         </div>
@@ -1148,7 +1148,6 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         filteredCurrentConditions.value.forEach(rate => {
-            // Ensure condition_value is always an array
             const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
             let match = false;
             if (rate.condition_type === 'day_of_week') {
@@ -1164,9 +1163,7 @@
                 if (rate.adjustment_type === 'flat_fee') flatFee += parseFloat(rate.adjustment_value) || 0;
             }
         });
-        // Apply percentage to base rate
         const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
-        // Add flat fee
         const finalPrice = priceWithPercentage + flatFee;
         return finalPrice > 0 ? finalPrice : null;
     });
