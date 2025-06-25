@@ -694,13 +694,18 @@
         showAdjustmentDialog.value = true;
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
-        // console.log('openEditAdjustmentDialog', adjustmentData)
-        // Populate the editAdjustment with the selected row data
+        console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
         editAdjustment.value = { ...adjustmentData };
-
+        // Ensure condition_type is set before updating options
         updateEditConditionValues();
-        selectedEditConditions.value = toArray(editAdjustment.value.condition_value);
-        showEditAdjustmentDialog.value = true; // Open the dialog
+        // Log condition_type and conditionValues
+        console.log('[openEditAdjustmentDialog] condition_type:', editAdjustment.value.condition_type);
+        console.log('[openEditAdjustmentDialog] conditionValues:', conditionValues.value);
+        // Normalize condition_value to match option values (lowercase)
+        let normalized = toArray(editAdjustment.value.condition_value).map(v => typeof v === 'string' ? v.toLowerCase() : v);
+        selectedEditConditions.value = normalized;
+        console.log('[openEditAdjustmentDialog] selectedEditConditions:', selectedEditConditions.value);
+        showEditAdjustmentDialog.value = true;
     };
     const updateConditionValues = () => {
         if (newAdjustment.value.condition_type === 'day_of_week') {
@@ -725,42 +730,64 @@
         } else {
             conditionValues.value = [];
         }
+        console.log('[updateEditConditionValues] condition_type:', editAdjustment.value.condition_type);
+        console.log('[updateEditConditionValues] conditionValues:', conditionValues.value);
     };
     const saveAdjustment = async () => {
         // Validation
-            if (newAdjustment.value.date_end && new Date(newAdjustment.value.date_end) < new Date(newAdjustment.value.date_start)) {                    
-                toast.add({ 
-                    severity: 'error', 
-                    summary: 'エラー',
-                    detail: '終了日と開始日の順番を確認してください。', life: 3000 
-                });
-                return;
-            }
-            if (newAdjustment.value.adjustment_value === 0) {
-                toast.add({
-                    severity: 'error',
-                    summary: 'エラー',
-                    detail: '「0」ではない数値に設定してください。',
-                    life: 3000
-                });
-                return;
-            }
+        if (!newAdjustment.value.date_start) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '開始日を入力してください。',
+                life: 3000
+            });
+            return;
+        }
+        if (!newAdjustment.value.tax_type_id) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '税区分を選択してください。',
+                life: 3000
+            });
+            return;
+        }
+        if (newAdjustment.value.date_end && new Date(newAdjustment.value.date_end) < new Date(newAdjustment.value.date_start)) {                    
+            toast.add({ 
+                severity: 'error', 
+                summary: 'エラー',
+                detail: '終了日と開始日の順番を確認してください。', life: 3000 
+            });
+            return;
+        }
+        if (newAdjustment.value.adjustment_value === 0) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '「0」ではない数値に設定してください。',
+                life: 3000
+            });
+            return;
+        }
 
         // Conversion from Datetime to Date
-            const formatDate = (date) => {
-                if (!date) return null;
-                const d = new Date(date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
-            const formattedAdjustment = {
-                ...newAdjustment.value,
-                date_start: formatDate(newAdjustment.value.date_start),
-                date_end: formatDate(newAdjustment.value.date_end),
-            };
+        const formatDate = (date) => {
+            if (!date) return null;
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+        const formattedAdjustment = {
+            ...newAdjustment.value,
+            date_start: formatDate(newAdjustment.value.date_start),
+            date_end: formatDate(newAdjustment.value.date_end),
+            condition_value: JSON.stringify(newAdjustment.value.condition_value),
+        };
 
+        console.log('[saveAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
@@ -801,11 +828,29 @@
     };
     const updateAdjustment = async () => {
         // Validation
+        if (!editAdjustment.value.date_start) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '開始日を入力してください。',
+                life: 3000
+            });
+            return;
+        }
+        if (!editAdjustment.value.tax_type_id) {
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '税区分を選択してください。',
+                life: 3000
+            });
+            return;
+        }
         if (editAdjustment.value.date_end && new Date(editAdjustment.value.date_end) < new Date(editAdjustment.value.date_start)) {
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
-                detail: '終了日と開始日の順番を確認してください。', // Corrected from: 'End date must be equal to or greater than start date.'
+                detail: '終了日と開始日の順番を確認してください。',
                 life: 3000
             });
             return;
@@ -814,7 +859,7 @@
             toast.add({
                 severity: 'error',
                 summary: 'エラー',
-                detail: '「0」ではない数値に設定してください。', // Corrected from: 'Adjustment value must be different than 0.'
+                detail: '「0」ではない数値に設定してください。',
                 life: 3000
             });
             return;
@@ -834,8 +879,10 @@
             ...editAdjustment.value,
             date_start: formatDate(editAdjustment.value.date_start),
             date_end: formatDate(editAdjustment.value.date_end),
+            condition_value: JSON.stringify(editAdjustment.value.condition_value),
         };
 
+        console.log('[updateAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/rates/${editAdjustment.value.id}`, {  // Use adjustment ID for PUT request
@@ -1114,6 +1161,7 @@
     }, { immediate: true });
 
     watch(selectedEditConditions, (newVal) => {
+        console.log('[watch selectedEditConditions] newVal:', newVal);
         editAdjustment.value.condition_value = newVal;
     });
 
@@ -1144,6 +1192,21 @@
         const finalPrice = priceWithPercentage + flatFee;
         return finalPrice > 0 ? finalPrice : null;
     });
+
+    // Utility function to ensure value is always an array
+    const toArray = (val) => {
+        if (Array.isArray(val)) return val;
+        if (val == null) return [];
+        if (typeof val === 'string') {
+            try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch {
+                return [val];
+            }
+        }
+        return [val];
+    };
  
 </script>
   
