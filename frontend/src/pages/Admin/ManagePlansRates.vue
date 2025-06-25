@@ -694,13 +694,18 @@
         showAdjustmentDialog.value = true;
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
-        // console.log('openEditAdjustmentDialog', adjustmentData)
-        // Populate the editAdjustment with the selected row data
+        console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
         editAdjustment.value = { ...adjustmentData };
-
+        // Ensure condition_type is set before updating options
         updateEditConditionValues();
-        selectedEditConditions.value = toArray(editAdjustment.value.condition_value);
-        showEditAdjustmentDialog.value = true; // Open the dialog
+        // Log condition_type and conditionValues
+        console.log('[openEditAdjustmentDialog] condition_type:', editAdjustment.value.condition_type);
+        console.log('[openEditAdjustmentDialog] conditionValues:', conditionValues.value);
+        // Normalize condition_value to match option values (lowercase)
+        let normalized = toArray(editAdjustment.value.condition_value).map(v => typeof v === 'string' ? v.toLowerCase() : v);
+        selectedEditConditions.value = normalized;
+        console.log('[openEditAdjustmentDialog] selectedEditConditions:', selectedEditConditions.value);
+        showEditAdjustmentDialog.value = true;
     };
     const updateConditionValues = () => {
         if (newAdjustment.value.condition_type === 'day_of_week') {
@@ -725,6 +730,8 @@
         } else {
             conditionValues.value = [];
         }
+        console.log('[updateEditConditionValues] condition_type:', editAdjustment.value.condition_type);
+        console.log('[updateEditConditionValues] conditionValues:', conditionValues.value);
     };
     const saveAdjustment = async () => {
         // Validation
@@ -1114,6 +1121,7 @@
     }, { immediate: true });
 
     watch(selectedEditConditions, (newVal) => {
+        console.log('[watch selectedEditConditions] newVal:', newVal);
         editAdjustment.value.condition_value = newVal;
     });
 
