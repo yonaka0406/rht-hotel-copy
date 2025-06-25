@@ -895,22 +895,19 @@
 
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'base_rate') {
-                const conditionDays = toArray(rate.condition_value);
-                if (conditionDays.includes(selectedDay)) {
+                if (toArray(rate.condition_value).includes(selectedDay)) {
                     return true;
                 }
             }
 
             if (rate.condition_type === 'month' && rate.adjustment_type === 'base_rate') {
-                const conditionMonths = toArray(rate.condition_value);
-                if (conditionMonths.includes(selectedMonth)) {
+                if (toArray(rate.condition_value).includes(selectedMonth)) {
                     return true;
                 }
             }
 
             if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'base_rate') {                        
                 return true;
-                
             }
 
             return false;
@@ -936,23 +933,20 @@
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
             // Handle day_of_week condition
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'flat_fee') {
-                const conditionDays = toArray(rate.condition_value);
-                if (conditionDays.includes(selectedDay)) {
+                if (toArray(rate.condition_value).includes(selectedDay)) {
                     return true;
                 }
             }
 
             // Handle month condition
             if (rate.condition_type === 'month' && rate.adjustment_type === 'flat_fee') {
-                const conditionMonths = toArray(rate.condition_value);
-                if (conditionMonths.includes(selectedMonth)) {
+                if (toArray(rate.condition_value).includes(selectedMonth)) {
                     return true;
                 }
             }
 
             if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'flat_fee') {                        
                 return true;
-                
             }
 
             return false;
@@ -974,12 +968,11 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
-            const condVal = toArray(rate.condition_value);
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'percentage') {
-                return condVal.includes(selectedDay);
+                return toArray(rate.condition_value).includes(selectedDay);
             }
             if (rate.condition_type === 'month' && rate.adjustment_type === 'percentage') {
-                return condVal.includes(selectedMonth);
+                return toArray(rate.condition_value).includes(selectedMonth);
             }
             if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {
                 return true;
@@ -1133,12 +1126,11 @@
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         filteredCurrentConditions.value.forEach(rate => {
-            const condVal = toArray(rate.condition_value);
             let match = false;
             if (rate.condition_type === 'day_of_week') {
-                match = condVal.includes(selectedDay);
+                match = toArray(rate.condition_value).includes(selectedDay);
             } else if (rate.condition_type === 'month') {
-                match = condVal.includes(selectedMonth);
+                match = toArray(rate.condition_value).includes(selectedMonth);
             } else if (rate.condition_type === 'no_restriction') {
                 match = true;
             }
