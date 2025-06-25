@@ -83,6 +83,8 @@
     // Primevue
     import { ProgressSpinner } from 'primevue';
 
+    const pmsFallbackCapacities = ref({}); // To store fallback capacities per hotel
+
     // -- Helper Functions --
     function formatDate(date) {
         const year = date.getFullYear()
@@ -191,6 +193,7 @@
     const pmsTotalData = ref({});
     const forecastTotalData = ref({});
     const accountingTotalData = ref({});
+    // pmsFallbackCapacities was added near the top
 
     const revenueData = computed(() => {
         // Guard: Only compute if a summary view is potentially active
@@ -251,9 +254,10 @@
                 const aggregatedMonthData = monthlyAggregates[monthKey][hotelIdStringKeyInMonth];
                 const pmsRev = aggregatedMonthData.pms_revenue;
                 const forecastRev = aggregatedMonthData.forecast_revenue;
-                const accRev = aggregatedMonthData.acc_revenue;
+                const accRev = aggregatedMonthData.acc_revenue; // accRev is still calculated but not used for periodRev
                 const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-                let periodRev = (accRev !== null) ? accRev : (pmsRev || 0);
+                // Align with ReportMonthly.vue: always use PMS revenue for period_revenue
+                let periodRev = pmsRev || 0;
                 result.push({
                     month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
                     pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
@@ -382,20 +386,81 @@
         Object.keys(monthlyOccupancyAggregates).sort().forEach(monthKey => {
             for (const hotelIdStringKeyInMonth in monthlyOccupancyAggregates[monthKey]) {
                 const data = monthlyOccupancyAggregates[monthKey][hotelIdStringKeyInMonth];
-                const adjustedTotalRooms = data.total_rooms + data.roomDifferenceSum;
-                const occupancyRate = adjustedTotalRooms > 0 ? (data.sold_rooms / adjustedTotalRooms) * 100 : 0;                
+                // OLD: const adjustedTotalRooms = data.total_rooms + data.roomDifferenceSum;
+
+                // NEW LOGIC FOR total_available_rooms_for_month_calc
+                let total_available_rooms_for_month_calc = 0;
+                const fallbackCapacityForHotel = pmsFallbackCapacities.value[hotelIdStringKeyInMonth] || 0;
+
+                const dailyRealRoomsMap = new Map();
+                const hotelPmsDataForMonth = (pmsTotalData.value[hotelIdStringKeyInMonth] || []).filter(
+                    pmsRecord => pmsRecord.date.startsWith(monthKey)
+                );
+
+                hotelPmsDataForMonth.forEach(pmsRecord => {
+                    if (pmsRecord.hasOwnProperty('total_rooms_real') && pmsRecord.total_rooms_real !== null && pmsRecord.total_rooms_real !== undefined) {
+                        const realRooms = parseInt(pmsRecord.total_rooms_real);
+                        if (!isNaN(realRooms)) {
+                            dailyRealRoomsMap.set(pmsRecord.date, realRooms);
+                        }
+                    }
+                });
+
+                const [yearStr, monthStr] = monthKey.split('-');
+                const year = parseInt(yearStr);
+                const monthJS = parseInt(monthStr) - 1; // Date month is 0-indexed
+                const daysInCurrentMonth = getDaysInMonth(year, monthJS + 1);
+
+                for (let day = 1; day <= daysInCurrentMonth; day++) {
+                    // Create a UTC date to avoid timezone issues with formatDate
+                    const currentDate = new Date(Date.UTC(year, monthJS, day));
+                    // formatDate needs a Date object that it can call getFullYear, getMonth, getDate on.
+                    // The existing formatDate also applies a JST adjustment, which might be problematic here
+                    // if we are comparing with UTC dates from dailyRealRoomsMap keys.
+                    // Let's ensure formatDate is robust or keys are consistently formatted.
+                    // For now, assume formatDate(currentDate) produces a YYYY-MM-DD string as needed.
+                    // const tempDateForFormat = new Date(year, monthJS, day); // Use local date for formatDate if it expects local
+                    // const currentDateStr = formatDate(tempDateForFormat); // Old
+
+                    // New: Ensure currentDateStr is derived from UTC date parts to match dailyRealRoomsMap keys
+                    const utcDateForDay = new Date(Date.UTC(year, monthJS, day));
+                    const currentDateStr = formatDate(utcDateForDay);
+
+
+                    if (dailyRealRoomsMap.has(currentDateStr)) {
+                        total_available_rooms_for_month_calc += dailyRealRoomsMap.get(currentDateStr);
+                    } else {
+                        total_available_rooms_for_month_calc += fallbackCapacityForHotel;
+                    }
+                }
+                // END NEW LOGIC for total_available_rooms_for_month_calc
+
+                const occupancyRate = total_available_rooms_for_month_calc > 0 ? (data.sold_rooms / total_available_rooms_for_month_calc) * 100 : 0;
+
                 let outputHotelId = hotelIdStringKeyInMonth === '0' ? 0 : selectedHotels.value.find(h => String(h) === hotelIdStringKeyInMonth);
                 if (outputHotelId === undefined && hotelIdStringKeyInMonth !== '0') {
                     const parsed = parseInt(hotelIdStringKeyInMonth, 10);
                     outputHotelId = String(parsed) === hotelIdStringKeyInMonth ? parsed : hotelIdStringKeyInMonth;
                 }
                 const hotelName = searchAllHotels(outputHotelId)[0]?.name || 'Unknown Hotel';
-                if (hotelIdStringKeyInMonth !== '0' || (hotelIdStringKeyInMonth === '0' && selectedHotels.value.length > 0)) {                    
-                    if (!(hotelIdStringKeyInMonth === '0' && adjustedTotalRooms === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && monthlyOccupancyAggregates[monthKey]['0'].total_rooms === 0)) {                        
+
+                // Original condition for pushing to results:
+                // if (hotelIdStringKeyInMonth !== '0' || (hotelIdStringKeyInMonth === '0' && selectedHotels.value.length > 0)) {
+                //    if (!(hotelIdStringKeyInMonth === '0' && adjustedTotalRooms === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && monthlyOccupancyAggregates[monthKey]['0'].total_rooms === 0)) {
+                // Re-evaluating the condition for pushing results with new total_available_rooms_for_month_calc
+                const oldAdjustedTotalRoomsEquivalentForCondition = data.total_rooms + data.roomDifferenceSum; // For condition check only
+                if (hotelIdStringKeyInMonth !== '0' || (hotelIdStringKeyInMonth === '0' && selectedHotels.value.length > 0)) {
+                    // If it's the sum row ('0'), only add if it's meaningful (not all zeros based on old logic)
+                    // This condition might need adjustment if the sum row ('0') itself is calculated differently now.
+                    // For individual hotels, this condition should be fine.
+                    if (!(hotelIdStringKeyInMonth === '0' && oldAdjustedTotalRoomsEquivalentForCondition === 0 && data.sold_rooms === 0 && data.roomDifferenceSum === 0 && data.total_rooms === 0 )) {
                         result.push({
                             month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
-                            total_rooms: adjustedTotalRooms, sold_rooms: data.sold_rooms, occ: parseFloat(occupancyRate.toFixed(2)),
-                            not_available_rooms: data.roomDifferenceSum === 0 ? 0 : data.roomDifferenceSum * -1,
+                            total_rooms: total_available_rooms_for_month_calc, // USE THE NEWLY CALCULATED VALUE
+                            sold_rooms: data.sold_rooms,
+                            occ: parseFloat(occupancyRate.toFixed(2)),
+                            // not_available_rooms: data.roomDifferenceSum === 0 ? 0 : data.roomDifferenceSum * -1, // Commenting out as roomDifferenceSum is no longer central
+                            not_available_rooms: 0, // Setting to 0 for now
                             fc_total_rooms: data.fc_total_rooms, fc_sold_rooms: data.fc_sold_rooms,
                             fc_occ: data.fc_total_rooms > 0 ? parseFloat(((data.fc_sold_rooms / data.fc_total_rooms) * 100).toFixed(2)) : 0
                         });
@@ -438,27 +503,52 @@
         }
         loading.value = true; 
 
-        const startDate = formatDate(firstDayofFetch.value);
-        const endDate = formatDate(lastDayofFetch.value);
+        // const startDate = formatDate(firstDayofFetch.value); // Old way
+        // Ensure PMS data fetch always starts from Jan 1st of the selectedDate's year
+        const yearOfSelectedDate = selectedDate.value.getFullYear();
+        const pmsFetchStartDate = formatDate(new Date(yearOfSelectedDate, 0, 1)); // Jan 1st
+        const pmsFetchEndDate = formatDate(lastDayofFetch.value); // Original end date is fine
+
         let currentProcessingHotelId = null;
+        pmsFallbackCapacities.value = {}; // Reset for current fetch
+
         try {
             for (const hotelId of selectedHotels.value) {
                 currentProcessingHotelId = hotelId;
-                // console.log(`RMP: Fetching summary data for hotel ID: ${hotelId}`);
-                const [rawPmsData, rawForecastData, rawAccountingData] = await Promise.all([
-                    fetchCountReservation(hotelId, startDate, endDate),
-                    fetchForecastData(hotelId, startDate, endDate),
-                    fetchAccountingData(hotelId, startDate, endDate)
+                // Fetch PMS data from Jan 1st
+                const rawPmsData = await fetchCountReservation(hotelId, pmsFetchStartDate, pmsFetchEndDate);
+
+                // Fetch Forecast and Accounting data using original date range (firstDayofFetch to lastDayofFetch)
+                // as these might not need the full year data for their specific calculations.
+                // However, if their logic also needs to align with ReportMonthly's wider view, this might need adjustment too.
+                // For now, focusing on fixing OCC and RevPAR based on PMS data alignment.
+                const forecastAndAccountingStartDate = formatDate(firstDayofFetch.value);
+                const forecastAndAccountingEndDate = formatDate(lastDayofFetch.value);
+
+                const [rawForecastData, rawAccountingData] = await Promise.all([
+                    fetchForecastData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate),
+                    fetchAccountingData(hotelId, forecastAndAccountingStartDate, forecastAndAccountingEndDate)
                 ]);
+
                 if (rawPmsData && Array.isArray(rawPmsData)) {
+                    if (rawPmsData.length > 0 && rawPmsData[0].total_rooms !== undefined) {
+                        pmsFallbackCapacities.value[String(hotelId)] = Number(rawPmsData[0].total_rooms || 0);
+                    } else {
+                        pmsFallbackCapacities.value[String(hotelId)] = 0; // Default if no data or no total_rooms
+                    }
+
                     pmsTotalData.value[String(hotelId)] = rawPmsData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.date))),
                         revenue: item.price !== undefined ? Number(item.price) : 0,
                         room_count: item.room_count !== undefined ? Number(item.room_count) : 0,
                         total_rooms: item.total_rooms !== undefined ? Number(item.total_rooms) : 0,
-                        total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,                                
+                        total_rooms_real: item.total_rooms_real !== undefined ? Number(item.total_rooms_real) : 0,
                     })).filter(item => item.date !== null);
-                } else if (rawPmsData) { pmsTotalData.value[String(hotelId)] = []; }
+                } else {
+                     pmsTotalData.value[String(hotelId)] = [];
+                     pmsFallbackCapacities.value[String(hotelId)] = 0;
+                }
+
                 if (rawForecastData && Array.isArray(rawForecastData)) {
                     forecastTotalData.value[String(hotelId)] = rawForecastData.map(item => ({
                         date: formatDate(normalizeDate(new Date(item.forecast_month))),
