@@ -256,6 +256,9 @@
     const OCCDifference = ref(0);
 
     const calculateMetrics = () => {
+        // console.log('[ReportMonthly.vue] Calculating metrics. Selected Month:', selectedMonth.value, 'View Mode:', viewMode.value);
+        // console.log('[ReportMonthly.vue] All reservations data count:', allReservationsData.value?.length);
+
         if (!allReservationsData.value || allReservationsData.value.length === 0) {
             ADR.value = 0;
             revPAR.value = 0;
@@ -350,7 +353,35 @@
         salesDifference.value = Math.round(totalRevenue) - forecastSales.value;
         ADRDifference.value = Math.round(ADR.value) - forecastADR.value;
         revPARDifference.value = Math.round(revPAR.value) - forecastRevPAR.value;
-        OCCDifference.value = OCC.value - forecastOCC.value;        
+        OCCDifference.value = OCC.value - forecastOCC.value;
+
+        // Conditional Logging for August (month index 7)
+        const currentYear = new Date().getFullYear(); // Or a specific year if debugging historical data
+        if (selectedMonth.value.getMonth() === 7 ) { // August is month 7
+             console.log(`[ReportMonthly.vue] Metrics for ${selectedMonth.value.getFullYear()}-08:`, {
+                selectedMonth: selectedMonth.value.toISOString().slice(0, 7),
+                viewMode: viewMode.value,
+                metricsEffectiveStartDate: metricsEffectiveStartDate.value,
+                metricsEffectiveEndDate: metricsEffectiveEndDate.value,
+                totalRevenueForPeriod: totalRevenue,
+                totalRoomsSoldInPeriod: totalRoomsSold,
+                totalAvailableRoomNightsInPeriod: totalAvailableRoomNightsInPeriod,
+                calculatedADR: ADR.value,
+                calculatedRevPAR: revPAR.value,
+                calculatedOCC: OCC.value,
+                hotelCapacityFallbackValue: hotelCapacity, // The value used as fallback
+            });
+            const tempDailyLog = [];
+            let tempCurrentDateIter = normalizeDate(new Date(metricsEffectiveStartDate.value));
+            const tempFinalIterationEndDate = normalizeDate(new Date(metricsEffectiveEndDate.value));
+            while (tempCurrentDateIter <= tempFinalIterationEndDate) {
+                const currentDateStr = formatDate(tempCurrentDateIter); // formatDate here is ReportMonthly's version
+                const dailyAvailable = dailyActualAvailableRoomsMap.has(currentDateStr) ? dailyActualAvailableRoomsMap.get(currentDateStr) : hotelCapacity;
+                tempDailyLog.push({ date: currentDateStr, available: dailyAvailable, isFallback: !dailyActualAvailableRoomsMap.has(currentDateStr) });
+                tempCurrentDateIter = addDaysUTC(tempCurrentDateIter, 1);
+            }
+            console.log(`[ReportMonthly.vue] ${selectedMonth.value.getFullYear()}-08 Daily Availability Detail:`, tempDailyLog);
+        }
     };
 
     // eCharts Instances & Refs
