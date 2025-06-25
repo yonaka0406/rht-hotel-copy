@@ -699,6 +699,7 @@
         editAdjustment.value = { ...adjustmentData };
 
         updateEditConditionValues();
+        selectedEditConditions.value = toArray(editAdjustment.value.condition_value);
         showEditAdjustmentDialog.value = true; // Open the dialog
     };
     const updateConditionValues = () => {
@@ -1148,6 +1149,10 @@
             selectedEditConditions.value = newValue || [];
         }
     }, { immediate: true });
+
+    watch(selectedEditConditions, (newVal) => {
+        editAdjustment.value.condition_value = newVal;
+    });
 
     const totalPriceForSelectedDay = computed(() => {
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
