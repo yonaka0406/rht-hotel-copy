@@ -262,9 +262,6 @@
                     month: monthKey, hotel_id: outputHotelId, hotel_name: hotelName,
                     pms_revenue: pmsRev, forecast_revenue: forecastRev, acc_revenue: accRev, period_revenue: periodRev,
                 });
-                if (monthKey.endsWith('-08')) { // Log for August
-                    console.log('[ReportingMainPage.vue] revenueData entry for August:', result[result.length-1]);
-                }
             }
         });
         result.sort((a, b) => {
@@ -467,32 +464,6 @@
                             fc_total_rooms: data.fc_total_rooms, fc_sold_rooms: data.fc_sold_rooms,
                             fc_occ: data.fc_total_rooms > 0 ? parseFloat(((data.fc_sold_rooms / data.fc_total_rooms) * 100).toFixed(2)) : 0
                         });
-
-                        if (monthKey.endsWith('-08')) { // Log for August
-                            const currentEntry = result[result.length-1];
-                            console.log('[ReportingMainPage.vue] occupancyData entry for August:', {
-                                month: currentEntry.month,
-                                hotel_id: currentEntry.hotel_id,
-                                calculatedTotalAvailableRooms: currentEntry.total_rooms,
-                                sold_rooms: currentEntry.sold_rooms,
-                                calculatedOcc: currentEntry.occ,
-                                fallbackCapacityUsedValue: fallbackCapacityForHotel // Value of the fallback used in this month's calc
-                            });
-                            // Optional: Log daily availability detail for August in ReportingMainPage
-                            const tempDailyLogRMP = [];
-                            // const [yearStr, monthStr] = monthKey.split('-'); // already defined
-                            // const year = parseInt(yearStr); // already defined
-                            // const monthJS = parseInt(monthStr) - 1; // already defined
-                            // const daysInCurrentMonth = getDaysInMonth(year, monthJS + 1); // already defined
-                            // dailyRealRoomsMap is already defined and populated for the current month and hotel
-                            for (let day = 1; day <= daysInCurrentMonth; day++) {
-                                const utcDateForDay = new Date(Date.UTC(year, monthJS, day));
-                                const currentDateStr = formatDate(utcDateForDay); // formatDate from ReportingMainPage
-                                const dailyAvailable = dailyRealRoomsMap.has(currentDateStr) ? dailyRealRoomsMap.get(currentDateStr) : fallbackCapacityForHotel;
-                                tempDailyLogRMP.push({ date: currentDateStr, available: dailyAvailable, isFallback: !dailyRealRoomsMap.has(currentDateStr) });
-                            }
-                            console.log('[ReportingMainPage.vue] August Daily Availability Detail (RMP calc):', tempDailyLogRMP);
-                        }
                     }
                 }
             }
