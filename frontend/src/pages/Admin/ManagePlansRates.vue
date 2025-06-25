@@ -1,53 +1,78 @@
 <template>
     <div v-if="plan">
-        <!-- Panel -->
-        <div class="flex gap-4 mb-4">
-            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
-                <h3 class="text-xl font-semibold">日付を選択:</h3>
-                <DatePicker v-model="selectedDate" 
-                    :showIcon="true" 
-                    iconDisplay="input" 
-                    :selectOtherMonths="true"                 
-                    fluid
-                    dateFormat="yy-mm-dd" 
-                />
-            </div>
-            <div class="p-4 shadow-lg rounded-lg w-1/3 bg-white">
-                <h3 class="text-xl font-semibold">現在の基本料金:</h3>
-                <div>
-                    <p v-if="filteredBaseRateSum !== null">
-                        基本料金合計: {{ formatNumber(filteredBaseRateSum, 'currency') }}
-                    </p>
-                    <p v-else>選択した日付の基本料金が見つかりません。</p>
-                </div>
-            </div>
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
-                <div>
-                    <p v-if="filteredFlatFeeSum !== null">
-                        定額料金合計: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
-                    </p>
-                    <p v-else>選択した日付の定額料金調整が見つかりません。</p>
-                </div>
-            </div>
-        </div>
-        <div class="flex gap-4">
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
-                <div>
-                    <p v-if="filteredPercentageSum !== null">
-                    合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
-                    </p>
-                    <p v-else>選択した日付のパーセント調整が見つかりません。</p>
-                </div>
-            </div>
-            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
-                <h3 class="text-xl font-semibold">現在のアドオン:</h3>
-                <div>                    
-                    <p>カウント: {{ filteredAddonCount }}</p>
-                    <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>                    
-                </div>
-            </div>
+        <!-- Panel -->        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">日付を選択:</h3>
+                </template>
+                <template #content>
+                    <DatePicker v-model="selectedDate" 
+                        :showIcon="true" 
+                        iconDisplay="input" 
+                        :selectOtherMonths="true"                 
+                        fluid
+                        dateFormat="yy-mm-dd" 
+                    />                        
+                    <div class="mt-4 bg-green-100 p-2 rounded-lg">
+                        <p v-if="totalPriceForSelectedDay !== null">
+                            当日料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の料金が見つかりません。</p>
+                    </div>                        
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在の基本料金:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredBaseRateSum !== null">
+                            基本料金合計: {{ formatNumber(filteredBaseRateSum, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の基本料金が見つかりません。</p>
+                    </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredFlatFeeSum !== null">
+                            定額料金合計: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の定額料金調整が見つかりません。</p>
+                    </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredPercentageSum !== null">
+                            合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
+                        </p>
+                        <p v-else>選択した日付のパーセント調整が見つかりません。</p>
+                    </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在のアドオン:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p>カウント: {{ filteredAddonCount }}</p>
+                        <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>
+                    </div>
+                </template>
+            </Card>
+            
         </div>
 
         <!-- Conditions -->
@@ -514,7 +539,7 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';    
     const toast = useToast();
-    import { Dialog, FloatLabel, DatePicker, InputText, InputNumber, MultiSelect, Select, Button,
+    import { Card, Dialog, FloatLabel, DatePicker, InputNumber, MultiSelect, Select, Button,
         Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Badge
      } from 'primevue';
 
@@ -571,7 +596,7 @@
     ];
     const adjustmentTypes = [
         { label: '基本料金', value: 'base_rate' },
-        { label: 'パーセント', value: 'パーセント' },
+        { label: 'パーセント', value: 'percentage' },
         { label: '定額料金', value: 'flat_fee' },
     ];
     const conditionTypes = [
@@ -974,42 +999,27 @@
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
             return null;
         }
-
         const selectedDateObj = new Date(selectedDate.value);
-        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();                
+        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
-
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
+            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'percentage') {
-                // Directly check if the day is included in condition_value string
-                const conditionDays = rate.condition_value;
-                if (conditionDays.includes(selectedDay)) {
-                    return true;
-                }
+                return condVal.includes(selectedDay);
             }
-
             if (rate.condition_type === 'month' && rate.adjustment_type === 'percentage') {
-                // Directly check if the month is included in condition_value string
-                const conditionMonths = rate.condition_value;
-                if (conditionMonths.includes(selectedMonth.toString())) {
-                    return true;
-                }
+                return condVal.includes(selectedMonth);
             }
-
-            if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {                        
+            if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {
                 return true;
-                
             }
-
             return false;
         });
-
         const sum = filteredRates.reduce((total, rate) => {
             const adjustmentValue = parseFloat(rate.adjustment_value) || 0;
             return total + adjustmentValue;
         }, 0);
-
-        return sum > 0 ? sum : null;                
+        return sum !== 0 ? sum : null;
     });
     const filteredCurrentConditions = computed(() => {
         if (!selectedDate.value) return null;
@@ -1089,7 +1099,19 @@
             allRates.value = data.map(rate => ({
                 ...rate,
                 date_start: formatDate(rate.date_start),
-                date_end: formatDate(rate.date_end)
+                date_end: formatDate(rate.date_end),
+                condition_value: (() => {
+                    if (!rate.condition_value) return [];
+                    if (Array.isArray(rate.condition_value)) return rate.condition_value;
+                    if (typeof rate.condition_value === 'string') {
+                        try {
+                            return JSON.parse(rate.condition_value);
+                        } catch {
+                            return [];
+                        }
+                    }
+                    return [];
+                })()
             }));
         } catch (error) {
             console.error('料金取得エラー:', error);
@@ -1126,6 +1148,35 @@
             selectedEditConditions.value = newValue || [];
         }
     }, { immediate: true });
+
+    const totalPriceForSelectedDay = computed(() => {
+        if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
+            return null;
+        }
+        let baseRate = 0, percentage = 0, flatFee = 0;
+        const selectedDateObj = new Date(selectedDate.value);
+        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
+        const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
+        filteredCurrentConditions.value.forEach(rate => {
+            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
+            let match = false;
+            if (rate.condition_type === 'day_of_week') {
+                match = condVal.includes(selectedDay);
+            } else if (rate.condition_type === 'month') {
+                match = condVal.includes(selectedMonth);
+            } else if (rate.condition_type === 'no_restriction') {
+                match = true;
+            }
+            if (match) {
+                if (rate.adjustment_type === 'base_rate') baseRate += parseFloat(rate.adjustment_value) || 0;
+                if (rate.adjustment_type === 'percentage') percentage += parseFloat(rate.adjustment_value) || 0;
+                if (rate.adjustment_type === 'flat_fee') flatFee += parseFloat(rate.adjustment_value) || 0;
+            }
+        });
+        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
+        const finalPrice = priceWithPercentage + flatFee;
+        return finalPrice > 0 ? finalPrice : null;
+    });
  
 </script>
   
