@@ -30,6 +30,15 @@
                     <p v-else>選択した日付の定額料金調整が見つかりません。</p>
                 </div>
             </div>
+            <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
+                <h3 class="text-xl font-semibold">合計料金:</h3>
+                <div>
+                    <p v-if="totalPriceForSelectedDay !== null">
+                        合計料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
+                    </p>
+                    <p v-else>選択した日付の料金が見つかりません。</p>
+                </div>
+            </div>
         </div>
         <div class="flex gap-4">
             <div class="p-4 shadow-lg rounded-lg w-full md:w-1/3 bg-white mb-4">
@@ -1089,7 +1098,10 @@
             allRates.value = data.map(rate => ({
                 ...rate,
                 date_start: formatDate(rate.date_start),
-                date_end: formatDate(rate.date_end)
+                date_end: formatDate(rate.date_end),
+                condition_value: typeof rate.condition_value === 'string'
+                    ? JSON.parse(rate.condition_value)
+                    : rate.condition_value
             }));
         } catch (error) {
             console.error('料金取得エラー:', error);
@@ -1126,6 +1138,38 @@
             selectedEditConditions.value = newValue || [];
         }
     }, { immediate: true });
+
+    const totalPriceForSelectedDay = computed(() => {
+        if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
+            return null;
+        }
+        let baseRate = 0, percentage = 0, flatFee = 0;
+        const selectedDateObj = new Date(selectedDate.value);
+        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
+        const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
+        filteredCurrentConditions.value.forEach(rate => {
+            // Ensure condition_value is always an array
+            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
+            let match = false;
+            if (rate.condition_type === 'day_of_week') {
+                match = condVal.includes(selectedDay);
+            } else if (rate.condition_type === 'month') {
+                match = condVal.includes(selectedMonth);
+            } else if (rate.condition_type === 'no_restriction') {
+                match = true;
+            }
+            if (match) {
+                if (rate.adjustment_type === 'base_rate') baseRate += parseFloat(rate.adjustment_value) || 0;
+                if (rate.adjustment_type === 'percentage') percentage += parseFloat(rate.adjustment_value) || 0;
+                if (rate.adjustment_type === 'flat_fee') flatFee += parseFloat(rate.adjustment_value) || 0;
+            }
+        });
+        // Apply percentage to base rate
+        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
+        // Add flat fee
+        const finalPrice = priceWithPercentage + flatFee;
+        return finalPrice > 0 ? finalPrice : null;
+    });
  
 </script>
   
