@@ -400,8 +400,8 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success" />
-                <Button label="キャンセル" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger" />
+                <Button label="保存" icon="pi pi-check" @click="saveAdjustment" class="p-button-success p-button-text p-button-sm" />
+                <Button label="キャンセル" icon="pi pi-times" @click="showAdjustmentDialog = false" class="p-button-danger p-button-text p-button-sm" text />
             </template>
             </Dialog>
 
@@ -517,8 +517,8 @@
                 </div>
             </div>
             <template #footer>
-                <Button label="更新" icon="pi pi-check" @click="updateAdjustment" class="p-button-success" />
-                <Button label="キャンセル" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger" />
+                <Button label="更新" icon="pi pi-check" @click="updateAdjustment" class="p-button-success p-button-text p-button-sm" />
+                <Button label="キャンセル" icon="pi pi-times" @click="showEditAdjustmentDialog = false" class="p-button-danger p-button-text p-button-sm" text />
             </template>
             </Dialog>
 
