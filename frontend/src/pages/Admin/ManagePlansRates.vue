@@ -983,42 +983,27 @@
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
             return null;
         }
-
         const selectedDateObj = new Date(selectedDate.value);
-        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();                
+        const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
-
         const filteredRates = filteredCurrentConditions.value.filter(rate => {
+            const condVal = Array.isArray(rate.condition_value) ? rate.condition_value : [];
             if (rate.condition_type === 'day_of_week' && rate.adjustment_type === 'percentage') {
-                // Directly check if the day is included in condition_value string
-                const conditionDays = rate.condition_value;
-                if (conditionDays.includes(selectedDay)) {
-                    return true;
-                }
+                return condVal.includes(selectedDay);
             }
-
             if (rate.condition_type === 'month' && rate.adjustment_type === 'percentage') {
-                // Directly check if the month is included in condition_value string
-                const conditionMonths = rate.condition_value;
-                if (conditionMonths.includes(selectedMonth.toString())) {
-                    return true;
-                }
+                return condVal.includes(selectedMonth);
             }
-
-            if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {                        
+            if (rate.condition_type === 'no_restriction' && rate.adjustment_type === 'percentage') {
                 return true;
-                
             }
-
             return false;
         });
-
         const sum = filteredRates.reduce((total, rate) => {
             const adjustmentValue = parseFloat(rate.adjustment_value) || 0;
             return total + adjustmentValue;
         }, 0);
-
-        return sum > 0 ? sum : null;                
+        return sum !== 0 ? sum : null;
     });
     const filteredCurrentConditions = computed(() => {
         if (!selectedDate.value) return null;
@@ -1099,9 +1084,18 @@
                 ...rate,
                 date_start: formatDate(rate.date_start),
                 date_end: formatDate(rate.date_end),
-                condition_value: typeof rate.condition_value === 'string'
-                    ? JSON.parse(rate.condition_value)
-                    : rate.condition_value
+                condition_value: (() => {
+                    if (!rate.condition_value) return [];
+                    if (Array.isArray(rate.condition_value)) return rate.condition_value;
+                    if (typeof rate.condition_value === 'string') {
+                        try {
+                            return JSON.parse(rate.condition_value);
+                        } catch {
+                            return [];
+                        }
+                    }
+                    return [];
+                })()
             }));
         } catch (error) {
             console.error('料金取得エラー:', error);
