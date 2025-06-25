@@ -350,7 +350,7 @@
         salesDifference.value = Math.round(totalRevenue) - forecastSales.value;
         ADRDifference.value = Math.round(ADR.value) - forecastADR.value;
         revPARDifference.value = Math.round(revPAR.value) - forecastRevPAR.value;
-        OCCDifference.value = OCC.value - forecastOCC.value;        
+        OCCDifference.value = OCC.value - forecastOCC.value;
     };
 
     // eCharts Instances & Refs
