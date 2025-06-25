@@ -1,62 +1,78 @@
 <template>
     <div v-if="plan">
-        <!-- Panel -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <div class="col-span-1 md:col-span-1 flex flex-col gap-4">
-                <div class="p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
+        <!-- Panel -->        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card>
+                <template #header>
                     <h3 class="text-xl font-semibold">日付を選択:</h3>
+                </template>
+                <template #content>
                     <DatePicker v-model="selectedDate" 
                         :showIcon="true" 
                         iconDisplay="input" 
                         :selectOtherMonths="true"                 
                         fluid
                         dateFormat="yy-mm-dd" 
-                    />
-                </div>
-                <div class="p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between mt-4">
-                    <h3 class="text-xl font-semibold">合計料金:</h3>
-                    <div>
+                    />                        
+                    <div class="mt-4 bg-green-100 p-2 rounded-lg">
                         <p v-if="totalPriceForSelectedDay !== null">
-                            合計料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
+                            当日料金: {{ formatNumber(totalPriceForSelectedDay, 'currency') }}
                         </p>
                         <p v-else>選択した日付の料金が見つかりません。</p>
+                    </div>                        
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在の基本料金:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredBaseRateSum !== null">
+                            基本料金合計: {{ formatNumber(filteredBaseRateSum, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の基本料金が見つかりません。</p>
                     </div>
-                </div>
-            </div>
-            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
-                <h3 class="text-xl font-semibold">現在の基本料金:</h3>
-                <div>
-                    <p v-if="filteredBaseRateSum !== null">
-                        基本料金合計: {{ formatNumber(filteredBaseRateSum, 'currency') }}
-                    </p>
-                    <p v-else>選択した日付の基本料金が見つかりません。</p>
-                </div>
-            </div>
-            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
-                <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
-                <div>
-                    <p v-if="filteredFlatFeeSum !== null">
-                        定額料金合計: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
-                    </p>
-                    <p v-else>選択した日付の定額料金調整が見つかりません。</p>
-                </div>
-            </div>
-            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
-                <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
-                <div>
-                    <p v-if="filteredPercentageSum !== null">
-                        合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
-                    </p>
-                    <p v-else>選択した日付のパーセント調整が見つかりません。</p>
-                </div>
-            </div>
-            <div class="col-span-1 md:col-span-1 p-4 shadow-lg rounded-lg bg-white h-full flex flex-col justify-between">
-                <h3 class="text-xl font-semibold">現在のアドオン:</h3>
-                <div>
-                    <p>カウント: {{ filteredAddonCount }}</p>
-                    <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>
-                </div>
-            </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在の定額料金調整:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredFlatFeeSum !== null">
+                            定額料金合計: {{ formatNumber(filteredFlatFeeSum, 'currency') }}
+                        </p>
+                        <p v-else>選択した日付の定額料金調整が見つかりません。</p>
+                    </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在のパーセント調整:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p v-if="filteredPercentageSum !== null">
+                            合計パーセント: {{ formatNumber(filteredPercentageSum, 'decimal') }}%
+                        </p>
+                        <p v-else>選択した日付のパーセント調整が見つかりません。</p>
+                    </div>
+                </template>
+            </Card>
+            <Card>
+                <template #header>
+                    <h3 class="text-xl font-semibold">現在のアドオン:</h3>
+                </template>
+                <template #content>
+                    <div>
+                        <p>カウント: {{ filteredAddonCount }}</p>
+                        <p>料金合計: {{ formatNumber(filteredAddonSum, 'currency') }}</p>
+                    </div>
+                </template>
+            </Card>
+            
         </div>
 
         <!-- Conditions -->
@@ -523,7 +539,7 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';    
     const toast = useToast();
-    import { Dialog, FloatLabel, DatePicker, InputText, InputNumber, MultiSelect, Select, Button,
+    import { Card, Dialog, FloatLabel, DatePicker, InputNumber, MultiSelect, Select, Button,
         Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Badge
      } from 'primevue';
 
