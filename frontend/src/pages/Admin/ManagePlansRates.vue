@@ -327,7 +327,7 @@
                     />
                     </div>
                 </FloatLabel>
-                <small class="text-gray-500">
+                <small class="text-gray-500" v-if="newAdjustment && newAdjustment.adjustment_type !== 'percentage'">
                     税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
                 </small>
                 </div>
@@ -443,7 +443,7 @@
                     />
                     </div>
                 </FloatLabel>
-                <small class="text-gray-500">
+                <small class="text-gray-500" v-if="editAdjustment && editAdjustment.adjustment_type !== 'percentage'">
                     税抜価格: {{ formatNumber(adjustmentNetPrice, 'currency') }}
                 </small>
                 </div>
