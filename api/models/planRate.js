@@ -91,6 +91,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
             adjustment_type,
             condition_type,
             condition_value,
+            tax_type_id,
             SUM(adjustment_value) AS total_value
         FROM plans_rates
         WHERE 
@@ -100,7 +101,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id
     `;
     const values = [
         plans_global_id || null,
@@ -116,20 +117,29 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         // console.log('Values:', values);
         // console.log('Result:', result);
 
-        let baseRate = 0, percentage = 0, flatFee = 0;
+        let baseRate = 0, percentageTotalEffect = 0, flatFee = 0;
         
         // Loop through the result rows and sum up valid adjustments for each adjustment_type
         result.rows.forEach(row => {
             if (isValidCondition(row, date)) {
-                if (row.adjustment_type === 'base_rate') baseRate += parseFloat(row.total_value);
-                if (row.adjustment_type === 'percentage') percentage += parseFloat(row.total_value);
-                if (row.adjustment_type === 'flat_fee') flatFee += parseFloat(row.total_value);
-                //console.log('Row processed with Base Rate:',baseRate,' Percentage:',percentage,' and Flat Fee:',flatFee);
+                if (row.adjustment_type === 'base_rate') {
+                    baseRate += parseFloat(row.total_value);
+                } else if (row.adjustment_type === 'percentage') {
+                    const value = parseFloat(row.total_value);
+                    if (row.tax_type_id === 1) { // 0% tax type, value is direct percentage (e.g., 10 means 10%)
+                        percentageTotalEffect += value / 100;
+                    } else { // Other tax types, value is in units of a hundred (e.g., 0.2 means 0.2x multiplier; 5 means 5x multiplier)
+                        percentageTotalEffect += value;
+                    }
+                } else if (row.adjustment_type === 'flat_fee') {
+                    flatFee += parseFloat(row.total_value);
+                }
+                //console.log('Row processed with Base Rate:',baseRate,' Percentage Effect:',percentageTotalEffect,' and Flat Fee:',flatFee, 'tax_type_id:', row.tax_type_id);
             }
         });
         
-        // Apply percentage to base rate
-        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
+        // Apply percentage effect to base rate
+        const priceWithPercentage = Math.round((baseRate * (1 + percentageTotalEffect)) * 100) / 100;
 
         // Add flat fee
         const finalPrice = priceWithPercentage + flatFee;
