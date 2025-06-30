@@ -193,21 +193,61 @@ const waitlistController = {
 
     // POST /api/waitlist/confirm/:token - Client confirmation
     async confirmReservation(req, res) {
-        // Find entry by token
-        // Validate token not expired
-        // Create new reservation using existing reservation logic
-        // Update waitlist entry status to 'confirmed'
-        // Send confirmation email
-        // Return reservation details
+        const { token } = req.params;
+        
+        // Find waitlist entry by token
+        const entry = await WaitlistEntry.findByToken(req.requestId, token);
+        if (!entry || entry.status !== 'notified') {
+            return res.status(400).json({ error: 'Invalid or expired token' });
+        }
+        
+        // Pre-fill reservation data
+        const prefillData = {
+            hotel_id: entry.hotel_id,
+            room_type_id: entry.room_type_id,
+            client_id: entry.client_id,
+            check_in: entry.requested_check_in_date,
+            check_out: entry.requested_check_out_date,
+            number_of_people: entry.number_of_guests,
+            // Include client details for auto-population
+            client: await getClientById(req.requestId, entry.client_id)
+        };
+        
+        // Update waitlist status to 'confirmed'
+        await WaitlistEntry.updateStatus(req.requestId, entry.id, 'confirmed');
+        
+        // Redirect to reservation page with pre-filled data
+        res.json({ 
+            success: true, 
+            redirectUrl: `/reservations/new?prefill=${encodeURIComponent(JSON.stringify(prefillData))}` 
+        });
     },
 
     // Internal function called by reservation cancellation
     async handleCancellation(requestId, cancellationData) {
-        // cancellationData: { hotel_id, room_type_id, check_in_date, check_out_date }
-        // Find matching waitlist entries
-        // Process first match: generate token, set expiry, update status
-        // Send notification email
-        // Return processed entry or null
+        const matchingEntries = await WaitlistEntry.findMatching(requestId, cancellationData);
+        
+        for (const entry of matchingEntries) {
+            if (entry.communication_preference === 'phone') {
+                // Create staff notification
+                await createStaffNotification({
+                    type: 'waitlist_call_required',
+                    hotel_id: entry.hotel_id,
+                    client_name: entry.client_name,
+                    client_phone: entry.contact_phone,
+                    room_type: entry.room_type_name,
+                    check_in: entry.requested_check_in_date,
+                    check_out: entry.requested_check_out_date,
+                    priority: 'high'
+                });
+                
+                // Update status to 'notified'
+                await WaitlistEntry.updateStatus(requestId, entry.id, 'notified');
+            } else {
+                // Send email notification (existing logic)
+                await sendEmailNotification(entry);
+            }
+        }
     }
 };
 ```
@@ -310,6 +350,42 @@ export const useWaitlistStore = () => {
    - Notes textarea
    - Form validation with error display
    -->
+   <div class="col-span-2">
+     <label class="font-semibold mb-2 block">連絡方法</label>
+     <div class="flex gap-4">
+       <div class="flex items-center">
+         <RadioButton
+           v-model="communicationPreference"
+           value="email"
+           :inputId="'email-pref'"
+         />
+         <label for="email-pref" class="ml-2">メール</label>
+       </div>
+       <div class="flex items-center">
+         <RadioButton
+           v-model="communicationPreference"
+           value="phone"
+           :inputId="'phone-pref'"
+         />
+         <label for="phone-pref" class="ml-2">電話</label>
+       </div>
+     </div>
+   </div>
+
+   <!-- Conditional fields based on preference -->
+   <div v-if="communicationPreference === 'email'" class="col-span-2">
+     <FloatLabel>
+       <InputText v-model="contactEmail" type="email" required />
+       <label>メールアドレス</label>
+     </FloatLabel>
+   </div>
+
+   <div v-if="communicationPreference === 'phone'" class="col-span-2">
+     <FloatLabel>
+       <InputText v-model="contactPhone" type="tel" required />
+       <label>電話番号</label>
+     </FloatLabel>
+   </div>
    ```
 
 3. **WaitlistConfirmationPage.vue**:
