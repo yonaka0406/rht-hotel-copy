@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+let actualGetPool = require('../config/database').getPool;
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -42,10 +42,11 @@ const isValidCondition = (row, date) => {
             return true; // For 'no_restriction' or unrecognized types, assume valid
     }
 };
+let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
 const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         SELECT * FROM plans_rates
         WHERE 
@@ -69,7 +70,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = 'SELECT * FROM plans_rates WHERE id = $1';
 
     try {
@@ -85,12 +86,13 @@ const getPlansRateById = async (requestId, id) => {
 };
 
 const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
             condition_type,
             condition_value,
+            tax_type_id,
             SUM(adjustment_value) AS total_value
         FROM plans_rates
         WHERE 
@@ -100,7 +102,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
             )
             AND ((plans_global_id = $1 AND plans_hotel_id IS NULL) 
             OR (plans_hotel_id = $2 AND hotel_id = $3 AND plans_global_id IS NULL))
-        GROUP BY condition_type, adjustment_type, condition_value
+        GROUP BY condition_type, adjustment_type, condition_value, tax_type_id
     `;
     const values = [
         plans_global_id || null,
@@ -116,32 +118,51 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         // console.log('Values:', values);
         // console.log('Result:', result);
 
-        let baseRate = 0, percentage = 0, flatFee = 0;
+        let baseRateTotal = 0;
+        let groupAPercentageEffect = 0; // For tax_type_id != 1
+        let groupBPercentageEffect = 0; // For tax_type_id == 1
+        let flatFeeTotal = 0;
         
-        // Loop through the result rows and sum up valid adjustments for each adjustment_type
+        // Loop through the result rows and sum up adjustments
         result.rows.forEach(row => {
-            if (isValidCondition(row, date)) {
-                if (row.adjustment_type === 'base_rate') baseRate += parseFloat(row.total_value);
-                if (row.adjustment_type === 'percentage') percentage += parseFloat(row.total_value);
-                if (row.adjustment_type === 'flat_fee') flatFee += parseFloat(row.total_value);
-                //console.log('Row processed with Base Rate:',baseRate,' Percentage:',percentage,' and Flat Fee:',flatFee);
+            if (actualIsValidCondition(row, date)) {
+                const value = parseFloat(row.total_value);
+                if (row.adjustment_type === 'base_rate') {
+                    baseRateTotal += value;
+                } else if (row.adjustment_type === 'percentage') {
+                    if (row.tax_type_id === 1) { // Group B: Value is direct percentage (e.g., 2.5 for 2.5%)
+                        groupBPercentageEffect += value / 100;
+                    } else { // Group A: Value is a multiplier (e.g., -0.04 for -4%)
+                        groupAPercentageEffect += value;
+                    }
+                } else if (row.adjustment_type === 'flat_fee') {
+                    flatFeeTotal += value;
+                }
             }
         });
         
-        // Apply percentage to base rate
-        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
+        // Sequential Calculation
+        let currentTotal = baseRateTotal;
+        // 1. Apply Group A Percentage Effect (tax_type_id != 1)
+        currentTotal = currentTotal * (1 + groupAPercentageEffect);
+        // 2. Round down to the nearest 100
+        currentTotal = Math.floor(currentTotal / 100) * 100;
+        // 3. Apply Group B Percentage Effect (tax_type_id == 1)
+        currentTotal = currentTotal * (1 + groupBPercentageEffect);
+        // 4. Final round down (simple floor)
+        currentTotal = Math.floor(currentTotal);
+        // 5. Add Flat Fee Total
+        currentTotal = currentTotal + flatFeeTotal;
 
-        // Add flat fee
-        const finalPrice = priceWithPercentage + flatFee;
-        // console.log('Calculated price:',finalPrice);
-        return finalPrice;
+        // console.log('Calculated price:', currentTotal);
+        return currentTotal;
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
     }
 };
 const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -172,7 +193,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
         const result = await pool.query(query, values);  
         
         // Filter results using isValidCondition
-        const filteredRates = result.rows.filter(row => isValidCondition(row, date));
+        const filteredRates = result.rows.filter(row => actualIsValidCondition(row, date));
               
         return filteredRates;
     } catch (err) {
@@ -183,7 +204,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
 
 // Create a new plans_rate
 const createPlansRate = async (requestId, plansRate) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         INSERT INTO plans_rates (
             hotel_id, 
@@ -230,7 +251,7 @@ const createPlansRate = async (requestId, plansRate) => {
 
 // Update an existing plans_rate
 const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         UPDATE plans_rates
         SET 
@@ -280,7 +301,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
 
 // Delete a plans_rate by ID
 const deletePlansRate = async (requestId, id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
 
     try {
@@ -295,6 +316,12 @@ const deletePlansRate = async (requestId, id) => {
     }
 };
 
+// Helper functions for testing to allow injection of mocks
+const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
+const __getOriginalGetPool = () => require('../config/database').getPool;
+const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
+const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
+
 module.exports = {
     getAllPlansRates,
     getPlansRateById,
@@ -302,5 +329,10 @@ module.exports = {
     getRatesForTheDay,
     createPlansRate,
     updatePlansRate,
-    deletePlansRate    
+    deletePlansRate,
+    // For testing purposes
+    __setGetPool,
+    __getOriginalGetPool,
+    __setIsValidCondition,
+    __getOriginalIsValidCondition
 };
