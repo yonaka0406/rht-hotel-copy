@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+let actualGetPool = require('../config/database').getPool;
 
 // Helper function to validate conditions
 const isValidCondition = (row, date) => {
@@ -42,10 +42,11 @@ const isValidCondition = (row, date) => {
             return true; // For 'no_restriction' or unrecognized types, assume valid
     }
 };
+let actualIsValidCondition = isValidCondition;
 
 // Return all plans_rates
 const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hotel_id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         SELECT * FROM plans_rates
         WHERE 
@@ -69,7 +70,7 @@ const getAllPlansRates = async (requestId, plans_global_id, plans_hotel_id, hote
 
 // Get plans_rates by ID
 const getPlansRateById = async (requestId, id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = 'SELECT * FROM plans_rates WHERE id = $1';
 
     try {
@@ -85,7 +86,7 @@ const getPlansRateById = async (requestId, id) => {
 };
 
 const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -121,7 +122,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         
         // Loop through the result rows and sum up valid adjustments for each adjustment_type
         result.rows.forEach(row => {
-            if (isValidCondition(row, date)) {
+            if (actualIsValidCondition(row, date)) {
                 if (row.adjustment_type === 'base_rate') {
                     baseRate += parseFloat(row.total_value);
                 } else if (row.adjustment_type === 'percentage') {
@@ -153,7 +154,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
     }
 };
 const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hotel_id, date) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `        
         SELECT 
             adjustment_type,
@@ -184,7 +185,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
         const result = await pool.query(query, values);  
         
         // Filter results using isValidCondition
-        const filteredRates = result.rows.filter(row => isValidCondition(row, date));
+        const filteredRates = result.rows.filter(row => actualIsValidCondition(row, date));
               
         return filteredRates;
     } catch (err) {
@@ -195,7 +196,7 @@ const getRatesForTheDay = async (requestId, plans_global_id, plans_hotel_id, hot
 
 // Create a new plans_rate
 const createPlansRate = async (requestId, plansRate) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         INSERT INTO plans_rates (
             hotel_id, 
@@ -242,7 +243,7 @@ const createPlansRate = async (requestId, plansRate) => {
 
 // Update an existing plans_rate
 const updatePlansRate = async (requestId, id, plansRate) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = `
         UPDATE plans_rates
         SET 
@@ -292,7 +293,7 @@ const updatePlansRate = async (requestId, id, plansRate) => {
 
 // Delete a plans_rate by ID
 const deletePlansRate = async (requestId, id) => {
-    const pool = getPool(requestId);
+    const pool = actualGetPool(requestId);
     const query = 'DELETE FROM plans_rates WHERE id = $1 RETURNING *';
 
     try {
@@ -314,5 +315,16 @@ module.exports = {
     getRatesForTheDay,
     createPlansRate,
     updatePlansRate,
-    deletePlansRate    
+    deletePlansRate,
+    // For testing purposes
+    __setGetPool,
+    __getOriginalGetPool,
+    __setIsValidCondition,
+    __getOriginalIsValidCondition
 };
+
+// Helper functions for testing to allow injection of mocks
+const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
+const __getOriginalGetPool = () => require('../config/database').getPool;
+const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
+const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
