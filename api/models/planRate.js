@@ -139,7 +139,9 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         });
         
         // Apply percentage effect to base rate
-        const priceWithPercentage = Math.round((baseRate * (1 + percentageTotalEffect)) * 100) / 100;
+        const rawPriceWithPercentage = baseRate * (1 + percentageTotalEffect);
+        // Round down to the nearest 100 currency units
+        const priceWithPercentage = Math.floor(rawPriceWithPercentage / 100) * 100;
 
         // Add flat fee
         const finalPrice = priceWithPercentage + flatFee;

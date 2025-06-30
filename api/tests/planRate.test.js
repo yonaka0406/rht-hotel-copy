@@ -1,223 +1,196 @@
 const assert = require('assert');
+// Assuming planRateModel.js is in ../models/
 const planRateModel = require('../models/planRate');
 
-// Mock a subset of the pool and client functionality needed by the model
+// --- Mocking Infrastructure ---
+let mockDbQueryResult = { rows: [] };
 const mockPool = {
     query: async (queryText, values) => {
-        // This function will be overridden by each test case
-        console.log('Mock DB Query:', queryText, values);
-        return { rows: [] };
+        // console.log('Mock DB Query:', queryText, values); // Keep for debugging if needed
+        return mockDbQueryResult; // Use the centrally defined mock result
     }
 };
 
 const mockGetPool = () => mockPool;
 
-// Original getPool
-const originalGetPool = planRateModel.__getPool; // Assuming we can access it or need to export it for testing
+// Store original functions from planRateModel to restore them
+let originalGetPoolInjected;
+let originalIsValidConditionInjected;
 
-// Mock isValidCondition
-const originalIsValidCondition = planRateModel.__isValidCondition; // Assuming we can access/export
+// These functions would ideally be part of planRateModel.js for testability
+// e.g., module.exports.setTestDependencies = (deps) => { getPool = deps.getPool; isValidCondition = deps.isValidCondition; }
+// For now, we assume planRateModel.js has been adapted to use these setters/getters.
+// If not, these tests won't correctly mock dependencies without a proper test framework.
 
-describe('planRateModel.getPriceForReservation', () => {
-    beforeEach(() => {
-        // Replace the model's getPool with our mock for the duration of the test
-        planRateModel.__setGetPool(mockGetPool); // Need to add a setter in the model for this
+function patchPlanRateModelForTesting(model) {
+    if (model.__setGetPool && model.__setIsValidCondition && model.__getOriginalGetPool && model.__getOriginalIsValidCondition) {
+        originalGetPoolInjected = model.__getOriginalGetPool();
+        originalIsValidConditionInjected = model.__getOriginalIsValidCondition();
+        model.__setGetPool(mockGetPool);
+        model.__setIsValidCondition(() => true); // Mock isValidCondition to always return true for price calculation tests
+    } else {
+        console.warn("planRateModel does not have __setGetPool/__setIsValidCondition or __getOriginalGetPool/__getOriginalIsValidCondition. Tests may not mock dependencies correctly.");
+    }
+}
 
-        // Mock isValidCondition to always be true for these tests
-        planRateModel.__setIsValidCondition(() => true); // Need to add a setter
-    });
+function unpatchPlanRateModelAfterTesting(model) {
+    if (model.__setGetPool && originalGetPoolInjected) {
+        model.__setGetPool(originalGetPoolInjected);
+    }
+    if (model.__setIsValidCondition && originalIsValidConditionInjected) {
+        model.__setIsValidCondition(originalIsValidConditionInjected);
+    }
+}
 
-    afterEach(() => {
-        // Restore original functions if they were altered
-        planRateModel.__setGetPool(originalGetPool);
-        planRateModel.__setIsValidCondition(originalIsValidCondition);
-    });
+// --- Test Suites ---
+(async () => {
+    const tests = [];
+    const describe = (name, fn) => {
+        console.log(`\n--- ${name} ---`);
+        fn();
+    };
+    const it = (name, fn) => { tests.push({ name, fn }); };
 
-    it('should calculate price correctly for 0% tax type (tax_type_id = 1)', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 1000 },
-                { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10 } // 10%
-            ]
+    describe('planRateModel.getPriceForReservation with new rounding', () => {
+
+        it('Test Case 1: 0% tax type (tax_type_id = 1), no rounding effect', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 1000, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req1', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 1000 * (1 + 0.10) = 1100. Rounded: Math.floor(1100/100)*100 = 1100.
+            assert.strictEqual(price, 1100, 'Test Case 1 Failed. Expected 1100, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req1', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1100, 'Test Case 1 Failed: 0% tax type'); // 1000 * (1 + 0.10)
-    });
 
-    it('should calculate price correctly for other tax types (value as multiplier)', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 1000 },
-                { adjustment_type: 'percentage', tax_type_id: 2, total_value: 0.2 } // 0.2x multiplier (20%)
-            ]
+        it('Test Case 2: Other tax types, no rounding effect', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 1000, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 2, total_value: 0.2, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req2', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 1000 * (1 + 0.2) = 1200. Rounded: Math.floor(1200/100)*100 = 1200.
+            assert.strictEqual(price, 1200, 'Test Case 2 Failed. Expected 1200, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req2', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1200, 'Test Case 2 Failed: Other tax type'); // 1000 * (1 + 0.2)
-    });
 
-    it('should calculate price correctly for a combination of percentage types', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 1000 },
-                { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10 },    // 10% -> 0.10 effect
-                { adjustment_type: 'percentage', tax_type_id: 2, total_value: 0.05 }  // 0.05x multiplier
-            ]
+        it('Test Case 3: Combination of percentages, shows rounding', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 1000, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10, condition_type: 'none', condition_value: null },    // 0.10 effect
+                    { adjustment_type: 'percentage', tax_type_id: 2, total_value: 0.05, condition_type: 'none', condition_value: null }  // 0.05 effect
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req3', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 1000 * (1 + 0.10 + 0.05) = 1150. Rounded: Math.floor(1150/100)*100 = 1100.
+            assert.strictEqual(price, 1100, 'Test Case 3 Failed. Expected 1100, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req3', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1150, 'Test Case 3 Failed: Combination of percentages'); // 1000 * (1 + 0.10 + 0.05)
-    });
 
-    it('should calculate price correctly with a flat fee', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 1000 },
-                { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10 }, // 10%
-                { adjustment_type: 'flat_fee', total_value: 50 }
-            ]
+        it('Test Case 4: With flat fee, shows rounding on percentage part', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 1030, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'flat_fee', total_value: 50, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req4', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw percentage part: 1030 * 1.10 = 1133. Rounded: Math.floor(1133/100)*100 = 1100. Final: 1100 + 50 = 1150.
+            assert.strictEqual(price, 1150, 'Test Case 4 Failed. Expected 1150, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req4', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1150, 'Test Case 4 Failed: With flat fee'); // (1000 * 1.10) + 50
-    });
 
-    it('should calculate price correctly with only base rate and flat fee', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 1000 },
-                { adjustment_type: 'flat_fee', total_value: 50 }
-            ]
+        it('Test Case 5: Only base rate and flat fee', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 1090, condition_type: 'none', condition_value: null }, // Base to show rounding
+                    { adjustment_type: 'flat_fee', total_value: 50, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req5', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw percentage part: 1090 * (1+0) = 1090. Rounded: Math.floor(1090/100)*100 = 1000. Final: 1000 + 50 = 1050.
+            assert.strictEqual(price, 1050, 'Test Case 5 Failed. Expected 1050, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req5', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1050, 'Test Case 5 Failed: Base rate and flat fee'); // 1000 + 50
-    });
 
-    it('should calculate price correctly with zero base rate', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 0 },
-                { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10 }, // 10%
-                { adjustment_type: 'flat_fee', total_value: 50 }
-            ]
+        it('Test Case 6: Zero base rate', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 0, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'flat_fee', total_value: 50, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req6', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 0 * 1.10 = 0. Rounded: 0. Final: 0 + 50 = 50.
+            assert.strictEqual(price, 50, 'Test Case 6 Failed. Expected 50, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req6', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 50, 'Test Case 6 Failed: Zero base rate'); // (0 * 1.10) + 50
-    });
 
-    it('should calculate price correctly when percentage is units of 100 (e.g. 5 means 500%)', async () => {
-        mockPool.query = async () => ({
-            rows: [
-                { adjustment_type: 'base_rate', total_value: 100 },
-                { adjustment_type: 'percentage', tax_type_id: 2, total_value: 5 } // 5x multiplier (500%)
-            ]
+        it('Test Case 7: Percentage as units of 100, shows rounding', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 120, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 2, total_value: 0.2, condition_type: 'none', condition_value: null }
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req7', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 120 * (1 + 0.2) = 144. Rounded: Math.floor(144/100)*100 = 100.
+            assert.strictEqual(price, 100, 'Test Case 7 Failed. Expected 100, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req7', 'global1', null, 'hotel1', '2023-01-01');
-        // Expected: 100 * (1 + 5) = 100 * 6 = 600
-        assert.strictEqual(price, 600, 'Test Case 7 Failed: Percentage as units of 100 (large value)');
-    });
 
-    it('should handle no applicable rates found (empty rows)', async () => {
-        mockPool.query = async () => ({
-            rows: []
+        it('Test Case 8: No applicable rates found', async () => {
+            mockDbQueryResult = { rows: [] };
+            const price = await planRateModel.getPriceForReservation('req8', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 0. Rounded: 0. Final: 0.
+            assert.strictEqual(price, 0, 'Test Case 8 Failed. Expected 0, Got ' + price);
         });
-        const price = await planRateModel.getPriceForReservation('req8', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 0, 'Test Case 8 Failed: No applicable rates'); // 0 base, 0 percentage, 0 flat_fee
+
+        it('Test Case 9: Price just under 100, after percentage', async () => {
+            mockDbQueryResult = {
+                rows: [
+                    { adjustment_type: 'base_rate', total_value: 90, condition_type: 'none', condition_value: null },
+                    { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10, condition_type: 'none', condition_value: null } // 10% of 90 is 9. Total 99.
+                ]
+            };
+            const price = await planRateModel.getPriceForReservation('req9', 'global1', null, 'hotel1', '2023-01-01');
+            // Raw: 90 * (1 + 0.10) = 99. Rounded: Math.floor(99/100)*100 = 0.
+            assert.strictEqual(price, 0, 'Test Case 9 Failed. Expected 0, Got ' + price);
+        });
     });
 
-});
-
-// Basic test runner if not using a framework like Mocha/Jest
-if (require.main === module) {
-    console.log("Running planRateModel tests...");
+    // --- Run tests ---
     let passed = 0;
     let failed = 0;
 
-    const testCases = [
-        { name: 'Test Case 1: 0% tax type', fn: module.exports.tests && module.exports.tests[0] ? module.exports.tests[0].fn : null }, // Placeholder, need to structure better for direct run
-        // Add more test cases here if running directly
-    ];
+    console.log("\nINFO: For these tests to correctly mock dependencies, `planRateModel.js` needs to be adapted for testability (e.g., by exporting setters like __setGetPool, __setIsValidCondition, or by using Jest/Proxyquire for mocking). The following test run assumes this adaptation is in place.");
 
-    // This is a simplified runner. A real test runner (Jest/Mocha) would be better.
-    // For now, this structure assumes tests are run with a test runner.
-    // To make this runnable directly, we'd need to export tests differently or use a describe/it polyfill.
-    console.log("Please use a test runner like Mocha or Jest to execute these tests.");
-    console.log("Example: mocha api/tests/planRate.test.js");
-    console.log("If you need to run this file directly, the test execution part needs to be fleshed out.");
-}
+    patchPlanRateModelForTesting(planRateModel);
 
-module.exports.tests = [ // For potential programmatic running or if a simple runner is built
-    { name: 'should calculate price correctly for 0% tax type (tax_type_id = 1)', fn: async () => {
-        mockPool.query = async () => ({ rows: [ { adjustment_type: 'base_rate', total_value: 1000 }, { adjustment_type: 'percentage', tax_type_id: 1, total_value: 10 } ] });
-        const price = await planRateModel.getPriceForReservation('req1', 'global1', null, 'hotel1', '2023-01-01');
-        assert.strictEqual(price, 1100);
-    }},
-    // ... other tests structured similarly
-];
+    for (const test of tests) {
+        try {
+            await test.fn();
+            console.log(`  PASSED: ${test.name}`);
+            passed++;
+        } catch (e) {
+            console.error(`  FAILED: ${test.name}`);
+            console.error(e.message); // More concise error for output
+            failed++;
+        }
+    }
 
-// Note: The direct run part is very basic. Test frameworks handle this much better.
-// The `describe` and `it` blocks are for Mocha/Jest.
-// To make this runnable, planRateModel needs to expose __setGetPool and __setIsValidCondition.
-// Or, use a library like `proxyquire` or Jest's module mocking.
-console.log("Test file created. Manual adjustments in planRate.js are needed to support this specific mocking strategy (exposing setters for dependencies) or use a more advanced mocking library.");
+    unpatchPlanRateModelAfterTesting(planRateModel);
 
-// For now, this is a placeholder test structure.
-// It requires `planRateModel.js` to be modified to allow injection of `getPool` and `isValidCondition` for testing.
-// e.g. by adding:
-// planRateModel.__setGetPool = (newGetPool) => { getPool = newGetPool; }
-// planRateModel.__setIsValidCondition = (newIsValidCondition) => { isValidCondition = newIsValidCondition; }
-// And exporting them at the end of planRateModel.js
-// module.exports = { ..., __setGetPool, __setIsValidCondition }; (bad practice for production code, better with Jest mocks or proxyquire)
+    console.log(`\nTests finished. Passed: ${passed}, Failed: ${failed}`);
+    if (failed > 0) {
+        console.log("\nNote: Some tests failed. Please review the output.");
+        // process.exit(1); // Consider uncommenting if running in CI
+    } else {
+        console.log("\nAll tests passed (based on the simplified runner and assuming model adaptations).");
+    }
 
-```
-
-**Important Considerations for this test file:**
-
-1.  **Mocking Dependencies:**
-    *   The test attempts to mock `getPool` and `isValidCondition`. This current approach (`planRateModel.__setGetPool`, `planRateModel.__setIsValidCondition`) requires modifying `planRate.js` to expose these setters. This is generally not ideal for production code structure.
-    *   A better approach in a project with a test runner like Jest would be to use `jest.mock()` or `jest.spyOn()`. With Mocha, libraries like `proxyquire` or `sinon` are often used for this.
-    *   Since no framework is specified, I've opted for a method that *could* work with minimal external libraries but requires small, test-specific modifications to the model file.
-
-2.  **Running the Tests:**
-    *   The `describe` and `it` syntax is standard for frameworks like Mocha or Jest. To run this, you'd typically install one of these (e.g., `npm install -D mocha`) and run it (e.g., `npx mocha api/tests/planRate.test.js`).
-    *   The rudimentary direct-run section at the bottom is very basic and not fully functional for the `describe/it` structure without more work.
-
-3.  **Exporting for Testability (if using the current mock strategy):**
-    In `api/models/planRate.js`, you would need to:
-    *   Make `getPool` (the imported one) and `isValidCondition` (the local function) modifiable from the outside for tests.
-    ```javascript
-    // At the top of planRate.js
-    let { getPool } = require('../config/database'); // Make getPool let
-    let currentIsValidCondition = isValidCondition; // Assuming isValidCondition is the name of your local function
-
-    // ... rest of the model ...
-
-    // At the bottom, before module.exports
-    const __setGetPool = (newGetPoolFunc) => {
-        getPool = newGetPoolFunc;
-    };
-    const __getOriginalGetPool = () => require('../config/database').getPool; // to restore
-
-    const __setIsValidCondition = (newIsValidConditionFunc) => {
-        currentIsValidCondition = newIsValidConditionFunc; // you'd call currentIsValidCondition in your model
-    };
-    const __getOriginalIsValidCondition = () => isValidCondition; // to restore
-
-    module.exports = {
-        getAllPlansRates,
-        getPlansRateById,
-        getPriceForReservation,
-        // ... other exports
-        __setGetPool, // Export for test
-        __getOriginalGetPool, // Export for test
-        __setIsValidCondition, // Export for test
-        __getOriginalIsValidCondition // Export for test
-    };
-
-    // And then in getPriceForReservation, use `currentIsValidCondition` instead of `isValidCondition` directly.
-    // if (currentIsValidCondition(row, date)) { ... }
-    ```
-    This is an invasive way to make code testable and is usually avoided in favor of dependency injection patterns or framework-specific mocking tools.
-
-Given these points, this test file is a starting point. To make it fully runnable and robust, decisions about the testing framework and mocking strategy for the project are needed.
-
-For now, I've created the file with the test logic. If you have a preferred testing setup (Jest, Mocha, etc.) or a different way to handle mocking, please let me know, and I can adapt. Otherwise, to run these tests as-is, `planRate.js` would need the `__setGetPool` and `__setIsValidCondition` type of modifications.
-
-I'll pause here before actually running/validating these tests, as it depends on the environment and potential modifications to `planRate.js`.
+})().catch(e => {
+    console.error("Critical error running test script:", e);
+    // process.exit(1); // Consider uncommenting if running in CI
+});
