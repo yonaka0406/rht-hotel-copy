@@ -118,36 +118,44 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         // console.log('Values:', values);
         // console.log('Result:', result);
 
-        let baseRate = 0, percentageTotalEffect = 0, flatFee = 0;
+        let baseRateTotal = 0;
+        let groupAPercentageEffect = 0; // For tax_type_id != 1
+        let groupBPercentageEffect = 0; // For tax_type_id == 1
+        let flatFeeTotal = 0;
         
-        // Loop through the result rows and sum up valid adjustments for each adjustment_type
+        // Loop through the result rows and sum up adjustments
         result.rows.forEach(row => {
             if (actualIsValidCondition(row, date)) {
+                const value = parseFloat(row.total_value);
                 if (row.adjustment_type === 'base_rate') {
-                    baseRate += parseFloat(row.total_value);
+                    baseRateTotal += value;
                 } else if (row.adjustment_type === 'percentage') {
-                    const value = parseFloat(row.total_value);
-                    if (row.tax_type_id === 1) { // 0% tax type, value is direct percentage (e.g., 10 means 10%)
-                        percentageTotalEffect += value / 100;
-                    } else { // Other tax types, value is in units of a hundred (e.g., 0.2 means 0.2x multiplier; 5 means 5x multiplier)
-                        percentageTotalEffect += value;
+                    if (row.tax_type_id === 1) { // Group B: Value is direct percentage (e.g., 2.5 for 2.5%)
+                        groupBPercentageEffect += value / 100;
+                    } else { // Group A: Value is a multiplier (e.g., -0.04 for -4%)
+                        groupAPercentageEffect += value;
                     }
                 } else if (row.adjustment_type === 'flat_fee') {
-                    flatFee += parseFloat(row.total_value);
+                    flatFeeTotal += value;
                 }
-                //console.log('Row processed with Base Rate:',baseRate,' Percentage Effect:',percentageTotalEffect,' and Flat Fee:',flatFee, 'tax_type_id:', row.tax_type_id);
             }
         });
         
-        // Apply percentage effect to base rate
-        const rawPriceWithPercentage = baseRate * (1 + percentageTotalEffect);
-        // Round down to the nearest 100 currency units
-        const priceWithPercentage = Math.floor(rawPriceWithPercentage / 100) * 100;
+        // Sequential Calculation
+        let currentTotal = baseRateTotal;
+        // 1. Apply Group A Percentage Effect (tax_type_id != 1)
+        currentTotal = currentTotal * (1 + groupAPercentageEffect);
+        // 2. Round down to the nearest 100
+        currentTotal = Math.floor(currentTotal / 100) * 100;
+        // 3. Apply Group B Percentage Effect (tax_type_id == 1)
+        currentTotal = currentTotal * (1 + groupBPercentageEffect);
+        // 4. Final round down (simple floor)
+        currentTotal = Math.floor(currentTotal);
+        // 5. Add Flat Fee Total
+        currentTotal = currentTotal + flatFeeTotal;
 
-        // Add flat fee
-        const finalPrice = priceWithPercentage + flatFee;
-        // console.log('Calculated price:',finalPrice);
-        return finalPrice;
+        // console.log('Calculated price:', currentTotal);
+        return currentTotal;
     } catch (err) {
         console.error('Error calculating price:', err);
         throw new Error('Database error');
@@ -308,6 +316,12 @@ const deletePlansRate = async (requestId, id) => {
     }
 };
 
+// Helper functions for testing to allow injection of mocks
+const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
+const __getOriginalGetPool = () => require('../config/database').getPool;
+const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
+const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
+
 module.exports = {
     getAllPlansRates,
     getPlansRateById,
@@ -322,9 +336,3 @@ module.exports = {
     __setIsValidCondition,
     __getOriginalIsValidCondition
 };
-
-// Helper functions for testing to allow injection of mocks
-const __setGetPool = (newGetPool) => { actualGetPool = newGetPool; };
-const __getOriginalGetPool = () => require('../config/database').getPool;
-const __setIsValidCondition = (newIsValidCondition) => { actualIsValidCondition = newIsValidCondition; };
-const __getOriginalIsValidCondition = () => isValidCondition; // This refers to the original isValidCondition function defined in this file
