@@ -173,6 +173,42 @@ It is highly recommended that all developers familiarize themselves with the con
 
 [Details to be added by project maintainers]
 
+## Security Considerations
+
+### PostgreSQL DoS Mitigation with Fail2ban
+
+Fail2ban is a service that monitors server logs for suspicious activity and temporarily bans IP addresses that exhibit malicious patterns, such as too many password failures. Configuring Fail2ban for PostgreSQL can help mitigate brute-force login attempts and other denial-of-service (DoS) attack vectors by blocking offending IPs.
+
+Here's a basic example of how to configure a Fail2ban jail for PostgreSQL. Create or edit your `jail.local` file (usually in `/etc/fail2ban/jail.local`) and add the following:
+
+```ini
+[postgres]
+enabled  = true
+port     = 5432
+filter   = postgres
+logpath  = /var/log/postgresql/postgresql-%Y-%m-%d_*.log  # Adjust path as needed
+maxretry = 5
+bantime  = 3600  # Ban for 1 hour
+findtime = 600   # Check logs for the past 10 minutes
+```
+
+**Explanation:**
+*   `enabled = true`: Activates this jail.
+*   `port = 5432`: Specifies the PostgreSQL port.
+*   `filter = postgres`: Uses the predefined `postgres` filter, which should be available in your Fail2ban installation (usually in `/etc/fail2ban/filter.d/postgres.conf`). This filter contains the regular expressions to identify failed login attempts.
+*   `logpath`: Points to the PostgreSQL log files. The exact path and naming convention might vary depending on your PostgreSQL version and operating system configuration. The example uses a common pattern for daily rotated logs.
+*   `maxretry = 5`: Bans an IP after 5 failed attempts.
+*   `bantime = 3600`: Bans the IP for 3600 seconds (1 hour).
+*   `findtime = 600`: Considers failures within the last 600 seconds (10 minutes) for `maxretry`.
+
+**Locating PostgreSQL Logs:**
+The `logpath` in the configuration is crucial. Common locations for PostgreSQL logs include:
+*   Debian/Ubuntu: `/var/log/postgresql/postgresql-X.Y-main.log` (where X.Y is the version) or `/var/log/postgresql/postgresql.log`.
+*   Red Hat/CentOS/Fedora: `/var/lib/pgsql/data/pg_log/` or `/var/lib/pgsql/<version>/data/log/`.
+*   Custom installations: The log location might be defined in your `postgresql.conf` file (look for `log_directory` and `log_filename`).
+
+Always ensure PostgreSQL is configured to log connection attempts and errors. This is typically managed by settings like `log_connections`, `log_disconnections`, `log_hostname`, and `log_statement` in `postgresql.conf`.
+
 ## License
 
 [Details to be added by project maintainers]
