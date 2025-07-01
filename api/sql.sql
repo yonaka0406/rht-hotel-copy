@@ -790,6 +790,7 @@ CREATE TABLE sc_tl_plans (
    hotel_id INT NOT NULL REFERENCES hotels(id),
    plans_global_id INT REFERENCES plans_global(id),
    plans_hotel_id INT,
+   plan_key TEXT NOT NULL,
    planGroupCode TEXT NOT NULL, --プラングループコード
    planGroupName TEXT NOT NULL, --プラングループ名      
    FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
