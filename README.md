@@ -93,11 +93,23 @@ This project is a comprehensive Hotel Management System designed to streamline v
 **Database Setup:**
 1. Set up the PostgreSQL database:
     * Create a PostgreSQL database (e.g., `hotel_system_db`).
-    * Connect to your database and execute the SQL scripts located in the `api/` directory in the following order:
-        * `sql.sql` (for main schema and tables)
-        * `sql_logs.sql` (for logging tables)
-        * `sql_triggers.sql` (for database triggers)
-    * **Note:** The `api/LOGIN_WITH_GOOGLE.md` guide may refer to an additional `migration_script.sql` for Google Authentication specific database changes. Please verify its location within the `api/` directory and apply if necessary for Google Sign-In functionality.
+    * Connect to your database and execute the SQL migration scripts located in the `api/migrations/` directory.
+    * These scripts should be executed in numerical order (e.g., `001_initial_schema.sql`, then `002_room_management.sql`, and so on).
+    * The current set of migration files are:
+        * `001_initial_schema.sql`
+        * `002_room_management.sql`
+        * `003_client_management.sql`
+        * `004_plans_and_addons.sql`
+        * `005_reservations.sql`
+        * `006_billing.sql`
+        * `007_ota_integration.sql`
+        * `008_views.sql`
+        * `009_financial_data.sql`
+        * `010_logs_schema_and_functions.sql`
+        * `011_custom_functions.sql`
+        * `012_triggers.sql`
+    * Ad-hoc scripts for specific data cleanup or processing can be found in `api/adhoc_scripts/`. These are not part of the standard installation.
+    * **Note:** The `api/LOGIN_WITH_GOOGLE.md` guide may refer to an additional `migration_script.sql` for Google Authentication specific database changes. This is now superseded by the numbered migration files. Ensure all necessary Google Auth fields are part of the `001_initial_schema.sql` or subsequent relevant migrations.
 
 **Backend Setup (API):**
 1. Navigate to the `api` directory: `cd api`
@@ -148,7 +160,8 @@ For specific instructions on setting up and using Google login, refer to the gui
 
 ## Project Structure
 
-*   `/api`: Contains the backend Node.js Express application. This includes routes, controllers, models, services, configuration, and the main SQL schema scripts (`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`).
+*   `/api`: Contains the backend Node.js Express application. This includes routes, controllers, models, services, and configuration.
+    *   `/api/migrations`: Contains SQL scripts for database schema setup and migrations. These should be run in numerical order.
 *   `/frontend`: Contains the Vue.js frontend application, including components, views, store (e.g., Pinia), and assets.
 *   `/apache`: Likely contains Apache web server configuration files for deploying the application, possibly as a reverse proxy.
 *   `/postgres`: Primarily used for storing PostgreSQL database backups and related utility scripts. The main database schema scripts are located in `/api`.

@@ -42,12 +42,24 @@ This directory contains the backend API for the Hotel Management System. It is a
     ```
 3.  **Database Setup:**
     *   Ensure you have a running PostgreSQL instance.
-    *   Create a database for the application.
-    *   Execute the necessary SQL scripts located in the `api/` directory to set up the schema:
-        *   `sql.sql` (main schema)
-        *   `sql_logs.sql` (logging tables)
-        *   `sql_triggers.sql` (database triggers)
-    *   **Note:** An earlier version of documentation referred to a `migration_script.sql` for Google Authentication specific database changes. This script is not present in the current version of the `api/` directory. Google Authentication setup relies on the main SQL scripts (`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`) and environment variable configuration as detailed in `LOGIN_WITH_GOOGLE.md`.
+    *   Create a database for the application (e.g., `hotel_system_db`).
+    *   Connect to your database and execute the SQL migration scripts located in the `api/migrations/` directory.
+    *   These scripts **must be executed in numerical order** (e.g., `001_initial_schema.sql`, then `002_room_management.sql`, and so on, up to `013_data_cleanup.sql`).
+    *   The ordered list of migration files is:
+        1.  `001_initial_schema.sql` (Core user and hotel tables)
+        2.  `002_room_management.sql` (Room types and rooms)
+        3.  `003_client_management.sql` (Clients, CRM, projects, loyalty)
+        4.  `004_plans_and_addons.sql` (Tax, plans, addons global and hotel-specific)
+        5.  `005_reservations.sql` (Reservations, details, related tables)
+        6.  `006_billing.sql` (Invoices, receipts)
+        7.  `007_ota_integration.sql` (OTA specific tables like `sc_tl_rooms`, `xml_templates`)
+        8.  `008_views.sql` (All database views)
+        9.  `009_financial_data.sql` (Forecasting and accounting tables)
+        10. `010_logs_schema_and_functions.sql` (Log tables and log trigger functions)
+        11. `011_custom_functions.sql` (Custom SQL utility functions)
+        12. `012_triggers.sql` (Attaches log triggers and other custom triggers)
+        13. `013_data_cleanup.sql` (Note: This script contains data cleanup operations that may be specific to an initial data import and might not be required for all fresh installations. Review its contents before running.)
+    *   **Note on Google Authentication:** The `LOGIN_WITH_GOOGLE.md` guide might mention a `migration_script.sql`. This is now superseded by the numbered migration files. Ensure all Google Auth related fields (e.g., in the `users` table) are correctly defined within `001_initial_schema.sql` or other relevant early migration files.
 4.  **Environment Variables:**
     *   Create a `.env` file in the `api` directory (i.e., `api/.env`).
     *   Populate the `.env` file with the following variables, adjusting values as necessary. Refer to `config/database.js`, `config/oauth.js`, `config/redis.js`, `config/session.js`, and `utils/emailUtils.js` for more context on their usage.
@@ -118,8 +130,8 @@ The API codebase is organized into the following main directories:
 
 *   **`index.js`**: The main entry point for the API application.
 *   **`package.json`**: Lists project dependencies and npm scripts.
-*   **`LOGIN_WITH_GOOGLE.md`**: Provides specific instructions and details for setting up and using the "Login with Google" functionality.
-*   **`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`**: SQL scripts for database initialization.
+*   **`LOGIN_WITH_GOOGLE.md`**: Provides specific instructions and details for setting up and using the "Login with Google" functionality (refer to migration scripts for schema setup).
+*   **`/migrations`**: This directory now contains all SQL scripts for database initialization, replacing the older monolithic `sql.sql`, `sql_logs.sql`, and `sql_triggers.sql` files. Execute these scripts in numerical order.
 
 ## Online Travel Agency (OTA) Integration
 
