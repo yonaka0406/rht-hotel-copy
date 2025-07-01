@@ -32,7 +32,7 @@ const postXMLResponse = async (req, res) => {
     const { hotel_id, name } = req.params;
     const xml = req.body.toString('utf8');
 
-    console.log('postXMLResponse', req.params, xml);
+    // console.log('postXMLResponse', req.params, xml);
 
     try {
         const parser = new xml2js.Parser();
@@ -41,11 +41,11 @@ const postXMLResponse = async (req, res) => {
                 console.error('Error parsing XML:', err);
                 return res.status(400).json({ error: 'Invalid XML' });
             }
-            console.log('Parsed XML:', result);
+            // console.log('Parsed XML:', result);
 
             try {
                 const responseXml = await submitXMLTemplate(req, res, hotel_id, name, xml);
-                console.log('XML response added successfully', responseXml);
+                // console.log('XML response added successfully', responseXml);
                 res.json({ response: 'XML response added successfully', data: responseXml });
             } catch (error) {
                 console.error('Error in submitXMLTemplate:', error);
@@ -84,7 +84,7 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         // Save the response using insertXMLResponse
         const responseXml = await response.text();
         // console.log('Response XML:', responseXml);
-        console.log('Inserting XML response into database...');
+        // console.log('Inserting XML response into database...');
         await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
 
         // Parse the XML response using xml2js
@@ -250,7 +250,7 @@ const getOTAReservations = async (req, res) => {
             for (const reservation of formattedReservations) {
                 try {
                     const classification = reservation.TransactionType.DataClassification;
-                    console.log('Type of OTA transaction:', classification);                    
+                    // console.log('Type of OTA transaction:', classification);                    
                     if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
                         console.error(`Unsupported DataClassification: ${classification}`, reservation);
                         allReservationsSuccessful = false;
@@ -260,15 +260,15 @@ const getOTAReservations = async (req, res) => {
                     let result = { success: false };
                     if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         result = await addOTAReservation(req.requestId, hotel_id, reservation);
-                        console.log(result);                        
+                        // console.log(result);                        
                     }
                     else if (reservation.TransactionType.DataClassification === 'ModificationReport'){
                         result = await editOTAReservation(req.requestId, hotel_id, reservation);
-                        console.log(result);                     
+                        // console.log(result);                     
                     }
                     else if (reservation.TransactionType.DataClassification === 'CancellationReport'){
                         result = await cancelOTAReservation(req.requestId, hotel_id, reservation);
-                        console.log(result);
+                        // console.log(result);
                     }
 
                     // If any reservation fails, mark the entire batch as unsuccessful
@@ -472,7 +472,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
         const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
 
-        console.log('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
+        // console.log('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
 
         const currentRemainingStock = stockCheckMap.get(lookupKey);
 
@@ -482,13 +482,13 @@ const updateInventoryMultipleDays = async (req, res) => {
             if (expectedRemainingCount < 0) { // Ensure expectedRemainingCount is not negative
                  if (currentRemainingStock !== 0) {
                      needsUpdate = true;
-                     console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
+                     // console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
                      break; // Found a mismatch, no need to check further
                  }
             } else {
                  if (currentRemainingStock !== expectedRemainingCount) {
                      needsUpdate = true;
-                     console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
+                     // console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
                      break; // Found a mismatch, no need to check further
                  }
             }
@@ -499,7 +499,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     // If no mismatch was found, skip the update process
     if (!needsUpdate) {
-        console.log('Inventory matches current stock. No update needed.');
+        // console.log('Inventory matches current stock. No update needed.');
         return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
     }
 

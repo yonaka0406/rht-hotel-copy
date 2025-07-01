@@ -222,7 +222,7 @@ const insertTLRoomMaster = async (requestId, data) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
 
-    console.log('insertTLRoomMaster', data)
+    // console.log('insertTLRoomMaster', data)
 
     try {
         await client.query('BEGIN');
@@ -285,7 +285,7 @@ const insertTLPlanMaster = async (requestId, data) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
 
-    console.log('insertTLRoomMaster', data)
+    // console.log('insertTLRoomMaster', data)
 
     try {
         await client.query('BEGIN');
