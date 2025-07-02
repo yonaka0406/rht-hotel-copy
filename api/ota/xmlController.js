@@ -165,6 +165,13 @@ const getOTAReservations = async (req, res) => {
                 continue; // Skip to next hotel
             }
 
+            // Log the request details for diagnostics
+            console.log('--- OTA Reservation Request ---');
+            console.log('Hotel ID:', hotel_id);
+            console.log('Request ID:', req.requestId);
+            console.log('Service Name:', name);
+            console.log('Request XML Template:', template);
+
             // Fetch the data
             const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
             // console.log('getOTAReservations reservations', reservations);
