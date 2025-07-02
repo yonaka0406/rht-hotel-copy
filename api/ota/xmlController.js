@@ -3,6 +3,7 @@ const xml2js = require('xml2js');
 const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster, selectTLPlanMaster, insertTLPlanMaster } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
+const logger = require('../config/logger'); // Winston logger
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -153,6 +154,7 @@ const getOTAReservations = async (req, res) => {
     try {
         const hotels = await getAllHotelSiteController(req.requestId);
         if (!hotels || hotels.length === 0) {
+            logger.warn('No hotels found.');
             return res.status(404).send({ error: 'No hotels found.' });
         }
 
@@ -162,30 +164,23 @@ const getOTAReservations = async (req, res) => {
             // Get the template with credentials already injected
             let template = await selectXMLTemplate(req.requestId, hotel_id, name);
             if (!template) {
-                console.warn(`XML template not found for hotel_id: ${hotel_id}`);
+                logger.warn(`XML template not found for hotel_id: ${hotel_id}`);
                 continue;
             }
 
-            // Log the request details for diagnostics
-            console.log('--- OTA Reservation Request ---');
-            console.log('Hotel ID:', hotel_id);
-            console.log('Request ID:', req.requestId);
-            console.log('Service Name:', name);
-            console.log('Request XML Template:', template);
-
             // Fetch the data
             const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
-            // console.log('getOTAReservations reservations', reservations);
+            // logger.debug('getOTAReservations reservations', reservations);
 
             const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
-            // console.log('getOTAReservations executeResponse', executeResponse);
+            // logger.debug('getOTAReservations executeResponse', executeResponse);
 
             const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
             const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
-            // console.log('getOTAReservations bookingInfoList', bookingInfoList);
+            // logger.debug('getOTAReservations bookingInfoList', bookingInfoList);
 
             if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
-                console.log('No booking information found in the response.');
+                logger.info('No booking information found in the response.');
                 return [];
             }
 
@@ -194,10 +189,9 @@ const getOTAReservations = async (req, res) => {
             for (const [idx, bookingInfo] of (Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]).entries()) {
                 // Diagnostic: Log the index and value if bookingInfo is falsy
                 if (!bookingInfo) {
-                    console.warn(
+                    logger.warn(
                         `Skipping undefined or null bookingInfo object at index ${idx}.`,
-                        'bookingInfoList:', bookingInfoList,
-                        'Raw executeResponse:', JSON.stringify(executeResponse, null, 2)
+                        { bookingInfoList, executeResponse }
                     );
                     // Possible causes:
                     // - The API response did not include bookingInfo objects for this hotel.
@@ -206,19 +200,19 @@ const getOTAReservations = async (req, res) => {
                     continue; // Skip to the next iteration
                 }
                 // Diagnostic: Log the bookingInfo object if needed
-                // console.log(`Processing bookingInfo at index ${idx}:`, bookingInfo);
+                // logger.debug(`Processing bookingInfo at index ${idx}:`, bookingInfo);
 
                 const infoTravelXML = bookingInfo.infoTravelXML;
-                // console.log('getOTAReservations infoTravelXML', infoTravelXML);
-        
+                // logger.debug('getOTAReservations infoTravelXML', infoTravelXML);
+
                 if (infoTravelXML) {
                     try {
                         const parsedXML = await new Promise((resolve, reject) => {
                             xml2js.parseString(infoTravelXML, { explicitArray: false }, (err, result) => {
                                 if (err) {
-                                reject(err);
+                                    reject(err);
                                 } else {
-                                resolve(result);
+                                    resolve(result);
                                 }
                             });
                         });
@@ -227,10 +221,10 @@ const getOTAReservations = async (req, res) => {
 
                         if (allotmentBookingReport) {
                             const reservationData = {};
-                        
+
                             function processValue(value, level = 0, keyPath = '') {
-                                // console.log(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
-                        
+                                // logger.debug(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
+
                                 if (typeof value === 'object' && value !== null) {
                                     const innerData = {};
                                     for (const innerKey in value) {
@@ -240,39 +234,39 @@ const getOTAReservations = async (req, res) => {
                                     }
                                     return innerData;
                                 } else if (Array.isArray(value) && value.length === 1) {
-                                    // console.log(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
+                                    // logger.debug(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
                                     return processValue(value[0], level + 1, keyPath + '[0]');
                                 } else {
                                     return value;
                                 }
                             }
-                        
+
                             for (const key in allotmentBookingReport) {
                                 if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
-                                    // console.log(`[Level 0] Starting processing for key: ${key}`);
+                                    // logger.debug(`[Level 0] Starting processing for key: ${key}`);
                                     reservationData[key] = processValue(allotmentBookingReport[key], 1, key);
-                                    // console.log(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
+                                    // logger.debug(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
                                 }
                             }
-                        
+
                             formattedReservations.push(reservationData);
                         }
                     } catch (parseError) {
-                        console.error('Error parsing infoTravelXML:', parseError);                        
+                        logger.error('Error parsing infoTravelXML:', parseError);
                     }
                 }
-            };        
-            // console.log('Formatted Reservations:', formattedReservations);
-            
+            }
+            // logger.debug('Formatted Reservations:', formattedReservations);
+
             let allReservationsSuccessful = true;
 
             // Function for each formatted reservation
             for (const reservation of formattedReservations) {
                 try {
                     const classification = reservation.TransactionType.DataClassification;
-                    // console.log('Type of OTA transaction:', classification);                    
+                    // logger.debug('Type of OTA transaction:', classification);
                     if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
-                        console.error(`Unsupported DataClassification: ${classification}`, reservation);
+                        logger.error(`Unsupported DataClassification: ${classification}`, reservation);
                         allReservationsSuccessful = false;
                         continue; // Continue checking other reservations
                     }
@@ -280,43 +274,43 @@ const getOTAReservations = async (req, res) => {
                     let result = { success: false };
                     if (reservation.TransactionType.DataClassification === 'NewBookReport'){
                         result = await addOTAReservation(req.requestId, hotel_id, reservation);
-                        // console.log(result);                        
+                        // logger.debug(result);
                     }
                     else if (reservation.TransactionType.DataClassification === 'ModificationReport'){
                         result = await editOTAReservation(req.requestId, hotel_id, reservation);
-                        // console.log(result);                     
+                        // logger.debug(result);
                     }
                     else if (reservation.TransactionType.DataClassification === 'CancellationReport'){
                         result = await cancelOTAReservation(req.requestId, hotel_id, reservation);
-                        // console.log(result);
+                        // logger.debug(result);
                     }
 
                     // If any reservation fails, mark the entire batch as unsuccessful
                     if (!result.success) {
                         allReservationsSuccessful = false;
                     }
-                                         
+
                 } catch (dbError) {
-                    console.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);
+                    logger.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);
                     allReservationsSuccessful = false; // Mark as unsuccessful if any error occurs 
                 }
             }
 
             // Send OK to OTA server
             if(!allReservationsSuccessful) {
-                console.log('No new reservations to write for hotel_id:', hotel_id);
+                logger.info('No new reservations to write for hotel_id:', hotel_id);
                 continue; // Skip to next hotel
             }else{
                 const outputId =  executeResponse?.return?.configurationSettings?.outputId;
                 await successOTAReservations(req, res, hotel_id, outputId);
-                console.log('All reservations successfully processed for hotel_id:', hotel_id);
+                logger.info('All reservations successfully processed for hotel_id:', hotel_id);
             }
-            
+
         }
 
         return res.status(200).send({ message: 'Processed all hotels.' });
     } catch (error) {
-        console.error('Error in getOTAReservations:', error);
+        logger.error('Error in getOTAReservations:', error);
         return res.status(500).send({ error: 'An error occurred while processing hotels.' });
     }
 };
