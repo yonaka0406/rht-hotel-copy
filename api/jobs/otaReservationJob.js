@@ -59,6 +59,11 @@ async function fetchAndProcessReservations() {
   
   function startScheduling() {
     // Initial call to start the chain of requests
+    // Do not run in development environment
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Skipping OTA reservation job in development environment.');
+      return;
+    }
     fetchAndProcessReservations();
   }
   
