@@ -2,6 +2,7 @@
 require('dotenv').config({ path: './api/.env' });
 const { Pool } = require('pg');
 const url = require('url');
+// const logger = require('./logger'); // Removed custom logger
 
 // Create both pools
 const pool = new Pool({
@@ -35,7 +36,7 @@ let requestCounter = 0;
 // Add domain-based detection function
 const isDomainProduction = (domain) => {
   if (!domain) {
-    // console.log('isDomainProduction: No domain provided, returning false.');
+    // console.debug('isDomainProduction: No domain provided, returning false.');
     return false;
   }
   
@@ -91,17 +92,31 @@ const setupRequestContext = (req, res, next) => {
 
   console.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
 
-  // Check host first, then origin, then referer for production domain
-  // This order makes it more robust against stripped referer/origin headers
-  const isProd = isDomainProduction(host) || isDomainProduction(origin) || isDomainProduction(referer);
+  let isProdEnvironment = false;
 
-  if (isProd) {
+  // Check if the server is running in a production environment
+  // This is crucial for internal server-to-server calls that might use 'localhost' as host
+  if (process.env.NODE_ENV === 'production') {
+    // If the host is localhost, and we are in a production NODE_ENV,
+    // this is likely an internal call that should use the production database.
+    if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
+      isProdEnvironment = true;
+      console.debug(`Request #${requestId} - Detected NODE_ENV=production and localhost host. Forcing PRODUCTION environment for internal call.`);
+    }
+  }
+
+  // If not forced by NODE_ENV + localhost, use existing domain checks
+  if (!isProdEnvironment) {
+    isProdEnvironment = isDomainProduction(host) || isDomainProduction(origin) || isDomainProduction(referer);
+  }
+
+  if (isProdEnvironment) {
       console.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
   } else {
       console.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
   }
 
-  setEnvironment(requestId, isProd ? 'prod' : 'dev');
+  setEnvironment(requestId, isProdEnvironment ? 'prod' : 'dev');
   
   // Add cleanup when response finishes
   res.on('finish', () => {
@@ -112,7 +127,7 @@ const setupRequestContext = (req, res, next) => {
   });
   
   // Pass the environment info to the client via a custom header
-  res.setHeader('X-Request-Environment', isProd ? 'prod' : 'dev');
+  res.setHeader('X-Request-Environment', isProdEnvironment ? 'prod' : 'dev');
   
   next();
 };
@@ -123,7 +138,6 @@ const getPool = (requestId) => {
   if (!requestId) {
     console.error('RequestId is required to select the correct database pool in getPool()');
     // Fallback to default pool if requestId is missing, to prevent application crash
-    console.info(`[getPool] No requestId provided, using DEV pool: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
     return pool; 
   }
   
@@ -131,12 +145,11 @@ const getPool = (requestId) => {
   console.debug(`Getting pool for request #${requestId}, environment: ${env}`);
   
   if (env === 'prod') {
-    console.info(`[getPool] Using PROD pool for request #${requestId}: ${process.env.PROD_PG_DATABASE} @ ${process.env.PG_HOST}`);
     return prodPool;
   } 
   
   // Default to development pool if environment is 'dev' or not found
-  console.info(`[getPool] Using DEV pool for request #${requestId}: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
+  console.debug('Defaulting to development pool for request #' + requestId);
   return pool;
 };
 
