@@ -268,6 +268,7 @@ const getOTAReservations = async (req, res) => {
                     if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
                         logger.error(`Unsupported DataClassification: ${classification}`, reservation);
                         allReservationsSuccessful = false;
+                        logger.warn(`allReservationsSuccessful set to false due to unsupported DataClassification: ${classification}`);
                         continue; // Continue checking other reservations
                     }
 
@@ -288,11 +289,13 @@ const getOTAReservations = async (req, res) => {
                     // If any reservation fails, mark the entire batch as unsuccessful
                     if (!result.success) {
                         allReservationsSuccessful = false;
+                        logger.warn(`allReservationsSuccessful set to false because reservation processing failed. DataClassification: ${classification}, reservation: ${JSON.stringify(reservation)}`);
                     }
 
                 } catch (dbError) {
                     logger.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);
                     allReservationsSuccessful = false; // Mark as unsuccessful if any error occurs 
+                    logger.warn(`allReservationsSuccessful set to false due to exception during reservation processing. Error: ${dbError && dbError.message ? dbError.message : dbError}`);
                 }
             }
 
