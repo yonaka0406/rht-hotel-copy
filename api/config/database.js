@@ -2,7 +2,6 @@
 require('dotenv').config({ path: './api/.env' });
 const { Pool } = require('pg');
 const url = require('url');
-const logger = require('./logger'); 
 
 // Create both pools
 const pool = new Pool({
@@ -36,7 +35,7 @@ let requestCounter = 0;
 // Add domain-based detection function
 const isDomainProduction = (domain) => {
   if (!domain) {
-    // logger.debug('isDomainProduction: No domain provided, returning false.');
+    // console.log('isDomainProduction: No domain provided, returning false.');
     return false;
   }
   
@@ -47,30 +46,30 @@ const isDomainProduction = (domain) => {
       domain = parsedUrl.hostname;
     }
   } catch (e) {
-    logger.warn(`Error parsing URL for domain check: '${domain}', Error: ${e.message}`);
+    console.warn(`Error parsing URL for domain check: '${domain}', Error: ${e.message}`);
     return false; // Treat as non-production if parsing fails
   }
   
   // Log the extracted domain being checked
-  logger.debug(`isDomainProduction: Checking domain '${domain}'`);
+  console.debug(`isDomainProduction: Checking domain '${domain}'`);
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
-  logger.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  console.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
   
   return isProd;
 };
 
 // Function to set environment for a specific request
 const setEnvironment = (requestId, env) => {
-  logger.debug(`Setting environment for request ${requestId} to ${env}`);
+  console.debug(`Setting environment for request ${requestId} to ${env}`);
   requestEnv.set(requestId, env);
   
   // Cleanup old request IDs to prevent memory leaks
   if (requestEnv.size > 1000) {
     const oldestKey = requestEnv.keys().next().value;
     requestEnv.delete(oldestKey);
-    logger.debug(`Cleaned up oldest request ID: ${oldestKey}`);
+    console.debug(`Cleaned up oldest request ID: ${oldestKey}`);
   }
 };
 
@@ -90,16 +89,16 @@ const setupRequestContext = (req, res, next) => {
   const origin = req.headers.origin || '';
   const referer = req.headers.referer || '';
 
-  logger.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
+  console.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
 
   // Check host first, then origin, then referer for production domain
   // This order makes it more robust against stripped referer/origin headers
   const isProd = isDomainProduction(host) || isDomainProduction(origin) || isDomainProduction(referer);
 
   if (isProd) {
-      logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
+      console.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
   } else {
-      logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
+      console.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
   }
 
   setEnvironment(requestId, isProd ? 'prod' : 'dev');
@@ -108,7 +107,7 @@ const setupRequestContext = (req, res, next) => {
   res.on('finish', () => {
     setTimeout(() => {
       requestEnv.delete(requestId);
-      logger.debug(`Cleaned up request #${requestId} context`);
+      console.debug(`Cleaned up request #${requestId} context`);
     }, 10000); // Keep the context for 10 seconds after response for potential async operations
   });
   
@@ -122,52 +121,52 @@ const setupRequestContext = (req, res, next) => {
 const getPool = (requestId) => {
   // Validate that requestId is provided
   if (!requestId) {
-    logger.error('RequestId is required to select the correct database pool in getPool()');
+    console.error('RequestId is required to select the correct database pool in getPool()');
     // Fallback to default pool if requestId is missing, to prevent application crash
-    logger.info(`[getPool] No requestId provided, using DEV pool: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
+    console.info(`[getPool] No requestId provided, using DEV pool: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
     return pool; 
   }
   
   const env = getEnvironment(requestId);
-  logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
+  console.debug(`Getting pool for request #${requestId}, environment: ${env}`);
   
   if (env === 'prod') {
-    logger.info(`[getPool] Using PROD pool for request #${requestId}: ${process.env.PROD_PG_DATABASE} @ ${process.env.PG_HOST}`);
+    console.info(`[getPool] Using PROD pool for request #${requestId}: ${process.env.PROD_PG_DATABASE} @ ${process.env.PG_HOST}`);
     return prodPool;
   } 
   
   // Default to development pool if environment is 'dev' or not found
-  logger.info(`[getPool] Using DEV pool for request #${requestId}: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
+  console.info(`[getPool] Using DEV pool for request #${requestId}: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
   return pool;
 };
 
 // Create a function to explicitly select prod pool for socket connections
 const getProdPool = () => {
-  logger.debug('Explicitly selecting production pool for socket/manual use.');
+  console.debug('Explicitly selecting production pool for socket/manual use.');
   return prodPool;
 };
 
 // Create a function to explicitly select dev pool for socket connections
 const getDevPool = () => {
-  logger.debug('Explicitly selecting development pool for socket/manual use.');
+  console.debug('Explicitly selecting development pool for socket/manual use.');
   return pool;
 };
 
 // Log connections for debugging
 pool.on('connect', () => {
-  logger.debug('DEV pool: connection created');
+  console.debug('DEV pool: connection created');
 });
 
 prodPool.on('connect', () => {
-  logger.debug('PROD pool: connection created');
+  console.debug('PROD pool: connection created');
 });
 
 pool.on('error', (err) => {
-  logger.error('Error in DEV pool', { errorMessage: err.message, stack: err.stack });
+  console.error('Error in DEV pool', { errorMessage: err.message, stack: err.stack });
 });
 
 prodPool.on('error', (err) => {
-  logger.error('Error in PROD pool', { errorMessage: err.message, stack: err.stack });
+  console.error('Error in PROD pool', { errorMessage: err.message, stack: err.stack });
 });
 
 module.exports = {
