@@ -124,6 +124,7 @@ const getPool = (requestId) => {
   if (!requestId) {
     logger.error('RequestId is required to select the correct database pool in getPool()');
     // Fallback to default pool if requestId is missing, to prevent application crash
+    logger.info(`[getPool] No requestId provided, using DEV pool: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
     return pool; 
   }
   
@@ -131,11 +132,12 @@ const getPool = (requestId) => {
   logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
   
   if (env === 'prod') {
+    logger.info(`[getPool] Using PROD pool for request #${requestId}: ${process.env.PROD_PG_DATABASE} @ ${process.env.PG_HOST}`);
     return prodPool;
   } 
   
   // Default to development pool if environment is 'dev' or not found
-  logger.debug('Defaulting to development pool for request #' + requestId);
+  logger.info(`[getPool] Using DEV pool for request #${requestId}: ${process.env.PG_DATABASE} @ ${process.env.PG_HOST}`);
   return pool;
 };
 
