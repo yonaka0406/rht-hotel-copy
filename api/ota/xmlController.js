@@ -280,6 +280,11 @@ const getOTAReservations = async (req, res) => {
             // logger.debug('Formatted Reservations:', formattedReservations);
 
             let allReservationsSuccessful = true;
+            let unsupportedClassifications = 0;
+            let failedProcessing = 0;
+            let exceptions = 0;
+            let successfulProcessing = 0;
+            logger.info(`Processing ${formattedReservations.length} reservations for hotel_id: ${hotel_id}`);
 
             // Function for each formatted reservation
             for (const reservation of formattedReservations) {
@@ -287,6 +292,7 @@ const getOTAReservations = async (req, res) => {
                     const classification = reservation.TransactionType.DataClassification;
                     // logger.debug('Type of OTA transaction:', classification);
                     if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
+                        unsupportedClassifications++;
                         logger.warn(`Unsupported DataClassification: ${classification}. Setting allReservationsSuccessful to false.`, {
                             reservationId: reservation.UniqueID?.ID || 'No ID',
                             classification,
@@ -313,6 +319,7 @@ const getOTAReservations = async (req, res) => {
 
                     // If any reservation fails, mark the entire batch as unsuccessful
                     if (!result.success) {
+                        failedProcessing++;
                         logger.warn(`Failed to process OTA reservation. Setting allReservationsSuccessful to false.`, {
                             reservationId: reservation.UniqueID?.ID || 'No ID',
                             classification,
@@ -321,9 +328,12 @@ const getOTAReservations = async (req, res) => {
                             result,
                         });
                         allReservationsSuccessful = false;
+                    } else {
+                        successfulProcessing++;
                     }
 
                 } catch (dbError) {
+                    exceptions++;
                     logger.warn('Exception during OTA reservation processing. Setting allReservationsSuccessful to false.', {
                         reservationId: reservation.UniqueID?.ID || 'No ID',
                         classification: reservation.TransactionType?.DataClassification || 'Unknown Classification',
@@ -337,13 +347,25 @@ const getOTAReservations = async (req, res) => {
             }
 
             // Send OK to OTA server
+            logger.info(`Processing summary for hotel_id ${hotel_id}:`, {
+                totalReservations: formattedReservations.length,
+                successfulProcessing,
+                failedProcessing,
+                unsupportedClassifications,
+                exceptions,
+                allReservationsSuccessful
+            });
             if(!allReservationsSuccessful) {
-                logger.info('No new reservations to write for hotel_id:', hotel_id);
+                logger.warn('Some reservations failed processing for hotel_id:', hotel_id, 'Skipping OutputCompleteService');
                 continue; // Skip to next hotel
             }else{
                 const outputId =  executeResponse?.return?.configurationSettings?.outputId;
-                await successOTAReservations(req, res, hotel_id, outputId);
-                logger.info('All reservations successfully processed for hotel_id:', hotel_id);
+                if (outputId) {
+                    await successOTAReservations(req, res, hotel_id, outputId);
+                    logger.info('All reservations successfully processed for hotel_id:', hotel_id);
+                } else {
+                    logger.error('No outputId found in response for hotel_id:', hotel_id);
+                }
             }
 
         }
@@ -357,14 +379,24 @@ const getOTAReservations = async (req, res) => {
 const successOTAReservations = async (req, res, hotel_id, outputId) => {
     const name = 'OutputCompleteService';
 
+    logger.info(`Calling OutputCompleteService for hotel_id: ${hotel_id}, outputId: ${outputId}`);
+    
     try {
         let template = await selectXMLTemplate(req.requestId, hotel_id, name);
         
         template = template.replace("{{outputId}}", outputId);
 
-        await submitXMLTemplate(req, res, hotel_id, name, template);
+        const response = await submitXMLTemplate(req, res, hotel_id, name, template);
+        logger.info(`OutputCompleteService completed successfully for hotel_id: ${hotel_id}, outputId: ${outputId}`);
+        return response;
     } catch (error) {        
-        console.error('Error in successOTAReservations:', error);
+        logger.error('Error in successOTAReservations:', {
+            error: error.message,
+            hotel_id,
+            outputId,
+            requestId: req.requestId,
+            stack: error.stack
+        });
         return res.status(500).send({ error: 'An error occurred while processing hotel response.' });
     }
 };
