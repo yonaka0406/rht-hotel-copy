@@ -157,12 +157,13 @@ const getOTAReservations = async (req, res) => {
         }
 
         for (const hotel of hotels) {
-            const hotel_id = hotel.hotel_id; 
+            const hotel_id = hotel.hotel_id;
 
-            const template = await selectXMLTemplate(req.requestId, hotel_id, name);
+            // Get the template with credentials already injected
+            let template = await selectXMLTemplate(req.requestId, hotel_id, name);
             if (!template) {
                 console.warn(`XML template not found for hotel_id: ${hotel_id}`);
-                continue; // Skip to next hotel
+                continue;
             }
 
             // Log the request details for diagnostics
