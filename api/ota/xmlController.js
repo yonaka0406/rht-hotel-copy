@@ -183,11 +183,23 @@ const getOTAReservations = async (req, res) => {
 
             const formattedReservations = [];
             // Process each bookingInfo to parse the inner infoTravelXML
-            for (const bookingInfo of Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]) {
-                if (!bookingInfo) { // Add this check
-                    console.warn('Skipping undefined or null bookingInfo object');
+            for (const [idx, bookingInfo] of (Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]).entries()) {
+                // Diagnostic: Log the index and value if bookingInfo is falsy
+                if (!bookingInfo) {
+                    console.warn(
+                        `Skipping undefined or null bookingInfo object at index ${idx}.`,
+                        'bookingInfoList:', bookingInfoList,
+                        'Raw executeResponse:', JSON.stringify(executeResponse, null, 2)
+                    );
+                    // Possible causes:
+                    // - The API response did not include bookingInfo objects for this hotel.
+                    // - bookingInfoList contains null/undefined entries (possibly due to empty bookings).
+                    // - The XML structure changed or is malformed.
                     continue; // Skip to the next iteration
                 }
+                // Diagnostic: Log the bookingInfo object if needed
+                // console.log(`Processing bookingInfo at index ${idx}:`, bookingInfo);
+
                 const infoTravelXML = bookingInfo.infoTravelXML;
                 // console.log('getOTAReservations infoTravelXML', infoTravelXML);
         
