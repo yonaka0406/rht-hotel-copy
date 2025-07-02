@@ -78,8 +78,15 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         });
         if (!response.ok) {
             const errorText = await response.text(); // Get the error response body
-            console.error('API Error:', response.status, response.statusText, errorText); // Log detailed error
-            throw new Error(`Failed to submit XML template: ${response.status} ${response.statusText} ${errorText}`);
+            logger.error('API Error:', {
+                status: response.status,
+                statusText: response.statusText,
+                errorText,
+                serviceName: name,
+                hotelId: hotel_id,
+                requestId: req.requestId,
+            });
+            throw new Error(`Failed to submit XML template for ${name}: ${response.status} ${response.statusText}`);
         }
 
         // Save the response using insertXMLResponse
@@ -92,6 +99,13 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         const parsedJson = new Promise((resolve, reject) => {
             xml2js.parseString(responseXml, { explicitArray: false }, (err, result) => {
                 if (err) {
+                  logger.error('Error parsing XML response:', {
+                    error: err,
+                    serviceName: name,
+                    hotelId: hotel_id,
+                    requestId: req.requestId,
+                    xmlResponse: responseXml, // Log the problematic XML
+                  });
                   reject(err);
                 } else {
                   resolve(result);
@@ -100,7 +114,14 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
         });
         return parsedJson;        
     } catch (error) {
-        console.error('Failed to submit XML template', error);
+        logger.error('Failed to submit XML template', {
+            error: error.message,
+            serviceName: name,
+            hotelId: hotel_id,
+            requestId: req.requestId,
+            stack: error.stack,
+        });
+        throw error; // Re-throw the error to be caught by the caller
     } 
 };
 const getTLRoomMaster = async (req, res) => {
@@ -266,9 +287,13 @@ const getOTAReservations = async (req, res) => {
                     const classification = reservation.TransactionType.DataClassification;
                     // logger.debug('Type of OTA transaction:', classification);
                     if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
-                        logger.error(`Unsupported DataClassification: ${classification}`, reservation);
+                        logger.warn(`Unsupported DataClassification: ${classification}. Setting allReservationsSuccessful to false.`, {
+                            reservationId: reservation.UniqueID?.ID || 'No ID',
+                            classification,
+                            hotel_id,
+                            requestId: req.requestId,
+                        });
                         allReservationsSuccessful = false;
-                        logger.warn(`allReservationsSuccessful set to false due to unsupported DataClassification: ${classification}`);
                         continue; // Continue checking other reservations
                     }
 
@@ -288,14 +313,26 @@ const getOTAReservations = async (req, res) => {
 
                     // If any reservation fails, mark the entire batch as unsuccessful
                     if (!result.success) {
+                        logger.warn(`Failed to process OTA reservation. Setting allReservationsSuccessful to false.`, {
+                            reservationId: reservation.UniqueID?.ID || 'No ID',
+                            classification,
+                            hotel_id,
+                            requestId: req.requestId,
+                            result,
+                        });
                         allReservationsSuccessful = false;
-                        logger.warn(`allReservationsSuccessful set to false because reservation processing failed. DataClassification: ${classification}, reservation: ${JSON.stringify(reservation)}`);
                     }
 
                 } catch (dbError) {
-                    logger.error('Error adding OTA reservation:', reservation.site_controller_id || 'No ID', dbError);
+                    logger.warn('Exception during OTA reservation processing. Setting allReservationsSuccessful to false.', {
+                        reservationId: reservation.UniqueID?.ID || 'No ID',
+                        classification: reservation.TransactionType?.DataClassification || 'Unknown Classification',
+                        hotel_id,
+                        requestId: req.requestId,
+                        error: dbError.message,
+                        stack: dbError.stack,
+                    });
                     allReservationsSuccessful = false; // Mark as unsuccessful if any error occurs 
-                    logger.warn(`allReservationsSuccessful set to false due to exception during reservation processing. Error: ${dbError && dbError.message ? dbError.message : dbError}`);
                 }
             }
 
