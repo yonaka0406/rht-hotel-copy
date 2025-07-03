@@ -32,14 +32,12 @@ const WaitlistEntry = {
             'client_id', 'hotel_id',
             'requested_check_in_date', 'requested_check_out_date',
             'number_of_guests', 'number_of_rooms', 'communication_preference'
-            // Do NOT include room_type_id here
         ];
         for (const field of requiredFields) {
             if (data[field] === undefined || data[field] === null || data[field] === '') {
                 throw new Error(`Missing required field: ${field}`);
             }
         }
-        // Now check contact_email/contact_phone based on communication_preference
         if (data.communication_preference === 'email') {
             if (!data.contact_email || data.contact_email.trim() === '') {
                 throw new Error('Missing required field: contact_email');
@@ -70,7 +68,6 @@ const WaitlistEntry = {
             throw new Error('Invalid preferred smoking status. Must be "any", "smoking", or "non_smoking".');
         }
 
-
         const query = format(`
             INSERT INTO waitlist_entries (
                 client_id, hotel_id, room_type_id,
@@ -92,7 +89,7 @@ const WaitlistEntry = {
             data.requested_check_in_date, data.requested_check_out_date,
             data.number_of_guests, data.number_of_rooms, data.contact_email, data.contact_phone,
             data.notes, data.communication_preference,
-            data.preferred_smoking_status || 'any', // Default to 'any' if not provided
+            data.preferred_smoking_status || 'any',
             userId, userId
         );
 
@@ -105,7 +102,6 @@ const WaitlistEntry = {
             }
         } catch (err) {
             console.error(`[${requestId}] Error creating waitlist entry:`, err);
-            // Check for specific constraint violations if possible, e.g., FK violations
             if (err.constraint) {
                  if (err.constraint === 'waitlist_entries_client_id_fkey') {
                     throw new Error('Invalid client_id provided.');
@@ -118,12 +114,11 @@ const WaitlistEntry = {
             }
             throw new Error('Database error occurred while creating waitlist entry.');
         }
-    }
+    }, // Added comma here
 
     // Future functions as per WAITLIST_STRATEGY.md:
     // async findMatching(requestId, criteria) { /* ... */ }
     // async getByHotel(requestId, hotelId, filters = {}) { /* ... */ }
-    // async updateStatus(requestId, id, status, additionalData = {}) { /* ... */ }
     // async findByToken(requestId, token, validateExpiry = true) { /* ... */ }
     // async expireOldTokens(requestId, hotelId = null) { /* ... */ }
 
@@ -142,7 +137,7 @@ const WaitlistEntry = {
             console.error(`[${requestId}] Error finding waitlist entry by ID ${id}:`, err);
             throw new Error('Database error occurred while fetching waitlist entry.');
         }
-    },
+    }, // Added comma here
 
     /**
      * Updates the status of a waitlist entry and related fields.
@@ -160,7 +155,6 @@ const WaitlistEntry = {
 
         const { confirmation_token, token_expires_at } = additionalData;
 
-        // Validate status transition (can be more complex if needed)
         const validStatuses = ['waiting', 'notified', 'confirmed', 'expired', 'cancelled'];
         if (!validStatuses.includes(status)) {
             throw new Error(`Invalid status value: ${status}`);
@@ -179,7 +173,6 @@ const WaitlistEntry = {
             querySetters.push(`token_expires_at = $${valueCounter++}`);
             queryValues.push(token_expires_at);
         } else {
-            // If status is not 'notified', clear token fields
             querySetters.push(`confirmation_token = NULL`);
             querySetters.push(`token_expires_at = NULL`);
         }
@@ -197,7 +190,6 @@ const WaitlistEntry = {
             if (result.rows.length > 0) {
                 return result.rows[0];
             } else {
-                // Could be that the entry with 'id' was not found
                 return null;
             }
         } catch (err) {
@@ -207,7 +199,7 @@ const WaitlistEntry = {
             }
             throw new Error('Database error occurred while updating waitlist entry status.');
         }
-    }
+    } // No comma here as it's the last method in the object
 };
 
 module.exports = {
