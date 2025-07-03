@@ -118,7 +118,33 @@ const WaitlistEntry = {
 
     // Future functions as per WAITLIST_STRATEGY.md:
     // async findMatching(requestId, criteria) { /* ... */ }
-    // async getByHotel(requestId, hotelId, filters = {}) { /* ... */ }
+
+    /**
+     * Gets waitlist entries for a hotel with filtering and pagination.
+     * (Skeleton implementation - returns empty data for now)
+     * @param {string} requestId - The ID of the request for logging.
+     * @param {number} hotelId - The ID of the hotel.
+     * @param {object} [filters={}] - Filtering criteria (e.g., status, dates).
+     * @param {number} [filters.page=1] - Page number.
+     * @param {number} [filters.size=20] - Page size.
+     * @returns {Promise<object>} Object containing entries array and pagination info.
+     */
+    async getByHotel(requestId, hotelId, filters = {}) {
+        // const pool = getPool(requestId); // Will be needed for actual query
+        console.log(`[${requestId}] Skeleton WaitlistEntry.getByHotel called for hotelId: ${hotelId}, filters:`, filters);
+        // TODO: Implement actual database query with filtering, joins, and pagination
+        // For now, return structure expected by the frontend
+        return {
+            entries: [],
+            pagination: {
+                page: filters.page || 1,
+                size: filters.size || 20,
+                total: 0, // Total matching entries
+                totalPages: 0
+            }
+        };
+    },
+
     // async findByToken(requestId, token, validateExpiry = true) { /* ... */ }
     // async expireOldTokens(requestId, hotelId = null) { /* ... */ }
 

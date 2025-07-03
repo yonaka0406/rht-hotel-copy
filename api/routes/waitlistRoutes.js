@@ -9,7 +9,7 @@ router.post('/waitlist', authMiddleware, authMiddlewareCRUDAccess, waitlistContr
 
 // Future routes for waitlist management as per WAITLIST_STRATEGY.md:
 // GET /api/waitlist/hotel/:hotelId - List entries for a hotel (requires auth, potentially specific permissions)
-// router.get('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getByHotel);
+router.get('/hotel/:hotelId', authMiddleware, waitlistController.getByHotel); // Uncommented and path adjusted
 
 // PUT /api/waitlist/:id/status - Update entry status (requires auth, specific permissions)
 // router.put('/waitlist/:id/status', authMiddleware, authMiddlewareCRUDAccess, waitlistController.updateStatus);

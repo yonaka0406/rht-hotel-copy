@@ -116,7 +116,46 @@ const waitlistController = {
     }, // Added comma here
 
     // Future controller actions as per WAITLIST_STRATEGY.md:
-    // async getByHotel(req, res) { /* ... */ }
+    /**
+     * GET /api/waitlist/hotel/:hotelId - List entries
+     * (Skeleton implementation)
+     */
+    async getByHotel(req, res) {
+        const { requestId } = req;
+        const { hotelId } = req.params;
+        // Extract pagination and filter query params
+        const { page = 1, size = 20, status, startDate, endDate, roomTypeId } = req.query;
+
+        // Validate hotelId (basic)
+        const validatedHotelId = validateNumericParam(hotelId, 'Hotel ID');
+        if (validatedHotelId === null || isNaN(validatedHotelId)) { // validateNumericParam returns null on error
+             return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
+        }
+
+        try {
+            // Construct filters object
+            const filters = {
+                page: parseInt(page, 10),
+                size: parseInt(size, 10),
+                status,      // Pass through, model should validate/handle
+                startDate,   // Pass through
+                endDate,     // Pass through
+                roomTypeId   // Pass through
+            };
+
+            // TODO: Add permission check: Validate user has access to this hotel's waitlist
+
+            const result = await WaitlistEntry.getByHotel(requestId, validatedHotelId, filters);
+            return res.status(200).json(result);
+
+        } catch (error) {
+            console.error(`[${requestId}] Error in waitlistController.getByHotel for hotel ${hotelId}:`, error);
+            if (error.message.includes('Invalid Hotel ID')) { // Or other specific validation errors
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Failed to retrieve waitlist entries.' });
+        }
+    },
     // async updateStatus(req, res) { /* ... */ }
     // async delete(req, res) { /* ... */ } // Soft delete by status 'cancelled'
     // async confirmReservation(req, res) { /* ... */ }
