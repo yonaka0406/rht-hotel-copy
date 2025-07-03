@@ -12,7 +12,7 @@ CREATE TABLE waitlist_entries (
     notes TEXT,
     confirmation_token TEXT UNIQUE,
     token_expires_at TIMESTAMPTZ,
-    contact_email TEXT NOT NULL,
+    contact_email TEXT,
     contact_phone TEXT,
     communication_preference TEXT NOT NULL DEFAULT 'email' CHECK (communication_preference IN ('email', 'phone')),
     preferred_smoking_status TEXT NOT NULL DEFAULT 'any' CHECK (preferred_smoking_status IN ('any', 'smoking', 'non_smoking')),
