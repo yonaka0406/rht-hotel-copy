@@ -467,6 +467,22 @@
           <Button label="登録" icon="pi pi-plus" @click="submitWaitlistEntry" :loading="waitlistStore.loading" class="p-button-text p-button-success p-button-sm" />
         </template>
       </Dialog>
+
+      <WaitlistDialog
+        v-model:visible="waitlistDialogVisibleState"
+        :initialHotelId="selectedHotelId"
+        :initialHotelName="selectedHotel ? selectedHotel.name : ''"
+        :initialRoomTypeId="waitlistInitialRoomTypeId"
+        :initialCheckInDate="waitlistInitialCheckInDate"
+        :initialCheckOutDate="waitlistInitialCheckOutDate"
+        :initialNumberOfGuests="waitlistInitialNumberOfGuests"
+        :initialSmokingPreference="selectedSmokingPreference"
+        :initialNotes="waitlistInitialNotes"
+        :allClients="clients"
+        :allRoomTypes="roomTypes"
+        :smokingPreferenceOptions="smokingPreferenceOptions"
+        @submitted="handleWaitlistSubmitted"
+      />
     </div>
 </template>
 <script setup>
@@ -479,6 +495,7 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';
+    import WaitlistDialog from '@/components/Dialogs/WaitlistDialog.vue'; // Import the new component
 
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
@@ -491,6 +508,15 @@
 
     // Stores
     const waitlistStore = useWaitlistStore();
+
+    // Refs for props to pass to WaitlistDialog
+    const waitlistDialogVisibleState = ref(false);
+    const waitlistInitialRoomTypeId = ref(null);
+    const waitlistInitialCheckInDate = ref('');
+    const waitlistInitialCheckOutDate = ref('');
+    const waitlistInitialNumberOfGuests = ref(1);
+    const waitlistInitialNotes = ref('');
+
 
     // Helper function
     const formatDate = (date) => {
@@ -653,32 +679,7 @@
         validateCombos();
     };
 
-    const onClientSelectForWaitlist = (event) => {
-        selectedClientForWaitlist.value = event.value;
-        isClientSelectedForWaitlist.value = true;
-        waitlistForm.value.client_id = selectedClientForWaitlist.value.id;
-        waitlistForm.value.contact_email = selectedClientForWaitlist.value.email || '';
-        waitlistForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
-        waitlistForm.value.client_name_waitlist = selectedClientForWaitlist.value.name_kanji || selectedClientForWaitlist.value.name_kana || selectedClientForWaitlist.value.name;
-    };
-
-    const resetWaitlistClientSelection = () => {
-        selectedClientForWaitlist.value = null;
-        isClientSelectedForWaitlist.value = false;
-        waitlistForm.value.client_id = null;
-    };
-
-    watch(() => waitlistForm.value.client_name_waitlist, (newName) => {
-        if (isClientSelectedForWaitlist.value && newName !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) {
-            if (!newName || newName.trim() === '') {
-                resetWaitlistClientSelection();
-                waitlistForm.value.contact_email = '';
-                waitlistForm.value.contact_phone = '';
-            } else {
-                resetWaitlistClientSelection();
-            }
-        }
-    });
+    // const onClientSelectForWaitlist, resetWaitlistClientSelection, and watcher for client_name_waitlist are moved to WaitlistDialog.vue
 
     const openWaitlistDialog = () => {
         if (!reservationCombos.value.length) {
@@ -686,93 +687,30 @@
             return;
         }
 
-        // For a combo, the waitlist entry will be for the overall period and total guests.
-        // The specific room types will be in notes. A "primary" room type might be the first one in the combo.
         const primaryComboItem = reservationCombos.value[0];
         let notesContent = "希望の組み合わせ：\n";
         reservationCombos.value.forEach(c => {
             notesContent += `- ${c.room_type_name}: ${c.number_of_rooms}室, ${c.number_of_people}名\n`;
         });
 
+        // Set refs that will be passed as props
+        waitlistInitialRoomTypeId.value = primaryComboItem.room_type_id;
+        waitlistInitialCheckInDate.value = formatDate(primaryComboItem.check_in);
+        waitlistInitialCheckOutDate.value = formatDate(primaryComboItem.check_out);
+        waitlistInitialNumberOfGuests.value = totalPeople.value;
+        waitlistInitialNotes.value = notesContent.trim();
+        // selectedSmokingPreference is already a ref and passed directly
 
-        waitlistForm.value = {
-            client_id: null,
-            hotel_id: selectedHotelId.value,
-            room_type_id: primaryComboItem.room_type_id, // Representative room type
-            requested_check_in_date: formatDate(primaryComboItem.check_in),
-            requested_check_out_date: formatDate(primaryComboItem.check_out),
-            number_of_guests: totalPeople.value, // Total guests for the combo
-            contact_email: '',
-            contact_phone: '',
-            communication_preference: 'email',
-            notes: notesContent.trim(),
-            preferred_smoking_status: selectedSmokingPreference.value,
-            client_name_waitlist: '',
-            client_legal_or_natural_person_waitlist: 'legal',
-            client_gender_waitlist: 'other',
-            client_email_waitlist: '',
-            client_phone_waitlist: ''
-        };
-        selectedClientForWaitlist.value = null;
-        isClientSelectedForWaitlist.value = false;
-        waitlistDialogVisible.value = true;
+        waitlistDialogVisibleState.value = true; // Changed from waitlistDialogVisible
     };
 
-    const closeWaitlistDialog = () => {
-        waitlistDialogVisible.value = false;
+    const handleWaitlistSubmitted = () => {
+        // Optional: any action needed in parent after waitlist is submitted
+        console.log("Waitlist entry submitted (event received in parent)");
+        // e.g., refresh some data if necessary, though usually not for waitlist creation itself
     };
 
-    const submitWaitlistEntry = async () => {
-        if (!waitlistForm.value.contact_email) {
-            toast.add({ severity: 'error', summary: '検証エラー', detail: '連絡用メールアドレスは必須です。', life: 3000 });
-            return;
-        }
-        if (waitlistForm.value.communication_preference === 'phone' && !waitlistForm.value.contact_phone) {
-            toast.add({ severity: 'error', summary: '検証エラー', detail: '電話連絡をご希望の場合は、電話番号も必須です。', life: 3000 });
-            return;
-        }
-
-        let finalClientId = waitlistForm.value.client_id;
-        if (!isClientSelectedForWaitlist.value && waitlistForm.value.client_name_waitlist) {
-            try {
-                const newClient = await createBasicClient(
-                    waitlistForm.value.client_name_waitlist, null,
-                    waitlistForm.value.client_legal_or_natural_person_waitlist,
-                    waitlistForm.value.client_gender_waitlist,
-                    waitlistForm.value.client_email_waitlist || waitlistForm.value.contact_email,
-                    waitlistForm.value.client_phone_waitlist || waitlistForm.value.contact_phone
-                );
-                finalClientId = newClient.client.id;
-                toast.add({ severity: 'info', summary: '顧客作成', detail: `新規顧客「${newClient.client.name}」が作成されました。`, life: 3000 });
-                await fetchClients(1);
-            } catch (error) {
-                toast.add({ severity: 'error', summary: '顧客作成エラー', detail: '新規顧客の作成に失敗しました： ' + error.message, life: 3000 });
-                return;
-            }
-        } else if (!finalClientId) {
-            toast.add({ severity: 'error', summary: '検証エラー', detail: '顧客を選択するか、新規顧客名を入力してください。', life: 3000 });
-            return;
-        }
-
-        const entryData = {
-            client_id: finalClientId,
-            hotel_id: waitlistForm.value.hotel_id,
-            room_type_id: waitlistForm.value.room_type_id,
-            requested_check_in_date: waitlistForm.value.requested_check_in_date,
-            requested_check_out_date: waitlistForm.value.requested_check_out_date,
-            number_of_guests: waitlistForm.value.number_of_guests,
-            contact_email: waitlistForm.value.contact_email,
-            contact_phone: waitlistForm.value.contact_phone,
-            communication_preference: waitlistForm.value.communication_preference,
-            notes: waitlistForm.value.notes,
-            preferred_smoking_status: waitlistForm.value.preferred_smoking_status
-        };
-
-        const result = await waitlistStore.addEntry(entryData);
-        if (result) {
-            closeWaitlistDialog();
-        }
-    };
+    // const closeWaitlistDialog and submitWaitlistEntry are moved to WaitlistDialog.vue
 
     const addReservationCombo = () => {
         // console.log('addReservationCombo:',comboRow.value);
@@ -919,8 +857,8 @@
         client_email_waitlist: '',
         client_phone_waitlist: ''
     });
-    const selectedClientForWaitlist = ref(null);
-    const isClientSelectedForWaitlist = ref(false);
+    // const selectedClientForWaitlist = ref(null); // Moved to dialog
+    // const isClientSelectedForWaitlist = ref(false); // Moved to dialog
 
     const reservationDetails = ref({
         hotel_id: null,
