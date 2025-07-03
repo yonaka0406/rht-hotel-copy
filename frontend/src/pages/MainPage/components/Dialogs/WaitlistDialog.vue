@@ -195,16 +195,20 @@
             v-model="internalForm.requested_check_in_date" 
             type="date"
             fluid 
+            @change="onCheckInDateChange"
           />
           <label>希望チェックイン</label>
         </FloatLabel>
+        <small v-if="dateValidationError" class="text-red-500 text-xs">{{ dateValidationError }}</small>
       </div>
       <div class="col-span-1">
         <FloatLabel>
           <InputText 
             v-model="internalForm.requested_check_out_date" 
             type="date"
+            :min="minCheckOutDate"
             fluid 
+            @change="onCheckOutDateChange"
           />
           <label>希望チェックアウト</label>
         </FloatLabel>
@@ -297,6 +301,7 @@ const isClientSelectedForWaitlist = ref(false);
 const filteredClients = ref([]);
 const isLoading = ref(false);
 const currentStep = ref('1');
+const dateValidationError = ref('');
 
 const personTypeOptions = ref([
     { label: '法人', value: 'legal' },
@@ -337,8 +342,22 @@ watch(() => props.visible, (newVal) => {
     selectedClientForWaitlist.value = null;
     isClientSelectedForWaitlist.value = false;
     filteredClients.value = []; // Reset suggestions
+    dateValidationError.value = ''; // Clear date validation errors
   }
 }, { immediate: true });
+
+// Watch for date changes and validate automatically
+watch(() => internalForm.value.requested_check_in_date, () => {
+  if (internalForm.value.requested_check_in_date) {
+    onCheckInDateChange();
+  }
+});
+
+watch(() => internalForm.value.requested_check_out_date, () => {
+  if (internalForm.value.requested_check_out_date) {
+    onCheckOutDateChange();
+  }
+});
 
 
 // Client Search Logic (adapted from ReservationsNewCombo)
@@ -458,6 +477,14 @@ const handleSubmit = async () => {
   isLoading.value = true;
   internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value; // Ensure latest is used
 
+  // Validate dates before submission
+  validateDateCombination();
+  if (dateValidationError.value) {
+    toast.add({ severity: 'error', summary: '日付エラー', detail: dateValidationError.value, life: 3000 });
+    isLoading.value = false;
+    return;
+  }
+
   if (internalForm.value.communication_preference === 'email' && !internalForm.value.contact_email) {
     toast.add({ severity: 'error', summary: '検証エラー', detail: 'メール連絡をご希望の場合は、メールアドレスは必須です。', life: 3000 });
     isLoading.value = false;
@@ -524,6 +551,127 @@ const goToStep = (step) => {
   console.log('current step after:', currentStep.value);
 };
 
+// Helper function for date formatting (same as ReservationsNewCombo)
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Date validation using the same logic as ReservationsNewCombo
+const minCheckOutDate = computed(() => {
+  if (!internalForm.value.requested_check_in_date) {
+    return null;
+  }
+  // Convert string to Date object (same approach as ReservationsNewCombo)
+  const checkInDate = new Date(internalForm.value.requested_check_in_date);
+  const minDate = new Date(checkInDate);
+  minDate.setDate(checkInDate.getDate() + 1);
+  return formatDate(minDate);
+});
+
+const onCheckInDateChange = () => {
+  dateValidationError.value = '';
+  
+  if (!internalForm.value.requested_check_in_date) {
+    return;
+  }
+  
+  // Check if check-in is today or in the future (same approach as ReservationsNewCombo)
+  const checkInDate = new Date(internalForm.value.requested_check_in_date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  checkInDate.setHours(0, 0, 0, 0);
+  
+  if (checkInDate < today) {
+    dateValidationError.value = 'チェックイン日は今日以降の日付を選択してください。';
+    return;
+  }
+  
+  // If check-out exists and is invalid, adjust it
+  if (internalForm.value.requested_check_out_date) {
+    const checkOutDate = new Date(internalForm.value.requested_check_out_date);
+    checkOutDate.setHours(0, 0, 0, 0);
+    
+    if (checkOutDate <= checkInDate) {
+      // Set check-out to one day after check-in (same logic as ReservationsNewCombo)
+      const newCheckOutDate = new Date(checkInDate);
+      newCheckOutDate.setDate(checkInDate.getDate() + 1);
+      internalForm.value.requested_check_out_date = formatDate(newCheckOutDate);
+      
+      toast.add({
+        severity: 'info',
+        summary: '日付調整',
+        detail: 'チェックアウト日を自動調整しました。',
+        life: 3000
+      });
+    }
+  }
+  
+  validateDateCombination();
+};
+
+const onCheckOutDateChange = () => {
+  dateValidationError.value = '';
+  
+  if (!internalForm.value.requested_check_out_date) {
+    return;
+  }
+  
+  const checkOutDate = new Date(internalForm.value.requested_check_out_date);
+  checkOutDate.setHours(0, 0, 0, 0);
+  
+  // If check-in exists and is invalid, adjust it
+  if (internalForm.value.requested_check_in_date) {
+    const checkInDate = new Date(internalForm.value.requested_check_in_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    checkInDate.setHours(0, 0, 0, 0);
+    
+    if (checkOutDate <= checkInDate) {
+      // Set check-in to one day before check-out
+      const newCheckInDate = new Date(checkOutDate);
+      newCheckInDate.setDate(checkOutDate.getDate() - 1);
+      
+      // Ensure check-in is not in the past
+      if (newCheckInDate < today) {
+        dateValidationError.value = 'チェックイン日は今日以降の日付を選択してください。';
+        return;
+      } else {
+        internalForm.value.requested_check_in_date = formatDate(newCheckInDate);
+        toast.add({
+          severity: 'info',
+          summary: '日付調整',
+          detail: 'チェックイン日を自動調整しました。',
+          life: 3000
+        });
+      }
+    }
+  }
+  
+  validateDateCombination();
+};
+
+// Final validation function for date combination
+const validateDateCombination = () => {
+  dateValidationError.value = '';
+  
+  if (!internalForm.value.requested_check_in_date || !internalForm.value.requested_check_out_date) {
+    return;
+  }
+  
+  const checkInDate = new Date(internalForm.value.requested_check_in_date);
+  const checkOutDate = new Date(internalForm.value.requested_check_out_date);
+  
+  // Check if the stay is reasonable (not more than 30 days)
+  const daysDiff = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
+  if (daysDiff > 30) {
+    dateValidationError.value = '宿泊期間は30日以内でお願いします。';
+    return;
+  }
+};
+
 // Validation logic
 const isFormValid = computed(() => {
   // Basic validation - check if required fields are filled
@@ -537,7 +685,12 @@ const isFormValid = computed(() => {
     (internalForm.value.communication_preference === 'email' && internalForm.value.contact_email) ||
     (internalForm.value.communication_preference === 'phone' && internalForm.value.contact_phone);
   
-  return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact;
+  // Date validation
+  const hasValidDates = !dateValidationError.value && 
+    internalForm.value.requested_check_in_date && 
+    internalForm.value.requested_check_out_date;
+  
+  return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact && hasValidDates;
 });
 
 // Filter room types based on smoking preference
