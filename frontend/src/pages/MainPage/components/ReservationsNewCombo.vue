@@ -307,12 +307,10 @@
         :initialRoomTypeId="waitlistInitialRoomTypeId"
         :initialCheckInDate="waitlistInitialCheckInDate"
         :initialCheckOutDate="waitlistInitialCheckOutDate"
-        :initialNumberOfGuests="waitlistInitialNumberOfGuests"
-        <!-- :initialSmokingPreference="selectedSmokingPreference" Removed -->
+        :initialNumberOfGuests="waitlistInitialNumberOfGuests"        
         :initialNotes="waitlistInitialNotes"
         :allClients="clients"
-        :allRoomTypes="roomTypes"
-        <!-- :smokingPreferenceOptions="smokingPreferenceOptions" Removed -->
+        :allRoomTypes="roomTypes"        
         @submitted="handleWaitlistSubmitted"
       />
     </div>
@@ -646,9 +644,7 @@
     };
 
     // Dialog
-    const dialogVisible = ref(false);
-    const dialogVisible = ref(false);
-    // All waitlistForm, selectedClientForWaitlist, isClientSelectedForWaitlist refs are removed as they are managed by WaitlistDialog.vue
+    const dialogVisible = ref(false);    
 
     const reservationDetails = ref({
         hotel_id: null,
