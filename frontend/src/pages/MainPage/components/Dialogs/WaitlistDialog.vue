@@ -175,8 +175,9 @@
             v-model="internalForm.number_of_rooms" 
             :min="1" 
             fluid 
+            required
           />
-          <label>部屋数</label>
+          <label>部屋数 *</label>
         </FloatLabel>
       </div>
       <div class="col-span-1">
@@ -694,7 +695,9 @@ const isFormValid = computed(() => {
     internalForm.value.requested_check_in_date && 
     internalForm.value.requested_check_out_date;
   
-  return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact && hasValidDates;
+  const hasValidRooms = internalForm.value.number_of_rooms && internalForm.value.number_of_rooms >= 1;
+  
+  return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact && hasValidDates && hasValidRooms;
 });
 
 // Filter room types based on smoking preference

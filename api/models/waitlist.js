@@ -12,6 +12,7 @@ const WaitlistEntry = {
      * @param {string} data.requested_check_in_date - Requested check-in date (YYYY-MM-DD).
      * @param {string} data.requested_check_out_date - Requested check-out date (YYYY-MM-DD).
      * @param {number} data.number_of_guests - Number of guests.
+     * @param {number} data.number_of_rooms - Number of rooms.
      * @param {string} data.contact_email - Contact email of the client.
      * @param {string} [data.contact_phone] - Optional contact phone of the client.
      * @param {string} [data.notes] - Optional notes for the waitlist entry.
@@ -27,7 +28,7 @@ const WaitlistEntry = {
         const requiredFields = [
             'client_id', 'hotel_id',
             'requested_check_in_date', 'requested_check_out_date',
-            'number_of_guests', 'communication_preference'
+            'number_of_guests', 'number_of_rooms', 'communication_preference'
             // Do NOT include room_type_id here
         ];
         for (const field of requiredFields) {
@@ -50,11 +51,17 @@ const WaitlistEntry = {
         if (data.number_of_guests <= 0) {
             throw new Error('Number of guests must be positive.');
         }
+        if (data.number_of_rooms <= 0) {
+            throw new Error('Number of rooms must be positive.');
+        }
         if (new Date(data.requested_check_out_date) <= new Date(data.requested_check_in_date)) {
             throw new Error('Requested check-out date must be after check-in date.');
         }
         if (!['email', 'phone'].includes(data.communication_preference)) {
             throw new Error('Invalid communication preference. Must be "email" or "phone".');
+        }
+        if (data.communication_preference === 'phone' && (!data.contact_phone || String(data.contact_phone).trim() === '')) {
+            throw new Error('Contact phone is required if communication preference is phone.');
         }
         if (data.preferred_smoking_status && !['any', 'smoking', 'non_smoking'].includes(data.preferred_smoking_status)) {
             throw new Error('Invalid preferred smoking status. Must be "any", "smoking", or "non_smoking".');
@@ -65,14 +72,14 @@ const WaitlistEntry = {
             INSERT INTO waitlist_entries (
                 client_id, hotel_id, room_type_id,
                 requested_check_in_date, requested_check_out_date,
-                number_of_guests, contact_email, contact_phone,
+                number_of_guests, number_of_rooms, contact_email, contact_phone,
                 notes, communication_preference, status,
                 preferred_smoking_status,
                 created_by, updated_by
             ) VALUES (
                 %L, %L, %L,
                 %L, %L,
-                %L, %L, %L,
+                %L, %L, %L, %L,
                 %L, %L, 'waiting',
                 %L, /* preferred_smoking_status */
                 %L, %L
@@ -80,7 +87,7 @@ const WaitlistEntry = {
             RETURNING *;
         `,  data.client_id, data.hotel_id, data.room_type_id,
             data.requested_check_in_date, data.requested_check_out_date,
-            data.number_of_guests, data.contact_email, data.contact_phone,
+            data.number_of_guests, data.number_of_rooms, data.contact_email, data.contact_phone,
             data.notes, data.communication_preference,
             data.preferred_smoking_status || 'any', // Default to 'any' if not provided
             userId, userId
