@@ -516,18 +516,30 @@ const handleSubmit = async () => {
   let finalClientId = internalForm.value.client_id;
   if (!isClientSelectedForWaitlist.value && internalForm.value.client_name_waitlist) {
     try {
+      const clientPayload = {
+        name: internalForm.value.client_name_waitlist,
+        type: internalForm.value.client_legal_or_natural_person_waitlist,
+        gender: internalForm.value.client_gender_waitlist,
+        email: internalForm.value.client_email_waitlist || internalForm.value.contact_email,
+        phone: internalForm.value.client_phone_waitlist || internalForm.value.contact_phone
+      };
+      console.log('Creating client with:', clientPayload);
       const newClientData = await clientStore.createBasicClient(
-        internalForm.value.client_name_waitlist, null,
-        internalForm.value.client_legal_or_natural_person_waitlist,
-        internalForm.value.client_gender_waitlist,
-        internalForm.value.client_email_waitlist || internalForm.value.contact_email,
-        internalForm.value.client_phone_waitlist || internalForm.value.contact_phone
+        clientPayload.name,
+        null,
+        clientPayload.type,
+        clientPayload.gender,
+        clientPayload.email,
+        clientPayload.phone
       );
-      finalClientId = newClientData.client.id;
-      toast.add({ severity: 'info', summary: '顧客作成', detail: `新規顧客「${newClientData.client.name}」が作成されました。`, life: 3000 });
-      // Optionally emit an event or have parent refresh client list
-      // For now, assume parent handles client list updates if needed globally
+      console.log('newClientData:', newClientData);
+      if (!newClientData || !newClientData.id) {
+        throw new Error('新規顧客の作成に失敗しました（レスポンスが不正です）');
+      }
+      finalClientId = newClientData.id;
+      toast.add({ severity: 'info', summary: '顧客作成', detail: `新規顧客「${newClientData.name}」が作成されました。`, life: 3000 });
     } catch (error) {
+      console.error('Client creation error:', error);
       toast.add({ severity: 'error', summary: '顧客作成エラー', detail: '新規顧客の作成に失敗しました： ' + error.message, life: 3000 });
       isLoading.value = false;
       return;
