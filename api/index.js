@@ -247,7 +247,7 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
-app.use('/api/waitlist', waitlistRoutes); // Use waitlist routes with /api/waitlist prefix
+app.use('/api', waitlistRoutes); // Corrected: Use waitlist routes with /api prefix
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
