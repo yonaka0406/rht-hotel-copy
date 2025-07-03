@@ -2,7 +2,7 @@
   <Dialog
     :visible="visible"
     @update:visible="handleClose"
-    header="順番待ちリスト登録"
+    :header="`順番待ちリスト登録 - ${initialHotelName}`"
     :closable="true"
     :modal="true"
     :style="{ width: '50vw' }"
@@ -103,6 +103,10 @@
         </div>
       </div>
 
+      <div class="col-span-2">
+        <Divider />
+      </div>
+
       <!-- Smoking Preference Selection -->
       <div class="col-span-2">
         <label class="font-semibold mb-2 block">喫煙設定の希望 *</label>
@@ -128,19 +132,39 @@
       </div>
 
       <div class="col-span-1">
-        <FloatLabel>
-          <InputText :value="initialHotelName" variant="filled" fluid disabled />
-          <label>ホテル</label>
+         <FloatLabel>
+            <Select
+                v-model="internalForm.room_type_id"
+                :options="allRoomTypes"
+                optionLabel="room_type_name"
+                optionValue="room_type_id"
+                placeholder="部屋タイプを選択（任意）"
+                fluid
+                :showClear="true"
+            />
+            <label>希望部屋タイプ（任意）</label>
         </FloatLabel>
       </div>
       <div class="col-span-1">
-         <FloatLabel>
-            <InputText
-                :value="internalForm.room_type_id ? (allRoomTypes.find(rt => rt.room_type_id === internalForm.room_type_id)?.room_type_name || '不明') : '指定なし'"
-                variant="filled"
-                fluid
-                disabled />
-            <label>代表部屋タイプ (備考参照)</label>
+        <FloatLabel>
+          <InputNumber 
+            v-model="internalForm.number_of_rooms" 
+            :min="1" 
+            :max="10"
+            fluid 
+          />
+          <label>部屋数</label>
+        </FloatLabel>
+      </div>
+      <div class="col-span-1">
+        <FloatLabel>
+          <InputNumber 
+            v-model="internalForm.number_of_guests" 
+            :min="1" 
+            :max="50"
+            fluid 
+          />
+          <label>合計人数</label>
         </FloatLabel>
       </div>
       <div class="col-span-1">
@@ -163,21 +187,6 @@
           <label>希望チェックアウト</label>
         </FloatLabel>
       </div>
-       <div class="col-span-1">
-        <FloatLabel>
-          <InputNumber :modelValue="internalForm.number_of_guests" variant="filled" fluid disabled />
-          <label>合計人数</label>
-        </FloatLabel>
-      </div>
-      <!-- Read-only display of smoking preference is removed as it's now an active selection above -->
-      <!--
-      <div class="col-span-1">
-        <FloatLabel>
-          <InputText :value="smokingOptionsToDisplay.find(o => o.value === internalForm.preferred_smoking_status)?.label || '指定なし'" fluid disabled />
-          <label>喫煙設定の希望</label>
-        </FloatLabel>
-      </div>
-      -->
     </div>
     <template #footer>
       <Button label="閉じる" icon="pi pi-times" @click="handleClose" class="p-button-text p-button-danger p-button-sm" />
@@ -188,7 +197,7 @@
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue';
-import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button } from 'primevue';
+import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button, Select, Divider } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useClientStore } from '@/composables/useClientStore';
@@ -260,6 +269,7 @@ watch(() => props.visible, (newVal) => {
       requested_check_in_date: props.initialCheckInDate,
       requested_check_out_date: props.initialCheckOutDate,
       number_of_guests: props.initialNumberOfGuests,
+      number_of_rooms: 1,
       contact_email: '',
       contact_phone: '',
       communication_preference: 'email',
@@ -409,6 +419,7 @@ const handleSubmit = async () => {
     requested_check_in_date: internalForm.value.requested_check_in_date,
     requested_check_out_date: internalForm.value.requested_check_out_date,
     number_of_guests: internalForm.value.number_of_guests,
+    number_of_rooms: internalForm.value.number_of_rooms,
     contact_email: internalForm.value.contact_email,
     contact_phone: internalForm.value.contact_phone,
     communication_preference: internalForm.value.communication_preference,
