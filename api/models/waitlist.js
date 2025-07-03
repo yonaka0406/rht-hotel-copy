@@ -126,6 +126,88 @@ const WaitlistEntry = {
     // async updateStatus(requestId, id, status, additionalData = {}) { /* ... */ }
     // async findByToken(requestId, token, validateExpiry = true) { /* ... */ }
     // async expireOldTokens(requestId, hotelId = null) { /* ... */ }
+
+    /**
+     * Finds a waitlist entry by its ID.
+     * @param {string} requestId - The ID of the request for logging.
+     * @param {string} id - The UUID of the waitlist entry.
+     * @returns {Promise<object|null>} The waitlist entry object or null if not found.
+     */
+    async findById(requestId, id) {
+        const pool = getPool(requestId);
+        try {
+            const result = await pool.query('SELECT * FROM waitlist_entries WHERE id = $1', [id]);
+            return result.rows.length > 0 ? result.rows[0] : null;
+        } catch (err) {
+            console.error(`[${requestId}] Error finding waitlist entry by ID ${id}:`, err);
+            throw new Error('Database error occurred while fetching waitlist entry.');
+        }
+    },
+
+    /**
+     * Updates the status of a waitlist entry and related fields.
+     * @param {string} requestId - The ID of the request for logging.
+     * @param {string} id - The UUID of the waitlist entry to update.
+     * @param {string} status - The new status.
+     * @param {object} [additionalData={}] - Optional additional data to update.
+     * @param {string} [additionalData.confirmation_token] - Confirmation token.
+     * @param {string} [additionalData.token_expires_at] - Token expiry timestamp.
+     * @param {number} userId - ID of the user performing the update.
+     * @returns {Promise<object|null>} The updated waitlist entry or null if not found/updated.
+     */
+    async updateStatus(requestId, id, status, additionalData = {}, userId) {
+        const pool = getPool(requestId);
+
+        const { confirmation_token, token_expires_at } = additionalData;
+
+        // Validate status transition (can be more complex if needed)
+        const validStatuses = ['waiting', 'notified', 'confirmed', 'expired', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            throw new Error(`Invalid status value: ${status}`);
+        }
+
+        let querySetters = ['status = $1', 'updated_by = $2', 'updated_at = CURRENT_TIMESTAMP'];
+        let queryValues = [status, userId];
+        let valueCounter = 3;
+
+        if (status === 'notified') {
+            if (!confirmation_token || !token_expires_at) {
+                throw new Error('Confirmation token and expiry are required when status is "notified".');
+            }
+            querySetters.push(`confirmation_token = $${valueCounter++}`);
+            queryValues.push(confirmation_token);
+            querySetters.push(`token_expires_at = $${valueCounter++}`);
+            queryValues.push(token_expires_at);
+        } else {
+            // If status is not 'notified', clear token fields
+            querySetters.push(`confirmation_token = NULL`);
+            querySetters.push(`token_expires_at = NULL`);
+        }
+
+        const query = format(`
+            UPDATE waitlist_entries
+            SET ${querySetters.join(', ')}
+            WHERE id = $${valueCounter}
+            RETURNING *;
+        `);
+        queryValues.push(id);
+
+        try {
+            const result = await pool.query(query, queryValues);
+            if (result.rows.length > 0) {
+                return result.rows[0];
+            } else {
+                // Could be that the entry with 'id' was not found
+                return null;
+            }
+        } catch (err) {
+            console.error(`[${requestId}] Error updating waitlist entry ${id} status:`, err);
+            if (err.constraint) {
+                 throw new Error(`Database constraint violation: ${err.constraint} while updating status.`);
+            }
+            throw new Error('Database error occurred while updating waitlist entry status.');
+        }
+    }
 };
 
 module.exports = {

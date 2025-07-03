@@ -20,4 +20,7 @@ router.post('/waitlist', authMiddleware, authMiddlewareCRUDAccess, waitlistContr
 // POST /api/waitlist/confirm/:token - Client confirmation (publicly accessible but token-based)
 // router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
 
+// POST /:id/manual-notify - Trigger manual email notification for an entry
+router.post('/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
+
 module.exports = router;

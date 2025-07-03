@@ -130,6 +130,123 @@ const waitlistController = {
     // async delete(req, res) { /* ... */ } // Soft delete by status 'cancelled'
     // async confirmReservation(req, res) { /* ... */ }
     // async handleCancellation(requestId, cancellationData) { /* ... */ }
+
+    /**
+     * POST /api/waitlist/:id/manual-notify - Send manual offer email
+     */
+    async sendManualNotificationEmail(req, res) {
+        const { requestId } = req;
+        const { id: entryId } = req.params;
+        const userId = req.user.id; // From authMiddleware
+
+        if (!entryId) {
+            return res.status(400).json({ error: 'Waitlist entry ID is required.' });
+        }
+
+        try {
+            const entry = await WaitlistEntry.findById(requestId, entryId);
+            if (!entry) {
+                return res.status(404).json({ error: 'Waitlist entry not found.' });
+            }
+
+            // Optional: Check if entry is in a state suitable for notification (e.g., 'waiting')
+            if (entry.status !== 'waiting') {
+                // Or, allow resending even if 'notified', TBD by exact requirements
+                // return res.status(400).json({ error: `Waitlist entry is not in 'waiting' status (current: ${entry.status}).` });
+            }
+
+            // --- Token Generation ---
+            const crypto = require('crypto');
+            const confirmationToken = crypto.randomBytes(32).toString('hex');
+            const tokenExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // E.g., 48 hours expiry
+
+            // --- Email Preparation ---
+            // Requires fetching client details and hotel details if not already on `entry`
+            // For now, assume entry.contact_email, client.name, hotel.name, room_type.name are available
+            // or can be fetched. This part needs to align with actual data fetching capabilities.
+
+            // Fetch client details (simplified, real implementation might need a join or separate query in model)
+            const clientResult = await selectClient(requestId, entry.client_id); // Assuming selectClient returns { client: {...} }
+            const client = clientResult ? clientResult.client : null;
+            if (!client) {
+                 return res.status(404).json({ error: `Client with ID ${entry.client_id} not found for waitlist entry.` });
+            }
+            const clientName = client.name_first + " " + client.name_last; // Adjust based on actual client model fields
+
+
+            // Fetch hotel details (simplified)
+            const hotel = await getHotelByID(requestId, entry.hotel_id);
+            if (!hotel) {
+                return res.status(404).json({ error: `Hotel with ID ${entry.hotel_id} not found.` });
+            }
+            const hotelName = hotel.name;
+
+            // Fetch room type details (simplified)
+            let roomTypeName = "指定なし"; // Default if no room type
+            if (entry.room_type_id) {
+                const roomType = await getRoomTypeById(requestId, entry.room_type_id, entry.hotel_id);
+                if (roomType) {
+                    roomTypeName = roomType.name; // Adjust if field name is different
+                } else {
+                    console.warn(`[${requestId}] Room type ID ${entry.room_type_id} not found for hotel ${entry.hotel_id} during manual notification.`);
+                }
+            }
+
+
+            const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'; // Fallback for local dev
+            const confirmationLink = `${FRONTEND_URL}/waitlist/confirm/${confirmationToken}`;
+
+            // --- Email Sending ---
+            // TODO: Replace placeholder with actual email sending logic.
+            // This involves:
+            // 1. Importing an email utility (e.g., from 'emailUtils.js' or 'notificationService.js').
+            // 2. Using the 'waitlistAvailable' template (defined in WAITLIST_STRATEGY.md).
+            // 3. Populating templateData with clientName, hotelName, roomTypeName, dates, confirmationLink, expiryDate.
+            // 4. Handling success/failure of the email sending process.
+            // Example call structure (actual implementation will vary):
+            // const emailService = require('../services/emailService'); // Or similar
+            // const emailSent = await emailService.sendTemplatedEmail(
+            // entry.contact_email,
+            // 'waitlistAvailable', // Template identifier
+            //     { /* templateData as above */ }
+            // );
+
+            console.log(`[${requestId}] ---- START EMAIL SIMULATION ----`);
+            console.log(`[${requestId}] To: ${entry.contact_email}`);
+            console.log(`[${requestId}] Subject: ご希望のお部屋に空きが出ました！`);
+            console.log(`[${requestId}] Body Data: clientName=${clientName}, hotelName=${hotelName}, roomTypeName=${roomTypeName}, checkIn=${entry.requested_check_in_date}, checkOut=${entry.requested_check_out_date}, guests=${entry.number_of_guests}, expiryDate=${tokenExpiresAt.toLocaleDateString('ja-JP')}, confirmationLink=${confirmationLink}`);
+            console.log(`[${requestId}] ---- END EMAIL SIMULATION ----`);
+            const emailSent = true; // Placeholder: Assume email sending is successful.
+
+            if (!emailSent) {
+                // If actual email sending fails, decide on error handling.
+                // Potentially: don't update status, or use a specific 'notification_failed' status.
+                // return res.status(500).json({ error: 'Failed to send notification email.' });
+            }
+
+            // --- Update Waitlist Entry Status ---
+            const updatedEntry = await WaitlistEntry.updateStatus(requestId, entryId, 'notified', {
+                confirmation_token: confirmationToken,
+                token_expires_at: tokenExpiresAt.toISOString(),
+            }, userId);
+
+            if (!updatedEntry) {
+                // This could happen if the entry was deleted just before update or ID was somehow wrong
+                return res.status(404).json({ error: 'Failed to update waitlist entry after sending email, entry not found or update failed.' });
+            }
+
+            // TODO: Log this manual notification action in an audit log if required
+
+            return res.status(200).json(updatedEntry);
+
+        } catch (error) {
+            console.error(`[${requestId}] Error in sendManualNotificationEmail for entry ${entryId}:`, error);
+            if (error.message.includes('not found') || error.message.includes('Invalid status')) {
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Failed to process manual notification.' });
+        }
+    }
 };
 
 module.exports = waitlistController;
