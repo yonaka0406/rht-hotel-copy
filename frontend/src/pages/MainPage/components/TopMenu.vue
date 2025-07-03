@@ -9,6 +9,13 @@
         <!-- Right Section -->
         <template #end>
             <div class="flex items-center gap-4">
+
+                <!-- Waitlist Icon (New) -->
+                <OverlayBadge :value="waitlistBadgeCount" class="mr-2">
+                    <Button class="p-button p-button-text" aria-label="順番待ちリスト" @click="openWaitlistModal">
+                        <i class="pi pi-calendar-clock" style="font-size:larger" />
+                    </Button>
+                </OverlayBadge>
                 
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
@@ -45,6 +52,12 @@
         </ul>
         <p v-else class="text-center text-gray-500">通知はありません。</p>
     </Drawer>
+
+    <!-- Waitlist Display Modal -->
+    <WaitlistDisplayModal
+        :visible="isWaitlistModalVisible"
+        @update:visible="isWaitlistModalVisible = $event"
+    />
 </template>
 
 <script setup>
@@ -57,17 +70,35 @@
     import { useUserStore } from '@/composables/useUserStore';
     const { logged_user, fetchUser } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, setHotelId, selectedHotelId } = useHotelStore();
+    const { hotels, setHotelId, selectedHotelId } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
     const { holdReservations, fetchMyHoldReservations, setReservationId } = useReservationStore();
+    import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
+
+    // Components (for Waitlist Modal)
+    import WaitlistDisplayModal from './WaitlistDisplayModal.vue';
 
     // Primevue
     import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
 
+    // --- Store Instances ---
+    const waitlistStore = useWaitlistStore();
+
     // --- Reactive State ---
     const showDrawer = ref(false);
+    // const waitlistBadgeCount = ref(0); // Will be replaced by a computed property
+    const isWaitlistModalVisible = ref(false); // Controls visibility of the waitlist modal
 
     // --- Computed Properties ---
+    const waitlistBadgeCount = computed(() => {
+        // UX Refinement: Definition of "actionable" waitlist items.
+        // Currently, this counts entries with status 'waiting'.
+        // This definition should be confirmed with stakeholders. A more complex definition
+        // (e.g., 'waiting' AND matching room available) might require a dedicated backend count
+        // for efficiency and to encapsulate business logic.
+        return waitlistStore.entries.value.filter(entry => entry.status === 'waiting').length;
+    });
+
     const hasCrudAccess = computed(() => {
         return logged_user.value && logged_user.value.length > 0 && logged_user.value[0]?.permissions?.crud_ok === true;
     });
@@ -112,6 +143,11 @@
     });
 
     // --- Methods ---
+    const openWaitlistModal = () => {
+        console.log('Opening waitlist modal...');
+        isWaitlistModalVisible.value = true;
+    };
+
     const goToEditReservationPage = async (hotel_id, reservation_id) => {
         await setHotelId(hotel_id); // Set the hotel context in the store
         await setReservationId(reservation_id); // Set the reservation context in the store
@@ -135,12 +171,19 @@
 
     // --- Watchers ---
     watch(selectedHotelId,
-        (newVal, oldVal) => {
-            if (newVal) {
-                // console.log(`Hotel ID changed from ${oldVal} to ${newVal} via TopMenu selection.`);
+        (newHotelId, oldHotelId) => {
+            if (newHotelId && newHotelId !== oldHotelId) {
+                // console.log(`Hotel ID changed from ${oldHotelId} to ${newHotelId} in TopMenu.`);
+                // Fetch waitlist entries for the new hotel to update the badge count.
+                // The modal will also use this data if opened subsequently.
+                waitlistStore.fetchWaitlistEntries(newHotelId);
+            } else if (!newHotelId) {
+                // Clear entries if no hotel is selected
+                waitlistStore.entries.value = [];
             }
         },
-        { immediate: true } // This ensures the watcher runs on component initialization with the initial value.
+        { immediate: true } // This ensures the watcher runs on component init.
+                           // If selectedHotelId is already set from store, it will fetch.
     );
 
 </script>
