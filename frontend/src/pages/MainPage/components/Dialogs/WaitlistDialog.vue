@@ -151,7 +151,7 @@
 
       <div class="col-span-2">
         <FloatLabel>
-          <Textarea v-model="internalForm.notes" rows="3" fluid placeholder="例：デラックスルーム1室、スタンダードルーム2室希望" />
+          <Textarea v-model="internalForm.notes" rows="3" fluid />
           <label>備考（部屋タイプ詳細など）</label>
         </FloatLabel>
       </div>
@@ -162,8 +162,7 @@
                 v-model="internalForm.room_type_id"
                 :options="allRoomTypes"
                 optionLabel="room_type_name"
-                optionValue="room_type_id"
-                placeholder="部屋タイプを選択（任意）"
+                optionValue="room_type_id"                
                 fluid
                 :showClear="true"
             />
