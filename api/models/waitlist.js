@@ -194,7 +194,7 @@ const WaitlistEntry = {
             SELECT
                 we.id,
                 we.client_id,
-                c.name_first || ' ' || c.name_last AS "clientName",
+                c.name AS "clientName", -- Corrected to use the single 'name' column
                 we.hotel_id,
                 we.room_type_id,
                 rt.name AS "roomTypeName",
