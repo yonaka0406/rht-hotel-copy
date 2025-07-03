@@ -83,7 +83,7 @@
             type="tel"
             fluid
             :required="internalForm.communication_preference === 'phone'"
-            :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.phone"
+            :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && !!selectedClientForWaitlist.phone"
           />
           <label>連絡用電話番号{{ internalForm.communication_preference === 'phone' ? ' *' : '' }}</label>
         </FloatLabel>
@@ -145,13 +145,21 @@
       </div>
       <div class="col-span-1">
         <FloatLabel>
-          <InputText :value="internalForm.requested_check_in_date" variant="filled" fluid disabled />
+          <InputText 
+            v-model="internalForm.requested_check_in_date" 
+            type="date"
+            fluid 
+          />
           <label>希望チェックイン</label>
         </FloatLabel>
       </div>
       <div class="col-span-1">
         <FloatLabel>
-          <InputText :value="internalForm.requested_check_out_date" variant="filled" fluid disabled />
+          <InputText 
+            v-model="internalForm.requested_check_out_date" 
+            type="date"
+            fluid 
+          />
           <label>希望チェックアウト</label>
         </FloatLabel>
       </div>
