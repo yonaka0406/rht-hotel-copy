@@ -63,7 +63,8 @@ CREATE TRIGGER trg_waitlist_entries_updated_at
 
 -- Grant permissions (adjust user name if necessary)
 GRANT SELECT, INSERT, UPDATE, DELETE ON waitlist_entries TO rhtsys_user;
-GRANT USAGE, SELECT ON SEQUENCE waitlist_entries_id_seq TO rhtsys_user; -- If using SERIAL for ID, else adjust
+-- The line below was removed because 'id UUID PRIMARY KEY DEFAULT gen_random_uuid()' does not create a sequence named waitlist_entries_id_seq
+-- GRANT USAGE, SELECT ON SEQUENCE waitlist_entries_id_seq TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
 
