@@ -160,7 +160,7 @@
          <FloatLabel>
             <Select
                 v-model="internalForm.room_type_id"
-                :options="allRoomTypes"
+                :options="filteredRoomTypes"
                 optionLabel="room_type_name"
                 optionValue="room_type_id"                
                 fluid
@@ -174,7 +174,6 @@
           <InputNumber 
             v-model="internalForm.number_of_rooms" 
             :min="1" 
-            :max="10"
             fluid 
           />
           <label>部屋数</label>
@@ -185,7 +184,6 @@
           <InputNumber 
             v-model="internalForm.number_of_guests" 
             :min="1" 
-            :max="50"
             fluid 
           />
           <label>合計人数</label>
@@ -264,6 +262,7 @@ const props = defineProps({
   initialNumberOfGuests: Number,
   initialSmokingPreference: String,
   initialNotes: String,
+  hotelTotalRooms: Number,
   allClients: {
     type: Array,
     default: () => []
@@ -420,6 +419,35 @@ const updateFormSmokingPreference = () => {
 
 watch(selectedSmokingPreferenceDialog, (newValue) => {
     internalForm.value.preferred_smoking_status = newValue;
+    
+    // Clear selected room type if it's no longer valid with the new smoking preference
+    if (internalForm.value.room_type_id) {
+        const selectedRoomType = props.allRoomTypes.find(rt => rt.room_type_id === internalForm.value.room_type_id);
+        if (selectedRoomType) {
+            const isValid = filteredRoomTypes.value.some(rt => rt.room_type_id === internalForm.value.room_type_id);
+            if (!isValid) {
+                internalForm.value.room_type_id = null;
+                toast.add({
+                    severity: 'info',
+                    summary: '情報',
+                    detail: '喫煙設定の変更により、選択された部屋タイプがクリアされました。',
+                    life: 3000
+                });
+            }
+        }
+    }
+});
+
+// Watch for changes in number of rooms and show confirmation if it exceeds hotel total
+watch(() => internalForm.value.number_of_rooms, (newValue) => {
+  if (newValue && props.hotelTotalRooms && newValue > props.hotelTotalRooms) {
+    toast.add({
+      severity: 'warn',
+      summary: '確認',
+      detail: `入力された部屋数（${newValue}室）がホテルの総部屋数（${props.hotelTotalRooms}室）を超えています。`,
+      life: 5000
+    });
+  }
 });
 
 const handleClose = () => {
@@ -510,6 +538,46 @@ const isFormValid = computed(() => {
     (internalForm.value.communication_preference === 'phone' && internalForm.value.contact_phone);
   
   return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact;
+});
+
+// Filter room types based on smoking preference
+const filteredRoomTypes = computed(() => {
+  console.log('filteredRoomTypes computed - allRoomTypes:', props.allRoomTypes);
+  console.log('filteredRoomTypes computed - smoking preference:', selectedSmokingPreferenceDialog.value);
+  
+  if (!props.allRoomTypes || !Array.isArray(props.allRoomTypes)) {
+    console.log('filteredRoomTypes: No room types available');
+    return [];
+  }
+  
+  if (selectedSmokingPreferenceDialog.value === 'any') {
+    console.log('filteredRoomTypes: Returning all room types (any preference)');
+    return props.allRoomTypes;
+  }
+  
+  const filtered = props.allRoomTypes.filter(roomType => {
+    console.log('Checking room type:', roomType.room_type_name, 'smoking property:', roomType.smoking);
+    
+    // Use the smoking property from the room type data
+    if (roomType.smoking !== undefined) {
+      if (selectedSmokingPreferenceDialog.value === 'smoking') {
+        const matches = roomType.smoking === true;
+        console.log('Smoking preference - room type matches:', matches);
+        return matches;
+      } else if (selectedSmokingPreferenceDialog.value === 'non_smoking') {
+        const matches = roomType.smoking === false;
+        console.log('Non-smoking preference - room type matches:', matches);
+        return matches;
+      }
+    }
+    
+    // If room type doesn't have smoking information, include it
+    console.log('Room type has no smoking info, including it');
+    return true;
+  });
+  
+  console.log('filteredRoomTypes result:', filtered);
+  return filtered;
 });
 
 </script>

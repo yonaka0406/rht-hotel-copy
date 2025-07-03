@@ -398,10 +398,10 @@
             return
         }
         const roomSet = new Map();
-        selectedHotelRooms.value.forEach(({ room_type_id, room_type_name }) => {
-            roomSet.set(room_type_id, room_type_name);
+        selectedHotelRooms.value.forEach(({ room_type_id, room_type_name, room_smoking_idc }) => {
+            roomSet.set(room_type_id, { room_type_id, room_type_name, smoking: room_smoking_idc });
         });
-        return Array.from(roomSet, ([room_type_id, room_type_name]) => ({ room_type_id, room_type_name }));
+        return Array.from(roomSet.values());
     });
     const countOfRoomTypes = computed(() => {
         if(!availableRooms.value){
