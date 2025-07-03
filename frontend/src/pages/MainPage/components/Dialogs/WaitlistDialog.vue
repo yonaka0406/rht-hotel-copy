@@ -546,9 +546,7 @@ const handleSubmit = async () => {
 };
 
 const goToStep = (step) => {
-  console.log('goToStep called with step:', step, 'current step before:', currentStep.value);
   currentStep.value = step.toString();
-  console.log('current step after:', currentStep.value);
 };
 
 // Helper function for date formatting (same as ReservationsNewCombo)
@@ -695,41 +693,28 @@ const isFormValid = computed(() => {
 
 // Filter room types based on smoking preference
 const filteredRoomTypes = computed(() => {
-  console.log('filteredRoomTypes computed - allRoomTypes:', props.allRoomTypes);
-  console.log('filteredRoomTypes computed - smoking preference:', selectedSmokingPreferenceDialog.value);
-  
   if (!props.allRoomTypes || !Array.isArray(props.allRoomTypes)) {
-    console.log('filteredRoomTypes: No room types available');
     return [];
   }
   
   if (selectedSmokingPreferenceDialog.value === 'any') {
-    console.log('filteredRoomTypes: Returning all room types (any preference)');
     return props.allRoomTypes;
   }
   
   const filtered = props.allRoomTypes.filter(roomType => {
-    console.log('Checking room type:', roomType.room_type_name, 'smoking property:', roomType.smoking);
-    
-    // Use the smoking property from the room type data
     if (roomType.smoking !== undefined) {
       if (selectedSmokingPreferenceDialog.value === 'smoking') {
         const matches = roomType.smoking === true;
-        console.log('Smoking preference - room type matches:', matches);
         return matches;
       } else if (selectedSmokingPreferenceDialog.value === 'non_smoking') {
         const matches = roomType.smoking === false;
-        console.log('Non-smoking preference - room type matches:', matches);
         return matches;
       }
     }
     
-    // If room type doesn't have smoking information, include it
-    console.log('Room type has no smoking info, including it');
     return true;
   });
   
-  console.log('filteredRoomTypes result:', filtered);
   return filtered;
 });
 
