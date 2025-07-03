@@ -140,13 +140,7 @@ export function useWaitlistStore() {
             } finally {
                 state.loading = false;
             }
-        }, // Added comma here
-
-        // Future actions as per WAITLIST_STRATEGY.md:
-        // async fetchEntries(hotelId) { /* ... */ }
-        // async updateEntryStatus(id, status, additionalData) { /* ... */ } // This might be used by sendManualNotification internally on backend
-        // async deleteEntry(id) { /* ... */ }
-        // setFilters(newFilters) { /* ... */ }
+        },
 
         /**
          * Fetches waitlist entries for a given hotel with optional filters and pagination.
