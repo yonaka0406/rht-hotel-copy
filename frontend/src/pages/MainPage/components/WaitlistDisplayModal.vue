@@ -7,7 +7,7 @@
     position="bottom"
     @hide="closeModal"
   >
-    <DataTable :value="waitlistEntries" :loading="loading" responsiveLayout="scroll">
+    <DataTable :value="entries" :loading="loading" responsiveLayout="scroll">
       <!-- UX Refinement: Consider making columns sortable. Add other relevant columns like 'Date Added' or 'Notes'. -->
       <!-- Make clientName a link to client profile if possible. -->
       <Column field="clientName" header="クライアント名" :sortable="true"></Column>
