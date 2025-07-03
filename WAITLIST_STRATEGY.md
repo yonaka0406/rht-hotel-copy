@@ -7,14 +7,15 @@ This document outlines the comprehensive implementation strategy for a waitlist 
 ## Why This UX Strategy is Effective
 
 ### 1. Reduces Revenue Loss from Turn-Aways
-- **Problem**: Hotels lose potential revenue when fully booked rooms turn away interested customers
-- **Solution**: Waitlist captures demand that would otherwise be lost, converting it into bookings when cancellations occur
-- **Impact**: Studies show hotels can recover 15-25% of lost bookings through effective waitlist management
+- **Problem**: Hotels lose potential revenue when fully booked rooms turn away interested customers. This also applies when specific room preferences (e.g., smoking vs. non-smoking, specific view, accessibility features) are unavailable, even if other rooms of the general type exist.
+- **Solution**: Waitlist captures demand that would otherwise be lost, converting it into bookings when cancellations occur or preferred room types become available.
+- **Impact**: Studies show hotels can recover 15-25% of lost bookings through effective waitlist management. Capturing preference-specific demand can further enhance this.
 
 ### 2. Enhances Customer Experience
-- **Proactive Communication**: Customers appreciate being notified of availability rather than having to repeatedly check
-- **Reduced Friction**: Seamless transition from "unavailable" to "book now" eliminates search restart
-- **Builds Loyalty**: Shows hotel values customer interest even when unable to immediately accommodate
+- **Proactive Communication**: Customers appreciate being notified of availability (including preferred room types) rather than having to repeatedly check.
+- **Reduced Friction**: Seamless transition from "unavailable" or "preference unavailable" to "book now" eliminates search restart.
+- **Builds Loyalty**: Shows hotel values customer interest and specific preferences even when unable to immediately accommodate.
+- **Accommodates Specific Needs**: Allows guests to wait for rooms that meet their specific requirements (e.g., smoking, non-smoking, accessible room), rather than settling for a less desirable option or booking elsewhere.
 
 ### 3. Operational Efficiency
 - **Automated Matching**: System automatically finds best waitlist candidates when rooms become available
@@ -346,6 +347,7 @@ export const useWaitlistStore = () => {
    - Hotel and room type dropdowns (cascading)
    - Date range picker with validation
    - Guest count input with limits
+   - **Fields for specific preferences (e.g., smoking/non-smoking, view, floor) - This might be an enhancement for a later phase but important for the rationale.**
    - Contact information fields
    - Notes textarea
    - Form validation with error display
