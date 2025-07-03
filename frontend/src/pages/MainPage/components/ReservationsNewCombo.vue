@@ -298,162 +298,7 @@
             </template>
         </Dialog>
 
-        <!-- Waitlist Dialog -->
-      <Dialog
-        v-model:visible="waitlistDialogVisible"
-        header="順番待ちリスト登録"
-        :closable="true"
-        :modal="true"
-        :style="{ width: '50vw' }"
-      >
-        <div class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
-          <!-- Client Selection/Creation for Waitlist -->
-          <div class="col-span-2 mb-2">
-            <FloatLabel>
-              <AutoComplete
-                v-model="waitlistForm.client_name_waitlist"
-                :suggestions="filteredClients"
-                optionLabel="display_name"
-                @complete="filterClients"
-                @option-select="onClientSelectForWaitlist"
-                fluid
-                placeholder="既存顧客を検索または新規顧客名を入力"
-              >
-                <template #option="slotProps">
-                  <div>
-                    <p>
-                      <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                      <i v-else class="pi pi-user"></i>
-                      {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                      <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                    </p>
-                     <div class="flex items-center gap-2">
-                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                      <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                    </div>
-                  </div>
-                </template>
-              </AutoComplete>
-              <label>顧客名（検索または新規入力）</label>
-            </FloatLabel>
-          </div>
-
-          <div class="col-span-1" v-if="!isClientSelectedForWaitlist">
-            <SelectButton
-              v-model="waitlistForm.client_legal_or_natural_person_waitlist"
-              :options="personTypeOptions"
-              option-label="label"
-              option-value="value"
-              fluid
-            />
-          </div>
-          <div class="col-span-1" v-if="!isClientSelectedForWaitlist && waitlistForm.client_legal_or_natural_person_waitlist === 'natural'">
-            <div class="flex gap-3">
-              <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
-                <RadioButton
-                  v-model="waitlistForm.client_gender_waitlist"
-                  :inputId="`combo_waitlist_gender_${option.value}`"
-                  :value="option.value"
-                />
-                <label :for="`combo_waitlist_gender_${option.value}`">{{ option.label }}</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-span-2"></div>
-
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText
-                v-model="waitlistForm.contact_email"
-                type="email"
-                fluid
-                required
-                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.email"
-              />
-              <label>連絡用メールアドレス *</label>
-            </FloatLabel>
-          </div>
-
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText
-                v-model="waitlistForm.contact_phone"
-                type="tel"
-                fluid
-                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.phone"
-              />
-              <label>連絡用電話番号</label>
-            </FloatLabel>
-          </div>
-
-          <div class="col-span-2">
-            <label class="font-semibold mb-2 block">希望連絡方法 *</label>
-            <div class="flex gap-4">
-              <div class="flex items-center">
-                <RadioButton v-model="waitlistForm.communication_preference" inputId="combo_comm_email_waitlist" value="email" />
-                <label for="combo_comm_email_waitlist" class="ml-2">メール</label>
-              </div>
-              <div class="flex items-center">
-                <RadioButton v-model="waitlistForm.communication_preference" inputId="combo_comm_phone_waitlist" value="phone" />
-                <label for="combo_comm_phone_waitlist" class="ml-2">電話</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-span-2">
-            <FloatLabel>
-              <Textarea v-model="waitlistForm.notes" rows="3" fluid placeholder="例：デラックスルーム1室、スタンダードルーム2室希望" />
-              <label>備考（部屋タイプ詳細など）</label>
-            </FloatLabel>
-          </div>
-
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="selectedHotel ? selectedHotel.name : ''" fluid disabled />
-              <label>ホテル</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-             <FloatLabel>
-                <InputText
-                    :value="waitlistForm.room_type_id ? roomTypes.find(rt => rt.room_type_id === waitlistForm.room_type_id)?.room_type_name : '指定なし'"
-                    fluid
-                    disabled />
-                <label>代表部屋タイプ (備考参照)</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="waitlistForm.requested_check_in_date" fluid disabled />
-              <label>希望チェックイン</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="waitlistForm.requested_check_out_date" fluid disabled />
-              <label>希望チェックアウト</label>
-            </FloatLabel>
-          </div>
-           <div class="col-span-1">
-            <FloatLabel>
-              <InputNumber :modelValue="waitlistForm.number_of_guests" fluid disabled />
-              <label>合計人数</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="smokingPreferenceOptions.find(o => o.value === waitlistForm.preferred_smoking_status)?.label || '指定なし'" fluid disabled />
-              <label>喫煙設定の希望</label>
-            </FloatLabel>
-          </div>
-
-        </div>
-        <template #footer>
-          <Button label="閉じる" icon="pi pi-times" @click="closeWaitlistDialog" class="p-button-text p-button-danger p-button-sm" />
-          <Button label="登録" icon="pi pi-plus" @click="submitWaitlistEntry" :loading="waitlistStore.loading" class="p-button-text p-button-success p-button-sm" />
-        </template>
-      </Dialog>
+      <!-- Old Waitlist Dialog REMOVED -->
 
       <WaitlistDialog
         v-model:visible="waitlistDialogVisibleState"
@@ -657,9 +502,9 @@
     //     validateCombos();
     // };
 
-    // const onClientSelectForWaitlist, resetWaitlistClientSelection, and watcher for client_name_waitlist are moved to WaitlistDialog.vue
+    // All old waitlist dialog logic (onClientSelectForWaitlist, resetWaitlistClientSelection, watcher, old openWaitlistDialog, closeWaitlistDialog, submitWaitlistEntry) is removed.
 
-    const openWaitlistDialog = () => {
+    const openWaitlistDialog = () => { // This is the new, simplified version for the parent
         if (!reservationCombos.value.length) {
             toast.add({ severity: 'warn', summary: '情報不足', detail: 'まず予約コンボに部屋を追加してください。', life: 3000 });
             return;
@@ -671,24 +516,21 @@
             notesContent += `- ${c.room_type_name}: ${c.number_of_rooms}室, ${c.number_of_people}名\n`;
         });
 
-        // Set refs that will be passed as props
+        // Set refs that will be passed as props to the new WaitlistDialog component
         waitlistInitialRoomTypeId.value = primaryComboItem.room_type_id;
         waitlistInitialCheckInDate.value = formatDate(primaryComboItem.check_in);
         waitlistInitialCheckOutDate.value = formatDate(primaryComboItem.check_out);
         waitlistInitialNumberOfGuests.value = totalPeople.value;
         waitlistInitialNotes.value = notesContent.trim();
-        // selectedSmokingPreference is already a ref and passed directly
+        // selectedSmokingPreference from parent is no longer passed as a prop.
 
-        waitlistDialogVisibleState.value = true; // Changed from waitlistDialogVisible
+        waitlistDialogVisibleState.value = true;
     };
 
     const handleWaitlistSubmitted = () => {
         // Optional: any action needed in parent after waitlist is submitted
         console.log("Waitlist entry submitted (event received in parent)");
-        // e.g., refresh some data if necessary, though usually not for waitlist creation itself
     };
-
-    // const closeWaitlistDialog and submitWaitlistEntry are moved to WaitlistDialog.vue
 
     const addReservationCombo = () => {
         // console.log('addReservationCombo:',comboRow.value);
@@ -805,27 +647,8 @@
 
     // Dialog
     const dialogVisible = ref(false);
-    const waitlistDialogVisible = ref(false);
-    const waitlistForm = ref({
-        client_id: null,
-        hotel_id: null,
-        room_type_id: null,
-        requested_check_in_date: '',
-        requested_check_out_date: '',
-        number_of_guests: 1,
-        contact_email: '',
-        contact_phone: '',
-        communication_preference: 'email',
-        notes: '',
-        preferred_smoking_status: 'any',
-        client_name_waitlist: '',
-        client_legal_or_natural_person_waitlist: 'legal',
-        client_gender_waitlist: 'other',
-        client_email_waitlist: '',
-        client_phone_waitlist: ''
-    });
-    // const selectedClientForWaitlist = ref(null); // Moved to dialog
-    // const isClientSelectedForWaitlist = ref(false); // Moved to dialog
+    const dialogVisible = ref(false);
+    // All waitlistForm, selectedClientForWaitlist, isClientSelectedForWaitlist refs are removed as they are managed by WaitlistDialog.vue
 
     const reservationDetails = ref({
         hotel_id: null,
