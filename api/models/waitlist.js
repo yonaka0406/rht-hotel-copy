@@ -25,10 +25,10 @@ const WaitlistEntry = {
 
         // Validate required fields
         const requiredFields = [
-            'client_id', 'hotel_id', 'room_type_id',
+            'client_id', 'hotel_id',
             'requested_check_in_date', 'requested_check_out_date',
             'number_of_guests', 'communication_preference'
-            // Do NOT include contact_email or contact_phone here
+            // Do NOT include room_type_id here
         ];
         for (const field of requiredFields) {
             if (data[field] === undefined || data[field] === null || data[field] === '') {

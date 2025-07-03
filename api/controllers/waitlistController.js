@@ -29,7 +29,17 @@ const waitlistController = {
             // --- Basic Input Validation ---
             const validatedClientId = validateNonEmptyStringParam(client_id, 'Client ID');
             const validatedHotelId = validateNumericParam(hotel_id, 'Hotel ID');
-            const validatedRoomTypeId = validateNumericParam(room_type_id, 'Room Type ID');
+            let validatedRoomTypeId = null;
+            if (room_type_id !== undefined && room_type_id !== null && room_type_id !== '') {
+                validatedRoomTypeId = validateNumericParam(room_type_id, 'Room Type ID');
+                // Verify room type exists for the given hotel
+                // Note: getRoomTypeById might need adjustment if it doesn't take hotel_id or if room_type_id isn't globally unique
+                // Assuming getRoomTypeById can check for a specific room_type_id within a hotel_id context or that room_type_id is unique
+                const roomType = await getRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId);
+                if (!roomType) {
+                    return res.status(404).json({ error: `Room type with ID ${validatedRoomTypeId} not found for hotel ${validatedHotelId}.` });
+                }
+            }
             const validatedCheckIn = validateDateStringParam(requested_check_in_date, 'Requested Check-in Date');
             const validatedCheckOut = validateDateStringParam(requested_check_out_date, 'Requested Check-out Date');
             const validatedNumGuests = validateIntegerParam(number_of_guests, 'Number of Guests');
@@ -74,18 +84,10 @@ const waitlistController = {
                 return res.status(404).json({ error: `Hotel with ID ${validatedHotelId} not found.` });
             }
 
-            // Verify room type exists for the given hotel
-            // Note: getRoomTypeById might need adjustment if it doesn't take hotel_id or if room_type_id isn't globally unique
-            // Assuming getRoomTypeById can check for a specific room_type_id within a hotel_id context or that room_type_id is unique
-            const roomType = await getRoomTypeById(requestId, validatedRoomTypeId, validatedHotelId);
-            if (!roomType) {
-                return res.status(404).json({ error: `Room type with ID ${validatedRoomTypeId} not found for hotel ${validatedHotelId}.` });
-            }
-
             const entryData = {
                 client_id: validatedClientId,
                 hotel_id: validatedHotelId,
-                room_type_id: validatedRoomTypeId,
+                room_type_id: validatedRoomTypeId, // can be null
                 requested_check_in_date: validatedCheckIn,
                 requested_check_out_date: validatedCheckOut,
                 number_of_guests: validatedNumGuests,

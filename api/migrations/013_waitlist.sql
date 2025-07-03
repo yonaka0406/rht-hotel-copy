@@ -7,6 +7,7 @@ CREATE TABLE waitlist_entries (
     requested_check_in_date DATE NOT NULL,
     requested_check_out_date DATE NOT NULL,
     number_of_guests INTEGER NOT NULL CHECK (number_of_guests > 0),
+    number_of_rooms INTEGER NOT NULL DEFAULT 1 CHECK (number_of_rooms > 0),
     status TEXT NOT NULL DEFAULT 'waiting'
         CHECK (status IN ('waiting', 'notified', 'confirmed', 'expired', 'cancelled')),
     notes TEXT,
