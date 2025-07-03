@@ -5,7 +5,7 @@ const {
     validateIntegerParam,
     validateNonEmptyStringParam
 } = require('../utils/validationUtils');
-const { getClientById } = require('../models/clients'); // To check if client exists
+const { selectClient } = require('../models/clients'); // To check if client exists
 const { getHotelById } = require('../models/hotel'); // To check if hotel exists
 const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
 
@@ -62,7 +62,8 @@ const waitlistController = {
 
             // --- Entity Existence Checks ---
             // Check client exists (if client_id is provided, assuming client creation is handled separately or not in scope for this specific task)
-            const client = await getClientById(requestId, validatedClientId);
+            const clientObj = await selectClient(requestId, validatedClientId);
+            const client = clientObj && clientObj.client;
             if (!client) {
                 return res.status(404).json({ error: `Client with ID ${validatedClientId} not found.` });
             }
