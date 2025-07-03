@@ -7,7 +7,33 @@
     :modal="true"
     :style="{ width: '50vw' }"
   >
-    <div class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
+    <!-- Step Navigation -->
+    <div class="flex justify-center mb-4">
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+               :class="currentStep === '1' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
+            1
+          </div>
+          <span class="ml-2 text-sm font-medium" :class="currentStep === '1' ? 'text-blue-500' : 'text-gray-600'">
+            顧客情報
+          </span>
+        </div>
+        <div class="w-8 h-1 bg-gray-200"></div>
+        <div class="flex items-center">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+               :class="currentStep === '2' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'">
+            2
+          </div>
+          <span class="ml-2 text-sm font-medium" :class="currentStep === '2' ? 'text-blue-500' : 'text-gray-600'">
+            予約情報
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Client Information -->
+    <div v-if="currentStep === '1'" class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
       <!-- Client Selection/Creation for Waitlist -->
       <div class="col-span-2 mb-2">
         <FloatLabel>
@@ -102,11 +128,10 @@
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="col-span-2">
-        <Divider />
-      </div>
-
+    <!-- Step 2: Reservation Information -->
+    <div v-if="currentStep === '2'" class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
       <!-- Smoking Preference Selection -->
       <div class="col-span-2">
         <label class="font-semibold mb-2 block">喫煙設定の希望 *</label>
@@ -188,16 +213,44 @@
         </FloatLabel>
       </div>
     </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-6">
+      <Button 
+        v-if="currentStep === '2'" 
+        label="前へ" 
+        severity="secondary" 
+        icon="pi pi-arrow-left" 
+        @click="goToStep(1)" 
+      />
+      <div v-else></div>
+      
+      <Button 
+        v-if="currentStep === '1'" 
+        label="次へ" 
+        icon="pi pi-arrow-right" 
+        iconPos="right" 
+        @click="goToStep(2)" 
+      />
+    </div>
+
     <template #footer>
       <Button label="閉じる" icon="pi pi-times" @click="handleClose" class="p-button-text p-button-danger p-button-sm" />
-      <Button label="登録" icon="pi pi-plus" @click="handleSubmit" :loading="isLoading" class="p-button-text p-button-success p-button-sm" />
+      <Button 
+        v-if="currentStep === '2' && isFormValid" 
+        label="登録" 
+        icon="pi pi-check" 
+        @click="handleSubmit" 
+        :loading="isLoading" 
+        class="p-button-text p-button-success p-button-sm" 
+      />
     </template>
   </Dialog>
 </template>
 
 <script setup>
 import { ref, watch, computed, onMounted } from 'vue';
-import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button, Select, Divider } from 'primevue';
+import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText, Textarea, InputNumber, Button, Select } from 'primevue';
 import { useToast } from 'primevue/usetoast';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useClientStore } from '@/composables/useClientStore';
@@ -245,6 +298,7 @@ const selectedClientForWaitlist = ref(null);
 const isClientSelectedForWaitlist = ref(false);
 const filteredClients = ref([]);
 const isLoading = ref(false);
+const currentStep = ref('1');
 
 const personTypeOptions = ref([
     { label: '法人', value: 'legal' },
@@ -261,6 +315,7 @@ const genderOptions = ref([
 // Initialize form when dialog becomes visible or props change
 watch(() => props.visible, (newVal) => {
   if (newVal) {
+    currentStep.value = '1';
     selectedSmokingPreferenceDialog.value = props.initialSmokingPreference || 'any'; // Initialize from prop or default
     internalForm.value = {
       client_id: null,
@@ -435,6 +490,28 @@ const handleSubmit = async () => {
   }
   // Toast for success/failure is handled by waitlistStore.addEntry
 };
+
+const goToStep = (step) => {
+  console.log('goToStep called with step:', step, 'current step before:', currentStep.value);
+  currentStep.value = step.toString();
+  console.log('current step after:', currentStep.value);
+};
+
+// Validation logic
+const isFormValid = computed(() => {
+  // Basic validation - check if required fields are filled
+  const hasClientInfo = internalForm.value.client_name_waitlist && internalForm.value.client_name_waitlist.trim() !== '';
+  const hasContactInfo = internalForm.value.contact_email || internalForm.value.contact_phone;
+  const hasCommunicationPreference = internalForm.value.communication_preference;
+  const hasSmokingPreference = selectedSmokingPreferenceDialog.value;
+  
+  // Additional validation based on communication preference
+  const hasValidContact = 
+    (internalForm.value.communication_preference === 'email' && internalForm.value.contact_email) ||
+    (internalForm.value.communication_preference === 'phone' && internalForm.value.contact_phone);
+  
+  return hasClientInfo && hasContactInfo && hasCommunicationPreference && hasSmokingPreference && hasValidContact;
+});
 
 </script>
 
