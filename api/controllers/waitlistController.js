@@ -33,14 +33,23 @@ const waitlistController = {
             const validatedCheckIn = validateDateStringParam(requested_check_in_date, 'Requested Check-in Date');
             const validatedCheckOut = validateDateStringParam(requested_check_out_date, 'Requested Check-out Date');
             const validatedNumGuests = validateIntegerParam(number_of_guests, 'Number of Guests');
-            const validatedContactEmail = validateNonEmptyStringParam(contact_email, 'Contact Email');
 
             if (!['email', 'phone'].includes(communication_preference)) {
                 return res.status(400).json({ error: 'Invalid communication preference. Must be "email" or "phone".' });
             }
-            if (communication_preference === 'phone' && (!contact_phone || String(contact_phone).trim() === '')) {
-                return res.status(400).json({ error: 'Contact phone is required if communication preference is phone.' });
+            // Only require and validate the relevant contact field
+            let validatedContactEmail = null;
+            let validatedContactPhone = null;
+            if (communication_preference === 'email') {
+                validatedContactEmail = validateNonEmptyStringParam(contact_email, 'Contact Email');
             }
+            if (communication_preference === 'phone') {
+                if (!contact_phone || String(contact_phone).trim() === '') {
+                    return res.status(400).json({ error: 'Contact phone is required if communication preference is phone.' });
+                }
+                validatedContactPhone = String(contact_phone).trim();
+            }
+
             if (validatedNumGuests <= 0) {
                 return res.status(400).json({ error: 'Number of guests must be a positive integer.' });
             }
@@ -79,8 +88,8 @@ const waitlistController = {
                 requested_check_in_date: validatedCheckIn,
                 requested_check_out_date: validatedCheckOut,
                 number_of_guests: validatedNumGuests,
-                contact_email: validatedContactEmail,
-                contact_phone: contact_phone ? String(contact_phone).trim() : null,
+                contact_email: validatedContactEmail, // will be null if not required
+                contact_phone: validatedContactPhone, // will be null if not required
                 notes: notes ? String(notes).trim() : null,
                 communication_preference: communication_preference,
                 preferred_smoking_status: preferred_smoking_status || 'any' // Pass to model, model also defaults

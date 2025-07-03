@@ -529,12 +529,18 @@ const handleSubmit = async () => {
     requested_check_out_date: internalForm.value.requested_check_out_date,
     number_of_guests: internalForm.value.number_of_guests,
     number_of_rooms: internalForm.value.number_of_rooms,
-    contact_email: internalForm.value.contact_email,
-    contact_phone: internalForm.value.contact_phone,
     communication_preference: internalForm.value.communication_preference,
     notes: internalForm.value.notes,
     preferred_smoking_status: internalForm.value.preferred_smoking_status
   };
+  // Only add contact_email if it's non-empty and not just whitespace
+  if (internalForm.value.contact_email && internalForm.value.contact_email.trim() !== "") {
+    entryData.contact_email = internalForm.value.contact_email;
+  }
+  // Only add contact_phone if it's non-empty and not just whitespace
+  if (internalForm.value.contact_phone && internalForm.value.contact_phone.trim() !== "") {
+    entryData.contact_phone = internalForm.value.contact_phone;
+  }
 
   const result = await waitlistStore.addEntry(entryData);
   isLoading.value = false;
