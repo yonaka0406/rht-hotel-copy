@@ -140,7 +140,7 @@ export function useWaitlistStore() {
             } finally {
                 state.loading = false;
             }
-        }
+        }, // Added comma here
 
         // Future actions as per WAITLIST_STRATEGY.md:
         // async fetchEntries(hotelId) { /* ... */ }

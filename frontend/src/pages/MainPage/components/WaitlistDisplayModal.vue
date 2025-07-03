@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, watch } from 'vue';
+import { computed, watch } from 'vue'; // defineProps and defineEmits are compiler macros
 import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
