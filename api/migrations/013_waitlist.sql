@@ -3,7 +3,7 @@ CREATE TABLE waitlist_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE, -- Changed INTEGER to UUID
     hotel_id INTEGER NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-    room_type_id INTEGER NOT NULL, -- Cannot add FK to room_types yet as it's partitioned and needs (room_type_id, hotel_id)
+    room_type_id INTEGER,
     requested_check_in_date DATE NOT NULL,
     requested_check_out_date DATE NOT NULL,
     number_of_guests INTEGER NOT NULL CHECK (number_of_guests > 0),
