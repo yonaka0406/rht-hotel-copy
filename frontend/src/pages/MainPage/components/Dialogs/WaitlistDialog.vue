@@ -470,6 +470,22 @@ watch(() => internalForm.value.number_of_rooms, (newValue) => {
   }
 });
 
+// Add watchers for number_of_guests and number_of_rooms to keep them in sync
+watch(() => internalForm.value.number_of_guests, (newGuests) => {
+  if (internalForm.value.number_of_rooms && newGuests < internalForm.value.number_of_rooms) {
+    internalForm.value.number_of_rooms = newGuests > 0 ? newGuests : 1;
+  }
+});
+
+watch(() => internalForm.value.number_of_rooms, (newRooms) => {
+  if (internalForm.value.number_of_guests && newRooms > internalForm.value.number_of_guests) {
+    internalForm.value.number_of_guests = newRooms;
+  }
+  if (newRooms < 1) {
+    internalForm.value.number_of_rooms = 1;
+  }
+});
+
 const handleClose = () => {
   emit('update:visible', false);
 };
