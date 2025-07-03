@@ -24,6 +24,9 @@ const WaitlistEntry = {
     async create(requestId, data, userId) {
         const pool = getPool(requestId);
 
+        // Log the incoming data for debugging
+        console.log('waitlist create data:', data);
+
         // Validate required fields
         const requiredFields = [
             'client_id', 'hotel_id',
