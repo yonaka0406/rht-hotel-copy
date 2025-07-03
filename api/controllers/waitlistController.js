@@ -6,7 +6,7 @@ const {
     validateNonEmptyStringParam
 } = require('../utils/validationUtils');
 const { selectClient } = require('../models/clients'); // To check if client exists
-const { getHotelById } = require('../models/hotel'); // To check if hotel exists
+const { getHotelByID } = require('../models/hotel'); // To check if hotel exists
 const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
 
 const waitlistController = {
@@ -27,7 +27,7 @@ const waitlistController = {
             } = req.body;
 
             // --- Basic Input Validation ---
-            const validatedClientId = validateNumericParam(client_id, 'Client ID');
+            const validatedClientId = validateNonEmptyStringParam(client_id, 'Client ID');
             const validatedHotelId = validateNumericParam(hotel_id, 'Hotel ID');
             const validatedRoomTypeId = validateNumericParam(room_type_id, 'Room Type ID');
             const validatedCheckIn = validateDateStringParam(requested_check_in_date, 'Requested Check-in Date');
@@ -69,7 +69,7 @@ const waitlistController = {
             }
 
             // Verify hotel exists
-            const hotel = await getHotelById(requestId, validatedHotelId);
+            const hotel = await getHotelByID(requestId, validatedHotelId);
             if (!hotel) {
                 return res.status(404).json({ error: `Hotel with ID ${validatedHotelId} not found.` });
             }
