@@ -324,9 +324,8 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';
-    import WaitlistDialog from '@/components/Dialogs/WaitlistDialog.vue'; // Import the new component
-
+    import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';    
+    import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
