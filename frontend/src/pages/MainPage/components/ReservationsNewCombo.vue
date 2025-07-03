@@ -98,20 +98,20 @@
                     </div>
                     <div v-if="validationErrors.length > 0" class="text-red-500 mt-2">
                         <p v-for="(error, index) in validationErrors" :key="index">{{ error }}</p>
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <Button 
+                            v-if="reservationCombos.length > 0 && validationErrors.length === 0" 
+                            label="新規予約" 
+                            icon="pi pi-calendar"                            
+                            @click="openDialog" 
+                        />
                         <Button
                             v-if="reservationCombos.length > 0"
                             label="順番待ち登録"
                             icon="pi pi-users"
-                            class="p-button-warning mt-2"
+                            :class="isWaitlistHighlighted ? 'p-button-danger' : 'p-button-warning'"
                             @click="openWaitlistDialog"
-                        />
-                    </div>
-                    <div v-else>
-                        <Button 
-                            v-if="reservationCombos.length > 0" 
-                            label="新規予約" 
-                            icon="pi pi-calendar"                            
-                            @click="openDialog" 
                         />
                     </div>
                 </template>
@@ -463,6 +463,34 @@
     const minNumberOfPeople = computed(() => {
         return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
     });   
+    
+    // Check if check-in date is today or in the future
+    const isCheckInDateValid = computed(() => {
+        if (!comboRow.value.check_in) return false;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day
+        
+        const checkInDate = new Date(comboRow.value.check_in);
+        checkInDate.setHours(0, 0, 0, 0); // Set to start of day
+        
+        return checkInDate >= today;
+    });
+    
+    // Check if waitlist button should be highlighted (when no rooms available)
+    const isWaitlistHighlighted = computed(() => {
+        if (!reservationCombos.value.length) return false;
+        
+        // Check if any room type has 0 available rooms
+        for (const combo of reservationCombos.value) {
+            const roomData = countOfRoomTypes.value.find(room => room.room_type_id === combo.room_type_id);
+            if (roomData && roomData.quantity === 0) {
+                return true;
+            }
+        }
+        return false;
+    });
+    
     const numberOfRooms = ref(1);
     const numberOfPeople = ref(1);
     const comboRow = ref({
@@ -501,6 +529,22 @@
     // };
 
     // All old waitlist dialog logic (onClientSelectForWaitlist, resetWaitlistClientSelection, watcher, old openWaitlistDialog, closeWaitlistDialog, submitWaitlistEntry) is removed.
+
+    const openWaitlistDialogDirect = () => { // Opens waitlist dialog without requiring reservation combos
+        // Set default values from the current form state
+        waitlistInitialRoomTypeId.value = comboRow.value.room_type_id;
+        waitlistInitialCheckInDate.value = formatDate(comboRow.value.check_in);
+        waitlistInitialCheckOutDate.value = formatDate(comboRow.value.check_out);
+        waitlistInitialNumberOfGuests.value = comboRow.value.number_of_people;
+        waitlistInitialNotes.value = "直接登録";
+        
+        waitlistDialogVisibleState.value = true;
+    };
+
+    // Expose the method to parent component
+    defineExpose({
+        openWaitlistDialogDirect
+    });
 
     const openWaitlistDialog = () => { // This is the new, simplified version for the parent
         if (!reservationCombos.value.length) {

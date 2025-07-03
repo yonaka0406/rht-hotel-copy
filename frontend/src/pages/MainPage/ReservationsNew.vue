@@ -12,12 +12,18 @@
               <span class="font-bold text-xl">新規予約</span>
             </div>
             <div class="flex items-center">
+              <Button
+                label="順番待ち登録"
+                icon="pi pi-users"
+                class="p-button-warning mr-2"
+                @click="openWaitlistDialog"
+              />
               <span class="mr-2">最適化モード</span>
               <ToggleButton v-model="showMinimal" onLabel="オン" offLabel="オフ" size="small" class="min-w-16" />
             </div>
           </div>
           <ReservationsNewMinimal v-if="showMinimal" />
-          <ReservationsNewCombo v-else />
+          <ReservationsNewCombo v-else ref="reservationsNewComboRef" />
         </div>
         <div v-else>
           <p class="text-red-500 font-bold">予約作成の権限がありません。</p>
@@ -38,7 +44,7 @@
   import { useUserStore } from '@/composables/useUserStore';
 
   // Primevue
-  import { Card, ToggleButton } from 'primevue';
+  import { Card, ToggleButton, Button } from 'primevue';
 
   const { logged_user, fetchUser } = useUserStore();
   const isLoadingPermissions = ref(true);
@@ -56,6 +62,13 @@
   });
 
   const showMinimal = ref(false);
+  const reservationsNewComboRef = ref(null);
+
+  const openWaitlistDialog = () => {
+    if (reservationsNewComboRef.value) {
+      reservationsNewComboRef.value.openWaitlistDialogDirect();
+    }
+  };
 
   // This function is not strictly necessary anymore as the toggle button handles its state directly
   // const toggleMinimal = () => {
