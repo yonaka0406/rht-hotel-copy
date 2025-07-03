@@ -13,7 +13,7 @@
                 <!-- Waitlist Icon (New) -->
                 <OverlayBadge :value="waitlistBadgeCount" class="mr-2">
                     <Button class="p-button p-button-text" aria-label="順番待ちリスト" @click="openWaitlistModal">
-                        <i class="pi pi-list" style="font-size:larger" />
+                        <i class="pi pi-calendar-clock" style="font-size:larger" />
                     </Button>
                 </OverlayBadge>
                 
