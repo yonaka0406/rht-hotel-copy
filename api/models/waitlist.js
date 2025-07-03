@@ -130,19 +130,118 @@ const WaitlistEntry = {
      * @returns {Promise<object>} Object containing entries array and pagination info.
      */
     async getByHotel(requestId, hotelId, filters = {}) {
-        // const pool = getPool(requestId); // Will be needed for actual query
-        console.log(`[${requestId}] Skeleton WaitlistEntry.getByHotel called for hotelId: ${hotelId}, filters:`, filters);
-        // TODO: Implement actual database query with filtering, joins, and pagination
-        // For now, return structure expected by the frontend
-        return {
-            entries: [],
-            pagination: {
-                page: filters.page || 1,
-                size: filters.size || 20,
-                total: 0, // Total matching entries
-                totalPages: 0
-            }
-        };
+        const pool = getPool(requestId);
+        console.log(`[${requestId}] WaitlistEntry.getByHotel called for hotelId: ${hotelId}, filters:`, filters);
+
+        const {
+            page = 1,
+            size = 20,
+            status,
+            startDate,
+            endDate,
+            roomTypeId
+        } = filters;
+
+        let queryValues = [];
+        let whereClauses = [];
+
+        // Mandatory hotel_id filter
+        queryValues.push(hotelId);
+        whereClauses.push(`we.hotel_id = $${queryValues.length}`);
+
+        // Optional filters
+        if (status) {
+            queryValues.push(status);
+            whereClauses.push(`we.status = $${queryValues.length}`);
+        }
+        if (roomTypeId) {
+            queryValues.push(roomTypeId);
+            whereClauses.push(`we.room_type_id = $${queryValues.length}`);
+        }
+        if (startDate) {
+            queryValues.push(startDate);
+            // Ensure requests overlap or start after this date
+            whereClauses.push(`we.requested_check_out_date > $${queryValues.length}`);
+        }
+        if (endDate) {
+            queryValues.push(endDate);
+            // Ensure requests overlap or end before this date
+            whereClauses.push(`we.requested_check_in_date < $${queryValues.length}`);
+        }
+        // Date range overlap (if both startDate and endDate are provided)
+        // This logic might need refinement based on exact overlap requirements.
+        // The above individual startDate/endDate clauses handle open-ended ranges.
+        // If a strict "within this period" is needed:
+        // if (startDate && endDate) {
+        //    queryValues.push(startDate, endDate);
+        //    whereClauses.push(`(we.requested_check_in_date, we.requested_check_out_date) OVERLAPS ($${queryValues.length-1}::DATE, $${queryValues.length}::DATE)`);
+        // }
+
+
+        const whereCondition = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+        // Query for total count
+        const countQuery = `
+            SELECT COUNT(*) AS total
+            FROM waitlist_entries we
+            ${whereCondition};
+        `;
+
+        // Query for entries with joins and pagination
+        // Aliasing columns to match frontend expectations (e.g., clientName, roomTypeName)
+        // Assuming client table has name_first, name_last and room_types has name
+        const entriesQuery = `
+            SELECT
+                we.id,
+                we.client_id,
+                c.name_first || ' ' || c.name_last AS "clientName",
+                we.hotel_id,
+                we.room_type_id,
+                rt.name AS "roomTypeName",
+                we.requested_check_in_date,
+                we.requested_check_out_date,
+                to_char(we.requested_check_in_date, 'YYYY/MM/DD') || ' - ' || to_char(we.requested_check_out_date, 'YYYY/MM/DD') AS "requestedDates",
+                we.number_of_guests,
+                we.status,
+                we.notes,
+                we.communication_preference,
+                we.contact_email,
+                we.contact_phone,
+                we.preferred_smoking_status,
+                we.created_at,
+                we.updated_at
+            FROM waitlist_entries we
+            LEFT JOIN clients c ON we.client_id = c.id
+            LEFT JOIN room_types rt ON we.room_type_id = rt.id AND we.hotel_id = rt.hotel_id -- Ensure hotel_id match for partitioned/composite key
+            ${whereCondition}
+            ORDER BY we.created_at ASC -- Or other preferred order
+            LIMIT $${queryValues.length + 1} OFFSET $${queryValues.length + 2};
+        `;
+
+        const limit = parseInt(size, 10);
+        const offset = (parseInt(page, 10) - 1) * limit;
+
+        try {
+            const countResult = await pool.query(countQuery, queryValues);
+            const total = parseInt(countResult.rows[0].total, 10);
+            const totalPages = Math.ceil(total / limit);
+
+            const entriesResult = await pool.query(entriesQuery, [...queryValues, limit, offset]);
+
+            return {
+                entries: entriesResult.rows,
+                pagination: {
+                    page: parseInt(page, 10),
+                    size: limit,
+                    total,
+                    totalPages
+                }
+            };
+        } catch (err) {
+            console.error(`[${requestId}] Error in WaitlistEntry.getByHotel for hotelId ${hotelId}:`, err);
+            // It's good practice to throw a custom error or re-throw
+            throw new Error(`Database error fetching waitlist entries: ${err.message}`);
+        }
     },
 
     // async findByToken(requestId, token, validateExpiry = true) { /* ... */ }
