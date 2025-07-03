@@ -1,1 +1,0 @@
-import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue' 
