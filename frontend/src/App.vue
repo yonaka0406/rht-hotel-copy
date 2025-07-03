@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <Toast />
-    <ConfirmDialog /> {/* Added ConfirmDialog for global use */}
+    <ConfirmDialog />
     <main>
         <router-view></router-view>
     </main>
