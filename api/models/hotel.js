@@ -382,6 +382,23 @@ const updatePlanExclusions = async (requestId, hotel_id, global_plan_ids) => {
   }
 };
 
+const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
+  const pool = getPool(requestId);
+  let query = 'SELECT * FROM room_types WHERE id = $1';
+  let values = [roomTypeId];
+  if (hotelId !== null) {
+    query += ' AND hotel_id = $2';
+    values.push(hotelId);
+  }
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0] || null;
+  } catch (err) {
+    console.error('Error finding room type by id:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   getAllHotels,
   getHotelByID,
@@ -398,4 +415,5 @@ module.exports = {
   getAllRoomsByHotelId,
   getPlanExclusionSettings,
   updatePlanExclusions,
+  getRoomTypeById,
 };
