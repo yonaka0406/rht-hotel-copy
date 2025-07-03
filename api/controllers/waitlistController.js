@@ -22,7 +22,7 @@ const waitlistController = {
             const {
                 client_id, hotel_id, room_type_id,
                 requested_check_in_date, requested_check_out_date,
-                number_of_guests, contact_email, contact_phone,
+                number_of_guests, number_of_rooms, contact_email, contact_phone,
                 notes, communication_preference, preferred_smoking_status // Added preferred_smoking_status
             } = req.body;
 
@@ -91,6 +91,7 @@ const waitlistController = {
                 requested_check_in_date: validatedCheckIn,
                 requested_check_out_date: validatedCheckOut,
                 number_of_guests: validatedNumGuests,
+                number_of_rooms: number_of_rooms, // pass through
                 contact_email: validatedContactEmail, // will be null if not required
                 contact_phone: validatedContactPhone, // will be null if not required
                 notes: notes ? String(notes).trim() : null,
