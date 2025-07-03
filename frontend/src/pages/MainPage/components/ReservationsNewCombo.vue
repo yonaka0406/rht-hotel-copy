@@ -46,20 +46,7 @@
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
-                        <!-- Smoking Preference -->
-                        <label class="font-semibold mb-2 block">喫煙設定</label>
-                        <div class="flex gap-3">
-                            <div v-for="option in smokingPreferenceOptions" :key="option.value" class="flex items-center">
-                            <RadioButton
-                                v-model="selectedSmokingPreference"
-                                :inputId="`combo_smoking_${option.value}`"
-                                name="comboSmokingPreference"
-                                :value="option.value"
-                                @change="onSmokingPreferenceChange"
-                            />
-                            <label :for="`combo_smoking_${option.value}`" class="ml-1">{{ option.label }}</label>
-                            </div>
-                        </div>
+                        <!-- Smoking Preference UI removed -->
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
@@ -476,11 +463,11 @@
         :initialCheckInDate="waitlistInitialCheckInDate"
         :initialCheckOutDate="waitlistInitialCheckOutDate"
         :initialNumberOfGuests="waitlistInitialNumberOfGuests"
-        :initialSmokingPreference="selectedSmokingPreference"
+        <!-- :initialSmokingPreference="selectedSmokingPreference" Removed -->
         :initialNotes="waitlistInitialNotes"
         :allClients="clients"
         :allRoomTypes="roomTypes"
-        :smokingPreferenceOptions="smokingPreferenceOptions"
+        <!-- :smokingPreferenceOptions="smokingPreferenceOptions" Removed -->
         @submitted="handleWaitlistSubmitted"
       />
     </div>
@@ -562,12 +549,7 @@
         }
         return 0;
     });
-    const selectedSmokingPreference = ref('any'); // 'any', 'smoking', 'non_smoking'
-    const smokingPreferenceOptions = ref([
-        { label: '指定なし', value: 'any' },
-        { label: '喫煙', value: 'smoking' },
-        { label: '禁煙', value: 'non_smoking' },
-    ]);
+    // selectedSmokingPreference and smokingPreferenceOptions are removed from here
 
     const roomTypes = computed(() => {
         if(!selectedHotelRooms.value){
@@ -581,18 +563,14 @@
     });
     const countOfRoomTypes = computed(() => {
         if(!availableRooms.value){
-            return []; // Return empty array if no available rooms
+            return [];
         }
         const roomMap = new Map();
 
-        const preferenceFilteredRooms = availableRooms.value.filter(room => {
-            if (selectedSmokingPreference.value === 'any') return room.for_sale;
-            if (selectedSmokingPreference.value === 'smoking') return room.for_sale && room.smoking === true;
-            if (selectedSmokingPreference.value === 'non_smoking') return room.for_sale && room.smoking === false;
-            return false;
-        });
+        // Reverted: Filter by for_sale only, no smoking preference filter here
+        const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
 
-        preferenceFilteredRooms.forEach(({ room_type_id, room_type_name, capacity }) => {
+        forSaleRooms.forEach(({ room_type_id, room_type_name, capacity }) => {
             // All rooms here are already for_sale and match preference
             if (!roomMap.has(room_type_id)) {
                 // Ensure room_type_name is sourced correctly, potentially from selectedHotelRooms if not present on all room objects
@@ -673,11 +651,11 @@
         validateCombos();   // This will validate based on new availability (needs to be preference aware)
     };
 
-    const onSmokingPreferenceChange = async () => {
-        // console.log("Combo smoking preference changed to:", selectedSmokingPreference.value);
-        await checkDates();
-        validateCombos();
-    };
+    // const onSmokingPreferenceChange = async () => { // Removed
+    //     // console.log("Combo smoking preference changed to:", selectedSmokingPreference.value);
+    //     await checkDates();
+    //     validateCombos();
+    // };
 
     // const onClientSelectForWaitlist, resetWaitlistClientSelection, and watcher for client_name_waitlist are moved to WaitlistDialog.vue
 
@@ -768,70 +746,59 @@
             return;
         }
 
-        // Filter all available rooms based on the global smoking preference first
-        const preferenceFilteredOverallRooms = availableRooms.value.filter(room => {
-            if (!room.for_sale) return false;
-            if (selectedSmokingPreference.value === 'any') return true;
-            if (selectedSmokingPreference.value === 'smoking') return room.smoking === true;
-            if (selectedSmokingPreference.value === 'non_smoking') return room.smoking === false;
-            return false;
-        });
+        // Reverted: Validation based on general for_sale rooms
+        const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
 
         for (const roomTypeIdStr in consolidatedCombos.value) {
             const roomTypeId = parseInt(roomTypeIdStr, 10);
             const combo = consolidatedCombos.value[roomTypeId];
 
-            // Further filter for the specific room type being validated
-            const roomsOfThisTypeAndPreference = preferenceFilteredOverallRooms.filter(
+            const roomsOfThisType = forSaleRooms.filter(
                 room => room.room_type_id === roomTypeId
             );
 
-            const availableRoomCount = roomsOfThisTypeAndPreference.length;
-            const availableRoomsForCapacity = roomsOfThisTypeAndPreference.map(r => r.capacity).sort((a, b) => b - a); // Sort descending for optimal fit
+            const availableRoomCount = roomsOfThisType.length;
+            const availableRoomsForCapacity = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
 
             if (combo.totalRooms > availableRoomCount) {
-                validationErrors.value.push(`部屋タイプ ${combo.room_type_name} (${smokingPreferenceOptions.value.find(o=>o.value === selectedSmokingPreference.value).label}) の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
+                // Error message no longer mentions smoking preference
+                validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
             } else {
-                // Check capacity: Assign people to largest available rooms first
                 let peopleToAssign = combo.totalPeople;
                 let roomsUsedCount = 0;
                 for (const capacity of availableRoomsForCapacity) {
-                    if (roomsUsedCount >= combo.totalRooms) break; // Only use up to the number of rooms requested for this type
+                    if (roomsUsedCount >= combo.totalRooms) break;
                     if (peopleToAssign <= 0) break;
                     peopleToAssign -= capacity;
                     roomsUsedCount++;
                 }
-
                 if (peopleToAssign > 0) {
-                    validationErrors.value.push(`部屋タイプ ${combo.room_type_name} (${smokingPreferenceOptions.value.find(o=>o.value === selectedSmokingPreference.value).label}) の人数が部屋のキャパシティを超えています。`);
+                    // Error message no longer mentions smoking preference
+                    validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の人数が部屋のキャパシティを超えています。`);
                 }
             }
         }
 
-        // Update row styles based on validation (this part might need adjustment if individual combo items can have different preferences, but for now global pref)
         reservationCombos.value.forEach(individualCombo => {
-            const comboForValidation = consolidatedCombos.value[individualCombo.room_type_id];
-            if (comboForValidation) { // Check if it exists in consolidated (it should)
-                 const roomsOfThisTypeAndPreference = preferenceFilteredOverallRooms.filter(
-                    room => room.room_type_id === individualCombo.room_type_id
-                );
-                const availableRoomCount = roomsOfThisTypeAndPreference.length;
-                const availableCaps = roomsOfThisTypeAndPreference.map(r => r.capacity).sort((a,b) => b - a);
+            const roomsOfThisType = forSaleRooms.filter(
+                room => room.room_type_id === individualCombo.room_type_id
+            );
+            const availableRoomCount = roomsOfThisType.length;
+            const availableCaps = roomsOfThisType.map(r => r.capacity).sort((a,b) => b - a);
 
-                let peopleRemaining = individualCombo.number_of_people; // Validate this specific combo item's people count
-                let roomsUsed = 0;
-                for(const cap of availableCaps) {
-                    if(roomsUsed >= individualCombo.number_of_rooms) break;
-                    peopleRemaining -= cap;
-                    roomsUsed++;
-                    if(peopleRemaining <=0) break;
-                }
+            let peopleRemaining = individualCombo.number_of_people;
+            let roomsUsed = 0;
+            for(const cap of availableCaps) {
+                if(roomsUsed >= individualCombo.number_of_rooms) break;
+                peopleRemaining -= cap;
+                roomsUsed++;
+                if(peopleRemaining <=0) break;
+            }
 
-                if (individualCombo.number_of_rooms > availableRoomCount || peopleRemaining > 0) {
-                    individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
-                } else {
-                    individualCombo.rowStyle = {};
-                }
+            if (individualCombo.number_of_rooms > availableRoomCount || peopleRemaining > 0) {
+                individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
+            } else {
+                individualCombo.rowStyle = {};
             }
         });
     };
