@@ -69,10 +69,10 @@
             v-model="internalForm.contact_email"
             type="email"
             fluid
-            required
+            :required="internalForm.communication_preference === 'email'"
             :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.email"
           />
-          <label>連絡用メールアドレス *</label>
+          <label>連絡用メールアドレス{{ internalForm.communication_preference === 'email' ? ' *' : '' }}</label>
         </FloatLabel>
       </div>
 
@@ -82,9 +82,10 @@
             v-model="internalForm.contact_phone"
             type="tel"
             fluid
+            :required="internalForm.communication_preference === 'phone'"
             :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.phone"
           />
-          <label>連絡用電話番号</label>
+          <label>連絡用電話番号{{ internalForm.communication_preference === 'phone' ? ' *' : '' }}</label>
         </FloatLabel>
       </div>
 
@@ -357,13 +358,13 @@ const handleSubmit = async () => {
   isLoading.value = true;
   internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value; // Ensure latest is used
 
-  if (!internalForm.value.contact_email) {
-    toast.add({ severity: 'error', summary: '検証エラー', detail: '連絡用メールアドレスは必須です。', life: 3000 });
+  if (internalForm.value.communication_preference === 'email' && !internalForm.value.contact_email) {
+    toast.add({ severity: 'error', summary: '検証エラー', detail: 'メール連絡をご希望の場合は、メールアドレスは必須です。', life: 3000 });
     isLoading.value = false;
     return;
   }
   if (internalForm.value.communication_preference === 'phone' && !internalForm.value.contact_phone) {
-    toast.add({ severity: 'error', summary: '検証エラー', detail: '電話連絡をご希望の場合は、電話番号も必須です。', life: 3000 });
+    toast.add({ severity: 'error', summary: '検証エラー', detail: '電話連絡をご希望の場合は、電話番号は必須です。', life: 3000 });
     isLoading.value = false;
     return;
   }
