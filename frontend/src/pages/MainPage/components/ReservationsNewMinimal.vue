@@ -69,13 +69,20 @@
             <label v-if="selectedCell">部屋タイプ</label>
           </FloatLabel>
         </div>
-        <div class="col-span-1 mt-6">                
+        <div class="col-span-1 mt-6 flex items-center space-x-2">
           <Button 
-            v-if="selectedCell" 
+            v-if="selectedCell && !isRoomUnavailableForSelection()"
             label="新規予約" 
             icon="pi pi-calendar"             
             :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
             @click="openDialog" 
+          />
+          <Button
+            v-if="selectedCell && isRoomUnavailableForSelection()"
+            label="順番待ち登録"
+            icon="pi pi-users"
+            class="p-button-warning"
+            @click="openWaitlistDialog"
           />
         </div>
       </div>
@@ -285,6 +292,159 @@
           <Button label="保存" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
         </template>
       </Dialog>
+
+      <!-- Waitlist Dialog -->
+      <Dialog
+        v-model:visible="waitlistDialogVisible"
+        header="順番待ちリスト登録"
+        :closable="true"
+        :modal="true"
+        :style="{ width: '50vw' }"
+      >
+        <div class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
+          <!-- Client Selection/Creation for Waitlist -->
+          <div class="col-span-2 mb-2">
+            <FloatLabel>
+              <AutoComplete
+                v-model="waitlistForm.client_name_waitlist"
+                :suggestions="filteredClients"
+                optionLabel="display_name"
+                @complete="filterClients"
+                @option-select="onClientSelectForWaitlist"
+                fluid
+                placeholder="既存顧客を検索または新規顧客名を入力"
+              >
+                <template #option="slotProps">
+                  <div>
+                    <p>
+                      <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
+                      <i v-else class="pi pi-user"></i>
+                      {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
+                      <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
+                    </p>
+                     <div class="flex items-center gap-2">
+                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                      <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                    </div>
+                  </div>
+                </template>
+              </AutoComplete>
+              <label>顧客名（検索または新規入力）</label>
+            </FloatLabel>
+          </div>
+
+          <div class="col-span-1" v-if="!isClientSelectedForWaitlist">
+            <SelectButton
+              v-model="waitlistForm.client_legal_or_natural_person_waitlist"
+              :options="personTypeOptions"
+              option-label="label"
+              option-value="value"
+              fluid
+            />
+          </div>
+          <div class="col-span-1" v-if="!isClientSelectedForWaitlist && waitlistForm.client_legal_or_natural_person_waitlist === 'natural'">
+            <div class="flex gap-3">
+              <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
+                <RadioButton
+                  v-model="waitlistForm.client_gender_waitlist"
+                  :inputId="`waitlist_gender_${option.value}`"
+                  :value="option.value"
+                />
+                <label :for="`waitlist_gender_${option.value}`">{{ option.label }}</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-span-2"></div> <!-- Spacer -->
+
+          <!-- Contact Email (Required for waitlist) -->
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText
+                v-model="waitlistForm.contact_email"
+                type="email"
+                fluid
+                required
+                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.email"
+              />
+              <label>連絡用メールアドレス *</label>
+            </FloatLabel>
+          </div>
+
+          <!-- Contact Phone (Optional, but required if preference is phone) -->
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText
+                v-model="waitlistForm.contact_phone"
+                type="tel"
+                fluid
+                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.phone"
+              />
+              <label>連絡用電話番号</label>
+            </FloatLabel>
+          </div>
+
+          <!-- Communication Preference -->
+          <div class="col-span-2">
+            <label class="font-semibold mb-2 block">希望連絡方法 *</label>
+            <div class="flex gap-4">
+              <div class="flex items-center">
+                <RadioButton v-model="waitlistForm.communication_preference" inputId="comm_email_waitlist" value="email" />
+                <label for="comm_email_waitlist" class="ml-2">メール</label>
+              </div>
+              <div class="flex items-center">
+                <RadioButton v-model="waitlistForm.communication_preference" inputId="comm_phone_waitlist" value="phone" />
+                <label for="comm_phone_waitlist" class="ml-2">電話</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="col-span-2">
+            <FloatLabel>
+              <Textarea v-model="waitlistForm.notes" rows="3" fluid />
+              <label>備考</label>
+            </FloatLabel>
+          </div>
+
+          <!-- Display pre-filled data (read-only) -->
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText :value="selectedHotel ? selectedHotel.name : ''" fluid disabled />
+              <label>ホテル</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText :value="selectedCell ? selectedCell.roomTypeName : ''" fluid disabled />
+              <label>部屋タイプ</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText :value="formatDate(inDate)" fluid disabled />
+              <label>希望チェックイン</label>
+            </FloatLabel>
+          </div>
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText :value="formatDate(outDate)" fluid disabled />
+              <label>希望チェックアウト</label>
+            </FloatLabel>
+          </div>
+           <div class="col-span-1">
+            <FloatLabel>
+              <InputNumber :modelValue="numberOfPeople" fluid disabled />
+              <label>人数</label>
+            </FloatLabel>
+          </div>
+
+        </div>
+        <template #footer>
+          <Button label="閉じる" icon="pi pi-times" @click="closeWaitlistDialog" class="p-button-text p-button-danger p-button-sm" />
+          <Button label="登録" icon="pi pi-plus" @click="submitWaitlistEntry" :loading="waitlistStore.loading" class="p-button-text p-button-success p-button-sm" />
+        </template>
+      </Dialog>
       
     </Panel>
     
@@ -303,7 +463,7 @@
   const toast = useToast();
   import Panel from 'primevue/panel';
   import FloatLabel from 'primevue/floatlabel'
-  import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton } from 'primevue';
+  import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton, Textarea } from 'primevue'; // Added Textarea
   import { DataTable, Column } from 'primevue';
   import Dialog from 'primevue/dialog';
   import Button from 'primevue/button'
@@ -312,10 +472,14 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
   import { useClientStore } from '@/composables/useClientStore';
-  const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+  const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore(); // Added createBasicClient
   import { useReservationStore } from '@/composables/useReservationStore';
   const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
+  import { useWaitlistStore } from '@/composables/useWaitlistStore';
   
+  // Stores
+  const waitlistStore = useWaitlistStore();
+
   // Form
   const inDate = ref(new Date());
   const outDate = ref(new Date(inDate.value));  
@@ -345,6 +509,29 @@
 
   // Dialog
   const dialogVisible = ref(false);
+  const waitlistDialogVisible = ref(false); // For waitlist dialog
+  const waitlistForm = ref({
+    client_id: null,
+    hotel_id: null,
+    room_type_id: null,
+    requested_check_in_date: '',
+    requested_check_out_date: '',
+    number_of_guests: 1,
+    contact_email: '',
+    contact_phone: '',
+    communication_preference: 'email', // Default
+    notes: '',
+    // Helper fields for client selection/creation in waitlist form
+    client_name_waitlist: '',
+    client_legal_or_natural_person_waitlist: 'legal',
+    client_gender_waitlist: 'other',
+    client_email_waitlist: '',
+    client_phone_waitlist: ''
+  });
+  const selectedClientForWaitlist = ref(null);
+  const isClientSelectedForWaitlist = ref(false);
+
+
   const reservationDetails = ref({
     hotel_id: null,
     room_type_id: null,
@@ -586,9 +773,22 @@
     return "Unknown";
   };
 
+  const isRoomUnavailableForSelection = () => {
+    if (!selectedCell.value || !generateDateRangeArray.value[selectedCell.value.dateIndex]) {
+      return true; // No cell selected or date data missing
+    }
+    const dateData = generateDateRangeArray.value[selectedCell.value.dateIndex];
+    const roomInfo = dateData.rooms ? dateData.rooms[selectedCell.value.roomTypeId] : null;
+    return !roomInfo || roomInfo.count === 0;
+  };
+
   const isCapacityExceeded = (roomTypeId, dateIndex) => {        
     if (!selectedCell.value || !generateDateRangeArray.value[dateIndex] || !generateDateRangeArray.value[dateIndex].rooms || !generateDateRangeArray.value[dateIndex].rooms[roomTypeId]) {
-      return false; // No data available for this cell
+      return false; // No data available for this cell, or cell not selected for capacity check
+    }
+    // If the room is unavailable, capacity check is irrelevant for reservation (it might be relevant for waitlist though)
+    if (isRoomUnavailableForSelection() && roomTypeId === selectedCell.value.roomTypeId && dateIndex === selectedCell.value.dateIndex) {
+        return false;
     }
     const availableCapacity = generateDateRangeArray.value[dateIndex].rooms[roomTypeId].total_capacity;
     return numberOfPeople.value > availableCapacity;
@@ -601,20 +801,30 @@
     selectedCell.value = { roomTypeId, dateIndex, roomTypeName };
     roomTypeInput.value = roomTypeName;
     
-    const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
-    
-    const endDate = new Date(selectedDate);
-    endDate.setDate(selectedDate.getDate() + numberOfNights.value);
-    inDate.value = selectedDate;
-    outDate.value = endDate;       
-    
+    // Check if the selected date is valid and exists in generateDateRangeArray
+    if (generateDateRangeArray.value && generateDateRangeArray.value[dateIndex] && generateDateRangeArray.value[dateIndex].date) {
+        const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
+
+        const endDate = new Date(selectedDate);
+        endDate.setDate(selectedDate.getDate() + numberOfNights.value); // numberOfNights is computed
+        inDate.value = selectedDate; // This will trigger onDateChange via its watcher if setup that way
+        outDate.value = endDate;     // This will also trigger onDateChange
+    } else {
+        console.warn("Selected cell's date data is invalid or missing.");
+        // Potentially reset inDate/outDate or handle error
+    }
   };
+
   const isSelectedCell = (roomTypeId, dateIndex) => {
     return selectedCell.value && selectedCell.value.roomTypeId === roomTypeId && selectedCell.value.dateIndex === dateIndex;
   };
 
   // Dialog
   const openDialog = () => {
+    if (isRoomUnavailableForSelection()) {
+        toast.add({ severity: 'warn', summary: '予約不可', detail: '選択された部屋タイプと日付では利用可能な部屋がありません。順番待ちリストをご利用ください。', life: 4000 });
+        return;
+    }
     reservationDetails.value.hotel_id = selectedHotelId.value;
     reservationDetails.value.room_type_id = selectedCell.value.roomTypeId;
     dialogVisible.value = true;
@@ -670,6 +880,139 @@
 
     client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
   };
+
+  const onClientSelectForWaitlist = (event) => {
+    selectedClientForWaitlist.value = event.value;
+    isClientSelectedForWaitlist.value = true;
+
+    waitlistForm.value.client_id = selectedClientForWaitlist.value.id;
+    // Pre-fill contact info from selected client
+    waitlistForm.value.contact_email = selectedClientForWaitlist.value.email || '';
+    waitlistForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
+
+    // Update client_name_waitlist for the AutoComplete display
+    waitlistForm.value.client_name_waitlist = selectedClientForWaitlist.value.name_kanji || selectedClientForWaitlist.value.name_kana || selectedClientForWaitlist.value.name;
+  };
+
+  const resetWaitlistClientSelection = () => {
+    selectedClientForWaitlist.value = null;
+    isClientSelectedForWaitlist.value = false;
+    waitlistForm.value.client_id = null;
+    // Don't clear contact_email and contact_phone here, allow user to override
+  };
+
+  // Watch for changes in client_name_waitlist to reset if user clears selection or types new name
+  watch(() => waitlistForm.value.client_name_waitlist, (newName, oldName) => {
+    if (isClientSelectedForWaitlist.value && newName !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) {
+        // If a client was selected, but the name in input changes to something else (not via selection)
+        // it means user is typing a new name or cleared it.
+        if (!newName || newName.trim() === '') { // If input is cleared
+            resetWaitlistClientSelection();
+            waitlistForm.value.contact_email = ''; // Clear prefill only if input is fully cleared
+            waitlistForm.value.contact_phone = '';
+        } else if (oldName && newName !== oldName) { // If user is typing a new name over a selected one
+             resetWaitlistClientSelection();
+        }
+    }
+  });
+
+
+  const openWaitlistDialog = () => {
+    if (!selectedCell.value) {
+      toast.add({ severity: 'warn', summary: '選択エラー', detail: 'まずカレンダーから部屋タイプと日付を選択してください。', life: 3000 });
+      return;
+    }
+    if (!isRoomUnavailableForSelection() && !isCapacityExceeded(selectedCell.value.roomTypeId, selectedCell.value.dateIndex)) {
+       toast.add({ severity: 'info', summary: '予約可能', detail: 'この部屋は現在予約可能です。通常の予約手続きをご利用ください。', life: 4000 });
+      // Optionally, could redirect to openDialog()
+      // openDialog();
+      return;
+    }
+
+    // Reset form fields for new entry, but pre-fill from current selection
+    waitlistForm.value = {
+      client_id: null, // Will be set by selection or new client creation
+      hotel_id: selectedHotelId.value,
+      room_type_id: selectedCell.value.roomTypeId,
+      requested_check_in_date: formatDate(inDate.value),
+      requested_check_out_date: formatDate(outDate.value),
+      number_of_guests: numberOfPeople.value,
+      contact_email: '', // User must fill this or it comes from selected client
+      contact_phone: '', // User must fill this or it comes from selected client
+      communication_preference: 'email',
+      notes: '',
+      client_name_waitlist: '',
+      client_legal_or_natural_person_waitlist: 'legal',
+      client_gender_waitlist: 'other',
+      client_email_waitlist: '', // This is for new client creation within waitlist form
+      client_phone_waitlist: ''  // This is for new client creation
+    };
+    selectedClientForWaitlist.value = null;
+    isClientSelectedForWaitlist.value = false;
+    waitlistDialogVisible.value = true;
+  };
+
+  const closeWaitlistDialog = () => {
+    waitlistDialogVisible.value = false;
+  };
+
+  const submitWaitlistEntry = async () => {
+    // Basic validation
+    if (!waitlistForm.value.contact_email) {
+      toast.add({ severity: 'error', summary: '検証エラー', detail: '連絡用メールアドレスは必須です。', life: 3000 });
+      return;
+    }
+    if (waitlistForm.value.communication_preference === 'phone' && !waitlistForm.value.contact_phone) {
+      toast.add({ severity: 'error', summary: '検証エラー', detail: '電話連絡をご希望の場合は、電話番号も必須です。', life: 3000 });
+      return;
+    }
+
+    let finalClientId = waitlistForm.value.client_id;
+
+    // If no existing client is selected for waitlist, try to create one
+    if (!isClientSelectedForWaitlist.value && waitlistForm.value.client_name_waitlist) {
+        try {
+            const newClient = await createBasicClient(
+                waitlistForm.value.client_name_waitlist,
+                null, // name_kana - not collected in this minimal form, can be enhanced
+                waitlistForm.value.client_legal_or_natural_person_waitlist,
+                waitlistForm.value.client_gender_waitlist,
+                waitlistForm.value.client_email_waitlist || waitlistForm.value.contact_email, // Use contact_email if specific client_email is not provided
+                waitlistForm.value.client_phone_waitlist || waitlistForm.value.contact_phone  // Use contact_phone if specific client_phone is not provided
+            );
+            finalClientId = newClient.client.id;
+            toast.add({ severity: 'info', summary: '顧客作成', detail: `新規顧客「${newClient.client.name}」が作成されました。`, life: 3000 });
+            await fetchClients(1); // Refresh client list for AutoComplete
+        } catch (error) {
+            toast.add({ severity: 'error', summary: '顧客作成エラー', detail: '新規顧客の作成に失敗しました。' + error.message, life: 3000 });
+            return;
+        }
+    } else if (!finalClientId) {
+        toast.add({ severity: 'error', summary: '検証エラー', detail: '顧客を選択するか、新規顧客名を入力してください。', life: 3000 });
+        return;
+    }
+
+    const entryData = {
+      client_id: finalClientId,
+      hotel_id: waitlistForm.value.hotel_id,
+      room_type_id: waitlistForm.value.room_type_id,
+      requested_check_in_date: waitlistForm.value.requested_check_in_date,
+      requested_check_out_date: waitlistForm.value.requested_check_out_date,
+      number_of_guests: waitlistForm.value.number_of_guests,
+      contact_email: waitlistForm.value.contact_email,
+      contact_phone: waitlistForm.value.contact_phone,
+      communication_preference: waitlistForm.value.communication_preference,
+      notes: waitlistForm.value.notes,
+    };
+
+    const result = await waitlistStore.addEntry(entryData);
+    if (result) {
+      closeWaitlistDialog();
+      // Optionally clear fields or refresh some data
+    }
+    // Toast messages are handled by the store
+  };
+
   const submitReservation = async () => {
     // Validate email and phone
     validateEmail();

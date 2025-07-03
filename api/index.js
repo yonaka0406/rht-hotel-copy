@@ -227,6 +227,7 @@ const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
+const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -246,6 +247,7 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
+app.use('/api/waitlist', waitlistRoutes); // Use waitlist routes with /api/waitlist prefix
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
