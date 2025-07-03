@@ -56,23 +56,7 @@
             <label>宿泊数</label>
           </FloatLabel>
         </div>
-        <!-- Smoking Preference -->
         <div class="col-span-1 mt-6">
-          <label class="font-semibold mb-2 block">喫煙設定</label>
-          <div class="flex gap-3">
-            <div v-for="option in smokingPreferenceOptions" :key="option.value" class="flex items-center">
-              <RadioButton
-                v-model="selectedSmokingPreference"
-                :inputId="`smoking_${option.value}`"
-                name="smokingPreference"
-                :value="option.value"
-                @change="onPreferenceChange"
-              />
-              <label :for="`smoking_${option.value}`" class="ml-1">{{ option.label }}</label>
-            </div>
-          </div>
-        </div>
-         <div class="col-span-1 mt-6"> <!-- This div is for roomTypeInput, adjusted grid if smoking pref takes a spot -->
           <FloatLabel>
             <InputText
               v-if="selectedCell"  
@@ -85,20 +69,13 @@
             <label v-if="selectedCell">部屋タイプ</label>
           </FloatLabel>
         </div>
-        <div class="col-span-1 mt-6 flex items-center space-x-2"> <!-- This div is for buttons -->
+        <div class="col-span-1 mt-6">
           <Button 
-            v-if="selectedCell && !isRoomUnavailableForSelection(selectedSmokingPreference)"
+            v-if="selectedCell"
             label="新規予約" 
             icon="pi pi-calendar"             
-            :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex, selectedSmokingPreference)"
+            :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
             @click="openDialog" 
-          />
-          <Button
-            v-if="selectedCell && isRoomUnavailableForSelection(selectedSmokingPreference)"
-            label="順番待ち登録"
-            icon="pi pi-users"
-            class="p-button-warning"
-            @click="openWaitlistDialog"
           />
         </div>
       </div>
@@ -120,11 +97,11 @@
           </thead>
           <tbody>
             <tr
-                v-for="(roomTypeId, roomIndex) in extractRoomTypes(generateDateRangeArray, selectedSmokingPreference)"
+                v-for="(roomTypeId, roomIndex) in extractRoomTypes(generateDateRangeArray)"
                 :key="roomIndex"
             >
               <td class="px-4 py-2 text-center font-bold bg-white sticky left-0 z-10">
-                  {{ getRoomTypeName(roomTypeId, generateDateRangeArray, selectedSmokingPreference) }}
+                  {{ getRoomTypeName(roomTypeId, generateDateRangeArray) }}
               </td>
               <td
                   v-for="(dateData, dateIndex) in generateDateRangeArray"
@@ -134,7 +111,7 @@
                   :class="{
                   'bg-blue-100': isSelectedCell(roomTypeId, dateIndex),
                   'cursor-pointer': true,                  
-                  'bg-red-100': isCapacityExceeded(roomTypeId, dateIndex, selectedSmokingPreference)
+                  'bg-red-100': isCapacityExceeded(roomTypeId, dateIndex)
                 }"
               >
                   <div v-if="dateData.rooms && dateData.rooms[roomTypeId]">
@@ -308,165 +285,6 @@
           <Button label="保存" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
         </template>
       </Dialog>
-
-      <!-- Waitlist Dialog -->
-      <Dialog
-        v-model:visible="waitlistDialogVisible"
-        header="順番待ちリスト登録"
-        :closable="true"
-        :modal="true"
-        :style="{ width: '50vw' }"
-      >
-        <div class="grid grid-cols-2 gap-x-4 gap-y-6 pt-6">
-          <!-- Client Selection/Creation for Waitlist -->
-          <div class="col-span-2 mb-2">
-            <FloatLabel>
-              <AutoComplete
-                v-model="waitlistForm.client_name_waitlist"
-                :suggestions="filteredClients"
-                optionLabel="display_name"
-                @complete="filterClients"
-                @option-select="onClientSelectForWaitlist"
-                fluid
-                placeholder="既存顧客を検索または新規顧客名を入力"
-              >
-                <template #option="slotProps">
-                  <div>
-                    <p>
-                      <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                      <i v-else class="pi pi-user"></i>
-                      {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                      <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                    </p>
-                     <div class="flex items-center gap-2">
-                      <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                      <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                    </div>
-                  </div>
-                </template>
-              </AutoComplete>
-              <label>顧客名（検索または新規入力）</label>
-            </FloatLabel>
-          </div>
-
-          <div class="col-span-1" v-if="!isClientSelectedForWaitlist">
-            <SelectButton
-              v-model="waitlistForm.client_legal_or_natural_person_waitlist"
-              :options="personTypeOptions"
-              option-label="label"
-              option-value="value"
-              fluid
-            />
-          </div>
-          <div class="col-span-1" v-if="!isClientSelectedForWaitlist && waitlistForm.client_legal_or_natural_person_waitlist === 'natural'">
-            <div class="flex gap-3">
-              <div v-for="option in genderOptions" :key="option.value" class="flex items-center gap-2">
-                <RadioButton
-                  v-model="waitlistForm.client_gender_waitlist"
-                  :inputId="`waitlist_gender_${option.value}`"
-                  :value="option.value"
-                />
-                <label :for="`waitlist_gender_${option.value}`">{{ option.label }}</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-span-2"></div> <!-- Spacer -->
-
-          <!-- Contact Email (Required for waitlist) -->
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText
-                v-model="waitlistForm.contact_email"
-                type="email"
-                fluid
-                required
-                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.email"
-              />
-              <label>連絡用メールアドレス *</label>
-            </FloatLabel>
-          </div>
-
-          <!-- Contact Phone (Optional, but required if preference is phone) -->
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText
-                v-model="waitlistForm.contact_phone"
-                type="tel"
-                fluid
-                :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.phone"
-              />
-              <label>連絡用電話番号</label>
-            </FloatLabel>
-          </div>
-
-          <!-- Communication Preference -->
-          <div class="col-span-2">
-            <label class="font-semibold mb-2 block">希望連絡方法 *</label>
-            <div class="flex gap-4">
-              <div class="flex items-center">
-                <RadioButton v-model="waitlistForm.communication_preference" inputId="comm_email_waitlist" value="email" />
-                <label for="comm_email_waitlist" class="ml-2">メール</label>
-              </div>
-              <div class="flex items-center">
-                <RadioButton v-model="waitlistForm.communication_preference" inputId="comm_phone_waitlist" value="phone" />
-                <label for="comm_phone_waitlist" class="ml-2">電話</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- Notes -->
-          <div class="col-span-2">
-            <FloatLabel>
-              <Textarea v-model="waitlistForm.notes" rows="3" fluid />
-              <label>備考</label>
-            </FloatLabel>
-          </div>
-
-          <!-- Display pre-filled data (read-only) -->
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="selectedHotel ? selectedHotel.name : ''" fluid disabled />
-              <label>ホテル</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="selectedCell ? selectedCell.roomTypeName : ''" fluid disabled />
-              <label>部屋タイプ</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="formatDate(inDate)" fluid disabled />
-              <label>希望チェックイン</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="formatDate(outDate)" fluid disabled />
-              <label>希望チェックアウト</label>
-            </FloatLabel>
-          </div>
-           <div class="col-span-1">
-            <FloatLabel>
-              <InputNumber :modelValue="numberOfPeople" fluid disabled />
-              <label>人数</label>
-            </FloatLabel>
-          </div>
-          <div class="col-span-1">
-            <FloatLabel>
-              <InputText :value="smokingPreferenceOptions.find(o => o.value === waitlistForm.preferred_smoking_status)?.label || '指定なし'" fluid disabled />
-              <label>喫煙設定の希望</label>
-            </FloatLabel>
-          </div>
-
-        </div>
-        <template #footer>
-          <Button label="閉じる" icon="pi pi-times" @click="closeWaitlistDialog" class="p-button-text p-button-danger p-button-sm" />
-          <Button label="登録" icon="pi pi-plus" @click="submitWaitlistEntry" :loading="waitlistStore.loading" class="p-button-text p-button-success p-button-sm" />
-        </template>
-      </Dialog>
       
     </Panel>
     
@@ -485,7 +303,7 @@
   const toast = useToast();
   import Panel from 'primevue/panel';
   import FloatLabel from 'primevue/floatlabel'
-  import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton, Textarea } from 'primevue'; // Added Textarea
+  import { DatePicker, InputNumber, InputText, AutoComplete, Select, SelectButton, RadioButton } from 'primevue';
   import { DataTable, Column } from 'primevue';
   import Dialog from 'primevue/dialog';
   import Button from 'primevue/button'
@@ -494,14 +312,10 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
   import { useClientStore } from '@/composables/useClientStore';
-  const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore(); // Added createBasicClient
+  const { clients, fetchClients, setClientsIsLoading } = useClientStore();
   import { useReservationStore } from '@/composables/useReservationStore';
   const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
-  import { useWaitlistStore } from '@/composables/useWaitlistStore';
   
-  // Stores
-  const waitlistStore = useWaitlistStore();
-
   // Form
   const inDate = ref(new Date());
   const outDate = ref(new Date(inDate.value));  
@@ -514,12 +328,6 @@
   const numberOfPeople = ref(1); 
   const selectedCell = ref(null);
   const roomTypeInput = ref('');
-  const selectedSmokingPreference = ref('any'); // 'any', 'smoking', 'non_smoking'
-  const smokingPreferenceOptions = ref([
-    { label: '指定なし', value: 'any' },
-    { label: '喫煙', value: 'smoking' },
-    { label: '禁煙', value: 'non_smoking' },
-  ]);
   const loading = ref(false);
   const numberOfNights = computed(() => {
       if (inDate && outDate) {
@@ -537,30 +345,6 @@
 
   // Dialog
   const dialogVisible = ref(false);
-  const waitlistDialogVisible = ref(false); // For waitlist dialog
-  const waitlistForm = ref({
-    client_id: null,
-    hotel_id: null,
-    room_type_id: null,
-    requested_check_in_date: '',
-    requested_check_out_date: '',
-    number_of_guests: 1,
-    contact_email: '',
-    contact_phone: '',
-    communication_preference: 'email', // Default
-    notes: '',
-    // Helper fields for client selection/creation in waitlist form
-    client_name_waitlist: '',
-    client_legal_or_natural_person_waitlist: 'legal',
-    client_gender_waitlist: 'other',
-    client_email_waitlist: '',
-    client_phone_waitlist: '',
-    preferred_smoking_status: 'any' // New field for smoking preference
-  });
-  const selectedClientForWaitlist = ref(null);
-  const isClientSelectedForWaitlist = ref(false);
-
-
   const reservationDetails = ref({
     hotel_id: null,
     room_type_id: null,
@@ -599,14 +383,6 @@
   const maxDate = ref(null);
         
   const reservation_id = computed(() => reservationId.value);
-
-  const onPreferenceChange = async () => {
-    // This function will be called when smoking preference changes.
-    // It should re-trigger the availability calculation and rendering.
-    // Similar to onDateChange, it should clear caches and re-fetch/re-process.
-    console.log("Smoking preference changed to:", selectedSmokingPreference.value);
-    await onDateChange(); // Re-use onDateChange to refresh the calendar display
-  };
       
   // Helper function
   const formatDate = (date) => {
@@ -678,7 +454,7 @@
   };
   const fetchRooms = async () => {        
     const fetchPromises = dateRange.value
-      .filter(date => !roomDataCache.value.has(`${date}_${selectedSmokingPreference.value}`)) // Use preference in cache key
+      .filter(date => !roomDataCache.value.has(date)) // Filter dates not yet fetched
       .map(date => {
         const startDate = new Date(date);
         const endDate = new Date(date);
@@ -689,60 +465,28 @@
 
         return fetchAvailableRooms(selectedHotelId.value, formattedStartDate, formattedEndDate)
           .then(() => {
-            // Filter availableRooms by selectedSmokingPreference before reducing
-            const filteredForPreference = availableRooms.value.filter(room => {
-              if (selectedSmokingPreference.value === 'any') return true;
-              return selectedSmokingPreference.value === 'smoking' ? room.smoking === true : room.smoking === false;
-            });
-
-            const roomTypesData = filteredForPreference.reduce((acc, room) => {
+            const roomTypesData = availableRooms.value.reduce((acc, room) => {
               const { room_type_id, capacity } = room;
 
               if (!acc[room_type_id]) {
                 acc[room_type_id] = {
-                  room_type_name: room.room_type_name, // Make sure room_type_name is consistent
+                  room_type_name: room.room_type_name,
                   count: 0,
                   total_capacity: 0,
                 };
               }
-              // Ensure room_type_name is taken from the first encountered room of that type,
-              // as filteredForPreference might be empty for a type if no rooms match the preference.
-              if (!acc[room_type_id].room_type_name && room.room_type_name) {
-                  acc[room_type_id].room_type_name = room.room_type_name;
-              }
 
               acc[room_type_id].count += 1;
               acc[room_type_id].total_capacity += capacity;
+
               return acc;
             }, {});
 
-            // To ensure all room types are displayed even if they have 0 availability for the preference,
-            // we can get a unique list of all room types from the original availableRooms.value (or selectedHotelRooms.value)
-            // and merge it with roomTypesData.
-            const allRoomTypeIdsInHotel = [...new Set(availableRooms.value.map(r => r.room_type_id))];
-            allRoomTypeIdsInHotel.forEach(rtId => {
-                if (!roomTypesData[rtId]) {
-                    const originalRoom = availableRooms.value.find(r => r.room_type_id === rtId);
-                    roomTypesData[rtId] = {
-                        room_type_name: originalRoom ? originalRoom.room_type_name : 'Unknown',
-                        count: 0,
-                        total_capacity: 0
-                    };
-                } else if (!roomTypesData[rtId].room_type_name) {
-                    // If filtered list was empty for this type, but type exists, get name
-                    const originalRoom = availableRooms.value.find(r => r.room_type_id === rtId);
-                    if (originalRoom) roomTypesData[rtId].room_type_name = originalRoom.room_type_name;
-                }
-            });
-
-
-            // Key for cache should now include preference to avoid conflicts if user changes preference
-            const cacheKey = `${date}_${selectedSmokingPreference.value}`;
-            roomDataCache.value.set(cacheKey, { date: formattedStartDate, rooms: roomTypesData });
-            return { date: formattedStartDate, rooms: roomTypesData }; // This structure is used by generateDateRangeArray
+            roomDataCache.value.set(date, { date: formattedStartDate, rooms: roomTypesData }); // Cache result
+            return { date: formattedStartDate, rooms: roomTypesData };
           })
           .catch(error => {
-            console.error(`Error fetching data for date ${formattedStartDate} with preference ${selectedSmokingPreference.value}:`, error);
+            console.error(`Error fetching data for date ${formattedStartDate}:`, error);
             return { date: formattedStartDate, rooms: {} };
           });
       });
@@ -820,110 +564,34 @@
 
   };
 
-  const extractRoomTypes = (dataArray, preference = selectedSmokingPreference.value) => {
-    const roomTypeIds = new Set();
-    // Use selectedHotelRooms as the primary source of all unique room types for the hotel
-    if (selectedHotelRooms.value && selectedHotelRooms.value.length > 0) {
-        selectedHotelRooms.value.forEach(roomDetail => {
-            // Assuming selectedHotelRooms contains items with room_type_id
-            // This ensures all defined room types for the hotel are considered for display.
-            if(roomDetail.room_type_id) roomTypeIds.add(String(roomDetail.room_type_id));
-        });
+  const extractRoomTypes = (data) => {
+    return data.reduce((acc, dateData) => {
+      for (const roomTypeId in dateData.rooms) {
+        if (!acc.includes(roomTypeId)) acc.push(roomTypeId);
+      }
+      return acc;
+    }, []);
+  };
+  const getRoomTypeName = (roomTypeId, array) => {
+    if (!Array.isArray(array)) {
+      console.error('Expected array but got:', typeof array);
+      return 'Unknown'; // Return default value if not an array
     }
-    // Additionally, iterate through dataArray (which is generateDateRangeArray)
-    // to ensure any room types dynamically appearing in availability data (if any) are caught,
-    // though ideally selectedHotelRooms should be comprehensive.
-    dataArray.forEach(dateData => {
-        const cacheKey = `${dateData.date}_${preference}`;
-        const cachedRoomsForDateAndPref = roomDataCache.value.get(cacheKey)?.rooms;
-        if (cachedRoomsForDateAndPref) {
-            for (const roomTypeId in cachedRoomsForDateAndPref) {
-                roomTypeIds.add(String(roomTypeId));
-            }
-        } else if (dateData.rooms) { // Fallback to non-preference specific if cache miss (should be rare)
-            for (const roomTypeId in dateData.rooms) {
-                roomTypeIds.add(String(roomTypeId));
-            }
-        }
-    });
-    return Array.from(roomTypeIds).sort((a,b) => Number(a) - Number(b));
+    for (const dateData of array) {
+      if (dateData.rooms && dateData.rooms[roomTypeId]) {
+        return dateData.rooms[roomTypeId].room_type_name;
+      }
+    }
+
+    return "Unknown";
   };
 
-  const getRoomTypeName = (roomTypeId, dataArray, preference = selectedSmokingPreference.value) => {
-    // Attempt to get from cached data first for the current preference
-    for (const dateData of dataArray) {
-        const cacheKey = `${dateData.date}_${preference}`;
-        const cachedRoomsForDateAndPref = roomDataCache.value.get(cacheKey)?.rooms;
-        if (cachedRoomsForDateAndPref && cachedRoomsForDateAndPref[roomTypeId] && cachedRoomsForDateAndPref[roomTypeId].room_type_name) {
-            return cachedRoomsForDateAndPref[roomTypeId].room_type_name;
-        }
+  const isCapacityExceeded = (roomTypeId, dateIndex) => {
+    if (!selectedCell.value || !generateDateRangeArray.value[dateIndex] || !generateDateRangeArray.value[dateIndex].rooms || !generateDateRangeArray.value[dateIndex].rooms[roomTypeId]) {
+      return false; // No data available for this cell
     }
-    // Fallback: If not in cache for preference, try to find it in the general selectedHotelRooms data
-    if (selectedHotelRooms.value) {
-        const roomTypeInfo = selectedHotelRooms.value.find(rt => String(rt.room_type_id) === String(roomTypeId));
-        if (roomTypeInfo && roomTypeInfo.room_type_name) return roomTypeInfo.room_type_name;
-    }
-    // Fallback: check any entry in generateDateRangeArray (less ideal as it might not be preference specific)
-     for (const dateData of dataArray) {
-        if (dateData.rooms && dateData.rooms[roomTypeId] && dateData.rooms[roomTypeId].room_type_name) {
-            return dateData.rooms[roomTypeId].room_type_name;
-        }
-    }
-    return "不明なタイプ"; // Unknown Type
-  };
-
-  const isRoomUnavailableForSelection = (preference = selectedSmokingPreference.value) => {
-    if (!selectedCell.value ||
-        !generateDateRangeArray.value[selectedCell.value.dateIndex] ||
-        !generateDateRangeArray.value[selectedCell.value.dateIndex].date) {
-      // This check is to ensure we are looking at a valid, populated part of generateDateRangeArray
-      return true;
-    }
-
-    const dateStr = generateDateRangeArray.value[selectedCell.value.dateIndex].date;
-    const cacheKey = `${dateStr}_${preference}`;
-    const cachedData = roomDataCache.value.get(cacheKey);
-
-    if (!cachedData || !cachedData.rooms) {
-        // If data for this specific date and preference isn't processed and cached yet,
-        // it implies we might not have accurate info. For safety, assume unavailable or trigger re-fetch.
-        // However, generateDateRangeArray should be populated by fetchRooms which uses the cacheKey.
-        // This path suggests an inconsistency if generateDateRangeArray is populated but cache is missing for that key.
-        // For now, let's rely on generateDateRangeArray's direct content if cache seems out of sync.
-        const dateData = generateDateRangeArray.value[selectedCell.value.dateIndex];
-        const roomInfo = dateData.rooms ? dateData.rooms[selectedCell.value.roomTypeId] : null;
-        return !roomInfo || roomInfo.count === 0;
-    }
-
-    const roomInfo = cachedData.rooms[selectedCell.value.roomTypeId];
-    return !roomInfo || roomInfo.count === 0;
-  };
-
-  const isCapacityExceeded = (roomTypeId, dateIndex, preference = selectedSmokingPreference.value) => {
-    if (!selectedCell.value ||
-        !generateDateRangeArray.value[dateIndex] ||
-        !generateDateRangeArray.value[dateIndex].date) {
-      return false;
-    }
-
-    const dateStr = generateDateRangeArray.value[dateIndex].date;
-    const cacheKey = `${dateStr}_${preference}`;
-    const cachedData = roomDataCache.value.get(cacheKey);
-
-    if (!cachedData || !cachedData.rooms || !cachedData.rooms[roomTypeId]) {
-        // Similar to above, if specific preference data is missing, assume capacity cannot be confirmed.
-        // Or, use generateDateRangeArray as a fallback.
-        const dateDataFallback = generateDateRangeArray.value[dateIndex];
-        const roomInfoFallback = dateDataFallback.rooms ? dateDataFallback.rooms[roomTypeId] : null;
-        if (!roomInfoFallback || roomInfoFallback.count === 0) return false; // No rooms, so not exceeding capacity of 0.
-        return numberOfPeople.value > roomInfoFallback.total_capacity;
-    }
-
-    const roomInfo = cachedData.rooms[roomTypeId];
-    if (roomInfo.count === 0) {
-        return false; // Not exceeding capacity if there are no rooms of this preference.
-    }
-    return numberOfPeople.value > roomInfo.total_capacity;
+    const availableCapacity = generateDateRangeArray.value[dateIndex].rooms[roomTypeId].total_capacity;
+    return numberOfPeople.value > availableCapacity;
   };
 
   // Select cell
@@ -933,30 +601,20 @@
     selectedCell.value = { roomTypeId, dateIndex, roomTypeName };
     roomTypeInput.value = roomTypeName;
     
-    // Check if the selected date is valid and exists in generateDateRangeArray
-    if (generateDateRangeArray.value && generateDateRangeArray.value[dateIndex] && generateDateRangeArray.value[dateIndex].date) {
-        const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
+    const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
 
-        const endDate = new Date(selectedDate);
-        endDate.setDate(selectedDate.getDate() + numberOfNights.value); // numberOfNights is computed
-        inDate.value = selectedDate; // This will trigger onDateChange via its watcher if setup that way
-        outDate.value = endDate;     // This will also trigger onDateChange
-    } else {
-        console.warn("Selected cell's date data is invalid or missing.");
-        // Potentially reset inDate/outDate or handle error
-    }
+    const endDate = new Date(selectedDate);
+    endDate.setDate(selectedDate.getDate() + numberOfNights.value);
+    inDate.value = selectedDate;
+    outDate.value = endDate;
+
   };
-
   const isSelectedCell = (roomTypeId, dateIndex) => {
     return selectedCell.value && selectedCell.value.roomTypeId === roomTypeId && selectedCell.value.dateIndex === dateIndex;
   };
 
   // Dialog
   const openDialog = () => {
-    if (isRoomUnavailableForSelection()) {
-        toast.add({ severity: 'warn', summary: '予約不可', detail: '選択された部屋タイプと日付では利用可能な部屋がありません。順番待ちリストをご利用ください。', life: 4000 });
-        return;
-    }
     reservationDetails.value.hotel_id = selectedHotelId.value;
     reservationDetails.value.room_type_id = selectedCell.value.roomTypeId;
     dialogVisible.value = true;
@@ -1012,141 +670,6 @@
 
     client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
   };
-
-  const onClientSelectForWaitlist = (event) => {
-    selectedClientForWaitlist.value = event.value;
-    isClientSelectedForWaitlist.value = true;
-
-    waitlistForm.value.client_id = selectedClientForWaitlist.value.id;
-    // Pre-fill contact info from selected client
-    waitlistForm.value.contact_email = selectedClientForWaitlist.value.email || '';
-    waitlistForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
-
-    // Update client_name_waitlist for the AutoComplete display
-    waitlistForm.value.client_name_waitlist = selectedClientForWaitlist.value.name_kanji || selectedClientForWaitlist.value.name_kana || selectedClientForWaitlist.value.name;
-  };
-
-  const resetWaitlistClientSelection = () => {
-    selectedClientForWaitlist.value = null;
-    isClientSelectedForWaitlist.value = false;
-    waitlistForm.value.client_id = null;
-    // Don't clear contact_email and contact_phone here, allow user to override
-  };
-
-  // Watch for changes in client_name_waitlist to reset if user clears selection or types new name
-  watch(() => waitlistForm.value.client_name_waitlist, (newName, oldName) => {
-    if (isClientSelectedForWaitlist.value && newName !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) {
-        // If a client was selected, but the name in input changes to something else (not via selection)
-        // it means user is typing a new name or cleared it.
-        if (!newName || newName.trim() === '') { // If input is cleared
-            resetWaitlistClientSelection();
-            waitlistForm.value.contact_email = ''; // Clear prefill only if input is fully cleared
-            waitlistForm.value.contact_phone = '';
-        } else if (oldName && newName !== oldName) { // If user is typing a new name over a selected one
-             resetWaitlistClientSelection();
-        }
-    }
-  });
-
-
-  const openWaitlistDialog = () => {
-    if (!selectedCell.value) {
-      toast.add({ severity: 'warn', summary: '選択エラー', detail: 'まずカレンダーから部屋タイプと日付を選択してください。', life: 3000 });
-      return;
-    }
-    if (!isRoomUnavailableForSelection() && !isCapacityExceeded(selectedCell.value.roomTypeId, selectedCell.value.dateIndex)) {
-       toast.add({ severity: 'info', summary: '予約可能', detail: 'この部屋は現在予約可能です。通常の予約手続きをご利用ください。', life: 4000 });
-      // Optionally, could redirect to openDialog()
-      // openDialog();
-      return;
-    }
-
-    // Reset form fields for new entry, but pre-fill from current selection
-    waitlistForm.value = {
-      client_id: null, // Will be set by selection or new client creation
-      hotel_id: selectedHotelId.value,
-      room_type_id: selectedCell.value.roomTypeId,
-      requested_check_in_date: formatDate(inDate.value),
-      requested_check_out_date: formatDate(outDate.value),
-      number_of_guests: numberOfPeople.value,
-      contact_email: '', // User must fill this or it comes from selected client
-      contact_phone: '', // User must fill this or it comes from selected client
-      communication_preference: 'email',
-      notes: '',
-      client_name_waitlist: '',
-      client_legal_or_natural_person_waitlist: 'legal',
-      client_gender_waitlist: 'other',
-      client_email_waitlist: '',
-      client_phone_waitlist: '',
-      preferred_smoking_status: selectedSmokingPreference.value // Pre-fill with current selection
-    };
-    selectedClientForWaitlist.value = null;
-    isClientSelectedForWaitlist.value = false;
-    waitlistDialogVisible.value = true;
-  };
-
-  const closeWaitlistDialog = () => {
-    waitlistDialogVisible.value = false;
-  };
-
-  const submitWaitlistEntry = async () => {
-    // Basic validation
-    if (!waitlistForm.value.contact_email) {
-      toast.add({ severity: 'error', summary: '検証エラー', detail: '連絡用メールアドレスは必須です。', life: 3000 });
-      return;
-    }
-    if (waitlistForm.value.communication_preference === 'phone' && !waitlistForm.value.contact_phone) {
-      toast.add({ severity: 'error', summary: '検証エラー', detail: '電話連絡をご希望の場合は、電話番号も必須です。', life: 3000 });
-      return;
-    }
-
-    let finalClientId = waitlistForm.value.client_id;
-
-    // If no existing client is selected for waitlist, try to create one
-    if (!isClientSelectedForWaitlist.value && waitlistForm.value.client_name_waitlist) {
-        try {
-            const newClient = await createBasicClient(
-                waitlistForm.value.client_name_waitlist,
-                null, // name_kana - not collected in this minimal form, can be enhanced
-                waitlistForm.value.client_legal_or_natural_person_waitlist,
-                waitlistForm.value.client_gender_waitlist,
-                waitlistForm.value.client_email_waitlist || waitlistForm.value.contact_email, // Use contact_email if specific client_email is not provided
-                waitlistForm.value.client_phone_waitlist || waitlistForm.value.contact_phone  // Use contact_phone if specific client_phone is not provided
-            );
-            finalClientId = newClient.client.id;
-            toast.add({ severity: 'info', summary: '顧客作成', detail: `新規顧客「${newClient.client.name}」が作成されました。`, life: 3000 });
-            await fetchClients(1); // Refresh client list for AutoComplete
-        } catch (error) {
-            toast.add({ severity: 'error', summary: '顧客作成エラー', detail: '新規顧客の作成に失敗しました。' + error.message, life: 3000 });
-            return;
-        }
-    } else if (!finalClientId) {
-        toast.add({ severity: 'error', summary: '検証エラー', detail: '顧客を選択するか、新規顧客名を入力してください。', life: 3000 });
-        return;
-    }
-
-    const entryData = {
-      client_id: finalClientId,
-      hotel_id: waitlistForm.value.hotel_id,
-      room_type_id: waitlistForm.value.room_type_id,
-      requested_check_in_date: waitlistForm.value.requested_check_in_date,
-      requested_check_out_date: waitlistForm.value.requested_check_out_date,
-      number_of_guests: waitlistForm.value.number_of_guests,
-      contact_email: waitlistForm.value.contact_email,
-      contact_phone: waitlistForm.value.contact_phone,
-      communication_preference: waitlistForm.value.communication_preference,
-      notes: waitlistForm.value.notes,
-      preferred_smoking_status: waitlistForm.value.preferred_smoking_status // Include preference
-    };
-
-    const result = await waitlistStore.addEntry(entryData);
-    if (result) {
-      closeWaitlistDialog();
-      // Optionally clear fields or refresh some data
-    }
-    // Toast messages are handled by the store
-  };
-
   const submitReservation = async () => {
     // Validate email and phone
     validateEmail();
