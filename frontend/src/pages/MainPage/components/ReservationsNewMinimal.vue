@@ -56,7 +56,23 @@
             <label>宿泊数</label>
           </FloatLabel>
         </div>
+        <!-- Smoking Preference -->
         <div class="col-span-1 mt-6">
+          <label class="font-semibold mb-2 block">喫煙設定</label>
+          <div class="flex gap-3">
+            <div v-for="option in smokingPreferenceOptions" :key="option.value" class="flex items-center">
+              <RadioButton
+                v-model="selectedSmokingPreference"
+                :inputId="`smoking_${option.value}`"
+                name="smokingPreference"
+                :value="option.value"
+                @change="onPreferenceChange"
+              />
+              <label :for="`smoking_${option.value}`" class="ml-1">{{ option.label }}</label>
+            </div>
+          </div>
+        </div>
+         <div class="col-span-1 mt-6"> <!-- This div is for roomTypeInput, adjusted grid if smoking pref takes a spot -->
           <FloatLabel>
             <InputText
               v-if="selectedCell"  
@@ -69,16 +85,16 @@
             <label v-if="selectedCell">部屋タイプ</label>
           </FloatLabel>
         </div>
-        <div class="col-span-1 mt-6 flex items-center space-x-2">
+        <div class="col-span-1 mt-6 flex items-center space-x-2"> <!-- This div is for buttons -->
           <Button 
-            v-if="selectedCell && !isRoomUnavailableForSelection()"
+            v-if="selectedCell && !isRoomUnavailableForSelection(selectedSmokingPreference)"
             label="新規予約" 
             icon="pi pi-calendar"             
-            :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
+            :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex, selectedSmokingPreference)"
             @click="openDialog" 
           />
           <Button
-            v-if="selectedCell && isRoomUnavailableForSelection()"
+            v-if="selectedCell && isRoomUnavailableForSelection(selectedSmokingPreference)"
             label="順番待ち登録"
             icon="pi pi-users"
             class="p-button-warning"
@@ -104,11 +120,11 @@
           </thead>
           <tbody>
             <tr
-                v-for="(roomTypeId, roomIndex) in extractRoomTypes(generateDateRangeArray)"
+                v-for="(roomTypeId, roomIndex) in extractRoomTypes(generateDateRangeArray, selectedSmokingPreference)"
                 :key="roomIndex"
             >
               <td class="px-4 py-2 text-center font-bold bg-white sticky left-0 z-10">
-                  {{ getRoomTypeName(roomTypeId, generateDateRangeArray) }}
+                  {{ getRoomTypeName(roomTypeId, generateDateRangeArray, selectedSmokingPreference) }}
               </td>
               <td
                   v-for="(dateData, dateIndex) in generateDateRangeArray"
@@ -118,7 +134,7 @@
                   :class="{
                   'bg-blue-100': isSelectedCell(roomTypeId, dateIndex),
                   'cursor-pointer': true,                  
-                  'bg-red-100': isCapacityExceeded(roomTypeId, dateIndex)
+                  'bg-red-100': isCapacityExceeded(roomTypeId, dateIndex, selectedSmokingPreference)
                 }"
               >
                   <div v-if="dateData.rooms && dateData.rooms[roomTypeId]">
@@ -438,6 +454,12 @@
               <label>人数</label>
             </FloatLabel>
           </div>
+          <div class="col-span-1">
+            <FloatLabel>
+              <InputText :value="smokingPreferenceOptions.find(o => o.value === waitlistForm.preferred_smoking_status)?.label || '指定なし'" fluid disabled />
+              <label>喫煙設定の希望</label>
+            </FloatLabel>
+          </div>
 
         </div>
         <template #footer>
@@ -491,7 +513,13 @@
   const dateColumns = ref([]);      
   const numberOfPeople = ref(1); 
   const selectedCell = ref(null);
-  const roomTypeInput = ref('');       
+  const roomTypeInput = ref('');
+  const selectedSmokingPreference = ref('any'); // 'any', 'smoking', 'non_smoking'
+  const smokingPreferenceOptions = ref([
+    { label: '指定なし', value: 'any' },
+    { label: '喫煙', value: 'smoking' },
+    { label: '禁煙', value: 'non_smoking' },
+  ]);
   const loading = ref(false);
   const numberOfNights = computed(() => {
       if (inDate && outDate) {
@@ -526,7 +554,8 @@
     client_legal_or_natural_person_waitlist: 'legal',
     client_gender_waitlist: 'other',
     client_email_waitlist: '',
-    client_phone_waitlist: ''
+    client_phone_waitlist: '',
+    preferred_smoking_status: 'any' // New field for smoking preference
   });
   const selectedClientForWaitlist = ref(null);
   const isClientSelectedForWaitlist = ref(false);
@@ -570,6 +599,14 @@
   const maxDate = ref(null);
         
   const reservation_id = computed(() => reservationId.value);
+
+  const onPreferenceChange = async () => {
+    // This function will be called when smoking preference changes.
+    // It should re-trigger the availability calculation and rendering.
+    // Similar to onDateChange, it should clear caches and re-fetch/re-process.
+    console.log("Smoking preference changed to:", selectedSmokingPreference.value);
+    await onDateChange(); // Re-use onDateChange to refresh the calendar display
+  };
       
   // Helper function
   const formatDate = (date) => {
@@ -641,7 +678,7 @@
   };
   const fetchRooms = async () => {        
     const fetchPromises = dateRange.value
-      .filter(date => !roomDataCache.value.has(date)) // Filter dates not yet fetched
+      .filter(date => !roomDataCache.value.has(`${date}_${selectedSmokingPreference.value}`)) // Use preference in cache key
       .map(date => {
         const startDate = new Date(date);
         const endDate = new Date(date);
@@ -651,29 +688,61 @@
         const formattedEndDate = formatDate(endDate);
 
         return fetchAvailableRooms(selectedHotelId.value, formattedStartDate, formattedEndDate)
-          .then(() => {                
-            const roomTypesData = availableRooms.value.reduce((acc, room) => {
+          .then(() => {
+            // Filter availableRooms by selectedSmokingPreference before reducing
+            const filteredForPreference = availableRooms.value.filter(room => {
+              if (selectedSmokingPreference.value === 'any') return true;
+              return selectedSmokingPreference.value === 'smoking' ? room.smoking === true : room.smoking === false;
+            });
+
+            const roomTypesData = filteredForPreference.reduce((acc, room) => {
               const { room_type_id, capacity } = room;
 
               if (!acc[room_type_id]) {
                 acc[room_type_id] = {
-                  room_type_name: room.room_type_name,
+                  room_type_name: room.room_type_name, // Make sure room_type_name is consistent
                   count: 0,
                   total_capacity: 0,
                 };
               }
+              // Ensure room_type_name is taken from the first encountered room of that type,
+              // as filteredForPreference might be empty for a type if no rooms match the preference.
+              if (!acc[room_type_id].room_type_name && room.room_type_name) {
+                  acc[room_type_id].room_type_name = room.room_type_name;
+              }
 
               acc[room_type_id].count += 1;
               acc[room_type_id].total_capacity += capacity;
-
               return acc;
             }, {});
 
-            roomDataCache.value.set(date, { date: formattedStartDate, rooms: roomTypesData }); // Cache result
-            return { date: formattedStartDate, rooms: roomTypesData };
+            // To ensure all room types are displayed even if they have 0 availability for the preference,
+            // we can get a unique list of all room types from the original availableRooms.value (or selectedHotelRooms.value)
+            // and merge it with roomTypesData.
+            const allRoomTypeIdsInHotel = [...new Set(availableRooms.value.map(r => r.room_type_id))];
+            allRoomTypeIdsInHotel.forEach(rtId => {
+                if (!roomTypesData[rtId]) {
+                    const originalRoom = availableRooms.value.find(r => r.room_type_id === rtId);
+                    roomTypesData[rtId] = {
+                        room_type_name: originalRoom ? originalRoom.room_type_name : 'Unknown',
+                        count: 0,
+                        total_capacity: 0
+                    };
+                } else if (!roomTypesData[rtId].room_type_name) {
+                    // If filtered list was empty for this type, but type exists, get name
+                    const originalRoom = availableRooms.value.find(r => r.room_type_id === rtId);
+                    if (originalRoom) roomTypesData[rtId].room_type_name = originalRoom.room_type_name;
+                }
+            });
+
+
+            // Key for cache should now include preference to avoid conflicts if user changes preference
+            const cacheKey = `${date}_${selectedSmokingPreference.value}`;
+            roomDataCache.value.set(cacheKey, { date: formattedStartDate, rooms: roomTypesData });
+            return { date: formattedStartDate, rooms: roomTypesData }; // This structure is used by generateDateRangeArray
           })
           .catch(error => {
-            console.error(`Error fetching data for date ${formattedStartDate}:`, error);
+            console.error(`Error fetching data for date ${formattedStartDate} with preference ${selectedSmokingPreference.value}:`, error);
             return { date: formattedStartDate, rooms: {} };
           });
       });
@@ -751,47 +820,110 @@
 
   };
 
-  const extractRoomTypes = (data) => {
-    return data.reduce((acc, dateData) => {
-      for (const roomTypeId in dateData.rooms) {
-        if (!acc.includes(roomTypeId)) acc.push(roomTypeId);
-      }
-      return acc;
-    }, []);
-  };
-  const getRoomTypeName = (roomTypeId, array) => {
-    if (!Array.isArray(array)) {
-      console.error('Expected array but got:', typeof array);
-      return 'Unknown'; // Return default value if not an array
+  const extractRoomTypes = (dataArray, preference = selectedSmokingPreference.value) => {
+    const roomTypeIds = new Set();
+    // Use selectedHotelRooms as the primary source of all unique room types for the hotel
+    if (selectedHotelRooms.value && selectedHotelRooms.value.length > 0) {
+        selectedHotelRooms.value.forEach(roomDetail => {
+            // Assuming selectedHotelRooms contains items with room_type_id
+            // This ensures all defined room types for the hotel are considered for display.
+            if(roomDetail.room_type_id) roomTypeIds.add(String(roomDetail.room_type_id));
+        });
     }
-    for (const dateData of array) {
-      if (dateData.rooms && dateData.rooms[roomTypeId]) {
-        return dateData.rooms[roomTypeId].room_type_name;
-      }
-    }
-      
-    return "Unknown";
+    // Additionally, iterate through dataArray (which is generateDateRangeArray)
+    // to ensure any room types dynamically appearing in availability data (if any) are caught,
+    // though ideally selectedHotelRooms should be comprehensive.
+    dataArray.forEach(dateData => {
+        const cacheKey = `${dateData.date}_${preference}`;
+        const cachedRoomsForDateAndPref = roomDataCache.value.get(cacheKey)?.rooms;
+        if (cachedRoomsForDateAndPref) {
+            for (const roomTypeId in cachedRoomsForDateAndPref) {
+                roomTypeIds.add(String(roomTypeId));
+            }
+        } else if (dateData.rooms) { // Fallback to non-preference specific if cache miss (should be rare)
+            for (const roomTypeId in dateData.rooms) {
+                roomTypeIds.add(String(roomTypeId));
+            }
+        }
+    });
+    return Array.from(roomTypeIds).sort((a,b) => Number(a) - Number(b));
   };
 
-  const isRoomUnavailableForSelection = () => {
-    if (!selectedCell.value || !generateDateRangeArray.value[selectedCell.value.dateIndex]) {
-      return true; // No cell selected or date data missing
+  const getRoomTypeName = (roomTypeId, dataArray, preference = selectedSmokingPreference.value) => {
+    // Attempt to get from cached data first for the current preference
+    for (const dateData of dataArray) {
+        const cacheKey = `${dateData.date}_${preference}`;
+        const cachedRoomsForDateAndPref = roomDataCache.value.get(cacheKey)?.rooms;
+        if (cachedRoomsForDateAndPref && cachedRoomsForDateAndPref[roomTypeId] && cachedRoomsForDateAndPref[roomTypeId].room_type_name) {
+            return cachedRoomsForDateAndPref[roomTypeId].room_type_name;
+        }
     }
-    const dateData = generateDateRangeArray.value[selectedCell.value.dateIndex];
-    const roomInfo = dateData.rooms ? dateData.rooms[selectedCell.value.roomTypeId] : null;
+    // Fallback: If not in cache for preference, try to find it in the general selectedHotelRooms data
+    if (selectedHotelRooms.value) {
+        const roomTypeInfo = selectedHotelRooms.value.find(rt => String(rt.room_type_id) === String(roomTypeId));
+        if (roomTypeInfo && roomTypeInfo.room_type_name) return roomTypeInfo.room_type_name;
+    }
+    // Fallback: check any entry in generateDateRangeArray (less ideal as it might not be preference specific)
+     for (const dateData of dataArray) {
+        if (dateData.rooms && dateData.rooms[roomTypeId] && dateData.rooms[roomTypeId].room_type_name) {
+            return dateData.rooms[roomTypeId].room_type_name;
+        }
+    }
+    return "不明なタイプ"; // Unknown Type
+  };
+
+  const isRoomUnavailableForSelection = (preference = selectedSmokingPreference.value) => {
+    if (!selectedCell.value ||
+        !generateDateRangeArray.value[selectedCell.value.dateIndex] ||
+        !generateDateRangeArray.value[selectedCell.value.dateIndex].date) {
+      // This check is to ensure we are looking at a valid, populated part of generateDateRangeArray
+      return true;
+    }
+
+    const dateStr = generateDateRangeArray.value[selectedCell.value.dateIndex].date;
+    const cacheKey = `${dateStr}_${preference}`;
+    const cachedData = roomDataCache.value.get(cacheKey);
+
+    if (!cachedData || !cachedData.rooms) {
+        // If data for this specific date and preference isn't processed and cached yet,
+        // it implies we might not have accurate info. For safety, assume unavailable or trigger re-fetch.
+        // However, generateDateRangeArray should be populated by fetchRooms which uses the cacheKey.
+        // This path suggests an inconsistency if generateDateRangeArray is populated but cache is missing for that key.
+        // For now, let's rely on generateDateRangeArray's direct content if cache seems out of sync.
+        const dateData = generateDateRangeArray.value[selectedCell.value.dateIndex];
+        const roomInfo = dateData.rooms ? dateData.rooms[selectedCell.value.roomTypeId] : null;
+        return !roomInfo || roomInfo.count === 0;
+    }
+
+    const roomInfo = cachedData.rooms[selectedCell.value.roomTypeId];
     return !roomInfo || roomInfo.count === 0;
   };
 
-  const isCapacityExceeded = (roomTypeId, dateIndex) => {        
-    if (!selectedCell.value || !generateDateRangeArray.value[dateIndex] || !generateDateRangeArray.value[dateIndex].rooms || !generateDateRangeArray.value[dateIndex].rooms[roomTypeId]) {
-      return false; // No data available for this cell, or cell not selected for capacity check
+  const isCapacityExceeded = (roomTypeId, dateIndex, preference = selectedSmokingPreference.value) => {
+    if (!selectedCell.value ||
+        !generateDateRangeArray.value[dateIndex] ||
+        !generateDateRangeArray.value[dateIndex].date) {
+      return false;
     }
-    // If the room is unavailable, capacity check is irrelevant for reservation (it might be relevant for waitlist though)
-    if (isRoomUnavailableForSelection() && roomTypeId === selectedCell.value.roomTypeId && dateIndex === selectedCell.value.dateIndex) {
-        return false;
+
+    const dateStr = generateDateRangeArray.value[dateIndex].date;
+    const cacheKey = `${dateStr}_${preference}`;
+    const cachedData = roomDataCache.value.get(cacheKey);
+
+    if (!cachedData || !cachedData.rooms || !cachedData.rooms[roomTypeId]) {
+        // Similar to above, if specific preference data is missing, assume capacity cannot be confirmed.
+        // Or, use generateDateRangeArray as a fallback.
+        const dateDataFallback = generateDateRangeArray.value[dateIndex];
+        const roomInfoFallback = dateDataFallback.rooms ? dateDataFallback.rooms[roomTypeId] : null;
+        if (!roomInfoFallback || roomInfoFallback.count === 0) return false; // No rooms, so not exceeding capacity of 0.
+        return numberOfPeople.value > roomInfoFallback.total_capacity;
     }
-    const availableCapacity = generateDateRangeArray.value[dateIndex].rooms[roomTypeId].total_capacity;
-    return numberOfPeople.value > availableCapacity;
+
+    const roomInfo = cachedData.rooms[roomTypeId];
+    if (roomInfo.count === 0) {
+        return false; // Not exceeding capacity if there are no rooms of this preference.
+    }
+    return numberOfPeople.value > roomInfo.total_capacity;
   };
 
   // Select cell
@@ -944,8 +1076,9 @@
       client_name_waitlist: '',
       client_legal_or_natural_person_waitlist: 'legal',
       client_gender_waitlist: 'other',
-      client_email_waitlist: '', // This is for new client creation within waitlist form
-      client_phone_waitlist: ''  // This is for new client creation
+      client_email_waitlist: '',
+      client_phone_waitlist: '',
+      preferred_smoking_status: selectedSmokingPreference.value // Pre-fill with current selection
     };
     selectedClientForWaitlist.value = null;
     isClientSelectedForWaitlist.value = false;
@@ -1003,6 +1136,7 @@
       contact_phone: waitlistForm.value.contact_phone,
       communication_preference: waitlistForm.value.communication_preference,
       notes: waitlistForm.value.notes,
+      preferred_smoking_status: waitlistForm.value.preferred_smoking_status // Include preference
     };
 
     const result = await waitlistStore.addEntry(entryData);

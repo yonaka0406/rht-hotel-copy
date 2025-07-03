@@ -23,7 +23,7 @@ const waitlistController = {
                 client_id, hotel_id, room_type_id,
                 requested_check_in_date, requested_check_out_date,
                 number_of_guests, contact_email, contact_phone,
-                notes, communication_preference
+                notes, communication_preference, preferred_smoking_status // Added preferred_smoking_status
             } = req.body;
 
             // --- Basic Input Validation ---
@@ -46,6 +46,9 @@ const waitlistController = {
             }
             if (new Date(validatedCheckOut) <= new Date(validatedCheckIn)) {
                 return res.status(400).json({ error: 'Requested check-out date must be after check-in date.' });
+            }
+            if (preferred_smoking_status && !['any', 'smoking', 'non_smoking'].includes(preferred_smoking_status)) {
+                return res.status(400).json({ error: 'Invalid preferred smoking status. Must be "any", "smoking", or "non_smoking".' });
             }
 
             // --- Entity Existence Checks ---
@@ -79,7 +82,8 @@ const waitlistController = {
                 contact_email: validatedContactEmail,
                 contact_phone: contact_phone ? String(contact_phone).trim() : null,
                 notes: notes ? String(notes).trim() : null,
-                communication_preference: communication_preference
+                communication_preference: communication_preference,
+                preferred_smoking_status: preferred_smoking_status || 'any' // Pass to model, model also defaults
             };
 
             const newWaitlistEntry = await WaitlistEntry.create(requestId, entryData, userId);

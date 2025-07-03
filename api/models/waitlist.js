@@ -28,6 +28,9 @@ const WaitlistEntry = {
             'client_id', 'hotel_id', 'room_type_id',
             'requested_check_in_date', 'requested_check_out_date',
             'number_of_guests', 'contact_email', 'communication_preference'
+            // preferred_smoking_status is optional for now at this level,
+            // schema will give it a default if not provided.
+            // Or it can be added to requiredFields if it becomes strictly mandatory from frontend.
         ];
         for (const field of requiredFields) {
             if (data[field] === undefined || data[field] === null || data[field] === '') {
@@ -44,8 +47,11 @@ const WaitlistEntry = {
         if (!['email', 'phone'].includes(data.communication_preference)) {
             throw new Error('Invalid communication preference. Must be "email" or "phone".');
         }
-        if (data.communication_preference === 'phone' && (!data.contact_phone || data.contact_phone.trim() === '')) {
+        if (data.communication_preference === 'phone' && (!data.contact_phone || String(data.contact_phone).trim() === '')) {
             throw new Error('Contact phone is required if communication preference is phone.');
+        }
+        if (data.preferred_smoking_status && !['any', 'smoking', 'non_smoking'].includes(data.preferred_smoking_status)) {
+            throw new Error('Invalid preferred smoking status. Must be "any", "smoking", or "non_smoking".');
         }
 
 
@@ -55,12 +61,14 @@ const WaitlistEntry = {
                 requested_check_in_date, requested_check_out_date,
                 number_of_guests, contact_email, contact_phone,
                 notes, communication_preference, status,
+                preferred_smoking_status,
                 created_by, updated_by
             ) VALUES (
                 %L, %L, %L,
                 %L, %L,
                 %L, %L, %L,
                 %L, %L, 'waiting',
+                %L, /* preferred_smoking_status */
                 %L, %L
             )
             RETURNING *;
@@ -68,6 +76,7 @@ const WaitlistEntry = {
             data.requested_check_in_date, data.requested_check_out_date,
             data.number_of_guests, data.contact_email, data.contact_phone,
             data.notes, data.communication_preference,
+            data.preferred_smoking_status || 'any', // Default to 'any' if not provided
             userId, userId
         );
 

@@ -15,6 +15,7 @@ CREATE TABLE waitlist_entries (
     contact_email TEXT NOT NULL,
     contact_phone TEXT,
     communication_preference TEXT NOT NULL DEFAULT 'email' CHECK (communication_preference IN ('email', 'phone')),
+    preferred_smoking_status TEXT NOT NULL DEFAULT 'any' CHECK (preferred_smoking_status IN ('any', 'smoking', 'non_smoking')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by INTEGER REFERENCES users(id),
