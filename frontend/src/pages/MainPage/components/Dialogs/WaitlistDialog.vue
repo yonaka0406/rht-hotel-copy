@@ -18,7 +18,6 @@
             @complete="localFilterClients"
             @option-select="onClientSelectForWaitlist"
             fluid
-            placeholder="既存顧客を検索または新規顧客名を入力"
           >
             <template #option="slotProps">
               <div>
@@ -129,7 +128,7 @@
 
       <div class="col-span-1">
         <FloatLabel>
-          <InputText :value="initialHotelName" fluid disabled />
+          <InputText :value="initialHotelName" variant="filled" fluid disabled />
           <label>ホテル</label>
         </FloatLabel>
       </div>
@@ -137,6 +136,7 @@
          <FloatLabel>
             <InputText
                 :value="internalForm.room_type_id ? (allRoomTypes.find(rt => rt.room_type_id === internalForm.room_type_id)?.room_type_name || '不明') : '指定なし'"
+                variant="filled"
                 fluid
                 disabled />
             <label>代表部屋タイプ (備考参照)</label>
@@ -144,19 +144,19 @@
       </div>
       <div class="col-span-1">
         <FloatLabel>
-          <InputText :value="internalForm.requested_check_in_date" fluid disabled />
+          <InputText :value="internalForm.requested_check_in_date" variant="filled" fluid disabled />
           <label>希望チェックイン</label>
         </FloatLabel>
       </div>
       <div class="col-span-1">
         <FloatLabel>
-          <InputText :value="internalForm.requested_check_out_date" fluid disabled />
+          <InputText :value="internalForm.requested_check_out_date" variant="filled" fluid disabled />
           <label>希望チェックアウト</label>
         </FloatLabel>
       </div>
        <div class="col-span-1">
         <FloatLabel>
-          <InputNumber :modelValue="internalForm.number_of_guests" fluid disabled />
+          <InputNumber :modelValue="internalForm.number_of_guests" variant="filled" fluid disabled />
           <label>合計人数</label>
         </FloatLabel>
       </div>
