@@ -103,6 +103,23 @@
         </div>
       </div>
 
+      <!-- Smoking Preference Selection -->
+      <div class="col-span-2">
+        <label class="font-semibold mb-2 block">喫煙設定の希望 *</label>
+        <div class="flex gap-4">
+          <div v-for="option in smokingOptionsDialog" :key="option.value" class="flex items-center">
+            <RadioButton
+              v-model="selectedSmokingPreferenceDialog"
+              :inputId="`dialog_smoking_${option.value}`"
+              name="dialogSmokingPreference"
+              :value="option.value"
+              @change="updateFormSmokingPreference"
+            />
+            <label :for="`dialog_smoking_${option.value}`" class="ml-1">{{ option.label }}</label>
+          </div>
+        </div>
+      </div>
+
       <div class="col-span-2">
         <FloatLabel>
           <Textarea v-model="internalForm.notes" rows="3" fluid placeholder="例：デラックスルーム1室、スタンダードルーム2室希望" />
@@ -143,13 +160,15 @@
           <label>合計人数</label>
         </FloatLabel>
       </div>
+      <!-- Read-only display of smoking preference is removed as it's now an active selection above -->
+      <!--
       <div class="col-span-1">
         <FloatLabel>
           <InputText :value="smokingOptionsToDisplay.find(o => o.value === internalForm.preferred_smoking_status)?.label || '指定なし'" fluid disabled />
           <label>喫煙設定の希望</label>
         </FloatLabel>
       </div>
-
+      -->
     </div>
     <template #footer>
       <Button label="閉じる" icon="pi pi-times" @click="handleClose" class="p-button-text p-button-danger p-button-sm" />
@@ -175,25 +194,27 @@ const props = defineProps({
   initialNumberOfGuests: Number,
   initialSmokingPreference: String,
   initialNotes: String,
-  allClients: { // Pass all clients from parent for AutoComplete
+  allClients: {
     type: Array,
     default: () => []
   },
-  allRoomTypes: { // Pass all room types for the hotel from parent
+  allRoomTypes: {
       type: Array,
       default: () => []
-  },
-  smokingPreferenceOptions: { // Pass smoking preference options from parent
-      type: Array,
-      default: () => [
-          { label: '指定なし', value: 'any' },
-          { label: '喫煙', value: 'smoking' },
-          { label: '禁煙', value: 'non_smoking' },
-      ]
   }
+  // initialSmokingPreference and smokingPreferenceOptions props are removed
+  // as the selection will now be managed internally within this dialog.
 });
 
 const emit = defineEmits(['update:visible', 'submitted']);
+
+// Internal state for smoking preference
+const selectedSmokingPreferenceDialog = ref('any');
+const smokingOptionsDialog = ref([
+    { label: '指定なし', value: 'any' },
+    { label: '喫煙', value: 'smoking' },
+    { label: '禁煙', value: 'non_smoking' },
+]);
 
 // Stores
 const toast = useToast();
@@ -217,12 +238,12 @@ const genderOptions = ref([
     { label: 'その他', value: 'other' },
 ]);
 
-// Use a computed property for smoking options to ensure reactivity if prop changes
-const smokingOptionsToDisplay = computed(() => props.smokingPreferenceOptions);
+// const smokingOptionsToDisplay = computed(() => props.smokingPreferenceOptions); // No longer needed as prop
 
 // Initialize form when dialog becomes visible or props change
 watch(() => props.visible, (newVal) => {
   if (newVal) {
+    selectedSmokingPreferenceDialog.value = props.initialSmokingPreference || 'any'; // Initialize from prop or default
     internalForm.value = {
       client_id: null,
       hotel_id: props.initialHotelId,
@@ -234,7 +255,7 @@ watch(() => props.visible, (newVal) => {
       contact_phone: '',
       communication_preference: 'email',
       notes: props.initialNotes || '',
-      preferred_smoking_status: props.initialSmokingPreference || 'any',
+      preferred_smoking_status: selectedSmokingPreferenceDialog.value, // Initialize from local ref
       client_name_waitlist: '',
       client_legal_or_natural_person_waitlist: 'legal',
       client_gender_waitlist: 'other',
@@ -320,12 +341,22 @@ watch(() => internalForm.value.client_name_waitlist, (newName) => {
     }
 });
 
+const updateFormSmokingPreference = () => {
+    internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value;
+};
+
+watch(selectedSmokingPreferenceDialog, (newValue) => {
+    internalForm.value.preferred_smoking_status = newValue;
+});
+
 const handleClose = () => {
   emit('update:visible', false);
 };
 
 const handleSubmit = async () => {
   isLoading.value = true;
+  internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value; // Ensure latest is used
+
   if (!internalForm.value.contact_email) {
     toast.add({ severity: 'error', summary: '検証エラー', detail: '連絡用メールアドレスは必須です。', life: 3000 });
     isLoading.value = false;
