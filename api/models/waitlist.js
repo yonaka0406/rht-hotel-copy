@@ -194,7 +194,7 @@ const WaitlistEntry = {
             SELECT
                 we.id,
                 we.client_id,
-                c.name AS "clientName", -- Corrected to use the single 'name' column
+                COALESCE(c.name_kanji, c.name_kana, c.name) AS "clientName", -- Prioritize Kanji, then Kana, then default name
                 we.hotel_id,
                 we.room_type_id,
                 rt.name AS "roomTypeName",
