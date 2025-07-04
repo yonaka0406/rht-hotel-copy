@@ -202,6 +202,7 @@ const WaitlistEntry = {
                 we.requested_check_out_date,
                 to_char(we.requested_check_in_date, 'YYYY/MM/DD') || ' - ' || to_char(we.requested_check_out_date, 'YYYY/MM/DD') AS "requestedDates",
                 we.number_of_guests,
+                we.number_of_rooms,
                 we.status,
                 we.notes,
                 we.communication_preference,

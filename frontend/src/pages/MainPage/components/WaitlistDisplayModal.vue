@@ -7,12 +7,14 @@
     position="bottom"
     @hide="closeModal"
   >
-    <DataTable :value="entries" :loading="loading" responsiveLayout="scroll">
+    <DataTable :value="entries" :loading="loading" responsiveLayout="scroll" size="small">
       <!-- UX Refinement: Consider making columns sortable. Add other relevant columns like 'Date Added' or 'Notes'. -->
       <!-- Make clientName a link to client profile if possible. -->
       <Column field="clientName" header="クライアント名" :sortable="true"></Column>
       <Column field="roomTypeName" header="希望部屋タイプ" :sortable="true"></Column>
       <Column field="requestedDates" header="希望日程"></Column>
+      <Column field="number_of_guests" header="人数" :sortable="true"></Column>
+      <Column field="number_of_rooms" header="部屋数" :sortable="true"></Column>
       <Column field="status" header="ステータス" :sortable="true">
         <!-- UX Refinement: Display status with badges/colors for better visual distinction. -->
         <template #body="slotProps">
@@ -22,8 +24,12 @@
       <Column field="notes" header="メモ" :sortable="false"></Column>
       <Column header="アクション">
         <template #body="slotProps">
-          <Button icon="pi pi-envelope" class="p-button-rounded p-button-text" @click="sendManualEmail(slotProps.data)" v-tooltip.top="'手動メール送信'" />
-          <!-- Other actions can be added here e.g., View Details, Edit Entry -->
+          <SplitButton 
+            :model="getActionItems(slotProps.data)" 
+            size="small"
+            :label="getMainActionLabel(slotProps.data)"
+            :icon="getMainActionIcon(slotProps.data)"
+          />
         </template>
       </Column>
 
@@ -47,6 +53,7 @@ import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
+import SplitButton from 'primevue/splitbutton';
 import { useConfirm } from "primevue/useconfirm";
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useHotelStore } from '@/composables/useHotelStore'; // For selectedHotelId
@@ -95,26 +102,101 @@ const getStatusLabel = (status) => {
   return statusLabels[status] || status;
 };
 
+// Helper functions for SplitButton actions
+const getMainActionLabel = (entry) => {
+  if (entry.communication_preference === 'email') {
+    return 'メール送信';
+  } else if (entry.communication_preference === 'phone') {
+    return '電話番号表示';
+  }
+  return 'アクション';
+};
+
+const getMainActionIcon = (entry) => {
+  if (entry.communication_preference === 'email') {
+    return 'pi pi-envelope';
+  } else if (entry.communication_preference === 'phone') {
+    return 'pi pi-phone';
+  }
+  return 'pi pi-cog';
+};
+
+const getActionItems = (entry) => {
+  const items = [];
+  
+  if (entry.communication_preference === 'email') {
+    items.push({
+      label: 'メール送信',
+      icon: 'pi pi-envelope',
+      command: () => sendManualEmail(entry)
+    });
+  } else if (entry.communication_preference === 'phone') {
+    items.push({
+      label: `電話番号: ${entry.contact_phone || '未設定'}`,
+      icon: 'pi pi-phone',
+      command: () => showPhoneNumber(entry)
+    });
+  }
+  
+  items.push({
+    label: 'キャンセル',
+    icon: 'pi pi-times',
+    command: () => cancelEntry(entry)
+  });
+  
+  return items;
+};
+
 const sendManualEmail = (entry) => {
   confirm.require({
-    message: `「${entry.clientName || 'このクライアント'}」に手動で空室案内メールを送信しますか？この操作により、該当の順番待ちエントリーのステータスが「通知済み」に更新されます。`, // Do you want to manually send an availability notification email to "${entry.clientName || 'this client'}"? This will update the waitlist entry status to "notified".
-    header: '手動メール送信の確認', // Manual Email Confirmation
+    message: `「${entry.clientName || 'このクライアント'}」に手動で空室案内メールを送信しますか？この操作により、該当の順番待ちエントリーのステータスが「通知済み」に更新されます。`,
+    header: '手動メール送信の確認',
     icon: 'pi pi-envelope',
-    acceptLabel: 'はい、送信する', // Yes, send
-    rejectLabel: 'いいえ、キャンセル', // No, cancel
+    acceptLabel: 'はい、送信する',
+    rejectLabel: 'いいえ、キャンセル',
     accept: async () => {
       if (!entry.id) {
         console.error('Entry ID is missing, cannot send manual email.');
-        // UX Refinement: Show a user-facing toast error instead of just console.error
-        // Example: toast.add({ severity: 'error', summary: 'Error', detail: 'Cannot send email: Entry ID is missing.', life: 3000 });
         return;
       }
-      const result = await sendManualNotification(entry.id); // Use destructured function
+      const result = await sendManualNotification(entry.id);
       if (result && selectedHotelId.value) {
-        // Refresh the list after successful action
         fetchWaitlistEntries(selectedHotelId.value);
         console.log('Manual email process completed for entry:', entry.id, 'Result:', result);
       }
+    },
+    reject: () => {
+      // Optional: Show a toast message that the action was cancelled
+    }
+  });
+};
+
+const showPhoneNumber = (entry) => {
+  confirm.require({
+    message: `電話番号: ${entry.contact_phone || '未設定'}`,
+    header: '連絡先情報',
+    icon: 'pi pi-phone',
+    acceptLabel: 'OK',
+    rejectLabel: '閉じる',
+    accept: () => {
+      // Just close the dialog
+    },
+    reject: () => {
+      // Just close the dialog
+    }
+  });
+};
+
+const cancelEntry = (entry) => {
+  confirm.require({
+    message: `「${entry.clientName || 'このクライアント'}」の順番待ちエントリーをキャンセルしますか？この操作は取り消せません。`,
+    header: '順番待ちキャンセルの確認',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'はい、キャンセルする',
+    rejectLabel: 'いいえ、キャンセルしない',
+    accept: async () => {
+      // TODO: Implement cancel functionality
+      console.log('Cancel entry:', entry.id);
     },
     reject: () => {
       // Optional: Show a toast message that the action was cancelled
