@@ -288,6 +288,22 @@
       
     </Panel>
     
+    <WaitlistDialog
+      v-model:visible="waitlistDialogVisible"
+      :initialHotelId="selectedHotelId"
+      :initialHotelName="selectedHotel ? selectedHotel.name : ''"
+      :initialRoomTypeId="waitlistInitialRoomTypeId"
+      :initialCheckInDate="waitlistInitialCheckInDate"
+      :initialCheckOutDate="waitlistInitialCheckOutDate"
+      :initialNumberOfGuests="waitlistInitialNumberOfGuests"
+      :initialNotes="waitlistInitialNotes"
+      :allClients="clients"
+      :allRoomTypes="selectedHotelRooms"
+      @submitted="onWaitlistSubmitted"
+    />
+    
+
+    
   </div>
 </template>
 
@@ -307,6 +323,7 @@
   import { DataTable, Column } from 'primevue';
   import Dialog from 'primevue/dialog';
   import Button from 'primevue/button'
+  import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
 
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -1006,6 +1023,36 @@
       }
     });      
   }); 
+    
+  // Refs for props to pass to WaitlistDialog (matching ReservationsNewCombo pattern)
+  const waitlistDialogVisible = ref(false);
+  const waitlistInitialRoomTypeId = ref(null);
+  const waitlistInitialCheckInDate = ref('');
+  const waitlistInitialCheckOutDate = ref('');
+  const waitlistInitialNumberOfGuests = ref(1);
+  const waitlistInitialNotes = ref('');
+
+
+
+  const openWaitlistDialogDirect = () => {
+    // Set default values from the current form state (matching ReservationsNewCombo pattern)
+    waitlistInitialRoomTypeId.value = selectedCell.value ? selectedCell.value.roomTypeId : null;
+    waitlistInitialCheckInDate.value = formatDate(inDate.value);
+    waitlistInitialCheckOutDate.value = formatDate(outDate.value);
+    waitlistInitialNumberOfGuests.value = numberOfPeople.value;
+    waitlistInitialNotes.value = "最適化モード直接登録";
+    
+    waitlistDialogVisible.value = true;
+  };
+
+  function onWaitlistSubmitted() {
+    // Optional: any action needed in parent after waitlist is submitted
+    waitlistDialogVisible.value = false;
+  }
+
+  defineExpose({
+    openWaitlistDialogDirect
+  });
     
 </script>
 

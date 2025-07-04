@@ -22,7 +22,7 @@
               <ToggleButton v-model="showMinimal" onLabel="オン" offLabel="オフ" size="small" class="min-w-16" />
             </div>
           </div>
-          <ReservationsNewMinimal v-if="showMinimal" />
+          <ReservationsNewMinimal v-if="showMinimal" ref="reservationsNewMinimalRef" />
           <ReservationsNewCombo v-else ref="reservationsNewComboRef" />
         </div>
         <div v-else>
@@ -63,9 +63,14 @@
 
   const showMinimal = ref(false);
   const reservationsNewComboRef = ref(null);
+  const reservationsNewMinimalRef = ref(null);
 
   const openWaitlistDialog = () => {
-    if (reservationsNewComboRef.value) {
+    if (showMinimal.value) {
+      if (reservationsNewMinimalRef.value) {
+        reservationsNewMinimalRef.value.openWaitlistDialogDirect();
+      }
+    } else if (reservationsNewComboRef.value) {
       reservationsNewComboRef.value.openWaitlistDialogDirect();
     }
   };
