@@ -96,7 +96,7 @@
             type="email"
             fluid
             :required="internalForm.communication_preference === 'email'"
-            :disabled="isClientSelectedForWaitlist && selectedClientForWaitlist && selectedClientForWaitlist.email"
+            :disabled="!!selectedClientForWaitlist && !!selectedClientForWaitlist.email"
           />
           <label>連絡用メールアドレス{{ internalForm.communication_preference === 'email' ? ' *' : '' }}</label>
         </FloatLabel>
