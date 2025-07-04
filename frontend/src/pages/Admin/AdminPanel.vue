@@ -243,13 +243,16 @@
         { key: 'mh-addon', type: 'link', label: 'アドオン', icon: 'pi pi-fw pi-cart-plus', route: '/admin/hotel-addons' },
         { key: 'mh-calendar', type: 'link', label: 'カレンダー', icon: 'pi pi-fw pi-calendar', route: '/admin/hotel-calendar' },
         { type: 'separator' },
-        { key: 'crm-settings-header', type: 'header', label: 'CRM 設定', icon: 'pi pi-fw pi-address-book' },
+        { key: 'customer-management-header', type: 'header', label: '顧客管理', icon: 'pi pi-fw pi-address-book' },
         { key: 'loyalty-tiers', type: 'link', label: 'ロイヤルティ層設定', icon: 'pi pi-fw pi-star', route: '/admin/loyalty-tiers' },
+        { key: 'waitlist-management', type: 'link', label: '順番待ち管理', icon: 'pi pi-fw pi-clock', route: '/admin/waitlist' },
+        { type: 'separator' },
+        { key: 'data-import-header', type: 'header', label: 'データインポート', icon: 'pi pi-fw pi-database' },
+        { key: 'import-data', type: 'link', label: '他社PMSデータインポート', icon: 'pi pi-fw pi-file-import', route: '/admin/pms-import' },
+        { key: 'import-finances', type: 'link', label: '財務データ', icon: 'pi pi-fw pi-wallet', route: '/admin/finances' },
         { type: 'separator' },
         { key: 'other-settings', type: 'link', label: 'その他設定', icon: 'pi pi-fw pi-cog', route: '/admin/settings' },
         { key: 'manage-ota', type: 'link', label: 'OTA Exchange', icon: 'pi pi-fw pi-arrow-right-arrow-left', route: '/admin/ota' },
-        { key: 'import-data', type: 'link', label: '他社PMSデータインポート', icon: 'pi pi-fw pi-file-import', route: '/admin/pms-import' },
-        { key: 'import-finances', type: 'link', label: '財務データ', icon: 'pi pi-fw pi-wallet', route: '/admin/finances' },
     ]);
 
     const adminMobileMenuItems = ref([]); 

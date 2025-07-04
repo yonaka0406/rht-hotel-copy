@@ -204,7 +204,7 @@ export function useWaitlistStore() {
          * @param {number} [options.page=1] - Page number for pagination.
          * @param {number} [options.size=20] - Page size for pagination.
          */
-        async fetchWaitlistEntries(hotelId, options = {}) {
+        async fetchWaitlistEntries(hotelId, options = {}, debugLabel = '') {
             if (!hotelId) {
                 state.entries = [];
                 state.error = 'Hotel ID is required to fetch waitlist entries.';
@@ -215,9 +215,17 @@ export function useWaitlistStore() {
             state.loading = true;
             state.error = null;
 
-            // Always filter by status 'waiting' or 'notified'
+            // Always filter by status 'waiting' or 'notified' unless status is already provided
             const { filters = {}, page = state.pagination.page, size = state.pagination.size } = options;
-            const mergedFilters = { ...filters, status: ['waiting', 'notified'] };
+            console.log('[fetchWaitlistEntries] filters.status before:', filters.status, '| debugLabel:', debugLabel);
+            const mergedFilters = { ...filters };
+            if (mergedFilters.status === 'all' || mergedFilters.status === undefined) {
+                delete mergedFilters.status;
+            }
+            console.log('[fetchWaitlistEntries] mergedFilters.status after:', mergedFilters.status, '| debugLabel:', debugLabel);
+
+            // Debug: log the label and call stack
+            console.log(`[fetchWaitlistEntries] label: ${debugLabel}`, new Error().stack);
 
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -225,28 +233,18 @@ export function useWaitlistStore() {
                     throw new Error('認証トークンが見つかりません。');
                 }
 
-                // Construct query parameters
-                const queryParams = new URLSearchParams();
-                queryParams.append('page', page);
-                queryParams.append('size', size);
-
-                // Add filters to query params (status as array)
-                for (const key in mergedFilters) {
-                    if (mergedFilters[key] !== null && mergedFilters[key] !== undefined && mergedFilters[key] !== '') {
-                        if (Array.isArray(mergedFilters[key])) {
-                            queryParams.append(key, mergedFilters[key].join(','));
-                        } else {
-                            queryParams.append(key, mergedFilters[key]);
-                        }
-                    }
-                }
-
-                const response = await fetch(`/api/waitlist/hotel/${hotelId}?${queryParams.toString()}`, {
-                    method: 'GET',
+                // Use POST with JSON body
+                const response = await fetch(`/api/waitlist/hotel/${hotelId}`, {
+                    method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
                         'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify({
+                        page,
+                        size,
+                        filters: mergedFilters
+                    })
                 });
 
                 const responseData = await response.json();

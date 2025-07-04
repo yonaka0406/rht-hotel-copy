@@ -351,6 +351,33 @@ const waitlistController = {
             }
             return res.status(500).json({ error: 'Failed to cancel waitlist entry.' });
         }
+    },
+
+    async getByHotelPost(req, res) {
+        const { requestId } = req;
+        const { hotelId } = req.params;
+        // Extract pagination and filter params from body
+        const { page = 1, size = 20, filters = {} } = req.body;
+
+        // Validate hotelId (basic)
+        const validatedHotelId = validateNumericParam(hotelId, 'Hotel ID');
+        if (validatedHotelId === null || isNaN(validatedHotelId)) {
+            return res.status(400).json({ error: 'Invalid Hotel ID parameter.' });
+        }
+
+        try {
+            // Compose filters object for model
+            const modelFilters = { ...filters, page: parseInt(page, 10), size: parseInt(size, 10) };
+            // TODO: Add permission check: Validate user has access to this hotel's waitlist
+            const result = await WaitlistEntry.getByHotel(requestId, validatedHotelId, modelFilters);
+            return res.status(200).json(result);
+        } catch (error) {
+            console.error(`[${requestId}] Error in waitlistController.getByHotelPost for hotel ${hotelId}:`, error);
+            if (error.message.includes('Invalid Hotel ID')) {
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Failed to retrieve waitlist entries.' });
+        }
     }
 };
 

@@ -203,8 +203,9 @@ const WaitlistEntry = {
             SELECT
                 we.id,
                 we.client_id,
-                COALESCE(c.name_kanji, c.name_kana, c.name) AS "clientName", -- Prioritize Kanji, then Kana, then default name
+                COALESCE(c.name_kanji, c.name_kana, c.name) AS "clientName",
                 we.hotel_id,
+                h.name AS "hotelName",
                 we.room_type_id,
                 rt.name AS "roomTypeName",
                 we.requested_check_in_date,
@@ -222,9 +223,10 @@ const WaitlistEntry = {
                 we.updated_at
             FROM waitlist_entries we
             LEFT JOIN clients c ON we.client_id = c.id
-            LEFT JOIN room_types rt ON we.room_type_id = rt.id AND we.hotel_id = rt.hotel_id -- Ensure hotel_id match for partitioned/composite key
+            LEFT JOIN hotels h ON we.hotel_id = h.id
+            LEFT JOIN room_types rt ON we.room_type_id = rt.id AND we.hotel_id = rt.hotel_id
             ${whereCondition}
-            ORDER BY we.created_at ASC -- Or other preferred order
+            ORDER BY we.created_at ASC
             LIMIT $${queryValues.length + 1} OFFSET $${queryValues.length + 2};
         `;
 

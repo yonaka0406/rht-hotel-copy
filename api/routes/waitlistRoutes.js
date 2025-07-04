@@ -7,9 +7,11 @@ const { authMiddleware, authMiddlewareCRUDAccess, authMiddlewareWaitlistToken } 
 // Protected by authentication and CRUD access middleware
 router.post('/waitlist', authMiddleware, authMiddlewareCRUDAccess, waitlistController.create);
 
-// Future routes for waitlist management as per WAITLIST_STRATEGY.md:
 // GET /api/waitlist/hotel/:hotelId - List entries for a hotel (requires auth, potentially specific permissions)
 router.get('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getByHotel); // Path corrected
+
+// POST /api/waitlist/hotel/:hotelId - List entries for a hotel with filters in body
+router.post('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getByHotelPost);
 
 // PUT /api/waitlist/:id/status - Update entry status (requires auth, specific permissions)
 // router.put('/waitlist/:id/status', authMiddleware, authMiddlewareCRUDAccess, waitlistController.updateStatus);
