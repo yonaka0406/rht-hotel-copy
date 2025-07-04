@@ -238,7 +238,8 @@ const waitlistController = {
             if (!client) {
                  return res.status(404).json({ error: `Client with ID ${entry.client_id} not found for waitlist entry.` });
             }
-            const clientName = client.name_first + " " + client.name_last;
+            // Use the same name prioritization logic as in findByToken
+            const clientName = client.name_kanji || client.name_kana || client.name || 'お客様';
 
             const hotel = await getHotelByID(requestId, entry.hotel_id);
             if (!hotel) {
@@ -259,6 +260,19 @@ const waitlistController = {
             const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
             const confirmationLink = `${FRONTEND_URL}/waitlist/confirm/${confirmationToken}`;
 
+            // Format dates for email
+            const formatDateForEmail = (dateString) => {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            };
+
+            const formattedCheckInDate = formatDateForEmail(entry.requested_check_in_date);
+            const formattedCheckOutDate = formatDateForEmail(entry.requested_check_out_date);
+
             // --- Email Sending ---
             const { sendWaitlistNotificationEmail } = require('../utils/emailUtils');
             
@@ -267,8 +281,8 @@ const waitlistController = {
                     entry.contact_email,
                     clientName,
                     hotelName,
-                    entry.requested_check_in_date,
-                    entry.requested_check_out_date,
+                    formattedCheckInDate,
+                    formattedCheckOutDate,
                     entry.number_of_guests,
                     entry.number_of_rooms,
                     confirmationLink,

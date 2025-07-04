@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const waitlistController = require('../controllers/waitlistController');
-const { authMiddleware, authMiddlewareCRUDAccess } = require('../middleware/authMiddleware');
+const { authMiddleware, authMiddlewareCRUDAccess, authMiddlewareWaitlistToken } = require('../middleware/authMiddleware');
 
 // POST /api/waitlist - Create a new waitlist entry
 // Protected by authentication and CRUD access middleware
@@ -26,7 +26,10 @@ router.get('/waitlist/confirm/:token', waitlistController.getConfirmationDetails
 // POST /waitlist/:id/manual-notify - Trigger manual email notification for an entry
 router.post('/waitlist/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
 
-// PUT /waitlist/:id/cancel - Cancel a waitlist entry
+// PUT /waitlist/:id/cancel - Cancel a waitlist entry (requires auth)
 router.put('/waitlist/:id/cancel', authMiddleware, waitlistController.cancelEntry);
+
+// PUT /waitlist/:id/cancel-token - Cancel a waitlist entry via waitlist token (public)
+router.put('/waitlist/:id/cancel-token', authMiddlewareWaitlistToken, waitlistController.cancelEntry);
 
 module.exports = router;

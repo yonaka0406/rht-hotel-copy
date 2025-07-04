@@ -7,6 +7,13 @@
         <p class="mt-4 text-gray-600">確認中...</p>
       </div>
 
+      <!-- Countdown Timer -->
+      <div v-if="showCountdown" class="bg-orange-100 border border-orange-300 rounded-lg p-6 text-center mb-6">
+        <div class="text-4xl font-bold text-orange-600 mb-2">{{ closeCountdown }}</div>
+        <p class="text-lg text-orange-800 mb-2">順番待ちエントリーをキャンセルしました</p>
+        <p class="text-sm text-orange-700">{{ closeCountdown }}秒後に自動的にタブが閉じます</p>
+      </div>
+
       <!-- Valid Token - Show Reservation Details -->
       <div v-else-if="!tokenExpired && reservationDetails" class="bg-white shadow-lg rounded-lg p-8">
         <div class="text-center mb-6">
@@ -60,23 +67,26 @@
 
         <!-- Action Buttons -->
         <div class="space-y-3">
-          <button
+          <Button
             @click="confirmReservation"
+            :loading="confirming"
             :disabled="confirming"
-            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span v-if="confirming" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
-            {{ confirming ? '確認中...' : '予約を確認する' }}
-          </button>
+            label="予約を確認する"
+            class="w-full"
+            severity="primary"
+          />
           
-          <button
+          <Button
             @click="cancelReservation"
+            :loading="cancelling"
             :disabled="cancelling"
-            class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span v-if="cancelling" class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></span>
-            {{ cancelling ? 'キャンセル中...' : 'キャンセル' }}
-          </button>
+            label="順番待ち取り消し"
+            icon="pi pi-times"
+            class="w-1/2"
+            severity="danger"
+            size="small"
+            text
+          />
         </div>
 
         <!-- Expiry Notice -->
@@ -114,12 +124,12 @@
 
         <!-- Back to Home Button -->
         <div class="mt-6">
-          <button
+          <Button
             @click="goToHome"
-            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          >
-            ホームに戻る
-          </button>
+            label="ホームに戻る"
+            class="w-full"
+            severity="secondary"
+          />
         </div>
       </div>
     </div>
@@ -129,9 +139,18 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import Button from 'primevue/button';
 
 const route = useRoute();
 const router = useRouter();
+
+// Define props
+const props = defineProps({
+  token: {
+    type: String,
+    required: false
+  }
+});
 
 // Reactive state
 const loading = ref(true);
@@ -140,8 +159,15 @@ const confirming = ref(false);
 const cancelling = ref(false);
 const reservationDetails = ref(null);
 
-// Get token from route params
-const token = route.params.token;
+// Timer for auto-close
+const closeCountdown = ref(10);
+const showCountdown = ref(false);
+let closeTimer = null;
+
+
+
+// Get token from props or route params
+const token = props.token || route.params.token;
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -225,28 +251,46 @@ const confirmReservation = async () => {
 
 // Cancel the reservation
 const cancelReservation = async () => {
-  if (!confirm('この予約をキャンセルしますか？')) {
+  const confirmed = confirm('この順番待ちエントリーをキャンセルしますか？この操作は取り消せません。');
+  
+  if (!confirmed) {
     return;
   }
-
+  
   cancelling.value = true;
   try {
-    const response = await fetch(`/api/waitlist/confirm/${token}/cancel`, {
-      method: 'POST',
+    const response = await fetch(`/api/waitlist/${reservationDetails.value.waitlistEntryId}/cancel-token`, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
+      body: JSON.stringify({ 
+        cancelReason: 'クライアントによる順番待ち取り消し'
+      }),
     });
 
     if (response.ok) {
-      alert('予約をキャンセルしました');
-      router.push('/');
+      // Show countdown
+      showCountdown.value = true;
+      closeCountdown.value = 10;
+      
+      // Start countdown timer
+      closeTimer = setInterval(() => {
+        closeCountdown.value--;
+        
+        // Close tab when countdown reaches 0
+        if (closeCountdown.value <= 0) {
+          clearInterval(closeTimer);
+          window.close();
+        }
+      }, 1000);
     } else {
       const errorData = await response.json();
       alert(`キャンセルに失敗しました: ${errorData.error || 'エラーが発生しました'}`);
     }
   } catch (error) {
-    console.error('Error cancelling reservation:', error);
+    console.error('Error cancelling waitlist entry:', error);
     alert('キャンセル中にエラーが発生しました');
   } finally {
     cancelling.value = false;
