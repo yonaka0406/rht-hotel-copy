@@ -127,7 +127,7 @@
             <div v-if="isRootAdminPath" class="bg-white rounded-lg shadow p-6">
             <h2 class="text-xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
             <!-- Grid layout for stat cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="bg-blue-50 p-5 rounded-lg flex flex-col shadow">
                     <div class="grow min-h-[3rem]">
                         <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
@@ -165,6 +165,15 @@
                         </p>
                         <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500">本日の予約</p>
                     </div>
+                </div>
+                <div class="bg-red-50 p-5 rounded-lg flex flex-col shadow">
+                    <div class="grow min-h-[3rem]">
+                        <h3 class="text-md font-semibold text-red-800">順番待ち</h3>
+                    </div>
+                    <div class="mt-auto">
+                        <p class="text-3xl font-bold text-red-600">{{ waitlistCount }}</p>
+                        <p class="text-sm text-red-500">待機中</p>
+                    </div>
                 </div>                
             </div>
             </div>
@@ -188,7 +197,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, fetchHotels } = useHotelStore(); 
     import { useMetricsStore } from '@/composables/useMetricsStore';
-    const { reservationsToday, averageBookingLeadTime, fetchReservationsToday, fetchBookingLeadTime } = useMetricsStore();
+    const { reservationsToday, averageBookingLeadTime, waitlistEntriesToday, fetchReservationsToday, fetchBookingLeadTime, fetchWaitlistEntriesToday } = useMetricsStore();
 
     // Primevue Components
     import Menubar from 'primevue/menubar';
@@ -212,6 +221,7 @@
     const reservationsTodayValue = ref(0);
     
     const averageLeadTimeDays = ref(0);    
+    const waitlistCount = ref(0);
 
     const isCollapsed = ref(false);
     const mobileSidebarVisible = ref(false);
@@ -326,6 +336,14 @@
                                 }
                             } else {
                                 console.warn(`ホテル ${hotel.id} の予約リードタイムデータが見つかりませんでした。`);
+                            }
+
+                            // --- Fetch and process waitlist data ---
+                            await fetchWaitlistEntriesToday(hotel.id, todayDateString);
+                            if (waitlistEntriesToday.value) {
+                                waitlistCount.value += Number(waitlistEntriesToday.value.waitlistCount) || 0;
+                            } else {
+                                console.warn(`ホテル ${hotel.id} のウェイトリストデータが見つかりませんでした。`);
                             }
                         } catch (error) {                            
                             console.error(`ホテル ${hotel.id} の予約取得エラー:`, error);

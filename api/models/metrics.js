@@ -166,8 +166,62 @@ const selectArrivalAverageLeadTime = async (requestId, hotelId, lookback, date) 
     }
 };
 
+const selectWaitlistEntriesToday = async (requestId, hotelId, date) => {
+    // --- Input Validation ---
+    const parsedHotelId = parseInt(hotelId, 10);
+    if (isNaN(parsedHotelId) || parsedHotelId <= 0) {
+        return { message: 'Invalid hotelId parameter.' };
+    }
+    if (!date) {
+        return { message: 'Missing required query parameter: date (YYYY-MM-DD).' };
+    }
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+        return { message: 'Invalid date format. Please use YYYY-MM-DD.' };
+    }
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0,10) !== date) {
+        return { message: 'Invalid date value.' };
+    }
+
+    const pool = getPool(requestId);
+
+    try{
+        const query = `
+            SELECT COUNT(*) as waitlist_count
+            FROM waitlist_entries 
+            WHERE hotel_id = $1 
+            AND status = 'waiting' 
+            AND requested_check_in_date >= $2;
+        `;
+        const values = [parsedHotelId, date];
+        const result = await pool.query(query, values);   
+        
+        let resultData;
+        if (result.rows.length > 0) {
+            resultData = {
+                hotelId: parsedHotelId,
+                date: date,
+                waitlistCount: parseInt(result.rows[0].waitlist_count, 10)
+            };
+        } else {
+            resultData = {
+                hotelId: parsedHotelId,
+                date: date,
+                waitlistCount: 0
+            };
+        }
+
+        return resultData;
+    } catch (error)  {
+        console.error(`Error fetching waitlist entries metric for hotel ${hotelId}, date ${date}:`, error);        
+        return { message: 'Database error occurred while fetching waitlist entries.' };
+    }
+};
+
 module.exports = {
     selectReservationsToday,
     selectBookingAverageLeadTime,
     selectArrivalAverageLeadTime,
+    selectWaitlistEntriesToday,
 };

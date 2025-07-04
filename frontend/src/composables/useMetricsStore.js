@@ -3,6 +3,7 @@ import { ref } from 'vue';
 const reservationsToday = ref(0);
 const averageBookingLeadTime = ref(0);
 const averageArrivalLeadTime = ref(0);
+const waitlistEntriesToday = ref(0);
 
 export function useMetricsStore() {
 
@@ -59,13 +60,32 @@ export function useMetricsStore() {
         }
     };
 
+    const fetchWaitlistEntriesToday = async (hotelId, date) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/metrics/waitlist-entries-today/${hotelId}/${date}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            waitlistEntriesToday.value = await response.json();
+            
+        } catch (error) {
+            console.error('Failed to fetch waitlist entries count', error);
+        }
+    };
 
     return{
         reservationsToday,
         averageBookingLeadTime,
         averageArrivalLeadTime,
+        waitlistEntriesToday,
         fetchReservationsToday,
         fetchBookingLeadTime,
         fetchArrivalLeadTime,
+        fetchWaitlistEntriesToday,
     };
 }
