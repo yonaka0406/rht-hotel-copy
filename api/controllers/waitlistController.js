@@ -245,6 +245,45 @@ const waitlistController = {
             }
             return res.status(500).json({ error: 'Failed to process manual notification.' });
         }
+    },
+
+    /**
+     * PUT /api/waitlist/:id/cancel - Cancel a waitlist entry
+     */
+    async cancelEntry(req, res) {
+        const { requestId } = req;
+        const { id: entryId } = req.params;
+        const { cancelReason } = req.body;
+        const userId = req.user.id; // From authMiddleware
+
+        if (!entryId) {
+            return res.status(400).json({ error: 'Waitlist entry ID is required.' });
+        }
+
+        try {
+            const entry = await WaitlistEntry.findById(requestId, entryId);
+            if (!entry) {
+                return res.status(404).json({ error: 'Waitlist entry not found.' });
+            }
+
+            if (entry.status === 'cancelled') {
+                return res.status(400).json({ error: 'Waitlist entry is already cancelled.' });
+            }
+
+            const cancelledEntry = await WaitlistEntry.cancelEntry(requestId, entryId, userId, cancelReason);
+            if (!cancelledEntry) {
+                return res.status(404).json({ error: 'Failed to cancel waitlist entry, entry not found or update failed.' });
+            }
+
+            return res.status(200).json(cancelledEntry);
+
+        } catch (error) {
+            console.error(`[${requestId}] Error in cancelEntry for entry ${entryId}:`, error);
+            if (error.message.includes('not found') || error.message.includes('Invalid status')) {
+                return res.status(400).json({ error: error.message });
+            }
+            return res.status(500).json({ error: 'Failed to cancel waitlist entry.' });
+        }
     }
 };
 

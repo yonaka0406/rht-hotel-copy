@@ -40,7 +40,7 @@ export function useWaitlistStore() {
                     throw new Error('認証トークンが見つかりません。'); // Authentication token not found.
                 }
 
-                const response = await fetch('/api/waitlist', {
+                const response = await fetch('/api/waitlist/', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
@@ -143,6 +143,60 @@ export function useWaitlistStore() {
         },
 
         /**
+         * Cancels a waitlist entry by updating its status to 'cancelled'.
+         * @param {string} entryId - The ID of the waitlist entry to cancel.
+         * @param {string} [cancelReason] - Optional reason for cancellation to append to notes.
+         * @returns {Promise<object|null>} The cancelled entry object or null if an error occurred.
+         */
+        async cancelEntry(entryId, cancelReason = '') {
+            state.loading = true;
+            state.error = null;
+            try {
+                const authToken = localStorage.getItem('authToken');
+                if (!authToken) {
+                    throw new Error('認証トークンが見つかりません。');
+                }
+
+                const response = await fetch(`/api/waitlist/${entryId}/cancel`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ cancelReason }),
+                });
+
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    const errorMessage = responseData.error || `順番待ちエントリーのキャンセルに失敗しました。ステータス: ${response.status}`;
+                    throw new Error(errorMessage);
+                }
+
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: '順番待ちエントリーが正常にキャンセルされました。', // Waitlist entry successfully cancelled.
+                    life: 3000
+                });
+                return responseData;
+
+            } catch (err) {
+                console.error('Error cancelling waitlist entry:', err);
+                state.error = err.message;
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: err.message || '順番待ちエントリーのキャンセル中にエラーが発生しました。',
+                    life: 5000
+                });
+                return null;
+            } finally {
+                state.loading = false;
+            }
+        },
+
+        /**
          * Fetches waitlist entries for a given hotel with optional filters and pagination.
          * @param {number} hotelId - The ID of the hotel.
          * @param {object} [options={}] - Optional parameters.
@@ -161,7 +215,9 @@ export function useWaitlistStore() {
             state.loading = true;
             state.error = null;
 
+            // Always filter by status 'waiting' or 'notified'
             const { filters = {}, page = state.pagination.page, size = state.pagination.size } = options;
+            const mergedFilters = { ...filters, status: ['waiting', 'notified'] };
 
             try {
                 const authToken = localStorage.getItem('authToken');
@@ -174,19 +230,17 @@ export function useWaitlistStore() {
                 queryParams.append('page', page);
                 queryParams.append('size', size);
 
-                // Add filters to query params (example: status, startDate, endDate, roomTypeId)
-                for (const key in filters) {
-                    if (filters[key] !== null && filters[key] !== undefined && filters[key] !== '') {
-                        queryParams.append(key, filters[key]);
+                // Add filters to query params (status as array)
+                for (const key in mergedFilters) {
+                    if (mergedFilters[key] !== null && mergedFilters[key] !== undefined && mergedFilters[key] !== '') {
+                        if (Array.isArray(mergedFilters[key])) {
+                            queryParams.append(key, mergedFilters[key].join(','));
+                        } else {
+                            queryParams.append(key, mergedFilters[key]);
+                        }
                     }
                 }
 
-                // The endpoint path might be /api/waitlist/hotel/:hotelId or /api/waitlist?hotelId=...
-                // Based on WAITLIST_STRATEGY.md, it's /api/waitlist/hotel/:hotelId
-                // The router file showed /waitlist/hotel/:hotelId, assuming /api is prepended.
-                // And in router file, it was /waitlist/hotel/:hotelId, but the create was /waitlist.
-                // Let's assume the file structure /api/waitlist routes to waitlistRoutes.js
-                // and the route itself is /hotel/:hotelId within that file.
                 const response = await fetch(`/api/waitlist/hotel/${hotelId}?${queryParams.toString()}`, {
                     method: 'GET',
                     headers: {

@@ -150,9 +150,18 @@ const WaitlistEntry = {
         whereClauses.push(`we.hotel_id = $${queryValues.length}`);
 
         // Optional filters
+        // Sanitize status filter
         if (status) {
-            queryValues.push(status);
-            whereClauses.push(`we.status = $${queryValues.length}`);
+            let statusArray = status;
+            if (typeof statusArray === 'string') {
+                statusArray = statusArray.split(',');
+            }
+            const allowedStatuses = ['waiting', 'notified', 'confirmed', 'expired', 'cancelled'];
+            statusArray = statusArray.map(s => s.trim()).filter(s => allowedStatuses.includes(s));
+            if (statusArray.length > 0) {
+                queryValues.push(statusArray);
+                whereClauses.push(`we.status = ANY($${queryValues.length})`);
+            }
         }
         if (roomTypeId) {
             queryValues.push(roomTypeId);
@@ -273,13 +282,14 @@ const WaitlistEntry = {
      * @param {object} [additionalData={}] - Optional additional data to update.
      * @param {string} [additionalData.confirmation_token] - Confirmation token.
      * @param {string} [additionalData.token_expires_at] - Token expiry timestamp.
+     * @param {string} [additionalData.notes] - Notes to append or update.
      * @param {number} userId - ID of the user performing the update.
      * @returns {Promise<object|null>} The updated waitlist entry or null if not found/updated.
      */
     async updateStatus(requestId, id, status, additionalData = {}, userId) {
         const pool = getPool(requestId);
 
-        const { confirmation_token, token_expires_at } = additionalData;
+        const { confirmation_token, token_expires_at, notes } = additionalData;
 
         const validStatuses = ['waiting', 'notified', 'confirmed', 'expired', 'cancelled'];
         if (!validStatuses.includes(status)) {
@@ -301,6 +311,13 @@ const WaitlistEntry = {
         } else {
             querySetters.push(`confirmation_token = NULL`);
             querySetters.push(`token_expires_at = NULL`);
+        }
+
+        // Handle notes update
+        if (notes) {
+            querySetters.push(`notes = CASE WHEN notes IS NULL OR notes = '' THEN $${valueCounter} ELSE notes || ' ' || $${valueCounter} END`);
+            queryValues.push(notes);
+            valueCounter++;
         }
 
         const query = format(`
@@ -325,7 +342,23 @@ const WaitlistEntry = {
             }
             throw new Error('Database error occurred while updating waitlist entry status.');
         }
-    } // No comma here as it's the last method in the object
+    },
+
+    /**
+     * Cancels a waitlist entry by updating its status to 'cancelled'.
+     * @param {string} requestId - The ID of the request for logging.
+     * @param {string} id - The UUID of the waitlist entry to cancel.
+     * @param {number} userId - ID of the user performing the cancellation.
+     * @param {string} [cancelReason] - Optional reason for cancellation to append to notes.
+     * @returns {Promise<object|null>} The cancelled waitlist entry or null if not found/updated.
+     */
+    async cancelEntry(requestId, id, userId, cancelReason = '') {
+        const additionalData = {};
+        if (cancelReason && cancelReason.trim()) {
+            additionalData.notes = `[キャンセル理由: ${cancelReason.trim()}]`;
+        }
+        return this.updateStatus(requestId, id, 'cancelled', additionalData, userId);
+    }
 };
 
 module.exports = {

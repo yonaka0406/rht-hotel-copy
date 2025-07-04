@@ -20,7 +20,10 @@ router.get('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getByH
 // POST /api/waitlist/confirm/:token - Client confirmation (publicly accessible but token-based)
 // router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
 
-// POST /:id/manual-notify - Trigger manual email notification for an entry
-router.post('/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
+// POST /waitlist/:id/manual-notify - Trigger manual email notification for an entry
+router.post('/waitlist/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
+
+// PUT /waitlist/:id/cancel - Cancel a waitlist entry
+router.put('/waitlist/:id/cancel', authMiddleware, waitlistController.cancelEntry);
 
 module.exports = router;

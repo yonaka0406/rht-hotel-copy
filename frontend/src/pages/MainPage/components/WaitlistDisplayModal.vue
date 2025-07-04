@@ -16,9 +16,8 @@
       <Column field="number_of_guests" header="人数" :sortable="true"></Column>
       <Column field="number_of_rooms" header="部屋数" :sortable="true"></Column>
       <Column field="status" header="ステータス" :sortable="true">
-        <!-- UX Refinement: Display status with badges/colors for better visual distinction. -->
         <template #body="slotProps">
-          <span>{{ getStatusLabel(slotProps.data.status) }}</span>
+          <Tag :value="getStatusLabel(slotProps.data.status)" :severity="getStatusTagSeverity(slotProps.data.status)" />
         </template>
       </Column>
       <Column field="notes" header="メモ" :sortable="false"></Column>
@@ -48,7 +47,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'; // defineProps and defineEmits are compiler macros
+import { computed, watch, ref, h } from 'vue'; // defineProps and defineEmits are compiler macros
 import Dialog from 'primevue/dialog';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -57,11 +56,12 @@ import SplitButton from 'primevue/splitbutton';
 import { useConfirm } from "primevue/useconfirm";
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useHotelStore } from '@/composables/useHotelStore'; // For selectedHotelId
+import Tag from 'primevue/tag';
 
 // Tooltip directive is globally registered in main.js, so no need to import here.
 
 const confirm = useConfirm();
-const { entries, loading, pagination, fetchWaitlistEntries, sendManualNotification } = useWaitlistStore();
+const { entries, loading, pagination, fetchWaitlistEntries, sendManualNotification, cancelEntry } = useWaitlistStore();
 const { selectedHotelId } = useHotelStore(); // This is a ref
 
 const props = defineProps({
@@ -141,7 +141,7 @@ const getActionItems = (entry) => {
   items.push({
     label: 'キャンセル',
     icon: 'pi pi-times',
-    command: () => cancelEntry(entry)
+    command: () => cancelEntryAction(entry)
   });
   
   return items;
@@ -173,13 +173,22 @@ const sendManualEmail = (entry) => {
 
 const showPhoneNumber = (entry) => {
   confirm.require({
-    message: `電話番号: ${entry.contact_phone || '未設定'}`,
-    header: '連絡先情報',
+    message: `電話番号: ${entry.contact_phone || '未設定'}\n\nこのお客様に電話で連絡した場合、ステータスを「通知済み」に変更しますか？`,
+    header: '電話連絡の確認',
     icon: 'pi pi-phone',
-    acceptLabel: 'OK',
-    rejectLabel: '閉じる',
-    accept: () => {
-      // Just close the dialog
+    acceptLabel: 'はい、通知済みにする',
+    rejectLabel: 'いいえ',
+    accept: async () => {
+      if (!entry.id) {
+        console.error('Entry ID is missing, cannot update status.');
+        return;
+      }
+      // Use the same API as manual notification to set status to notified
+      const result = await sendManualNotification(entry.id);
+      if (result && selectedHotelId.value) {
+        fetchWaitlistEntries(selectedHotelId.value);
+        console.log('Phone contact status updated for entry:', entry.id, 'Result:', result);
+      }
     },
     reject: () => {
       // Just close the dialog
@@ -187,21 +196,49 @@ const showPhoneNumber = (entry) => {
   });
 };
 
-const cancelEntry = (entry) => {
+const cancelEntryAction = (entry) => {
   confirm.require({
     message: `「${entry.clientName || 'このクライアント'}」の順番待ちエントリーをキャンセルしますか？この操作は取り消せません。`,
     header: '順番待ちキャンセルの確認',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'はい、キャンセルする',
-    rejectLabel: 'いいえ、キャンセルしない',
+    acceptLabel: 'キャンセル実行',
+    rejectLabel: '中止',
+    acceptClassName: 'p-button-warning',
+    rejectClassName: 'p-button-text p-button-danger',
     accept: async () => {
-      // TODO: Implement cancel functionality
-      console.log('Cancel entry:', entry.id);
+      if (!entry.id) {
+        console.error('Entry ID is missing, cannot cancel entry.');
+        return;
+      }
+      const result = await cancelEntry(entry.id);
+      if (result && selectedHotelId.value) {
+        // Refresh the list after successful cancellation
+        fetchWaitlistEntries(selectedHotelId.value);
+        console.log('Entry cancelled successfully:', entry.id, 'Result:', result);
+      }
     },
     reject: () => {
       // Optional: Show a toast message that the action was cancelled
     }
   });
+};
+
+// Add getStatusTagSeverity helper
+const getStatusTagSeverity = (status) => {
+  switch (status) {
+    case 'waiting':
+      return 'info';
+    case 'notified':
+      return 'success';
+    case 'confirmed':
+      return 'success';
+    case 'expired':
+      return 'danger';
+    case 'cancelled':
+      return 'danger';
+    default:
+      return null;
+  }
 };
 
 // TODO: Fetch actual waitlist entries when the modal becomes visible,
