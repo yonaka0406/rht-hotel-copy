@@ -16,7 +16,7 @@
       <Column field="status" header="ステータス" :sortable="true">
         <!-- UX Refinement: Display status with badges/colors for better visual distinction. -->
         <template #body="slotProps">
-          <span>{{ slotProps.data.status }}</span>
+          <span>{{ getStatusLabel(slotProps.data.status) }}</span>
         </template>
       </Column>
       <Column field="notes" header="メモ" :sortable="false"></Column>
@@ -81,6 +81,18 @@ watch(() => [props.visible, selectedHotelId.value], ([newVisible, hotelId]) => {
 
 const closeModal = () => {
   isVisible.value = false;
+};
+
+// Status localization function
+const getStatusLabel = (status) => {
+  const statusLabels = {
+    'waiting': '順番待ち',
+    'notified': '通知済み',
+    'confirmed': '確認済み',
+    'expired': '期限切れ',
+    'cancelled': 'キャンセル'
+  };
+  return statusLabels[status] || status;
 };
 
 const sendManualEmail = (entry) => {
