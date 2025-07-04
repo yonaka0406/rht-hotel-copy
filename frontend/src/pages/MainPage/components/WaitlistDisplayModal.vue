@@ -153,10 +153,15 @@ const sendManualEmail = (entry) => {
     message: `「${entry.clientName || 'このクライアント'}」に手動で空室案内メールを送信しますか？この操作により、該当の順番待ちエントリーのステータスが「通知済み」に更新されます。`,
     header: '手動メール送信の確認',
     icon: 'pi pi-envelope',
-    acceptLabel: '送信',
-    rejectLabel: 'キャンセル',
-    acceptClassName: 'p-button-success',
-    rejectClassName: 'p-button-text',
+    acceptProps: {
+      label: '送信',
+      severity: 'success'
+    },
+    rejectProps: {
+      label: 'キャンセル',
+      severity: 'secondary',
+      outlined: true
+    },
     accept: async () => {
       if (!entry.id) {
         console.error('Entry ID is missing, cannot send manual email.');
@@ -179,8 +184,15 @@ const showPhoneNumber = (entry) => {
     message: `電話番号: ${entry.contact_phone || '未設定'}\n\nこのお客様に電話で連絡した場合、ステータスを「通知済み」に変更しますか？`,
     header: '電話連絡の確認',
     icon: 'pi pi-phone',
-    acceptLabel: 'はい、通知済みにする',
-    rejectLabel: 'いいえ',
+    acceptProps: {
+      label: '通知済みにする',
+      severity: 'success'
+    },
+    rejectProps: {
+      label: 'キャンセル',
+      severity: 'secondary',
+      outlined: true
+    },
     accept: async () => {
       if (!entry.id) {
         console.error('Entry ID is missing, cannot update status.');
@@ -204,10 +216,15 @@ const cancelEntryAction = (entry) => {
     message: `「${entry.clientName || 'このクライアント'}」の順番待ちエントリーをキャンセルしますか？この操作は取り消せません。`,
     header: '順番待ちキャンセルの確認',
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'キャンセル実行',
-    rejectLabel: '中止',
-    acceptClassName: 'p-button-warning',
-    rejectClassName: 'p-button-text p-button-danger',
+    acceptProps: {
+      label: 'キャンセル実行',
+      severity: 'danger'
+    },
+    rejectProps: {
+      label: 'キャンセル',
+      severity: 'secondary',
+      outlined: true
+    },
     accept: async () => {
       if (!entry.id) {
         console.error('Entry ID is missing, cannot cancel entry.');

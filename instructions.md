@@ -250,6 +250,40 @@ This section details how user permissions affect the user interface and what use
 
 *   (More guidelines can be added here as they are identified)
 
+# PrimeVue Confirm Dialog Button Styling Pattern
+
+For all PrimeVue confirm dialogs, use the `acceptProps` and `rejectProps` options to control button label, severity, and outlined style. This provides a consistent and modern user experience.
+
+## Example Usage
+
+```js
+confirm.require({
+  message: 'Are you sure you want to proceed?',
+  header: 'Confirmation',
+  icon: 'pi pi-exclamation-triangle',
+  acceptProps: {
+    label: 'OK',
+    severity: 'success'
+  },
+  rejectProps: {
+    label: 'Cancel',
+    severity: 'secondary',
+    outlined: true
+  },
+  accept: () => {
+    // handle accept
+  },
+  reject: () => {
+    // handle reject
+  }
+});
+```
+
+- Use `acceptProps` for the main action (e.g., send, confirm, delete) and set an appropriate severity (e.g., 'success', 'danger').
+- Use `rejectProps` for the cancel/abort action, with `severity: 'secondary'` and `outlined: true` for a neutral, text-style button.
+
+This pattern should be used for all confirmation dialogs for consistency across the application.
+
 ---
 
 *Please refer back to this document periodically and before starting new development tasks.*
