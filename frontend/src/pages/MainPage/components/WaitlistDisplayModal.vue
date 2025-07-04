@@ -169,7 +169,7 @@ const sendManualEmail = (entry) => {
       }
       const result = await sendManualNotification(entry.id);
       if (result && selectedHotelId.value) {
-        fetchWaitlistEntries(selectedHotelId.value);
+        fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
         console.log('Manual email process completed for entry:', entry.id, 'Result:', result);
       }
     },
@@ -201,7 +201,7 @@ const showPhoneNumber = (entry) => {
       // Use the same API as manual notification to set status to notified
       const result = await sendManualNotification(entry.id);
       if (result && selectedHotelId.value) {
-        fetchWaitlistEntries(selectedHotelId.value);
+        fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
         console.log('Phone contact status updated for entry:', entry.id, 'Result:', result);
       }
     },
@@ -233,7 +233,7 @@ const cancelEntryAction = (entry) => {
       const result = await cancelEntry(entry.id);
       if (result && selectedHotelId.value) {
         // Refresh the list after successful cancellation
-        fetchWaitlistEntries(selectedHotelId.value);
+        fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
         console.log('Entry cancelled successfully:', entry.id, 'Result:', result);
       }
     },
