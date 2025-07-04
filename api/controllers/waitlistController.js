@@ -215,16 +215,24 @@ const waitlistController = {
             const confirmationLink = `${FRONTEND_URL}/waitlist/confirm/${confirmationToken}`;
 
             // --- Email Sending ---
-            // TODO: Replace placeholder with actual email sending logic.
-            console.log(`[${requestId}] ---- START EMAIL SIMULATION ----`);
-            console.log(`[${requestId}] To: ${entry.contact_email}`);
-            console.log(`[${requestId}] Subject: ご希望のお部屋に空きが出ました！`);
-            console.log(`[${requestId}] Body Data: clientName=${clientName}, hotelName=${hotelName}, roomTypeName=${roomTypeName}, checkIn=${entry.requested_check_in_date}, checkOut=${entry.requested_check_out_date}, guests=${entry.number_of_guests}, expiryDate=${tokenExpiresAt.toLocaleDateString('ja-JP')}, confirmationLink=${confirmationLink}`);
-            console.log(`[${requestId}] ---- END EMAIL SIMULATION ----`);
-            const emailSent = true;
-
-            if (!emailSent) {
-                // return res.status(500).json({ error: 'Failed to send notification email.' });
+            const { sendWaitlistNotificationEmail } = require('../utils/emailUtils');
+            
+            try {
+                await sendWaitlistNotificationEmail(
+                    entry.contact_email,
+                    clientName,
+                    hotelName,
+                    entry.requested_check_in_date,
+                    entry.requested_check_out_date,
+                    entry.number_of_guests,
+                    entry.number_of_rooms,
+                    confirmationLink,
+                    tokenExpiresAt.toLocaleDateString('ja-JP')
+                );
+                console.log(`[${requestId}] Waitlist notification email sent successfully to ${entry.contact_email}`);
+            } catch (emailError) {
+                console.error(`[${requestId}] Error sending waitlist notification email:`, emailError);
+                return res.status(500).json({ error: 'Failed to send notification email.' });
             }
 
             const updatedEntry = await WaitlistEntry.updateStatus(requestId, entryId, 'notified', {
