@@ -24,9 +24,6 @@ const WaitlistEntry = {
     async create(requestId, data, userId) {
         const pool = getPool(requestId);
 
-        // Log the incoming data for debugging
-        console.log('waitlist create data:', data);
-
         // Validate required fields
         const requiredFields = [
             'client_id', 'hotel_id',
@@ -101,7 +98,6 @@ const WaitlistEntry = {
                 throw new Error('Failed to create waitlist entry, no rows returned.');
             }
         } catch (err) {
-            console.error(`[${requestId}] Error creating waitlist entry:`, err);
             if (err.constraint) {
                  if (err.constraint === 'waitlist_entries_client_id_fkey') {
                     throw new Error('Invalid client_id provided.');
@@ -114,7 +110,7 @@ const WaitlistEntry = {
             }
             throw new Error('Database error occurred while creating waitlist entry.');
         }
-    }, // Added comma here
+    },
 
     // Future functions as per WAITLIST_STRATEGY.md:
     // async findMatching(requestId, criteria) { /* ... */ }
@@ -131,7 +127,6 @@ const WaitlistEntry = {
      */
     async getByHotel(requestId, hotelId, filters = {}) {
         const pool = getPool(requestId);
-        console.log(`[${requestId}] WaitlistEntry.getByHotel called for hotelId: ${hotelId}, filters:`, filters);
 
         const {
             page = 1,
@@ -250,8 +245,6 @@ const WaitlistEntry = {
                 }
             };
         } catch (err) {
-            console.error(`[${requestId}] Error in WaitlistEntry.getByHotel for hotelId ${hotelId}:`, err);
-            // It's good practice to throw a custom error or re-throw
             throw new Error(`Database error fetching waitlist entries: ${err.message}`);
         }
     },
@@ -303,7 +296,6 @@ const WaitlistEntry = {
             
             return null;
         } catch (err) {
-            console.error(`[${requestId}] Error finding waitlist entry by token ${token}:`, err);
             throw new Error('Database error occurred while fetching waitlist entry by token.');
         }
     },
@@ -320,10 +312,9 @@ const WaitlistEntry = {
             const result = await pool.query('SELECT * FROM waitlist_entries WHERE id = $1', [id]);
             return result.rows.length > 0 ? result.rows[0] : null;
         } catch (err) {
-            console.error(`[${requestId}] Error finding waitlist entry by ID ${id}:`, err);
             throw new Error('Database error occurred while fetching waitlist entry.');
         }
-    }, // Added comma here
+    },
 
     /**
      * Updates the status of a waitlist entry and related fields.
@@ -387,7 +378,6 @@ const WaitlistEntry = {
                 return null;
             }
         } catch (err) {
-            console.error(`[${requestId}] Error updating waitlist entry ${id} status:`, err);
             if (err.constraint) {
                  throw new Error(`Database constraint violation: ${err.constraint} while updating status.`);
             }

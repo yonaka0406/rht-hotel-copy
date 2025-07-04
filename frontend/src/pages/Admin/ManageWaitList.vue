@@ -323,7 +323,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useHotelStore } from '@/composables/useHotelStore';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
@@ -582,6 +582,45 @@ onMounted(async () => {
     filters.checkInEndDate = last;
     // Do NOT set filters.status or filters.hotelId here, already set in reactive
     await loadData();
+});
+
+// Improved watcher: if end is set before or equal to start, set start to one day before end. If start is set after or equal to end, set end to one day after start.
+let lastChanged = null;
+
+watch(
+  () => filters.checkInStartDate,
+  (newVal, oldVal) => {
+    lastChanged = 'start';
+  }
+);
+watch(
+  () => filters.checkInEndDate,
+  (newVal, oldVal) => {
+    lastChanged = 'end';
+  }
+);
+
+watch([
+  () => filters.checkInStartDate,
+  () => filters.checkInEndDate
+], ([start, end]) => {
+  if (start && end) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (endDate < startDate) {
+      if (lastChanged === 'end') {
+        // User changed end, so adjust start
+        const newStart = new Date(endDate);
+        newStart.setDate(endDate.getDate() - 1);
+        filters.checkInStartDate = newStart;
+      } else {
+        // User changed start, so adjust end
+        const newEnd = new Date(startDate);
+        newEnd.setDate(startDate.getDate() + 1);
+        filters.checkInEndDate = newEnd;
+      }
+    }
+  }
 });
 </script>
 

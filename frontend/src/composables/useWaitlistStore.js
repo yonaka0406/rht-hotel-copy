@@ -217,15 +217,10 @@ export function useWaitlistStore() {
 
             // Always filter by status 'waiting' or 'notified' unless status is already provided
             const { filters = {}, page = state.pagination.page, size = state.pagination.size } = options;
-            console.log('[fetchWaitlistEntries] filters.status before:', filters.status, '| debugLabel:', debugLabel);
             const mergedFilters = { ...filters };
             if (mergedFilters.status === 'all' || mergedFilters.status === undefined) {
                 delete mergedFilters.status;
             }
-            console.log('[fetchWaitlistEntries] mergedFilters.status after:', mergedFilters.status, '| debugLabel:', debugLabel);
-
-            // Debug: log the label and call stack
-            console.log(`[fetchWaitlistEntries] label: ${debugLabel}`, new Error().stack);
 
             try {
                 const authToken = localStorage.getItem('authToken');
