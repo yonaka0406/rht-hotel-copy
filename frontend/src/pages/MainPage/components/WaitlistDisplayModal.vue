@@ -153,8 +153,10 @@ const sendManualEmail = (entry) => {
     message: `「${entry.clientName || 'このクライアント'}」に手動で空室案内メールを送信しますか？この操作により、該当の順番待ちエントリーのステータスが「通知済み」に更新されます。`,
     header: '手動メール送信の確認',
     icon: 'pi pi-envelope',
-    acceptLabel: 'はい、送信する',
-    rejectLabel: 'いいえ、キャンセル',
+    acceptLabel: '送信',
+    rejectLabel: 'キャンセル',
+    acceptClassName: 'p-button-success',
+    rejectClassName: 'p-button-text',
     accept: async () => {
       if (!entry.id) {
         console.error('Entry ID is missing, cannot send manual email.');
