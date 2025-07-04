@@ -173,17 +173,15 @@
     watch(selectedHotelId,
         (newHotelId, oldHotelId) => {
             if (newHotelId && newHotelId !== oldHotelId) {
-                // console.log(`Hotel ID changed from ${oldHotelId} to ${newHotelId} in TopMenu.`);
                 // Fetch waitlist entries for the new hotel to update the badge count.
-                // The modal will also use this data if opened subsequently.
-                waitlistStore.fetchWaitlistEntries(newHotelId);
+                // Only fetch entries with status 'waiting' and 'notified'.
+                waitlistStore.fetchWaitlistEntries(newHotelId, { filters: { status: ['waiting', 'notified'] } });
             } else if (!newHotelId) {
                 // Clear entries if no hotel is selected
                 waitlistStore.entries.value = [];
             }
         },
-        { immediate: true } // This ensures the watcher runs on component init.
-                           // If selectedHotelId is already set from store, it will fetch.
+        { immediate: true }
     );
 
 </script>

@@ -82,10 +82,10 @@ const isVisible = computed({
 // Fetch data when modal becomes visible and hotelId is available
 watch(() => [props.visible, selectedHotelId.value], ([newVisible, hotelId]) => {
   if (newVisible && hotelId) {
-    // TODO: Handle pagination options if needed
-    fetchWaitlistEntries(hotelId);
+    // Only fetch entries with status 'waiting' and 'notified'.
+    fetchWaitlistEntries(hotelId, { filters: { status: ['waiting', 'notified'] } });
   }
-}, { immediate: true }); // immediate might try to fetch on load if visible is true initially
+}, { immediate: true });
 
 const closeModal = () => {
   isVisible.value = false;
