@@ -34,4 +34,7 @@ router.put('/waitlist/:id/cancel', authMiddleware, waitlistController.cancelEntr
 // PUT /waitlist/:id/cancel-token - Cancel a waitlist entry via waitlist token (public)
 router.put('/waitlist/:id/cancel-token', authMiddlewareWaitlistToken, waitlistController.cancelEntry);
 
+// POST /api/waitlist/check-vacancy - Check if there is vacancy for a waitlist entry
+router.post('/waitlist/check-vacancy', waitlistController.checkVacancy);
+
 module.exports = router;

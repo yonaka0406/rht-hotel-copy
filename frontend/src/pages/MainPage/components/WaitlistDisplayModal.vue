@@ -29,6 +29,7 @@
             :label="getMainActionLabel(slotProps.data)"
             :icon="getMainActionIcon(slotProps.data)"
             @click="handleMainAction(slotProps.data)"
+            :disabled="vacancyStatus[slotProps.data.id] === false && slotProps.data.communication_preference === 'email'"
           />
         </template>
       </Column>
@@ -58,6 +59,7 @@ import { useConfirm } from "primevue/useconfirm";
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useHotelStore } from '@/composables/useHotelStore'; // For selectedHotelId
 import Tag from 'primevue/tag';
+import axios from 'axios';
 
 // Tooltip directive is globally registered in main.js, so no need to import here.
 
@@ -78,6 +80,40 @@ const isVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value)
 });
+
+const vacancyStatus = ref({}); // { [entry.id]: true/false }
+
+// Function to check vacancy for a waitlist entry
+const checkVacancy = async (entry) => {
+  if (!entry) return false;
+  // Avoid duplicate requests
+  if (vacancyStatus.value[entry.id] !== undefined) return vacancyStatus.value[entry.id];
+  try {
+    const response = await axios.post('/api/waitlist/check-vacancy', {
+      hotel_id: entry.hotel_id,
+      room_type_id: entry.room_type_id || null,
+      check_in: entry.requested_check_in_date,
+      check_out: entry.requested_check_out_date,
+      number_of_rooms: entry.number_of_rooms,
+      number_of_guests: entry.number_of_guests,
+      smoking_preference: entry.preferred_smoking_status === 'smoking' ? true : (entry.preferred_smoking_status === 'non_smoking' ? false : null)
+    });
+    vacancyStatus.value[entry.id] = response.data.available;
+    return response.data.available;
+  } catch (e) {
+    vacancyStatus.value[entry.id] = false;
+    return false;
+  }
+};
+
+// Watch for entries and check vacancy for each
+watch(entries, (newEntries) => {
+  if (Array.isArray(newEntries)) {
+    newEntries.forEach(entry => {
+      checkVacancy(entry);
+    });
+  }
+}, { immediate: true });
 
 // Fetch data when modal becomes visible and hotelId is available
 watch(() => [props.visible, selectedHotelId.value], ([newVisible, hotelId]) => {
@@ -124,27 +160,28 @@ const getMainActionIcon = (entry) => {
 
 const getActionItems = (entry) => {
   const items = [];
-  
+  const disabled = vacancyStatus.value[entry.id] === false;
   if (entry.communication_preference === 'email') {
     items.push({
       label: 'メール送信',
       icon: 'pi pi-envelope',
-      command: () => sendManualEmail(entry)
+      command: () => sendManualEmail(entry),
+      disabled
     });
   } else if (entry.communication_preference === 'phone') {
     items.push({
       label: `電話番号: ${entry.contact_phone || '未設定'}`,
       icon: 'pi pi-phone',
-      command: () => showPhoneNumber(entry)
+      command: () => showPhoneNumber(entry),
+      disabled: false
     });
   }
-  
   items.push({
     label: 'キャンセル',
     icon: 'pi pi-times',
-    command: () => cancelEntryAction(entry)
+    command: () => cancelEntryAction(entry),
+    disabled: false
   });
-  
   return items;
 };
 

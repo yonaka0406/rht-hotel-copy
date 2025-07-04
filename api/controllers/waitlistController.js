@@ -378,6 +378,48 @@ const waitlistController = {
             }
             return res.status(500).json({ error: 'Failed to retrieve waitlist entries.' });
         }
+    },
+
+    /**
+     * POST /api/waitlist/check-vacancy - Check if there is vacancy for a waitlist entry
+     */
+    async checkVacancy(req, res) {
+        const { requestId } = req;
+        try {
+            const {
+                hotel_id,
+                room_type_id,
+                check_in,
+                check_out,
+                number_of_rooms,
+                number_of_guests,
+                smoking_preference
+            } = req.body;
+
+            // Validate required fields (basic)
+            if (!hotel_id || !check_in || !check_out || !number_of_rooms || !number_of_guests) {
+                return res.status(400).json({ error: 'Missing required parameters.' });
+            }
+
+            // Prepare params for SQL function
+            const pool = require('../config/database').getProdPool();
+            const result = await pool.query(
+                'SELECT is_waitlist_vacancy_available($1, $2, $3, $4, $5, $6, $7) AS available',
+                [
+                    hotel_id,
+                    room_type_id || null,
+                    check_in,
+                    check_out,
+                    number_of_rooms,
+                    number_of_guests,
+                    smoking_preference
+                ]
+            );
+            return res.status(200).json({ available: result.rows[0].available });
+        } catch (error) {
+            console.error(`[${requestId}] Error in waitlistController.checkVacancy:`, error);
+            return res.status(500).json({ error: 'Failed to check vacancy.' });
+        }
     }
 };
 

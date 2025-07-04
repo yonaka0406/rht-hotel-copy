@@ -70,12 +70,14 @@
           <Button
             @click="confirmReservation"
             :loading="confirming"
-            :disabled="confirming"
+            :disabled="confirming || vacancyAvailable === false"
             label="予約を確認する"
             class="w-full"
             severity="primary"
           />
-          
+          <div v-if="vacancyAvailable === false" class="text-red-600 text-sm mt-2">
+            申し訳ありませんが、ご希望のお部屋は現在ご予約いただけません。
+          </div>
           <Button
             @click="cancelReservation"
             :loading="cancelling"
@@ -137,7 +139,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Button from 'primevue/button';
 
@@ -158,13 +160,12 @@ const tokenExpired = ref(false);
 const confirming = ref(false);
 const cancelling = ref(false);
 const reservationDetails = ref(null);
+const vacancyAvailable = ref(null); // null: not checked, true/false: result
 
 // Timer for auto-close
 const closeCountdown = ref(10);
 const showCountdown = ref(false);
 let closeTimer = null;
-
-
 
 // Get token from props or route params
 const token = props.token || route.params.token;
@@ -216,6 +217,38 @@ const validateToken = async () => {
     loading.value = false;
   }
 };
+
+// Check vacancy for the reservation details
+const checkVacancy = async () => {
+  if (!reservationDetails.value) return;
+  try {
+    const response = await fetch('/api/waitlist/check-vacancy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotel_id: reservationDetails.value.hotelId || reservationDetails.value.hotel_id,
+        room_type_id: reservationDetails.value.roomTypeId || reservationDetails.value.room_type_id || null,
+        check_in: reservationDetails.value.checkInDate,
+        check_out: reservationDetails.value.checkOutDate,
+        number_of_rooms: reservationDetails.value.numberOfRooms,
+        number_of_guests: reservationDetails.value.numberOfGuests,
+        smoking_preference: reservationDetails.value.smokingPreference || null
+      })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      vacancyAvailable.value = data.available;
+    } else {
+      vacancyAvailable.value = false;
+    }
+  } catch (e) {
+    vacancyAvailable.value = false;
+  }
+};
+
+watch(reservationDetails, (val) => {
+  if (val) checkVacancy();
+});
 
 // Confirm the reservation
 const confirmReservation = async () => {
