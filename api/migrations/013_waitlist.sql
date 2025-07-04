@@ -79,3 +79,41 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO rh
 COMMENT ON COLUMN waitlist_entries.room_type_id IS 'References room_types.id, part of composite FK (room_type_id, hotel_id)';
 COMMENT ON CONSTRAINT fk_waitlist_room_types ON waitlist_entries IS 'Composite foreign key to the partitioned room_types table.';
 COMMENT ON COLUMN waitlist_entries.communication_preference IS 'Client''s preferred method of contact: email or phone.';
+
+-- Enhanced function: checks both number of rooms and total capacity, and supports smoking preference and optional room type
+CREATE OR REPLACE FUNCTION is_waitlist_vacancy_available(
+    p_hotel_id INT,
+    p_room_type_id INT DEFAULT NULL,
+    p_check_in DATE,
+    p_check_out DATE,
+    p_number_of_rooms INT,
+    p_number_of_guests INT,
+    p_smoking_preference BOOLEAN DEFAULT NULL
+) RETURNS BOOLEAN AS $$
+DECLARE
+    available_room_count INT;
+    total_capacity INT;
+BEGIN
+    WITH occupied_rooms AS (
+        SELECT room_id
+        FROM reservation_details
+        WHERE date >= p_check_in AND date < p_check_out
+          AND room_id IS NOT NULL
+          AND cancelled IS NULL
+    ),
+    available_rooms AS (
+        SELECT r.id, r.capacity
+        FROM rooms r
+        WHERE r.hotel_id = p_hotel_id
+          AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
+          AND r.for_sale = TRUE
+          AND r.id NOT IN (SELECT room_id FROM occupied_rooms)
+          AND (p_smoking_preference IS NULL OR r.smoking = p_smoking_preference)
+    )
+    SELECT COUNT(*), COALESCE(SUM(capacity), 0)
+      INTO available_room_count, total_capacity
+    FROM available_rooms;
+
+    RETURN available_room_count >= p_number_of_rooms AND total_capacity >= p_number_of_guests;
+END;
+$$ LANGUAGE plpgsql;
