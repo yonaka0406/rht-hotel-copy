@@ -28,6 +28,7 @@
             size="small"
             :label="getMainActionLabel(slotProps.data)"
             :icon="getMainActionIcon(slotProps.data)"
+            @click="handleMainAction(slotProps.data)"
           />
         </template>
       </Column>
@@ -238,6 +239,14 @@ const getStatusTagSeverity = (status) => {
       return 'danger';
     default:
       return null;
+  }
+};
+
+// Add this method in <script setup>
+const handleMainAction = (entry) => {
+  const actions = getActionItems(entry);
+  if (actions.length > 0 && typeof actions[0].command === 'function') {
+    actions[0].command();
   }
 };
 
