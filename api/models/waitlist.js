@@ -254,8 +254,57 @@ const WaitlistEntry = {
         }
     },
 
-    // async findByToken(requestId, token, validateExpiry = true) { /* ... */ }
-    // async expireOldTokens(requestId, hotelId = null) { /* ... */ }
+    /**
+     * Finds a waitlist entry by its confirmation token.
+     * @param {string} requestId - The ID of the request for logging.
+     * @param {string} token - The confirmation token to search for.
+     * @param {boolean} [validateExpiry=true] - Whether to validate token expiry.
+     * @returns {Promise<object|null>} The waitlist entry object or null if not found/expired.
+     */
+    async findByToken(requestId, token, validateExpiry = true) {
+        const pool = getPool(requestId);
+        try {
+            let query = `
+                SELECT 
+                    we.*,
+                    COALESCE(c.name_kanji, c.name_kana, c.name) AS "clientName",
+                    h.name AS "hotelName",
+                    rt.name AS "roomTypeName"
+                FROM waitlist_entries we
+                LEFT JOIN clients c ON we.client_id = c.id
+                LEFT JOIN hotels h ON we.hotel_id = h.id
+                LEFT JOIN room_types rt ON we.room_type_id = rt.id AND we.hotel_id = rt.hotel_id
+                WHERE we.confirmation_token = $1
+            `;
+            let queryValues = [token];
+
+            if (validateExpiry) {
+                query += ` AND we.token_expires_at > CURRENT_TIMESTAMP`;
+            }
+
+            const result = await pool.query(query, queryValues);
+            
+            if (result.rows.length > 0) {
+                const entry = result.rows[0];
+                
+                // Check if token is expired even if validateExpiry is false
+                if (!validateExpiry && entry.token_expires_at) {
+                    const now = new Date();
+                    const expiryDate = new Date(entry.token_expires_at);
+                    if (now > expiryDate) {
+                        return null; // Token is expired
+                    }
+                }
+                
+                return entry;
+            }
+            
+            return null;
+        } catch (err) {
+            console.error(`[${requestId}] Error finding waitlist entry by token ${token}:`, err);
+            throw new Error('Database error occurred while fetching waitlist entry by token.');
+        }
+    },
 
     /**
      * Finds a waitlist entry by its ID.

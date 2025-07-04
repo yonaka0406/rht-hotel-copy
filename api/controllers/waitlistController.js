@@ -156,6 +156,51 @@ const waitlistController = {
             return res.status(500).json({ error: 'Failed to retrieve waitlist entries.' });
         }
     },
+    /**
+     * GET /api/waitlist/confirm/:token - Validate token and return reservation details
+     */
+    async getConfirmationDetails(req, res) {
+        const { requestId } = req;
+        const { token } = req.params;
+
+        if (!token) {
+            return res.status(400).json({ error: 'Confirmation token is required.' });
+        }
+
+        try {
+            // Find waitlist entry by token
+            const entry = await WaitlistEntry.findByToken(requestId, token, true);
+            
+            if (!entry) {
+                return res.status(404).json({ error: 'Invalid or expired confirmation token.' });
+            }
+
+            // Check if entry is in 'notified' status
+            if (entry.status !== 'notified') {
+                return res.status(400).json({ error: 'Waitlist entry is not in a valid state for confirmation.' });
+            }
+
+            // Format the response data for the frontend
+            const responseData = {
+                hotelName: entry.hotelName,
+                checkInDate: entry.requested_check_in_date,
+                checkOutDate: entry.requested_check_out_date,
+                numberOfGuests: entry.number_of_guests,
+                numberOfRooms: entry.number_of_rooms,
+                roomTypeName: entry.roomTypeName || null,
+                clientName: entry.clientName,
+                expiryDate: entry.token_expires_at,
+                waitlistEntryId: entry.id
+            };
+
+            return res.status(200).json(responseData);
+
+        } catch (error) {
+            console.error(`[${requestId}] Error in getConfirmationDetails for token ${token}:`, error);
+            return res.status(500).json({ error: 'Failed to retrieve confirmation details.' });
+        }
+    },
+
     // async updateStatus(req, res) { /* ... */ }
     // async delete(req, res) { /* ... */ } // Soft delete by status 'cancelled'
     // async confirmReservation(req, res) { /* ... */ }

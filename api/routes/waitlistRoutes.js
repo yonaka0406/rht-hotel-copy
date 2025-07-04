@@ -17,6 +17,9 @@ router.get('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getByH
 // DELETE /api/waitlist/:id - Remove entry (soft delete) (requires auth, specific permissions)
 // router.delete('/waitlist/:id', authMiddleware, authMiddlewareCRUDAccess, waitlistController.delete);
 
+// GET /api/waitlist/confirm/:token - Validate token and return reservation details (publicly accessible)
+router.get('/waitlist/confirm/:token', waitlistController.getConfirmationDetails);
+
 // POST /api/waitlist/confirm/:token - Client confirmation (publicly accessible but token-based)
 // router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
 

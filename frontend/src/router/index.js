@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const WorkInProgress = () => import('@/components/WorkInProgress.vue');
+const ReservationClientConfirmation = () => import('@/components/ReservationClientConfirmation.vue');
 
 const Login = () => import('@/pages/Login.vue');
 const ForgotPassword = () => import('@/pages/ForgotPassword.vue');
@@ -128,6 +129,14 @@ const routes = [
     path: "/wip",
     name: "WorkInProgress",
     component: WorkInProgress
+  },
+  // Waitlist confirmation route (public, no auth required)
+  {
+    path: '/waitlist/confirm/:token',
+    name: 'ReservationClientConfirmation',
+    component: ReservationClientConfirmation,
+    props: true,
+    meta: { requiresAuth: false }
   },
   // Catch-all 404 route
   {
