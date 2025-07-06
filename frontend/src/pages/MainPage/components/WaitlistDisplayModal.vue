@@ -29,7 +29,7 @@
             :label="getMainActionLabel(slotProps.data)"
             :icon="getMainActionIcon(slotProps.data)"
             @click="handleMainAction(slotProps.data)"
-            :disabled="vacancyStatus[slotProps.data.id] === false && slotProps.data.communication_preference === 'email'"
+            :severity="getMainActionSeverity(slotProps.data)"
           />
         </template>
       </Column>
@@ -156,6 +156,14 @@ const getMainActionIcon = (entry) => {
     return 'pi pi-phone';
   }
   return 'pi pi-cog';
+};
+
+const getMainActionSeverity = (entry) => {
+  const actions = getActionItems(entry);
+  if (actions.length > 0 && actions[0].disabled) {
+    return 'secondary';
+  }
+  return 'primary';
 };
 
 const getActionItems = (entry) => {
@@ -301,7 +309,7 @@ const getStatusTagSeverity = (status) => {
 // Add this method in <script setup>
 const handleMainAction = (entry) => {
   const actions = getActionItems(entry);
-  if (actions.length > 0 && typeof actions[0].command === 'function') {
+  if (actions.length > 0 && typeof actions[0].command === 'function' && !actions[0].disabled) {
     actions[0].command();
   }
 };
