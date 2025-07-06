@@ -83,11 +83,11 @@ COMMENT ON COLUMN waitlist_entries.communication_preference IS 'Client''s prefer
 -- Enhanced function: checks both number of rooms and total capacity, and supports smoking preference and optional room type
 CREATE OR REPLACE FUNCTION is_waitlist_vacancy_available(
     p_hotel_id INT,
-    p_room_type_id INT DEFAULT NULL,
     p_check_in DATE,
     p_check_out DATE,
     p_number_of_rooms INT,
     p_number_of_guests INT,
+    p_room_type_id INT DEFAULT NULL,
     p_smoking_preference BOOLEAN DEFAULT NULL
 ) RETURNS BOOLEAN AS $$
 DECLARE
