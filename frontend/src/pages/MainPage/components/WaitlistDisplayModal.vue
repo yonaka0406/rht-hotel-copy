@@ -88,19 +88,26 @@ const checkVacancy = async (entry) => {
   if (!entry) return false;
   // Avoid duplicate requests
   if (vacancyStatus.value[entry.id] !== undefined) return vacancyStatus.value[entry.id];
+  
+  const payload = {
+    hotel_id: entry.hotel_id,
+    room_type_id: entry.room_type_id || null,
+    check_in: entry.requested_check_in_date,
+    check_out: entry.requested_check_out_date,
+    number_of_rooms: entry.number_of_rooms,
+    number_of_guests: entry.number_of_guests,
+    smoking_preference: entry.preferred_smoking_status === 'smoking' ? true : (entry.preferred_smoking_status === 'non_smoking' ? false : null)
+  };
+  
+  console.log('Checking vacancy for entry:', entry.id, 'with payload:', payload);
+  
   try {
-    const response = await axios.post('/api/waitlist/check-vacancy', {
-      hotel_id: entry.hotel_id,
-      room_type_id: entry.room_type_id || null,
-      check_in: entry.requested_check_in_date,
-      check_out: entry.requested_check_out_date,
-      number_of_rooms: entry.number_of_rooms,
-      number_of_guests: entry.number_of_guests,
-      smoking_preference: entry.preferred_smoking_status === 'smoking' ? true : (entry.preferred_smoking_status === 'non_smoking' ? false : null)
-    });
+    const response = await axios.post('/api/waitlist/check-vacancy', payload);
+    console.log('Vacancy check response for entry:', entry.id, ':', response.data);
     vacancyStatus.value[entry.id] = response.data.available;
     return response.data.available;
   } catch (e) {
+    console.error('Error checking vacancy for entry:', entry.id, ':', e);
     vacancyStatus.value[entry.id] = false;
     return false;
   }
@@ -169,6 +176,8 @@ const getMainActionSeverity = (entry) => {
 const getActionItems = (entry) => {
   const items = [];
   const disabled = vacancyStatus.value[entry.id] === false;
+  console.log('getActionItems for entry:', entry.id, 'vacancyStatus:', vacancyStatus.value[entry.id], 'disabled:', disabled, 'full vacancyStatus:', vacancyStatus.value);
+  
   if (entry.communication_preference === 'email') {
     items.push({
       label: 'メール送信',

@@ -396,26 +396,59 @@ const waitlistController = {
                 smoking_preference
             } = req.body;
 
+            console.log(`[${requestId}] checkVacancy called with:`, {
+                hotel_id,
+                room_type_id,
+                check_in,
+                check_out,
+                number_of_rooms,
+                number_of_guests,
+                smoking_preference
+            });
+
             // Validate required fields (basic)
             if (!hotel_id || !check_in || !check_out || !number_of_rooms || !number_of_guests) {
                 return res.status(400).json({ error: 'Missing required parameters.' });
             }
 
+            // Convert ISO date strings to DATE format for SQL function
+            const formatDateForSQL = (dateString) => {
+                // The frontend sends dates in JST but with Z suffix (misleading)
+                // We need to adjust for the 9-hour timezone difference
+                const date = new Date(dateString);
+                // Add 9 hours to convert from UTC to JST, then extract the date
+                date.setHours(date.getHours() + 9);
+                return date.toISOString().split('T')[0];
+            };
+
+            const checkInDate = formatDateForSQL(check_in);
+            const checkOutDate = formatDateForSQL(check_out);
+
+            console.log(`[${requestId}] Converted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
+
             // Prepare params for SQL function
-            const pool = require('../config/database').getProdPool();
+            const pool = require('../config/database').getPool();
+            const params = [
+                hotel_id,
+                room_type_id || null,
+                checkInDate,
+                checkOutDate,
+                number_of_rooms,
+                number_of_guests,
+                smoking_preference
+            ];
+            
+            console.log(`[${requestId}] Calling SQL function with params:`, params);
+            
             const result = await pool.query(
-                'SELECT is_waitlist_vacancy_available($1, $2, $3, $4, $5, $6, $7) AS available',
-                [
-                    hotel_id,
-                    room_type_id || null,
-                    check_in,
-                    check_out,
-                    number_of_rooms,
-                    number_of_guests,
-                    smoking_preference
-                ]
+                'SELECT is_waitlist_vacancy_available($1::INT, $2::INT, $3::DATE, $4::DATE, $5::INT, $6::INT, $7::BOOLEAN) AS available',
+                params
             );
-            return res.status(200).json({ available: result.rows[0].available });
+            
+            const available = result.rows[0].available;
+            console.log(`[${requestId}] SQL function returned:`, available);
+            
+            return res.status(200).json({ available });
         } catch (error) {
             console.error(`[${requestId}] Error in waitlistController.checkVacancy:`, error);
             return res.status(500).json({ error: 'Failed to check vacancy.' });

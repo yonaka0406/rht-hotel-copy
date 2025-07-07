@@ -80,40 +80,73 @@ COMMENT ON COLUMN waitlist_entries.room_type_id IS 'References room_types.id, pa
 COMMENT ON CONSTRAINT fk_waitlist_room_types ON waitlist_entries IS 'Composite foreign key to the partitioned room_types table.';
 COMMENT ON COLUMN waitlist_entries.communication_preference IS 'Client''s preferred method of contact: email or phone.';
 
+-- Drop all existing functions with this name to avoid conflicts
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN);
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, DATE, DATE, INT, INT, INT, BOOLEAN);
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT);
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, DATE, DATE, INT, INT, INT);
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN, BOOLEAN);
+DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN, BOOLEAN, BOOLEAN);
+
 -- Enhanced function: checks both number of rooms and total capacity, and supports smoking preference and optional room type
 CREATE OR REPLACE FUNCTION is_waitlist_vacancy_available(
     p_hotel_id INT,
+    p_room_type_id INT,
     p_check_in DATE,
     p_check_out DATE,
     p_number_of_rooms INT,
     p_number_of_guests INT,
-    p_room_type_id INT DEFAULT NULL,
-    p_smoking_preference BOOLEAN DEFAULT NULL
+    p_smoking_preference BOOLEAN
 ) RETURNS BOOLEAN AS $$
 DECLARE
     available_room_count INT;
     total_capacity INT;
+    current_date DATE := CURRENT_DATE;
 BEGIN
-    WITH occupied_rooms AS (
-        SELECT room_id
-        FROM reservation_details
-        WHERE date >= p_check_in AND date < p_check_out
-          AND room_id IS NOT NULL
-          AND cancelled IS NULL
-    ),
-    available_rooms AS (
-        SELECT r.id, r.capacity
+    -- Check if dates are in the past
+    IF p_check_in < current_date THEN
+        RETURN FALSE;
+    END IF;
+    
+    -- Count available rooms for the specified criteria
+    SELECT COUNT(*)
+    INTO available_room_count
+    FROM rooms r
+    WHERE r.hotel_id = p_hotel_id
+      AND r.for_sale = true
+      AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
+      AND (p_smoking_preference IS NULL OR r.smoking = p_smoking_preference)
+      AND r.id NOT IN (
+          -- Exclude rooms that have reservations during the requested period
+          SELECT DISTINCT rd.room_id
+          FROM reservation_details rd
+          WHERE rd.date >= p_check_in 
+            AND rd.date < p_check_out
+            AND rd.cancelled = false
+      );
+    
+    -- Check if we have enough rooms
+    IF available_room_count >= p_number_of_rooms THEN
+        -- Also check if total capacity is sufficient
+        SELECT COALESCE(SUM(r.capacity), 0)
+        INTO total_capacity
         FROM rooms r
         WHERE r.hotel_id = p_hotel_id
+          AND r.for_sale = true
           AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
-          AND r.for_sale = TRUE
-          AND r.id NOT IN (SELECT room_id FROM occupied_rooms)
           AND (p_smoking_preference IS NULL OR r.smoking = p_smoking_preference)
-    )
-    SELECT COUNT(*), COALESCE(SUM(capacity), 0)
-      INTO available_room_count, total_capacity
-    FROM available_rooms;
-
-    RETURN available_room_count >= p_number_of_rooms AND total_capacity >= p_number_of_guests;
+          AND r.id NOT IN (
+              SELECT DISTINCT rd.room_id
+              FROM reservation_details rd
+              WHERE rd.date >= p_check_in 
+                AND rd.date < p_check_out
+                AND rd.cancelled = false
+          )
+        LIMIT p_number_of_rooms;
+        
+        RETURN total_capacity >= p_number_of_guests;
+    END IF;
+    
+    RETURN FALSE;
 END;
 $$ LANGUAGE plpgsql;
