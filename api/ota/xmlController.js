@@ -405,7 +405,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
 
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
-        return res.status(500).send({ error: 'XML template not found.' });
+        throw new Error('XML template not found.');
     }
 
     const formatYYYYMMDD = (dateString) => {
@@ -442,7 +442,7 @@ const checkOTAStock = async (req, res, hotel_id, startDate, endDate) => {
         return transformedResponse;
     } catch (error) {        
         console.error('Error submitting XML template:', error);        
-        res.status(500).send({ error: 'Failed to submit XML template.' });
+        throw error; // Re-throw to be handled by the caller
     }
 
 };
@@ -450,6 +450,9 @@ const updateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
+    if (!Array.isArray(inventory)) {
+        return res.status(400).send({ error: 'Inventory data must be an array.' });
+    }
     // console.log('updateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
@@ -821,8 +824,10 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
 
         try {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
+            return apiResponse;
         } catch (error) {
-            
+            console.error(`Error in processInventoryBatch for batch ${batch_no}:`, error);
+            throw error; // Re-throw to be handled by the main function
         }
         
     };
@@ -838,20 +843,26 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
     
     // Determine batch size and process inventory in batches or as a single request
-    if (filteredInventory.length > 1000 || exceeds30Days) {        
-        const batchSize = 30;
-        let requestNumber = 0;
-        for (let i = 0; i < filteredInventory.length; i += batchSize) {            
-            const batch = filteredInventory.slice(i, i + batchSize);
-            await processInventoryBatch(batch, requestNumber);
-            requestNumber++;
+    try {
+        if (filteredInventory.length > 1000 || exceeds30Days) {        
+            const batchSize = 30;
+            let requestNumber = 0;
+            for (let i = 0; i < filteredInventory.length; i += batchSize) {            
+                const batch = filteredInventory.slice(i, i + batchSize);
+                await processInventoryBatch(batch, requestNumber);
+                requestNumber++;
+            }
+        } else {
+            // Process all filtered inventory as a single batch
+            await processInventoryBatch(filteredInventory, 0);
         }
-    } else {
-        // Process all filtered inventory as a single batch
-        await processInventoryBatch(filteredInventory, 0);
+        res.status(200).send({ success: true, message: 'Inventory update processed.' });
+    } catch (error) {
+        console.error('Error in manualUpdateInventoryMultipleDays:', error);
+        if (!res.headersSent) {
+            res.status(500).send({ error: 'Failed to process inventory update.' });
+        }
     }
-
-    res.status(200).send({ success: true, message: 'Inventory update processed.' });
 
 };
 
