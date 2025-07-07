@@ -644,20 +644,19 @@ const updateInventoryMultipleDays = async (req, res) => {
         }
         xmlBody = xmlBody.replace('{{requestId}}', requestId);
 
-        // console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
-
+        // Do not send a response here!
         try {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
+            return apiResponse;
         } catch (error) {
-            
+            console.error(`Error in processInventoryBatch for batch ${batch_no}:`, error);
+            throw error; // Let the main function handle the response
         }
-        
     };
     
     // Check if the date range exceeds 30 days for batching decision
     const dateRangeExceeds30Days = (minDate, maxDate) => {
         if (!minDate || !maxDate) return false;
-
         const timeDiff = Math.abs(maxDate.getTime() - minDate.getTime());
         const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
         return daysDiff > 30;
@@ -665,20 +664,26 @@ const updateInventoryMultipleDays = async (req, res) => {
     const exceeds30Days = dateRangeExceeds30Days(minDate, maxDate);
     
     // Determine batch size and process inventory in batches or as a single request
-    if (filteredInventory.length > 1000 || exceeds30Days) {        
-        const batchSize = 30;
-        let requestNumber = 0;
-        for (let i = 0; i < filteredInventory.length; i += batchSize) {            
-            const batch = filteredInventory.slice(i, i + batchSize);
-            await processInventoryBatch(batch, requestNumber);
-            requestNumber++;
+    try {
+        if (filteredInventory.length > 1000 || exceeds30Days) {        
+            const batchSize = 30;
+            let requestNumber = 0;
+            for (let i = 0; i < filteredInventory.length; i += batchSize) {            
+                const batch = filteredInventory.slice(i, i + batchSize);
+                await processInventoryBatch(batch, requestNumber);
+                requestNumber++;
+            }
+        } else {
+            // Process all filtered inventory as a single batch
+            await processInventoryBatch(filteredInventory, 0);
         }
-    } else {
-        // Process all filtered inventory as a single batch
-        await processInventoryBatch(filteredInventory, 0);
-    }
-
-    res.status(200).send({ message: 'Inventory update processed.' });                
+        res.status(200).send({ message: 'Inventory update processed.' });
+    } catch (error) {
+        console.error('Error in updateInventoryMultipleDays:', error);
+        if (!res.headersSent) {
+            res.status(500).send({ error: 'Failed to process inventory update.' });
+        }
+    }                
 
 };
 
