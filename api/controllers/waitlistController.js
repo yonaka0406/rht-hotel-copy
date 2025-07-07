@@ -206,8 +206,172 @@ const waitlistController = {
 
     // async updateStatus(req, res) { /* ... */ }
     // async delete(req, res) { /* ... */ } // Soft delete by status 'cancelled'
-    // async confirmReservation(req, res) { /* ... */ }
-    // async handleCancellation(requestId, cancellationData) { /* ... */ }
+    /**
+     * POST /api/waitlist/confirm/:token - Client confirmation and reservation creation
+     */
+    async confirmReservation(req, res) {
+        const { requestId } = req;
+        const { token } = req.params;
+
+        if (!token) {
+            return res.status(400).json({ error: 'Confirmation token is required.' });
+        }
+
+        try {
+            // Find waitlist entry by token
+            const entry = await WaitlistEntry.findByToken(requestId, token, true);
+            if (!entry) {
+                return res.status(400).json({ error: 'Invalid or expired token.' });
+            }
+
+            if (entry.status !== 'notified') {
+                return res.status(400).json({ error: 'Waitlist entry is not in notified status.' });
+            }
+
+            // Get client details
+            const clientResult = await selectClient(requestId, entry.client_id);
+            const client = clientResult ? clientResult.client : null;
+            if (!client) {
+                return res.status(404).json({ error: 'Client not found.' });
+            }
+
+            // Get hotel details
+            const hotel = await getHotelByID(requestId, entry.hotel_id);
+            if (!hotel) {
+                return res.status(404).json({ error: 'Hotel not found.' });
+            }
+
+            // Import reservation creation functions
+            const { 
+                addReservationHold, 
+                addReservationDetail, 
+                selectAvailableRooms 
+            } = require('../models/reservations');
+
+            // Create reservation data
+            const reservationData = {
+                hotel_id: entry.hotel_id,
+                reservation_client_id: entry.client_id,
+                check_in: entry.requested_check_in_date,
+                check_out: entry.requested_check_out_date,
+                number_of_people: entry.number_of_guests,
+                created_by: entry.created_by, // Use waitlist entry creator
+                updated_by: entry.created_by
+            };
+
+            // Create the reservation
+            const newReservation = await addReservationHold(requestId, reservationData);
+
+            // Get available rooms for the reservation period
+            const availableRooms = await selectAvailableRooms(requestId, entry.hotel_id, entry.requested_check_in_date, entry.requested_check_out_date);
+
+            // Filter rooms by room type if specified
+            let availableRoomsFiltered = availableRooms;
+            if (entry.room_type_id) {
+                availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === Number(entry.room_type_id));
+            }
+
+            if (availableRoomsFiltered.length === 0) {
+                return res.status(400).json({ error: 'No available rooms for the specified period.' });
+            }
+
+            // Create date range
+            const dateRange = [];
+            let currentDate = new Date(entry.requested_check_in_date);
+            while (currentDate < new Date(entry.requested_check_out_date)) {
+                dateRange.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Helper function to format date
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            };
+
+            // Distribute people into rooms
+            let remainingPeople = entry.number_of_guests;
+            const reservationDetails = [];
+
+            while (remainingPeople > 0) {
+                let bestRoom = null;
+
+                // Find the best-fit room
+                for (const room of availableRoomsFiltered) {
+                    if (room.capacity === remainingPeople) {
+                        bestRoom = room;
+                        break; // Perfect fit, stop searching
+                    }
+                    if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
+                        bestRoom = room; // Choose the smallest room that can accommodate the remaining people
+                    }
+                }
+
+                // If no perfect or near-perfect room found, pick the largest available room
+                if (!bestRoom) {         
+                    bestRoom = availableRoomsFiltered.reduce((prev, curr) => (curr.capacity > prev.capacity ? curr : prev));
+                }
+
+                // Assign people to the best room and remove it from the list of available rooms
+                const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
+                remainingPeople -= peopleAssigned;
+
+                dateRange.forEach((date) => {
+                    reservationDetails.push({
+                        reservation_id: newReservation.id,
+                        hotel_id: entry.hotel_id,
+                        room_id: bestRoom.room_id,
+                        date: formatDate(date),
+                        plans_global_id: null,
+                        plans_hotel_id: null,
+                        plan_name: null,
+                        plan_type: 'per_room',
+                        number_of_people: peopleAssigned,
+                        price: 0,
+                        created_by: entry.created_by,
+                        updated_by: entry.created_by
+                    });
+                });
+
+                // Remove the room from availableRoomsFiltered
+                availableRoomsFiltered = availableRoomsFiltered.filter(room => room.room_id !== bestRoom.room_id);
+            }
+
+            // Add reservation details to the database
+            for (const detail of reservationDetails) {
+                await addReservationDetail(requestId, detail);
+            }
+
+            // Add waitlist notes to reservation comments if they exist
+            if (entry.notes && entry.notes.trim()) {
+                const { updateReservationComment } = require('../models/reservations');
+                const commentText = `【順番待ち時備考】${entry.notes.trim()}`;
+                await updateReservationComment(requestId, {
+                    id: newReservation.id,
+                    hotelId: entry.hotel_id,
+                    comment: commentText,
+                    updated_by: entry.created_by
+                });
+            }
+
+            // Update waitlist entry status to 'confirmed'
+            await WaitlistEntry.updateStatus(requestId, entry.id, 'confirmed', {}, entry.created_by);
+
+            // Return success response with reservation details
+            return res.status(201).json({
+                success: true,
+                message: 'Reservation created successfully from waitlist entry.',
+                reservation: newReservation,
+                reservationDetails: reservationDetails.length
+            });
+
+        } catch (error) {
+            console.error(`[${requestId}] Error in confirmReservation for token ${token}:`, error);
+            return res.status(500).json({ error: 'Failed to confirm reservation.' });
+        }
+    },
 
     /**
      * POST /api/waitlist/:id/manual-notify - Send manual offer email

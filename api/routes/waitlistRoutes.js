@@ -23,7 +23,7 @@ router.post('/waitlist/hotel/:hotelId', authMiddleware, waitlistController.getBy
 router.get('/waitlist/confirm/:token', waitlistController.getConfirmationDetails);
 
 // POST /api/waitlist/confirm/:token - Client confirmation (publicly accessible but token-based)
-// router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
+router.post('/waitlist/confirm/:token', waitlistController.confirmReservation);
 
 // POST /waitlist/:id/manual-notify - Trigger manual email notification for an entry
 router.post('/waitlist/:id/manual-notify', authMiddleware, waitlistController.sendManualNotificationEmail);
