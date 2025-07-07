@@ -124,15 +124,7 @@
           </p>
         </div>
 
-        <!-- Back to Home Button -->
-        <div class="mt-6">
-          <Button
-            @click="goToHome"
-            label="ホームに戻る"
-            class="w-full"
-            severity="secondary"
-          />
-        </div>
+
       </div>
     </div>
   </div>
@@ -330,10 +322,7 @@ const cancelReservation = async () => {
   }
 };
 
-// Go to home page
-const goToHome = () => {
-  router.push('/');
-};
+
 
 // Initialize component
 onMounted(() => {
