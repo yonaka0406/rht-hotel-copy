@@ -63,7 +63,12 @@ The frontend codebase is organized as follows:
     *   **`assets/`**: Static assets processed by Vite (e.g., images, global styles).
     *   **`components/`**: Reusable Vue components used across different pages.
     *   **`composables/`**: Vue Composition API functions, used for state management (e.g., `useUserStore.js`, `useHotelStore.js`) and reusable logic.
+        *   **`useWaitlistStore.js`** ✅ **NEW** - State management for waitlist functionality including entry creation, management, and notifications.
     *   **`pages/`**: Vue components that represent different pages or views of the application, organized by feature (e.g., `Admin`, `CRM`, `MainPage`, `Reporting`).
+        *   **`Admin/ManageWaitList.vue`** ✅ **NEW** - Comprehensive waitlist management interface with filtering, pagination, and bulk operations.
+        *   **`MainPage/components/Dialogs/WaitlistDialog.vue`** ✅ **NEW** - Modal dialog for creating and editing waitlist entries with client selection and preference settings.
+        *   **`MainPage/components/WaitlistDisplayModal.vue`** ✅ **NEW** - Modal for displaying waitlist entries with real-time vacancy checking and action buttons.
+    *   **`components/ReservationClientConfirmation.vue`** ✅ **NEW** - Public-facing confirmation page for waitlist token-based reservations with full reservation creation flow.
     *   **`router/`**: Contains the Vue Router configuration (`index.js`), defining the application's routes.
     *   **`App.vue`**: The root Vue component of the application.
     *   **`main.js`**: The entry point of the application, where Vue is initialized, along with plugins and the root component.
@@ -85,6 +90,14 @@ This frontend application enables users to interact with the following core feat
 *   **Billing and Invoicing:** Generation and management of guest invoices based on stays, plans, and addons.
 *   **Reporting & Analytics:** Visualization of hotel operational data, occupancy, revenue, and guest statistics using charts (via ECharts).
 *   **User Administration:** Management of system user accounts, roles, and permissions (for admin users).
+*   **Waitlist Management:** ✅ **NEW** - Comprehensive waitlist system including:
+    *   **Entry Creation**: Modal dialog for adding guests to waitlist with preferences (smoking/non-smoking, room types, communication preferences)
+    *   **Management Interface**: Admin panel for viewing, filtering, and managing waitlist entries
+    *   **Real-time Vacancy Checking**: Automatic checking of room availability for waitlist entries
+    *   **Manual Notifications**: Staff can send availability notifications to waitlist guests
+    *   **Status Management**: Track waitlist entry status (waiting, notified, confirmed, expired, cancelled)
+    *   **Integration**: Seamless integration with existing reservation and client management systems
+    *   **Public Confirmation**: Token-based public confirmation page for guests to confirm their waitlist reservations
 *   **Data Import:** Client-side processing of imported data, such as CSV files for various records (using Papaparse), and potentially interaction with backend Excel import/export.
 *   **Real-time Updates:** Display of live updates for relevant data through Socket.io (e.g., new reservations, notifications).
 
@@ -103,6 +116,59 @@ Key management features include:
 
 These functionalities are primarily managed through the `ManageOTA.vue` page, which dynamically loads components like `otaRoomMaster.vue`, `otaPlanMaster.vue`, and `otaInventory.vue`. The `useXMLStore.js` composable handles state and communication with the backend API for these OTA operations.
 
+## Waitlist System Frontend Implementation ✅ NEW
+
+### Core Components
+
+1. **WaitlistDialog.vue**: Modal dialog for creating waitlist entries
+   * Client selection with autocomplete search
+   * Hotel and room type selection
+   * Date range picker with validation
+   * Guest count and room count inputs
+   * Smoking preference selection (any/smoking/non-smoking)
+   * Communication preference (email/phone)
+   * Contact information fields
+   * Notes and additional preferences
+
+2. **ManageWaitList.vue**: Admin interface for waitlist management
+   * DataTable with server-side pagination and filtering
+   * Status-based filtering and sorting
+   * Date range filtering
+   * Hotel-specific and multi-hotel views
+   * Action buttons for each entry (view details, send notification, cancel)
+   * Real-time vacancy checking
+   * Export functionality
+
+3. **WaitlistDisplayModal.vue**: Quick view modal for waitlist entries
+   * Compact display of waitlist entries
+   * Real-time vacancy status
+   * Quick action buttons
+   * Status badges with appropriate styling
+
+4. **ReservationClientConfirmation.vue**: Public confirmation page for waitlist tokens
+   * Token validation and expiry checking
+   * Reservation details display
+   * Real-time vacancy checking
+   * Confirmation and cancellation actions
+   * Success/error state handling
+   * Auto-close functionality after cancellation
+
+### State Management
+
+The `useWaitlistStore.js` composable provides:
+* Reactive state management for waitlist entries
+* API communication for CRUD operations
+* Loading and error state handling
+* Pagination and filtering logic
+* Toast notifications for user feedback
+
+### Integration Points
+
+* **Reservation Creation**: Waitlist dialog accessible from reservation creation when rooms are unavailable
+* **Top Menu**: Waitlist badge showing count of actionable entries
+* **Admin Panel**: Dedicated waitlist management section
+* **Client Management**: Integration with existing client selection and creation
+
 ## UI Guidelines and Key Behaviors
 
 This section outlines important UI/UX conventions and specific behaviors implemented in the frontend.
@@ -119,9 +185,37 @@ This section outlines important UI/UX conventions and specific behaviors impleme
 ### Key Component Usage
 *   **Key Component Usage:** Refer to `instructions.md` for specific guidelines on using PrimeVue components like `<FloatLabel>`, `<Select>`, `<DatePicker>`, form layouts with Tailwind CSS, and dialogs.
 
+### Waitlist-Specific UI Guidelines ✅ NEW
+*   **Status Badges**: Use consistent color coding for waitlist status (info for waiting, success for notified/confirmed, danger for expired/cancelled)
+*   **Vacancy Indicators**: Show real-time availability status with appropriate visual indicators
+*   **Action Buttons**: Provide clear, contextual actions for each waitlist entry
+*   **Form Validation**: Comprehensive validation for waitlist entry creation with user-friendly error messages
+*   **Responsive Design**: Ensure waitlist interfaces work well on mobile devices
+
 ## Development Guidelines and Best Practices
 
 For detailed coding guidelines, component usage conventions, specific patterns to follow (like `requestId` handling in the backend or UI component best practices in the frontend), and other essential best practices for this project, please consult the **`instructions.md`** file located in the root of this repository.
 
 It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
+
+## Waitlist Frontend Implementation Status
+
+### ✅ Implemented Features:
+1. **Entry Creation Dialog**: Complete modal for creating waitlist entries with all required fields
+2. **Management Interface**: Full-featured admin panel for waitlist management
+3. **State Management**: Comprehensive composable store for waitlist operations
+4. **Real-time Updates**: Live vacancy checking and status updates
+5. **Integration**: Seamless integration with existing reservation and client systems
+6. **Responsive Design**: Mobile-friendly interfaces
+7. **Accessibility**: Proper ARIA labels and keyboard navigation
+8. **Error Handling**: User-friendly error messages and validation
+9. **Public Confirmation Page**: Complete frontend page for token-based confirmations with reservation creation flow
+
+### ❌ Not Yet Implemented Features:
+1. **Real-time WebSocket Updates**: Live status changes via WebSocket
+2. **Advanced Filtering**: More sophisticated search and filter options
+3. **Bulk Operations**: Mass actions on multiple waitlist entries
+4. **Export Enhancements**: Additional export formats and options
+
+For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to `WAITLIST_STRATEGY.md` in the root directory.
 ```

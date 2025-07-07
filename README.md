@@ -18,7 +18,7 @@
 
 ## Project Overview
 
-This project is a comprehensive Hotel Management System designed to streamline various aspects of hotel operations. It includes a backend API for managing data and a frontend interface for user interaction. The system supports functionalities from reservations and client management to billing and reporting, with additional capabilities like OTA (Online Travel Agency) integration.
+This project is a comprehensive Hotel Management System designed to streamline various aspects of hotel operations. It includes a backend API for managing data and a frontend interface for user interaction. The system supports functionalities from reservations and client management to billing and reporting, with additional capabilities like OTA (Online Travel Agency) integration and waitlist management.
 
 ## Features
 
@@ -29,6 +29,14 @@ This project is a comprehensive Hotel Management System designed to streamline v
 * **Billing, Plans, Addons, and Invoicing:** Flexible handling of pricing plans, service addons, dynamic rates, and automated generation of invoices (utilizing Puppeteer for PDF creation).
 * **Reporting & Analytics:** Generation of insightful reports for key hotel operations metrics, including occupancy rates, revenue streams, and guest statistics.
 * **User Management & Roles:** Administering user accounts, defining roles, and managing permissions across the system.
+* **Waitlist Management:** ✅ **IMPLEMENTED** - Comprehensive waitlist system for managing guest requests when rooms are unavailable, including:
+  - Manual waitlist entry creation with client preferences (smoking/non-smoking, room types)
+  - Real-time vacancy checking for waitlist entries
+  - Manual notification system for staff to send availability offers
+  - Token-based confirmation system with secure expiry
+  - Waitlist management interface with filtering and pagination
+  - Integration with existing client and reservation systems
+  - ❌ **NOT YET IMPLEMENTED**: Automatic notifications when rooms become available
 * **Data Import/Export:**
     *   Functionality to import data from various sources, including **Financial Data Import** and **PMS Data Import**.
     *   Supports CSV import (using Papaparse client-side and fast-csv backend-side).
@@ -108,6 +116,7 @@ This project is a comprehensive Hotel Management System designed to streamline v
         * `010_logs_schema_and_functions.sql`
         * `011_custom_functions.sql`
         * `012_triggers.sql`
+        * `013_waitlist.sql` ✅ **NEW** - Waitlist system database schema
     * Ad-hoc scripts for specific data cleanup or processing can be found in `api/adhoc_scripts/`. These are not part of the standard installation.
     * **Note:** The `api/LOGIN_WITH_GOOGLE.md` guide may refer to an additional `migration_script.sql` for Google Authentication specific database changes. This is now superseded by the numbered migration files. Ensure all necessary Google Auth fields are part of the `001_initial_schema.sql` or subsequent relevant migrations.
 
@@ -148,7 +157,16 @@ Once both the backend API and the frontend application are running:
 
 1.  **Access the application:** Open your web browser and navigate to the address where the frontend is being served (typically `http://localhost:5173` when using `npm run dev` for the frontend).
 2.  **Login:** Use the login page to authenticate. The system may offer standard credentials login and/or Google login.
-3.  **Navigate Features:** Explore the different sections of the application, such as hotel configuration, reservations, client management, billing, and reports.
+3.  **Navigate Features:** Explore the different sections of the application, such as hotel configuration, reservations, client management, billing, reports, and waitlist management.
+
+### Waitlist Feature Usage
+
+The waitlist system is accessible through the main navigation and provides the following functionality:
+
+1. **Creating Waitlist Entries**: When rooms are unavailable during reservation creation, users can add guests to a waitlist with their preferences.
+2. **Managing Waitlist**: Staff can view, filter, and manage waitlist entries through the dedicated management interface.
+3. **Manual Notifications**: Staff can manually send availability notifications to waitlist guests when rooms become available.
+4. **Vacancy Checking**: The system can check real-time availability for waitlist entries to determine if offers can be made.
 
 ## API Documentation
 
@@ -158,23 +176,37 @@ For more detailed information about the API, including setup, specific endpoints
 
 For specific instructions on setting up and using Google login, refer to the guide: `api/LOGIN_WITH_GOOGLE.md`.
 
+For comprehensive details about the waitlist feature implementation, refer to: `WAITLIST_STRATEGY.md`
+
 ## Project Structure
 
 *   `/api`: Contains the backend Node.js Express application. This includes routes, controllers, models, services, and configuration.
     *   `/api/migrations`: Contains SQL scripts for database schema setup and migrations. These should be run in numerical order.
+    *   `/api/models/waitlist.js`: ✅ **NEW** - Waitlist data model and business logic
+    *   `/api/controllers/waitlistController.js`: ✅ **NEW** - Waitlist API endpoints
+    *   `/api/routes/waitlistRoutes.js`: ✅ **NEW** - Waitlist route definitions
+    *   `/api/jobs/waitlistJob.js`: ✅ **NEW** - Background job for waitlist maintenance
 *   `/frontend`: Contains the Vue.js frontend application, including components, views, store (e.g., Pinia), and assets.
+    *   `/frontend/src/composables/useWaitlistStore.js`: ✅ **NEW** - Waitlist state management
+    *   `/frontend/src/pages/Admin/ManageWaitList.vue`: ✅ **NEW** - Waitlist management interface
+    *   `/frontend/src/pages/MainPage/components/Dialogs/WaitlistDialog.vue`: ✅ **NEW** - Waitlist entry creation dialog
+    *   `/frontend/src/pages/MainPage/components/WaitlistDisplayModal.vue`: ✅ **NEW** - Waitlist display modal
 *   `/apache`: Likely contains Apache web server configuration files for deploying the application, possibly as a reverse proxy.
 *   `/postgres`: Primarily used for storing PostgreSQL database backups and related utility scripts. The main database schema scripts are located in `/api`.
 *   `/scripts`: Contains miscellaneous utility scripts for development, deployment, or administrative tasks.
 *   `ecosystem.config.js`: Configuration file for PM2, a Node.js process manager, used for managing the backend application in production.
 *   `package.json`: Root level `package.json`. It may manage workspace dependencies or define top-level scripts for coordinating frontend/backend tasks.
-*   **Note:** The root directory also contains several other `.md` files such as `data_aggregation_strategies_postgresql.md`, `key_reservation_metrics_recommendations.md`, and `multi_hotel_presentation_strategy.md` which may contain further design and architectural notes.
+*   **Note:** The root directory also contains several other `.md` files such as `data_aggregation_strategies_postgresql.md`, `key_reservation_metrics_recommendations.md`, `multi_hotel_presentation_strategy.md`, and `WAITLIST_STRATEGY.md` which may contain further design and architectural notes.
 
 ## Architecture and Design Documents
 
 For more detailed information on the system's architecture, data aggregation strategies, key metric definitions, and multi-hotel presentation strategies, please refer to the following document:
 
 -   [Architecture and Design](./ARCHITECTURE.md)
+
+For comprehensive details about the waitlist feature implementation, including current status and future roadmap:
+
+-   [Waitlist Strategy](./WAITLIST_STRATEGY.md)
 
 ## Development Guidelines and Best Practices
 

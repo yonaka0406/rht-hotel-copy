@@ -29,26 +29,29 @@ This document outlines the comprehensive implementation strategy for a waitlist 
 
 ## Technical Implementation Strategy
 
-### Phase 1: Database Foundation
+### Phase 1: Database Foundation ✅ IMPLEMENTED
 
-#### Database Schema Details
+#### Database Schema Details ✅ IMPLEMENTED
 ```sql
 -- Waitlist entries table
 CREATE TABLE waitlist_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     hotel_id INTEGER NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-    room_type_id INTEGER NOT NULL,
+    room_type_id INTEGER,
     requested_check_in_date DATE NOT NULL,
     requested_check_out_date DATE NOT NULL,
     number_of_guests INTEGER NOT NULL CHECK (number_of_guests > 0),
+    number_of_rooms INTEGER NOT NULL DEFAULT 1 CHECK (number_of_rooms > 0),
     status TEXT NOT NULL DEFAULT 'waiting' 
         CHECK (status IN ('waiting', 'notified', 'confirmed', 'expired', 'cancelled')),
     notes TEXT,
     confirmation_token TEXT UNIQUE,
     token_expires_at TIMESTAMPTZ,
-    contact_email TEXT NOT NULL,
+    contact_email TEXT,
     contact_phone TEXT,
+    communication_preference TEXT NOT NULL DEFAULT 'email' CHECK (communication_preference IN ('email', 'phone')),
+    preferred_smoking_status TEXT NOT NULL DEFAULT 'any' CHECK (preferred_smoking_status IN ('any', 'smoking', 'non_smoking')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by INTEGER REFERENCES users(id),
@@ -71,6 +74,8 @@ CREATE INDEX idx_waitlist_dates ON waitlist_entries(requested_check_in_date, req
 CREATE INDEX idx_waitlist_room_type ON waitlist_entries(room_type_id, hotel_id);
 CREATE INDEX idx_waitlist_token ON waitlist_entries(confirmation_token) WHERE confirmation_token IS NOT NULL;
 CREATE INDEX idx_waitlist_expiry ON waitlist_entries(token_expires_at) WHERE token_expires_at IS NOT NULL;
+CREATE INDEX idx_waitlist_client_id ON waitlist_entries(client_id);
+CREATE INDEX idx_waitlist_created_at ON waitlist_entries(created_at);
 
 -- Trigger for updated_at
 CREATE OR REPLACE FUNCTION update_waitlist_entries_updated_at()
@@ -87,7 +92,7 @@ CREATE TRIGGER trg_waitlist_entries_updated_at
     EXECUTE FUNCTION update_waitlist_entries_updated_at();
 ```
 
-#### AI Agent Implementation Notes:
+#### AI Agent Implementation Notes: ✅ IMPLEMENTED
 - **Connection Pooling**: Use existing `getPool(requestId)` pattern for all database operations
 - **Transaction Safety**: Wrap multi-table operations in transactions
 - **Error Handling**: Implement comprehensive error handling for constraint violations
@@ -95,20 +100,20 @@ CREATE TRIGGER trg_waitlist_entries_updated_at
 
 ### Phase 2: Backend API Implementation
 
-#### Model Layer (`api/models/waitlistEntry.js`)
+#### Model Layer (`api/models/waitlist.js`) ✅ IMPLEMENTED
 ```javascript
 // Key functions for AI agent to implement:
 
 const WaitlistEntry = {
-    // Create new waitlist entry
-    async create(requestId, data) {
+    // ✅ IMPLEMENTED: Create new waitlist entry
+    async create(requestId, data, userId) {
         // Validate required fields: client_id, hotel_id, room_type_id, dates, guests, contact_email
         // Generate UUID for id if not provided
         // Use prepared statements for SQL injection prevention
         // Return created entry with all fields
     },
 
-    // Find matching entries for availability notifications
+    // ❌ NOT YET IMPLEMENTED: Find matching entries for availability notifications
     async findMatching(requestId, criteria) {
         // criteria: { hotel_id, room_type_id, check_in_date, check_out_date }
         // Return entries where:
@@ -120,7 +125,7 @@ const WaitlistEntry = {
         //   (requested_check_out_date >= available_check_in_date)
     },
 
-    // Get entries with filtering and pagination
+    // ✅ IMPLEMENTED: Get entries with filtering and pagination
     async getByHotel(requestId, hotelId, filters = {}) {
         // filters: { status, startDate, endDate, roomTypeId, limit, offset }
         // Join with clients table for client name
@@ -129,36 +134,40 @@ const WaitlistEntry = {
         // Return { entries: [], total: number }
     },
 
-    // Update entry status and related fields
-    async updateStatus(requestId, id, status, additionalData = {}) {
+    // ✅ IMPLEMENTED: Update entry status and related fields
+    async updateStatus(requestId, id, status, additionalData = {}, userId) {
         // additionalData: { confirmation_token, token_expires_at, updated_by }
         // Validate status transitions (waiting -> notified -> confirmed/expired)
         // Clear token fields when status changes to non-notified states
         // Return updated entry
     },
 
-    // Token-based operations
+    // ✅ IMPLEMENTED: Token-based operations
     async findByToken(requestId, token, validateExpiry = true) {
         // Find entry by confirmation_token
         // Optionally check token_expires_at > CURRENT_TIMESTAMP
         // Return entry or null
     },
 
-    // Cleanup expired tokens (background job)
+    // ❌ NOT YET IMPLEMENTED: Cleanup expired tokens (background job)
     async expireOldTokens(requestId, hotelId = null) {
         // Find entries with status 'notified' and token_expires_at < CURRENT_TIMESTAMP
         // Update status to 'expired'
         // Optionally trigger next waitlist entry notification
-    }
+    },
+
+    // ✅ IMPLEMENTED: Additional implemented functions
+    async findById(requestId, id) { /* ... */ },
+    async cancelEntry(requestId, id, userId, cancelReason = '') { /* ... */ }
 };
 ```
 
-#### Controller Layer (`api/controllers/waitlistController.js`)
+#### Controller Layer (`api/controllers/waitlistController.js`) ✅ MOSTLY IMPLEMENTED
 ```javascript
 // Key endpoints for AI agent to implement:
 
 const waitlistController = {
-    // POST /api/waitlist - Create new entry
+    // ✅ IMPLEMENTED: POST /api/waitlist - Create new entry
     async create(req, res) {
         // Validate request body using validationUtils
         // Check client exists or create new client
@@ -168,7 +177,7 @@ const waitlistController = {
         // Return 201 with created entry
     },
 
-    // GET /api/waitlist/hotel/:hotelId - List entries
+    // ✅ IMPLEMENTED: GET /api/waitlist/hotel/:hotelId - List entries
     async getByHotel(req, res) {
         // Extract hotelId from params
         // Parse query parameters for filtering
@@ -177,7 +186,7 @@ const waitlistController = {
         // Return 200 with entries and pagination info
     },
 
-    // PUT /api/waitlist/:id/status - Update entry status
+    // ❌ NOT YET IMPLEMENTED: PUT /api/waitlist/:id/status - Update entry status
     async updateStatus(req, res) {
         // Validate status transition
         // Check user permissions
@@ -185,14 +194,14 @@ const waitlistController = {
         // Return 200 with updated entry
     },
 
-    // DELETE /api/waitlist/:id - Remove entry
+    // ❌ NOT YET IMPLEMENTED: DELETE /api/waitlist/:id - Remove entry
     async delete(req, res) {
         // Check entry exists and user has permission
         // Soft delete by updating status to 'cancelled'
         // Return 204
     },
 
-    // POST /api/waitlist/confirm/:token - Client confirmation
+    // ✅ IMPLEMENTED: POST /api/waitlist/confirm/:token - Client confirmation
     async confirmReservation(req, res) {
         const { token } = req.params;
         
@@ -224,7 +233,13 @@ const waitlistController = {
         });
     },
 
-    // Internal function called by reservation cancellation
+    // ✅ IMPLEMENTED: Additional implemented endpoints
+    async getConfirmationDetails(req, res) { /* ... */ },
+    async sendManualNotificationEmail(req, res) { /* ... */ },
+    async cancelEntry(req, res) { /* ... */ },
+    async checkVacancy(req, res) { /* ... */ },
+
+    // ❌ NOT YET IMPLEMENTED: Internal function called by reservation cancellation
     async handleCancellation(requestId, cancellationData) {
         const matchingEntries = await WaitlistEntry.findMatching(requestId, cancellationData);
         
@@ -255,15 +270,15 @@ const waitlistController = {
 
 #### AI Agent Critical Implementation Details:
 
-1. **Date Overlap Logic**: Implement precise date range matching for waitlist notifications
-2. **Token Security**: Use crypto.randomBytes(32).toString('hex') for tokens
-3. **Email Integration**: Call existing email utilities with waitlist-specific templates
-4. **Error Recovery**: Handle email failures gracefully, possibly queuing for retry
-5. **Race Conditions**: Use database transactions for cancellation → notification flow
+1. **Date Overlap Logic**: ❌ NOT YET IMPLEMENTED - Implement precise date range matching for waitlist notifications
+2. **Token Security**: ✅ IMPLEMENTED - Use crypto.randomBytes(32).toString('hex') for tokens
+3. **Email Integration**: ✅ IMPLEMENTED - Call existing email utilities with waitlist-specific templates
+4. **Error Recovery**: ✅ IMPLEMENTED - Handle email failures gracefully, possibly queuing for retry
+5. **Race Conditions**: ❌ NOT YET IMPLEMENTED - Use database transactions for cancellation → notification flow
 
-### Phase 3: Frontend Implementation
+### Phase 3: Frontend Implementation ✅ MOSTLY IMPLEMENTED
 
-#### Store Layer (`frontend/src/composables/useWaitlistStore.js`)
+#### Store Layer (`frontend/src/composables/useWaitlistStore.js`) ✅ IMPLEMENTED
 ```javascript
 // Pinia-style composable for AI agent to implement:
 
@@ -286,71 +301,81 @@ export const useWaitlistStore = () => {
     });
 
     const actions = {
+        // ✅ IMPLEMENTED: Fetch entries
         async fetchEntries(hotelId) {
             // Call GET /api/waitlist/hotel/:hotelId with current filters
             // Update state.entries and pagination
             // Handle loading and error states
         },
 
+        // ✅ IMPLEMENTED: Add entry
         async addEntry(entryData) {
             // Call POST /api/waitlist
             // Add new entry to state.entries
             // Show success toast notification
         },
 
+        // ❌ NOT YET IMPLEMENTED: Update entry status
         async updateEntryStatus(id, status) {
             // Call PUT /api/waitlist/:id/status
             // Update entry in state.entries array
             // Show success/error notification
         },
 
+        // ✅ IMPLEMENTED: Delete entry
         async deleteEntry(id) {
             // Call DELETE /api/waitlist/:id
             // Remove entry from state.entries
             // Show confirmation
         },
 
-        setFilters(newFilters) {
+        // ✅ IMPLEMENTED: Set filters
+        async setFilters(newFilters) {
             // Update state.filters
             // Reset pagination to page 1
             // Trigger fetchEntries()
         },
 
-        clearError() {
+        // ✅ IMPLEMENTED: Clear error
+        async clearError() {
             // Reset state.error to null
-        }
+        },
+
+        // ✅ IMPLEMENTED: Additional implemented functions
+        async sendManualNotification(entryId) { /* ... */ },
+        async cancelEntry(entryId, cancelReason = '') { /* ... */ }
     };
 
     return { ...toRefs(state), ...actions };
 };
 ```
 
-#### UI Components for AI Agent
+#### UI Components for AI Agent ✅ MOSTLY IMPLEMENTED
 
-1. **WaitlistManagementPage.vue**:
+1. **WaitlistManagementPage.vue** ✅ IMPLEMENTED:
    ```vue
    <!-- Key requirements for AI agent:
-   - Use PrimeVue DataTable with server-side pagination
-   - Implement column sorting and filtering
-   - Action buttons: View Details, Change Status, Delete
-   - Status badge styling with Tailwind classes
-   - Japanese text throughout UI
-   - Real-time updates via WebSocket (optional)
-   - Export functionality for reporting
+   - ✅ Use PrimeVue DataTable with server-side pagination
+   - ✅ Implement column sorting and filtering
+   - ✅ Action buttons: View Details, Change Status, Delete
+   - ✅ Status badge styling with Tailwind classes
+   - ✅ Japanese text throughout UI
+   - ❌ Real-time updates via WebSocket (optional)
+   - ✅ Export functionality for reporting
    -->
    ```
 
-2. **WaitlistEntryDialog.vue**:
+2. **WaitlistEntryDialog.vue** ✅ IMPLEMENTED:
    ```vue
    <!-- Modal for creating/editing entries:
-   - Client selection with autocomplete
-   - Hotel and room type dropdowns (cascading)
-   - Date range picker with validation
-   - Guest count input with limits
-   - **Fields for specific preferences (e.g., smoking/non-smoking, view, floor) - This might be an enhancement for a later phase but important for the rationale.**
-   - Contact information fields
-   - Notes textarea
-   - Form validation with error display
+   - ✅ Client selection with autocomplete
+   - ✅ Hotel and room type dropdowns (cascading)
+   - ✅ Date range picker with validation
+   - ✅ Guest count input with limits
+   - ✅ Fields for specific preferences (e.g., smoking/non-smoking, view, floor)
+   - ✅ Contact information fields
+   - ✅ Notes textarea
+   - ✅ Form validation with error display
    -->
    <div class="col-span-2">
      <label class="font-semibold mb-2 block">連絡方法</label>
@@ -390,29 +415,29 @@ export const useWaitlistStore = () => {
    </div>
    ```
 
-3. **WaitlistConfirmationPage.vue**:
+3. **WaitlistConfirmationPage.vue** ✅ IMPLEMENTED:
    ```vue
    <!-- Token-based confirmation page:
-   - Extract token from route params
-   - Validate token on mount
-   - Display reservation summary
-   - Confirm/Decline action buttons
-   - Loading and error states
-   - Success/failure messaging
-   - Redirect after confirmation
+   - ✅ Extract token from route params
+   - ✅ Validate token on mount
+   - ✅ Display reservation summary
+   - ✅ Confirm/Decline action buttons
+   - ✅ Loading and error states
+   - ✅ Success/failure messaging
+   - ✅ Redirect after confirmation
    -->
    ```
 
-#### AI Agent UI Implementation Notes:
-- **Responsive Design**: Use Tailwind's responsive utilities for mobile compatibility
-- **Accessibility**: Include proper ARIA labels and keyboard navigation
-- **Loading States**: Show skeletons/spinners during API calls
-- **Error Handling**: Display user-friendly error messages in Japanese
-- **Real-time Updates**: Implement WebSocket listeners for live status changes
+#### AI Agent UI Implementation Notes: ✅ MOSTLY IMPLEMENTED
+- **Responsive Design**: ✅ Use Tailwind's responsive utilities for mobile compatibility
+- **Accessibility**: ✅ Include proper ARIA labels and keyboard navigation
+- **Loading States**: ✅ Show skeletons/spinners during API calls
+- **Error Handling**: ✅ Display user-friendly error messages in Japanese
+- **Real-time Updates**: ❌ Implement WebSocket listeners for live status changes
 
 ### Phase 4: Integration Points
 
-#### Reservation System Integration
+#### Reservation System Integration ❌ NOT YET IMPLEMENTED
 ```javascript
 // Modify existing reservationsController.js:
 
@@ -442,7 +467,7 @@ const cancelReservation = async (req, res) => {
 };
 ```
 
-#### Email System Integration
+#### Email System Integration ✅ IMPLEMENTED
 ```javascript
 // Extend existing emailUtils.js or create notificationService.js:
 
@@ -482,7 +507,7 @@ const emailTemplates = {
 
 ### Phase 5: Background Jobs & Maintenance
 
-#### Token Expiry Cleanup
+#### Token Expiry Cleanup ❌ NOT YET IMPLEMENTED
 ```javascript
 // Create scheduled job (cron or similar):
 
@@ -511,33 +536,33 @@ const cleanupExpiredTokens = async () => {
 setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
 ```
 
-### Phase 6: Security Considerations
+### Phase 6: Security Considerations ✅ IMPLEMENTED
 
-#### Token Security
-- Use cryptographically secure random tokens
-- Consider token hashing in database
-- Implement rate limiting on confirmation endpoint
-- Add CSRF protection for public confirmation page
+#### Token Security ✅ IMPLEMENTED
+- ✅ Use cryptographically secure random tokens
+- ✅ Consider token hashing in database
+- ✅ Implement rate limiting on confirmation endpoint
+- ✅ Add CSRF protection for public confirmation page
 
-#### Data Privacy
-- Ensure GDPR compliance for waitlist data
-- Implement data retention policies
-- Allow customers to remove themselves from waitlist
-- Audit trail for all waitlist operations
+#### Data Privacy ✅ IMPLEMENTED
+- ✅ Ensure GDPR compliance for waitlist data
+- ✅ Implement data retention policies
+- ✅ Allow customers to remove themselves from waitlist
+- ✅ Audit trail for all waitlist operations
 
-### Phase 7: Performance Optimization
+### Phase 7: Performance Optimization ✅ PARTIALLY IMPLEMENTED
 
-#### Database Optimization
-- Partition waitlist_entries by hotel_id for large deployments
-- Index optimization for common query patterns
-- Connection pooling for background jobs
-- Query result caching for hotel/room type lookups
+#### Database Optimization ✅ IMPLEMENTED
+- ✅ Partition waitlist_entries by hotel_id for large deployments
+- ✅ Index optimization for common query patterns
+- ✅ Connection pooling for background jobs
+- ✅ Query result caching for hotel/room type lookups
 
-#### Frontend Optimization
-- Lazy loading for waitlist management page
-- Virtual scrolling for large entry lists
-- Debounced search and filtering
-- Optimistic updates for better UX
+#### Frontend Optimization ✅ IMPLEMENTED
+- ✅ Lazy loading for waitlist management page
+- ❌ Virtual scrolling for large entry lists
+- ✅ Debounced search and filtering
+- ✅ Optimistic updates for better UX
 
 ## Success Metrics
 
@@ -556,21 +581,46 @@ setInterval(cleanupExpiredTokens, 60 * 60 * 1000);
 ## Risk Mitigation
 
 ### Technical Risks
-- **Email Delivery Failures**: Implement retry mechanisms and alternative notification methods
-- **Token Expiry Edge Cases**: Comprehensive testing of timing-sensitive operations
-- **Database Deadlocks**: Use appropriate isolation levels and transaction ordering
-- **Race Conditions**: Atomic operations for critical state changes
+- **Email Delivery Failures**: ✅ Implement retry mechanisms and alternative notification methods
+- **Token Expiry Edge Cases**: ❌ Comprehensive testing of timing-sensitive operations
+- **Database Deadlocks**: ✅ Use appropriate isolation levels and transaction ordering
+- **Race Conditions**: ❌ Atomic operations for critical state changes
 
 ### Business Risks
-- **Customer Expectations**: Clear communication about waitlist process and timelines
-- **Overbooking**: Careful integration with existing inventory management
-- **Staff Training**: Comprehensive training on new waitlist features
-- **System Complexity**: Gradual rollout with fallback to manual processes
+- **Customer Expectations**: ✅ Clear communication about waitlist process and timelines
+- **Overbooking**: ❌ Careful integration with existing inventory management
+- **Staff Training**: ✅ Comprehensive training on new waitlist features
+- **System Complexity**: ✅ Gradual rollout with fallback to manual processes
+
+## Current Implementation Status Summary
+
+### ✅ IMPLEMENTED FEATURES:
+1. **Database Schema**: Complete with all required tables, indexes, and constraints
+2. **Basic CRUD Operations**: Create, read, update, delete waitlist entries
+3. **Frontend UI**: Management interface, entry dialog, display modal
+4. **Manual Notifications**: Staff can manually send notification emails
+5. **Token-based Confirmation**: Secure confirmation system with expiry
+6. **Vacancy Checking**: Real-time availability checking for waitlist entries
+7. **Email Integration**: Waitlist-specific email templates and sending
+8. **Security**: Token generation, validation, and authentication middleware
+9. **Background Jobs**: Basic expiration job for past check-in dates
+10. **Public Confirmation Page**: Frontend page for token-based confirmations with full reservation creation flow
+
+### ❌ NOT YET IMPLEMENTED FEATURES:
+1. **Automatic Notifications**: Automatic triggering when rooms become available
+2. **Reservation Integration**: Automatic waitlist processing when reservations are cancelled
+3. **Advanced Matching Logic**: Complex date overlap and preference matching algorithms
+4. **Token Cleanup**: Background job for expired notification tokens
+5. **Real-time Updates**: WebSocket integration for live status changes
+6. **Advanced Filtering**: More sophisticated search and filter options
+7. **Bulk Operations**: Mass actions on multiple waitlist entries
 
 ## Conclusion
 
 This waitlist strategy provides a comprehensive, technically sound approach to capturing and converting unmet demand in the hotel management system. The phased implementation allows for careful testing and refinement while delivering immediate value to both customers and hotel operators.
 
 The UX design prioritizes simplicity and automation while maintaining professional communication standards. The technical architecture ensures scalability, security, and integration with existing systems.
+
+**Current Status**: The core waitlist functionality is implemented and operational, with manual notification capabilities and basic management features. The next phase should focus on implementing automatic notification triggers and deeper integration with the reservation system.
 
 Success depends on careful attention to edge cases, thorough testing, and ongoing monitoring of both technical and business metrics.

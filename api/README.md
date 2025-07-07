@@ -44,7 +44,7 @@ This directory contains the backend API for the Hotel Management System. It is a
     *   Ensure you have a running PostgreSQL instance.
     *   Create a database for the application (e.g., `hotel_system_db`).
     *   Connect to your database and execute the SQL migration scripts located in the `api/migrations/` directory.
-    *   These scripts **must be executed in numerical order** (e.g., `001_initial_schema.sql`, then `002_room_management.sql`, and so on, up to `013_data_cleanup.sql`).
+    *   These scripts **must be executed in numerical order** (e.g., `001_initial_schema.sql`, then `002_room_management.sql`, and so on, up to `013_waitlist.sql`).
     *   The ordered list of migration files is:
         1.  `001_initial_schema.sql` (Core user and hotel tables)
         2.  `002_room_management.sql` (Room types and rooms)
@@ -58,7 +58,7 @@ This directory contains the backend API for the Hotel Management System. It is a
         10. `010_logs_schema_and_functions.sql` (Log tables and log trigger functions)
         11. `011_custom_functions.sql` (Custom SQL utility functions)
         12. `012_triggers.sql` (Attaches log triggers and other custom triggers)
-        13. `013_data_cleanup.sql` (Note: This script contains data cleanup operations that may be specific to an initial data import and might not be required for all fresh installations. Review its contents before running.)
+        13. `013_waitlist.sql` ✅ **NEW** - Waitlist system database schema and functions
     *   **Note on Google Authentication:** The `LOGIN_WITH_GOOGLE.md` guide might mention a `migration_script.sql`. This is now superseded by the numbered migration files. Ensure all Google Auth related fields (e.g., in the `users` table) are correctly defined within `001_initial_schema.sql` or other relevant early migration files.
 4.  **Environment Variables:**
     *   Create a `.env` file in the `api` directory (i.e., `api/.env`).
@@ -117,14 +117,20 @@ The API codebase is organized into the following main directories:
 
 *   **`/config`**: Contains configuration files for the database, OAuth, Redis, etc.
 *   **`/controllers`**: Houses the controllers that handle incoming requests, interact with services/models, and send responses.
+    *   **`waitlistController.js`** ✅ **NEW** - Handles waitlist-related API endpoints including entry creation, management, notifications, and confirmations.
 *   **`/middleware`**: Contains custom middleware functions (e.g., for authentication).
+    *   **`authMiddleware.js`** - Updated with waitlist token authentication for public confirmation endpoints.
 *   **`/models`**: Defines the database schemas/models and includes logic for interacting with the database (data access layer).
+    *   **`waitlist.js`** ✅ **NEW** - Waitlist data model with CRUD operations, token management, and business logic.
 *   **`/ota`**: Contains specific logic for Online Travel Agency (OTA) XML integration, including its own routes, controller, and model for handling XML-based communication.
 *   **`/public`**: Static assets served by the API.
 *   **`/routes`**: Defines the API endpoints and maps them to the appropriate controllers.
+    *   **`waitlistRoutes.js`** ✅ **NEW** - Waitlist API route definitions with proper authentication and authorization.
 *   **`/services`**: Contains business logic that is shared across controllers (e.g., session management, specific business operations).
 *   **`/utils`**: Utility functions used throughout the application. This includes helpers for email (`emailUtils.js`), JWT handling, Japanese text processing (Kuroshiro/wanakana), date formatting, and input validation.
     *   **Input Validation:** The `api/utils/validationUtils.js` module provides helper functions for robust and consistent validation of request parameters (e.g., numeric IDs, UUIDs, date strings). It is recommended to use these utilities in controllers to ensure data integrity and standardized error responses. For detailed usage, refer to `instructions.md`.
+*   **`/jobs`**: Contains background job scripts for automated tasks.
+    *   **`waitlistJob.js`** ✅ **NEW** - Background job for waitlist maintenance including expiration of past entries.
 
 ## Key Files
 
@@ -132,6 +138,32 @@ The API codebase is organized into the following main directories:
 *   **`package.json`**: Lists project dependencies and npm scripts.
 *   **`LOGIN_WITH_GOOGLE.md`**: Provides specific instructions and details for setting up and using the "Login with Google" functionality (refer to migration scripts for schema setup).
 *   **`/migrations`**: This directory now contains all SQL scripts for database initialization, replacing the older monolithic `sql.sql`, `sql_logs.sql`, and `sql_triggers.sql` files. Execute these scripts in numerical order.
+
+## Waitlist System API Endpoints ✅ NEW
+
+The waitlist system provides the following API endpoints:
+
+### Core Waitlist Operations
+*   **`POST /api/waitlist`** - Create a new waitlist entry (requires authentication and CRUD access)
+*   **`GET /api/waitlist/hotel/:hotelId`** - List waitlist entries for a hotel with filtering and pagination (requires authentication)
+*   **`POST /api/waitlist/hotel/:hotelId`** - Alternative endpoint for listing entries with POST body for complex filters
+
+### Waitlist Management
+*   **`POST /api/waitlist/:id/manual-notify`** - Send manual notification email to waitlist guest (requires authentication)
+*   **`PUT /api/waitlist/:id/cancel`** - Cancel a waitlist entry (requires authentication)
+*   **`PUT /api/waitlist/:id/cancel-token`** - Cancel a waitlist entry via waitlist token (public endpoint with token authentication)
+
+### Public Confirmation Endpoints
+*   **`GET /api/waitlist/confirm/:token`** - Get confirmation details for a waitlist token (public)
+*   **`POST /api/waitlist/confirm/:token`** - Confirm waitlist entry and create reservation (public)
+
+### Utility Endpoints
+*   **`POST /api/waitlist/check-vacancy`** - Check real-time availability for waitlist entry criteria (public)
+
+### Authentication
+*   Most endpoints require standard JWT authentication via `authMiddleware`
+*   CRUD operations require additional `authMiddlewareCRUDAccess` for permission checking
+*   Public confirmation endpoints use `authMiddlewareWaitlistToken` for token-based authentication
 
 ## Online Travel Agency (OTA) Integration
 
@@ -157,11 +189,32 @@ For detailed coding guidelines, component usage conventions, specific patterns t
 
 It is highly recommended that all developers familiarize themselves with the contents of `instructions.md` before starting new development tasks and refer back to it periodically.
 
+## Waitlist System Implementation Status
+
+### ✅ Implemented Features:
+1. **Database Schema**: Complete waitlist_entries table with all required fields, indexes, and constraints
+2. **Core CRUD Operations**: Create, read, update, delete waitlist entries with proper validation
+3. **Token-based Confirmation**: Secure confirmation system with crypto-generated tokens and expiry
+4. **Manual Notifications**: Staff can manually send availability notifications via email
+5. **Vacancy Checking**: Real-time availability checking for waitlist entry criteria
+6. **Email Integration**: Waitlist-specific email templates and sending functionality
+7. **Authentication**: Proper middleware for both authenticated and public endpoints
+8. **Background Jobs**: Basic expiration job for past check-in dates
+
+### ❌ Not Yet Implemented Features:
+1. **Automatic Notifications**: Automatic triggering when rooms become available
+2. **Reservation Integration**: Automatic waitlist processing when reservations are cancelled
+3. **Advanced Matching Logic**: Complex date overlap and preference matching algorithms
+4. **Token Cleanup**: Background job for expired notification tokens
+5. **Real-time Updates**: WebSocket integration for live status changes
+
+For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to `WAITLIST_STRATEGY.md` in the root directory.
+
 ## Troubleshooting
 
 If you encounter issues during setup or operation, first check the following:
 *   **Environment Variable Configuration:** Ensure all required environment variables in your `.env` file are correctly set for your specific environment. Pay close attention to database credentials, API keys, and service URLs.
 *   **Service Availability:** Verify that essential services like PostgreSQL and Redis are running and accessible to the API.
 *   **Logs:** Check the application logs for more specific error messages. If running in development mode (`npm run dev`), logs will typically appear in the console. For production deployments, check the configured log files or logging service.
-*   **Database Schema:** Confirm that all SQL scripts (`sql.sql`, `sql_logs.sql`, `sql_triggers.sql`) have been executed successfully against your database.
+*   **Database Schema:** Confirm that all SQL scripts (`001_initial_schema.sql` through `013_waitlist.sql`) have been executed successfully against your database.
 *   **Port Conflicts:** Ensure the port specified for the API (`SERVER_PORT`, defaulting to the port used by `npm start` or `npm run dev` if not set) is not already in use by another application.
