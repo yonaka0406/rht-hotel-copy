@@ -80,15 +80,11 @@ COMMENT ON COLUMN waitlist_entries.room_type_id IS 'References room_types.id, pa
 COMMENT ON CONSTRAINT fk_waitlist_room_types ON waitlist_entries IS 'Composite foreign key to the partitioned room_types table.';
 COMMENT ON COLUMN waitlist_entries.communication_preference IS 'Client''s preferred method of contact: email or phone.';
 
--- Drop all existing functions with this name to avoid conflicts
+-- Fix the waitlist vacancy function to properly calculate capacity
+-- Drop the existing function first
 DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN);
-DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, DATE, DATE, INT, INT, INT, BOOLEAN);
-DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT);
-DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, DATE, DATE, INT, INT, INT);
-DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN, BOOLEAN);
-DROP FUNCTION IF EXISTS is_waitlist_vacancy_available(INT, INT, DATE, DATE, INT, INT, BOOLEAN, BOOLEAN, BOOLEAN);
 
--- Enhanced function: checks both number of rooms and total capacity, and supports smoking preference and optional room type
+-- Recreate the function with corrected logic
 CREATE OR REPLACE FUNCTION is_waitlist_vacancy_available(
     p_hotel_id INT,
     p_room_type_id INT,
@@ -128,21 +124,26 @@ BEGIN
     -- Check if we have enough rooms
     IF available_room_count >= p_number_of_rooms THEN
         -- Also check if total capacity is sufficient
+        -- Get the sum of capacity for the first N rooms (ordered by capacity descending to get the best rooms first)
         SELECT COALESCE(SUM(r.capacity), 0)
         INTO total_capacity
-        FROM rooms r
-        WHERE r.hotel_id = p_hotel_id
-          AND r.for_sale = true
-          AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
-          AND (p_smoking_preference IS NULL OR r.smoking = p_smoking_preference)
-          AND r.id NOT IN (
-              SELECT DISTINCT rd.room_id
-              FROM reservation_details rd
-              WHERE rd.date >= p_check_in 
-                AND rd.date < p_check_out
-                AND rd.cancelled = false
-          )
-        LIMIT p_number_of_rooms;
+        FROM (
+            SELECT r.capacity
+            FROM rooms r
+            WHERE r.hotel_id = p_hotel_id
+              AND r.for_sale = true
+              AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
+              AND (p_smoking_preference IS NULL OR r.smoking = p_smoking_preference)
+              AND r.id NOT IN (
+                  SELECT DISTINCT rd.room_id
+                  FROM reservation_details rd
+                  WHERE rd.date >= p_check_in 
+                    AND rd.date < p_check_out
+                    AND rd.cancelled = false
+              )
+            ORDER BY r.capacity DESC
+            LIMIT p_number_of_rooms
+        ) AS selected_rooms;
         
         RETURN total_capacity >= p_number_of_guests;
     END IF;
