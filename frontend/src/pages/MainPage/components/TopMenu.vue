@@ -144,15 +144,12 @@
 
     // --- Methods ---
     const openWaitlistModal = () => {
-        console.log('Opening waitlist modal...');
         isWaitlistModalVisible.value = true;
     };
 
     const goToEditReservationPage = async (hotel_id, reservation_id) => {
         await setHotelId(hotel_id); // Set the hotel context in the store
         await setReservationId(reservation_id); // Set the reservation context in the store
-
-        // console.log('TopMenu goToEditReservationPage:', hotel_id, reservation_id);
 
         showDrawer.value = false; // Close the notification drawer
 
@@ -162,11 +159,9 @@
 
     // --- Lifecycle Hooks ---
     onMounted(async () => {
-        // console.log('holdReservations onMounted:', holdReservations.value);
         // Already called in SideMenu 
         // await fetchUser();
         // await fetchMyHoldReservations();
-        // console.log('Logged user onMounted:', logged_user.value);
     });
 
     // --- Watchers ---

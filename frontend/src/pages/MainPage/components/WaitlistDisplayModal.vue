@@ -99,15 +99,11 @@ const checkVacancy = async (entry) => {
     smoking_preference: entry.preferred_smoking_status === 'smoking' ? true : (entry.preferred_smoking_status === 'non_smoking' ? false : null)
   };
   
-  console.log('Checking vacancy for entry:', entry.id, 'with payload:', payload);
-  
   try {
     const response = await axios.post('/api/waitlist/check-vacancy', payload);
-    console.log('Vacancy check response for entry:', entry.id, ':', response.data);
     vacancyStatus.value[entry.id] = response.data.available;
     return response.data.available;
   } catch (e) {
-    console.error('Error checking vacancy for entry:', entry.id, ':', e);
     vacancyStatus.value[entry.id] = false;
     return false;
   }
@@ -176,7 +172,6 @@ const getMainActionSeverity = (entry) => {
 const getActionItems = (entry) => {
   const items = [];
   const disabled = vacancyStatus.value[entry.id] === false;
-  console.log('getActionItems for entry:', entry.id, 'vacancyStatus:', vacancyStatus.value[entry.id], 'disabled:', disabled, 'full vacancyStatus:', vacancyStatus.value);
   
   if (entry.communication_preference === 'email') {
     items.push({
@@ -218,13 +213,11 @@ const sendManualEmail = (entry) => {
     },
     accept: async () => {
       if (!entry.id) {
-        console.error('Entry ID is missing, cannot send manual email.');
         return;
       }
       const result = await sendManualNotification(entry.id);
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
-        console.log('Manual email process completed for entry:', entry.id, 'Result:', result);
       }
     },
     reject: () => {
@@ -249,14 +242,12 @@ const showPhoneNumber = (entry) => {
     },
     accept: async () => {
       if (!entry.id) {
-        console.error('Entry ID is missing, cannot update status.');
         return;
       }
       // Use the same API as manual notification to set status to notified
       const result = await sendManualNotification(entry.id);
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
-        console.log('Phone contact status updated for entry:', entry.id, 'Result:', result);
       }
     },
     reject: () => {
@@ -281,14 +272,12 @@ const cancelEntryAction = (entry) => {
     },
     accept: async () => {
       if (!entry.id) {
-        console.error('Entry ID is missing, cannot cancel entry.');
         return;
       }
       const result = await cancelEntry(entry.id);
       if (result && selectedHotelId.value) {
         // Refresh the list after successful cancellation
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
-        console.log('Entry cancelled successfully:', entry.id, 'Result:', result);
       }
     },
     reject: () => {
