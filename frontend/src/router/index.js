@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 const WorkInProgress = () => import('@/components/WorkInProgress.vue');
+const ReservationClientConfirmation = () => import('@/components/ReservationClientConfirmation.vue');
 
 const Login = () => import('@/pages/Login.vue');
 const ForgotPassword = () => import('@/pages/ForgotPassword.vue');
@@ -21,6 +22,7 @@ const ManageOTA = () => import('@/pages/Admin/ManageOTA.vue');
 const ManagePMSImport = () => import('@/pages/Admin/ManagePMSImport.vue');
 const ManageFinancesImport = () => import('@/pages/Admin/ManageFinancesImport.vue');
 const ManageLoyaltyTiers = () => import('@/pages/Admin/ManageLoyaltyTiers.vue');
+const ManageWaitList = () => import('@/pages/Admin/ManageWaitList.vue');
 
 const MainPage = () => import('@/pages/MainPage/MainPage.vue');
 const Dashboard = () => import('@/pages/MainPage/Dashboard.vue');
@@ -96,6 +98,7 @@ const routes = [
       { path: 'pms-import', component: ManagePMSImport },
       { path: 'finances', component: ManageFinancesImport },
       { path: 'loyalty-tiers', name: 'ManageLoyaltyTiers', component: ManageLoyaltyTiers },
+      { path: 'waitlist', name: 'ManageWaitList', component: ManageWaitList },
     ],
     meta: { requiresAuth: true },
   },
@@ -128,6 +131,14 @@ const routes = [
     path: "/wip",
     name: "WorkInProgress",
     component: WorkInProgress
+  },
+  // Waitlist confirmation route (public, no auth required)
+  {
+    path: '/waitlist/confirm/:token',
+    name: 'ReservationClientConfirmation',
+    component: ReservationClientConfirmation,
+    props: true,
+    meta: { requiresAuth: false }
   },
   // Catch-all 404 route
   {

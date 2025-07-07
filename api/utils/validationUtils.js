@@ -119,4 +119,66 @@ module.exports = {
   validateDateStringParam,
   validateNonEmptyStringParam,
   validateIntegerParam,
+  validateEmailFormat,
+  validatePhoneNumberFormat,
 };
+
+/**
+ * Validates if the given string is a plausible email format.
+ * Note: This is a basic check. True email validation requires sending a confirmation link.
+ *
+ * @param {string} emailString - The string to validate.
+ * @param {string} paramName - The name of the parameter for error messages.
+ * @returns {string} The validated email string.
+ * @throws {Error} If the string is not a plausible email format or is empty/null/undefined.
+ */
+function validateEmailFormat(emailString, paramName) {
+  if (emailString === undefined || emailString === null || String(emailString).trim() === '') {
+    // Allow empty if email is optional, otherwise make it required via validateNonEmptyStringParam first
+    // For now, let's assume if called, it's expected to be a valid email or handled as an error by this fn.
+    // If an email field is optional, the caller should check for presence before calling this.
+    // Alternatively, this function could return null/undefined for empty strings if that's desired.
+    throw new Error(`${paramName} is required and cannot be empty if provided for validation.`);
+  }
+  const email = String(emailString).trim();
+  // Basic regex for email format. More comprehensive regexes exist but can be overly complex.
+  // This one checks for something@something.something
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error(`Invalid ${paramName} format. Must be a valid email address. Received: '${emailString}'`);
+  }
+  return email;
+}
+
+/**
+ * Validates if the given string is a plausible phone number format.
+ * This is a very basic check (e.g., mostly digits, optional +, -, spaces).
+ * Specific country code validation or length is not performed here.
+ *
+ * @param {string} phoneString - The string to validate.
+ * @param {string} paramName - The name of the parameter for error messages.
+ * @returns {string} The validated phone number string (trimmed).
+ * @throws {Error} If the string is not a plausible phone number format or is empty/null/undefined.
+ */
+function validatePhoneNumberFormat(phoneString, paramName) {
+  if (phoneString === undefined || phoneString === null || String(phoneString).trim() === '') {
+    // Similar to email, if phone is optional, caller should check.
+    // If called, it's expected to be a valid phone number.
+    throw new Error(`${paramName} is required and cannot be empty if provided for validation.`);
+  }
+  const phone = String(phoneString).trim();
+  // Basic regex for phone numbers: allows digits, spaces, hyphens, parentheses, and an optional leading +
+  // Does not enforce specific lengths or structures.
+  const phoneRegex = /^[+]?[\d\s()-]+$/;
+  // A stricter version that requires at least a few digits: /^[+]?[\d\s()-]{7,}$/ for min 7 chars.
+  // For simplicity, we'll use a lenient one.
+  if (!phoneRegex.test(phone)) {
+    throw new Error(`Invalid ${paramName} format. Contains invalid characters for a phone number. Received: '${phoneString}'`);
+  }
+  // Optionally, one might want to strip non-digits for storage or further validation:
+  // const digitsOnly = phone.replace(/\D/g, '');
+  // if (digitsOnly.length < 7 || digitsOnly.length > 15) { // Example length check
+  //   throw new Error(`Invalid ${paramName} length. Must be between 7 and 15 digits. Received: '${phoneString}'`);
+  // }
+  return phone;
+}

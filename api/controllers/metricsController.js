@@ -35,10 +35,20 @@ const getArrivalAverageLeadTime = async (req, res) => {
     }
 };
 
-
+const getWaitlistEntriesToday = async (req, res) => {
+    const { hotelId, date } = req.params;   
+    try {
+        const metric = await metricsModels.selectWaitlistEntriesToday(req.requestId, hotelId, date);
+        return res.status(200).json(metric);
+    } catch (error) {
+      console.error('Error getting waitlist entries count:', error);
+      res.status(500).json({ error: error.message });
+    }
+};
 
 module.exports = {
     getReservationsToday,
     getBookingAverageLeadTime,
     getArrivalAverageLeadTime,
+    getWaitlistEntriesToday,
 };

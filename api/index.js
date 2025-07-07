@@ -17,6 +17,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const crypto = require('crypto'); // Added for session secret
+const { startWaitlistJob } = require('./jobs/waitlistJob');
 
 const app = express();
 app.locals.logger = logger; // Make logger globally available
@@ -227,6 +228,7 @@ const logRoutes = require('./routes/logRoutes');
 const metricsRoutes = require('./routes/metricsRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
+const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -246,6 +248,7 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
+app.use('/api', waitlistRoutes); // Corrected: Use waitlist routes with /api prefix
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
@@ -499,7 +502,8 @@ if (httpsServer) {
 if (process.env.NODE_ENV === 'production') {
     startScheduling();
     scheduleLoyaltyTierJob();
-    logger.info('Scheduled jobs (OTA sync, Loyalty Tiers) started for production environment.');
+    startWaitlistJob();
+    logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration) started for production environment.');
 } else {
     logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }

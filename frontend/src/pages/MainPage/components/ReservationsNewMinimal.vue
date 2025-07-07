@@ -69,9 +69,9 @@
             <label v-if="selectedCell">部屋タイプ</label>
           </FloatLabel>
         </div>
-        <div class="col-span-1 mt-6">                
+        <div class="col-span-1 mt-6">
           <Button 
-            v-if="selectedCell" 
+            v-if="selectedCell"
             label="新規予約" 
             icon="pi pi-calendar"             
             :disabled="isCapacityExceeded(selectedCell.roomTypeId, selectedCell.dateIndex)"
@@ -288,6 +288,22 @@
       
     </Panel>
     
+    <WaitlistDialog
+      v-model:visible="waitlistDialogVisible"
+      :initialHotelId="selectedHotelId"
+      :initialHotelName="selectedHotel ? selectedHotel.name : ''"
+      :initialRoomTypeId="waitlistInitialRoomTypeId"
+      :initialCheckInDate="waitlistInitialCheckInDate"
+      :initialCheckOutDate="waitlistInitialCheckOutDate"
+      :initialNumberOfGuests="waitlistInitialNumberOfGuests"
+      :initialNotes="waitlistInitialNotes"
+      :allClients="clients"
+      :allRoomTypes="selectedHotelRooms"
+      @submitted="onWaitlistSubmitted"
+    />
+    
+
+    
   </div>
 </template>
 
@@ -307,6 +323,7 @@
   import { DataTable, Column } from 'primevue';
   import Dialog from 'primevue/dialog';
   import Button from 'primevue/button'
+  import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
 
   // Stores
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -327,7 +344,7 @@
   const dateColumns = ref([]);      
   const numberOfPeople = ref(1); 
   const selectedCell = ref(null);
-  const roomTypeInput = ref('');       
+  const roomTypeInput = ref('');
   const loading = ref(false);
   const numberOfNights = computed(() => {
       if (inDate && outDate) {
@@ -464,7 +481,7 @@
         const formattedEndDate = formatDate(endDate);
 
         return fetchAvailableRooms(selectedHotelId.value, formattedStartDate, formattedEndDate)
-          .then(() => {                
+          .then(() => {
             const roomTypesData = availableRooms.value.reduce((acc, room) => {
               const { room_type_id, capacity } = room;
 
@@ -582,11 +599,11 @@
         return dateData.rooms[roomTypeId].room_type_name;
       }
     }
-      
+
     return "Unknown";
   };
 
-  const isCapacityExceeded = (roomTypeId, dateIndex) => {        
+  const isCapacityExceeded = (roomTypeId, dateIndex) => {
     if (!selectedCell.value || !generateDateRangeArray.value[dateIndex] || !generateDateRangeArray.value[dateIndex].rooms || !generateDateRangeArray.value[dateIndex].rooms[roomTypeId]) {
       return false; // No data available for this cell
     }
@@ -602,12 +619,12 @@
     roomTypeInput.value = roomTypeName;
     
     const selectedDate = new Date(generateDateRangeArray.value[dateIndex].date);
-    
+
     const endDate = new Date(selectedDate);
     endDate.setDate(selectedDate.getDate() + numberOfNights.value);
     inDate.value = selectedDate;
-    outDate.value = endDate;       
-    
+    outDate.value = endDate;
+
   };
   const isSelectedCell = (roomTypeId, dateIndex) => {
     return selectedCell.value && selectedCell.value.roomTypeId === roomTypeId && selectedCell.value.dateIndex === dateIndex;
@@ -1006,6 +1023,36 @@
       }
     });      
   }); 
+    
+  // Refs for props to pass to WaitlistDialog (matching ReservationsNewCombo pattern)
+  const waitlistDialogVisible = ref(false);
+  const waitlistInitialRoomTypeId = ref(null);
+  const waitlistInitialCheckInDate = ref('');
+  const waitlistInitialCheckOutDate = ref('');
+  const waitlistInitialNumberOfGuests = ref(1);
+  const waitlistInitialNotes = ref('');
+
+
+
+  const openWaitlistDialogDirect = () => {
+    // Set default values from the current form state (matching ReservationsNewCombo pattern)
+    waitlistInitialRoomTypeId.value = selectedCell.value ? selectedCell.value.roomTypeId : null;
+    waitlistInitialCheckInDate.value = formatDate(inDate.value);
+    waitlistInitialCheckOutDate.value = formatDate(outDate.value);
+    waitlistInitialNumberOfGuests.value = numberOfPeople.value;
+    waitlistInitialNotes.value = "最適化モード直接登録";
+    
+    waitlistDialogVisible.value = true;
+  };
+
+  function onWaitlistSubmitted() {
+    // Optional: any action needed in parent after waitlist is submitted
+    waitlistDialogVisible.value = false;
+  }
+
+  defineExpose({
+    openWaitlistDialogDirect
+  });
     
 </script>
 

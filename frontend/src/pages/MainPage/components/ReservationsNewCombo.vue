@@ -45,7 +45,9 @@
                             <label>宿泊数</label>
                         </FloatLabel>
                     </div>
-                    <div class="col-span-1 mt-6"></div>
+                    <div class="col-span-1 mt-6">
+                        <!-- Smoking Preference UI removed -->
+                    </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
                             <Select
@@ -97,14 +99,14 @@
                     <div v-if="validationErrors.length > 0" class="text-red-500 mt-2">
                         <p v-for="(error, index) in validationErrors" :key="index">{{ error }}</p>
                     </div>
-                    <div v-else>
+                    <div class="flex gap-2 mt-2">
                         <Button 
-                            v-if="reservationCombos.length > 0" 
+                            v-if="reservationCombos.length > 0 && validationErrors.length === 0" 
                             label="新規予約" 
                             icon="pi pi-calendar"                            
                             @click="openDialog" 
                         />
-                    </div>                    
+                    </div>
                 </template>
                 <template #content>
                     <DataTable :value="reservationCombos" class="mt-4">
@@ -288,6 +290,22 @@
                 <Button label="保存" icon="pi pi-check" @click="submitReservation" class="p-button-success p-button-text p-button-sm" />
             </template>
         </Dialog>
+
+      <!-- Old Waitlist Dialog REMOVED -->
+
+      <WaitlistDialog
+        v-model:visible="waitlistDialogVisibleState"
+        :initialHotelId="selectedHotelId"
+        :initialHotelName="selectedHotel ? selectedHotel.name : ''"
+        :initialRoomTypeId="waitlistInitialRoomTypeId"
+        :initialCheckInDate="waitlistInitialCheckInDate"
+        :initialCheckOutDate="waitlistInitialCheckOutDate"
+        :initialNumberOfGuests="waitlistInitialNumberOfGuests"        
+        :initialNotes="waitlistInitialNotes"
+        :allClients="clients"
+        :allRoomTypes="roomTypes"        
+        @submitted="handleWaitlistSubmitted"
+      />
     </div>
 </template>
 <script setup>
@@ -299,15 +317,28 @@
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
-    import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';
-
+    import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';    
+    import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
     import { useClientStore } from '@/composables/useClientStore';
-    const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+    const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore(); // Added createBasicClient
     import { useReservationStore } from '@/composables/useReservationStore';
     const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
+    import { useWaitlistStore } from '@/composables/useWaitlistStore';
+
+    // Stores
+    const waitlistStore = useWaitlistStore();
+
+    // Refs for props to pass to WaitlistDialog
+    const waitlistDialogVisibleState = ref(false);
+    const waitlistInitialRoomTypeId = ref(null);
+    const waitlistInitialCheckInDate = ref('');
+    const waitlistInitialCheckOutDate = ref('');
+    const waitlistInitialNumberOfGuests = ref(1);
+    const waitlistInitialNotes = ref('');
+
 
     // Helper function
     const formatDate = (date) => {
@@ -352,38 +383,63 @@
             return calcDateDiff(comboRow.value.check_in, comboRow.value.check_out);
         }
         return 0;
-    }); 
+    });
+    // selectedSmokingPreference and smokingPreferenceOptions are removed from here
+
     const roomTypes = computed(() => {
         if(!selectedHotelRooms.value){
             return
         }
         const roomSet = new Map();
-        selectedHotelRooms.value.forEach(({ room_type_id, room_type_name }) => {
-            roomSet.set(room_type_id, room_type_name);
+        selectedHotelRooms.value.forEach(({ room_type_id, room_type_name, room_smoking_idc }) => {
+            roomSet.set(room_type_id, { room_type_id, room_type_name, smoking: room_smoking_idc });
         });
-        return Array.from(roomSet, ([room_type_id, room_type_name]) => ({ room_type_id, room_type_name }));
+        return Array.from(roomSet.values());
     });
     const countOfRoomTypes = computed(() => {
         if(!availableRooms.value){
-            return
+            return [];
         }
         const roomMap = new Map();
 
-        availableRooms.value.forEach(({ room_type_id, room_type_name, for_sale, capacity }) => {
-            if (for_sale) {
-                if (!roomMap.has(room_type_id)) {
-                    roomMap.set(room_type_id, { room_type_id, room_type_name, quantity: 0, total_capacity: 0 });
-                }
-                const roomData = roomMap.get(room_type_id);
-                roomData.quantity += 1;
-                roomData.total_capacity += capacity;
+        // Reverted: Filter by for_sale only, no smoking preference filter here
+        const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
+
+        forSaleRooms.forEach(({ room_type_id, room_type_name, capacity }) => {
+            // All rooms here are already for_sale and match preference
+            if (!roomMap.has(room_type_id)) {
+                // Ensure room_type_name is sourced correctly, potentially from selectedHotelRooms if not present on all room objects
+                const baseRoomTypeInfo = selectedHotelRooms.value.find(rt => rt.room_type_id === room_type_id);
+                roomMap.set(room_type_id, {
+                    room_type_id,
+                    room_type_name: room_type_name || (baseRoomTypeInfo ? baseRoomTypeInfo.room_type_name : 'Unknown'),
+                    quantity: 0,
+                    total_capacity: 0
+                });
             }
+            const roomData = roomMap.get(room_type_id);
+            roomData.quantity += 1;
+            roomData.total_capacity += capacity;
         });
+
+        // Ensure all room types from the hotel are present, even if with 0 quantity for the preference
+        if (selectedHotelRooms.value) {
+            selectedHotelRooms.value.forEach(hotelRoomType => {
+                if (hotelRoomType.room_type_id && !roomMap.has(hotelRoomType.room_type_id)) {
+                    roomMap.set(hotelRoomType.room_type_id, {
+                        room_type_id: hotelRoomType.room_type_id,
+                        room_type_name: hotelRoomType.room_type_name,
+                        quantity: 0,
+                        total_capacity: 0
+                    });
+                }
+            });
+        }
 
         return Array.from(roomMap.values());
     }); 
     const maxRoomNumber = computed(() => {
-        if(!countOfRoomTypes.value && !comboRow.value.room_type_id){
+        if(!countOfRoomTypes.value || !comboRow.value.room_type_id){ // Added check for countOfRoomTypes length
             return
         }
         const roomData = countOfRoomTypes.value.find(room => room.room_type_id === comboRow.value.room_type_id);
@@ -399,6 +455,34 @@
     const minNumberOfPeople = computed(() => {
         return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
     });   
+    
+    // Check if check-in date is today or in the future
+    const isCheckInDateValid = computed(() => {
+        if (!comboRow.value.check_in) return false;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Set to start of day
+        
+        const checkInDate = new Date(comboRow.value.check_in);
+        checkInDate.setHours(0, 0, 0, 0); // Set to start of day
+        
+        return checkInDate >= today;
+    });
+    
+    // Check if waitlist button should be highlighted (when no rooms available)
+    const isWaitlistHighlighted = computed(() => {
+        if (!reservationCombos.value.length) return false;
+        
+        // Check if any room type has 0 available rooms
+        for (const combo of reservationCombos.value) {
+            const roomData = countOfRoomTypes.value.find(room => room.room_type_id === combo.room_type_id);
+            if (roomData && roomData.quantity === 0) {
+                return true;
+            }
+        }
+        return false;
+    });
+    
     const numberOfRooms = ref(1);
     const numberOfPeople = ref(1);
     const comboRow = ref({
@@ -426,9 +510,62 @@
             combo.check_in = comboRow.value.check_in;
             combo.check_out = comboRow.value.check_out;
         });
-        await checkDates();
-        validateCombos();
+        await checkDates(); // This will fetch available rooms
+        validateCombos();   // This will validate based on new availability (needs to be preference aware)
     };
+
+    // const onSmokingPreferenceChange = async () => { // Removed
+    //     // console.log("Combo smoking preference changed to:", selectedSmokingPreference.value);
+    //     await checkDates();
+    //     validateCombos();
+    // };
+
+    // All old waitlist dialog logic (onClientSelectForWaitlist, resetWaitlistClientSelection, watcher, old openWaitlistDialog, closeWaitlistDialog, submitWaitlistEntry) is removed.
+
+    const openWaitlistDialogDirect = () => { // Opens waitlist dialog without requiring reservation combos
+        // Set default values from the current form state
+        waitlistInitialRoomTypeId.value = comboRow.value.room_type_id;
+        waitlistInitialCheckInDate.value = formatDate(comboRow.value.check_in);
+        waitlistInitialCheckOutDate.value = formatDate(comboRow.value.check_out);
+        waitlistInitialNumberOfGuests.value = comboRow.value.number_of_people;
+        waitlistInitialNotes.value = "直接登録";
+        
+        waitlistDialogVisibleState.value = true;
+    };
+
+    // Expose the method to parent component
+    defineExpose({
+        openWaitlistDialogDirect
+    });
+
+    const openWaitlistDialog = () => { // This is the new, simplified version for the parent
+        if (!reservationCombos.value.length) {
+            toast.add({ severity: 'warn', summary: '情報不足', detail: 'まず予約コンボに部屋を追加してください。', life: 3000 });
+            return;
+        }
+
+        const primaryComboItem = reservationCombos.value[0];
+        let notesContent = "希望の組み合わせ：\n";
+        reservationCombos.value.forEach(c => {
+            notesContent += `- ${c.room_type_name}: ${c.number_of_rooms}室, ${c.number_of_people}名\n`;
+        });
+
+        // Set refs that will be passed as props to the new WaitlistDialog component
+        waitlistInitialRoomTypeId.value = primaryComboItem.room_type_id;
+        waitlistInitialCheckInDate.value = formatDate(primaryComboItem.check_in);
+        waitlistInitialCheckOutDate.value = formatDate(primaryComboItem.check_out);
+        waitlistInitialNumberOfGuests.value = totalPeople.value;
+        waitlistInitialNotes.value = notesContent.trim();
+        // selectedSmokingPreference from parent is no longer passed as a prop.
+
+        waitlistDialogVisibleState.value = true;
+    };
+
+    const handleWaitlistSubmitted = () => {
+        // Optional: any action needed in parent after waitlist is submitted
+        console.log("Waitlist entry submitted (event received in parent)");
+    };
+
     const addReservationCombo = () => {
         // console.log('addReservationCombo:',comboRow.value);
         const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
@@ -480,59 +617,71 @@
     };
     const validateCombos = () => {
         validationErrors.value = [];
-        const rooms = ref(availableRooms.value ? [...availableRooms.value] : []);
+        if (!availableRooms.value) {
+            validationErrors.value.push("利用可能な部屋のデータがありません。日付を確認してください。");
+            return;
+        }
 
-        for (const roomTypeId in consolidatedCombos.value) {
-        const combo = consolidatedCombos.value[roomTypeId];
-        let availableRoomCount = 0;
-        let availableCapacity = 0;
-        const availableRoomsForCapacity = [];
+        // Reverted: Validation based on general for_sale rooms
+        const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
 
-        rooms.value.forEach(room => {
-            if (room.room_type_id === combo.room_type_id && room.for_sale) {
-            availableRoomCount++;
-            availableCapacity += room.capacity;
-            availableRoomsForCapacity.push(room.capacity);
-            }
-        });
+        for (const roomTypeIdStr in consolidatedCombos.value) {
+            const roomTypeId = parseInt(roomTypeIdStr, 10);
+            const combo = consolidatedCombos.value[roomTypeId];
 
-        if (combo.totalRooms > availableRoomCount) {
-            validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
-        } else {
-            const sortedRoomCapacities = combo.roomCapacities.slice().sort((a, b) => b - a);
-            const sortedAvailableCapacities = availableRoomsForCapacity.slice().sort((a, b) => b - a);
+            const roomsOfThisType = forSaleRooms.filter(
+                room => room.room_type_id === roomTypeId
+            );
 
-            let peopleRemaining = combo.totalPeople;
-            for (let i = 0; i < sortedRoomCapacities.length; i++) {
-            if (peopleRemaining > 0) {
-                peopleRemaining -= sortedAvailableCapacities[i] || 0;
-            }
-            }
-            if (peopleRemaining > 0) {
-            validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の人数が部屋のキャパシティを超えています。`);
+            const availableRoomCount = roomsOfThisType.length;
+            const availableRoomsForCapacity = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
+
+            if (combo.totalRooms > availableRoomCount) {
+                // Error message no longer mentions smoking preference
+                validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
+            } else {
+                let peopleToAssign = combo.totalPeople;
+                let roomsUsedCount = 0;
+                for (const capacity of availableRoomsForCapacity) {
+                    if (roomsUsedCount >= combo.totalRooms) break;
+                    if (peopleToAssign <= 0) break;
+                    peopleToAssign -= capacity;
+                    roomsUsedCount++;
+                }
+                if (peopleToAssign > 0) {
+                    // Error message no longer mentions smoking preference
+                    validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の人数が部屋のキャパシティを超えています。`);
+                }
             }
         }
 
         reservationCombos.value.forEach(individualCombo => {
-            if (individualCombo.room_type_id === combo.room_type_id) {
-            let peopleRemaining = combo.totalPeople;
-            for (let i = 0; i < combo.roomCapacities.length; i++) {
-                if (peopleRemaining > 0) {
-                peopleRemaining -= availableRoomsForCapacity[i] || 0;
-                }
+            const roomsOfThisType = forSaleRooms.filter(
+                room => room.room_type_id === individualCombo.room_type_id
+            );
+            const availableRoomCount = roomsOfThisType.length;
+            const availableCaps = roomsOfThisType.map(r => r.capacity).sort((a,b) => b - a);
+
+            let peopleRemaining = individualCombo.number_of_people;
+            let roomsUsed = 0;
+            for(const cap of availableCaps) {
+                if(roomsUsed >= individualCombo.number_of_rooms) break;
+                peopleRemaining -= cap;
+                roomsUsed++;
+                if(peopleRemaining <=0) break;
             }
-            if (combo.totalRooms > availableRoomCount || peopleRemaining > 0) {
+
+            if (individualCombo.number_of_rooms > availableRoomCount || peopleRemaining > 0) {
                 individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
             } else {
                 individualCombo.rowStyle = {};
             }
-            }
         });
-        }
     };
 
     // Dialog
-    const dialogVisible = ref(false);
+    const dialogVisible = ref(false);    
+
     const reservationDetails = ref({
         hotel_id: null,
         client_id: null,

@@ -2,7 +2,8 @@
 
 const { verifyToken } = require('../utils/jwtUtils');
 const sessionService = require('../services/sessionService');
-const logger = require('../config/logger'); 
+const logger = require('../config/logger');
+const { WaitlistEntry } = require('../models/waitlist'); 
 
 /**
  * Verifies the JWT token from the Authorization header.
@@ -304,11 +305,58 @@ const authMiddleware_manageClients = (req, res, next) => {
   next();
 };
 
+/**
+ * Waitlist token authentication middleware.
+ * Validates waitlist confirmation tokens for public endpoints.
+ * Sets req.user with a system user object for client-initiated actions.
+ */
+const authMiddlewareWaitlistToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Authorization header required' });
+  }
+
+  const headerParts = authHeader.split(' ');
+  if (headerParts.length !== 2 || headerParts[0].toLowerCase() !== 'bearer') {
+    return res.status(401).json({ error: 'Invalid Authorization header format. Expected "Bearer <token>"' });
+  }
+
+  const token = headerParts[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Bearer token missing' });
+  }
+
+  try {
+    // Find waitlist entry by token
+    const entry = await WaitlistEntry.findByToken(req.requestId, token, false); // Don't validate expiry for cancellation
+    
+    if (!entry) {
+      return res.status(401).json({ error: 'Invalid waitlist token' });
+    }
+
+    // Set a system user object for client-initiated actions
+    req.user = {
+      id: 1, // System user ID
+      name: 'System User',
+      permissions: { crud_ok: true } // Allow CRUD operations
+    };
+
+    // Store the waitlist entry for potential use in controllers
+    req.waitlistEntry = entry;
+
+    next();
+  } catch (error) {
+    console.error('Error in authMiddlewareWaitlistToken:', error);
+    return res.status(500).json({ error: 'Token validation failed' });
+  }
+};
+
 module.exports = {
   authMiddleware,
   authMiddlewareCRUDAccess,
   authMiddlewareAdmin, 
   authMiddleware_manageUsers, 
   authMiddleware_manageDB, 
-  authMiddleware_manageClients
+  authMiddleware_manageClients,
+  authMiddlewareWaitlistToken
 };

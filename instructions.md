@@ -237,9 +237,52 @@ This section details how user permissions affect the user interface and what use
     *   The store handles initialization from `localStorage`, validation against available hotels, and updates to `localStorage` when the ID changes.
     *   Components relying on `selectedHotelId` should expect it to be potentially pre-populated from `localStorage` on initialization.
 
+### 3.7. Client Name Display Order
+
+*   **Guideline:** When displaying client names, the preferred order of fields from the `clients` table is:
+    1.  `name_kanji` (Kanji name)
+    2.  `name_kana` (Katakana/Hiragana name)
+    3.  `name` (Default/Romaji name)
+*   The first available non-null value from this list should be used for display. In SQL queries, this can typically be achieved using `COALESCE(c.name_kanji, c.name_kana, c.name)`.
+*   This ensures that the most appropriate representation of the client's name is shown, prioritizing Japanese script versions when available.
+
 ## 4. General
 
 *   (More guidelines can be added here as they are identified)
+
+# PrimeVue Confirm Dialog Button Styling Pattern
+
+For all PrimeVue confirm dialogs, use the `acceptProps` and `rejectProps` options to control button label, severity, and outlined style. This provides a consistent and modern user experience.
+
+## Example Usage
+
+```js
+confirm.require({
+  message: 'Are you sure you want to proceed?',
+  header: 'Confirmation',
+  icon: 'pi pi-exclamation-triangle',
+  acceptProps: {
+    label: 'OK',
+    severity: 'success'
+  },
+  rejectProps: {
+    label: 'Cancel',
+    severity: 'secondary',
+    outlined: true
+  },
+  accept: () => {
+    // handle accept
+  },
+  reject: () => {
+    // handle reject
+  }
+});
+```
+
+- Use `acceptProps` for the main action (e.g., send, confirm, delete) and set an appropriate severity (e.g., 'success', 'danger').
+- Use `rejectProps` for the cancel/abort action, with `severity: 'secondary'` and `outlined: true` for a neutral, text-style button.
+
+This pattern should be used for all confirmation dialogs for consistency across the application.
 
 ---
 
