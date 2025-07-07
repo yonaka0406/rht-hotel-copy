@@ -118,14 +118,14 @@ BEGIN
           FROM reservation_details rd
           WHERE rd.date >= p_check_in 
             AND rd.date < p_check_out
-            AND rd.cancelled = false
+            AND rd.cancelled IS NULL
       );
     
     -- Check if we have enough rooms
     IF available_room_count >= p_number_of_rooms THEN
         -- Also check if total capacity is sufficient
         -- Get the sum of capacity for the first N rooms (ordered by capacity descending to get the best rooms first)
-        SELECT COALESCE(SUM(r.capacity), 0)
+        SELECT COALESCE(SUM(selected_rooms.capacity), 0)
         INTO total_capacity
         FROM (
             SELECT r.capacity
@@ -139,7 +139,7 @@ BEGIN
                   FROM reservation_details rd
                   WHERE rd.date >= p_check_in 
                     AND rd.date < p_check_out
-                    AND rd.cancelled = false
+                    AND rd.cancelled IS NULL
               )
             ORDER BY r.capacity DESC
             LIMIT p_number_of_rooms

@@ -427,7 +427,7 @@ const waitlistController = {
             console.log(`[${requestId}] Converted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
 
             // Prepare params for SQL function
-            const pool = require('../config/database').getPool();
+            const pool = require('../config/database').getPool(requestId);
             const params = [
                 hotel_id,
                 room_type_id || null,
