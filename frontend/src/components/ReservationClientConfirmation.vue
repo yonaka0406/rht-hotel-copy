@@ -14,6 +14,35 @@
         <p class="text-sm text-orange-700">{{ closeCountdown }}秒後に自動的にタブが閉じます</p>
       </div>
 
+      <!-- Success State - Reservation Confirmed -->
+      <div v-else-if="reservationConfirmed" class="bg-white shadow-lg rounded-lg p-8">
+        <div class="text-center mb-6">
+          <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+            <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h2 class="mt-4 text-2xl font-bold text-gray-900">予約が正常に作成されました！</h2>
+          <p class="mt-2 text-gray-600">ご予約ありがとうございます</p>
+        </div>
+
+        <div class="text-center">
+          <p class="text-gray-700 mb-4">
+            ご予約の詳細確認や追加情報が必要な場合は、<br>
+            当ホテルよりご連絡いたします。
+          </p>
+          
+          <div class="mt-6 p-4 bg-gray-50 rounded-md">
+            <h3 class="text-sm font-medium text-gray-900 mb-2">お問い合わせ先</h3>
+            <p class="text-sm text-gray-600">
+              予約センター<br>
+              電話: 03-XXXX-XXXX<br>
+              メール: reservations@example.com
+            </p>
+          </div>
+        </div>
+      </div>
+
       <!-- Valid Token - Show Reservation Details -->
       <div v-else-if="!tokenExpired && reservationDetails" class="bg-white shadow-lg rounded-lg p-8">
         <div class="text-center mb-6">
@@ -157,6 +186,7 @@ const confirming = ref(false);
 const cancelling = ref(false);
 const reservationDetails = ref(null);
 const vacancyAvailable = ref(null); // null: not checked, true/false: result
+const reservationConfirmed = ref(false); // Track if reservation was successfully created
 
 // Timer for auto-close
 const closeCountdown = ref(10);
@@ -272,13 +302,8 @@ const confirmReservation = async () => {
 
     if (response.ok) {
       const data = await response.json();
-      // Redirect to reservation page with pre-filled data
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        // Fallback: redirect to main page
-        router.push('/');
-      }
+      // Mark reservation as confirmed to show success state
+      reservationConfirmed.value = true;
     } else {
       const errorData = await response.json();
       alert(`予約の確認に失敗しました: ${errorData.error || 'エラーが発生しました'}`);
