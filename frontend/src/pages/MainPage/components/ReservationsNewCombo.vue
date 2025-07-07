@@ -106,13 +106,6 @@
                             icon="pi pi-calendar"                            
                             @click="openDialog" 
                         />
-                        <Button
-                            v-if="reservationCombos.length > 0"
-                            label="順番待ち登録"
-                            icon="pi pi-users"
-                            :class="isWaitlistHighlighted ? 'p-button-danger' : 'p-button-warning'"
-                            @click="openWaitlistDialog"
-                        />
                     </div>
                 </template>
                 <template #content>
