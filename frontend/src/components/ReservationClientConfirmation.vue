@@ -78,6 +78,17 @@
           <div v-if="vacancyAvailable === false" class="text-red-600 text-sm mt-2">
             申し訳ありませんが、ご希望のお部屋は現在ご予約いただけません。
           </div>
+        </div>
+
+        <!-- Expiry Notice -->
+        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p class="text-sm text-yellow-800">
+            ※このリンクは {{ formatDate(reservationDetails.expiryDate) }} まで有効です
+          </p>
+        </div>
+
+        <!-- Cancel Button -->
+        <div class="mt-4 text-center">
           <Button
             @click="cancelReservation"
             :loading="cancelling"
@@ -89,13 +100,6 @@
             size="small"
             text
           />
-        </div>
-
-        <!-- Expiry Notice -->
-        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-          <p class="text-sm text-yellow-800">
-            ※このリンクは {{ formatDate(reservationDetails.expiryDate) }} まで有効です
-          </p>
         </div>
       </div>
 
@@ -187,14 +191,17 @@ const validateToken = async () => {
       const data = await response.json();
       reservationDetails.value = {
         hotelName: data.hotelName,
+        hotel_id: data.hotel_id || data.hotelId,
         checkInDate: data.checkInDate,
         checkOutDate: data.checkOutDate,
         numberOfGuests: data.numberOfGuests,
         numberOfRooms: data.numberOfRooms,
         roomTypeName: data.roomTypeName,
+        room_type_id: data.room_type_id || data.roomTypeId,
         clientName: data.clientName,
         expiryDate: data.expiryDate,
-        waitlistEntryId: data.waitlistEntryId
+        waitlistEntryId: data.waitlistEntryId,
+        smokingPreference: data.smokingPreference || data.preferred_smoking_status
       };
       tokenExpired.value = false;
     } else {
@@ -213,18 +220,28 @@ const validateToken = async () => {
 // Check vacancy for the reservation details
 const checkVacancy = async () => {
   if (!reservationDetails.value) return;
+  
+  // Convert smoking preference string to boolean for the API
+  let smokingPreference = null;
+  if (reservationDetails.value.preferred_smoking_status === 'smoking') {
+    smokingPreference = true;
+  } else if (reservationDetails.value.preferred_smoking_status === 'non_smoking') {
+    smokingPreference = false;
+  }
+  // 'any' remains null, which means any smoking preference
+  
   try {
     const response = await fetch('/api/waitlist/check-vacancy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        hotel_id: reservationDetails.value.hotelId || reservationDetails.value.hotel_id,
-        room_type_id: reservationDetails.value.roomTypeId || reservationDetails.value.room_type_id || null,
+        hotel_id: reservationDetails.value.hotel_id,
+        room_type_id: reservationDetails.value.room_type_id || null,
         check_in: reservationDetails.value.checkInDate,
         check_out: reservationDetails.value.checkOutDate,
         number_of_rooms: reservationDetails.value.numberOfRooms,
         number_of_guests: reservationDetails.value.numberOfGuests,
-        smoking_preference: reservationDetails.value.smokingPreference || null
+        smoking_preference: smokingPreference
       })
     });
     if (response.ok) {

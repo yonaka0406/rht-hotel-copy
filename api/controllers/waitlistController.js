@@ -183,14 +183,17 @@ const waitlistController = {
             // Format the response data for the frontend
             const responseData = {
                 hotelName: entry.hotelName,
+                hotel_id: entry.hotel_id,
                 checkInDate: entry.requested_check_in_date,
                 checkOutDate: entry.requested_check_out_date,
                 numberOfGuests: entry.number_of_guests,
                 numberOfRooms: entry.number_of_rooms,
                 roomTypeName: entry.roomTypeName || null,
+                room_type_id: entry.room_type_id,
                 clientName: entry.clientName,
                 expiryDate: entry.token_expires_at,
-                waitlistEntryId: entry.id
+                waitlistEntryId: entry.id,
+                preferred_smoking_status: entry.preferred_smoking_status
             };
 
             return res.status(200).json(responseData);
