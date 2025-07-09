@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col h-screen bg-gray-100">
+    <div class="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
         <header>
             <ReportingTopMenu
                 :selectedDate="selectedDate"
@@ -51,14 +51,14 @@
                     :revenueData="revenueData"
                     :occupancyData="occupancyData"                
                 />
-                <div v-else class="text-gray-700 text-center">
+                <div v-else class="text-gray-700 dark:text-gray-200 text-center">
                     <!-- This message shows if selectedReportType is a summary type but selectedView doesn't match any known summary view -->
                     レポートタイプに対応するサマリービューが見つかりません。
                 </div>
             </div>
         </main>
 
-        <footer class="bg-black text-white p-4 text-center text-sm">
+        <footer class="bg-black dark:bg-gray-950 text-white dark:text-gray-300 p-4 text-center text-sm">
             レッドホーストラスト株式会社
         </footer>
     </div>
