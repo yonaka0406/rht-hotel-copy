@@ -1,7 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
-@import 'tailwindcss';
 
-@source '../node_modules/primevue/**/*.{vue,js,ts,jsx,tsx}';
+/* Tailwind's order is important: base, components, then utilities. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
@@ -17,69 +19,83 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    /* border-color: var(--color-gray-200, currentColor); MOVED: Tailwind's default or specific utilities will handle this. */
+    /* If specific default border is needed: @apply border-gray-200 dark:border-gray-700; */
+  }
+
+  :root {
+    font-family: Inter, "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: light dark; /* Enables browser default dark styling if nothing else overrides */
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply m-0 p-0 flex place-items-center min-w-[320px] min-h-screen;
+    @apply bg-[#f9f7e8] text-[#2f6a4d]; /* Light mode defaults */
+    @apply dark:bg-slate-900 dark:text-slate-200; /* Dark mode overrides */
+  }
+
+  h1 {
+    /* font-size: 3.2em; */ /* Use Tailwind classes for this e.g., text-4xl or text-5xl */
+    /* line-height: 1.1; */ /* Use Tailwind classes for this e.g., leading-tight */
+    @apply text-4xl leading-tight; /* Example, adjust as per original sizing if needed */
+     /* If h1 had specific colors, add dark: variants here, e.g. dark:text-white */
+  }
+
+  button {
+    /* border-radius: 8px; */ /* Use Tailwind: rounded-lg */
+    /* border: 1px solid transparent; */ /* Use Tailwind: border border-transparent */
+    /* padding: 0.6em 1.2em; */ /* Use Tailwind: px-4 py-2 (approx) */
+    /* font-size: 1em; */ /* Use Tailwind: text-base (or sm, lg depending on context) */
+    /* font-weight: 500; */ /* Use Tailwind: font-medium */
+    @apply rounded-lg border border-transparent px-4 py-2 text-base font-medium; /* Tailwind-ized */
+    font-family: inherit; /* Kept from original */
+    /* background-color: #d4ed91; */ /* Light mode button bg - Tailwind */
+    /* color: #2f6a4d; */ /* Light mode button text - Tailwind */
+    @apply bg-[#d4ed91] text-[#2f6a4d]; /* Light mode button colors */
+    @apply dark:bg-green-700 dark:text-slate-200; /* Dark mode button colors */
+
+    /* cursor: pointer; */ /* Tailwind: cursor-pointer */
+    /* transition: border-color 0.25s, background-color 0.25s; */ /* Tailwind: transition-colors duration-250 */
+    @apply cursor-pointer transition-colors duration-200; /* Tweaked duration slightly from 250 for standard values */
+  }
+
+  button:hover {
+    /* border-color: #5d9e5f; */ /* Light mode hover border - Tailwind */
+    /* background-color: #c3e082; */ /* Light mode hover bg - Tailwind */
+    @apply border-[#5d9e5f] bg-[#c3e082]; /* Light mode hover colors */
+    @apply dark:border-green-400 dark:bg-green-600; /* Dark mode hover colors */
+  }
+
+  button:focus,
+  button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color; /* Keep existing focus style, browser typically handles dark variant well */
+  }
+
+  .card {
+    /* padding: 2em; */ /* Tailwind: p-8 */
+    @apply p-8;
+    /* Add default background for card if it's not transparent, e.g., bg-white */
+    @apply bg-white dark:bg-slate-800; /* Example: cards get a slightly lighter dark bg */
+    /* Add other card specific styles like shadows, borders and their dark variants */
+    /* e.g. @apply shadow-lg dark:shadow-xl dark:shadow-slate-700/50; */
+  }
+
+  #app {
+    @apply w-full m-0 p-0 text-center;
   }
 }
 
-:root {
-  font-family: Inter, "Noto Sans JP", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: #2f6a4d;
-  background-color: #f9f7e8;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  display: flex;
-  place-items: center;  
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #d4ed91; /* Soft yellow background for button */
-  color: #2f6a4d; /* Dark green text color */
-  cursor: pointer;
-  transition: border-color 0.25s, background-color 0.25s;
-}
-
-button:hover {
-  border-color: #5d9e5f; /* Lighter green for hover border */
-  background-color: #c3e082; /* Darker yellow for hover background */
-}
-
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.card {
-  padding: 2em;
-}
-
-#app {
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  text-align: center;
-}
+/*
+  The `@source` directive is non-standard CSS. It might be a Vite-specific feature or from a PostCSS plugin.
+  Assuming it's correctly processed by the build system for PrimeVue styles.
+  If PrimeVue components are used, their dark mode compatibility needs separate verification/configuration.
+*/
+@source '../node_modules/primevue/**/*.{vue,js,ts,jsx,tsx}';
