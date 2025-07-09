@@ -1,8 +1,8 @@
 <template>
-  <div class="forgot-password-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
-    <Card class="w-full max-w-md">
+  <div class="forgot-password-container flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <Card class="w-full max-w-md bg-white dark:bg-gray-800 dark:border-gray-700 dark:shadow-gray-900/50">
       <template #title>
-        <h2 class="text-2xl font-bold mb-6 text-center">パスワード忘れた場合</h2>
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-200">パスワード忘れた場合</h2>
       </template>
       <template #content>
         <form @submit.prevent="handleResetRequest">
@@ -18,23 +18,23 @@
               />
               <label for="email">メールアドレス</label>
             </FloatLabel>
-            <small v-if="emailError" class="p-error">{{ emailError }}</small>
+            <small v-if="emailError" class="p-error dark:text-red-400">{{ emailError }}</small>
           </div>
 
           <div class="mb-4">
             <Button
               label="パスワードリセット"
               icon="pi pi-refresh"
-              class="w-full !bg-emerald-800 !text-white !border-emerald-800 hover:!bg-emerald-700 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!border-emerald-700"
+              class="w-full !bg-emerald-800 !text-white !border-emerald-800 hover:!bg-emerald-700 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!border-emerald-700 dark:!bg-emerald-900 dark:!border-emerald-900 dark:hover:!bg-emerald-800 dark:hover:!border-emerald-800"
               :loading="isLoading"
               type="submit"
             />
           </div>
 
-          <div v-if="successMessage" class="text-center text-green-600 mt-4">
+          <div v-if="successMessage" class="text-center text-green-600 dark:text-green-400 mt-4">
             {{ successMessage }}
           </div>
-          <div v-if="errorMessage" class="text-center text-red-600 mt-4">
+          <div v-if="errorMessage" class="text-center text-red-600 dark:text-red-400 mt-4">
             {{ errorMessage }}
           </div>
         </form>
