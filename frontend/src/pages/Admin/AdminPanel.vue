@@ -1,6 +1,6 @@
 <template>
-    <div class="flex min-h-screen bg-gray-100">
-        <div :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
+    <div class="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+        <div :class="['bg-gradient-to-b from-yellow-400 to-yellow-700 dark:from-yellow-900 dark:to-gray-950 text-white', 'flex-col h-screen sticky top-0', 'transition-all duration-300 ease-in-out', isCollapsed ? 'w-20' : 'w-64', 'hidden md:flex overflow-y-auto no-scroll']">
             <div :class="['p-4 border-b border-yellow-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
                 <div v-if="!isCollapsed" class="flex items-center">
                     <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
@@ -70,17 +70,17 @@
 
         </div>  
         
-        <div class="flex-1 flex flex-col min-w-0"> <div class="md:hidden bg-white shadow-md sticky top-0 z-30">
+        <div class="flex-1 flex flex-col min-w-0"> <div class="md:hidden bg-white dark:bg-gray-800 shadow-md sticky top-0 z-30">
             <Menubar :model="adminMobileMenuItems" class="w-full !border-0 !rounded-none !py-0">
             <template #start>
                 <div class="flex items-center">
-                <Button icon="pi pi-bars" @click="mobileSidebarVisible = true" text class="mr-1 !text-gray-600" />
+                <Button icon="pi pi-bars" @click="mobileSidebarVisible = true" text class="mr-1 !text-gray-600 dark:!text-gray-300" />
                 <img src="@/assets/logo-simple.png" alt="管理者" class="h-7" />
                 </div>
             </template>
             <template #end>
                 <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-700">{{ userNameDisplayShort }}</span>
+                <span class="text-sm text-gray-700 dark:text-gray-300">{{ userNameDisplayShort }}</span>
                 <Button @click="handleLogout" icon="pi pi-sign-out" severity="danger" text rounded aria-label="ログアウト" class="!text-red-500" />
                 </div>
             </template>
@@ -89,32 +89,32 @@
         
         <Drawer v-model:visible="mobileSidebarVisible" position="left" class="w-[18rem] md:hidden">
             <div class="flex flex-col h-full">
-                <div class="flex items-center p-4 border-b">
+                <div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
                     <img src="@/assets/logo-simple.png" alt="管理者パネル" class="h-8 mr-2" />
-                    <span class="text-xl font-semibold text-gray-800">管理者パネル</span>
+                    <span class="text-xl font-semibold text-gray-800 dark:text-gray-200">管理者パネル</span>
                 </div>
                 <nav class="flex-1 space-y-1 p-4 overflow-y-auto">
                     <template v-for="(item, index) in adminSidebarItems" :key="'mobile-' + item.key + '-' + index">
-                    <div v-if="item.type === 'header'" class="px-2 py-2 text-xs text-gray-500 uppercase font-semibold tracking-wider mt-1">
+                    <div v-if="item.type === 'header'" class="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold tracking-wider mt-1">
                         {{ item.label }}
                     </div>
                     <router-link v-else-if="item.type === 'link'" :to="item.route" v-slot="{ href, navigate, isActive, isExactActive }" custom>
                         <a :href="href" @click="navigate($event); mobileSidebarVisible = false;"
-                        :class="['flex items-center py-2.5 px-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 group',
-                                    ( (isActive && item.route !== '/admin') || (isExactActive && item.route === '/admin') || ($route.path.startsWith(String(item.route)) && String(item.route) !== '/admin' && String(item.route).length > '/admin'.length && !$route.path.substring(String(item.route).length).startsWith('/')) ) ? 'bg-gray-200 font-semibold' : '']">
-                        <i :class="[item.icon, 'text-lg mr-3 text-gray-600']"></i>
+                        :class="['flex items-center py-2.5 px-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group',
+                                    ( (isActive && item.route !== '/admin') || (isExactActive && item.route === '/admin') || ($route.path.startsWith(String(item.route)) && String(item.route) !== '/admin' && String(item.route).length > '/admin'.length && !$route.path.substring(String(item.route).length).startsWith('/')) ) ? 'bg-gray-200 dark:bg-gray-600 font-semibold' : '']">
+                        <i :class="[item.icon, 'text-lg mr-3 text-gray-600 dark:text-gray-400']"></i>
                         <span class="truncate">{{ item.label }}</span>
                         </a>
                     </router-link>
                     <Divider v-if="item.type === 'separator'" class="my-2" />
                     </template>
                 </nav>
-                <div class="mt-auto p-4 border-t space-y-2">
-                    <router-link to="/" @click="mobileSidebarVisible = false" class="flex items-center py-2.5 px-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors duration-200 group">
-                        <i class="pi pi-home text-lg mr-3 text-gray-600"></i>
+                <div class="mt-auto p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <router-link to="/" @click="mobileSidebarVisible = false" class="flex items-center py-2.5 px-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 group">
+                        <i class="pi pi-home text-lg mr-3 text-gray-600 dark:text-gray-400"></i>
                         <span>PMSホーム</span>
                     </router-link>
-                    <Button @click="handleLogoutAndCloseMobileSidebar" text class="flex items-center w-full py-2.5 px-3 !text-red-500 hover:!bg-red-50 rounded-lg transition-colors duration-200 group">
+                    <Button @click="handleLogoutAndCloseMobileSidebar" text class="flex items-center w-full py-2.5 px-3 !text-red-500 hover:!bg-red-50 dark:hover:!bg-red-900/20 rounded-lg transition-colors duration-200 group">
                         <i class="pi pi-sign-out text-lg mr-3"></i>
                         <span>ログアウト</span>
                     </Button>
@@ -123,56 +123,56 @@
         </Drawer>
 
         <main class="flex-1 p-4 lg:p-6 overflow-y-auto">
-            <p class="text-2xl font-semibold text-gray-800 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
-            <div v-if="isRootAdminPath" class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-xl font-bold text-gray-800 mb-6">アドミンダッシュボード</h2>
+            <p class="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">{{ userNameDisplay }}管理者パネルへようこそ！</p>
+            <div v-if="isRootAdminPath" class="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/50 p-6">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">アドミンダッシュボード</h2>
             <!-- Grid layout for stat cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="bg-blue-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="bg-blue-50 dark:bg-blue-900/20 p-5 rounded-lg flex flex-col shadow dark:shadow-gray-900/50">
                     <div class="grow min-h-[3rem]">
-                        <h3 class="text-md font-semibold text-blue-800">ログイン中ユーザー</h3>
+                        <h3 class="text-md font-semibold text-blue-800 dark:text-blue-300">ログイン中ユーザー</h3>
                     </div>
                     <div class="mt-auto">
-                        <p class="text-3xl font-bold text-blue-600">{{ activeUsers }}</p>
+                        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{{ activeUsers }}</p>
                     </div>
                 </div>
-                <div class="bg-green-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="bg-green-50 dark:bg-green-900/20 p-5 rounded-lg flex flex-col shadow dark:shadow-gray-900/50">
                     <div class="grow min-h-[3rem]">
-                        <h3 class="text-md font-semibold text-green-800">ホテル</h3>
+                        <h3 class="text-md font-semibold text-green-800 dark:text-green-300">ホテル</h3>
                     </div>
                     <div class="mt-auto">
-                        <p class="text-3xl font-bold text-green-600">{{ hotelCount }}</p>
+                        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{{ hotelCount }}</p>
                     </div>
                 </div>                
-                <div class="bg-purple-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="bg-purple-50 dark:bg-purple-900/20 p-5 rounded-lg flex flex-col shadow dark:shadow-gray-900/50">
                     <div class="grow min-h-[3rem]">
-                        <h3 class="text-md font-semibold text-purple-800">本日の予約</h3>
+                        <h3 class="text-md font-semibold text-purple-800 dark:text-purple-300">本日の予約</h3>
                     </div>
                     <div class="mt-auto">
-                        <p class="text-3xl font-bold text-purple-600">{{ reservationsTodayCount }}</p>
-                        <p v-if="reservationsTodayValue > 0" class="text-sm text-purple-500">
+                        <p class="text-3xl font-bold text-purple-600 dark:text-purple-400">{{ reservationsTodayCount }}</p>
+                        <p v-if="reservationsTodayValue > 0" class="text-sm text-purple-500 dark:text-purple-400">
                             ¥{{ reservationsTodayValue.toLocaleString() }}
                         </p>
                     </div>
                 </div>
-                <div class="bg-orange-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="bg-orange-50 dark:bg-orange-900/20 p-5 rounded-lg flex flex-col shadow dark:shadow-gray-900/50">
                     <div class="grow min-h-[3rem]">
-                        <h3 class="text-md font-semibold text-orange-800">平均リードタイム</h3>
+                        <h3 class="text-md font-semibold text-orange-800 dark:text-orange-300">平均リードタイム</h3>
                     </div>
                     <div class="mt-auto">
-                        <p class="text-3xl font-bold text-orange-600">
+                        <p class="text-3xl font-bold text-orange-600 dark:text-orange-400">
                             {{ averageLeadTimeDays !== null ? averageLeadTimeDays.toFixed(1) + ' 日' : 'N/A' }}
                         </p>
-                        <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500">本日の予約</p>
+                        <p v-if="averageLeadTimeDays !== null" class="text-sm text-orange-500 dark:text-orange-400">本日の予約</p>
                     </div>
                 </div>
-                <div class="bg-red-50 p-5 rounded-lg flex flex-col shadow">
+                <div class="bg-red-50 dark:bg-red-900/20 p-5 rounded-lg flex flex-col shadow dark:shadow-gray-900/50">
                     <div class="grow min-h-[3rem]">
-                        <h3 class="text-md font-semibold text-red-800">順番待ち</h3>
+                        <h3 class="text-md font-semibold text-red-800 dark:text-red-300">順番待ち</h3>
                     </div>
                     <div class="mt-auto">
-                        <p class="text-3xl font-bold text-red-600">{{ waitlistCount }}</p>
-                        <p class="text-sm text-red-500">待機中</p>
+                        <p class="text-3xl font-bold text-red-600 dark:text-red-400">{{ waitlistCount }}</p>
+                        <p class="text-sm text-red-500 dark:text-red-400">待機中</p>
                     </div>
                 </div>                
             </div>

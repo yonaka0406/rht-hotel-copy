@@ -1,7 +1,7 @@
 <template>
-    <div class="min-h-screen">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <div class="grid grid-cols-12 gap-4">
-            <Card class="flex col-span-12">
+            <Card class="flex col-span-12 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
                 <template #title>
                     顧客一覧
                 </template>
@@ -17,6 +17,7 @@
                         optionLabel="label" dataKey="label" />
                     </div>
                     <DataTable
+                        class="dark:bg-gray-800 dark:text-gray-200"
                         v-model:filters="filters"
                         :value="clients"
                         dataKey="id"
@@ -134,6 +135,7 @@
     </div>
 
     <Dialog
+        class="dark:bg-gray-800 dark:text-gray-200"
         v-model:visible="dialogVisible"
         :header="'新規顧客登録'"
         :closable="true"

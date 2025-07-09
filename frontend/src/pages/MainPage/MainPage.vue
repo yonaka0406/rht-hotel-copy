@@ -1,11 +1,11 @@
 <template>
-    <div class="min-h-screen">
-        <div class="grid grid-cols-12 bg-gray-100">
+    <div class="min-h-screen dark:bg-gray-900">
+        <div class="grid grid-cols-12 bg-gray-100 dark:bg-gray-900">
             <div :class="sidebarClass">
                 <SideMenu :isCollapsed="isCollapsed" @toggle="toggleSidebar" />
             </div>
 
-            <div :class="mainContentClass" class="flex flex-col">
+            <div :class="mainContentClass" class="flex flex-col bg-gray-100 dark:bg-gray-900">
                 <div class="w-full hidden md:block mb-1 px-4 py-1">
                     <TopMenu />
                 </div>
@@ -14,7 +14,7 @@
                   <SideMenu :isCollapsed="isCollapsed" @toggle="toggleSidebar" />
                 </div>
                 
-                <div class="flex-grow p-4">
+                <div class="flex-grow p-4 bg-gray-100 dark:bg-gray-900">
                     <router-view />
                 </div>
             </div>
