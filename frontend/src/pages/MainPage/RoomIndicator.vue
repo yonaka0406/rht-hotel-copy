@@ -3,14 +3,14 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 items-center">
 
       <div class="lg:col-span-4">
-        <h2 class="text-xl font-semibold mb-3 text-gray-700">当日の概要</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <Card v-for="metric in summaryMetrics" :key="metric.title" class="shadow-md rounded-lg">
+        <h2 class="text-xl font-semibold mb-3 text-gray-700 dark:text-gray-200">当日の概要</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <Card v-for="metric in summaryMetrics" :key="metric.title" class="shadow-md rounded-lg dark:bg-gray-800 dark:border-gray-700">
               <template #title>                
                 <i :class="[metric.icon, metric.iconColor, 'text-xl mr-2']"></i>
-                <span class="text-sm font-medium text-gray-500">{{ metric.title }}</span>                
+                <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ metric.title }}</span>                
               </template>
               <template #content>
-                <p class="text-3xl font-bold text-gray-800 pt-1">{{ metric.count }}</p>
+                <p class="text-3xl font-bold text-gray-800 dark:text-white pt-1">{{ metric.count }}</p>
               </template>
             </Card>
         </div>
@@ -18,13 +18,13 @@
 
       <div class="lg:col-span-3 flex lg:justify-center items-start">
         <div class="w-full lg:max-w-md p-1">          
-          <DatePicker v-model="selectedDate" inline dateFormat="yy-mm-dd" :selectOtherMonths="true" class="w-full custom-datepicker-inline rounded-md" />
+          <DatePicker v-model="selectedDate" inline dateFormat="yy-mm-dd" :selectOtherMonths="true" class="w-full custom-datepicker-inline rounded-md dark:bg-gray-800" />
         </div>
       </div>
 
     </div>
 
-    <Panel>
+    <Panel class="dark:bg-gray-800 dark:border-gray-700">
       <template #header>        
       </template>
       <div v-if="isLoading" class="grid gap-4">
@@ -34,21 +34,21 @@
       </div>
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div v-for="group in roomGroups" :key="group.title" class="col-span-1 md:col-span-1">
-          <div v-if="group.title!=='部屋ブロック' || (group.rooms.length > 0 && group.title==='部屋ブロック')" :class="`p-2 rounded-lg ${group.color}`">
-            <Card class="p-2">
+          <div v-if="group.title!=='部屋ブロック' || (group.rooms.length > 0 && group.title==='部屋ブロック')" :class="`p-2 rounded-lg ${group.color} ${group.darkColor}`">
+            <Card class="p-2 dark:bg-gray-700 dark:border-gray-600">
               <template #header>
-                <h3 :class="`text-lg rounded-lg font-semibold mb-2 ${group.color}`">{{ group.title }} ({{ group.rooms.length }})</h3>
+                <h3 :class="`text-lg rounded-lg font-semibold mb-2 ${group.color} ${group.darkColor} dark:text-white`">{{ group.title }} ({{ group.rooms.length }})</h3>
               </template>
               <template #content>
                 <div v-if="group.rooms.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
                   <div v-for="room in group.rooms" :key="room.room_id" 
-                    class="p-2 rounded outline-zinc-500/50 outline-dashed"
+                    class="p-2 rounded outline-zinc-500/50 dark:outline-gray-400/50 outline-dashed dark:bg-gray-600"
                   >
                     <div class="flex items-center justify-between">
-                      <span class="font-semibold">{{ room.room_number + '：' + room.room_type_name }}</span>
+                      <span class="font-semibold dark:text-white">{{ room.room_number + '：' + room.room_type_name }}</span>
                       <div class="flex items-center">
                         <div v-if="room.number_of_people"class="flex items-center mr-2">
-                          <div class="flex items-center">
+                          <div class="flex items-center dark:text-gray-200">
                           <i class="pi pi-users mr-1"></i>
                           <span>{{ room.number_of_people }}</span>
                           </div>
@@ -65,17 +65,17 @@
                       </div>
                     </div>
                     
-                    <div v-if="room.client_name" class="flex self-center" @click="openEditReservation(room)">
+                    <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
                       <Avatar icon="pi pi-user" size="small" class="mr-2"/>
                       <span class="mb-4">{{ room.client_name }}</span> 
                     </div>
-                    <div v-else @click="openNewReservation(room)">
+                    <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
                       <span>予約を追加</span> 
                     </div>
                     <div v-if="group.title === '本日チェックイン'" class="flex items-center gap-2">
                       <div>
-                        <span>
+                        <span class="dark:text-gray-200">
                           <i class="pi pi-clock mr-1"></i>
                           {{ formatTime(room.check_in_time) }}
                         </span>
@@ -86,7 +86,7 @@
                     </div>
                     <div v-else-if="group.title === '本日チェックアウト'" class="flex items-center gap-2">
                       <div>
-                        <span>
+                        <span class="dark:text-gray-200">
                           <i class="pi pi-clock mr-1"></i>
                           {{ formatTime(room.check_out_time) }}
                         </span>
@@ -100,7 +100,7 @@
                   </div>
                 </div>
                 <div v-else>
-                  <p>部屋はありません。</p>
+                  <p class="dark:text-gray-400">部屋はありません。</p>
                 </div>
               </template>
             
@@ -118,6 +118,7 @@
     :position="'bottom'"
     :style="{height: '75vh'}"    
     :closable="true"
+    class="dark:bg-gray-800"
   >
     <div class="flex justify-end" v-if="hasReservation">
       <Button @click="goToReservation" severity="info">
@@ -298,11 +299,11 @@
 
 
     const result = [
-      { title: '本日チェックイン', rooms: checkInToday, color: 'bg-blue-100' },
-      { title: '本日チェックアウト', rooms: checkOutToday, color: 'bg-green-100' },
-      { title: '滞在', rooms: occupiedRooms, color: 'bg-yellow-100' },
-      { title: '空室', rooms: freeRooms, color: 'bg-gray-100' },
-      { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100' },
+      { title: '本日チェックイン', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
+      { title: '本日チェックアウト', rooms: checkOutToday, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
+      { title: '滞在', rooms: occupiedRooms, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },
+      { title: '空室', rooms: freeRooms, color: 'bg-gray-100', darkColor: 'dark:bg-gray-800' },
+      { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
 
     // console.log('roomGroups:', result);

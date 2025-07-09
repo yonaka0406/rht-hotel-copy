@@ -1,11 +1,12 @@
 <template>
-    <div class="min-h-screen">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <Card class="flex col-span-12">
             <template #title>
                 所属グループ一覧
             </template>
             <template #content>
                 <DataTable
+                    class="dark:bg-gray-800 dark:text-gray-200"
                     v-model:filters="filters"
                     :value="groups"
                     dataKey="id"

@@ -1,14 +1,14 @@
 <template>
   <div
     :class="[
-      'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white',
-      'flex flex-col h-full', // Changed from h-screen to h-full
+      'bg-gradient-to-b from-emerald-500 to-emerald-600 dark:from-emerald-700 dark:to-emerald-800 text-white',
+      'flex flex-col h-full',
       'transition-all duration-300 ease-in-out',
-      'w-full', // Changed from fixed widths (w-20/w-64) to w-full
-      'hidden md:flex overflow-y-auto no-scroll' // This part remains for desktop visibility
+      'w-full',
+      'hidden md:flex overflow-y-auto no-scroll'
     ]"
   >
-    <div :class="['p-4 border-b border-emerald-700', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
+    <div :class="['p-4 border-b border-emerald-700 dark:border-emerald-600', isCollapsed ? 'flex flex-col items-center' : 'flex items-center justify-between']">
       <div v-if="!isCollapsed" class="flex items-center">
         <!-- Logo -->
         <img src="@/assets/logo-simple.png" alt="ホテル管理システム" class="h-8 mr-1" />
@@ -18,7 +18,7 @@
       
       <Button
         @click="toggleSidebar"
-        class="p-2 text-white rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        class="p-2 text-white rounded-md hover:bg-emerald-700 dark:hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
         :class="isCollapsed ? 'w-full justify-center' : ''"
         aria-label="サイドバーの切り替え"
       >
@@ -30,7 +30,7 @@
       <template v-for="(item, index) in items" :key="index">
         <div
           v-if="item.type === 'header'"
-          :class="['px-6 py-2 text-xs text-emerald-300 uppercase font-semibold', isCollapsed ? 'text-center' : '']"
+          :class="['px-6 py-2 text-xs text-emerald-300 dark:text-emerald-200 uppercase font-semibold', isCollapsed ? 'text-center' : '']"
         >
           <span v-if="!isCollapsed">{{ item.label }}</span>
           <i v-if="isCollapsed && item.icon" :class="[item.icon, 'text-lg']" :title="item.label"></i>
@@ -46,23 +46,23 @@
             :href="href"
             @click="item.command ? item.command() : navigate()"
             :class="[
-              'flex items-center py-3 text-gray-200 hover:bg-emerald-700 hover:text-white rounded-lg transition-colors duration-200 group',
-              isActive ? 'bg-emerald-700 font-semibold' : '',
-              isCollapsed ? 'px-0 justify-center' : 'px-6' // Padding adjusts based on collapsed state
+              'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group',
+              isActive ? 'bg-emerald-700 dark:bg-emerald-600 font-semibold' : '',
+              isCollapsed ? 'px-0 justify-center' : 'px-6'
             ]"
           >
             <i :class="[item.icon, 'text-lg', isCollapsed ? '' : 'mr-3']"></i>
             <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
             <span
               v-if="isCollapsed"
-              class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
+              class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
             >
               {{ item.label }}
             </span>
           </a>
         </router-link>
         
-        <Divider v-if="item.separator" class="my-2 border-emerald-700" />
+        <Divider v-if="item.separator" class="my-2 border-emerald-700 dark:border-emerald-600" />
       </template>
     </nav>
 
@@ -71,8 +71,8 @@
         v-if="isAdmin"
         to="/admin"
         :class="[
-          'flex items-center py-3 text-gray-200 hover:bg-emerald-700 hover:text-white rounded-lg transition-colors duration-200 group',
-          $route.path.startsWith('/admin') ? 'bg-emerald-700 font-semibold' : '',
+          'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group',
+          $route.path.startsWith('/admin') ? 'bg-emerald-700 dark:bg-emerald-600 font-semibold' : '',
            isCollapsed ? 'px-0 justify-center' : 'px-6'
         ]"
       >
@@ -80,7 +80,7 @@
         <span v-if="!isCollapsed">管理者パネル</span>
          <span
             v-if="isCollapsed"
-            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
           >
             管理者パネル
           </span>
@@ -89,8 +89,8 @@
         v-if="isClientEditor"
         to="/crm/dashboard"
          :class="[
-          'flex items-center py-3 text-gray-200 hover:bg-emerald-700 hover:text-white rounded-lg transition-colors duration-200 group',
-          $route.path.startsWith('/crm') ? 'bg-emerald-700 font-semibold' : '',
+          'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group',
+          $route.path.startsWith('/crm') ? 'bg-emerald-700 dark:bg-emerald-600 font-semibold' : '',
            isCollapsed ? 'px-0 justify-center' : 'px-6'
         ]"
       >
@@ -98,7 +98,7 @@
         <span v-if="!isCollapsed">顧客情報</span>
         <span
             v-if="isCollapsed"
-            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
           >
             顧客情報
           </span>
@@ -107,8 +107,8 @@
         v-if="isReporting"
         to="/reporting"
         :class="[
-          'flex items-center py-3 text-gray-200 hover:bg-emerald-700 hover:text-white rounded-lg transition-colors duration-200 group',
-          $route.path.startsWith('/reporting') ? 'bg-emerald-700 font-semibold' : '',
+          'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group',
+          $route.path.startsWith('/reporting') ? 'bg-emerald-700 dark:bg-emerald-600 font-semibold' : '',
            isCollapsed ? 'px-0 justify-center' : 'px-6'
         ]"
       >
@@ -116,7 +116,7 @@
         <span v-if="!isCollapsed">レポート</span>
          <span
             v-if="isCollapsed"
-            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
           >
             レポート
           </span>
@@ -125,7 +125,7 @@
         @click="handleLogout"
         severity="danger"
         :class="[
-          'flex items-center w-full py-3 text-gray-200 hover:bg-red-700 hover:text-white rounded-lg transition-colors duration-200 group',
+          'flex items-center w-full py-3 text-gray-200 dark:text-gray-300 hover:bg-red-700 dark:hover:bg-red-600 hover:text-white rounded-lg transition-colors duration-200 group',
            isCollapsed ? 'px-0 justify-center' : 'px-6'
         ]"
       >
@@ -133,29 +133,29 @@
         <span v-if="!isCollapsed">ログアウト</span>
         <span
             v-if="isCollapsed"
-            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-red-700 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-red-700 dark:bg-red-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0"
           >
             ログアウト
           </span>
       </Button>
     </div>
 
-    <div :class="['p-4 mt-auto border-t border-emerald-700', isCollapsed ? 'text-center' : '']">
-      <p v-if="!isCollapsed" class="text-xs text-emerald-300">© {{ new Date().getFullYear() }} WeHub.work PMS</p>
-      <p v-if="isCollapsed" class="text-xs text-emerald-300">©{{ new Date().getFullYear() }}</p>
+    <div :class="['p-4 mt-auto border-t border-emerald-700 dark:border-emerald-600', isCollapsed ? 'text-center' : '']">
+      <p v-if="!isCollapsed" class="text-xs text-emerald-300 dark:text-emerald-200">© {{ new Date().getFullYear() }} WeHub.work PMS</p>
+      <p v-if="isCollapsed" class="text-xs text-emerald-300 dark:text-emerald-200">©{{ new Date().getFullYear() }}</p>
     </div>
   </div>
 
-  <div class="flex bg-gray-100 m-0 p-0 block w-full md:hidden">
-      <Menubar :model="menubarItems" class="w-full mb-2">
+  <div class="flex bg-gray-100 dark:bg-gray-800 m-0 p-0 block w-full md:hidden">
+      <Menubar :model="menubarItems" class="w-full mb-2 dark:bg-gray-800 dark:text-white">
           <template #start>
               <img src="@/assets/logo-favi.png" alt="WeHub.work" class="h-8" />                                  
           </template>
           <template #end>                     
               <div class="flex items-center gap-4">     
-                  <span>{{ userGreeting }}</span>                         
+                  <span class="dark:text-white">{{ userGreeting }}</span>                         
                   <OverlayBadge :value="holdReservations.length" class="mr-2">
-                      <button class="p-button p-button-text" aria-label="通知" @click="showDrawer = true">
+                      <button class="p-button p-button-text dark:text-white" aria-label="通知" @click="showDrawer = true">
                           <i class="pi pi-bell" style="font-size:larger" />
                       </button>
                   </OverlayBadge>
@@ -166,7 +166,7 @@
                       optionLabel="name" 
                       optionValue="id"
                       :virtualScrollerOptions="{ itemSize: 38 }"
-                      class="w-48"
+                      class="w-48 dark:bg-gray-700 dark:text-white"
                       placeholder="ホテル選択"
                       filter
                   />                  
@@ -180,17 +180,17 @@
           </template>
       </Menubar>
 
-      <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
+      <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知" class="dark:bg-gray-800 dark:text-white">
           <ul v-if="holdReservations.length">
               <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                  <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)">
+                  <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)" class="dark:text-white dark:hover:bg-gray-700">
                       <p>保留中予約を完成させてください:</p>
                       {{ reservation.client_name }} @ {{ reservation.check_in }}
                   </button>
-                  <Divider />
+                  <Divider class="dark:border-gray-600" />
               </li>
           </ul>
-          <p v-else class="text-center text-gray-500">通知はありません。</p>
+          <p v-else class="text-center text-gray-500 dark:text-gray-400">通知はありません。</p>
       </Drawer>
   </div>    
 </template>

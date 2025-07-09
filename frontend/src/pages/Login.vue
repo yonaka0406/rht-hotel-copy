@@ -1,9 +1,9 @@
 <template>
-  <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 p-4">
-    <Card class="w-full max-w-md">
+  <div class="login-container flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+    <Card class="w-full max-w-md bg-white dark:bg-gray-900 dark:border-gray-700 shadow-lg dark:shadow-xl">
 
       <template #title>
-        <img src="/logo.jpg" alt="Logo" class="block mx-auto mb-6 max-w-[150px] h-auto" />        
+        <img src="/logo.jpg" alt="Logo" class="block mx-auto mb-6 max-w-[150px] h-auto rounded-xl" />        
       </template>
       <template #content>
         <Message severity="warn" :closable="false" v-if="showBrowserWarning" class="mb-4">このウェブアプリケーションは、現在のブラウザに最適化されていません。最高の体験を得るには、Google ChromeまたはMicrosoft Edgeを使用してください。</Message>
@@ -15,13 +15,13 @@
                 id="email"
                 v-model="email"
                 fluid
-                :class="{'p-invalid': emailError}"
+                :class="{'p-invalid': emailError, 'dark:bg-gray-900 dark:text-white': true}"
                 required
                 @blur="validateEmail"
               />
-              <label for="email">メールアドレス</label>
+              <label for="email" class="dark:text-gray-200">メールアドレス</label>
             </FloatLabel>
-            <small v-if="emailError" class="p-error">{{ emailError }}</small>
+            <small v-if="emailError" class="p-error dark:text-red-300">{{ emailError }}</small>
           </div>
 
           <div class="field mb-6">  
@@ -31,30 +31,30 @@
                 v-model="password"
                 :feedback="false"
                 toggleMask               
-                class="w-full"
+                class="w-full dark:bg-gray-900 dark:text-white"
                 :class="{'p-invalid': passwordError}"
                 type="password"
                 required
                 fluid
                 @blur="validatePassword"
               />
-              <label for="password">パスワード</label>
+              <label for="password" class="dark:text-gray-200">パスワード</label>
             </FloatLabel>
-            <small v-if="passwordError" class="p-error">{{ passwordError }}</small>
+            <small v-if="passwordError" class="p-error dark:text-red-300">{{ passwordError }}</small>
           </div>
 
           <div class="mb-4">
               <Button
                 label="ログイン"
                 icon="pi pi-sign-in"
-                class="w-full !bg-emerald-800 !text-white !border-emerald-800 hover:!bg-emerald-700 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!border-emerald-700"
+                class="w-full !bg-emerald-800 !text-white !border-emerald-800 hover:!bg-emerald-700 hover:!border-emerald-700 focus:!bg-emerald-700 focus:!border-emerald-700 dark:!bg-emerald-900 dark:!border-emerald-900 dark:hover:!bg-emerald-800 dark:hover:!border-emerald-800"
                 :loading="isLoading"
                 type="submit"
               />
             </div>
             <!-- Forgot password link MOVED HERE -->
             <div class="text-center">
-              <router-link to="/forgot-password" class="text-sm text-emerald-700 hover:text-emerald-600 hover:underline">パスワードを忘れましたか？</router-link>
+              <router-link to="/forgot-password" class="text-sm text-emerald-700 hover:text-emerald-600 hover:underline dark:text-emerald-300 dark:hover:text-emerald-200">パスワードを忘れましたか？</router-link>
             </div>
           </div>
 
@@ -62,7 +62,7 @@
             <Button
               label="Google でログイン"
               icon="pi pi-google"
-              class="w-full !bg-emerald-700 !text-white !border-emerald-700 hover:!bg-emerald-600 hover:!border-emerald-600 focus:!bg-emerald-600 focus:!border-emerald-600"
+              class="w-full !bg-emerald-700 !text-white !border-emerald-700 hover:!bg-emerald-600 hover:!border-emerald-600 focus:!bg-emerald-600 focus:!border-emerald-600 dark:!bg-emerald-900 dark:!border-emerald-900 dark:hover:!bg-emerald-800 dark:hover:!border-emerald-800"
               @click="handleGoogleLogin"
             />
           </div>
@@ -73,7 +73,7 @@
               v-if="!showPasswordLogin"
               label="又はID＆PWでログイン"
               icon="pi pi-envelope"
-              class="w-full !text-emerald-700 hover:!bg-emerald-700/[.05] focus:!bg-emerald-700/[.05] p-button-text"
+              class="w-full !text-emerald-700 hover:!bg-emerald-700/[.05] focus:!bg-emerald-700/[.05] p-button-text dark:!text-emerald-300"
               @click="showPasswordLogin = !showPasswordLogin"
             />
           </div>
@@ -244,5 +244,4 @@
 </script>
 
 <style scoped>
-
 </style>

@@ -1,5 +1,5 @@
 <template>
-    <div class="min-h-[4rem] bg-red-600 text-white p-4 flex flex-wrap shadow-md gap-4">        
+    <div class="min-h-[4rem] bg-red-600 dark:bg-red-900 text-white dark:text-gray-200 p-4 flex flex-wrap shadow-md gap-4">        
         <!-- Header and Filters Row -->
         <div class="flex flex-wrap gap-x-4 gap-y-2">
             <div class="flex gap-x-4 gap-y-2 flex-wrap">
@@ -9,7 +9,7 @@
                     <!-- PMS Button -->
                     <router-link
                         to="/"
-                        class="bg-emerald-500 hover:bg-emerald-600 py-1 px-3 block rounded-sm whitespace-nowrap"
+                        class="bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-900 dark:hover:bg-emerald-800 py-1 px-3 block rounded-sm whitespace-nowrap"
                     >
                         <i class="pi pi-home text-white mr-2"></i>
                         <span class="text-white">PMS</span>
@@ -18,7 +18,7 @@
 
                 <!-- Report Type Filter -->
                 <div class="flex gap-2 grid">                    
-                    <label for="reportType" class="text-sm text-gray-200">レポートタイプ</label>
+                    <label for="reportType" class="text-sm text-gray-200 dark:text-gray-300">レポートタイプ</label>
                     <Select
                         v-model="selectedReportType"
                         :options="reportTypeOptions"
@@ -26,20 +26,20 @@
                         optionValue="value"
                         @change="onInternalReportTypeChange"
                         placeholder="レポートを選択"
-                        class="text-black rounded border-gray-300 min-w-[150px] w-full sm:w-auto"
+                        class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[150px] w-full sm:w-auto"
                     />                    
                 </div>
 
                 <!-- Date Filter -->
                 <template v-if="!isReservationChangeReport">
                     <div class="flex gap-2 grid">
-                        <label for="date" class="text-sm text-gray-200">月度</label>
+                        <label for="date" class="text-sm text-gray-200 dark:text-gray-300">月度</label>
                         <DatePicker
                             v-model="selectedDate"
                             view="month"
                             dateFormat="yy年mm月"
                             @update:modelValue="onInternalDateChange"
-                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                            class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[120px] w-full sm:w-auto"
                         />
                     </div>
                 </template>
@@ -47,14 +47,14 @@
                 <!-- Period Filter -->
                 <template v-if="!showSingleHotelSelect">
                     <div class="flex gap-2 grid">
-                        <label for="period" class="text-sm text-gray-200">期間</label>
+                        <label for="period" class="text-sm text-gray-200 dark:text-gray-300">期間</label>
                         <Select
                             v-model="period"
                             :options="periodOptions"
                             optionLabel="label"
                             optionValue="value"
                             @change="onInternalPeriodChange"
-                            class="text-black rounded border-gray-300 min-w-[120px] w-full sm:w-auto"
+                            class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[120px] w-full sm:w-auto"
                             placeholder="期間を選択"
                         />
                     </div>
@@ -62,7 +62,7 @@
 
                 <!-- Hotels Filter -->
                 <div v-if="!showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
-                    <label for="hotels" class="text-sm text-gray-200">施設</label>
+                    <label for="hotels" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <MultiSelect
                         v-model="selectedHotels"
                         :options="hotels"
@@ -72,11 +72,11 @@
                         :maxSelectedLabels="1"
                         @change="onInternalHotelSelectionChange"
                         placeholder="施設を選択"                            
-                        class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                        class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[180px] w-full sm:w-auto"
                     />                    
                 </div>
                 <div v-if="showSingleHotelSelect" class="flex gap-2 grid"> <!-- Changed condition -->
-                    <label for="facility" class="text-sm text-gray-200">施設</label>
+                    <label for="facility" class="text-sm text-gray-200 dark:text-gray-300">施設</label>
                     <Select
                         v-model="singleSelectedHotelId"
                         :options="hotelOptions"
@@ -84,7 +84,7 @@
                         optionValue="id"
                         @change="onInternalHotelSelectionChange"
                         placeholder="施設を選択"
-                        class="text-black rounded border-gray-300 min-w-[180px] w-full sm:w-auto"
+                        class="text-black dark:text-gray-200 rounded border-gray-300 dark:bg-gray-800 dark:border-gray-600 min-w-[180px] w-full sm:w-auto"
                     />
                 </div>
             </div>

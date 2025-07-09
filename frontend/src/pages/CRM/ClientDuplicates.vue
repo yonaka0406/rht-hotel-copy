@@ -1,7 +1,7 @@
 <template>
-    <div class="min-h-screen">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <div class="grid grid-cols-12 gap-4">            
-            <Card class="flex col-span-12">
+            <Card class="flex col-span-12 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
                 <template #title>
                     顧客重複チェック
                 </template>
@@ -10,6 +10,7 @@
                 </template>
                 <template #content>  
                     <DataTable 
+                        class="dark:bg-gray-800 dark:text-gray-200"
                         :value="duplicatePairs"
                         :paginator="true"
                         :rows="5"
@@ -153,6 +154,7 @@
     </div>
     
     <Drawer v-model:visible="showDrawer" 
+        class="dark:bg-gray-800 dark:text-gray-200"
         modal
         :position="'bottom'" 
         :style="{height: '75vh'}" 

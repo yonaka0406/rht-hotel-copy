@@ -1,9 +1,9 @@
 <template>
-    <Toolbar class="bg-gray-100 border-b border-gray-300 shadow-md">
+    <Toolbar class="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-600 shadow-md">
         <!-- Left Section -->
         <template #start>
             <div class="flex items-center gap-4">                
-                <span class="ml-4" v-html="userGreeting"></span>
+                <span class="ml-4 dark:text-white" v-html="userGreeting"></span>
             </div>
         </template>
         <!-- Right Section -->
@@ -12,14 +12,14 @@
 
                 <!-- Waitlist Icon (New) - Only show when 1 or more entries -->
                 <OverlayBadge v-if="waitlistBadgeCount >= 1" :value="waitlistBadgeCount" class="mr-2">
-                    <Button class="p-button p-button-text" aria-label="順番待ちリスト" @click="openWaitlistModal">
+                    <Button class="p-button p-button-text dark:text-white" aria-label="順番待ちリスト" @click="openWaitlistModal">
                         <i class="pi pi-calendar-clock" style="font-size:larger" />
                     </Button>
                 </OverlayBadge>
                 
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
-                    <Button class="p-button p-button-text" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
+                    <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
                         <i class="pi pi-bell" :class="bellAnimationClass" style="font-size:larger" />
                     </Button>
                 </OverlayBadge>
@@ -31,7 +31,7 @@
                     optionLabel="name" 
                     optionValue="id"
                     :virtualScrollerOptions="{ itemSize: 38 }"
-                    class="w-48"
+                    class="w-48 dark:bg-gray-700 dark:text-white"
                     placeholder="ホテル選択"
                     filter
                 />
@@ -40,17 +40,17 @@
     </Toolbar>
     
     <!-- Drawer for Notifications -->
-    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知">
+    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知" class="dark:bg-gray-800 dark:text-white">
         <ul v-if="holdReservations.length">
             <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)">
+                <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)" class="dark:text-white dark:hover:bg-gray-700">
                     {{ reservation.hotel_name }}<span>保留中予約を完成させてください: </span><br/>
                     {{ reservation.client_name }} @ {{ reservation.check_in }}
                 </button>
-                <Divider />
+                <Divider class="dark:border-gray-600" />
             </li>
         </ul>
-        <p v-else class="text-center text-gray-500">通知はありません。</p>
+        <p v-else class="text-center text-gray-500 dark:text-gray-400">通知はありません。</p>
     </Drawer>
 
     <!-- Waitlist Display Modal -->
@@ -192,6 +192,11 @@
     }
     .m-2 button:hover {
         background-color: rgba(0,0,0,0.05);
+    }
+    
+    /* Dark mode button hover */
+    :global(.dark) .m-2 button:hover {
+        background-color: rgba(255,255,255,0.1);
     }
 
     /* Keyframes for bell animation */
