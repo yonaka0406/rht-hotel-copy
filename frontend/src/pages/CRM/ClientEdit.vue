@@ -1,5 +1,5 @@
 <template>
-    <div class="p-6">
+    <div class="p-6 bg-gray-100 dark:bg-gray-900">
       <Tabs value="0">
         <TabList>
           <Tab value="0" as="div" class="flex items-center gap-2">
@@ -25,27 +25,27 @@
           </Tab>
         </TabList>
         <TabPanels>
-          <TabPanel value="0" as="p" class="m-0">
+          <TabPanel value="0" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <div v-if="loadingBasicInfo">編集中ページから読み込み中...</div>
             <ClientBasicInfo v-else/>
           </TabPanel>
-          <TabPanel value="1" as="p" class="m-0">
+          <TabPanel value="1" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <ClientAddresses :addresses="null" />
           </TabPanel>
-          <TabPanel value="2" as="p" class="m-0">
+          <TabPanel value="2" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <ClientReservationHistory />
           </TabPanel>
-          <TabPanel v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="p" class="m-0">
+          <TabPanel v-if="selectedClient?.client.legal_or_natural_person === 'legal'" value="3" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <ClientRelated :client-id="clientId" />
           </TabPanel>
-          <TabPanel value="4" as="p" class="m-0">
+          <TabPanel value="4" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <div class="mt-2">
               <RelatedProjectsList 
                 :current-client-id="clientId" 
               />
             </div>
           </TabPanel>
-          <TabPanel value="5" as="p" class="m-0">
+          <TabPanel value="5" as="p" class="m-0 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
             <ClientEditHistory />
           </TabPanel>
         </TabPanels>

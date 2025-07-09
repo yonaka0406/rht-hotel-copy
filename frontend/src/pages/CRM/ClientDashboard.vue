@@ -1,7 +1,7 @@
 <template>
-    <div class="min-h-screen">
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <div class="grid grid-cols-12 gap-4">
-            <Card class="flex col-span-6">
+            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
                 <template #title>                    
                     <span>顧客データ割合</span>
                 </template>
@@ -12,7 +12,7 @@
                     <div ref="halfPie" class="w-full h-40"></div>
                 </template>
             </Card>
-            <Card class="flex col-span-6">
+            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
                 <template #title>
                     <span>顧客ロイヤリティ階層</span>
                 </template>
