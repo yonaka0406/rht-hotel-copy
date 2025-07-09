@@ -152,12 +152,7 @@
         </div>
     </div>
     
-    <Drawer v-model:visible="showDrawer" 
-        modal
-        :position="'bottom'" 
-        :style="{height: '75vh'}" 
-        closable
-    >
+    <Drawer v-model:visible="showDrawer" modal :position="bottom" :style="{height: '75vh'}" closable>
       <ClientMerge        
         :newID="drawerProps.newClientId"
         :oldID="drawerProps.oldClientId"
