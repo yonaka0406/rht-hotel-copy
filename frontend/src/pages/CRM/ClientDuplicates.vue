@@ -10,14 +10,13 @@
                 </template>
                 <template #content>  
                     <DataTable 
-                        class="dark:bg-gray-800 dark:text-gray-200"
+                        class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm"
                         :value="duplicatePairs"
                         :paginator="true"
                         :rows="5"
                         :rowsPerPageOptions="[5, 10, 20]"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-                        class="p-datatable-sm"
                         v-if="duplicatePairs.length > 0"
                     >
                         <Column header="元顧客情報">
