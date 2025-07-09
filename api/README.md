@@ -208,7 +208,7 @@ It is highly recommended that all developers familiarize themselves with the con
 4. **Token Cleanup**: Background job for expired notification tokens
 5. **Real-time Updates**: WebSocket integration for live status changes
 
-For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to `WAITLIST_STRATEGY.md` in the root directory.
+For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to the [Waitlist System Documentation](../README.md#waitlist-system-documentation) in the main README file.
 
 ## Troubleshooting
 

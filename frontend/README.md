@@ -90,7 +90,7 @@ This frontend application enables users to interact with the following core feat
 *   **Billing and Invoicing:** Generation and management of guest invoices based on stays, plans, and addons.
 *   **Reporting & Analytics:** Visualization of hotel operational data, occupancy, revenue, and guest statistics using charts (via ECharts).
 *   **User Administration:** Management of system user accounts, roles, and permissions (for admin users).
-*   **Waitlist Management:** ✅ **NEW** - Comprehensive waitlist system including:
+*   **Waitlist Management:** ✅ **IMPLEMENTED** - Comprehensive waitlist system including:
     *   **Entry Creation**: Modal dialog for adding guests to waitlist with preferences (smoking/non-smoking, room types, communication preferences)
     *   **Management Interface**: Admin panel for viewing, filtering, and managing waitlist entries
     *   **Real-time Vacancy Checking**: Automatic checking of room availability for waitlist entries
@@ -98,6 +98,9 @@ This frontend application enables users to interact with the following core feat
     *   **Status Management**: Track waitlist entry status (waiting, notified, confirmed, expired, cancelled)
     *   **Integration**: Seamless integration with existing reservation and client management systems
     *   **Public Confirmation**: Token-based public confirmation page for guests to confirm their waitlist reservations
+    *   **Email Integration**: Waitlist-specific email templates and sending functionality
+    *   **Background Jobs**: Basic expiration job for past check-in dates
+    *   ❌ **NOT YET IMPLEMENTED**: Automatic notifications when rooms become available, real-time WebSocket updates, advanced filtering, bulk operations
 *   **Data Import:** Client-side processing of imported data, such as CSV files for various records (using Papaparse), and potentially interaction with backend Excel import/export.
 *   **Real-time Updates:** Display of live updates for relevant data through Socket.io (e.g., new reservations, notifications).
 
@@ -217,5 +220,5 @@ It is highly recommended that all developers familiarize themselves with the con
 3. **Bulk Operations**: Mass actions on multiple waitlist entries
 4. **Export Enhancements**: Additional export formats and options
 
-For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to `WAITLIST_STRATEGY.md` in the root directory.
+For comprehensive details about the waitlist implementation, including technical specifications and future roadmap, refer to the [Waitlist System Documentation](../README.md#waitlist-system-documentation) in the main README file.
 ```

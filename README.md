@@ -36,7 +36,10 @@ This project is a comprehensive Hotel Management System designed to streamline v
   - Token-based confirmation system with secure expiry
   - Waitlist management interface with filtering and pagination
   - Integration with existing client and reservation systems
-  - ❌ **NOT YET IMPLEMENTED**: Automatic notifications when rooms become available
+  - Public confirmation page for token-based reservations with full reservation creation flow
+  - Email integration with waitlist-specific templates
+  - Background jobs for maintenance and expiration
+  - ❌ **NOT YET IMPLEMENTED**: Automatic notifications when rooms become available, reservation integration, advanced matching logic, token cleanup, real-time WebSocket updates
 * **Data Import/Export:**
     *   Functionality to import data from various sources, including **Financial Data Import** and **PMS Data Import**.
     *   Supports CSV import (using Papaparse client-side and fast-csv backend-side).
@@ -176,7 +179,7 @@ For more detailed information about the API, including setup, specific endpoints
 
 For specific instructions on setting up and using Google login, refer to the guide: `api/LOGIN_WITH_GOOGLE.md`.
 
-For comprehensive details about the waitlist feature implementation, refer to: `WAITLIST_STRATEGY.md`
+For comprehensive details about the waitlist feature implementation, including technical specifications and implementation status, see the [Waitlist System Documentation](#waitlist-system-documentation) section below.
 
 ## Project Structure
 
@@ -204,9 +207,7 @@ For more detailed information on the system's architecture, data aggregation str
 
 -   [Architecture and Design](./ARCHITECTURE.md)
 
-For comprehensive details about the waitlist feature implementation, including current status and future roadmap:
-
--   [Waitlist Strategy](./WAITLIST_STRATEGY.md)
+For comprehensive details about the waitlist feature implementation, including current status and future roadmap, see the [Waitlist System Documentation](#waitlist-system-documentation) section below.
 
 ## Development Guidelines and Best Practices
 
@@ -217,6 +218,167 @@ It is highly recommended that all developers familiarize themselves with the con
 ## Contributing
 
 [Details to be added by project maintainers]
+
+## Waitlist System Documentation
+
+### Overview
+
+The waitlist system is a comprehensive feature designed to capture and convert unmet demand in the hotel management system. It allows hotels to maintain a list of guests interested in specific room types and dates when they are unavailable, and automatically notify them when rooms become available.
+
+### Business Value
+
+#### 1. Revenue Recovery
+- **Problem**: Hotels lose potential revenue when fully booked rooms turn away interested customers, especially when specific room preferences (smoking vs. non-smoking, specific view, accessibility features) are unavailable.
+- **Solution**: Waitlist captures demand that would otherwise be lost, converting it into bookings when cancellations occur or preferred room types become available.
+- **Impact**: Studies show hotels can recover 15-25% of lost bookings through effective waitlist management.
+
+#### 2. Enhanced Customer Experience
+- **Proactive Communication**: Customers appreciate being notified of availability rather than having to repeatedly check.
+- **Reduced Friction**: Seamless transition from "unavailable" to "book now" eliminates search restart.
+- **Builds Loyalty**: Shows hotel values customer interest and specific preferences even when unable to immediately accommodate.
+- **Accommodates Specific Needs**: Allows guests to wait for rooms that meet their specific requirements.
+
+#### 3. Operational Efficiency
+- **Automated Matching**: System automatically finds best waitlist candidates when rooms become available.
+- **Staff Productivity**: Reduces manual work of tracking interested customers and making availability calls.
+- **Data-Driven Insights**: Provides visibility into unmet demand patterns for capacity planning.
+
+### Technical Implementation
+
+#### Database Schema
+
+The waitlist system uses a comprehensive database schema with the following key features:
+
+```sql
+-- Waitlist entries table with all required fields
+CREATE TABLE waitlist_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    hotel_id INTEGER NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+    room_type_id INTEGER,
+    requested_check_in_date DATE NOT NULL,
+    requested_check_out_date DATE NOT NULL,
+    number_of_guests INTEGER NOT NULL CHECK (number_of_guests > 0),
+    number_of_rooms INTEGER NOT NULL DEFAULT 1 CHECK (number_of_rooms > 0),
+    status TEXT NOT NULL DEFAULT 'waiting' 
+        CHECK (status IN ('waiting', 'notified', 'confirmed', 'expired', 'cancelled')),
+    notes TEXT,
+    confirmation_token TEXT UNIQUE,
+    token_expires_at TIMESTAMPTZ,
+    contact_email TEXT,
+    contact_phone TEXT,
+    communication_preference TEXT NOT NULL DEFAULT 'email' 
+        CHECK (communication_preference IN ('email', 'phone')),
+    preferred_smoking_status TEXT NOT NULL DEFAULT 'any' 
+        CHECK (preferred_smoking_status IN ('any', 'smoking', 'non_smoking')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id)
+);
+```
+
+#### API Endpoints
+
+The waitlist system provides the following API endpoints:
+
+**Core Operations:**
+- `POST /api/waitlist` - Create new waitlist entry
+- `GET /api/waitlist/hotel/:hotelId` - List waitlist entries with filtering and pagination
+- `PUT /api/waitlist/:id/cancel` - Cancel a waitlist entry
+
+**Management:**
+- `POST /api/waitlist/:id/manual-notify` - Send manual notification email
+- `POST /api/waitlist/check-vacancy` - Check real-time availability
+
+**Public Confirmation:**
+- `GET /api/waitlist/confirm/:token` - Get confirmation details for a token
+- `POST /api/waitlist/confirm/:token` - Confirm waitlist entry and create reservation
+
+#### Frontend Components
+
+**Core Components:**
+1. **WaitlistDialog.vue** - Modal dialog for creating waitlist entries with client selection, preferences, and contact information
+2. **ManageWaitList.vue** - Admin interface for waitlist management with filtering, pagination, and bulk operations
+3. **WaitlistDisplayModal.vue** - Quick view modal for waitlist entries with real-time vacancy checking
+4. **ReservationClientConfirmation.vue** - Public confirmation page for token-based reservations
+
+**State Management:**
+- `useWaitlistStore.js` - Comprehensive composable store for waitlist operations
+
+### Implementation Status
+
+#### ✅ Implemented Features:
+1. **Database Schema**: Complete with all required tables, indexes, and constraints
+2. **Core CRUD Operations**: Create, read, update, delete waitlist entries with proper validation
+3. **Token-based Confirmation**: Secure confirmation system with crypto-generated tokens and expiry
+4. **Manual Notifications**: Staff can manually send availability notifications via email
+5. **Vacancy Checking**: Real-time availability checking for waitlist entry criteria
+6. **Email Integration**: Waitlist-specific email templates and sending functionality
+7. **Frontend UI**: Complete management interface, entry dialog, and display components
+8. **Public Confirmation Page**: Frontend page for token-based confirmations with full reservation creation flow
+9. **Authentication**: Proper middleware for both authenticated and public endpoints
+10. **Background Jobs**: Basic expiration job for past check-in dates
+
+#### ❌ Not Yet Implemented Features:
+1. **Automatic Notifications**: Automatic triggering when rooms become available
+2. **Reservation Integration**: Automatic waitlist processing when reservations are cancelled
+3. **Advanced Matching Logic**: Complex date overlap and preference matching algorithms
+4. **Token Cleanup**: Background job for expired notification tokens
+5. **Real-time Updates**: WebSocket integration for live status changes
+6. **Advanced Filtering**: More sophisticated search and filter options
+7. **Bulk Operations**: Mass actions on multiple waitlist entries
+
+### Security Considerations
+
+#### Token Security
+- Uses cryptographically secure random tokens
+- Implements rate limiting on confirmation endpoints
+- Includes CSRF protection for public confirmation pages
+- Token expiry management with automatic cleanup
+
+#### Data Privacy
+- GDPR compliance for waitlist data
+- Data retention policies
+- Customer self-removal capabilities
+- Comprehensive audit trail for all operations
+
+### Performance Optimization
+
+#### Database Optimization
+- Partitioned waitlist_entries by hotel_id for large deployments
+- Optimized indexes for common query patterns
+- Connection pooling for background jobs
+- Query result caching for hotel/room type lookups
+
+#### Frontend Optimization
+- Lazy loading for waitlist management page
+- Debounced search and filtering
+- Optimistic updates for better UX
+- Responsive design for mobile compatibility
+
+### Success Metrics
+
+#### Business Metrics
+- **Conversion Rate**: Percentage of waitlist entries that convert to bookings
+- **Revenue Recovery**: Revenue generated from waitlist conversions
+- **Customer Satisfaction**: Feedback scores on waitlist experience
+- **Operational Efficiency**: Reduction in manual waitlist management time
+
+#### Technical Metrics
+- **Response Time**: API endpoint performance (< 200ms target)
+- **Email Delivery**: Notification email success rate (> 99%)
+- **System Uptime**: Availability during peak booking periods
+- **Error Rate**: Application error frequency (< 0.1%)
+
+### Future Roadmap
+
+The next phase of development should focus on:
+1. Implementing automatic notification triggers when rooms become available
+2. Deep integration with the reservation cancellation system
+3. Advanced matching algorithms for complex date overlap scenarios
+4. Real-time WebSocket updates for live status changes
+5. Enhanced filtering and bulk operation capabilities
 
 ## Security Considerations
 
