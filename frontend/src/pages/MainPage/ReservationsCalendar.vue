@@ -1,15 +1,16 @@
 <template>
-  <div class="p-2">
-    <Panel header="">
+  <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
+    <Panel header="" class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
       <template #header>
         <div class="grid grid-cols-6 items-center">
-          <p class="text-lg font-bold">予約カレンダー</p>
+          <p class="text-lg font-bold dark:text-gray-100">予約カレンダー</p>
           <div class="flex justify-start grid grid-cols-2 col-span-2 mr-4">
-            <p class="mr-2">日付へ飛ぶ：</p>
+            <p class="mr-2 dark:text-gray-100">日付へ飛ぶ：</p>
             <InputText v-model="centerDate" 
                 type="date"                
                 fluid
                 required 
+                class="dark:bg-gray-800 dark:text-gray-100 rounded"
             />
           </div>
           <div class="flex grid grid-cols-5 col-span-2">            
@@ -29,13 +30,14 @@
                 optionValue="value"  
                 :options="tableModeOptions" 
                 v-model="isCompactView"
+                class="dark:bg-gray-800 dark:text-gray-100"
               />            
           </div>          
         </div>
       </template>
       
       <div 
-        class="table-container" 
+        class="table-container bg-white dark:bg-gray-900"
         :class="{ 'compact-view': isCompactView }"
         ref="tableContainer" 
         @scroll="onScroll"
@@ -47,12 +49,12 @@
         >
           <thead>
             <tr>              
-              <th class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky top-0 left-0 z-20">日付</th>
+              <th class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky top-0 left-0 z-20">日付</th>
 
               <th
                 v-for="(room, roomIndex) in selectedHotelRooms"
                 :key="roomIndex"
-                class="px-2 py-2 text-center bg-white aspect-square w-32 h-16 sticky top-0 z-10"
+                class="px-2 py-2 text-center bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky top-0 z-10"
               > 
                   {{ room.room_type_name }} <br/>
                   <span class="text-lg">{{ room.room_number }}</span>
@@ -61,13 +63,14 @@
           </thead>
           <tbody @dragover.prevent>
             <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
-              <td class="px-2 py-2 text-center font-bold bg-white aspect-square w-32 h-16 sticky left-0 z-10">                
-                <span class="text-xs">{{ formatDateWithDay(date) }}</span>  
+              <td class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky left-0 z-10">                
+                <span class="text-xs dark:text-gray-100">{{ formatDateWithDay(date) }}</span>  
                 
                 <div 
                   class="text-2xs text-gray-500 flex justify-center"
                   :class="{
-                    'text-red-400': availableRoomsByDate[date] === 0
+                    'text-red-400': availableRoomsByDate[date] === 0,
+                    'dark:text-gray-400': availableRoomsByDate[date] !== 0
                   }"
                 >
                   空室: {{ availableRoomsByDate[date] }}
@@ -86,48 +89,49 @@
                 @drop="handleDrop($event, room.room_id, date)"
                 draggable="true"                
                 :style="getCellStyle(room.room_id, date, dragMode === 'reorganizeRooms')"
-                :class="{
-                    'cell-first': isCellFirst(room.room_id, date, dragMode === 'reorganizeRooms'),
-                    'cell-last': isCellLast(room.room_id, date, dragMode === 'reorganizeRooms'),
-                    'cursor-pointer': true,
-                    'compact-cell': isCompactView,
-                    'selected-room-by-day': isSelectedRoomByDay(room.room_id, date),
-                }"
-                class="px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover"
+                :class="[
+                  'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
+                  isCellFirst(room.room_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
+                  isCellLast(room.room_id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
+                  'cursor-pointer',
+                  isCompactView ? 'compact-cell' : '',
+                  isSelectedRoomByDay(room.room_id, date) ? 'selected-room-by-day' : '',
+                  !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms') ? 'dark:bg-gray-800 dark:text-gray-100' : ''
+                ]"
                 @mouseover="applyHover(roomIndex, dateIndex)"
                 @mouseleave="removeHover(roomIndex, dateIndex)"
               >                
                 <div v-if="isLoading && !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')">
-                  <Skeleton class="mb-2"></Skeleton>
+                  <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
                 </div> 
                 <div v-else>
                   <div v-if="isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')" class="flex items-center">
                     <div>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
-                        <i class="pi pi-pause bg-yellow-100 p-1 rounded"></i>
+                        <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
                       </template>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
-                        <i class="pi pi-clock bg-cyan-200 p-1 rounded"></i>                        
+                        <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>                        
                       </template>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
-                        <i class="pi pi-check-circle bg-sky-300 p-1 rounded"></i>                        
+                        <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>                        
                       </template>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
-                        <i class="pi pi-user bg-green-400 p-1 rounded"></i>                        
+                        <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>                        
                       </template>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
-                        <i class="pi pi-sign-out bg-gray-300 p-1 rounded"></i>                        
+                        <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>                        
                       </template>
                       <template v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block'">
-                        <i class="pi pi-times bg-red-100 p-1 rounded"></i>                        
+                        <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>                        
                       </template>
                     </div>
-                    <div class="ml-1">
+                    <div class="ml-1 dark:text-gray-100">
                       {{ fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_name || '予約情報あり' }}
                     </div>
                   </div>
                   <div v-else>
-                    <i class="pi pi-circle"></i> 空室
+                    <i class="pi pi-circle"></i> <span class="dark:text-gray-100">空室</span>
                   </div>
                 </div>
               </td>
@@ -136,8 +140,8 @@
         </table>
       </div>
       <template #footer>
-        <span class="mr-4">編集モード：{{ dragModeLabel }}</span>
-        <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization">変更適用</Button>        
+        <span class="mr-4 dark:text-gray-100">編集モード：{{ dragModeLabel }}</span>
+        <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization" class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>        
       </template>
     </Panel>  
         
