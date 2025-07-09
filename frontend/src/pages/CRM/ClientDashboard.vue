@@ -1,7 +1,7 @@
 <template>
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
         <div class="grid grid-cols-12 gap-4">
-            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
+            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
                 <template #title>                    
                     <span>顧客データ割合</span>
                 </template>
@@ -9,10 +9,10 @@
                     登録数：{{ clientsCount.total }}
                 </template>
                 <template #content>  
-                    <div ref="halfPie" class="w-full h-40"></div>
+                    <div ref="halfPie" class="w-full h-56"></div>
                 </template>
             </Card>
-            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
+            <Card class="flex col-span-6 bg-white dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700">
                 <template #title>
                     <span>顧客ロイヤリティ階層</span>
                 </template>
@@ -20,7 +20,7 @@
                     <span>総顧客数：{{ loyaltyClientsCount }}</span>
                 </template>
                 <template #content>
-                    <div ref="loyaltyTierChartRef" class="w-full h-40"></div>
+                    <div ref="loyaltyTierChartRef" class="w-full h-56"></div>
                 </template>
             </Card>
             <!--
@@ -109,14 +109,108 @@
         LabelLayout
     ]);
 
+    // --- Dark mode detection ---
+    const isDark = ref(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    let darkMediaQuery;
+
+    const updateIsDark = () => {
+        isDark.value = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    };
+
+    onMounted(() => {
+        darkMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        if (darkMediaQuery.addEventListener) {
+            darkMediaQuery.addEventListener('change', updateIsDark);
+        } else if (darkMediaQuery.addListener) {
+            darkMediaQuery.addListener(updateIsDark);
+        }
+    });
+    onBeforeUnmount(() => {
+        if (darkMediaQuery) {
+            if (darkMediaQuery.removeEventListener) {
+                darkMediaQuery.removeEventListener('change', updateIsDark);
+            } else if (darkMediaQuery.removeListener) {
+                darkMediaQuery.removeListener(updateIsDark);
+            }
+        }
+    });
+
+    // --- Chart initialization with dark mode ---
     let myHalfPie;
     const halfPie = ref(null);
-
-    // Loyalty Tier Chart
-    const loyaltyTierChartRef = ref(null);
     let loyaltyTierChartInstance;
+    const loyaltyTierChartRef = ref(null);
+
+    const initHalfPie = () => {
+        if (!halfPie.value || clients.value.length === 0) {
+            return;
+        }
+        let currentChartInstance = echarts.getInstanceByDom(halfPie.value);
+        if (currentChartInstance) {
+            myHalfPie = currentChartInstance;
+            myHalfPie.setOption(halfPieOption.value);
+        } else {
+            myHalfPie = echarts.init(halfPie.value, isDark.value ? 'dark' : undefined);
+            myHalfPie.setOption(halfPieOption.value);
+        }
+    };
+
+    const initLoyaltyTierChart = () => {
+        if (!loyaltyTierChartRef.value || loyaltyClientsCount.value === 0) {
+            return;
+        }
+        let currentChartInstance = echarts.getInstanceByDom(loyaltyTierChartRef.value);
+        if (currentChartInstance) {
+            loyaltyTierChartInstance = currentChartInstance;
+        } else {
+            loyaltyTierChartInstance = echarts.init(loyaltyTierChartRef.value, isDark.value ? 'dark' : undefined);
+        }
+        loyaltyTierChartInstance.setOption(loyaltyTierChartOption.value);
+    };
+
+    // Watch for dark mode changes and update charts
+    watch(isDark, (newVal) => {
+        // Dispose and re-init charts with new theme
+        if (myHalfPie && myHalfPie.dispose) myHalfPie.dispose();
+        if (loyaltyTierChartInstance && loyaltyTierChartInstance.dispose) loyaltyTierChartInstance.dispose();
+        nextTick(() => {
+            initHalfPie();
+            initLoyaltyTierChart();
+        });
+    });
+
+    const cardDarkBg = '#1f2937'; // Tailwind gray-800
+    const cardLightBg = '#fff';
+
+    const halfPieOption = computed(() => ({
+        backgroundColor: isDark.value ? cardDarkBg : cardLightBg,
+        tooltip: {
+            trigger: 'item',
+            formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
+        },            
+        series: [
+            {
+                name: '顧客データ割合',
+                type: 'pie',
+                radius: ['40%', '90%'],
+                center: ['50%', '85%'],                
+                startAngle: 180,            
+                endAngle: 360,
+                label: {
+                    show: true,
+                    formatter: "{b}: {d}%",
+                },
+                // Ensure data is valid, provide defaults if necessary
+                data: [
+                    { value: clientsCount.value.legal || 0, name: '法人' },
+                    { value: clientsCount.value.natural || 0, name: '個人' },
+                ]
+            }
+        ]
+    }));
 
     const loyaltyTierChartOption = computed(() => ({
+        backgroundColor: isDark.value ? cardDarkBg : cardLightBg,
         tooltip: {
             trigger: 'item',
             formatter: "{b}: {c} ({d}%)",
@@ -141,67 +235,11 @@
         ],
     }));
 
-    const halfPieOption = computed(() => ({
-        tooltip: {
-            trigger: 'item',
-            formatter: "{b}: {c} ({d}%)", // b = name, c = value, d = percentage
-        },            
-        series: [
-            {
-                name: '顧客データ割合',
-                type: 'pie',
-                radius: ['40%', '90%'],
-                center: ['50%', '50%'],                
-                startAngle: 180,            
-                endAngle: 360,
-                label: {
-                    show: true,
-                    formatter: "{b}: {d}%",
-                },
-                // Ensure data is valid, provide defaults if necessary
-                data: [
-                    { value: clientsCount.value.legal || 0, name: '法人' },
-                    { value: clientsCount.value.natural || 0, name: '個人' },
-                ]
-            }
-        ]
-    }));
-
-    const initHalfPie = () => {
-        if (!halfPie.value || clients.value.length === 0) {
-            // If DOM element isn't ready or no client data, don't proceed
-            return; 
-        }
-
-        let currentChartInstance = echarts.getInstanceByDom(halfPie.value);
-        if (currentChartInstance) {
-            myHalfPie = currentChartInstance; // Ensure myHalfPie is assigned
-            myHalfPie.setOption(halfPieOption.value);
-        } else {
-            myHalfPie = echarts.init(halfPie.value);
-            myHalfPie.setOption(halfPieOption.value);
-        }
-    };
-
     const handleResize = () => {
         if (myHalfPie) {
             myHalfPie.resize();
         }
     };  
-
-    const initLoyaltyTierChart = () => {
-        if (!loyaltyTierChartRef.value || loyaltyClientsCount.value === 0) {
-            return;
-        }
-
-        let currentChartInstance = echarts.getInstanceByDom(loyaltyTierChartRef.value);
-        if (currentChartInstance) {
-            loyaltyTierChartInstance = currentChartInstance;
-        } else {
-            loyaltyTierChartInstance = echarts.init(loyaltyTierChartRef.value);
-        }
-        loyaltyTierChartInstance.setOption(loyaltyTierChartOption.value);
-    };
 
     const handleLoyaltyTierResize = () => {
         if (loyaltyTierChartInstance) {
