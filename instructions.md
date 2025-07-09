@@ -182,7 +182,36 @@ This approach centralizes validation logic, making controllers cleaner and ensur
 
 *   **Guideline:** For data visualization and charts, the preferred library is **ECharts**. Avoid using PrimeVue Charts to ensure consistency and leverage the comprehensive features of ECharts.
 
-### 3.4. Template Comments
+### 3.4. Tailwind CSS v4 Configuration
+
+*   **Dark Mode Setup:** This project uses Tailwind CSS v4, which has a different configuration approach than v3.
+    *   **CSS Import:** Use `@import 'tailwindcss';` instead of the v3 `@tailwind` directives.
+    *   **Dark Mode Configuration:** Configure dark mode using `@custom-variant dark:media(prefers-color-scheme: dark);` in your CSS file.
+    *   **Config File:** The `tailwind.config.js` should be minimal in v4 - no `content` array or `darkMode` property needed.
+    *   **Example CSS Setup:**
+        ```css
+        /* Import Tailwind CSS v4 */
+        @import 'tailwindcss';
+        
+        /* Configure dark mode for Tailwind CSS v4 */
+        @custom-variant dark:media(prefers-color-scheme: dark);
+        ```
+    *   **Example Config File:**
+        ```js
+        /** @type {import('tailwindcss').Config} */
+        export default {
+          theme: {
+            extend: {},
+          },
+        }
+        ```
+    *   **Dark Mode Utilities:** Once configured, all `dark:` utilities work normally (e.g., `dark:bg-gray-800`, `dark:text-white`).
+    *   **Automatic Detection:** Dark mode automatically activates based on the user's system preference (`prefers-color-scheme: dark`).
+    *   **Reference:** See [Tailwind CSS v4 Dark Mode Documentation](https://tailwindcss.com/docs/dark-mode) for more details.
+
+### 3.5. Template Comments
+
+### 3.6. Template Comments
 
 *   **Guideline:** Proper commenting in Vue templates is crucial for readability and avoiding syntax errors.
     *   Use standard HTML-style comments: `<!-- Your comment here -->`.
@@ -191,7 +220,7 @@ This approach centralizes validation logic, making controllers cleaner and ensur
     *   Ensure comments are not placed where they could interfere with HTML attribute parsing or component functionality (e.g., do not place them inside a `class="..."` attribute string).
     *   Incorrect comments can inadvertently break features like PrimeVue's `FloatLabel` or other component behaviors that rely on precise DOM structure or attribute interpretation.
 
-### 3.5. Common PrimeVue Components
+### 3.7. Common PrimeVue Components
 
 *   **Dropdown Component:** For dropdown selection lists, use PrimeVue's `<Select>` component (imported as `import Select from 'primevue/select';`). Note that `<Dropdown>` may be a name used in older PrimeVue versions or other libraries, but for this project (PrimeVue 4+), `<Select>` is the standard component.
 *   **Date Component:** For date selection, use PrimeVue's `<DatePicker>` component (imported as `import DatePicker from 'primevue/datepicker';`). Avoid using the older `<Calendar>` component, as it is deprecated in PrimeVue v4+.
@@ -217,7 +246,7 @@ This approach centralizes validation logic, making controllers cleaner and ensur
         *   If such errors occur, consider removing `:filterMatchModeOptions` from the problematic column. This allows PrimeVue to use its full default set of match modes for that column's data type. The desired default `matchMode` can still be set in the main `filters` ref.
         *   Alternatively, ensure that if `filterMatchModeOptions` is used, it provides a list that is well-handled by PrimeVue's internal components (e.g., typically two or more options). Thorough testing is advised for custom, short lists of match modes with menu-based filtering.
 
-### 3.6. User Permissions and UI Behavior
+### 3.8. User Permissions and UI Behavior
 
 This section details how user permissions affect the user interface and what users can expect based on their access level.
 
@@ -231,13 +260,13 @@ This section details how user permissions affect the user interface and what use
         *   **Calendar View:** When attempting to create a new reservation from the calendar interface (e.g., by double-clicking an empty cell, which would normally open a new reservation form), users without `crud_ok` permission will instead see a toast notification. This message will typically state "権限エラー" (Permission Error) with details like "予約作成の権限がありません。" (You do not have permission to create reservations.). The reservation creation drawer/modal will not open.
         *   **New Reservation Page:** If a user without `crud_ok` permission navigates directly to the dedicated "New Reservation" page (usually found at a route like `/reservations/new`), the page will not display the standard reservation creation form. Instead, it will show an access error message. This message will typically be within a card titled "アクセスエラー" (Access Error) and state "予約作成の権限がありません。" (You do not have permission to create reservations.), often with a suggestion to contact an administrator.
 
-### 3.6. Hotel Store (`useHotelStore.js`) Behavior
+### 3.9. Hotel Store (`useHotelStore.js`) Behavior
 
 *   **`selectedHotelId` Persistence:** The `selectedHotelId` within the `useHotelStore` is persisted to `localStorage` (under the key `wehub_selectedHotelId_v1`). This means the user's last selected hotel will be remembered across page loads and sessions.
     *   The store handles initialization from `localStorage`, validation against available hotels, and updates to `localStorage` when the ID changes.
     *   Components relying on `selectedHotelId` should expect it to be potentially pre-populated from `localStorage` on initialization.
 
-### 3.7. Client Name Display Order
+### 3.10. Client Name Display Order
 
 *   **Guideline:** When displaying client names, the preferred order of fields from the `clients` table is:
     1.  `name_kanji` (Kanji name)
