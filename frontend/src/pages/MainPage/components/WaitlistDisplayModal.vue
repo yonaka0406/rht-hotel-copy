@@ -23,13 +23,14 @@
       <Column field="notes" header="メモ" :sortable="false"></Column>
       <Column header="アクション">
         <template #body="slotProps">
-          <SplitButton 
-            :model="getActionItems(slotProps.data)" 
+          <SplitButton
+            :model="getActionItems(slotProps.data)"
             size="small"
             :label="getMainActionLabel(slotProps.data)"
             :icon="getMainActionIcon(slotProps.data)"
             @click="handleMainAction(slotProps.data)"
             :severity="getMainActionSeverity(slotProps.data)"
+            v-tooltip.top="{ value: '予約部によってEメール送信がまだ検証されていません。', disabled: !isEmailActionDisabled(slotProps.data) }"
           />
         </template>
       </Column>
@@ -178,7 +179,7 @@ const getActionItems = (entry) => {
       label: 'メール送信',
       icon: 'pi pi-envelope',
       command: () => sendManualEmail(entry),
-      disabled
+      disabled: true // Disable email sending
     });
   } else if (entry.communication_preference === 'phone') {
     items.push({
@@ -315,6 +316,11 @@ const handleMainAction = (entry) => {
 // TODO: Fetch actual waitlist entries when the modal becomes visible,
 // likely by calling a function from useWaitlistStore.
 // This will be handled in a subsequent step.
+
+const isEmailActionDisabled = (entry) => {
+  const items = getActionItems(entry);
+  return entry.communication_preference === 'email' && items.length > 0 && items[0].disabled;
+};
 
 </script>
 
