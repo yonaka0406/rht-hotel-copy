@@ -22,7 +22,7 @@
         :class="isCollapsed ? 'w-full justify-center' : ''"
         aria-label="サイドバーの切り替え"
       >
-        <i class="pi" :class="isCollapsed ? 'pi-arrow-right' : 'pi-arrow-left'"></i>
+        <i class="pi" :class="isCollapsed ? 'pi-chevron-right' : 'pi-chevron-left'"></i>
       </Button>
     </div>
 
@@ -239,28 +239,44 @@
         { label: '領収書', icon: 'pi pi-fw pi-receipt', route: '/billing/receipts', type: 'link', command: () => router.push({ name: 'Receipts' }) },
     ]);
 
-    const menubarItems = computed(() => [
-         {
-            label: 'ホーム',
-            icon: 'pi pi-fw pi-home',
-            command: () => router.push('/reservations/day')
-        },
-        {
-            label: '新規予約',
-            icon: 'pi pi-fw pi-plus',
-            command: () => goToNewReservation()
-        },
-        {
-            label: '予約一覧',
-            icon: 'pi pi-fw pi-list',
-            command: () => router.push('/reservations/list')
-        },
-        {
-            label: '請求書',
-            icon: 'pi pi-fw pi-file',
-            command: () => router.push('/billing/invoices')
-        },
-    ]);
+    // Add menubarItems computed property for mobile Menubar
+    const menubarItems = computed(() => {
+        const items = [
+            { label: 'ホーム', icon: 'pi pi-fw pi-home', command: () => router.push('/reservations/day') },
+            { label: 'ダッシュボード', icon: 'pi pi-fw pi-chart-bar', command: () => router.push('/dashboard') },
+            {
+                label: '予約',
+                icon: 'pi pi-calendar-plus',
+                items: [
+                    { label: '新規予約', icon: 'pi pi-fw pi-plus', command: () => goToNewReservation() },
+                    { label: '予約カレンダー', icon: 'pi pi-fw pi-calendar', command: () => router.push('/reservations/calendar') },
+                    { label: '予約一覧', icon: 'pi pi-fw pi-list', command: () => router.push('/reservations/list') },
+                    { label: '月次集計', icon: 'pi pi-fw pi-calendar-plus', command: () => router.push('/report/monthly') },
+                ]
+            },
+            {
+                label: '請求',
+                icon: 'pi pi-file-edit',
+                items: [
+                    { label: '請求書', icon: 'pi pi-fw pi-file', command: () => router.push('/billing/invoices') },
+                    { label: '領収書', icon: 'pi pi-fw pi-receipt', command: () => router.push({ name: 'Receipts' }) },
+                ]
+            },
+        ];
+        if (logged_user.value && logged_user.value[0] && logged_user.value[0].permissions) {
+            const permissions = logged_user.value[0].permissions;
+            if (permissions.manage_db || permissions.manage_users) {
+                items.push({ label: '管理者パネル', icon: 'pi pi-cog', command: () => router.push('/admin') });
+            }
+            if (permissions.manage_clients) {
+                items.push({ label: '顧客情報', icon: 'pi pi-users', command: () => router.push('/crm/dashboard') });
+            }
+            if (permissions.view_reports) {
+                items.push({ label: 'レポート', icon: 'pi pi-book', command: () => router.push('/reporting') });
+            }
+        }
+        return items;
+    });
 
     const showDrawer = ref(false);
     const isAdmin = ref(false);
@@ -289,6 +305,7 @@
         router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                                   
     }; 
 
+    // Ensure goToNewReservation is defined
     const goToNewReservation = () => {                
         setReservationId(null);               
         router.push({ name: 'ReservationsNew' });
