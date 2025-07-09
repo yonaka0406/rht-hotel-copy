@@ -1,9 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
-/* Tailwind's order is important: base, components, then utilities. */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Import Tailwind CSS v4 */
+@import 'tailwindcss';
 
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
@@ -98,4 +96,3 @@
   Assuming it's correctly processed by the build system for PrimeVue styles.
   If PrimeVue components are used, their dark mode compatibility needs separate verification/configuration.
 */
-@source '../node_modules/primevue/**/*.{vue,js,ts,jsx,tsx}';
