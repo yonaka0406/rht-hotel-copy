@@ -42,7 +42,9 @@ This document outlines the integration strategy for connecting the rht-hotel Pro
 2. **High Availability** - Graceful degradation when one system is unavailable
 3. **Data Consistency** - Conflict resolution and data validation
 4. **Security First** - Secure authentication and data transmission
-5. **Performance Optimized** - Caching and efficient data transfer
+5. **Performance Optimized** - Hybrid caching strategy with manual and automatic updates
+6. **Data Ownership** - PMS maintains control over hotel and room type data
+7. **Bidirectional Integration** - PMS can trigger cache updates and check status
 
 ## 🔧 Technical Implementation Plan
 
@@ -74,6 +76,12 @@ GET /api/booking-engine/auth/user/:user_id
 // Hotel Information
 GET /api/booking-engine/hotels/:hotel_id/images
 GET /api/booking-engine/hotels/:hotel_id/pricing
+
+// Cache Management (for PMS to trigger updates)
+POST /api/booking-engine/cache/update-hotels
+POST /api/booking-engine/cache/update-room-types
+GET /api/booking-engine/cache/status
+POST /api/booking-engine/cache/refresh-availability
 ```
 
 #### 1.2 Authentication & Security
@@ -135,15 +143,163 @@ CREATE TABLE booking_engine_audit_log (
     error_message TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Cache Management Tables
+CREATE TABLE booking_engine_cache_status (
+    id SERIAL PRIMARY KEY,
+    cache_type TEXT NOT NULL, -- hotels, room_types, availability
+    hotel_id INT REFERENCES hotels(id),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    cache_ttl_minutes INTEGER DEFAULT 15,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Cache Update Triggers
+CREATE TABLE booking_engine_cache_triggers (
+    id SERIAL PRIMARY KEY,
+    trigger_type TEXT NOT NULL, -- manual, scheduled, pms_triggered
+    cache_type TEXT NOT NULL, -- hotels, room_types, availability
+    hotel_id INT REFERENCES hotels(id),
+    triggered_by TEXT, -- admin, pms, system
+    status TEXT DEFAULT 'pending', -- pending, processing, completed, failed
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
+);
 ```
+
+## 🗄️ Caching Strategy
+
+### Hybrid Caching Approach
+
+The integration implements a **hybrid caching strategy** with different update mechanisms for different data types:
+
+#### Hotel & Room Type Cache (Manual Updates Only)
+- **Manual Control**: Updates only triggered by administrators or PMS system
+- **No Automatic Sync**: No background synchronization for hotel/room type data
+- **PMS Ownership**: PMS maintains full control over hotel and room type data
+- **Smart Cleanup**: Only removes cache entries not linked to active hotels/room types
+- **Admin Control**: All hotel/room type cache updates must be triggered manually
+
+#### Availability Cache (Automatic + Manual)
+- **TTL-based**: 15-minute Time-To-Live for availability data
+- **Automatic Refresh**: Background service refreshes expired availability entries
+- **Manual Override**: Admin can manually trigger availability cache refresh
+- **Real-time Updates**: Immediate availability updates for critical operations
+- **Smart Cleanup**: Removes availability data older than 1 month
+
+### Cache Management API
+
+#### PMS-Triggered Cache Updates
+```bash
+# PMS can trigger hotel cache updates
+POST /api/booking-engine/cache/update-hotels
+Authorization: Bearer PMS_API_KEY
+Content-Type: application/json
+
+# PMS can trigger room type cache updates
+POST /api/booking-engine/cache/update-room-types
+Authorization: Bearer PMS_API_KEY
+Content-Type: application/json
+
+# PMS can check cache status
+GET /api/booking-engine/cache/status
+Authorization: Bearer PMS_API_KEY
+
+# PMS can trigger availability cache refresh
+POST /api/booking-engine/cache/refresh-availability
+Authorization: Bearer PMS_API_KEY
+Content-Type: application/json
+{
+  "hotel_id": "uuid",
+  "room_type_id": "uuid",
+  "start_date": "2024-01-15",
+  "end_date": "2024-01-20"
+}
+```
+
+#### Cache Status Response
+```json
+{
+  "hotels": {
+    "last_updated": "2024-01-15T10:30:00Z",
+    "is_active": true,
+    "cache_ttl_minutes": 1440
+  },
+  "room_types": {
+    "last_updated": "2024-01-15T10:30:00Z",
+    "is_active": true,
+    "cache_ttl_minutes": 1440
+  },
+  "availability": {
+    "last_updated": "2024-01-15T10:25:00Z",
+    "is_active": true,
+    "cache_ttl_minutes": 15
+  }
+}
+```
+
+### Cache Data Flow
+
+#### Hotel & Room Type Cache Flow
+1. **PMS Data Change** → PMS triggers cache update via API
+2. **Booking Engine** → Receives update request and fetches fresh data
+3. **Cache Update** → Updates local cache with new hotel/room type data
+4. **Status Response** → Returns update status to PMS
+5. **Manual Control** → No automatic background sync for hotel/room type data
+
+#### Availability Cache Flow
+1. **Client Request** → Booking engine checks local availability cache
+2. **Cache Hit (Valid)** → Returns cached availability immediately
+3. **Cache Miss/Expired** → Fetches from PMS API → Updates cache → Returns data
+4. **Background Sync** → Periodically refreshes expired availability entries
+5. **Manual Override** → Admin can manually trigger availability cache refresh
+
+### Cache Benefits
+
+#### Performance Benefits
+- **Fast Response Times**: Cached data provides sub-200ms response times
+- **Reduced PMS Load**: Minimizes API calls to PMS system
+- **High Availability**: Booking engine continues operating during PMS downtime
+- **Scalability**: Supports high-volume booking operations
+
+#### Operational Benefits
+- **Data Ownership**: PMS maintains control over hotel and room type data
+- **Manual Control**: Hotel/room type updates only when explicitly requested
+- **Automatic Availability**: Availability cache refreshes automatically
+- **Bidirectional Integration**: PMS can trigger cache updates and check status
+- **Smart Cleanup**: Intelligent cache cleanup preserves linked data
+
+### Cache Configuration
+
+#### Environment Variables
+```env
+# Booking Engine Configuration
+BOOKING_ENGINE_CACHE_TTL_MINUTES=15
+BOOKING_ENGINE_HOTEL_CACHE_TTL_MINUTES=1440
+BOOKING_ENGINE_ROOM_TYPE_CACHE_TTL_MINUTES=1440
+
+# PMS Integration Configuration
+PMS_API_URL=https://pms.example.com
+PMS_API_KEY=your_pms_api_key_here
+```
+
+#### Cache Settings
+- **Hotel Cache TTL**: 24 hours (manual updates only)
+- **Room Type Cache TTL**: 24 hours (manual updates only)
+- **Availability Cache TTL**: 15 minutes (automatic + manual updates)
+- **Cleanup Threshold**: 1 month for availability data
+- **Smart Cleanup**: Preserves linked hotel/room type data
 
 ### Phase 2: Core Integration Features (Week 3-4)
 
 #### 2.1 Availability Synchronization
-- **Real-time Availability Queries** - Fast availability lookup for booking engine
-- **Caching Layer** - Redis caching for frequently accessed data
+- **Hybrid Caching Strategy** - Manual hotel/room type cache + automatic availability cache
+- **Real-time Availability Queries** - Fast availability lookup with 15-minute TTL cache
+- **Smart Cache Management** - Intelligent cleanup preserving linked data
 - **Batch Updates** - Efficient bulk availability updates
 - **Conflict Resolution** - Handle availability conflicts between systems
+- **PMS-Triggered Updates** - PMS can trigger cache updates via API calls
 
 #### 2.2 Booking Synchronization
 - **Bidirectional Booking Creation** - Create bookings from either system
@@ -152,10 +308,11 @@ CREATE TABLE booking_engine_audit_log (
 - **Status Tracking** - Real-time booking status updates
 
 #### 2.3 Data Mapping & Transformation
-- **Room Type Mapping** - Map PMS room types to booking engine format
+- **Room Type Mapping** - Map PMS room types to booking engine format with manual cache control
 - **Pricing Synchronization** - Sync rates and pricing rules
 - **Amenity Translation** - Map amenities between systems
 - **User Data Bridge** - Cross-system user authentication
+- **Cache-Aware Mapping** - Respect cache TTL and manual update requirements
 
 ### Phase 3: Advanced Features (Week 5-6)
 
@@ -231,21 +388,32 @@ CREATE TABLE booking_engine_audit_log (
 
 ## 🔄 Data Synchronization Strategy
 
-### Real-time Sync
-- **Immediate Updates** - Critical data changes sync immediately
-- **WebSocket Events** - Real-time notifications for data changes
-- **Event Queue** - Reliable message delivery for sync operations
+### Hybrid Sync Approach
 
-### Batch Sync
-- **Scheduled Sync** - Regular batch synchronization
-- **Incremental Updates** - Only sync changed data
-- **Conflict Resolution** - Handle data conflicts automatically
+#### Hotel & Room Type Sync (Manual Only)
+- **PMS-Triggered Updates** - PMS initiates cache updates when data changes
+- **Manual Admin Control** - Administrators can trigger cache updates
+- **No Automatic Background Sync** - Hotel/room type data only updates when explicitly requested
+- **Smart Cleanup** - Preserves linked data, removes only orphaned cache entries
+
+#### Availability Sync (Automatic + Manual)
+- **TTL-Based Automatic Sync** - 15-minute automatic refresh of expired availability data
+- **Real-time Updates** - Critical availability changes sync immediately
+- **Background Service** - Periodically refreshes expired availability entries
+- **Manual Override** - Admin can manually trigger availability cache refresh
+
+### Cache-Aware Synchronization
+- **Intelligent Caching** - Different cache strategies for different data types
+- **PMS Control** - PMS maintains ownership of hotel and room type data
+- **Performance Optimization** - Cached data provides fast response times
+- **Reliability** - Booking engine continues operating during PMS downtime
 
 ### Fallback Mechanisms
 - **Offline Mode** - Continue operation when integration is down
-- **Data Caching** - Use cached data during outages
+- **Cached Data Usage** - Use cached data during PMS outages
 - **Retry Logic** - Automatic retry for failed operations
 - **Manual Sync** - Manual sync tools for critical operations
+- **Smart Cache Management** - Intelligent cleanup and preservation of linked data
 
 ## 🚀 Deployment Strategy
 
@@ -320,18 +488,22 @@ CREATE TABLE booking_engine_audit_log (
 - [ ] Implement security measures
 
 ### Phase 2: Core Features
-- [ ] Implement availability synchronization
+- [ ] Implement hybrid caching strategy (manual hotel/room type + automatic availability)
+- [ ] Add PMS-triggered cache update endpoints
+- [ ] Implement availability synchronization with TTL cache
 - [ ] Add booking synchronization
-- [ ] Create data mapping layer
+- [ ] Create data mapping layer with cache awareness
 - [ ] Implement error handling
 - [ ] Add audit logging
+- [ ] Implement smart cache cleanup logic
 
 ### Phase 3: Advanced Features
 - [ ] Add real-time communication
-- [ ] Implement monitoring dashboard
-- [ ] Create admin interface
+- [ ] Implement monitoring dashboard with cache status
+- [ ] Create admin interface with cache management tools
 - [ ] Add performance optimization
-- [ ] Implement caching strategy
+- [ ] Implement cache monitoring and analytics
+- [ ] Add cache health checks and alerting
 
 ### Phase 4: Testing & Deployment
 - [ ] Comprehensive testing

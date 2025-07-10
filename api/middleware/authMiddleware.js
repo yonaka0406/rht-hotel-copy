@@ -351,6 +351,72 @@ const authMiddlewareWaitlistToken = async (req, res, next) => {
   }
 };
 
+/**
+ * Booking Engine API Key Authentication Middleware.
+ * Validates API keys sent by the booking engine for cache update operations.
+ * Sets req.user with a system user object for booking engine actions.
+ */
+const authMiddlewareBookingEngine = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Authorization header required' });
+  }
+
+  const headerParts = authHeader.split(' ');
+  if (headerParts.length !== 2 || headerParts[0].toLowerCase() !== 'bearer') {
+    return res.status(401).json({ error: 'Invalid Authorization header format. Expected "Bearer <api_key>"' });
+  }
+
+  const apiKey = headerParts[1];
+  if (!apiKey) {
+    return res.status(401).json({ error: 'API key missing' });
+  }
+
+  try {
+    // Validate against environment variable
+    const expectedApiKey = process.env.BOOKING_ENGINE_API_KEY;
+    
+    if (!expectedApiKey) {
+      logger.error('BOOKING_ENGINE_API_KEY not configured in environment');
+      return res.status(500).json({ error: 'Booking engine API key not configured' });
+    }
+
+    if (apiKey !== expectedApiKey) {
+      logger.warn('Invalid booking engine API key attempt', { 
+        providedKey: apiKey.substring(0, 8) + '...',
+        ip: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+      return res.status(401).json({ error: 'Invalid API key' });
+    }
+
+    // Set a system user object for booking engine actions
+    req.user = {
+      id: 2, // System user ID for booking engine
+      name: 'Booking Engine System',
+      permissions: { crud_ok: true } // Allow CRUD operations
+    };
+
+    // Store booking engine context for potential use in controllers
+    req.bookingEngine = {
+      authenticated: true,
+      apiKey: apiKey.substring(0, 8) + '...', // Log partial key for debugging
+      timestamp: new Date().toISOString()
+    };
+
+    logger.debug('Booking engine authentication successful', {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+      endpoint: req.path
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Error in authMiddlewareBookingEngine:', error);
+    return res.status(500).json({ error: 'Token validation failed' });
+  }
+};
+
 module.exports = {
   authMiddleware,
   authMiddlewareCRUDAccess,
@@ -358,5 +424,6 @@ module.exports = {
   authMiddleware_manageUsers, 
   authMiddleware_manageDB, 
   authMiddleware_manageClients,
-  authMiddlewareWaitlistToken
+  authMiddlewareWaitlistToken,
+  authMiddlewareBookingEngine
 };
