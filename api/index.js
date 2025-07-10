@@ -229,6 +229,7 @@ const metricsRoutes = require('./routes/metricsRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const xmlRoutes = require('./ota/xmlRoutes');
 const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
+const bookingEngineRoutes = require('./routes/bookingEngineRoutes'); // Import booking engine routes
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -248,7 +249,8 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
-app.use('/api', waitlistRoutes); // Corrected: Use waitlist routes with /api prefix
+app.use('/api', waitlistRoutes); 
+app.use('/api/booking-engine', bookingEngineRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {
