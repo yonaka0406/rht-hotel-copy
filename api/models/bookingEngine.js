@@ -18,8 +18,8 @@ const getAllHotelsForBookingEngine = async (requestId) => {
       address,
       email,
       phone_number,
-      created_at,
-      updated_at
+      created_at
+      
     FROM hotels 
     WHERE deleted_at IS NULL
     ORDER BY id
@@ -52,8 +52,7 @@ const getHotelForBookingEngine = async (requestId, hotelId) => {
       address,
       email,
       phone_number,
-      created_at,
-      updated_at
+      created_at
     FROM hotels 
     WHERE id = $1 AND deleted_at IS NULL
   `;
@@ -80,8 +79,8 @@ const getRoomTypesForBookingEngine = async (requestId, hotelId) => {
       rt.name,
       rt.description,
       rt.hotel_id,
-      rt.created_at,
-      rt.updated_at
+      rt.created_at
+      
     FROM room_types rt
     INNER JOIN hotels h ON rt.hotel_id = h.id
     WHERE rt.hotel_id = $1 
