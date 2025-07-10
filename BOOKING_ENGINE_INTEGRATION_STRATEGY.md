@@ -78,9 +78,7 @@ GET /api/booking-engine/hotels/:hotel_id/images
 GET /api/booking-engine/hotels/:hotel_id/pricing
 
 // Cache Management (for PMS to trigger updates)
-POST /api/booking-engine/cache/update-hotels
-POST /api/booking-engine/cache/update-room-types
-GET /api/booking-engine/cache/status
+
 POST /api/booking-engine/cache/refresh-availability
 ```
 
