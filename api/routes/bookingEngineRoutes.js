@@ -12,8 +12,4 @@ router.get('/hotels', authMiddlewareBookingEngine, getAllHotelsForBookingEngine)
 router.get('/hotels/:hotel_id', authMiddlewareBookingEngine, getHotelsForBookingEngine);
 router.get('/room-types/:hotel_id', authMiddlewareBookingEngine, getRoomTypesForBookingEngine);
 
-
-
-
-
 module.exports = router; 

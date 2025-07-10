@@ -249,8 +249,8 @@ app.use('/api', logRoutes);
 app.use('/api', metricsRoutes);
 app.use('/api', projectRoutes);
 app.use('/api', xmlRoutes);
-app.use('/api', waitlistRoutes); // Corrected: Use waitlist routes with /api prefix
-app.use('/api/booking-engine', bookingEngineRoutes); // Booking engine routes with /api/booking-engine prefix
+app.use('/api', waitlistRoutes); 
+app.use('/api/booking-engine', bookingEngineRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {

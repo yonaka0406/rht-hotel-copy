@@ -1,6 +1,6 @@
-const { getPool } = require('../config/database');
-const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam } = require('../utils/validationUtils');
+const { validateNumericParam } = require('../utils/validationUtils');
 const logger = require('../config/logger');
+const bookingEngineModel = require('../models/bookingEngine');
 
 /**
  * Get hotels data for booking engine
@@ -16,36 +16,13 @@ const getHotelsForBookingEngine = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
-  const pool = getPool(req.requestId);
-  const client = await pool.connect();
-
   try {
-    const query = `
-      SELECT 
-        id,
-        formal_name,
-        name,
-        facility_type,
-        open_date,
-        total_rooms,
-        postal_code,
-        address,
-        email,
-        phone_number,
-        created_at,
-        updated_at
-      FROM hotels 
-      WHERE id = $1 AND deleted_at IS NULL
-    `;
+    const hotel = await bookingEngineModel.getHotelForBookingEngine(req.requestId, validatedHotelId);
     
-    const result = await client.query(query, [validatedHotelId]);
-    
-    if (result.rows.length === 0) {
+    if (!hotel) {
       return res.status(404).json({ error: 'Hotel not found' });
     }
 
-    const hotel = result.rows[0];
-    
     // Format response according to booking engine expectations
     const response = {
       hotel_id: hotel.id,
@@ -67,12 +44,8 @@ const getHotelsForBookingEngine = async (req, res) => {
   } catch (error) {
     logger.error('Error fetching hotel for booking engine:', error);
     res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    client.release();
   }
 };
-
-
 
 /**
  * Get room types for a specific hotel
@@ -88,30 +61,11 @@ const getRoomTypesForBookingEngine = async (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
-  const pool = getPool(req.requestId);
-  const client = await pool.connect();
-
   try {
-    const query = `
-      SELECT 
-        rt.id,
-        rt.name,
-        rt.description,
-        rt.hotel_id,
-        rt.created_at,
-        rt.updated_at
-      FROM room_types rt
-      INNER JOIN hotels h ON rt.hotel_id = h.id
-      WHERE rt.hotel_id = $1 
-        AND h.deleted_at IS NULL 
-        AND rt.deleted_at IS NULL
-      ORDER BY rt.name
-    `;
-    
-    const result = await client.query(query, [validatedHotelId]);
+    const roomTypes = await bookingEngineModel.getRoomTypesForBookingEngine(req.requestId, validatedHotelId);
     
     // Format response according to booking engine expectations
-    const roomTypes = result.rows.map(roomType => ({
+    const formattedRoomTypes = roomTypes.map(roomType => ({
       id: roomType.id,
       name: roomType.name,
       description: roomType.description,
@@ -122,50 +76,25 @@ const getRoomTypesForBookingEngine = async (req, res) => {
 
     res.status(200).json({
       hotel_id: validatedHotelId,
-      room_types: roomTypes
+      room_types: formattedRoomTypes
     });
 
   } catch (error) {
     logger.error('Error fetching room types for booking engine:', error);
     res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    client.release();
   }
 };
-
 
 /**
  * Get all hotels for booking engine
  * Returns all active hotels in the format expected by the booking engine
  */
 const getAllHotelsForBookingEngine = async (req, res) => {
-  const pool = getPool(req.requestId);
-  const client = await pool.connect();
-
   try {
-    const query = `
-      SELECT 
-        id,
-        formal_name,
-        name,
-        facility_type,
-        open_date,
-        total_rooms,
-        postal_code,
-        address,
-        email,
-        phone_number,
-        created_at,
-        updated_at
-      FROM hotels 
-      WHERE deleted_at IS NULL
-      ORDER BY id
-    `;
-    
-    const result = await client.query();
+    const hotels = await bookingEngineModel.getAllHotelsForBookingEngine(req.requestId);
     
     // Format response according to booking engine expectations
-    const hotels = result.rows.map(hotel => ({
+    const formattedHotels = hotels.map(hotel => ({
       hotel_id: hotel.id,
       name: hotel.name,
       formal_name: hotel.formal_name,
@@ -180,16 +109,13 @@ const getAllHotelsForBookingEngine = async (req, res) => {
       updated_at: hotel.updated_at
     }));
 
-    res.status(200).json({ hotels });
+    res.status(200).json({ hotels: formattedHotels });
 
   } catch (error) {
     logger.error('Error fetching all hotels for booking engine:', error);
     res.status(500).json({ error: 'Internal server error' });
-  } finally {
-    client.release();
   }
 };
-
 
 module.exports = {
   getHotelsForBookingEngine,
