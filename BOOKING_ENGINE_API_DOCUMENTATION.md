@@ -75,7 +75,43 @@ https://test.wehub.work/api/booking-engine
 }
 ```
 
-### 3. Update Hotel Cache
+### 3. Get Individual Hotel Plans
+
+**Endpoint:** `GET /plans/{hotel_id}`
+
+**Description:** Retrieves all available plans for a specific hotel.
+
+**Parameters:**
+- `hotel_id` (path): The ID of the hotel
+
+**Response:**
+```json
+{
+  "hotel_id": 1,
+  "plans": [
+    {
+      "global_plan_id": 1,
+      "hotel_plan_id": null,
+      "plan_key": "1h",
+      "name": "Standard Plan",
+      "description": "Standard accommodation plan",
+      "plan_type": "per_room",
+      "color": "#FF5733"
+    },
+    {
+      "global_plan_id": 2,
+      "hotel_plan_id": 5,
+      "plan_key": "2h5",
+      "name": "Premium Plan",
+      "description": "Premium accommodation with amenities",
+      "plan_type": "per_room",
+      "color": "#33FF57"
+    }
+  ]
+}
+```
+
+### 4. Update Hotel Cache
 
 **Endpoint:** `POST /cache/update-hotels`
 
@@ -107,7 +143,7 @@ https://test.wehub.work/api/booking-engine
 }
 ```
 
-### 4. Update Room Type Cache
+### 5. Update Room Type Cache
 
 **Endpoint:** `POST /cache/update-room-types`
 
@@ -133,7 +169,7 @@ https://test.wehub.work/api/booking-engine
 }
 ```
 
-### 5. Get Cache Status
+### 6. Get Cache Status
 
 **Endpoint:** `GET /cache/status`
 
@@ -224,6 +260,13 @@ curl -X POST https://test.wehub.work/api/booking-engine/cache/update-hotels \
 #### Update Room Type Cache
 ```bash
 curl -X POST https://test.wehub.work/api/booking-engine/cache/update-room-types \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+#### Get Hotel Plans
+```bash
+curl -X GET https://test.wehub.work/api/booking-engine/plans/1 \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json"
 ```

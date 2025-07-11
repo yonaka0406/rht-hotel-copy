@@ -86,6 +86,45 @@ const getRoomTypesForBookingEngine = async (req, res) => {
 };
 
 /**
+ * Get plans for a specific hotel
+ * Returns plan information in the format expected by the booking engine
+ */
+const getPlansForBookingEngine = async (req, res) => {
+  const { hotel_id } = req.params;
+  
+  let validatedHotelId;
+  try {
+    validatedHotelId = validateNumericParam(hotel_id, 'Hotel ID');
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  try {
+    const plans = await bookingEngineModel.getPlansForBookingEngine(req.requestId, validatedHotelId);
+    
+    // Format response according to booking engine expectations
+    const formattedPlans = plans.map(plan => ({
+      global_plan_id: plan.plans_global_id,
+      hotel_plan_id: plan.plans_hotel_id,
+      plan_key: plan.plan_key,
+      name: plan.name,
+      description: plan.description,
+      plan_type: plan.plan_type,
+      color: plan.color
+    }));
+
+    res.status(200).json({
+      hotel_id: validatedHotelId,
+      plans: formattedPlans
+    });
+
+  } catch (error) {
+    logger.error('Error fetching plans for booking engine:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
  * Get all hotels for booking engine
  * Returns all active hotels in the format expected by the booking engine
  */
@@ -120,5 +159,6 @@ const getAllHotelsForBookingEngine = async (req, res) => {
 module.exports = {
   getHotelsForBookingEngine,
   getRoomTypesForBookingEngine,
+  getPlansForBookingEngine,
   getAllHotelsForBookingEngine
 }; 

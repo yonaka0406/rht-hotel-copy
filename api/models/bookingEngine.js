@@ -94,8 +94,38 @@ const getRoomTypesForBookingEngine = async (requestId, hotelId) => {
   }
 };
 
+/**
+ * Get all plans for a specific hotel for booking engine
+ * Returns plans in the format expected by the booking engine
+ */
+const getPlansForBookingEngine = async (requestId, hotelId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT 
+      p.plans_global_id,
+      p.plans_hotel_id,
+      p.plan_key,
+      p.name,
+      p.description,
+      p.plan_type,
+      p.color
+    FROM get_available_plans_for_hotel($1) p
+    ORDER BY p.plan_type, p.name
+  `;
+  const values = [hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error retrieving plans for booking engine:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   getAllHotelsForBookingEngine,
   getHotelForBookingEngine,
-  getRoomTypesForBookingEngine
+  getRoomTypesForBookingEngine,
+  getPlansForBookingEngine
 }; 
