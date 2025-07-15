@@ -130,12 +130,13 @@ try {
 }
 
 app.use((req, res, next) => { 
-  logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
+  // logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
+  next();
 });
 
 // Determine if we're in a secure environment (HTTPS)
 const isSecureEnvironment = process.env.NODE_ENV !== 'local';
-logger.info(`[SESSION_CONFIG] NODE_ENV: ${process.env.NODE_ENV}, Secure cookies: ${isSecureEnvironment}, SameSite: ${isSecureEnvironment ? 'None' : 'Lax'}`);
+// logger.info(`[SESSION_CONFIG] NODE_ENV: ${process.env.NODE_ENV}, Secure cookies: ${isSecureEnvironment}, SameSite: ${isSecureEnvironment ? 'None' : 'Lax'}`);
 
 app.use(session({
   store: sessionStore, // Use the created sessionStore
@@ -369,7 +370,7 @@ const listenForTableChanges = async () => {
 
     await devClient.query('LISTEN logs_reservation_changed');
     await devClient.query('LISTEN reservation_log_inserted');
-    logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
+    // logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
   } catch (error) {
     logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
   }
@@ -433,7 +434,7 @@ const listenForTableChanges = async () => {
       
       await prodClient.query('LISTEN logs_reservation_changed');
       await prodClient.query('LISTEN reservation_log_inserted');
-      logger.info('Listening for changes on logs_reservation_changed and reservation_log_inserted (prod)');
+      // logger.info('Listening for changes on logs_reservation_changed and reservation_log_inserted (prod)');
     } catch (error) {
       logger.error('Failed to connect to PROD database for LISTEN:', { errorMessage: error.message, stack: error.stack });
     }
@@ -448,7 +449,7 @@ listenForTableChanges();
 
 // Socket.IO event handlers
 ioHttp.on('connection', (socket) => {
-  logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
+  // logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
   const origin = socket.handshake.headers.origin;
   const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
   socket.join(environment);
@@ -492,7 +493,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
 // Start the servers
 httpServer.listen(PORT, '0.0.0.0', () => {
-  logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
+  // logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
 /*

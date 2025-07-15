@@ -56,7 +56,7 @@ const isDomainProduction = (domain) => {
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
-  logger.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+  // logger.debug(`isDomainProduction: Domain '${domain}' identified as: ${isProd ? 'PRODUCTION' : 'DEVELOPMENT'}`);
   
   return isProd;
 };
@@ -90,7 +90,7 @@ const setupRequestContext = (req, res, next) => {
   const origin = req.headers.origin || '';
   const referer = req.headers.referer || '';
 
-  logger.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
+  // logger.debug(`Request #${requestId} - Determining environment. Host: '${host}', Origin: '${origin}', Referer: '${referer}'`);
 
   let isProdEnvironment = false;
 
@@ -122,7 +122,7 @@ const setupRequestContext = (req, res, next) => {
   res.on('finish', () => {
     setTimeout(() => {
       requestEnv.delete(requestId);
-      logger.debug(`Cleaned up request #${requestId} context`);
+      // logger.debug(`Cleaned up request #${requestId} context`);
     }, 10000); // Keep the context for 10 seconds after response for potential async operations
   });
   
