@@ -516,27 +516,46 @@
       const key = `${room_id}_${date}`;
       return useTemp ? !!lastCellTempMap.value[key] : !!lastCellMap.value[key];
   };
-  const applyHover = (roomIndex, dateIndex) => {    
-    const firstColCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:first-child`);
-    const th = document.querySelector(`thead th:nth-child(${roomIndex + 2})`); // +2 because of the first "日付" th
+  const applyHover = (roomIndex, dateIndex) => {
+    // Highlight the entire row
+    const rowCells = document.querySelectorAll(`tbody tr:nth-child(${dateIndex + 1}) td`);
+    rowCells.forEach(cell => cell.classList.add('highlight-row'));
 
-    if (firstColCell) {
-      firstColCell.classList.add('title-cell-highlight');
-    }
-    if (th) {
-      th.classList.add('title-cell-highlight');
-    }
-  };
-  const removeHover = (roomIndex, dateIndex) => {
+    // Highlight the entire column
+    const colCells = document.querySelectorAll(`tbody tr td:nth-child(${roomIndex + 2})`); // +2 because first col is date
+    colCells.forEach(cell => cell.classList.add('highlight-col'));
+
+    // Highlight the hovered cell
+    const hoveredCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:nth-child(${roomIndex + 2})`);
+    if (hoveredCell) hoveredCell.classList.add('highlight-cell');
+
+    // Also highlight the date cell (first column)
     const firstColCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:first-child`);
+    if (firstColCell) firstColCell.classList.add('title-cell-highlight');
+    // And the header cell (top row)
     const th = document.querySelector(`thead th:nth-child(${roomIndex + 2})`);
+    if (th) th.classList.add('title-cell-highlight');
+  };
 
-    if (firstColCell) {
-      firstColCell.classList.remove('title-cell-highlight');
-    }
-    if (th) {
-      th.classList.remove('title-cell-highlight');
-    }
+  const removeHover = (roomIndex, dateIndex) => {
+    // Remove row highlight
+    const rowCells = document.querySelectorAll(`tbody tr:nth-child(${dateIndex + 1}) td`);
+    rowCells.forEach(cell => cell.classList.remove('highlight-row'));
+
+    // Remove column highlight
+    const colCells = document.querySelectorAll(`tbody tr td:nth-child(${roomIndex + 2})`);
+    colCells.forEach(cell => cell.classList.remove('highlight-col'));
+
+    // Remove cell highlight
+    const hoveredCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:nth-child(${roomIndex + 2})`);
+    if (hoveredCell) hoveredCell.classList.remove('highlight-cell');
+
+    // Remove date cell highlight
+    const firstColCell = document.querySelector(`tbody tr:nth-child(${dateIndex + 1}) td:first-child`);
+    if (firstColCell) firstColCell.classList.remove('title-cell-highlight');
+    // Remove header cell highlight
+    const th = document.querySelector(`thead th:nth-child(${roomIndex + 2})`);
+    if (th) th.classList.remove('title-cell-highlight');
   };
       
   // Drawer
@@ -1406,7 +1425,8 @@
   }
 
   th, td {
-    border: 0px solid;
+    border: none;
+    border-right: 1px solid #e5e7eb;
     padding: 8px 12px;
     text-align: center;
     min-width: 120px;
@@ -1414,8 +1434,40 @@
   }  
   td {
     text-align: left;
-    border-left: 4px solid white;
-    border-right: 4px solid white;
+  }
+  
+  /* Remove right border from last column */
+  th:last-child, td:last-child {
+    border-right: none;
+  }
+
+  /* Enhanced table header styling */
+  thead th {
+    background-color: #fff;
+    font-weight: bold;
+    color: #111827;
+    border-right: 1px solid #e5e7eb;
+    padding: 8px 12px;
+  }
+  thead th:first-child {
+    background-color: #fff;
+    border-left: none;
+    border-right: 1px solid #e5e7eb;
+  }
+  thead th:last-child {
+    border-right: none;
+  }
+  /* For dark mode */
+  .dark thead th {
+    background-color: #fff;
+    color: #111827;
+    border-right: 1px solid #6b7280;
+  }
+  .dark thead th:first-child {
+    background-color: #fff;
+    color: #111827;
+    border-left: none;
+    border-right: 1px solid #6b7280;
   }
 
   .cell-first {
@@ -1484,8 +1536,14 @@
     background-color: lightgray;
   }
   .title-cell-highlight {
-    transition: background-color 0.3s ease;
-    background-color: lightgray;
+    background-color: #fde68a !important; /* amber-200 */
+    color: #92400e !important;
+    font-weight: bold;
+    transition: background-color 0.2s;
+  }
+  .dark .title-cell-highlight {
+    background-color: #b45309 !important; /* amber-700 */
+    color: #fef3c7 !important;
   }
   .dragging-reservation {
     background-color: rgba(255, 255, 255, 0.8);
@@ -1509,4 +1567,70 @@
   .drop-zone-th {
     background-color: lightgreen;
   }
+  
+  /* Enhanced room row styling */
+  tbody tr:nth-child(even) {
+    background-color: #fafafa;
+  }
+  
+  tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+  }
+  
+  /* Room column styling */
+  tbody td:first-child {
+    background-color: #fff;
+    font-weight: bold;
+    border-left: none;
+  }
+  
+  /* Hover effects for better visual feedback */
+  tbody tr:hover {
+    background-color: #f0f9ff;
+  }
+  
+  /* Dark mode support */
+  .dark tbody tr:nth-child(even) {
+    background-color: #374151;
+  }
+  
+  .dark tbody tr:nth-child(odd) {
+    background-color: #1f2937;
+  }
+  
+  .dark tbody tr:hover {
+    background-color: #1e40af;
+  }
+  
+  .dark thead th {
+    background-color: #374151;
+    border-color: #6b7280;
+  }
+  
+  .dark tbody td:first-child {
+    background-color: #fff;
+    border-left-color: #9ca3af;
+  }
+
+.highlight-row {
+  background-color: #fef9c3 !important; /* yellow-100 */
+}
+.highlight-col {
+  background-color: #e0f2fe !important; /* sky-100 */
+}
+.highlight-cell {
+  background-color: #fde68a !important; /* amber-200 */
+  box-shadow: 0 0 0 2px #f59e42 inset;
+  z-index: 2;
+}
+.dark .highlight-row {
+  background-color: #78350f !important;
+}
+.dark .highlight-col {
+  background-color: #0c4a6e !important;
+}
+.dark .highlight-cell {
+  background-color: #b45309 !important;
+  box-shadow: 0 0 0 2px #fbbf24 inset;
+}
 </style>
