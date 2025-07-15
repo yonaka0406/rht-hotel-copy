@@ -1,0 +1,7 @@
+# Requirements Directory
+
+This directory contains all system requirements documentation:
+- business-requirements.md: Business objectives and value statements
+- functional-requirements.md: System functionality requirements
+- non-functional-requirements.md: Performance, security, and quality requirements
+- requirements-traceability.md: Mapping between requirements and implementation
