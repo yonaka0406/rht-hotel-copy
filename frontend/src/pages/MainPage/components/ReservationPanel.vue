@@ -121,7 +121,9 @@
                     @click="showHistoryDialog"
                 />
     </div>
-    <ConfirmDialog group="default"></ConfirmDialog>
+    <ConfirmDialog group="delete"></ConfirmDialog>
+    <ConfirmDialog group="cancel"></ConfirmDialog>
+    <ConfirmDialog group="recovery"></ConfirmDialog>
             <div class="grid grid-cols-4 gap-x-6">
                 <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
@@ -585,10 +587,10 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
-    const confirm = useConfirm(); // General confirm
-    const confirmDelete = useConfirm();
-    const confirmCancel = useConfirm();
-    const confirmRecovery = useConfirm();
+    // Assign unique group names to each confirm instance
+    const confirmDelete = useConfirm('delete');
+    const confirmCancel = useConfirm('cancel');
+    const confirmRecovery = useConfirm('recovery');
     import { 
         Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog
      } from 'primevue';
@@ -885,35 +887,39 @@
 
         confirmDelete.require({
             message: `保留中予約を削除してもよろしいですか?`,
-            header: 'Delete Confirmation',                    
+            header: '削除確認',
             icon: 'pi pi-info-circle',
             acceptClass: 'p-button-danger',
             acceptProps: {
                 label: '削除'
             },
-            accept: () => {
-                deleteHoldReservation(reservation_id);                    
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `保留中予約削除されました。`,
-                    life: 3000
-                });                
-                goToNewReservation();
-            },
             rejectProps: {
                 label: 'キャンセル',
                 severity: 'secondary',
-                outlined: true
+                outlined: true,
+                icon: 'pi pi-times'
             },
-            reject: () => {
-                toast.add({
-                    severity: 'info',
-                    summary: '削除キャンセル',
-                    detail: '削除するのをキャンセルしました。',
-                    life: 3000
-                });
-            }
+            group: 'delete',
+            accept: async () => {
+                try {
+                    await deleteHoldReservation(reservation_id);
+                    toast.add({
+                        severity: 'success',
+                        summary: '成功',
+                        detail: `保留中予約が削除されました。`,
+                        life: 3000
+                    });
+                } catch (e) {
+                    // Always show Japanese warning for not found/404
+                    toast.add({
+                        severity: 'warn',
+                        summary: '警告',
+                        detail: '予約は既に削除されています。',
+                        life: 3000
+                    });
+                }
+                await goToNewReservation();
+            },
         });
     };
     const handleCancel = () => {
@@ -971,9 +977,9 @@
     };
 
     // Router
-    const goToNewReservation = () => {                
-        setReservationId(null);                
-        router.push({ name: 'ReservationsNew' });
+    const goToNewReservation = async () => {
+        await setReservationId(null);
+        await router.push({ name: 'ReservationsNew' });
     };
     
     // Dialog: Add Room

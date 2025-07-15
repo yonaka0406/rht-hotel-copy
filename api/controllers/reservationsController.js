@@ -1164,7 +1164,11 @@ const deleteHoldReservation = async (req, res) => {
   const user_id = req.user.id;
   try{
     const updatedReservation = await deleteHoldReservationById(req.requestId, id, user_id);
-    res.json(updatedReservation);
+    if (updatedReservation > 0) {
+      res.json({ success: true });
+    } else {
+      res.status(404).json({ success: false, message: 'Reservation not found or not deleted.' });
+    }
   } catch (err) {
     console.error('Error deleting hold reservation:', err);
     res.status(500).json({ error: 'Failed to delete reservation' });

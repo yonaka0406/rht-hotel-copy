@@ -79,9 +79,16 @@
         
         await setReservationId(props.reservation_id);
         await fetchReservation(reservationId.value);
+        if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
             reservation_details.value = reservationDetails.value.reservation;
-        const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             reservation_payments.value = pmtData.payments;
+            reservationStatus.value = reservation_details.value[0].status;
+        } else {
+            reservation_details.value = [];
+            reservation_payments.value = [];
+            reservationStatus.value = null;
+        }
 
             reservationStatus.value = reservation_details.value[0].status;
             // console.log(reservationStatus.value)
@@ -127,18 +134,28 @@
         if (newVal === false) {
             // console.log("Not Updating...");
             await fetchReservation(reservationId.value);
+            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+            } else {
+                reservation_details.value = [];
+                reservation_payments.value = [];
+            }
         }
     });
     watch(reservationId, async (newVal, oldVal) => {
         if(oldVal && newVal !== oldVal){
             // console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
             await fetchReservation(newVal);
+            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+            } else {
+                reservation_details.value = [];
+                reservation_payments.value = [];
+            }
         }
         
     });

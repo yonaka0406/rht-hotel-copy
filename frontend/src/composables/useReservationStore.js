@@ -873,12 +873,19 @@ export function useReservationStore() {
                 },
             });
     
-            if (!response.ok) {
-                throw new Error('Failed to delete hold reservation');
+            if (response.ok) {
+                setReservationIsUpdating(false);
+                return await response.json();
+            } else if (response.status === 404) {
+                // Not found or already deleted
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.message || 'Reservation not found or already deleted');
+            } else {
+                const data = await response.json().catch(() => ({}));
+                throw new Error(data.error || 'Failed to delete hold reservation');
             }
-            setReservationIsUpdating(false);
-            return await response.json();                
         } catch (error) {
+            setReservationIsUpdating(false);
             console.error('Error deleting hold reservation:', error);
             throw error;
         }
