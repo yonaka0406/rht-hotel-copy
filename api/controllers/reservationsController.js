@@ -1202,5 +1202,63 @@ const delReservationPayment = async (req, res) => {
 
 };
 
+const copyReservation = async (req, res) => {
+  const { original_reservation_id, new_client_id, room_ids } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const originalReservation = await selectReservation(req.requestId, original_reservation_id);
+    if (originalReservation.length === 0) {
+      return res.status(404).json({ error: 'Original reservation not found' });
+    }
+
+    const { hotel_id, check_in, check_out, number_of_people } = originalReservation[0];
+
+    const reservationData = {
+      hotel_id,
+      reservation_client_id: new_client_id,
+      check_in,
+      check_out,
+      number_of_people,
+      created_by: user_id,
+      updated_by: user_id,
+    };
+
+    const newReservation = await addReservationHold(req.requestId, reservationData);
+
+    const dateRange = [];
+    let currentDate = new Date(check_in);
+    while (currentDate < new Date(check_out)) {
+      dateRange.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    for (const room_id of room_ids) {
+      for (const date of dateRange) {
+        const detail = {
+          reservation_id: newReservation.id,
+          hotel_id,
+          room_id,
+          date: formatDate(date),
+          plans_global_id: null,
+          plans_hotel_id: null,
+          plan_name: null,
+          plan_type: 'per_room',
+          number_of_people: 1, // Default to 1, can be adjusted
+          price: 0,
+          created_by: user_id,
+          updated_by: user_id,
+        };
+        await addReservationDetail(req.requestId, detail);
+      }
+    }
+
+    res.status(201).json({ message: 'Reservation copied successfully', reservation: newReservation });
+  } catch (error) {
+    console.error('Error copying reservation:', error);
+    res.status(500).json({ error: 'Failed to copy reservation' });
+  }
+};
+
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment };
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation };

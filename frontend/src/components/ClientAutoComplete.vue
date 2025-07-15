@@ -51,7 +51,7 @@ const props = defineProps({
   modelValue: { type: [Object, String, Number], default: null },
   suggestions: { type: Array, default: () => [] },
   optionLabel: { type: String, default: 'display_name' },
-  placeholder: { type: String, default: '顧客検索' },
+  placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
   forceSelection: { type: Boolean, default: true },
   loading: { type: Boolean, default: false },

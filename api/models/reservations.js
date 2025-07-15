@@ -3729,6 +3729,69 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
   }
 };
 
+const copyReservation = async (requestId, originalReservationId, newClientId, roomIds, userId) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const originalReservation = await selectReservation(requestId, originalReservationId);
+    if (originalReservation.length === 0) {
+      throw new Error('Original reservation not found');
+    }
+
+    const { hotel_id, check_in, check_out, number_of_people } = originalReservation[0];
+
+    const reservationData = {
+      hotel_id,
+      reservation_client_id: newClientId,
+      check_in,
+      check_out,
+      number_of_people,
+      created_by: userId,
+      updated_by: userId,
+    };
+
+    const newReservation = await addReservationHold(requestId, reservationData);
+
+    const dateRange = [];
+    let currentDate = new Date(check_in);
+    while (currentDate < new Date(check_out)) {
+      dateRange.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    for (const room_id of roomIds) {
+      for (const date of dateRange) {
+        const detail = {
+          reservation_id: newReservation.id,
+          hotel_id,
+          room_id,
+          date: formatDate(date),
+          plans_global_id: null,
+          plans_hotel_id: null,
+          plan_name: null,
+          plan_type: 'per_room',
+          number_of_people: 1, // Default to 1, can be adjusted
+          price: 0,
+          created_by: userId,
+          updated_by: userId,
+        };
+        await addReservationDetail(requestId, detail);
+      }
+    }
+
+    await client.query('COMMIT');
+    return newReservation;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {    
     selectAvailableRooms,
     selectReservedRooms,
@@ -3775,5 +3838,6 @@ module.exports = {
     addOTAReservation,
     editOTAReservation,
     cancelOTAReservation,
+    copyReservation,
 };
 
