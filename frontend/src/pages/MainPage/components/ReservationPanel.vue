@@ -139,7 +139,7 @@
                         @click="updateReservationStatus('confirmed')"
                     /> 
                 </div>
-                <div v-if="reservationStatus === '確定' && allGroupsPeopleCountMatch" class="field flex flex-col">
+                <div v-if="reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
                         label="チェックイン" 
                         severity="success"
