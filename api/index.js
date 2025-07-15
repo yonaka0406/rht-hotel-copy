@@ -89,7 +89,7 @@ const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toStr
 
 // Log information about the session secret being used
 if (!sessionSecret || typeof sessionSecret !== 'string' || sessionSecret.length < 16) { // Example minimum length
-    logger.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
+    // logger.error("[SESSION_INIT] CRITICAL: sessionSecret is undefined, not a string, or too short! This will likely prevent sessions from working or be insecure.");
     // Consider exiting if the secret is critically misconfigured for a production-like environment:
     // if (process.env.NODE_ENV === 'production') { process.exit(1); }
 }
@@ -110,10 +110,10 @@ try {
     sessionPool = new Pool(poolConfig);
     
     sessionPool.on('error', (err) => {
-      logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
+      // logger.error('[SESSION_POOL_ERROR] Idle client error', { message: err.message, stack: err.stack });
     });
 } catch (error) {
-    logger.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', { error: error.message, stack: error.stack });
+    // logger.error('[SESSION_INIT_ERROR] Failed to create sessionPool:', { error: error.message, stack: error.stack });
 }
 
 let sessionStore;
@@ -126,7 +126,7 @@ try {
     };    
     sessionStore = new pgSession(storeOptions);
 } catch (error) {
-    logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
+    // logger.error('[SESSION_INIT_ERROR] Failed to create pgSession store:', { error: error.message, stack: error.stack });
 }
 
 app.use((req, res, next) => { 
@@ -174,7 +174,7 @@ try {
   };
   httpsServer = https.createServer(credentials, app);
 } catch (error) {
-  logger.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
+  // logger.error(`HTTPS setup for NODE_ENV='${process.env.NODE_ENV}' failed: ${error.message}`);
 }
 */
 
@@ -261,12 +261,12 @@ app.use('/api/booking-engine', bookingEngineRoutes);
 app.use('/api', (err, req, res, next) => {
   // Use the app's logger if available, otherwise console.error
   const logger = req.app.locals.logger || console;
-  logger.error('API Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
+  // logger.error('API Error:', {
+  //   message: err.message,
+  //   stack: err.stack,
+  //   path: req.path,
+  //   method: req.method
+  // });
 
   // If headers have already been sent, delegate to the default Express error handler
   if (res.headersSent) {
@@ -310,12 +310,12 @@ const listenForTableChanges = async () => {
     devClient = await listenClient.connect();
     devClient.on('notification', async (msg) => {
       if (msg.channel === 'logs_reservation_changed') {
-        logger.debug('Notification received: logs_reservation_changed (dev)');
+        // logger.debug('Notification received: logs_reservation_changed (dev)');
         ioHttp.emit('tableUpdate', 'Reservation update detected');
       }
       if (msg.channel === 'reservation_log_inserted') {
         const logId = parseInt(msg.payload, 10);
-        logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
+        // logger.debug('Notification received: reservation_log_inserted (dev)', { logId });
                 
         let response = null;
         response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
@@ -360,9 +360,9 @@ const listenForTableChanges = async () => {
               },
               body: JSON.stringify(inventory),
             });
-            logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
+            // logger.debug(`Successfully updated site controller for hotel ${data[0].hotel_id} (dev)`);
           } catch (siteControllerError) {
-            logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+            // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (dev):`, { error: siteControllerError.message, stack: siteControllerError.stack });
           }
         }
       }
@@ -372,7 +372,7 @@ const listenForTableChanges = async () => {
     await devClient.query('LISTEN reservation_log_inserted');
     // logger.debug('Listening for changes on logs_reservation_changed and reservation_log_inserted (dev)');
   } catch (error) {
-    logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
+    // logger.error('Failed to connect to DEV database for LISTEN:', { errorMessage: error.message, stack: error.stack });
   }
 
   // --- Production database listener ---
@@ -382,7 +382,7 @@ const listenForTableChanges = async () => {
       const prodClient = await prodListenClient.connect();
       prodClient.on('notification', async (msg) => {
         if (msg.channel === 'logs_reservation_changed') {
-          logger.info('Notification received: logs_reservation_changed (prod)');
+          // logger.info('Notification received: logs_reservation_changed (prod)');
           ioHttp.emit('tableUpdate', {
             message: 'Reservation update detected',
             environment: 'prod'
@@ -390,7 +390,7 @@ const listenForTableChanges = async () => {
         }
         if (msg.channel === 'reservation_log_inserted') {
           const logId = parseInt(msg.payload, 10);
-          logger.info('Notification received: reservation_log_inserted (prod)', { logId });
+          // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
           let response = null;
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
@@ -424,9 +424,9 @@ const listenForTableChanges = async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(inventory),
               });
-              logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
+              // logger.info(`Successfully updated site controller for hotel ${data[0].hotel_id} (prod)`);
             } catch (siteControllerError) {
-              logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
+              // logger.error(`Failed to update site controller for hotel ${data[0].hotel_id} (prod):`, { error: siteControllerError.message, stack: siteControllerError.stack });
             }
           }
         }
@@ -436,10 +436,10 @@ const listenForTableChanges = async () => {
       await prodClient.query('LISTEN reservation_log_inserted');
       // logger.info('Listening for changes on logs_reservation_changed and reservation_log_inserted (prod)');
     } catch (error) {
-      logger.error('Failed to connect to PROD database for LISTEN:', { errorMessage: error.message, stack: error.stack });
+      // logger.error('Failed to connect to PROD database for LISTEN:', { errorMessage: error.message, stack: error.stack });
     }
   } else {
-    logger.info('Not listening to production database as NODE_ENV is not production.');
+    // logger.info('Not listening to production database as NODE_ENV is not production.');
   }
 };
 
@@ -456,7 +456,7 @@ ioHttp.on('connection', (socket) => {
 
   // Handle client disconnection
   socket.on('disconnect', () => {
-    logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
+    // logger.debug('Client disconnected (HTTP)', { clientId: socket.id });
   });
 });
 /*
@@ -510,7 +510,7 @@ if (process.env.NODE_ENV === 'production') {
     startScheduling();
     scheduleLoyaltyTierJob();
     startWaitlistJob();
-    logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration) started for production environment.');
+    // logger.info('Scheduled jobs (OTA sync, Loyalty Tiers, Waitlist Expiration) started for production environment.');
 } else {
-    logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
+    // logger.info(`Scheduled jobs (OTA sync, Loyalty Tiers) NOT started for environment: ${process.env.NODE_ENV}`);
 }

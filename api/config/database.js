@@ -52,7 +52,7 @@ const isDomainProduction = (domain) => {
   }
   
   // Log the extracted domain being checked
-  logger.debug(`isDomainProduction: Checking domain '${domain}'`);
+  // logger.debug(`isDomainProduction: Checking domain '${domain}'`);
   
   // Check if it's a production domain
   const isProd = domain.includes('wehub.work') && !domain.includes('test.wehub');
@@ -63,14 +63,14 @@ const isDomainProduction = (domain) => {
 
 // Function to set environment for a specific request
 const setEnvironment = (requestId, env) => {
-  logger.debug(`Setting environment for request ${requestId} to ${env}`);
+  // logger.debug(`Setting environment for request ${requestId} to ${env}`);
   requestEnv.set(requestId, env);
   
   // Cleanup old request IDs to prevent memory leaks
   if (requestEnv.size > 1000) {
     const oldestKey = requestEnv.keys().next().value;
     requestEnv.delete(oldestKey);
-    logger.debug(`Cleaned up oldest request ID: ${oldestKey}`);
+    // logger.debug(`Cleaned up oldest request ID: ${oldestKey}`);
   }
 };
 
@@ -101,7 +101,7 @@ const setupRequestContext = (req, res, next) => {
     // this is likely an internal call that should use the production database.
     if (host.startsWith('localhost') || host.startsWith('127.0.0.1')) {
       isProdEnvironment = true;
-      logger.debug(`Request #${requestId} - Detected NODE_ENV=production and localhost host. Forcing PRODUCTION environment for internal call.`);
+      // logger.debug(`Request #${requestId} - Detected NODE_ENV=production and localhost host. Forcing PRODUCTION environment for internal call.`);
     }
   }
 
@@ -111,9 +111,9 @@ const setupRequestContext = (req, res, next) => {
   }
 
   if (isProdEnvironment) {
-      logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
+      // logger.debug(`Request #${requestId} - Detected PRODUCTION environment based on checks.`);
   } else {
-      logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
+      // logger.debug(`Request #${requestId} - Detected DEVELOPMENT environment based on checks.`);
   }
 
   setEnvironment(requestId, isProdEnvironment ? 'prod' : 'dev');
@@ -136,59 +136,10 @@ const setupRequestContext = (req, res, next) => {
 const getPool = (requestId) => {
   // Validate that requestId is provided
   if (!requestId) {
-    logger.error('RequestId is required to select the correct database pool in getPool()');
+    // logger.error('RequestId is required to select the correct database pool in getPool()');
     // Fallback to default pool if requestId is missing, to prevent application crash
     return pool; 
   }
   
   const env = getEnvironment(requestId);
-  logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
-  
-  if (env === 'prod') {
-    return prodPool;
-  } 
-  
-  // Default to development pool if environment is 'dev' or not found
-  logger.debug('Defaulting to development pool for request #' + requestId);
-  return pool;
-};
-
-// Create a function to explicitly select prod pool for socket connections
-const getProdPool = () => {
-  logger.debug('Explicitly selecting production pool for socket/manual use.');
-  return prodPool;
-};
-
-// Create a function to explicitly select dev pool for socket connections
-const getDevPool = () => {
-  logger.debug('Explicitly selecting development pool for socket/manual use.');
-  return pool;
-};
-
-// Log connections for debugging
-pool.on('connect', () => {
-  logger.debug('DEV pool: connection created');
-});
-
-prodPool.on('connect', () => {
-  logger.debug('PROD pool: connection created');
-});
-
-pool.on('error', (err) => {
-  logger.error('Error in DEV pool', { errorMessage: err.message, stack: err.stack });
-});
-
-prodPool.on('error', (err) => {
-  logger.error('Error in PROD pool', { errorMessage: err.message, stack: err.stack });
-});
-
-module.exports = {
-  pool,
-  prodPool,
-  getPool,
-  getDevPool,
-  getProdPool,
-  getEnvironment,
-  setupRequestContext,
-  isDomainProduction
-};
+  // logger.debug(`
