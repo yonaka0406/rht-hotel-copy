@@ -21,7 +21,7 @@ import ClientAutoComplete from './ClientAutoComplete.vue';
 const props = defineProps({
   modelValue: { type: [Object, String, Number], default: null },
   optionLabel: { type: String, default: 'display_name' },
-  placeholder: { type: String, default: '顧客検索' },
+  placeholder: { type: [String, null], default: null },
   label: { type: String, default: '個人氏名　||　法人名称' },
 });
 const emit = defineEmits(['update:modelValue', 'option-select', 'change', 'clear']);

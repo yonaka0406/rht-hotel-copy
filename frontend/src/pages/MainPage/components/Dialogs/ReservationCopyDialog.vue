@@ -19,7 +19,6 @@
             v-model="targetRooms"
             :options="availableRooms"
             optionLabel="label"
-            placeholder="部屋を選択"
             fluid
           />
           <label for="move-room">部屋を追加</label>
