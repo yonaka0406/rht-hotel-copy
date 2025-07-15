@@ -1412,6 +1412,42 @@
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
     await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     isLoading.value = false;
+    // Scroll to the row for the selected date after table is rendered
+    nextTick(() => {
+      const tableContainer = document.querySelector('.table-container');
+      if (tableContainer) {
+        // Find the row for the day before the selected date
+        const rows = tableContainer.querySelectorAll('tbody tr');
+        let targetRow = null;
+        // Calculate the day before
+        const selectedDate = new Date(newVal);
+        const prevDate = new Date(selectedDate);
+        prevDate.setDate(selectedDate.getDate() - 1);
+        const prevDateStr = formatDateWithDay(prevDate);
+        const selectedDateStr = formatDateWithDay(newVal);
+        rows.forEach(row => {
+          const dateCell = row.querySelector('td');
+          if (dateCell && dateCell.textContent && dateCell.textContent.includes(prevDateStr)) {
+            targetRow = row;
+          }
+        });
+        // If not found, fall back to the selected date
+        if (!targetRow) {
+          rows.forEach(row => {
+            const dateCell = row.querySelector('td');
+            if (dateCell && dateCell.textContent && dateCell.textContent.includes(selectedDateStr)) {
+              targetRow = row;
+            }
+          });
+        }
+        if (targetRow) {
+          const containerRect = tableContainer.getBoundingClientRect();
+          const rowRect = targetRow.getBoundingClientRect();
+          // Scroll so the row is near the top (with a small offset)
+          tableContainer.scrollTop += (rowRect.top - containerRect.top) - 16;
+        }
+      }
+    });
   }); 
   watch(dragMode, async (newVal, oldVal) => {
     selectedRoomByDay.value = [];
