@@ -501,7 +501,7 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
     console.error('Error fetching reservation:', err);
     throw new Error('Database error');
   }
-}
+};
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
@@ -1779,13 +1779,17 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
   
 };
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id) => {
+  console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
+  if (!plan) {
+    console.warn('[updateReservationDetailPlan] plan is null or undefined');
+  }
   const pool = getPool(requestId);
   const client = await pool.connect();
-       
-  const plans_global_id = plan.plans_global_id === 0 ? null : plan.plans_global_id;
-  const plans_hotel_id = plan.plans_hotel_id === 0 ? null : plan.plans_hotel_id;
-  const plan_name = plan.name;
-  const plan_type = plan.plan_type;
+  
+  const plans_global_id = plan?.plans_global_id === 0 ? null : plan?.plans_global_id ?? null;
+  const plans_hotel_id = plan?.plans_hotel_id === 0 ? null : plan?.plans_hotel_id ?? null;
+  const plan_name = plan?.name ?? null;
+  const plan_type = plan?.plan_type ?? null;
 
   const updateReservationDetailsQuery = `
     UPDATE reservation_details
@@ -1807,6 +1811,9 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     await client.query(setSessionQuery);
 
     // Update reservation_details
+    console.log('[updateReservationDetailPlan] Executing update with:', {
+      plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id
+    });
     await client.query(updateReservationDetailsQuery, [
       plans_global_id,
       plans_hotel_id,
@@ -1884,10 +1891,11 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   }
 };
 const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
-  
+  if (!Array.isArray(addons)) {
+    addons = [];
+  }
   await deleteReservationAddonsByDetailId(requestId, id, user_id);
   const reservationDetail = await selectReservationDetail(requestId, id);  
-  
   const addOnPromises = addons.map(addon =>
       addReservationAddon(requestId, {
           hotel_id: reservationDetail[0].hotel_id,
@@ -1904,7 +1912,6 @@ const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
       })
   );  
   await Promise.all(addOnPromises);
-  
 };
 const updateReservationDetailRoom = async (requestId, id, room_id, user_id) => {  
   const pool = getPool(requestId);
@@ -2018,7 +2025,11 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
       const { id } = detail;
 
       // 1. Update Plan      
-      await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+      if (plan) {
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+      } else {
+        console.log('[updateReservationDetailPlan] Skipped because plan is null');
+      }
 
       // 2. Update Addons
       await updateReservationDetailAddon(requestId, id, addons, user_id);
@@ -2070,7 +2081,11 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       }
 
       // 1. Update Plan
-      await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+      if (plan) {
+        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+      } else {
+        console.log('[updateReservationDetailPlan] Skipped because plan is null');
+      }
 
       // 2. Update Addons
       await updateReservationDetailAddon(requestId, id, addons, user_id);

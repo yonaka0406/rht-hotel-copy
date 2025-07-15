@@ -73,7 +73,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to stale state or missing data reload after navigation.
 
 #### Bug #6
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Addon is not reflected in the reservation edit page when added from the プラン・機関編集 (Plan/Addon Edit) button, but appears when added from the day details.
 - **Steps to Reproduce**:
@@ -101,7 +101,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Useful for cases where a similar reservation is needed for a different client/booker.
 
 #### Bug #8 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: When exporting the meals quantity report and there are no addons, the toast response should be more informative (e.g., 'No meal data to export') instead of a generic or silent response.
 - **Steps to Reproduce**:
@@ -113,7 +113,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Improves user experience and reduces confusion when no data is available for export.
 
 #### Bug #9
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The count of addons (especially meals) may not be correct in the all reservations export CSV. For the same period, reservation_details CSV showed meal addons that did not appear in the meals report, indicating a possible data extraction or filtering bug.
 - **Steps to Reproduce**:

@@ -400,6 +400,10 @@
                         <Card v-if="!isPatternInput">
                             <template #title>アドオン</template>
                             <template #content>
+                                <div style="color: #b45309; display: flex; align-items: center; margin-bottom: 8px;">
+                                    <i class="pi pi-exclamation-triangle" style="margin-right: 6px;"></i>
+                                    このセクションを使用すると、既存のアドオンがすべてリセットされます。
+                                </div>
                                 <div class="grid grid-cols-4">
                                     <div class="field col-span-3 mt-8">
                                         <FloatLabel>
