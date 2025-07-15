@@ -21,7 +21,10 @@
         "dev:backend": "nodemon api/index.js",
         "redis": "wsl -e bash -ic \"sudo service redis-server start\"",
         "redis:stop": "wsl -e bash -ic \"sudo service redis-server stop\"",
-        "redis:status": "wsl -e bash -ic \"sudo service redis-server status\""
+        "redis:status": "wsl -e bash -ic \"sudo service redis-server status\"",
+        "validate:requirements": "node scripts/validate-requirements.js",
+        "validate:links": "node scripts/validate-docs-links.js",
+        "validate:docs": "node scripts/validate-all-docs.js"
     },
     "devDependencies": {
         "concurrently": "^9.2.0"
