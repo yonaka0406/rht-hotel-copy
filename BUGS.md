@@ -48,7 +48,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This is to prevent accidental room type changes during free move operations.
 
 #### Bug #4 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Romaji auto-capitalization should preserve all-uppercase input (e.g., 'NTT' should not become 'Ntt').
 - **Steps to Reproduce**:
@@ -60,7 +60,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This is important for company names and acronyms that are conventionally written in all caps.
 
 #### Bug #5
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
 - **Steps to Reproduce**:
