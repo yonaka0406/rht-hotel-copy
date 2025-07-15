@@ -133,16 +133,20 @@ app.use((req, res, next) => {
   logger.debug(`[PRE-SESSION] Path: ${req.path}, User-Agent: ${req.headers['user-agent']}, Cookie Header: ${req.headers.cookie}`); next(); 
 });
 
+// Determine if we're in a secure environment (HTTPS)
+const isSecureEnvironment = process.env.NODE_ENV !== 'local';
+logger.info(`[SESSION_CONFIG] NODE_ENV: ${process.env.NODE_ENV}, Secure cookies: ${isSecureEnvironment}, SameSite: ${isSecureEnvironment ? 'None' : 'Lax'}`);
+
 app.use(session({
   store: sessionStore, // Use the created sessionStore
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Set to true as test.wehub.work is HTTPS (and prod is also HTTPS)
+    secure: isSecureEnvironment, // Only secure in production (local/dev use HTTP)
     httpOnly: true,
     maxAge: 30 * 60 * 1000, // 30 minutes (increased from 5 mins for testing stability)
-    sameSite: 'None',   // Changed from 'Lax' // Use lax to allow cookies in same-site requests
+    sameSite: isSecureEnvironment ? 'None' : 'Lax', // Use None for production, Lax for local/development
     // domain: 'test.wehub.work' // No need to set domain if same-domain
   }
 }));
