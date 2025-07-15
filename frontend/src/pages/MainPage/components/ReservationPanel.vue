@@ -30,7 +30,14 @@
             <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'">
                 <div class="flex items-center justify-between mr-2 mb-2">
                     <p class="font-bold">宿泊者：</p>                    
-                    <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openAddRoomDialog" />                    
+                    <SplitButton 
+                        label="予約操作"
+                        :model="actionOptions"
+                        icon="pi pi-cog"
+                        severity="help"
+                        class="ml-2"
+                        @click="onActionClick"
+                    />
                 </div> 
             </div>
             <div v-else>
@@ -70,10 +77,7 @@
                     <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange" timeOnly style="width: 80px;" />
                 </div>
             </div>   
-            <div class="flex items-start justify-between mr-2 mt-2">
-                <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />
-            </div>
-            
+                        
         </div>
         <div class="field">
             <p class="font-bold flex justify-start items-center">備考：<span class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
@@ -400,10 +404,6 @@
                         <Card v-if="!isPatternInput">
                             <template #title>アドオン</template>
                             <template #content>
-                                <div style="color: #b45309; display: flex; align-items: center; margin-bottom: 8px;">
-                                    <i class="pi pi-exclamation-triangle" style="margin-right: 6px;"></i>
-                                    このセクションを使用すると、既存のアドオンがすべてリセットされます。
-                                </div>
                                 <div class="grid grid-cols-4">
                                     <div class="field col-span-3 mt-8">
                                         <FloatLabel>
@@ -576,6 +576,16 @@
             :reservation_id="props.reservation_id"        
         />
     </Dialog>
+
+    <!-- ReservationCopy dialog -->
+    <Dialog 
+        v-model:visible="showCopyDialog" 
+        header="予約を複製" 
+        :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }"
+        modal
+    >
+        <ReservationCopyDialog :reservation_id="reservationInfo.value?.reservation_id" @close="showCopyDialog = false" />
+    </Dialog>
 </template>
 
 <script setup>
@@ -586,6 +596,7 @@
 
     import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
     import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
+    import ReservationCopyDialog from '@/pages/MainPage/components/Dialogs/ReservationCopyDialog.vue';
     
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -596,7 +607,7 @@
     const confirmCancel = useConfirm('cancel');
     const confirmRecovery = useConfirm('recovery');
     import { 
-        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog
+        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton
      } from 'primevue';
 
     const props = defineProps({
@@ -1006,7 +1017,7 @@
         const startDate = reservationInfo.value.check_in;
         const endDate = reservationInfo.value.check_out;
 
-        await fetchAvailableRooms(hotelId, startDate, endDate);        
+        await fetchAvailableRooms(hotelId, startDate, endDate);
         
         visibleAddRoomDialog.value = true;
     };
@@ -1301,6 +1312,35 @@
         toast.add({ severity: 'success', summary: '成功', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });
         
     };
+
+    const showCopyDialog = ref(false);
+    const actionOptions = [
+    {
+        label: 'プラン・期間編集',
+        icon: 'pi pi-pencil',
+        command: openReservationBulkEditDialog
+    },
+    {
+        label: '部屋追加',
+        icon: 'pi pi-plus',
+        command: openAddRoomDialog
+    },
+    {
+        label: '予約を複製',
+        icon: 'pi pi-copy',
+        command: () => {
+            console.log('[SplitButton] 予約を複製 clicked');
+            console.log('reservationInfo.value:', reservationInfo.value);
+            console.log('reservationInfo.value.reservation_id:', reservationInfo.value?.reservation_id);
+            console.log('showCopyDialog (before):', showCopyDialog.value);
+            showCopyDialog.value = true;
+            console.log('showCopyDialog (after):', showCopyDialog.value);
+        }
+    }
+];
+const onActionClick = () => {
+    // Default action if needed
+};
 
     onMounted(async () => {
         
