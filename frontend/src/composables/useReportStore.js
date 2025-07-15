@@ -314,11 +314,17 @@ export function useReportStore() {
                 },
             });
             
+            if (response.status === 404) {
+                return 'no_data';
+            }
             if (!response.ok) {
                 throw new Error("Failed to fetch CSV");
             }
 
             const blob = await response.blob();
+            if (blob.size === 0) {
+                return 'no_data';
+            }
             const dlURL = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = dlURL;

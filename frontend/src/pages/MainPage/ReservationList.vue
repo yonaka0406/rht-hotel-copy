@@ -542,8 +542,11 @@
     };
     const splitButtonExportMealCount = async () => {
         try {
-            await exportMealCount(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));            
-
+            const result = await exportMealCount(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
+            if (result === 'no_data') {
+                toast.add({ severity: 'info', summary: '情報', detail: 'エクスポート可能な食事データがありません。', life: 3000 });
+                return;
+            }
             toast.add({ severity: "success", summary: "成功", detail: "食事件数をエクスポートしました", life: 3000 });
         } catch (error) {
             console.error("エクスポートエラー:", error);
