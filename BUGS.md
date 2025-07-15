@@ -139,7 +139,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details.
 
 #### Feature Request #11
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Remove the requirement to have a reservation client in order to perform check-in.
 - **Steps to Reproduce**:
@@ -175,6 +175,21 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This will help users quickly understand the meaning of icons and improve usability.
 
+### July 15, 2025
+
+#### Bug #10
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: After deleting a reservation, the confirmation prompt '保留中予約を削除してもよろしいですか?' remains on screen instead of closing automatically.
+- **Steps to Reproduce**:
+  1. Attempt to delete a hold reservation (保留中予約).
+  2. Confirm the deletion in the prompt.
+  3. Observe that the prompt does not close after the reservation is deleted.
+- **Expected Behavior**: The confirmation prompt should close automatically after the reservation is deleted.
+- **Actual Behavior**: The prompt remains visible even after deletion.
+- **Environment**: 
+- **Additional Notes**: This can confuse users, making them think the action was not completed.
+
 ---
 
 ## Bug Status Legend
@@ -191,5 +206,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: December 19, 2024*
+*Last Updated: July 15, 2025*
 *Total Bugs: 2* 

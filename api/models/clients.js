@@ -1,5 +1,6 @@
 const { getPool } = require('../config/database');
 const format = require('pg-format');
+const logger = require('../config/logger');
 
 // Helper
 const transliterateKanaToRomaji = async (kanaString) => {
@@ -76,14 +77,7 @@ const processNameStringWithSubstitutions = (name, nameKanji) => {
         }
     }
     updatedName = updatedName.trim().replace(/\s+/g, ' ');
-    updatedName = updatedName
-        .split(' ')
-        .map(word => {
-            if (word.length === 0) return '';
-            if (word === 'K.K') return 'K.K';
-            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-        })
-        .join(' ');
+    // Do not change casing, just return the updatedName as-is
     return updatedName;
 };
 const processNameString = async (nameString) => {
@@ -124,10 +118,8 @@ const processNameString = async (nameString) => {
   } else {
     name = nameString
       .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xFEE0))
-      .replace(/　/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
+      .replace(/　/g, ' ');
+    // Do not change casing
   }
 
   if (nameKanji) {
@@ -280,8 +272,10 @@ const selectClientGroups = async (requestId) => {
 const addClientByName = async (requestId, client) => {
   const pool = getPool(requestId);
   let finalName, finalNameKana, finalNameKanji;
+  logger.warn(`[CLIENT_CREATE] Original name input: ${client.name}`);
   const { name, nameKana, nameKanji } = await processNameString(client.name);
   finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+  logger.warn(`[CLIENT_CREATE] Capitalized name: ${finalName}`);
   if (client.name_kana) {
     finalNameKana = toFullWidthKana(client.name_kana);
   }
@@ -303,10 +297,14 @@ const addClientByName = async (requestId, client) => {
     client.updated_by
   ];
   try {
+    logger.warn('[CLIENT_CREATE] addClientByName input', { client });
+    logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
+    logger.warn('[CLIENT_CREATE] Query and values', { query, values });
     const result = await pool.query(query, values);
+    logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id });
     return result.rows[0];
   } catch (err) {
-    console.error('Error adding client:', err);
+    logger.warn('Error adding client', { error: err.message, stack: err.stack });
     throw new Error('Database error');
   }
 };

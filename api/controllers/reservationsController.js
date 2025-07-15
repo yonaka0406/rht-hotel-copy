@@ -6,6 +6,7 @@ const {
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
+const logger = require('../config/logger');
 
 //Helper
 const formatDate = (date) => {
@@ -190,10 +191,12 @@ const createReservationHold = async (req, res) => {
   }
 
   try {
+    logger.warn(`[RES_CREATE] Received reservation request`, { hotel_id, room_type_id, room_id, client_id, check_in, check_out, number_of_people, name, legal_or_natural_person, gender, email, phone, created_by });
     let finalClientId = client_id;
 
     // Check if client_id is null
     if (!client_id) {
+      logger.warn(`[RES_CREATE] No client_id provided, creating new client`, { name, legal_or_natural_person, gender, email, phone });
       // Create the client if no client_id is provided
       const clientData = {
         name: name,
@@ -204,10 +207,11 @@ const createReservationHold = async (req, res) => {
         created_by,
         updated_by,
       };
-
+      logger.warn(`[RESERVATION_CLIENT_CREATE] clientData: ${JSON.stringify(clientData)}`);
       // Add new client and get the created client's id
       const newClient = await addClientByName(req.requestId, clientData);
       finalClientId = newClient.id; // Use the newly created client's id
+      logger.warn(`[RES_CREATE] Created new client`, { client_id: finalClientId });
     }
 
     // Add the reservation with the final client_id
@@ -221,71 +225,53 @@ const createReservationHold = async (req, res) => {
       updated_by
     };
 
+    logger.warn(`[RES_CREATE] Inserting reservation`, reservationData);
     // Add the reservation to the database
     const newReservation = await addReservationHold(req.requestId, reservationData);
+    logger.warn(`[RES_CREATE] Reservation inserted`, { reservation_id: newReservation.id });
     // Get available rooms for the reservation period
     const availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out);
 
     const reservationDetails = [];
-    const availableRoomsFiltered = [];    
-    
+    const availableRoomsFiltered = [];
     if(room_type_id !== null){
-      // Filter available rooms by room_type_id      
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
-      console.log('room_type_id is not null. Available Rooms:',availableRoomsFiltered.value);
-    } else if(room_id !== null){      
-      // Filter available rooms by room_id      
+      logger.warn(`[RES_CREATE] Filtering available rooms by room_type_id`, { room_type_id, availableRooms: availableRoomsFiltered.value });
+    } else if(room_id !== null){
       availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));
-      // console.log('room_id is not null. Available Rooms:',availableRoomsFiltered.value);
+      logger.warn(`[RES_CREATE] Filtering available rooms by room_id`, { room_id, availableRooms: availableRoomsFiltered.value });
     }
 
     if (availableRoomsFiltered.value.length === 0) {
+      logger.warn(`[RES_CREATE] No available rooms for the specified period`, { hotel_id, check_in, check_out });
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
-    }    
-
-    // console.log('availableRoomsFiltered length:',availableRoomsFiltered.value.length);
+    }
 
     let remainingPeople = number_of_people;
-
     // Distribute people into rooms
-    while (remainingPeople > 0) {      
-      // console.log('remainingPeople:', remainingPeople);
-
+    while (remainingPeople > 0) {
       let bestRoom = null;
-
-      // Find the best-fit room
       for (const room of availableRoomsFiltered.value) {
-        // console.log('Testing room',room.room_number,'with capacity:',room.capacity);
         if (room.capacity === remainingPeople) {
           bestRoom = room;
-          // console.log('Perfect match found:', bestRoom);
           break;
         }
-
         if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
           bestRoom = room;
-          // console.log('Smaller suitable room found:', bestRoom);
         }
       }
-
-      // If no suitable room was found, pick the largest available room
       if (!bestRoom && availableRoomsFiltered.value.length > 0) {
         bestRoom = availableRoomsFiltered.value.reduce(
           (prev, curr) => (curr.capacity > prev.capacity ? curr : prev),
           availableRoomsFiltered.value[0]
         );
-        // console.log('Largest available room selected:', bestRoom);
       }
-
       if (!bestRoom) {
-        // console.error('No room found for remaining people:', remainingPeople);
-        break; // Avoid infinite loop
+        logger.warn(`[RES_CREATE] No room found for remaining people`, { remainingPeople });
+        break;
       }
-
-      // Assign people to the best room and remove it from the list of available rooms
       const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
       remainingPeople -= peopleAssigned;
-      
       dateRange.forEach((date) => {
         reservationDetails.push({
           reservation_id: newReservation.id,
@@ -302,26 +288,26 @@ const createReservationHold = async (req, res) => {
           updated_by,
         });
       });
-            
-      // Remove the room from availableRooms
       availableRoomsFiltered.value = availableRoomsFiltered.value.filter(room => room.room_id !== bestRoom.room_id);
+      logger.warn(`[RES_CREATE] Assigned people to room`, { bestRoom, peopleAssigned, remainingPeople });
     }
 
     // Add reservation details to the database
     for (const detail of reservationDetails) {
+      logger.warn(`[RES_CREATE] Inserting reservation detail`, detail);
       await addReservationDetail(req.requestId, detail);
     }
 
+    logger.warn(`[RES_CREATE] Reservation creation complete`, { reservation_id: newReservation.id });
     res.status(201).json({
       reservation: newReservation,
       reservationDetails,
     });
     
   } catch (err) {
-    console.error('Error creating reservation:', err);
+    logger.warn('[RES_CREATE] Error creating reservation', { error: err.message, stack: err.stack });
     res.status(500).json({ error: 'Failed to create reservation' });
   }
-
 };
 
 const createHoldReservationCombo = async (req, res) => {

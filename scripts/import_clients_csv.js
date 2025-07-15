@@ -34,7 +34,7 @@ async function transliterateKanaToRomaji(kanaString) {
     let romaji = toRomaji(halfWidthString);
     romaji = romaji
         .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .map(word => word === word.toUpperCase() ? word : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ');
     return romaji;
 }

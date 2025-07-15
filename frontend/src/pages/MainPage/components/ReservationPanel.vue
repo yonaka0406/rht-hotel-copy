@@ -1033,6 +1033,8 @@
     const visibleClientChangeDialog = ref(false);
     const selectedClient = ref(null);
     const openChangeClientDialog = () => {
+        // Always set selectedClient to the latest client_id from reservationInfo
+        selectedClient.value = reservationInfo.value?.client_id;
         visibleClientChangeDialog.value = true;
     };
     const closeChangeClientDialog = () => {
