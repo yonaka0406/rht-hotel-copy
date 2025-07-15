@@ -142,4 +142,53 @@ const getPool = (requestId) => {
   }
   
   const env = getEnvironment(requestId);
-  // logger.debug(`
+logger.debug(`Getting pool for request #${requestId}, environment: ${env}`);
+  
+  if (env === 'prod') {
+    return prodPool;
+  } 
+  
+  // Default to development pool if environment is 'dev' or not found
+  logger.debug('Defaulting to development pool for request #' + requestId);
+  return pool;
+};
+
+// Create a function to explicitly select prod pool for socket connections
+const getProdPool = () => {
+  logger.debug('Explicitly selecting production pool for socket/manual use.');
+  return prodPool;
+};
+
+// Create a function to explicitly select dev pool for socket connections
+const getDevPool = () => {
+  logger.debug('Explicitly selecting development pool for socket/manual use.');
+  return pool;
+};
+
+// Log connections for debugging
+pool.on('connect', () => {
+  logger.debug('DEV pool: connection created');
+});
+
+prodPool.on('connect', () => {
+  logger.debug('PROD pool: connection created');
+});
+
+pool.on('error', (err) => {
+  logger.error('Error in DEV pool', { errorMessage: err.message, stack: err.stack });
+});
+
+prodPool.on('error', (err) => {
+  logger.error('Error in PROD pool', { errorMessage: err.message, stack: err.stack });
+});
+
+module.exports = {
+  pool,
+  prodPool,
+  getPool,
+  getDevPool,
+  getProdPool,
+  getEnvironment,
+  setupRequestContext,
+  isDomainProduction
+};  // logger.debug(`
