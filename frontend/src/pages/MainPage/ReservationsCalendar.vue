@@ -141,7 +141,19 @@
       </div>
       <template #footer>
         <span class="mr-4 dark:text-gray-100">編集モード：{{ dragModeLabel }}</span>
-        <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization" class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>        
+        <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization" class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>
+        <!-- Legend Row -->
+        <Fieldset legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
+          <div class="flex flex-wrap items-center gap-4">
+            <span class="flex items-center gap-1"><i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>保留中（仮押さえ）</span>
+            <span class="flex items-center gap-1"><i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>仮予約</span>
+            <span class="flex items-center gap-1"><i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>確定予約</span>
+            <span class="flex items-center gap-1"><i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>チェックイン済み</span>
+            <span class="flex items-center gap-1"><i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>チェックアウト済み</span>
+            <span class="flex items-center gap-1"><i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>ブロック</span>
+            <span class="flex items-center gap-1"><i class="pi pi-circle"></i>空室</span>
+          </div>
+        </Fieldset>
       </template>
     </Panel>  
         
@@ -269,7 +281,7 @@
   import { useConfirm } from "primevue/useconfirm";
   const confirm = useConfirm();
   const confirmRoomMode = useConfirm();
-  import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
+  import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge, Fieldset } from 'primevue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -1536,13 +1548,23 @@
     background-color: lightgray;
   }
   .title-cell-highlight {
-    background-color: #fde68a !important; /* amber-200 */
+    /* Horizontal highlight (yellow) for first column (dates) */
+    background-color: #fef9c3 !important; /* yellow-100, matches .highlight-row */
     color: #92400e !important;
     font-weight: bold;
     transition: background-color 0.2s;
   }
   .dark .title-cell-highlight {
-    background-color: #b45309 !important; /* amber-700 */
+    background-color: #78350f !important; /* matches .dark .highlight-row */
+    color: #fef3c7 !important;
+  }
+  /* Blue highlight for first row (rooms) */
+  thead th.title-cell-highlight {
+    background-color: #e0f2fe !important; /* sky-100, matches .highlight-col */
+    color: #0c4a6e !important;
+  }
+  .dark thead th.title-cell-highlight {
+    background-color: #0c4a6e !important; /* matches .dark .highlight-col */
     color: #fef3c7 !important;
   }
   .dragging-reservation {
