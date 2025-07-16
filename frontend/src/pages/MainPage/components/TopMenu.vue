@@ -17,6 +17,16 @@
                     </Button>
                 </OverlayBadge>
                 
+                <!-- Help Icon -->
+                <Button 
+                    class="p-button p-button-text dark:text-white mr-2" 
+                    aria-label="ヘルプ" 
+                    @click="goToAboutPage"
+                    v-tooltip.bottom="'システムヘルプ'"
+                >
+                    <i class="pi pi-question-circle" style="font-size:larger" />
+                </Button>
+
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
@@ -155,6 +165,10 @@
 
         // Navigate to the reservation editing page
         router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
+    };
+
+    const goToAboutPage = () => {
+        router.push({ name: 'About' });
     };
 
     // --- Lifecycle Hooks ---
