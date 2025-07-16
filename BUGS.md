@@ -35,7 +35,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Visual clarity of the calendar view has been improved as requested. (Fixed on December 19, 2024)
 
 #### Bug #3 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
 - **Steps to Reproduce**:
@@ -45,7 +45,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: If the room type changes during a free move, a confirmation dialog should appear, summarizing the old and new room types, and only proceed if the user confirms.
 - **Actual Behavior**: No confirmation is shown; the change is applied immediately.
 - **Environment**: 
-- **Additional Notes**: This is to prevent accidental room type changes during free move operations.
+- **Additional Notes**: This is to prevent accidental room type changes during free move operations. Spec created at `.kiro/specs/room-change-confirmation/`.
 
 #### Bug #4 / Feature Request
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
@@ -87,7 +87,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to a missing state update or data fetch after editing via the plan/addon dialog.
 
 #### Feature Request #7
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a 'Copy Reservation' function that allows copying a reservation to a different booker, keeping all other reservation details the same.
 - **Steps to Reproduce**:
@@ -96,9 +96,9 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   3. Choose a new booker/client.
   4. Confirm that a new reservation is created with the same details but a different booker.
 - **Expected Behavior**: The system should allow users to duplicate a reservation for a different booker, with all other details (dates, rooms, addons, etc.) copied.
-- **Actual Behavior**: This functionality does not currently exist.
+- **Actual Behavior**: Backend implementation completed. Frontend UI integration in progress.
 - **Environment**: 
-- **Additional Notes**: Useful for cases where a similar reservation is needed for a different client/booker.
+- **Additional Notes**: Backend functionality for copying reservations including all rates, addons, and details has been implemented and tested. Spec created at `.kiro/specs/reservation-copy-feature/`.
 
 #### Bug #8 / Feature Request
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
@@ -126,7 +126,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to a bug in the data extraction or filtering logic for exports and reports.
 
 #### Feature Request #10
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
 - **Steps to Reproduce**:
@@ -136,7 +136,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: Part-time staff see only the information they need (e.g., in/out clients and rooms for the week) in a clear, defined format.
 - **Actual Behavior**: No such dedicated page currently exists.
 - **Environment**: 
-- **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details.
+- **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details. Spec created at `.kiro/specs/part-time-staff-dashboard/`.
 
 #### Feature Request #11
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
@@ -151,7 +151,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will make the check-in process more flexible for cases where a client is not yet registered or known at the time of check-in.
 
 #### Feature Request #12
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type. These indicators should be easily visible in the calendar.
 - **Steps to Reproduce**:
@@ -160,7 +160,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: There are clear, easily visible indicators in the calendar for these two client types.
 - **Actual Behavior**: No such indicators currently exist.
 - **Environment**: 
-- **Additional Notes**: This will help staff quickly identify flexible clients and optimize room assignments.
+- **Additional Notes**: This will help staff quickly identify flexible clients and optimize room assignments. Spec created at `.kiro/specs/calendar-visual-indicators/`.
 
 #### Feature Request #13
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -204,17 +204,17 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
 
 #### Feature Request #15
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Add a FAQ page of the system with instructions for the use of the system.
 - **Steps to Reproduce**:
   1. Access the system.
   2. Navigate to the FAQ page.
   3. View instructions and answers to common questions about system usage.
-- **Expected Behavior**: Users can easily find instructions and answers to common questions about the system.
+- **Expected Behavior**: Users can easily find instructions and answers to common questions about system usage.
 - **Actual Behavior**: No FAQ page currently exists.
 - **Environment**: 
-- **Additional Notes**: This will help new and existing users understand how to use the system efficiently.
+- **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
 ---
 
