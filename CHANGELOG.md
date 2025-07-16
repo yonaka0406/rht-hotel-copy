@@ -180,7 +180,28 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.0.1] - 2025-06-11
+## [1.0.3] - 2025-07-16
+
+### Added
+- **About/FAQ System** - Comprehensive help system with searchable FAQ and changelog display
+- **System Help Documentation** - Step-by-step instructions for all major system functions
+- **Japanese FAQ Content** - Complete FAQ coverage for reservations, clients, reports, billing, and system management
+- **Interactive Search** - Real-time FAQ search with highlighting and filtering capabilities
+- **Changelog Display** - Version history with filtering by type and version
+- **Mobile-Responsive Design** - Optimized layout for all device sizes
+- **Accessibility Features** - ARIA labels, keyboard navigation, and screen reader support
+
+### Improved
+- **Documentation System** - Enhanced codebase documentation and structured help content
+- **User Experience** - Intuitive tabbed interface for help content navigation
+- **Content Management** - External JSON files for easy FAQ and changelog updates
+
+---
+
+## [1.0.2] - 2025-06-23
+
+### Added
+- Reservation: Check-in cancellation. (#043)
 
 ### Fixed
 - Production Environment: Add-ons not reflected. (#033)
@@ -195,10 +216,14 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Production Environment: Customer name display order changed. (#035)
 - CRM: Editing sales actions. (#038)
 
-## [1.0.2] - 2025-06-23
+---
 
-### Added
-- Reservation: Check-in cancellation. (#043)
+## [1.0.1] - 2025-06-11
+
+### Fixed
+- Production Environment: Add-ons not reflected. (#033)
+- Production Environment: Customer name display order changed. (#035)
+- CRM: Editing sales actions. (#038)
 
 ---
 
@@ -217,6 +242,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
+- **1.0.3** (2025-07-16) - Added comprehensive About/FAQ system with searchable help documentation and enhanced codebase documentation.
 - **1.0.2** (2025-06-23) - Added post-release features including production fixes, CRM enhancements, and new integrations.
 - **1.0.1** (2025-06-11) - Addressed production environment issues and introduced new CRM features.
 - **1.0.0** (2025-06-01) - Initial stable release with comprehensive hotel management features

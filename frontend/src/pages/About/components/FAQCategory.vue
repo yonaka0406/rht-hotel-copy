@@ -2,55 +2,60 @@
   <div class="faq-category mb-8">
     <div class="category-header mb-4">
       <h2 class="text-2xl font-semibold text-gray-800 dark:text-white flex items-center">
-        <i :class="category.icon" class="mr-3 text-blue-600 dark:text-blue-400"></i>
+        <i :class="[iconClass, 'mr-3', 'text-blue-600', 'dark:text-blue-400']"></i>
         {{ category.title }}
       </h2>
     </div>
     
     <div class="questions-list">
       <Accordion :multiple="true">
-        <AccordionTab
-          v-for="question in category.questions"
-          :key="question.id"
-          :header="question.question"
-        >
-          <div class="question-content">
-            <p class="mb-4 text-gray-700 dark:text-gray-300">{{ question.answer }}</p>
-            
-            <div v-if="question.steps && question.steps.length > 0" class="steps-list">
-              <h4 class="font-semibold mb-3 text-gray-800 dark:text-white">手順:</h4>
-              <ol class="list-decimal list-inside space-y-2">
-                <li
-                  v-for="(step, index) in question.steps"
-                  :key="index"
-                  class="text-gray-700 dark:text-gray-300 pl-2"
-                  v-html="highlightSearchTerm(step)"
-                >
-                </li>
-              </ol>
-            </div>
-            
-            <!-- Tags -->
-            <div v-if="question.tags && question.tags.length > 0" class="tags mt-4">
-              <div class="flex flex-wrap gap-2">
-                <span
-                  v-for="tag in question.tags"
-                  :key="tag"
-                  class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
-                >
-                  {{ tag }}
-                </span>
+        <AccordionPanel v-for="question in category.questions" :key="question.id" :value="question.id">
+          <AccordionHeader>
+            {{ question.question }}
+          </AccordionHeader>
+          <AccordionContent>
+            <div class="question-content text-left">
+              <p class="mb-4 text-gray-700 dark:text-gray-300">{{ question.answer }}</p>
+              
+              <Fieldset v-if="question.steps && question.steps.length > 0" legend="手順" class="steps-list mb-4">
+                <ol class="list-decimal list-inside space-y-2">
+                  <li
+                    v-for="(step, index) in question.steps"
+                    :key="index"
+                    class="text-gray-700 dark:text-gray-300 pl-2"
+                    v-html="highlightSearchTerm(step)"
+                  >
+                  </li>
+                </ol>
+              </Fieldset>
+              
+              <!-- Tags -->
+              <div v-if="question.tags && question.tags.length > 0" class="tags mt-4">
+                <div class="flex flex-wrap gap-2">
+                  <span
+                    v-for="tag in question.tags"
+                    :key="tag"
+                    class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        </AccordionTab>
+          </AccordionContent>
+        </AccordionPanel>
       </Accordion>
     </div>
   </div>
 </template>
 
 <script setup>
-import { Accordion, AccordionTab } from 'primevue';
+import Accordion from 'primevue/accordion';
+import AccordionPanel from 'primevue/accordionpanel';
+import AccordionHeader from 'primevue/accordionheader';
+import AccordionContent from 'primevue/accordioncontent';
+import Fieldset from 'primevue/fieldset';
+import { computed } from 'vue';
 
 // Props
 const props = defineProps({
@@ -62,6 +67,15 @@ const props = defineProps({
     type: String,
     default: ''
   }
+});
+
+// Computed: normalized icon class
+const iconClass = computed(() => {
+  // Accepts 'calendar', 'pi-calendar', or 'pi pi-calendar'
+  let icon = props.category.icon || '';
+  if (icon.startsWith('pi ')) return icon;
+  if (icon.startsWith('pi-')) return `pi ${icon}`;
+  return `pi pi-${icon}`;
 });
 
 // Methods

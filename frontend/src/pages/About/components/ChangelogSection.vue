@@ -15,6 +15,7 @@
             placeholder="すべてのバージョン"
             class="w-full sm:w-48"
             aria-label="バージョンを選択"
+            clearable
           />
         </div>
         
@@ -31,9 +32,16 @@
             placeholder="すべてのタイプ"
             class="w-full sm:w-48"
             aria-label="変更タイプを選択"
+            clearable
           />
         </div>
-        
+        <Button
+          :label="sortOrder === 'desc' ? '新しい順' : '古い順'"
+          :icon="sortOrder === 'desc' ? 'pi pi-sort-amount-down' : 'pi pi-sort-amount-up'"
+          class="p-button-outlined p-button-sm w-full sm:w-auto mt-2 sm:mt-0"
+          @click="toggleSortOrder"
+          aria-label="表示順を切り替え"
+        />
         <Button
           v-if="selectedVersion || selectedType"
           label="フィルターをクリア"
@@ -71,9 +79,11 @@
             <div class="flex items-start">
               <i :class="getChangeTypeIcon(change.type)" class="mr-3 mt-1"></i>
               <div>
-                <span class="change-type font-medium text-sm uppercase tracking-wide">
-                  {{ getChangeTypeLabel(change.type) }}
-                </span>
+                <Tag
+                  :value="getChangeTypeLabel(change.type)"
+                  :severity="change.type === 'feature' ? 'success' : change.type === 'improvement' ? 'info' : change.type === 'bugfix' ? 'danger' : change.type === 'user-request' ? 'warn' : undefined"
+                  class="change-type font-medium text-sm uppercase tracking-wide mr-auto"
+                />
                 <p class="mt-1 text-gray-700 dark:text-gray-300">
                   {{ change.description }}
                 </p>
@@ -95,11 +105,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Select, Button } from 'primevue';
+import Tag from 'primevue/tag';
 
 // Reactive state
 const selectedVersion = ref(null);
 const selectedType = ref(null);
 const changelogData = ref({ entries: [] });
+const sortOrder = ref('desc'); // 'desc' (newest first) by default
 
 // Load changelog data
 onMounted(async () => {
@@ -140,7 +152,8 @@ const versionOptions = computed(() => {
 const typeOptions = [
   { label: '新機能', value: 'feature' },
   { label: '改善', value: 'improvement' },
-  { label: 'バグ修正', value: 'bugfix' }
+  { label: 'バグ修正', value: 'bugfix' },
+  { label: 'ユーザー要望', value: 'user-request' }
 ];
 
 const filteredEntries = computed(() => {
@@ -156,6 +169,13 @@ const filteredEntries = computed(() => {
       changes: entry.changes.filter(change => change.type === selectedType.value)
     })).filter(entry => entry.changes.length > 0);
   }
+
+  // Sort by date
+  entries = [...entries].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return sortOrder.value === 'desc' ? dateB - dateA : dateA - dateB;
+  });
   
   return entries;
 });
@@ -174,7 +194,8 @@ const getChangeTypeClass = (type) => {
   const classes = {
     feature: 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500',
     improvement: 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500',
-    bugfix: 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500'
+    bugfix: 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500',
+    'user-request': 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500'
   };
   return classes[type] || 'bg-gray-50 dark:bg-gray-700 border-l-4 border-gray-500';
 };
@@ -183,7 +204,8 @@ const getChangeTypeIcon = (type) => {
   const icons = {
     feature: 'pi pi-plus-circle text-green-600 dark:text-green-400',
     improvement: 'pi pi-arrow-up text-blue-600 dark:text-blue-400',
-    bugfix: 'pi pi-wrench text-red-600 dark:text-red-400'
+    bugfix: 'pi pi-wrench text-red-600 dark:text-red-400',
+    'user-request': 'pi pi-user-edit text-yellow-600 dark:text-yellow-400'
   };
   return icons[type] || 'pi pi-info-circle text-gray-600 dark:text-gray-400';
 };
@@ -192,7 +214,8 @@ const getChangeTypeLabel = (type) => {
   const labels = {
     feature: '新機能',
     improvement: '改善',
-    bugfix: 'バグ修正'
+    bugfix: 'バグ修正',
+    'user-request': 'ユーザー要望'
   };
   return labels[type] || 'その他';
 };
@@ -200,6 +223,10 @@ const getChangeTypeLabel = (type) => {
 const clearFilters = () => {
   selectedVersion.value = null;
   selectedType.value = null;
+};
+
+const toggleSortOrder = () => {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
 };
 </script>
 

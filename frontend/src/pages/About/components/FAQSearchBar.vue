@@ -11,6 +11,7 @@
           @input="onSearchInput"
           aria-label="FAQ検索"
           role="searchbox"
+          fluid
         />
       </IconField>
       <Button
@@ -79,6 +80,7 @@ const setSearchTerm = (term) => {
   display: flex;
   align-items: center;
   max-width: 600px;
+  width: 100%;
 }
 
 .search-hints {
