@@ -5,6 +5,7 @@ const { getPlanByKey } = require('../models/plan');
 const { getAllPlanAddons } = require('../models/planAddon');
 const { getPriceForReservation, getRatesForTheDay } = require('../models/planRate');
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
+const logger = require('../config/logger');
 
 
 
@@ -115,6 +116,12 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
 };
 const selectReservation = async (requestId, id) => {
   const pool = getPool(requestId);
+  
+  // Validate that id is not null or undefined
+  if (!id) {
+    logger.error('[selectReservation] Invalid reservation ID provided', { id });
+    throw new Error('Invalid reservation ID: ID cannot be null or undefined');
+  }
   const query = `
     SELECT
       reservation_details.id
@@ -777,7 +784,7 @@ const addReservationHold = async (requestId, reservation) => {
     throw new Error('Database error');
   }
 };
-const addReservationDetail = async (requestId, reservationDetail) => {
+const addReservationDetail = async (requestId, detail) => {
   const pool = getPool(requestId);
   const query = `
     INSERT INTO reservation_details (
@@ -785,21 +792,21 @@ const addReservationDetail = async (requestId, reservationDetail) => {
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *;
   `;
-
   const values = [
-    reservationDetail.hotel_id,
-    reservationDetail.reservation_id,    
-    reservationDetail.date,
-    reservationDetail.room_id,
-    reservationDetail.plans_global_id,
-    reservationDetail.plans_hotel_id,
-    reservationDetail.plan_name,
-    reservationDetail.plan_type,
-    reservationDetail.number_of_people,
-    reservationDetail.price,
-    reservationDetail.created_by,
-    reservationDetail.updated_by
+    detail.hotel_id,
+    detail.reservation_id,
+    detail.date,
+    detail.room_id,
+    detail.plans_global_id,
+    detail.plans_hotel_id,
+    detail.plan_name,
+    detail.plan_type,
+    detail.number_of_people,
+    detail.price,
+    detail.created_by,
+    detail.updated_by
   ];
+  console.error('[addReservationDetail] Inserting with values:', values);
 
   try {
     const result = await pool.query(query, values);
@@ -809,8 +816,8 @@ const addReservationDetail = async (requestId, reservationDetail) => {
     throw new Error('Database error');
   }
 };
-const addReservationAddon = async (requestId, reservationAddon) => {
-  // console.log('addReservationAddon:',reservationAddon)
+const addReservationAddon = async (requestId, addon) => {
+  // console.log('addReservationAddon:',addon)
   const pool = getPool(requestId);  
   const query = `
     INSERT INTO reservation_addons (
@@ -820,18 +827,19 @@ const addReservationAddon = async (requestId, reservationAddon) => {
   `;
 
   const values = [
-    reservationAddon.hotel_id,
-    reservationAddon.reservation_detail_id,
-    reservationAddon.addons_global_id,
-    reservationAddon.addons_hotel_id,
-    reservationAddon.addon_name,
-    reservationAddon.quantity,
-    reservationAddon.price,
-    reservationAddon.tax_type_id,
-    reservationAddon.tax_rate,
-    reservationAddon.created_by,
-    reservationAddon.updated_by
+    addon.hotel_id,
+    addon.reservation_detail_id,
+    addon.addons_global_id,
+    addon.addons_hotel_id,
+    addon.addon_name,
+    addon.quantity,
+    addon.price,
+    addon.tax_type_id,
+    addon.tax_rate,
+    addon.created_by,
+    addon.updated_by
   ];
+  console.error('[addReservationAddon] Inserting with values:', values);
 
   try {
     const result = await pool.query(query, values);
@@ -3729,17 +3737,45 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
   }
 };
 
-const copyReservation = async (requestId, originalReservationId, newClientId, roomIds, userId) => {
+const insertCopyReservation = async (requestId, originalReservationId, newClientId, roomMapping, userId, deps = {}) => {
+  logger.warn('[copyReservation] Logger is working');
   const pool = getPool(requestId);
   const client = await pool.connect();
+
+  // Dependency injection for testability
+  const _selectReservation = deps.selectReservation || selectReservation;
+  const _addReservationHold = deps.addReservationHold || addReservationHold;
+  const _addReservationDetail = deps.addReservationDetail || addReservationDetail;
+  const _addReservationAddon = deps.addReservationAddon || addReservationAddon;
+
+  // Validate input parameters
+  if (!originalReservationId) {
+    logger.error('[copyReservation] Invalid originalReservationId:', originalReservationId);
+    throw new Error('Original reservation ID cannot be null or undefined');
+  }
+  if (!newClientId) {
+    logger.error('[copyReservation] Invalid newClientId:', newClientId);
+    throw new Error('New client ID cannot be null or undefined');
+  }
+  if (!roomMapping || !Array.isArray(roomMapping) || roomMapping.length === 0) {
+    logger.error('[copyReservation] Invalid roomMapping:', roomMapping);
+    throw new Error('Room mapping must be a non-empty array');
+  }
+  if (!userId) {
+    logger.error('[copyReservation] Invalid userId:', userId);
+    throw new Error('User ID cannot be null or undefined');
+  }
 
   try {
     await client.query('BEGIN');
 
-    const originalReservation = await selectReservation(requestId, originalReservationId);
+    const originalReservation = await _selectReservation(requestId, originalReservationId);
+    logger.debug('[copyReservation] originalReservation', { originalReservation });
     if (originalReservation.length === 0) {
       throw new Error('Original reservation not found');
     }
+
+    logger.error('[copyReservation] originalReservation[0].hotel_id', originalReservation[0].hotel_id);
 
     const { hotel_id, check_in, check_out, number_of_people } = originalReservation[0];
 
@@ -3751,9 +3787,12 @@ const copyReservation = async (requestId, originalReservationId, newClientId, ro
       number_of_people,
       created_by: userId,
       updated_by: userId,
+      ota_reservation_id: null, // Always null for copied reservations
     };
 
-    const newReservation = await addReservationHold(requestId, reservationData);
+    const newReservation = await _addReservationHold(requestId, reservationData);
+    logger.debug('[copyReservation] newReservation:', newReservation);
+    logger.debug('[copyReservation] newReservation.id:', newReservation?.id);
 
     const dateRange = [];
     let currentDate = new Date(check_in);
@@ -3762,29 +3801,81 @@ const copyReservation = async (requestId, originalReservationId, newClientId, ro
       currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    for (const room_id of roomIds) {
+    // Group original reservation details by room_id to copy plans and addons
+    const originalDetailsByRoom = {};
+    originalReservation.forEach(detail => {
+      if (!originalDetailsByRoom[detail.room_id]) {
+        originalDetailsByRoom[detail.room_id] = [];
+      }
+      originalDetailsByRoom[detail.room_id].push(detail);
+    });
+    logger.debug('[copyReservation] originalDetailsByRoom:', JSON.stringify(originalDetailsByRoom, null, 2));
+
+    for (const mapping of roomMapping) {
+      const { new_room_id, original_room_id } = mapping;
+      // Get the original room details for this mapping
+      const originalRoomDetails = originalDetailsByRoom[original_room_id] || [];
+      logger.debug('[copyReservation] Processing mapping:', { new_room_id, original_room_id, originalRoomDetailsCount: originalRoomDetails.length });
       for (const date of dateRange) {
+        // Find the original detail for this date to copy plan and addon info
+        const originalDetail = originalRoomDetails.find(d => {
+          // d.date may be a Date object or a string; always compare as YYYY-MM-DD
+          const dDate = typeof d.date === 'string' ? d.date.slice(0, 10) : formatDate(new Date(d.date));
+          return dDate === formatDate(date);
+        });
+        logger.debug('[copyReservation] originalDetail:', originalDetail);
+        logger.debug('[copyReservation] originalDetail.reservation_addons:', originalDetail?.reservation_addons);
+        // Defensive: ensure hotel_id is never null
+        if (!hotel_id) {
+          logger.error('[copyReservation] hotel_id is null or undefined when creating reservation detail', { mapping, originalDetail });
+          throw new Error('Cannot create reservation detail: hotel_id is null or undefined');
+        }
         const detail = {
           reservation_id: newReservation.id,
           hotel_id,
-          room_id,
+          room_id: new_room_id,
           date: formatDate(date),
-          plans_global_id: null,
-          plans_hotel_id: null,
-          plan_name: null,
-          plan_type: 'per_room',
-          number_of_people: 1, // Default to 1, can be adjusted
-          price: 0,
+          plans_global_id: originalDetail?.plans_global_id || null,
+          plans_hotel_id: originalDetail?.plans_hotel_id || null,
+          plan_name: originalDetail?.plan_name || null,
+          plan_type: originalDetail?.plan_type || 'per_room',
+          number_of_people: originalDetail?.number_of_people || 1,
+          price: originalDetail?.price || 0,
           created_by: userId,
           updated_by: userId,
         };
-        await addReservationDetail(requestId, detail);
+        logger.error('[copyReservation] About to insert reservation detail', { detail, hotel_id, mapping, originalDetail });
+        const newDetail = await _addReservationDetail(requestId, detail);
+        // Copy addons if they exist
+        if (originalDetail?.reservation_addons && originalDetail.reservation_addons.length > 0) {
+          for (const addon of originalDetail.reservation_addons) {
+            const addonData = {
+              hotel_id,
+              reservation_detail_id: newDetail.id,
+              addons_global_id: addon.addons_global_id,
+              addons_hotel_id: addon.addons_hotel_id,
+              addon_name: addon.addon_name,
+              quantity: addon.quantity,
+              price: addon.price,
+              tax_type_id: addon.tax_type_id,
+              tax_rate: addon.tax_rate,
+              created_by: userId,
+              updated_by: userId,
+            };
+            logger.debug('[copyReservation] Creating new addon:', addonData);
+            await _addReservationAddon(requestId, addonData);
+          }
+        } else {
+          logger.debug('[copyReservation] No addons to copy for this detail.');
+        }
       }
     }
 
+    logger.debug('[copyReservation] Returning newReservation:', newReservation);
     await client.query('COMMIT');
     return newReservation;
   } catch (error) {
+    logger.error('[copyReservation] Error:', error);
     await client.query('ROLLBACK');
     throw error;
   } finally {
@@ -3838,6 +3929,6 @@ module.exports = {
     addOTAReservation,
     editOTAReservation,
     cancelOTAReservation,
-    copyReservation,
+    insertCopyReservation,
 };
 

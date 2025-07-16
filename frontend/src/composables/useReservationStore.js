@@ -1015,7 +1015,7 @@ export function useReservationStore() {
         }
     };
 
-    const copyReservation = async (originalReservationId, newClientId, roomIds) => {
+    const copyReservation = async (originalReservationId, newClientId, roomMapping) => {
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -1029,7 +1029,7 @@ export function useReservationStore() {
                 body: JSON.stringify({
                     original_reservation_id: originalReservationId,
                     new_client_id: newClientId,
-                    room_ids: roomIds,
+                    room_mapping: roomMapping,
                 }),
             });
 
