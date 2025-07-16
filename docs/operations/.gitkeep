@@ -1,0 +1,7 @@
+# Operations Directory
+
+This directory contains operational documentation:
+- deployment-guide.md: Deployment procedures and environment setup
+- monitoring-guide.md: System monitoring and alerting
+- troubleshooting.md: Common issues and resolution procedures
+- maintenance-procedures.md: Regular maintenance tasks and schedules

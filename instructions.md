@@ -313,6 +313,141 @@ confirm.require({
 
 This pattern should be used for all confirmation dialogs for consistency across the application.
 
+# 5. Documentation Standards and Guidelines
+
+This section outlines the standards and best practices for creating, maintaining, and updating project documentation.
+
+## 5.1. Documentation Structure and Organization
+
+### Documentation Hierarchy
+All project documentation follows a structured hierarchy located in the `docs/` directory:
+
+```
+docs/
+├── requirements/           # Business and functional requirements
+├── design/                # System architecture and technical design
+├── features/              # Feature-specific specifications
+├── operations/            # Deployment and maintenance guides
+└── templates/             # Standardized documentation templates
+```
+
+### Document Types and Purposes
+- **Requirements Documents**: Capture what the system should do and why (business value)
+- **Design Documents**: Explain how the system works and is structured
+- **Feature Specifications**: Detailed specifications for individual features with implementation status
+- **Operations Documents**: Guides for deployment, monitoring, troubleshooting, and maintenance
+- **Templates**: Standardized formats for consistent documentation creation
+
+## 5.2. Documentation Creation Standards
+
+### Using Templates
+Always use the appropriate template when creating new documentation:
+- **Requirements**: Use `docs/templates/requirement-template.md`
+- **Design Documents**: Use `docs/templates/design-template.md`
+- **Feature Specifications**: Use `docs/templates/feature-spec-template.md`
+- **Architecture Decision Records**: Use `docs/templates/adr-template.md`
+
+### Writing Standards
+- **Language**: Write all documentation in clear, professional English
+- **Format**: Use Markdown (.md) format for all documentation files
+- **Headers**: Use consistent header hierarchy (H1 for document title, H2 for major sections, etc.)
+- **Links**: Use relative links for internal documentation references
+- **Code Examples**: Use proper syntax highlighting in code blocks
+- **Images**: Store images in a `docs/images/` directory and use relative paths
+
+### Requirements Documentation Standards
+- **EARS Format**: Write acceptance criteria using EARS (Easy Approach to Requirements Syntax)
+  - WHEN [event] THEN [system] SHALL [response]
+  - IF [condition] THEN [system] SHALL [response]
+- **Traceability**: Include requirement IDs and maintain traceability matrices
+- **Business Value**: Always include clear business value statements for requirements
+- **Acceptance Criteria**: Ensure all requirements have testable acceptance criteria
+
+## 5.3. Documentation Maintenance and Updates
+
+### Review Process
+1. **Author Review**: Document creator performs initial review for completeness and accuracy
+2. **Peer Review**: At least one team member reviews technical accuracy and clarity
+3. **Stakeholder Review**: Business stakeholders review requirements and feature specifications
+4. **Final Approval**: Technical lead or project manager provides final approval
+
+### Update Procedures
+- **Version Control**: All documentation changes must be committed to version control
+- **Change Documentation**: Significant changes should be documented with rationale
+- **Notification**: Notify relevant team members of important documentation updates
+- **Regular Reviews**: Schedule periodic reviews to ensure documentation remains current
+
+### Maintenance Responsibilities
+- **Feature Owners**: Responsible for maintaining feature-specific documentation
+- **Technical Leads**: Responsible for design and architecture documentation
+- **Product Managers**: Responsible for requirements documentation accuracy
+- **DevOps Team**: Responsible for operations and deployment documentation
+
+## 5.4. Documentation Quality Standards
+
+### Content Quality
+- **Accuracy**: All information must be current and reflect actual implementation
+- **Completeness**: Documents should cover all necessary aspects of their subject
+- **Clarity**: Use clear, concise language appropriate for the target audience
+- **Consistency**: Follow established terminology and formatting standards
+- **Actionability**: Provide specific, actionable information rather than vague descriptions
+
+### Technical Standards
+- **Code Examples**: All code examples must be tested and functional
+- **API Documentation**: Include request/response examples and error codes
+- **Configuration Examples**: Provide complete, working configuration examples
+- **Troubleshooting**: Include common issues and step-by-step resolution procedures
+
+### Validation and Testing
+- **Link Checking**: Regularly validate all internal and external links
+- **Code Validation**: Test all code examples and configuration snippets
+- **Procedure Testing**: Verify all step-by-step procedures work as documented
+- **Accessibility**: Ensure documentation is accessible to team members with different technical backgrounds
+
+## 5.5. Documentation Tools and Automation
+
+### Validation Tools
+The project includes automated documentation validation tools:
+- **Requirements Validator**: `scripts/validate-requirements.js` - Validates EARS format compliance
+- **Link Checker**: `scripts/check-documentation-links.js` - Validates internal cross-references
+- **Template Compliance**: Automated checks for template usage and completeness
+
+### Usage Instructions
+```bash
+# Validate requirements documents
+npm run validate-requirements
+
+# Check documentation links
+npm run check-docs-links
+
+# Run all documentation validation
+npm run validate-docs
+```
+
+### Integration with Development Workflow
+- **Pre-commit Hooks**: Documentation validation runs before commits
+- **CI/CD Pipeline**: Automated documentation checks in continuous integration
+- **Pull Request Reviews**: Documentation changes require review and approval
+
+## 5.6. Style Guide and Conventions
+
+### File Naming Conventions
+- Use lowercase with hyphens for file names: `feature-specification.md`
+- Include descriptive names that clearly indicate content: `reservation-management-api-design.md`
+- Use consistent prefixes for related documents: `req-`, `design-`, `feature-`
+
+### Content Formatting
+- **Headers**: Use sentence case for headers: "System Architecture Overview"
+- **Lists**: Use consistent bullet point or numbering styles
+- **Tables**: Include headers and maintain consistent formatting
+- **Code Blocks**: Always specify language for syntax highlighting
+
+### Cross-References and Navigation
+- **Internal Links**: Use relative paths for all internal documentation links
+- **Navigation**: Include clear navigation sections in longer documents
+- **Index Pages**: Maintain index pages for major documentation sections
+- **Breadcrumbs**: Include navigation breadcrumbs in nested documentation
+
 ---
 
 *Please refer back to this document periodically and before starting new development tasks.*

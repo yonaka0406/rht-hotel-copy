@@ -1,0 +1,8 @@
+# Design Directory
+
+This directory contains system design and architecture documentation:
+- system-architecture.md: High-level system architecture and components
+- data-models.md: Database schema and data relationships
+- api-design.md: API specifications and integration patterns
+- integration-patterns.md: External system integrations
+- security-design.md: Security architecture and patterns
