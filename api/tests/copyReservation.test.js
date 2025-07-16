@@ -2,8 +2,22 @@ const assert = require('assert');
 
 // --- Patch DB before requiring the model (like planRate.test.js) ---
 const originalDatabaseModule = require('../config/database');
+
+// Track rate insertion calls
+let rateInsertCalls = [];
+
 const mockPool = {
-  query: async () => ({ rows: [] }),
+  query: async (query, params) => {
+    // Track reservation_rates INSERT calls
+    if (query.includes('INSERT INTO reservation_rates')) {
+      rateInsertCalls.push({
+        query,
+        params: [...params] // Copy params to avoid reference issues
+      });
+      return { rows: [{ id: Math.floor(Math.random() * 10000) }] };
+    }
+    return { rows: [] };
+  },
   connect: async () => mockPool,
   release: () => {}
 };
@@ -142,8 +156,8 @@ const reservationsModel = require('../models/reservations');
     assert.strictEqual(data.status, undefined, 'addReservationHold does not set status');
     return { id: newReservationId, ...data };
   };
-  const mockAddReservationDetail = async (requestId, reservationId, detail) => {
-    assert.strictEqual(reservationId, newReservationId, 'addReservationDetail uses new reservation id');
+  const mockAddReservationDetail = async (requestId, detail) => {
+    assert.strictEqual(detail.reservation_id, newReservationId, 'addReservationDetail uses new reservation id');
     // Assert that at least one of plans_global_id or plans_hotel_id is present if either is set (not both null)
     if (detail.plans_global_id !== null || detail.plans_hotel_id !== null) {
       assert.ok(
@@ -154,8 +168,8 @@ const reservationsModel = require('../models/reservations');
     }
     return { id: ++detailIdCounter, ...detail };
   };
-  const mockAddReservationAddon = async (requestId, detailId, addon) => {
-    addonCalls.push({ detailId, ...addon });
+  const mockAddReservationAddon = async (requestId, addon) => {
+    addonCalls.push({ ...addon });
     return { id: Math.floor(Math.random() * 10000), ...addon };
   };
 
@@ -193,6 +207,27 @@ const reservationsModel = require('../models/reservations');
   assert.ok(addonCalls.length >= 2, 'Addons were copied for each detail');
   const breakfastAddon = addonCalls.find(a => a.addon_name === 'Breakfast');
   assert.ok(breakfastAddon, 'Breakfast addon copied');
+  
+  console.log(`Found ${addonCalls.length} addon calls`);
 
-  console.log('copyReservation test passed');
+  // Check that reservation_rates were copied
+  assert.ok(rateInsertCalls.length > 0, 'Reservation rates were copied');
+  console.log(`Found ${rateInsertCalls.length} rate insert calls`);
+  
+  // Verify rate data structure
+  const firstRateCall = rateInsertCalls[0];
+  assert.ok(firstRateCall.params.length === 8, 'Rate insert has correct number of parameters');
+  
+  // Check that the rate parameters match expected structure
+  // [hotel_id, reservation_details_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, price, created_by]
+  const [hotel_id, reservation_details_id, adjustment_type, adjustment_value, tax_type_id, tax_rate, price, created_by] = firstRateCall.params;
+  assert.strictEqual(hotel_id, 3, 'Hotel ID matches original');
+  assert.strictEqual(adjustment_type, 'base_rate', 'Adjustment type copied correctly');
+  assert.strictEqual(adjustment_value, 2600, 'Adjustment value copied correctly');
+  assert.strictEqual(tax_type_id, 3, 'Tax type ID copied correctly');
+  assert.strictEqual(tax_rate, 0.1, 'Tax rate copied correctly');
+  assert.strictEqual(price, 2600, 'Price copied correctly');
+  assert.strictEqual(created_by, user_id, 'Created by user ID is correct');
+
+  console.log('copyReservation test passed - including reservation_rates copying!');
 })(); 
