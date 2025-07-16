@@ -190,6 +190,32 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This can confuse users, making them think the action was not completed.
 
+#### Feature Request #14
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.
+- **Steps to Reproduce**:
+  1. Open the reservation Panel.
+  2. Use the splitbutton for reservation actions.
+  3. Select the new 'Send Fax' option.
+- **Expected Behavior**: The system should allow sending a fax (via email gateway) to the client directly from the reservation panel.
+- **Actual Behavior**: This functionality does not currently exist.
+- **Environment**: 
+- **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
+
+#### Feature Request #15
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a FAQ page of the system with instructions for the use of the system.
+- **Steps to Reproduce**:
+  1. Access the system.
+  2. Navigate to the FAQ page.
+  3. View instructions and answers to common questions about system usage.
+- **Expected Behavior**: Users can easily find instructions and answers to common questions about the system.
+- **Actual Behavior**: No FAQ page currently exists.
+- **Environment**: 
+- **Additional Notes**: This will help new and existing users understand how to use the system efficiently.
+
 ---
 
 ## Bug Status Legend

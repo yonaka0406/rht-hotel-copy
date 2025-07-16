@@ -2,8 +2,9 @@ const winston = require('winston');
 
 const { combine, timestamp, printf, json } = winston.format;
 
-const devFormat = printf(({ level, message, timestamp, stack }) => {
-  return `${timestamp} ${level}: ${stack || message}`;
+const devFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
+  let metaString = Object.keys(meta).length ? JSON.stringify(meta, null, 2) : '';
+  return `${timestamp} ${level}: ${stack || message} ${metaString}`;
 });
 
 const logger = winston.createLogger({

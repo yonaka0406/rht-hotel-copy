@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 // Define shared state outside the function
 const reservationIsUpdating = ref(false);
 const availableRooms = ref([]);
+const availableRoomsForCopy = ref([]);
 const reservedRooms = ref([]);
 const holdReservations = ref([]);
 const reservationId = ref(null);
@@ -964,6 +965,86 @@ export function useReservationStore() {
         }
     };
 
+    const fetchReservationForCopy = async (reservationId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/info?id=${reservationId}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservation details');
+            }
+
+            const data = await response.json();
+            if (data.reservation && data.reservation.length > 0) {
+                const { hotel_id, check_in, check_out } = data.reservation[0];
+                await fetchAvailableRoomsForCopy(hotel_id, check_in, check_out);
+            }
+        } catch (error) {
+            console.error('Error fetching reservation for copy:', error);
+        }
+    };
+
+    const fetchAvailableRoomsForCopy = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/available-rooms?hotel_id=${hotelId}&start_date=${startDate}&end_date=${endDate}`;
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch available rooms');
+            }
+
+            const data = await response.json();
+            availableRoomsForCopy.value = data.availableRooms || [];
+        } catch (error) {
+            console.error('Failed to fetch available rooms for copy:', error);
+            availableRoomsForCopy.value = [];
+        }
+    };
+
+    const copyReservation = async (originalReservationId, newClientId, roomMapping) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/copy`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    original_reservation_id: originalReservationId,
+                    new_client_id: newClientId,
+                    room_mapping: roomMapping,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to copy reservation');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();
+        } catch (error) {
+            setReservationIsUpdating(false);
+            console.error('Error copying reservation:', error);
+            throw error;
+        }
+    };
+
     // Watchers
     watch(reservedRooms, (newValue, oldValue) => {
         if (newValue !== oldValue) {
@@ -987,6 +1068,7 @@ export function useReservationStore() {
     return {
         reservationIsUpdating,
         availableRooms,
+        availableRoomsForCopy,
         reservedRooms,
         holdReservations,
         reservationId,
@@ -1027,5 +1109,7 @@ export function useReservationStore() {
         deleteReservationRoom,
         deleteReservationPayment,     
         createHoldReservationCombo,
+        fetchReservationForCopy,
+        copyReservation,
     };
 }

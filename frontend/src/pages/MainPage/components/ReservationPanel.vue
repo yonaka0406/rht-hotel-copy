@@ -584,7 +584,7 @@
         :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }"
         modal
     >
-        <ReservationCopyDialog :reservation_id="reservationInfo.value?.reservation_id" @close="showCopyDialog = false" />
+        <ReservationCopyDialog :reservation_id="props.reservation_id" @close="showCopyDialog = false" />
     </Dialog>
 </template>
 
