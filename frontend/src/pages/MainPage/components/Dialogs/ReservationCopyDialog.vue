@@ -36,7 +36,7 @@
           </Column>
           <Column field="originalRoom" header="複製元の部屋">
             <template #body="slotProps">
-              <Dropdown
+              <Select
                 v-model="slotProps.data.originalRoomId"
                 :options="originalRooms"
                 optionLabel="label"
@@ -86,7 +86,7 @@
   const emit = defineEmits(['close']);
 
   // Primevue
-  import { Button, MultiSelect, FloatLabel, DataTable, Column, Dropdown } from 'primevue';
+  import { Button, MultiSelect, FloatLabel, DataTable, Column, Select } from 'primevue';
 
   // Stores
   import { useReservationStore } from '@/composables/useReservationStore';
