@@ -1,0 +1,40 @@
+# Fail2Ban configuration for RHT Hotel server
+# Custom jail configurations
+
+[DEFAULT]
+# Ban hosts for 2 hours (7200 seconds)
+bantime = 7200
+# Find time: 5 minutes
+findtime = 300
+# Max retries before ban
+maxretry = 3
+# Ban action
+banaction = iptables-multiport
+# Unban action
+unbanaction = iptables-multiport
+
+# SSH protection
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+
+# Apache protection
+[apache]
+enabled = true
+port = http,https
+filter = apache-auth
+logpath = /var/log/apache2/error.log
+maxretry = 3
+
+# PostgreSQL protection - CUSTOM JAIL
+[postgresql]
+enabled = true
+port = 5432
+filter = postgresql
+logpath = /var/log/postgresql/postgresql-*.log
+maxretry = 3
+bantime = 7200
+findtime = 300
