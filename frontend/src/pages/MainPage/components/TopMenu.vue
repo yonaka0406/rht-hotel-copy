@@ -17,16 +17,6 @@
                     </Button>
                 </OverlayBadge>
                 
-                <!-- Help Icon -->
-                <Button 
-                    class="p-button p-button-text dark:text-white mr-2" 
-                    aria-label="ヘルプ" 
-                    @click="goToAboutPage"
-                    v-tooltip.bottom="'システムヘルプ'"
-                >
-                    <i class="pi pi-question-circle" style="font-size:larger" />
-                </Button>
-
                 <!-- Notifications Icon -->                
                 <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
@@ -45,6 +35,15 @@
                     placeholder="ホテル選択"
                     filter
                 />
+                <!-- Help Icon -->
+                <Button 
+                    class="p-button p-button-text dark:text-white ml-2" 
+                    aria-label="ヘルプ" 
+                    @click="goToAboutPage"
+                    v-tooltip.bottom="'システムヘルプ'"
+                >
+                    <i class="pi pi-question-circle" style="font-size:larger" />
+                </Button>
             </div>
         </template>
     </Toolbar>
