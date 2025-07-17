@@ -1,62 +1,72 @@
-# Tasks: Calendar Refactor
+# Implementation Plan
 
-## High Priority
+- [ ] 1. Create core composables for centralized state management
+  - Create useCalendarState composable with consolidated state (dateRange, selectedRooms, reservations, loading, selectedCells, dragState)
+  - Implement actions: selectCell, moveReservation, updateDateRange
+  - Add computed properties for visibleReservations and filtered data
+  - _Requirements: 1.1, 2.1, 2.3_
 
-- [ ] Extract drag & drop logic into useCalendarDragDrop composable
-- [ ] Move WebSocket handling into useCalendarWebSocket composable
-- [ ] Move date range logic into useCalendarDateRange composable
-- [ ] Create CalendarCell.vue for cell rendering
-- [ ] Create CalendarTable.vue for main table structure and scroll/hover events
-- [ ] Create CalendarHeader.vue for header controls and date navigation
-- [ ] Create DragModeControls.vue for mode switching and context menus
-- [ ] Add try-catch and error handling to all async operations (use useCalendarErrors composable)
-- [ ] Refactor scroll handler into useDebouncedScroll composable
-- [ ] Centralize calendar state in useCalendarStore (Pinia)
-- [ ] Implement simplified interaction model (unified modes: view, move, select)
-- [ ] Add clear visual indicators for current interaction mode
-- [ ] Implement progressive disclosure: basic view, detailed view, advanced operations
-- [ ] Add visual feedback overlays for drag/move/select modes
-- [ ] Add loading states and PrimeVue Spinner to all async operations
-- [ ] Implement keyboard navigation (useKeyboardNavigation composable)
-- [ ] Implement contextual actions and smart context menus for cells
-- [ ] Add validation and error prevention before reservation actions
-- [ ] Improve information hierarchy and visual clarity of the calendar header (implement two-row header layout or collapsible sections for usability)
-- [ ] Add table-level loading overlay for enhanced loading state (not just skeletons for empty cells)
-- [ ] Consolidate accessibility improvements: Add ARIA labels, keyboard navigation, screen reader support for drag-and-drop, focus management for table navigation, and improve color contrast (covering all accessibility and ARIA-related tasks)
-- [ ] Consolidate responsive design improvements: Use responsive units and breakpoints for cell/table sizing (e.g., w-20 h-12 sm:w-32 sm:h-16 md:w-36 md:h-18), implement touch-friendly targets, responsive table layout, and gesture support for mobile
-- [ ] Implement a consistent color token system for status colors (replace hardcoded and mixed Tailwind classes)
-- [ ] Enhance visual feedback for drag operations: add ghost elements and improved drop zone indicators
-- [ ] Extract sub-components: CalendarHeader.vue, CalendarCell.vue, ReservationCard.vue, ReservationStatus.vue, EmptyRoomIndicator.vue
-- [ ] Extract logic into composable functions: useCalendarDragDrop, useReservationStatus, etc.
-- [ ] Consolidate configuration and utility file tasks: Move configuration objects to separate files (e.g., config/reservationConfig.js, calendarConfig.js, status config, etc.), and create utility functions in utils/dateHelpers.js and utils/reservationHelpers.js
-- [ ] Improve code clarity by using better variable names (e.g., dateIndex → dayIndex, roomIndex → roomColumnIndex, dragMode → currentDragMode or editMode)
-- [ ] Add JSDoc comments to all major functions and composables
-- [ ] Extract complex conditions into computed properties or helper functions
-- [ ] Use constants for magic numbers (e.g., calendar config for sticky header height, cell sizes, etc.)
-- [ ] Implement virtual scrolling for large date ranges
-- [ ] Use memoization (computed) for expensive calculations
-- [ ] Use event delegation to minimize event listeners
-- [ ] Align file structure to suggested modular layout (components/ReservationsCalendar/components, composables, config, etc.)
+- [ ] 2. Extract WebSocket functionality
+  - Create useCalendarSocket composable for real-time updates
+  - Implement connection management and event handlers for reservation updates/deletes
+  - Integrate with useCalendarState for seamless data updates
+  - _Requirements: 1.2, 2.3_
 
-## Medium Priority
+- [ ] 3. Create modular UI components
+  - Create CalendarCell.vue component with props (reservation, room, date, isSelected, isDragTarget) and events (cell-click, drag-start, drag-end)
+  - Create CalendarHeader.vue component for date navigation and view controls (room filter, date range selector)
+  - Keep ReservationsCalendar.vue as main container using useCalendarState
+  - _Requirements: 1.3, 2.1, 2.2_
 
-- [ ] Ensure cleanup of all listeners and sockets in onUnmounted
-- [ ] Implement centralized event bus with useCalendarEvents composable
-- [ ] Implement optimistic UI updates for performance UX
-- [ ] Add progressive onboarding and interactive tutorial for new users
+- [ ] 4. Implement configuration structure
+  - Create calendarConfig.js with constants, icon mappings, and calendar settings
+  - Consolidate magic numbers and configuration values
+  - _Requirements: 1.4, 2.3_
 
-## Low Priority
+- [ ] 5. Add error handling and loading states
+  - Implement try-catch blocks around async operations with toast notifications
+  - Manage loading states within useCalendarState
+  - Add basic validation before reservation operations
+  - _Requirements: 1.5, 4.3_
 
-- [ ] Add unit and integration tests for new composables/components (see example test structures)
-- [ ] Add onboarding tooltips or help modal
-- [ ] Add service worker for offline support (optional)
-- [ ] Add feature flags for progressive feature introduction
+- [ ] 6. Implement drag and drop functionality
+  - Add drag state management to useCalendarState
+  - Implement drag start/end handlers in CalendarCell component
+  - Add visual feedback for drag operations (ghost elements, drop zones)
+  - _Requirements: 4.1, 4.4_
 
-## Testing Structure
+- [ ] 7. Add performance optimizations
+  - Use computed properties for expensive calculations in useCalendarState
+  - Implement debounced scroll handlers
+  - Add memoization where appropriate
+  - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] Write component tests for CalendarCell, CalendarTable, DragModeControls, etc.
-- [ ] Write composable tests for useCalendarDragDrop, useCalendarWebSocket, useCalendarDateRange, useCalendarEvents, useCalendarErrors, useKeyboardNavigation, useGestures, useReservationStatus
+- [ ] 8. Implement accessibility features
+  - Add ARIA labels and keyboard navigation support
+  - Ensure proper focus management
+  - Implement screen reader support for drag-and-drop
+  - _Requirements: 4.2_
 
-## References
-- See requirements.md and design.md for context and details.
-- See the detailed breakdown in the refactoring plan and UX recommendations for implementation guidance. 
+- [ ] 9. Add responsive design
+  - Use responsive units for cell and table sizing
+  - Implement touch-friendly interactions for mobile
+  - Test mobile drag-and-drop functionality
+  - _Requirements: 4.1, 4.4_
+
+- [ ] 10. Improve code quality
+  - Add JSDoc comments to composables and components
+  - Improve variable naming consistency
+  - Extract complex conditions into computed properties
+  - _Requirements: 2.1, 2.2_
+
+- [ ] 11. Implement testing
+  - Write unit tests for useCalendarState and useCalendarSocket composables
+  - Write component tests for CalendarCell and CalendarHeader
+  - Add integration tests for drag-and-drop workflows
+  - _Requirements: 2.2_
+
+- [ ] 12. Final integration and cleanup
+  - Ensure proper cleanup of event listeners and sockets
+  - Test complete user workflows
+  - Optimize performance and fix any remaining issues
+  - _Requirements: 2.1, 3.1_ 
