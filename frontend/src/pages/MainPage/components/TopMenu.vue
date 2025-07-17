@@ -37,12 +37,12 @@
                 />
                 <!-- Help Icon -->
                 <Button 
-                    class="p-button p-button-text dark:text-white ml-2" 
+                    class="p-button p-button-text dark:text-white" 
                     aria-label="ヘルプ" 
                     @click="goToAboutPage"
-                    v-tooltip.bottom="'システムヘルプ'"
+                    v-tooltip.bottom="{ value: 'システムヘルプ', class: 'small-tooltip' }"
                 >
-                    <i class="pi pi-question-circle" style="font-size:larger" />
+                    <i class="pi pi-question-circle" style="font-size:1rem" />
                 </Button>
             </div>
         </template>
@@ -225,4 +225,10 @@
         transform-origin: top center; /* Bell swings from its top center */
         animation: gentle-bell-shake 2s ease-in-out infinite; /* Animation properties: name, duration, timing function, iteration count */
     }
+</style>
+<style>
+.small-tooltip {
+    font-size: 0.75rem !important;
+    padding: 2px 6px !important;
+}
 </style>
