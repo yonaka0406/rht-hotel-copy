@@ -172,6 +172,7 @@
             },
             accept: () => {
                 applyToAllHotels();
+                confirm.close('templating');
             },
             rejectProps: {
                 label: 'キャンセル',
@@ -179,6 +180,7 @@
                 outlined: true
             },
             reject: () => {                
+                confirm.close('templating');
             },
         });
     };
@@ -226,6 +228,7 @@
             },
             accept: () => {
                 applyToSelectedHotel();
+                confirm.close('templating');
             },            
             rejectProps: {
                 label: 'キャンセル',
@@ -233,6 +236,7 @@
                 outlined: true
             },
             reject: () => {                
+                confirm.close('templating');
             },
         });
     };
@@ -277,8 +281,9 @@
             header: '確認',
             icon: 'pi pi-exclamation-triangle',
             acceptProps: { label: 'はい' },
-            accept: () => deleteBlockedRoomAction(data.id),
+            accept: () => { deleteBlockedRoomAction(data.id); confirm.close('templating'); },
             rejectProps: { label: 'キャンセル', severity: 'secondary', outlined: true },
+            reject: () => { confirm.close('templating'); },
         });
     };
     const deleteBlockedRoomAction = async (id) => {

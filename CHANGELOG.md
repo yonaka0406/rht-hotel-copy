@@ -254,8 +254,10 @@ This marks the first stable release of the comprehensive Hotel Management System
 - CRM: Data recording via upload method. (#037)
 - CRM: Sales cool performance report. (#041)
 - Bug #11: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA, resulting in duplicate reservations and edit failures.
-- Bug #12: The PrimeVue ConfirmDialog in ReservationPayments did not close after add/delete; all Confirm dialogs in the system should be checked to ensure they close properly after actions.
 - Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry).
+
+### Unreleased
+- Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
 
 ---
 

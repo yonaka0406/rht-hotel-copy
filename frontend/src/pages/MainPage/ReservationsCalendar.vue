@@ -733,6 +733,7 @@
                   selectedRoomByDay.value = [];
                   isUpdating.value = false;
                   await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+                  confirmRoomMode.close('templating');
               },
               rejectProps: {
                   label: 'キャンセル',
@@ -741,6 +742,7 @@
               },
               reject: () => {
                   // Cancel action
+                  confirmRoomMode.close('templating');
               }
             });              
           }
@@ -1221,6 +1223,7 @@
         } else {
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
         }
+        confirm.close('templating');
       },
       rejectProps: {
           label: 'キャンセル',
@@ -1228,7 +1231,7 @@
           outlined: true
       },
       reject: () => {
-        
+        confirm.close('templating');
       }
     });
   };

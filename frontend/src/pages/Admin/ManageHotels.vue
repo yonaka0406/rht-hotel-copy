@@ -537,6 +537,10 @@
             life: 3000
           });
         }
+        confirm.close();
+      },
+      reject: () => {
+        confirm.close();
       }
     });
   };

@@ -784,9 +784,11 @@
                         console.error('Error updating reservation status:', error);
                         toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
                     }
+                    confirm.close('default');
                 },
                 reject: () => {
                     toast.add({ severity: 'info', summary: 'キャンセル', detail: 'ステータス変更はキャンセルされました。', life: 3000 });
+                    confirm.close('default');
                 }
             });
             return; // Stop further execution for this specific case
@@ -869,13 +871,10 @@
                         detail: `復活されました。`,
                         life: 3000
                     });
+                    confirmRecovery.close('recovery');
                 },
-                rejectProps: {
-                    label: 'キャンセル',
-                    severity: 'secondary',
-                    outlined: true
-                },
-                reject: () => {                    
+                reject: () => {    
+                    confirmRecovery.close('recovery');                
                 }
             });
         }else{
@@ -934,7 +933,11 @@
                     });
                 }
                 await goToNewReservation();
+                confirmDelete.close('delete');
             },
+            reject: () => {
+                confirmDelete.close('delete');
+            }
         });
     };
     const handleCancel = () => {
@@ -943,10 +946,10 @@
             header: 'キャンセル確認',
             icon: 'pi pi-exclamation-triangle',            
             accept: () => updateReservationStatus('cancelled'),
+            reject: () => { showDateDialog.value = true; confirmCancel.close('cancel'); },
             acceptLabel: 'キャンセル料無し',
             acceptClass: 'p-button-success',
             acceptIcon: 'pi pi-check',            
-            reject: () => showDateDialog.value = true,
             rejectLabel: 'キャンセル料発生',
             rejectClass: 'p-button-danger',
             rejectIcon: 'pi pi-calendar'

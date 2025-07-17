@@ -220,9 +220,11 @@ const sendManualEmail = (entry) => {
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }
+      confirm.close();
     },
     reject: () => {
       // Optional: Show a toast message that the action was cancelled
+      confirm.close();
     }
   });
 };
@@ -250,9 +252,11 @@ const showPhoneNumber = (entry) => {
       if (result && selectedHotelId.value) {
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }
+      confirm.close();
     },
     reject: () => {
       // Just close the dialog
+      confirm.close();
     }
   });
 };
@@ -280,9 +284,11 @@ const cancelEntryAction = (entry) => {
         // Refresh the list after successful cancellation
         fetchWaitlistEntries(selectedHotelId.value, { filters: { status: ['waiting', 'notified'] } });
       }
+      confirm.close();
     },
     reject: () => {
       // Optional: Show a toast message that the action was cancelled
+      confirm.close();
     }
   });
 };

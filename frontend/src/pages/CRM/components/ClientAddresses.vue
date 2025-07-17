@@ -365,10 +365,12 @@
                     detail: `「"${address.address_name}"」を削除しました。`,
                     life: 3000
                 });
+                confirm.close();
             },
             rejectLabel: 'キャンセル',
             rejectClass: 'p-button-secondary',
             reject: () => {                
+                confirm.close();
             }
         });
     };

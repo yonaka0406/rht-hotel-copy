@@ -232,7 +232,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
 
 ### Bug #12
-- **Status**: [x] Fixed [ ] Open [ ] In Progress [ ] Closed
+- **Status**: [x] Fixed [ ] Open [ ] In Progress [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
 - **Steps to Reproduce**:

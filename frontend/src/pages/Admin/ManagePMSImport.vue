@@ -731,6 +731,7 @@
                     detail: `データベースインポート操作されました。`,
                     life: 3000
                 });
+                confirm.close();
             },
             rejectProps: {
                 label: 'キャンセル',
@@ -738,6 +739,7 @@
                 outlined: true
             },
             reject: () => {                
+                confirm.close();
             }
         });
     };

@@ -262,10 +262,12 @@ const handleDeleteProject = (project) => {
           life: 5000
         });
       }
+      confirm.close();
     },
     reject: () => {
       console.log('User rejected deletion for project:', project);
       toast.add({ severity: 'info', summary: 'キャンセルされました', detail: '削除処理はキャンセルされました。', life: 3000 }); // Deletion cancelled.
+      confirm.close();
     }
   });
 };

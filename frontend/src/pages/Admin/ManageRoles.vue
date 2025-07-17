@@ -431,6 +431,7 @@
                             detail: `「"${role.role_name}"」を削除します。`,
                             life: 3000
                         });
+                        confirm.close();
                     },
                     reject: () => {
                         toast.add({
@@ -439,6 +440,7 @@
                             detail: 'ロール削除するのをキャンセルしました。',
                             life: 3000
                         });
+                        confirm.close();
                     }
                 });
             };
