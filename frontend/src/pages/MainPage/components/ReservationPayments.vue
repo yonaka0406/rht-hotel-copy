@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <ConfirmDialog></ConfirmDialog>
+        <ConfirmDialog group="payment"></ConfirmDialog>
         <Card>
             <template #title>
                 <span>
@@ -173,7 +173,7 @@
             </Column>
             <Column header="削除" style="width: 100px; text-align: center;">
                 <template #body="{ data }">
-                    <ConfirmDialog group="headless"></ConfirmDialog>
+                    <ConfirmDialog group="delete"></ConfirmDialog>
                     <Button 
                         icon="pi pi-trash" 
                         class="p-button-danger p-button-text" 
@@ -204,8 +204,8 @@
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
-    const confirmPayment = useConfirm();
-    const confirmDelete = useConfirm();
+    const confirmPayment = useConfirm('payment');
+    const confirmDelete = useConfirm('delete');
     import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';    
 
     // Stores
@@ -412,12 +412,14 @@
                 acceptProps: {
                     label: 'はい'
                 },                
-                accept: () => {
-                    addReservationPayment(dataToAdd);
+                accept: async () => {
+                    await addReservationPayment(dataToAdd);
                     resetPaymentForm();
                     toast.add({ severity: 'success', summary: '追加', detail: '清算登録されました。', life: 3000 });
+                    confirmPayment.close();
                 },
                 reject: () => {
+                    confirmPayment.close();
                 },
             });
         } else {
@@ -440,7 +442,13 @@
                     label: '削除',
                     severity: 'danger',
                 }, 
-            accept: () => deleteReservationPayment(payment.id),
+            accept: async () => {
+                await deleteReservationPayment(payment.id);
+                confirmDelete.close();
+            },
+            reject: () => {
+                confirmDelete.close();
+            },
         });
         
     };
