@@ -648,29 +648,298 @@ Based on the current system specifications (4 cores, 4GB RAM) and the PostgreSQL
 
 ### Monitoring Performance
 
-1. **Regular Performance Checks**:
+#### Performance Monitoring Queries
+
+The following queries help identify performance bottlenecks and optimization opportunities:
+
+1. **Slow Query Analysis**:
    ```sql
-   -- Check for slow queries
-   SELECT query, calls, total_time, mean_time
+   -- Top 10 slowest queries by total execution time
+   SELECT 
+       query,
+       calls,
+       total_time,
+       mean_time,
+       (total_time/sum(total_time) OVER()) * 100 AS percentage_of_total
    FROM pg_stat_statements
    ORDER BY total_time DESC
    LIMIT 10;
    
-   -- Check for table bloat
-   SELECT schemaname, relname, n_dead_tup, n_live_tup, 
-          (n_dead_tup::float / (n_live_tup + n_dead_tup) * 100)::int AS dead_percentage
+   -- Queries with highest average execution time
+   SELECT 
+       query,
+       calls,
+       mean_time,
+       total_time
+   FROM pg_stat_statements
+   WHERE calls > 10  -- Only queries called more than 10 times
+   ORDER BY mean_time DESC
+   LIMIT 10;
+   ```
+
+2. **Table and Index Usage Analysis**:
+   ```sql
+   -- Table bloat analysis
+   SELECT 
+       schemaname,
+       relname,
+       n_dead_tup,
+       n_live_tup,
+       CASE 
+           WHEN n_live_tup > 0 
+           THEN (n_dead_tup::float / (n_live_tup + n_dead_tup) * 100)::int 
+           ELSE 0 
+       END AS dead_percentage,
+       last_vacuum,
+       last_autovacuum
    FROM pg_stat_user_tables
    WHERE n_live_tup > 0
    ORDER BY dead_percentage DESC;
+   
+   -- Index usage statistics
+   SELECT 
+       schemaname,
+       relname,
+       indexrelname,
+       idx_tup_read,
+       idx_tup_fetch,
+       idx_scan,
+       CASE 
+           WHEN idx_scan = 0 THEN 'UNUSED INDEX'
+           WHEN idx_scan < 10 THEN 'LOW USAGE'
+           ELSE 'ACTIVE'
+       END AS usage_status
+   FROM pg_stat_user_indexes
+   ORDER BY idx_scan ASC;
+   
+   -- Tables with sequential scans (potential missing indexes)
+   SELECT 
+       schemaname,
+       relname,
+       seq_scan,
+       seq_tup_read,
+       idx_scan,
+       idx_tup_fetch,
+       CASE 
+           WHEN seq_scan > idx_scan AND seq_scan > 100 
+           THEN 'HIGH SEQ SCAN - CONSIDER INDEX'
+           ELSE 'OK'
+       END AS recommendation
+   FROM pg_stat_user_tables
+   WHERE seq_scan > 0
+   ORDER BY seq_scan DESC;
    ```
 
-2. **Monitoring Tools**:
-   - Install pg_stat_statements extension:
-     ```sql
-     CREATE EXTENSION pg_stat_statements;
+3. **Connection and Lock Analysis**:
+   ```sql
+   -- Current active connections
+   SELECT 
+       datname,
+       usename,
+       application_name,
+       client_addr,
+       state,
+       query_start,
+       state_change,
+       query
+   FROM pg_stat_activity
+   WHERE state != 'idle'
+   ORDER BY query_start;
+   
+   -- Lock analysis
+   SELECT 
+       blocked_locks.pid AS blocked_pid,
+       blocked_activity.usename AS blocked_user,
+       blocking_locks.pid AS blocking_pid,
+       blocking_activity.usename AS blocking_user,
+       blocked_activity.query AS blocked_statement,
+       blocking_activity.query AS blocking_statement
+   FROM pg_catalog.pg_locks blocked_locks
+   JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+   JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
+       AND blocking_locks.DATABASE IS NOT DISTINCT FROM blocked_locks.DATABASE
+       AND blocking_locks.relation IS NOT DISTINCT FROM blocked_locks.relation
+       AND blocking_locks.page IS NOT DISTINCT FROM blocked_locks.page
+       AND blocking_locks.tuple IS NOT DISTINCT FROM blocked_locks.tuple
+       AND blocking_locks.virtualxid IS NOT DISTINCT FROM blocked_locks.virtualxid
+       AND blocking_locks.transactionid IS NOT DISTINCT FROM blocked_locks.transactionid
+       AND blocking_locks.classid IS NOT DISTINCT FROM blocked_locks.classid
+       AND blocking_locks.objid IS NOT DISTINCT FROM blocked_locks.objid
+       AND blocking_locks.objsubid IS NOT DISTINCT FROM blocked_locks.objsubid
+       AND blocking_locks.pid != blocked_locks.pid
+   JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+   WHERE NOT blocked_locks.GRANTED;
+   ```
+
+4. **Database Size and Growth Analysis**:
+   ```sql
+   -- Database size analysis
+   SELECT 
+       datname,
+       pg_size_pretty(pg_database_size(datname)) AS size
+   FROM pg_database
+   WHERE datname NOT IN ('template0', 'template1', 'postgres')
+   ORDER BY pg_database_size(datname) DESC;
+   
+   -- Table size analysis
+   SELECT 
+       schemaname,
+       relname,
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname)) AS total_size,
+       pg_size_pretty(pg_relation_size(schemaname||'.'||relname)) AS table_size,
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||relname) - pg_relation_size(schemaname||'.'||relname)) AS index_size
+   FROM pg_stat_user_tables
+   ORDER BY pg_total_relation_size(schemaname||'.'||relname) DESC;
+   ```
+
+5. **Cache Hit Ratio Analysis**:
+   ```sql
+   -- Buffer cache hit ratio (should be > 95%)
+   SELECT 
+       datname,
+       blks_read,
+       blks_hit,
+       CASE 
+           WHEN (blks_hit + blks_read) = 0 THEN 0
+           ELSE round((blks_hit::float / (blks_hit + blks_read)) * 100, 2)
+       END AS cache_hit_ratio
+   FROM pg_stat_database
+   WHERE datname NOT IN ('template0', 'template1')
+   ORDER BY cache_hit_ratio DESC;
+   
+   -- Index cache hit ratio
+   SELECT 
+       schemaname,
+       relname,
+       indexrelname,
+       idx_blks_read,
+       idx_blks_hit,
+       CASE 
+           WHEN (idx_blks_hit + idx_blks_read) = 0 THEN 0
+           ELSE round((idx_blks_hit::float / (idx_blks_hit + idx_blks_read)) * 100, 2)
+       END AS index_cache_hit_ratio
+   FROM pg_stat_user_indexes
+   WHERE idx_blks_read > 0
+   ORDER BY index_cache_hit_ratio ASC;
+   ```
+
+6. **Checkpoint and WAL Analysis**:
+   ```sql
+   -- Checkpoint statistics
+   SELECT 
+       checkpoints_timed,
+       checkpoints_req,
+       checkpoint_write_time,
+       checkpoint_sync_time,
+       buffers_checkpoint,
+       buffers_clean,
+       maxwritten_clean,
+       buffers_backend,
+       buffers_backend_fsync,
+       buffers_alloc,
+       stats_reset
+   FROM pg_stat_bgwriter;
+   
+   -- WAL statistics
+   SELECT 
+       pg_current_wal_lsn(),
+       pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0') AS wal_bytes_generated;
+   ```
+
+#### Performance Monitoring Tools
+
+1. **Essential Extensions**:
+   ```sql
+   -- Install pg_stat_statements for query performance tracking
+   CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+   
+   -- Install pg_buffercache for buffer cache analysis
+   CREATE EXTENSION IF NOT EXISTS pg_buffercache;
+   
+   -- Install pg_stat_kcache for system-level statistics (if available)
+   CREATE EXTENSION IF NOT EXISTS pg_stat_kcache;
+   ```
+
+2. **Log Analysis Tools**:
+   - **pgBadger**: Comprehensive PostgreSQL log analyzer
+     ```bash
+     # Install pgBadger
+     sudo apt install pgbadger
+     
+     # Analyze logs
+     pgbadger /var/log/postgresql/postgresql-*.log -o /tmp/pgbadger_report.html
      ```
-   - Use pgBadger for log analysis
-   - Set up Prometheus and Grafana for real-time monitoring
+   
+   - **pg_stat_statements Reset**: Reset statistics for fresh analysis
+     ```sql
+     SELECT pg_stat_statements_reset();
+     ```
+
+3. **Real-time Monitoring Setup**:
+   - **Prometheus + Grafana**: For comprehensive monitoring dashboard
+   - **postgres_exporter**: Prometheus exporter for PostgreSQL metrics
+   - **Custom monitoring scripts**: Automated performance checks
+
+#### Performance Monitoring Schedule
+
+Implement a regular monitoring schedule to proactively identify performance issues:
+
+1. **Daily Checks**:
+   - Review slow query log
+   - Check cache hit ratios
+   - Monitor connection counts
+   - Verify autovacuum activity
+
+2. **Weekly Checks**:
+   - Analyze table bloat
+   - Review index usage statistics
+   - Check database growth trends
+   - Validate backup performance
+
+3. **Monthly Checks**:
+   - Comprehensive performance review
+   - Index optimization analysis
+   - Query plan analysis for critical queries
+   - Capacity planning review
+
+#### Performance Alerting Thresholds
+
+Set up alerts for the following performance indicators:
+
+| Metric | Warning Threshold | Critical Threshold |
+|--------|------------------|-------------------|
+| Cache Hit Ratio | < 95% | < 90% |
+| Average Query Time | > 100ms | > 500ms |
+| Active Connections | > 80 | > 95 |
+| Table Bloat | > 20% | > 40% |
+| Checkpoint Frequency | > 1/min | > 2/min |
+| Lock Wait Time | > 1s | > 5s |
+
+#### Performance Troubleshooting Workflow
+
+When performance issues are detected:
+
+1. **Immediate Assessment**:
+   - Check current active queries
+   - Identify blocking locks
+   - Review recent configuration changes
+
+2. **Root Cause Analysis**:
+   - Analyze slow query patterns
+   - Check for missing indexes
+   - Review table bloat levels
+   - Examine system resource usage
+
+3. **Resolution Steps**:
+   - Optimize problematic queries
+   - Add missing indexes
+   - Adjust configuration parameters
+   - Schedule maintenance operations
+
+4. **Verification**:
+   - Monitor performance improvements
+   - Validate that changes don't cause regressions
+   - Document lessons learned
 
 ### Autovacuum Configuration
 

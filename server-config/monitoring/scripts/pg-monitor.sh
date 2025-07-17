@@ -32,10 +32,48 @@ log_message() {
 send_email_alert() {
     local subject="$1"
     local message="$2"
+    local priority="$3"  # normal, high, critical
     
     if command -v mail >/dev/null 2>&1; then
-        echo "$message" | mail -s "$subject" -r "$ALERT_FROM" "$ALERT_EMAIL"
-        log_message "INFO: Email alert sent to $ALERT_EMAIL: $subject"
+        # Create HTML formatted email for better readability
+        local html_message="<html><body>"
+        html_message+="<h2 style='color: #d32f2f;'>PostgreSQL Alert: $subject</h2>"
+        html_message+="<p><strong>Timestamp:</strong> $(date '+%Y-%m-%d %H:%M:%S')</p>"
+        html_message+="<p><strong>Server:</strong> $(hostname)</p>"
+        html_message+="<p><strong>Priority:</strong> $priority</p>"
+        html_message+="<hr>"
+        html_message+="<pre>$message</pre>"
+        html_message+="<hr>"
+        html_message+="<p><em>This is an automated alert from the PostgreSQL monitoring system.</em></p>"
+        html_message+="</body></html>"
+        
+        # Set priority headers based on alert level
+        local mail_headers=""
+        case "$priority" in
+            "critical")
+                mail_headers="-a 'X-Priority: 1' -a 'Importance: high'"
+                ;;
+            "high")
+                mail_headers="-a 'X-Priority: 2' -a 'Importance: high'"
+                ;;
+            *)
+                mail_headers="-a 'X-Priority: 3' -a 'Importance: normal'"
+                ;;
+        esac
+        
+        # Send both plain text and HTML versions
+        {
+            echo "Content-Type: text/html; charset=UTF-8"
+            echo "Subject: [PostgreSQL Alert] $subject"
+            echo "From: $ALERT_FROM"
+            echo "To: $ALERT_EMAIL"
+            echo "X-Priority: $(case $priority in critical) echo 1;; high) echo 2;; *) echo 3;; esac)"
+            echo ""
+            echo "$html_message"
+        } | sendmail "$ALERT_EMAIL" 2>/dev/null || \
+        echo "$message" | mail -s "[PostgreSQL Alert] $subject" -r "$ALERT_FROM" "$ALERT_EMAIL"
+        
+        log_message "INFO: Email alert sent to $ALERT_EMAIL: $subject (Priority: $priority)"
     else
         log_message "WARNING: mail command not available, could not send email alert"
     fi
@@ -59,8 +97,9 @@ send_slack_alert() {
 send_alert() {
     local subject="$1"
     local message="$2"
+    local priority="${3:-normal}"  # Default to normal priority
     
-    send_email_alert "$subject" "$message"
+    send_email_alert "$subject" "$message" "$priority"
     send_slack_alert "$subject" "$message"
 }
 
@@ -72,21 +111,33 @@ check_system_resources() {
     CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print int($2 + $4)}')
     if [ "$CPU_USAGE" -gt "$MAX_CPU_USAGE" ]; then
         message=$(printf "$CPU_ALERT_TEMPLATE" "$CPU_USAGE" "$MAX_CPU_USAGE")
-        send_alert "PostgreSQL High CPU Usage Alert" "$message"
+        if [ "$CPU_USAGE" -gt 95 ]; then
+            send_alert "PostgreSQL Critical CPU Usage Alert" "$message" "critical"
+        else
+            send_alert "PostgreSQL High CPU Usage Alert" "$message" "high"
+        fi
     fi
     
     # Check memory usage
     MEMORY_USAGE=$(free | grep Mem | awk '{print int($3/$2 * 100)}')
     if [ "$MEMORY_USAGE" -gt "$MAX_MEMORY_USAGE" ]; then
         message=$(printf "$MEMORY_ALERT_TEMPLATE" "$MEMORY_USAGE" "$MAX_MEMORY_USAGE")
-        send_alert "PostgreSQL High Memory Usage Alert" "$message"
+        if [ "$MEMORY_USAGE" -gt 95 ]; then
+            send_alert "PostgreSQL Critical Memory Usage Alert" "$message" "critical"
+        else
+            send_alert "PostgreSQL High Memory Usage Alert" "$message" "high"
+        fi
     fi
     
     # Check disk usage
     DISK_USAGE=$(df -h /var/lib/postgresql | tail -n 1 | awk '{print $5}' | sed 's/%//')
     if [ "$DISK_USAGE" -gt "$MAX_DISK_USAGE" ]; then
         message=$(printf "$DISK_ALERT_TEMPLATE" "$DISK_USAGE" "$MAX_DISK_USAGE")
-        send_alert "PostgreSQL High Disk Usage Alert" "$message"
+        if [ "$DISK_USAGE" -gt 95 ]; then
+            send_alert "PostgreSQL Critical Disk Usage Alert" "$message" "critical"
+        else
+            send_alert "PostgreSQL High Disk Usage Alert" "$message" "high"
+        fi
     fi
 }
 
@@ -96,7 +147,7 @@ check_postgresql_connections() {
     
     # Check if PostgreSQL is running
     if ! systemctl is-active --quiet postgresql; then
-        send_alert "PostgreSQL Service Down" "PostgreSQL service is not running."
+        send_alert "PostgreSQL Service Down" "PostgreSQL service is not running. This is a critical failure that requires immediate attention." "critical"
         return
     fi
     

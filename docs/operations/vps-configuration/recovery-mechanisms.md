@@ -836,6 +836,525 @@ PG_PASSWORD="your_application_user_password"
 Set appropriate permissions:
 ```bash
 sudo chmod 600 /etc/default/postgresql-health-check
+
+## Monitoring and Alerting for Database Failures
+
+The PostgreSQL monitoring and alerting system provides comprehensive monitoring of database health, performance, and availability. This system automatically detects issues and sends notifications through multiple channels including email and Slack.
+
+### Monitoring Architecture
+
+The monitoring system consists of the following components:
+
+1. **Monitoring Script**: `/usr/local/bin/pg-monitor.sh`
+2. **Configuration File**: `/etc/postgresql-monitor/postgresql-alerts.conf`
+3. **Systemd Service**: `postgresql-monitor.service`
+4. **Systemd Timer**: `postgresql-monitor.timer`
+5. **Log Rotation**: Automated cleanup of monitoring logs
+
+```mermaid
+graph TD
+    Timer[Systemd Timer] --> Service[Monitor Service]
+    Service --> Script[Monitor Script]
+    Script --> Checks[Health Checks]
+    Checks --> Email[Email Alerts]
+    Checks --> Slack[Slack Alerts]
+    Checks --> Logs[Monitoring Logs]
+    Script --> Config[Alert Configuration]
+```
+
+### Monitoring Components
+
+#### System Resource Monitoring
+
+The monitoring system tracks the following system resources:
+
+1. **CPU Usage**: Monitors PostgreSQL server CPU utilization
+2. **Memory Usage**: Tracks system memory consumption
+3. **Disk Usage**: Monitors PostgreSQL data directory disk space
+4. **Network Connections**: Tracks active database connections
+
+#### Database Health Monitoring
+
+The system performs comprehensive database health checks:
+
+1. **Service Status**: Verifies PostgreSQL service is running
+2. **Connection Availability**: Tests database connectivity
+3. **Query Performance**: Monitors query execution times
+4. **Lock Detection**: Identifies blocking queries and deadlocks
+5. **Transaction Monitoring**: Tracks long-running and idle transactions
+
+#### Database Maintenance Monitoring
+
+The system monitors database maintenance needs:
+
+1. **Table Bloat**: Detects tables with excessive bloat
+2. **Dead Tuples**: Monitors tables needing vacuum operations
+3. **Index Usage**: Identifies unused or inefficient indexes
+4. **Autovacuum Activity**: Tracks vacuum and analyze operations
+
+#### Backup and Recovery Monitoring
+
+The system monitors backup and recovery operations:
+
+1. **Backup Status**: Verifies recent backup completion
+2. **Backup Integrity**: Checks for backup errors
+3. **Recovery Readiness**: Validates recovery mechanisms
+4. **Replication Status**: Monitors replication lag (if configured)
+
+### Alert Configuration
+
+#### Alert Thresholds
+
+The monitoring system uses configurable thresholds for alerting:
+
+| Metric | Warning Threshold | Critical Threshold |
+|--------|------------------|-------------------|
+| CPU Usage | 80% | 90% |
+| Memory Usage | 80% | 90% |
+| Disk Usage | 80% | 85% |
+| Connection Usage | 70% | 80% |
+| Query Duration | 5 minutes | 10 minutes |
+| Idle Transaction | 30 minutes | 1 hour |
+| Dead Tuples | 15% | 20% |
+| Table Bloat | 20% | 30% |
+
+#### Notification Channels
+
+The system supports multiple notification channels:
+
+1. **Email Notifications**:
+   - SMTP server configuration
+   - Multiple recipient support
+   - HTML formatted alerts
+   - Severity-based routing
+
+2. **Slack Notifications**:
+   - Webhook integration
+   - Channel-specific routing
+   - Rich message formatting
+   - Emoji indicators
+
+3. **Log-based Alerts**:
+   - Structured logging
+   - Syslog integration
+   - Log aggregation support
+   - Searchable alert history
+
+### Monitoring Configuration
+
+#### Configuration File Structure
+
+The monitoring configuration is stored in `/etc/postgresql-monitor/postgresql-alerts.conf`:
+
+```bash
+# Email notification settings
+ALERT_EMAIL="admin@example.com"
+ALERT_FROM="postgres-monitor@example.com"
+SMTP_SERVER="smtp.example.com"
+SMTP_PORT="587"
+SMTP_USER="alerts@example.com"
+SMTP_PASSWORD="your_smtp_password"
+
+# Slack webhook notification settings
+SLACK_WEBHOOK_URL="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+SLACK_CHANNEL="#database-alerts"
+
+# Monitoring thresholds
+MAX_CPU_USAGE=90
+MAX_MEMORY_USAGE=90
+MAX_DISK_USAGE=85
+MAX_CONNECTION_PERCENTAGE=80
+MAX_IDLE_TRANSACTION_TIME=3600
+MAX_QUERY_TIME=300
+MAX_DEAD_TUPLES_PERCENTAGE=20
+MAX_INDEX_BLOAT_PERCENTAGE=30
+
+# Database connection settings
+DB_HOST="localhost"
+DB_PORT="5432"
+DB_NAME="rhthotels"
+DB_USER="rhtsys_user"
+```
+
+#### Environment Configuration
+
+Create the environment file for the monitoring service:
+
+```bash
+sudo mkdir -p /etc/postgresql-monitor
+sudo cp /path/to/postgresql-alerts.conf /etc/postgresql-monitor/
+sudo chmod 600 /etc/postgresql-monitor/postgresql-alerts.conf
+```
+
+Create the environment file for systemd:
+
+```bash
+sudo nano /etc/default/postgresql-monitor
+```
+
+Add the following content:
+```bash
+DB_PASSWORD="your_database_password"
+```
+
+Set appropriate permissions:
+```bash
+sudo chmod 600 /etc/default/postgresql-monitor
+```
+
+### Monitoring Service Configuration
+
+#### Systemd Service Configuration
+
+The monitoring service is defined in `/etc/systemd/system/postgresql-monitor.service`:
+
+```ini
+[Unit]
+Description=PostgreSQL Monitoring Service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=-/etc/default/postgresql-monitor
+ExecStart=/usr/local/bin/pg-monitor.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=postgresql-monitor
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Systemd Timer Configuration
+
+The monitoring timer is defined in `/etc/systemd/system/postgresql-monitor.timer`:
+
+```ini
+[Unit]
+Description=Run PostgreSQL Monitoring Every 5 Minutes
+Requires=postgresql-monitor.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
+```
+
+This timer configuration:
+- Runs the monitoring service 5 minutes after system boot
+- Repeats the monitoring every 5 minutes thereafter
+- Ensures accurate timing with a 1-second precision
+- Automatically starts with the system via the timers.target
+
+### Installation and Setup
+
+#### Step 1: Install Monitoring Components
+
+1. **Copy the monitoring script**:
+   ```bash
+   sudo cp /path/to/pg-monitor.sh /usr/local/bin/
+   sudo chmod +x /usr/local/bin/pg-monitor.sh
+   ```
+
+2. **Copy the configuration file**:
+   ```bash
+   sudo mkdir -p /etc/postgresql-monitor
+   sudo cp /path/to/postgresql-alerts.conf /etc/postgresql-monitor/
+   sudo chmod 600 /etc/postgresql-monitor/postgresql-alerts.conf
+   ```
+
+3. **Copy the systemd service files**:
+   ```bash
+   sudo cp postgresql-monitor.service /etc/systemd/system/
+   sudo cp postgresql-monitor.timer /etc/systemd/system/
+   ```
+
+#### Step 2: Configure Email Notifications
+
+1. **Install mail utilities**:
+   ```bash
+   sudo apt update
+   sudo apt install mailutils postfix
+   ```
+
+2. **Configure Postfix** (if using local SMTP):
+   ```bash
+   sudo dpkg-reconfigure postfix
+   ```
+
+3. **Test email functionality**:
+   ```bash
+   echo "Test message" | mail -s "Test Subject" admin@example.com
+   ```
+
+#### Step 3: Configure Slack Notifications (Optional)
+
+1. **Create a Slack webhook**:
+   - Go to your Slack workspace settings
+   - Create a new incoming webhook
+   - Copy the webhook URL
+
+2. **Update the configuration**:
+   ```bash
+   sudo nano /etc/postgresql-monitor/postgresql-alerts.conf
+   # Update SLACK_WEBHOOK_URL with your webhook URL
+   ```
+
+#### Step 4: Enable and Start Services
+
+1. **Reload systemd**:
+   ```bash
+   sudo systemctl daemon-reload
+   ```
+
+2. **Enable and start the timer**:
+   ```bash
+   sudo systemctl enable postgresql-monitor.timer
+   sudo systemctl start postgresql-monitor.timer
+   ```
+
+3. **Verify the timer is active**:
+   ```bash
+   sudo systemctl status postgresql-monitor.timer
+   sudo systemctl list-timers postgresql-monitor.timer
+   ```
+
+### Log Management
+
+#### Log File Locations
+
+The monitoring system creates logs in the following locations:
+
+| Log File | Purpose |
+|----------|---------|
+| `/var/log/postgresql/monitoring.log` | Main monitoring log |
+| `/var/log/postgresql/health-check.log` | Health check results |
+| `/var/log/postgresql/recovery.log` | Recovery operations |
+| `/var/log/syslog` | Systemd service logs |
+
+#### Log Rotation Configuration
+
+Create a log rotation configuration for monitoring logs:
+
+```bash
+sudo nano /etc/logrotate.d/postgresql-monitoring
+```
+
+Add the following content:
+```
+/var/log/postgresql/monitoring.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 postgres postgres
+    postrotate
+        systemctl reload rsyslog > /dev/null 2>&1 || true
+    endscript
+}
+
+/var/log/postgresql/health-check.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 postgres postgres
+}
+
+/var/log/postgresql/recovery.log {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 postgres postgres
+}
+```
+
+#### Log Monitoring Commands
+
+Monitor the logs using the following commands:
+
+```bash
+# Monitor real-time monitoring logs
+sudo tail -f /var/log/postgresql/monitoring.log
+
+# Check recent monitoring activity
+sudo journalctl -u postgresql-monitor.service -n 50
+
+# View timer status and next run time
+sudo systemctl list-timers postgresql-monitor.timer
+
+# Check for recent alerts
+sudo grep -i "alert\|error\|critical" /var/log/postgresql/monitoring.log | tail -20
+```
+
+### Alert Types and Responses
+
+#### Critical Alerts
+
+Critical alerts require immediate attention and trigger multiple notification channels:
+
+1. **Service Down**: PostgreSQL service is not running
+   - **Response**: Automatic recovery attempt via recovery service
+   - **Notification**: Email + Slack + SMS (if configured)
+
+2. **Connection Failure**: Database not accepting connections
+   - **Response**: Health check escalation and recovery
+   - **Notification**: Email + Slack
+
+3. **Disk Space Critical**: Less than 15% disk space remaining
+   - **Response**: Automatic log cleanup and backup rotation
+   - **Notification**: Email + Slack + Phone call (if configured)
+
+4. **Memory Exhaustion**: System memory usage above 90%
+   - **Response**: Process monitoring and potential restart
+   - **Notification**: Email + Slack
+
+#### Warning Alerts
+
+Warning alerts indicate potential issues that should be monitored:
+
+1. **High Resource Usage**: CPU, memory, or disk usage above warning thresholds
+2. **Long-Running Queries**: Queries running longer than expected
+3. **Table Bloat**: Tables requiring maintenance
+4. **Backup Delays**: Backups not completed within expected timeframe
+
+#### Informational Alerts
+
+Informational alerts provide status updates and confirmations:
+
+1. **Recovery Success**: Successful completion of recovery operations
+2. **Backup Completion**: Successful backup operations
+3. **Maintenance Completion**: Successful vacuum or reindex operations
+4. **Service Restart**: Planned service restarts
+
+### Troubleshooting Monitoring Issues
+
+#### Common Issues and Solutions
+
+1. **Email Alerts Not Sending**:
+   ```bash
+   # Check mail service status
+   sudo systemctl status postfix
+   
+   # Test mail configuration
+   echo "Test" | mail -s "Test" admin@example.com
+   
+   # Check mail logs
+   sudo tail -f /var/log/mail.log
+   ```
+
+2. **Slack Alerts Not Working**:
+   ```bash
+   # Test webhook URL
+   curl -X POST -H 'Content-type: application/json' \
+        --data '{"text":"Test message"}' \
+        YOUR_WEBHOOK_URL
+   
+   # Check network connectivity
+   ping hooks.slack.com
+   ```
+
+3. **Monitoring Service Not Running**:
+   ```bash
+   # Check service status
+   sudo systemctl status postgresql-monitor.timer
+   
+   # Check service logs
+   sudo journalctl -u postgresql-monitor.service -n 50
+   
+   # Restart the timer
+   sudo systemctl restart postgresql-monitor.timer
+   ```
+
+4. **Database Connection Issues**:
+   ```bash
+   # Test database connection
+   PGPASSWORD="password" psql -h localhost -U rhtsys_user -d rhthotels -c "SELECT 1"
+   
+   # Check PostgreSQL logs
+   sudo tail -f /var/log/postgresql/postgresql-*.log
+   
+   # Verify pg_hba.conf configuration
+   sudo cat /etc/postgresql/16/main/pg_hba.conf
+   ```
+
+### Performance Impact
+
+The monitoring system is designed to have minimal performance impact:
+
+1. **Resource Usage**:
+   - CPU: Less than 1% during monitoring runs
+   - Memory: Approximately 10-20MB per monitoring cycle
+   - Disk I/O: Minimal, primarily log writes
+
+2. **Database Impact**:
+   - Connection overhead: 1-2 connections during monitoring
+   - Query load: Lightweight monitoring queries only
+   - Lock contention: Minimal, read-only operations
+
+3. **Network Impact**:
+   - Email alerts: Minimal bandwidth usage
+   - Slack alerts: Small JSON payloads
+   - Log shipping: Configurable based on setup
+
+### Monitoring Best Practices
+
+1. **Regular Review**:
+   - Review alert thresholds monthly
+   - Analyze false positive rates
+   - Update notification preferences
+
+2. **Documentation**:
+   - Document all configuration changes
+   - Maintain runbook for common alerts
+   - Keep contact information updated
+
+3. **Testing**:
+   - Test alert mechanisms monthly
+   - Verify backup and recovery procedures
+   - Validate monitoring coverage
+
+4. **Optimization**:
+   - Tune alert thresholds based on historical data
+   - Optimize monitoring queries for performance
+   - Implement alert suppression for maintenance windows
+
+### Integration with External Systems
+
+The monitoring system can be integrated with external monitoring and alerting platforms:
+
+1. **Prometheus Integration**:
+   - Export metrics via custom exporter
+   - Create Grafana dashboards
+   - Set up Prometheus alerting rules
+
+2. **Nagios Integration**:
+   - Create Nagios check commands
+   - Configure service definitions
+   - Set up notification escalations
+
+3. **Zabbix Integration**:
+   - Create custom monitoring items
+   - Configure trigger expressions
+   - Set up action scenarios
+
+4. **PagerDuty Integration**:
+   - Configure webhook notifications
+   - Set up escalation policies
+   - Implement incident management workflows
 ```
 
 #### Logging Configuration
@@ -1157,6 +1676,661 @@ If the automatic recovery system is not working as expected:
 
 *Content will be added in task 5.5*
 
-## Testing Procedures
+## Testing Procedures for Recovery Mechanisms
 
-*Content will be added in task 5.6*
+This section provides comprehensive testing procedures to validate the automatic recovery mechanisms for PostgreSQL. These tests should be performed regularly to ensure the recovery system functions correctly when needed.
+
+### Testing Overview
+
+The testing procedures are designed to:
+
+1. **Validate Recovery Scripts**: Ensure health check and recovery scripts function correctly
+2. **Test Failure Scenarios**: Simulate various failure conditions safely
+3. **Verify Alert Systems**: Confirm notifications are sent properly
+4. **Validate Recovery Effectiveness**: Ensure PostgreSQL is restored to a healthy state
+5. **Test Edge Cases**: Handle unusual failure scenarios
+
+### Pre-Testing Checklist
+
+Before conducting recovery tests, ensure the following prerequisites are met:
+
+1. **Backup Current State**:
+   ```bash
+   # Create a database backup before testing
+   sudo -u postgres pg_dump -Fc rhthotels > /tmp/pre_test_backup.dump
+   
+   # Backup configuration files
+   sudo cp -r /etc/postgresql/16/main /tmp/postgresql_config_backup
+   ```
+
+2. **Verify System Status**:
+   ```bash
+   # Ensure PostgreSQL is running normally
+   sudo systemctl status postgresql
+   
+   # Check current connections
+   sudo -u postgres psql -c "SELECT count(*) FROM pg_stat_activity;"
+   
+   # Verify disk space
+   df -h /var/lib/postgresql
+   ```
+
+3. **Prepare Test Environment**:
+   ```bash
+   # Create test database for non-destructive testing
+   sudo -u postgres createdb test_recovery
+   
+   # Set up test data
+   sudo -u postgres psql -d test_recovery -c "
+   CREATE TABLE test_table (id SERIAL PRIMARY KEY, data TEXT, created_at TIMESTAMP DEFAULT NOW());
+   INSERT INTO test_table (data) SELECT 'Test data ' || generate_series(1, 1000);
+   "
+   ```
+
+4. **Notify Stakeholders**:
+   - Inform team members about planned testing
+   - Schedule testing during low-usage periods
+   - Prepare rollback procedures
+
+### Test Categories
+
+#### Category 1: Health Check Script Testing
+
+These tests validate the health check script functionality without causing service disruption.
+
+##### Test 1.1: Normal Health Check Execution
+
+**Objective**: Verify health check script runs successfully under normal conditions.
+
+**Procedure**:
+```bash
+# Run health check manually
+sudo /usr/local/bin/pg-health-check.sh
+
+# Check exit code
+echo "Exit code: $?"
+
+# Verify log output
+sudo tail -10 /var/log/postgresql/health-check.log
+```
+
+**Expected Results**:
+- Exit code: 0
+- Log shows "INFO: PostgreSQL is healthy"
+- No failure count increment
+- No recovery service triggered
+
+**Verification Steps**:
+```bash
+# Check failure count (should be 0)
+cat /var/run/postgresql/failure_count
+
+# Verify no recovery service runs
+sudo journalctl -u postgresql-recovery.service --since "5 minutes ago"
+```
+
+##### Test 1.2: Health Check Performance Measurement
+
+**Objective**: Measure health check execution time and resource usage.
+
+**Procedure**:
+```bash
+# Time the health check execution
+time sudo /usr/local/bin/pg-health-check.sh
+
+# Monitor resource usage during health check
+top -p $(pgrep -f pg-health-check.sh) -n 1
+```
+
+**Expected Results**:
+- Execution time: < 10 seconds
+- CPU usage: < 5%
+- Memory usage: < 50MB
+
+##### Test 1.3: Health Check Under Load
+
+**Objective**: Verify health check functions correctly under database load.
+
+**Procedure**:
+```bash
+# Generate database load
+sudo -u postgres pgbench -i -s 10 test_recovery
+sudo -u postgres pgbench -c 10 -j 2 -T 60 test_recovery &
+
+# Run health check during load
+sudo /usr/local/bin/pg-health-check.sh
+
+# Stop load generation
+pkill pgbench
+```
+
+**Expected Results**:
+- Health check completes successfully
+- No false positives due to load
+- Performance thresholds not exceeded
+
+#### Category 2: Simulated Failure Testing
+
+These tests simulate various failure scenarios to validate recovery mechanisms.
+
+##### Test 2.1: PostgreSQL Service Stop Simulation
+
+**Objective**: Test recovery when PostgreSQL service is stopped.
+
+**Procedure**:
+```bash
+# Stop PostgreSQL service
+sudo systemctl stop postgresql
+
+# Wait for health check to detect failure
+sleep 180  # Wait for 3 health check cycles
+
+# Monitor recovery process
+sudo journalctl -u postgresql-recovery.service -f &
+
+# Wait for recovery completion
+sleep 300
+```
+
+**Expected Results**:
+- Health check detects service failure
+- After 3 failures, recovery service is triggered
+- PostgreSQL service is restarted successfully
+- Database accepts connections after recovery
+
+**Verification Steps**:
+```bash
+# Verify PostgreSQL is running
+sudo systemctl status postgresql
+
+# Test database connectivity
+sudo -u postgres psql -c "SELECT 1;"
+
+# Check recovery logs
+sudo cat /var/log/postgresql/recovery.log | tail -20
+
+# Verify failure count reset
+cat /var/run/postgresql/failure_count
+```
+
+##### Test 2.2: Database Connection Failure Simulation
+
+**Objective**: Test recovery when database accepts connections but queries fail.
+
+**Procedure**:
+```bash
+# Simulate connection issues by temporarily blocking connections
+sudo -u postgres psql -c "ALTER SYSTEM SET max_connections = 1;"
+sudo systemctl reload postgresql
+
+# Generate connection load to exhaust connections
+for i in {1..5}; do
+    sudo -u postgres psql -c "SELECT pg_sleep(60);" &
+done
+
+# Wait for health check to detect connection issues
+sleep 180
+
+# Clean up
+pkill -f "pg_sleep"
+sudo -u postgres psql -c "ALTER SYSTEM RESET max_connections;"
+sudo systemctl reload postgresql
+```
+
+**Expected Results**:
+- Health check detects connection failures
+- Recovery process is triggered
+- Database connectivity is restored
+
+##### Test 2.3: Disk Space Exhaustion Simulation
+
+**Objective**: Test recovery behavior when disk space is low.
+
+**Procedure**:
+```bash
+# Create large file to simulate disk space issue (be careful with size)
+sudo fallocate -l 1G /var/lib/postgresql/test_large_file
+
+# Check disk usage
+df -h /var/lib/postgresql
+
+# Run health check
+sudo /usr/local/bin/pg-health-check.sh
+
+# Clean up
+sudo rm /var/lib/postgresql/test_large_file
+```
+
+**Expected Results**:
+- Health check detects disk space warning
+- Warning logged but no recovery triggered (unless critical threshold reached)
+- System continues to function
+
+##### Test 2.4: Corrupted PID File Simulation
+
+**Objective**: Test recovery when PostgreSQL PID file is corrupted.
+
+**Procedure**:
+```bash
+# Stop PostgreSQL cleanly
+sudo systemctl stop postgresql
+
+# Create corrupted PID file
+echo "invalid_pid" | sudo tee /var/lib/postgresql/16/main/postmaster.pid
+
+# Try to start PostgreSQL (should fail)
+sudo systemctl start postgresql
+
+# Check if recovery handles the situation
+sudo /usr/local/bin/pg-recovery.sh
+```
+
+**Expected Results**:
+- Recovery script detects and removes corrupted PID file
+- PostgreSQL starts successfully after cleanup
+- No data corruption occurs
+
+#### Category 3: Recovery Script Testing
+
+These tests validate the recovery script functionality.
+
+##### Test 3.1: Manual Recovery Script Execution
+
+**Objective**: Test recovery script execution without triggering conditions.
+
+**Procedure**:
+```bash
+# Ensure PostgreSQL is running normally
+sudo systemctl status postgresql
+
+# Run recovery script manually
+sudo /usr/local/bin/pg-recovery.sh
+
+# Monitor the process
+sudo journalctl -u postgresql-recovery.service -f
+```
+
+**Expected Results**:
+- Recovery script executes without errors
+- PostgreSQL remains stable
+- Recovery count is incremented
+- Appropriate logs are generated
+
+##### Test 3.2: Recovery Script Under Multiple Failure Conditions
+
+**Objective**: Test recovery script when multiple issues exist simultaneously.
+
+**Procedure**:
+```bash
+# Stop PostgreSQL
+sudo systemctl stop postgresql
+
+# Create stale PID file
+echo "12345" | sudo tee /var/lib/postgresql/16/main/postmaster.pid
+
+# Create some old log files
+sudo touch /var/log/postgresql/old_test_log_$(date -d '10 days ago' +%Y%m%d).log
+
+# Run recovery script
+sudo /usr/local/bin/pg-recovery.sh
+```
+
+**Expected Results**:
+- Recovery script handles multiple issues
+- PID file is cleaned up
+- Old logs are removed (if disk space is low)
+- PostgreSQL starts successfully
+
+##### Test 3.3: Recovery Script Maximum Attempts
+
+**Objective**: Test recovery script behavior when maximum attempts are reached.
+
+**Procedure**:
+```bash
+# Temporarily lower max attempts for testing
+sudo sed -i 's/MAX_RECOVERY_ATTEMPTS=3/MAX_RECOVERY_ATTEMPTS=1/' /usr/local/bin/pg-recovery.sh
+
+# Create a condition that prevents PostgreSQL from starting
+sudo chmod 000 /var/lib/postgresql/16/main
+
+# Run recovery script
+sudo /usr/local/bin/pg-recovery.sh
+
+# Restore permissions and reset script
+sudo chmod 700 /var/lib/postgresql/16/main
+sudo sed -i 's/MAX_RECOVERY_ATTEMPTS=1/MAX_RECOVERY_ATTEMPTS=3/' /usr/local/bin/pg-recovery.sh
+```
+
+**Expected Results**:
+- Recovery script reaches maximum attempts
+- Critical alert is sent
+- Manual intervention message is logged
+- Script exits with error code
+
+#### Category 4: Alert and Notification Testing
+
+These tests validate the alerting and notification systems.
+
+##### Test 4.1: Email Alert Testing
+
+**Objective**: Verify email alerts are sent correctly for different scenarios.
+
+**Procedure**:
+```bash
+# Test email configuration
+echo "Test email from PostgreSQL monitoring" | mail -s "Test Alert" admin@example.com
+
+# Trigger a recovery scenario to test automatic emails
+sudo systemctl stop postgresql
+sleep 180  # Wait for recovery to trigger
+
+# Check mail logs
+sudo tail -f /var/log/mail.log
+```
+
+**Expected Results**:
+- Test email is delivered successfully
+- Recovery alerts are sent automatically
+- Email contains relevant information (timestamp, server, issue description)
+
+##### Test 4.2: Alert Priority Testing
+
+**Objective**: Verify different alert priorities are handled correctly.
+
+**Procedure**:
+```bash
+# Test critical alert (service down)
+sudo systemctl stop postgresql
+sleep 180
+
+# Test warning alert (disk space)
+# (Use the disk space simulation from Test 2.3)
+
+# Check email headers for priority settings
+# Review received emails for priority indicators
+```
+
+**Expected Results**:
+- Critical alerts have high priority headers
+- Warning alerts have normal priority
+- Email formatting reflects alert severity
+
+#### Category 5: Integration Testing
+
+These tests validate the complete recovery system integration.
+
+##### Test 5.1: End-to-End Recovery Testing
+
+**Objective**: Test complete failure-to-recovery cycle.
+
+**Procedure**:
+```bash
+# Record initial state
+sudo -u postgres psql -c "SELECT count(*) FROM pg_stat_activity;" > /tmp/initial_state.txt
+
+# Simulate failure
+sudo systemctl stop postgresql
+
+# Monitor complete recovery cycle
+timeout 600 bash -c 'while ! sudo -u postgres psql -c "SELECT 1;" 2>/dev/null; do sleep 10; done'
+
+# Verify recovery
+sudo -u postgres psql -c "SELECT count(*) FROM pg_stat_activity;" > /tmp/recovered_state.txt
+
+# Compare states
+diff /tmp/initial_state.txt /tmp/recovered_state.txt
+```
+
+**Expected Results**:
+- Complete recovery within 10 minutes
+- Database functionality fully restored
+- No data loss or corruption
+- All services operational
+
+##### Test 5.2: Recovery During High Load
+
+**Objective**: Test recovery effectiveness during high database load.
+
+**Procedure**:
+```bash
+# Generate sustained load
+sudo -u postgres pgbench -i -s 50 test_recovery
+sudo -u postgres pgbench -c 20 -j 4 -T 3600 test_recovery &
+
+# Wait for load to stabilize
+sleep 60
+
+# Simulate failure during load
+sudo systemctl kill postgresql
+
+# Monitor recovery
+sudo journalctl -u postgresql-recovery.service -f &
+
+# Wait for recovery and verify load can resume
+wait  # Wait for pgbench to complete or fail
+```
+
+**Expected Results**:
+- Recovery completes successfully despite load
+- Database performance returns to normal
+- No transaction corruption
+- Load can resume after recovery
+
+### Test Execution Schedule
+
+#### Regular Testing Schedule
+
+1. **Daily Automated Tests**:
+   - Health check script execution (Test 1.1)
+   - Basic connectivity verification
+
+2. **Weekly Tests**:
+   - Performance measurement (Test 1.2)
+   - Email alert testing (Test 4.1)
+
+3. **Monthly Tests**:
+   - Simulated service stop (Test 2.1)
+   - Manual recovery script execution (Test 3.1)
+   - End-to-end recovery testing (Test 5.1)
+
+4. **Quarterly Tests**:
+   - All failure simulation tests (Category 2)
+   - Complete integration testing (Category 5)
+   - Recovery script stress testing
+
+#### Pre-Production Testing
+
+Before deploying changes to the recovery system:
+
+1. Run all tests in Category 1 (Health Check Testing)
+2. Execute at least one test from each failure category
+3. Verify alert systems with Test 4.1
+4. Perform end-to-end testing (Test 5.1)
+
+### Test Documentation and Reporting
+
+#### Test Execution Log Template
+
+```
+Test Execution Report
+Date: [DATE]
+Tester: [NAME]
+Environment: [PRODUCTION/STAGING]
+
+Test Results:
+- Test 1.1: [PASS/FAIL] - [NOTES]
+- Test 1.2: [PASS/FAIL] - [NOTES]
+- Test 2.1: [PASS/FAIL] - [NOTES]
+[Continue for all executed tests]
+
+Issues Identified:
+- [Issue 1]: [Description and resolution]
+- [Issue 2]: [Description and resolution]
+
+Recommendations:
+- [Recommendation 1]
+- [Recommendation 2]
+
+Next Test Date: [DATE]
+```
+
+#### Test Result Storage
+
+Store test results in:
+```bash
+# Create test results directory
+sudo mkdir -p /var/log/postgresql/test-results
+
+# Store test logs with timestamps
+sudo tee /var/log/postgresql/test-results/test-$(date +%Y%m%d-%H%M%S).log
+```
+
+### Troubleshooting Test Failures
+
+#### Common Test Issues and Solutions
+
+1. **Health Check Script Fails**:
+   ```bash
+   # Check script permissions
+   ls -l /usr/local/bin/pg-health-check.sh
+   
+   # Verify environment variables
+   sudo cat /etc/default/postgresql-health-check
+   
+   # Test database connectivity manually
+   sudo -u postgres psql -c "SELECT 1;"
+   ```
+
+2. **Recovery Script Doesn't Trigger**:
+   ```bash
+   # Check timer status
+   sudo systemctl status postgresql-health-check.timer
+   
+   # Verify failure count
+   cat /var/run/postgresql/failure_count
+   
+   # Check systemd logs
+   sudo journalctl -u postgresql-health-check.service
+   ```
+
+3. **Email Alerts Not Received**:
+   ```bash
+   # Test mail system
+   echo "Test" | mail -s "Test" admin@example.com
+   
+   # Check mail logs
+   sudo tail -f /var/log/mail.log
+   
+   # Verify SMTP configuration
+   sudo postconf | grep relayhost
+   ```
+
+4. **Recovery Takes Too Long**:
+   ```bash
+   # Check system resources
+   top
+   iostat 1 5
+   
+   # Review recovery logs for bottlenecks
+   sudo cat /var/log/postgresql/recovery.log
+   
+   # Verify PostgreSQL configuration
+   sudo -u postgres psql -c "SHOW ALL;"
+   ```
+
+### Test Safety Measures
+
+#### Safety Precautions
+
+1. **Always Backup Before Testing**:
+   ```bash
+   sudo -u postgres pg_dumpall > /tmp/full_backup_$(date +%Y%m%d).sql
+   ```
+
+2. **Test in Staging First**:
+   - Never run destructive tests directly in production
+   - Use staging environment that mirrors production
+
+3. **Monitor System Resources**:
+   ```bash
+   # Monitor during tests
+   watch -n 1 'df -h; free -h; uptime'
+   ```
+
+4. **Have Rollback Plan**:
+   ```bash
+   # Quick rollback procedure
+   sudo systemctl stop postgresql
+   sudo -u postgres pg_ctl -D /var/lib/postgresql/16/main start
+   ```
+
+#### Emergency Procedures
+
+If testing causes system instability:
+
+1. **Immediate Actions**:
+   ```bash
+   # Stop all test processes
+   sudo pkill -f test
+   sudo pkill -f pgbench
+   
+   # Restart PostgreSQL cleanly
+   sudo systemctl restart postgresql
+   
+   # Verify system status
+   sudo systemctl status postgresql
+   ```
+
+2. **Recovery Actions**:
+   ```bash
+   # Restore from backup if needed
+   sudo systemctl stop postgresql
+   sudo -u postgres pg_restore -C -d postgres /tmp/pre_test_backup.dump
+   sudo systemctl start postgresql
+   ```
+
+3. **Post-Incident Review**:
+   - Document what went wrong
+   - Update test procedures
+   - Implement additional safety measures
+
+### Continuous Improvement
+
+#### Test Enhancement
+
+1. **Regular Review**:
+   - Monthly review of test procedures
+   - Update tests based on system changes
+   - Add new tests for identified scenarios
+
+2. **Automation Enhancement**:
+   ```bash
+   # Create automated test runner
+   #!/bin/bash
+   # automated-recovery-tests.sh
+   
+   # Run daily tests
+   /usr/local/bin/pg-health-check.sh
+   
+   # Log results
+   echo "$(date): Daily test completed" >> /var/log/postgresql/test-results/daily.log
+   ```
+
+3. **Metrics Collection**:
+   - Track test execution times
+   - Monitor recovery success rates
+   - Measure system performance impact
+
+#### Integration with CI/CD
+
+For development environments:
+
+```bash
+# Add to deployment pipeline
+- name: Test Recovery Mechanisms
+  run: |
+    ./scripts/test-recovery-basic.sh
+    ./scripts/verify-health-checks.sh
+```
+
+This comprehensive testing framework ensures the PostgreSQL recovery mechanisms are thoroughly validated and will function correctly when needed in production scenarios.

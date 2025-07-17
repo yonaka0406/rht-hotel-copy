@@ -1,0 +1,16 @@
+[Unit]
+Description=PostgreSQL Recovery Mechanisms Automated Tests
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/bin/automated-recovery-tests.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=postgresql-recovery-tests
+
+[Install]
+WantedBy=multi-user.target
