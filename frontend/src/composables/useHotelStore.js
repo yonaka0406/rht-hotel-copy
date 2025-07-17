@@ -25,16 +25,12 @@ export function useHotelStore() {
                     'Content-Type': 'application/json',
                 },
             });
-            
-            hotels.value = await response.json();
-
+            const data = await response.json();
+            hotels.value = Array.isArray(data) ? data : [];
             // Set the first hotel as selected if none is selected
             if (hotels.value.length > 0 && !selectedHotelId.value) {
-                // console.log('From Hotel Store => No hotel was previously selected.');
                 selectedHotelId.value = hotels.value[0].id;
             }
-            // console.log('From Hotel Store => fetchHotels Hotel ID',selectedHotelId.value);
-
         } catch (error) {
             console.error('Failed to fetch hotels', error);
             hotels.value = [];
@@ -219,8 +215,18 @@ export function useHotelStore() {
         return [...hotelRooms.value].sort((a, b) => a.room_number - b.room_number);
     });
 
+    // Defensive computed for Select :options
+    const safeHotels = computed(() => {
+      if (!Array.isArray(hotels.value)) {
+        console.warn('[useHotelStore] hotels is not an array:', hotels.value);
+        return [];
+      }
+      return hotels.value;
+    });
+
     return {
         hotels,
+        safeHotels,
         selectedHotel,
         selectedHotelId,
         selectedHotelRooms,

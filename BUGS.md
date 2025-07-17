@@ -8,7 +8,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ### December 19, 2024
 
 #### Bug #1
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Calendar View scroll position doesn't reset when date is changed
 - **Steps to Reproduce**: 
@@ -35,7 +35,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Visual clarity of the calendar view has been improved as requested. (Fixed on December 19, 2024)
 
 #### Bug #3 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
 - **Steps to Reproduce**:
@@ -45,10 +45,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: If the room type changes during a free move, a confirmation dialog should appear, summarizing the old and new room types, and only proceed if the user confirms.
 - **Actual Behavior**: No confirmation is shown; the change is applied immediately.
 - **Environment**: 
-- **Additional Notes**: This is to prevent accidental room type changes during free move operations.
+- **Additional Notes**: This is to prevent accidental room type changes during free move operations. Spec created at `.kiro/specs/room-change-confirmation/`.
 
 #### Bug #4 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Romaji auto-capitalization should preserve all-uppercase input (e.g., 'NTT' should not become 'Ntt').
 - **Steps to Reproduce**:
@@ -60,7 +60,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This is important for company names and acronyms that are conventionally written in all caps.
 
 #### Bug #5
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
 - **Steps to Reproduce**:
@@ -73,7 +73,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to stale state or missing data reload after navigation.
 
 #### Bug #6
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Addon is not reflected in the reservation edit page when added from the プラン・機関編集 (Plan/Addon Edit) button, but appears when added from the day details.
 - **Steps to Reproduce**:
@@ -87,7 +87,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to a missing state update or data fetch after editing via the plan/addon dialog.
 
 #### Feature Request #7
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a 'Copy Reservation' function that allows copying a reservation to a different booker, keeping all other reservation details the same.
 - **Steps to Reproduce**:
@@ -96,12 +96,12 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   3. Choose a new booker/client.
   4. Confirm that a new reservation is created with the same details but a different booker.
 - **Expected Behavior**: The system should allow users to duplicate a reservation for a different booker, with all other details (dates, rooms, addons, etc.) copied.
-- **Actual Behavior**: This functionality does not currently exist.
+- **Actual Behavior**: Backend implementation completed. Frontend UI integration in progress.
 - **Environment**: 
-- **Additional Notes**: Useful for cases where a similar reservation is needed for a different client/booker.
+- **Additional Notes**: Backend functionality for copying reservations including all rates, addons, and details has been implemented and tested. Spec created at `.kiro/specs/reservation-copy-feature/`.
 
 #### Bug #8 / Feature Request
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: When exporting the meals quantity report and there are no addons, the toast response should be more informative (e.g., 'No meal data to export') instead of a generic or silent response.
 - **Steps to Reproduce**:
@@ -113,7 +113,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Improves user experience and reduces confusion when no data is available for export.
 
 #### Bug #9
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The count of addons (especially meals) may not be correct in the all reservations export CSV. For the same period, reservation_details CSV showed meal addons that did not appear in the meals report, indicating a possible data extraction or filtering bug.
 - **Steps to Reproduce**:
@@ -126,7 +126,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to a bug in the data extraction or filtering logic for exports and reports.
 
 #### Feature Request #10
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
 - **Steps to Reproduce**:
@@ -136,10 +136,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: Part-time staff see only the information they need (e.g., in/out clients and rooms for the week) in a clear, defined format.
 - **Actual Behavior**: No such dedicated page currently exists.
 - **Environment**: 
-- **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details.
+- **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details. Spec created at `.kiro/specs/part-time-staff-dashboard/`.
 
 #### Feature Request #11
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Remove the requirement to have a reservation client in order to perform check-in.
 - **Steps to Reproduce**:
@@ -151,7 +151,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will make the check-in process more flexible for cases where a client is not yet registered or known at the time of check-in.
 
 #### Feature Request #12
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type. These indicators should be easily visible in the calendar.
 - **Steps to Reproduce**:
@@ -160,10 +160,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: There are clear, easily visible indicators in the calendar for these two client types.
 - **Actual Behavior**: No such indicators currently exist.
 - **Environment**: 
-- **Additional Notes**: This will help staff quickly identify flexible clients and optimize room assignments.
+- **Additional Notes**: This will help staff quickly identify flexible clients and optimize room assignments. Spec created at `.kiro/specs/calendar-visual-indicators/`.
 
 #### Feature Request #13
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Add a legend to the Calendar view explaining the meaning of all icons used.
 - **Steps to Reproduce**:
@@ -174,6 +174,47 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Actual Behavior**: No such legend currently exists.
 - **Environment**: 
 - **Additional Notes**: This will help users quickly understand the meaning of icons and improve usability.
+
+### July 15, 2025
+
+#### Bug #10
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: After deleting a reservation, the confirmation prompt '保留中予約を削除してもよろしいですか?' remains on screen instead of closing automatically.
+- **Steps to Reproduce**:
+  1. Attempt to delete a hold reservation (保留中予約).
+  2. Confirm the deletion in the prompt.
+  3. Observe that the prompt does not close after the reservation is deleted.
+- **Expected Behavior**: The confirmation prompt should close automatically after the reservation is deleted.
+- **Actual Behavior**: The prompt remains visible even after deletion.
+- **Environment**: 
+- **Additional Notes**: This can confuse users, making them think the action was not completed.
+
+#### Feature Request #14
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.
+- **Steps to Reproduce**:
+  1. Open the reservation Panel.
+  2. Use the splitbutton for reservation actions.
+  3. Select the new 'Send Fax' option.
+- **Expected Behavior**: The system should allow sending a fax (via email gateway) to the client directly from the reservation panel.
+- **Actual Behavior**: This functionality does not currently exist.
+- **Environment**: 
+- **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
+
+#### Feature Request #15
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a FAQ page of the system with instructions for the use of the system.
+- **Steps to Reproduce**:
+  1. Access the system.
+  2. Navigate to the FAQ page.
+  3. View instructions and answers to common questions about system usage.
+- **Expected Behavior**: Users can easily find instructions and answers to common questions about system usage.
+- **Actual Behavior**: No FAQ page currently exists.
+- **Environment**: 
+- **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
 ---
 
@@ -191,5 +232,25 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: December 19, 2024*
+*Last Updated: July 15, 2025*
 *Total Bugs: 2* 
+
+# Backlog
+
+The following bugs and feature requests are not yet completed (status: Open or In Progress):
+
+#### Bug #3 / Feature Request
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
+
+#### Feature Request #10
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
+
+#### Feature Request #12
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type.
+
+#### Feature Request #14
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton. 

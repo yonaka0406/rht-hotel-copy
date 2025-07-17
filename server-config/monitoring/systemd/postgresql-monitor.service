@@ -1,0 +1,17 @@
+[Unit]
+Description=PostgreSQL Monitoring Service
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+EnvironmentFile=-/etc/default/postgresql-monitor
+ExecStart=/usr/local/bin/pg-monitor.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=postgresql-monitor
+
+[Install]
+WantedBy=multi-user.target

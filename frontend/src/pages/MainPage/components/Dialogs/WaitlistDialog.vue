@@ -37,29 +37,11 @@
       <!-- Client Selection/Creation for Waitlist -->
       <div class="col-span-2 mb-2">
         <FloatLabel>
-          <AutoComplete
+          <ClientAutoCompleteWithStore
             v-model="internalForm.client_name_waitlist"
-            :suggestions="filteredClients"
-            optionLabel="display_name"
-            @complete="localFilterClients"
             @option-select="onClientSelectForWaitlist"
-            fluid
-          >
-            <template #option="slotProps">
-              <div>
-                <p>
-                  <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
-                  <i v-else class="pi pi-user"></i>
-                  {{ slotProps.option.name_kanji || slotProps.option.name_kana || slotProps.option.name || '' }}
-                  <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana }})</span>
-                </p>
-                 <div class="flex items-center gap-2">
-                  <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                  <p v-if="slotProps.option.email" class="text-xs text-sky-800"><i class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                </div>
-              </div>
-            </template>
-          </AutoComplete>
+            label="顧客名（検索または新規入力）"                        
+          />
           <label>顧客名（検索または新規入力）</label>
         </FloatLabel>
       </div>
@@ -256,6 +238,7 @@ import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText,
 import { useToast } from 'primevue/usetoast';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useClientStore } from '@/composables/useClientStore';
+import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 
 const props = defineProps({
   visible: Boolean,
@@ -276,8 +259,6 @@ const props = defineProps({
       type: Array,
       default: () => []
   }
-  // initialSmokingPreference and smokingPreferenceOptions props are removed
-  // as the selection will now be managed internally within this dialog.
 });
 
 const emit = defineEmits(['update:visible', 'submitted']);
@@ -293,13 +274,12 @@ const smokingOptionsDialog = ref([
 // Stores
 const toast = useToast();
 const waitlistStore = useWaitlistStore();
-const clientStore = useClientStore(); // For createBasicClient and potentially fetching full client list if not passed
+const clientStore = useClientStore();
 
 // Internal State
 const internalForm = ref({});
 const selectedClientForWaitlist = ref(null);
 const isClientSelectedForWaitlist = ref(false);
-const filteredClients = ref([]);
 const isLoading = ref(false);
 const currentStep = ref('1');
 const dateValidationError = ref('');
@@ -314,13 +294,11 @@ const genderOptions = ref([
     { label: 'その他', value: 'other' },
 ]);
 
-// const smokingOptionsToDisplay = computed(() => props.smokingPreferenceOptions); // No longer needed as prop
-
 // Initialize form when dialog becomes visible or props change
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     currentStep.value = '1';
-    selectedSmokingPreferenceDialog.value = props.initialSmokingPreference || 'any'; // Initialize from prop or default
+    selectedSmokingPreferenceDialog.value = props.initialSmokingPreference || 'any';
     internalForm.value = {
       client_id: null,
       hotel_id: props.initialHotelId,
@@ -333,7 +311,7 @@ watch(() => props.visible, (newVal) => {
       contact_phone: '',
       communication_preference: 'email',
       notes: props.initialNotes || '',
-      preferred_smoking_status: selectedSmokingPreferenceDialog.value, // Initialize from local ref
+      preferred_smoking_status: selectedSmokingPreferenceDialog.value,
       client_name_waitlist: '',
       client_legal_or_natural_person_waitlist: 'legal',
       client_gender_waitlist: 'other',
@@ -342,8 +320,7 @@ watch(() => props.visible, (newVal) => {
     };
     selectedClientForWaitlist.value = null;
     isClientSelectedForWaitlist.value = false;
-    filteredClients.value = []; // Reset suggestions
-    dateValidationError.value = ''; // Clear date validation errors
+    dateValidationError.value = '';
   }
 }, { immediate: true });
 
@@ -362,57 +339,17 @@ watch(() => internalForm.value.requested_check_out_date, () => {
 
 
 // Client Search Logic (adapted from ReservationsNewCombo)
-const normalizePhone = (phone) => {
-    if (!phone) return '';
-    let normalized = phone.replace(/\D/g, '');
-    normalized = normalized.replace(/^0+/, '');
-    return normalized;
-};
-const normalizeKana = (str) => {
-    if (!str) return '';
-    let normalizedStr = str.normalize('NFKC');
-    normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-      String.fromCharCode(char.charCodeAt(0) + 0x60)
-    );
-    normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-      String.fromCharCode(char.charCodeAt(0) - 0xFEC0)
-    );
-    return normalizedStr;
-};
-
-const localFilterClients = (event) => {
-    const query = event.query.toLowerCase();
-    const normalizedQuery = normalizePhone(query);
-    const isNumericQuery = /^\d+$/.test(normalizedQuery);
-
-    if (!query || !props.allClients || !Array.isArray(props.allClients)) {
-        filteredClients.value = [];
-        return;
-    }
-
-    filteredClients.value = props.allClients.filter((client) => {
-        const matchesName =
-            (client.name && client.name.toLowerCase().includes(query)) ||
-            (client.name_kana && normalizeKana(client.name_kana).toLowerCase().includes(normalizeKana(query))) ||
-            (client.name_kanji && client.name_kanji.toLowerCase().includes(query));
-        const matchesPhoneFax = isNumericQuery &&
-            ((client.fax && normalizePhone(client.fax).includes(normalizedQuery)) ||
-            (client.phone && normalizePhone(client.phone).includes(normalizedQuery)));
-        const matchesEmail = client.email && client.email.toLowerCase().includes(query);
-        return matchesName || matchesPhoneFax || matchesEmail;
-    });
-};
-
 const onClientSelectForWaitlist = (event) => {
-    selectedClientForWaitlist.value = event.value;
-    isClientSelectedForWaitlist.value = true;
-    internalForm.value.client_id = selectedClientForWaitlist.value.id;
-    internalForm.value.contact_email = selectedClientForWaitlist.value.email || '';
-    internalForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
-    internalForm.value.client_name_waitlist = selectedClientForWaitlist.value.name_kanji || selectedClientForWaitlist.value.name_kana || selectedClientForWaitlist.value.name;
-    // If client is selected, their details might override the new client type/gender
-    internalForm.value.client_legal_or_natural_person_waitlist = selectedClientForWaitlist.value.legal_or_natural_person || 'legal';
-    internalForm.value.client_gender_waitlist = selectedClientForWaitlist.value.gender || 'other';
+  console.log('[WaitlistDialog] onClientSelectForWaitlist called with', event);
+  selectedClientForWaitlist.value = event.value;
+  isClientSelectedForWaitlist.value = true;
+  internalForm.value.client_id = selectedClientForWaitlist.value.id;
+  internalForm.value.contact_email = selectedClientForWaitlist.value.email || '';
+  internalForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
+  // Do NOT set internalForm.value.client_name_waitlist here!
+  internalForm.value.client_legal_or_natural_person_waitlist = selectedClientForWaitlist.value.legal_or_natural_person || 'legal';
+  internalForm.value.client_gender_waitlist = selectedClientForWaitlist.value.gender || 'other';
+  console.log('[WaitlistDialog] After select, client_id:', internalForm.value.client_id, 'client_name_waitlist:', internalForm.value.client_name_waitlist);
 };
 
 const resetWaitlistClientSelection = () => {
@@ -421,16 +358,31 @@ const resetWaitlistClientSelection = () => {
     internalForm.value.client_id = null;
 };
 
-watch(() => internalForm.value.client_name_waitlist, (newName) => {
-    if (isClientSelectedForWaitlist.value && newName !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) {
-        if (!newName || newName.trim() === '') {
-            resetWaitlistClientSelection();
-            internalForm.value.contact_email = '';
-            internalForm.value.contact_phone = '';
-        } else {
-            resetWaitlistClientSelection();
-        }
+// Helper to get client name as string for validation/display
+const getClientNameString = (val) => {
+  if (typeof val === 'string') return val.trim();
+  if (typeof val === 'object' && val !== null) {
+    return val.display_name || val.name_kanji || val.name_kana || val.name || '';
+  }
+  return '';
+};
+
+watch(() => internalForm.value.client_name_waitlist, (newName, oldName) => {
+  console.log('[WaitlistDialog] client_name_waitlist changed from', oldName, 'to', newName);
+  const newNameStr = getClientNameString(newName);
+  if (isClientSelectedForWaitlist.value && (
+        (typeof newName === 'string' && newNameStr !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) ||
+        (typeof newName === 'object' && newName?.id !== selectedClientForWaitlist.value?.id)
+      )) {
+    console.log('[WaitlistDialog] Resetting client selection due to input change');
+    if (!newNameStr) {
+      resetWaitlistClientSelection();
+      internalForm.value.contact_email = '';
+      internalForm.value.contact_phone = '';
+    } else {
+      resetWaitlistClientSelection();
     }
+  }
 });
 
 const updateFormSmokingPreference = () => {
@@ -492,7 +444,7 @@ const handleClose = () => {
 
 const handleSubmit = async () => {
   isLoading.value = true;
-  internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value; // Ensure latest is used
+  internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value;
 
   // Validate dates before submission
   validateDateCombination();
@@ -514,16 +466,15 @@ const handleSubmit = async () => {
   }
 
   let finalClientId = internalForm.value.client_id;
-  if (!isClientSelectedForWaitlist.value && internalForm.value.client_name_waitlist) {
+  if (!isClientSelectedForWaitlist.value && getClientNameString(internalForm.value.client_name_waitlist)) {
     try {
       const clientPayload = {
-        name: internalForm.value.client_name_waitlist,
+        name: getClientNameString(internalForm.value.client_name_waitlist),
         type: internalForm.value.client_legal_or_natural_person_waitlist,
         gender: internalForm.value.client_gender_waitlist,
         email: internalForm.value.client_email_waitlist || internalForm.value.contact_email,
         phone: internalForm.value.client_phone_waitlist || internalForm.value.contact_phone
       };
-      console.log('Creating client with:', clientPayload);
       const newClientData = await clientStore.createBasicClient(
         clientPayload.name,
         null,
@@ -532,7 +483,6 @@ const handleSubmit = async () => {
         clientPayload.email,
         clientPayload.phone
       );
-      console.log('newClientData:', newClientData);
       if (!newClientData || !newClientData.id) {
         throw new Error('新規顧客の作成に失敗しました（レスポンスが不正です）');
       }
@@ -708,7 +658,7 @@ const validateDateCombination = () => {
 // Validation logic
 const isFormValid = computed(() => {
   // Basic validation - check if required fields are filled
-  const hasClientInfo = internalForm.value.client_name_waitlist && internalForm.value.client_name_waitlist.trim() !== '';
+  const hasClientInfo = getClientNameString(internalForm.value.client_name_waitlist) !== '';
   const hasContactInfo = internalForm.value.contact_email || internalForm.value.contact_phone;
   const hasCommunicationPreference = internalForm.value.communication_preference;
   const hasSmokingPreference = selectedSmokingPreferenceDialog.value;

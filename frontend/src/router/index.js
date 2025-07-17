@@ -48,6 +48,8 @@ const SalesProjectList = () => import('@/pages/CRM/Sales/SalesProjectList.vue');
 
 const ReportingMainPage = () => import('@/pages/Reporting/ReportingMainPage.vue');
 
+const AboutPage = () => import('@/pages/About/AboutPage.vue');
+
 const routes = [
   {path: '/',
     name: 'MainPage',
@@ -124,6 +126,12 @@ const routes = [
   {path: '/reporting',
     component: ReportingMainPage,
     children: [],
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: AboutPage,
     meta: { requiresAuth: true },
   },
   // Work in Progress

@@ -18,6 +18,7 @@
                 :class="{'p-invalid': emailError, 'dark:bg-gray-900 dark:text-white': true}"
                 required
                 @blur="validateEmail"
+                autocomplete="email"
               />
               <label for="email" class="dark:text-gray-200">メールアドレス</label>
             </FloatLabel>
@@ -37,6 +38,7 @@
                 required
                 fluid
                 @blur="validatePassword"
+                autocomplete="current-password"
               />
               <label for="password" class="dark:text-gray-200">パスワード</label>
             </FloatLabel>

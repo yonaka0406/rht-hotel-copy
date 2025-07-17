@@ -30,7 +30,14 @@
             <div v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'">
                 <div class="flex items-center justify-between mr-2 mb-2">
                     <p class="font-bold">宿泊者：</p>                    
-                    <Button label="部屋追加" severity="help" icon="pi pi-pencil" @click="openAddRoomDialog" />                    
+                    <SplitButton 
+                        label="予約操作"
+                        :model="actionOptions"
+                        icon="pi pi-cog"
+                        severity="help"
+                        class="ml-2"
+                        @click="onActionClick"
+                    />
                 </div> 
             </div>
             <div v-else>
@@ -70,10 +77,7 @@
                     <DatePicker id="datepicker-timeonly" v-model="checkOutTime" @update:modelValue="checkOutChange" timeOnly style="width: 80px;" />
                 </div>
             </div>   
-            <div class="flex items-start justify-between mr-2 mt-2">
-                <Button label="プラン・期間編集" severity="help" icon="pi pi-pencil" @click="openReservationBulkEditDialog" />
-            </div>
-            
+                        
         </div>
         <div class="field">
             <p class="font-bold flex justify-start items-center">備考：<span class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
@@ -121,7 +125,9 @@
                     @click="showHistoryDialog"
                 />
     </div>
-    <ConfirmDialog group="default"></ConfirmDialog>
+    <ConfirmDialog group="delete"></ConfirmDialog>
+    <ConfirmDialog group="cancel"></ConfirmDialog>
+    <ConfirmDialog group="recovery"></ConfirmDialog>
             <div class="grid grid-cols-4 gap-x-6">
                 <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
@@ -570,6 +576,16 @@
             :reservation_id="props.reservation_id"        
         />
     </Dialog>
+
+    <!-- ReservationCopy dialog -->
+    <Dialog 
+        v-model:visible="showCopyDialog" 
+        header="予約を複製" 
+        :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }"
+        modal
+    >
+        <ReservationCopyDialog :reservation_id="props.reservation_id" @close="showCopyDialog = false" />
+    </Dialog>
 </template>
 
 <script setup>
@@ -580,17 +596,18 @@
 
     import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
     import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
+    import ReservationCopyDialog from '@/pages/MainPage/components/Dialogs/ReservationCopyDialog.vue';
     
     // Primevue
     import { useToast } from 'primevue/usetoast';
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
-    const confirm = useConfirm(); // General confirm
-    const confirmDelete = useConfirm();
-    const confirmCancel = useConfirm();
-    const confirmRecovery = useConfirm();
+    // Assign unique group names to each confirm instance
+    const confirmDelete = useConfirm('delete');
+    const confirmCancel = useConfirm('cancel');
+    const confirmRecovery = useConfirm('recovery');
     import { 
-        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog
+        Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton
      } from 'primevue';
 
     const props = defineProps({
@@ -885,35 +902,39 @@
 
         confirmDelete.require({
             message: `保留中予約を削除してもよろしいですか?`,
-            header: 'Delete Confirmation',                    
+            header: '削除確認',
             icon: 'pi pi-info-circle',
             acceptClass: 'p-button-danger',
             acceptProps: {
                 label: '削除'
             },
-            accept: () => {
-                deleteHoldReservation(reservation_id);                    
-                toast.add({
-                    severity: 'success',
-                    summary: '成功',
-                    detail: `保留中予約削除されました。`,
-                    life: 3000
-                });                
-                goToNewReservation();
-            },
             rejectProps: {
                 label: 'キャンセル',
                 severity: 'secondary',
-                outlined: true
+                outlined: true,
+                icon: 'pi pi-times'
             },
-            reject: () => {
-                toast.add({
-                    severity: 'info',
-                    summary: '削除キャンセル',
-                    detail: '削除するのをキャンセルしました。',
-                    life: 3000
-                });
-            }
+            group: 'delete',
+            accept: async () => {
+                try {
+                    await deleteHoldReservation(reservation_id);
+                    toast.add({
+                        severity: 'success',
+                        summary: '成功',
+                        detail: `保留中予約が削除されました。`,
+                        life: 3000
+                    });
+                } catch (e) {
+                    // Always show Japanese warning for not found/404
+                    toast.add({
+                        severity: 'warn',
+                        summary: '警告',
+                        detail: '予約は既に削除されています。',
+                        life: 3000
+                    });
+                }
+                await goToNewReservation();
+            },
         });
     };
     const handleCancel = () => {
@@ -971,9 +992,9 @@
     };
 
     // Router
-    const goToNewReservation = () => {                
-        setReservationId(null);                
-        router.push({ name: 'ReservationsNew' });
+    const goToNewReservation = async () => {
+        await setReservationId(null);
+        await router.push({ name: 'ReservationsNew' });
     };
     
     // Dialog: Add Room
@@ -996,7 +1017,7 @@
         const startDate = reservationInfo.value.check_in;
         const endDate = reservationInfo.value.check_out;
 
-        await fetchAvailableRooms(hotelId, startDate, endDate);        
+        await fetchAvailableRooms(hotelId, startDate, endDate);
         
         visibleAddRoomDialog.value = true;
     };
@@ -1033,6 +1054,8 @@
     const visibleClientChangeDialog = ref(false);
     const selectedClient = ref(null);
     const openChangeClientDialog = () => {
+        // Always set selectedClient to the latest client_id from reservationInfo
+        selectedClient.value = reservationInfo.value?.client_id;
         visibleClientChangeDialog.value = true;
     };
     const closeChangeClientDialog = () => {
@@ -1289,6 +1312,35 @@
         toast.add({ severity: 'success', summary: '成功', detail: '全ての部屋の宿泊期間が更新されました。', life: 3000 });
         
     };
+
+    const showCopyDialog = ref(false);
+    const actionOptions = [
+    {
+        label: 'プラン・期間編集',
+        icon: 'pi pi-pencil',
+        command: openReservationBulkEditDialog
+    },
+    {
+        label: '部屋追加',
+        icon: 'pi pi-plus',
+        command: openAddRoomDialog
+    },
+    {
+        label: '予約を複製',
+        icon: 'pi pi-copy',
+        command: () => {
+            console.log('[SplitButton] 予約を複製 clicked');
+            console.log('reservationInfo.value:', reservationInfo.value);
+            console.log('reservationInfo.value.reservation_id:', reservationInfo.value?.reservation_id);
+            console.log('showCopyDialog (before):', showCopyDialog.value);
+            showCopyDialog.value = true;
+            console.log('showCopyDialog (after):', showCopyDialog.value);
+        }
+    }
+];
+const onActionClick = () => {
+    // Default action if needed
+};
 
     onMounted(async () => {
         

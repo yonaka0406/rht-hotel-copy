@@ -429,7 +429,7 @@
           return matchesName || matchesPhoneFax || matchesEmail;
       });
 
-      reservationDetails.value.name = query;
+      reservationDetails.value.name = event.query; // preserve original casing
     };
     const onClientSelect = (event) => {
         // Get selected client object from the event
@@ -454,6 +454,9 @@
         validateEmail();
         validatePhone();
         
+        // Log the values being sent
+        console.log('[submitReservation] reservationDetails:', JSON.stringify(reservationDetails.value));
+        console.log('[submitReservation] name field:', reservationDetails.value.name);
         // Check if either email or phone is filled
         if (!reservationDetails.value.email && !reservationDetails.value.phone) {
         toast.add({

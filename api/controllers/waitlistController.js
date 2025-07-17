@@ -8,6 +8,7 @@ const {
 const { selectClient } = require('../models/clients'); // To check if client exists
 const { getHotelByID } = require('../models/hotel'); // To check if hotel exists
 const { getRoomTypeById } = require('../models/hotel'); // To check if room type exists
+const logger = require('../config/logger');
 
 const waitlistController = {
     /**
@@ -420,7 +421,7 @@ const waitlistController = {
                 if (roomType) {
                     roomTypeName = roomType.name;
                 } else {
-                    console.warn(`[${requestId}] Room type ID ${entry.room_type_id} not found for hotel ${entry.hotel_id} during manual notification.`);
+                    logger.warn(`[${requestId}] Room type ID ${entry.room_type_id} not found for hotel ${entry.hotel_id} during manual notification.`);
                 }
             }
 
@@ -455,7 +456,7 @@ const waitlistController = {
                     confirmationLink,
                     tokenExpiresAt.toLocaleDateString('ja-JP')
                 );
-                console.log(`[${requestId}] Waitlist notification email sent successfully to ${entry.contact_email}`);
+                // console.log(`[${requestId}] Waitlist notification email sent successfully to ${entry.contact_email}`);
             } catch (emailError) {
                 console.error(`[${requestId}] Error sending waitlist notification email:`, emailError);
                 return res.status(500).json({ error: 'Failed to send notification email.' });
@@ -563,15 +564,15 @@ const waitlistController = {
                 smoking_preference
             } = req.body;
 
-            console.log(`[${requestId}] checkVacancy called with:`, {
-                hotel_id,
-                room_type_id,
-                check_in,
-                check_out,
-                number_of_rooms,
-                number_of_guests,
-                smoking_preference
-            });
+            // console.log(`[${requestId}] checkVacancy called with:`, {
+            //     hotel_id,
+            //     room_type_id,
+            //     check_in,
+            //     check_out,
+            //     number_of_rooms,
+            //     number_of_guests,
+            //     smoking_preference
+            // });
 
             // Validate required fields (basic)
             if (!hotel_id || !check_in || !check_out || !number_of_rooms || !number_of_guests) {
@@ -591,7 +592,7 @@ const waitlistController = {
             const checkInDate = formatDateForSQL(check_in);
             const checkOutDate = formatDateForSQL(check_out);
 
-            console.log(`[${requestId}] Converted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
+            // console.log(`[${requestId}] Converted dates: checkInDate=${checkInDate}, checkOutDate=${checkOutDate}`);
 
             // Prepare params for SQL function
             const pool = require('../config/database').getPool(requestId);
@@ -605,7 +606,7 @@ const waitlistController = {
                 smoking_preference
             ];
             
-            console.log(`[${requestId}] Calling SQL function with params:`, params);
+            // console.log(`[${requestId}] Calling SQL function with params:`, params);
             
             const result = await pool.query(
                 'SELECT is_waitlist_vacancy_available($1::INT, $2::INT, $3::DATE, $4::DATE, $5::INT, $6::INT, $7::BOOLEAN) AS available',
@@ -613,7 +614,7 @@ const waitlistController = {
             );
             
             const available = result.rows[0].available;
-            console.log(`[${requestId}] SQL function returned:`, available);
+            // console.log(`[${requestId}] SQL function returned:`, available);
             
             return res.status(200).json({ available });
         } catch (error) {

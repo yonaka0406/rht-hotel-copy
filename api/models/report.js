@@ -1,5 +1,9 @@
 const { getPool } = require('../config/database');
 
+// Diagnostic note: If you encounter partition errors related to hotel_id being null in reservation_details inserts, add a log in addReservationDetail (models/reservations.js) to print the SQL values array before the insert. Example:
+// console.error('[addReservationDetail] Inserting with values:', values);
+// This helps ensure hotel_id is always set and not null.
+
 // GET
 const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
@@ -852,6 +856,10 @@ const selectAllRoomTypesInventory = async (requestId, hotelId, startDate, endDat
   }
 };
 const selectReservationsForGoogle = async (requestId, hotelId, startDate, endDate) => {
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'development') {
+    // Skip querying the view in local/test environments
+    return [];
+  }
   const pool = getPool(requestId);
   const query = `
       SELECT

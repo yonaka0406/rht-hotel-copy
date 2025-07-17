@@ -1,0 +1,200 @@
+{
+  "entries": [
+    {
+      "version": "0.1.0",
+      "date": "2025-02-21",
+      "changes": [
+        { "type": "feature", "description": "カレンダー：予約カレンダーがプランごとに色分けされるようになりました（予約照会と同様）。" },
+        { "type": "feature", "description": "予約編集：従業員宿泊インデックスを追加しました。" }
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2025-03-07",
+      "changes": [
+        { "type": "feature", "description": "予約カレンダー：ドラッグ＆ドロップ操作時の警告デザインを変更しました。" },
+        { "type": "feature", "description": "予約カレンダー：日付・部屋番号のフォントサイズを大きくしました。" },
+        { "type": "feature", "description": "日付選択：Primevue日本語表示と日付範囲分離。" },
+        { "type": "feature", "description": "予約：確定済み予約でも部屋数の追加・削減が可能になりました。" },
+        { "type": "user-request", "description": "予約編集：日付変更方法の一部対応。" }
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2025-03-11",
+      "changes": [
+        { "type": "feature", "description": "予約カレンダー：満室時の部屋移動（交換）機能を追加。" },
+        { "type": "feature", "description": "予約カレンダー：グリッド線を追加。" },
+        { "type": "feature", "description": "予約：滞在中の部屋変更をドラッグ＆ドロップで可能に。" },
+        { "type": "feature", "description": "予約カレンダー：空室数表示を追加。" }
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2025-03-13",
+      "changes": [
+        { "type": "feature", "description": "出力：予約情報・詳細をCSVで出力可能に。" }
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2025-03-14",
+      "changes": [
+        { "type": "feature", "description": "予約編集：アドオン詳細をyadomaster同様に反映。" },
+        { "type": "feature", "description": "予約編集：分割部屋移動の表示方法を変更。" },
+        { "type": "feature", "description": "予約：キャンセル後の再有効化が可能に。" }
+      ]
+    },
+    {
+      "version": "0.6.0",
+      "date": "2025-03-27",
+      "changes": [
+        { "type": "feature", "description": "新規予約：入力方法を変更。" }
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2025-03-28",
+      "changes": [
+        { "type": "user-request", "description": "予約履歴：更新履歴と担当者の表示（一部対応）。" }
+      ]
+    },
+    {
+      "version": "0.8.0",
+      "date": "2025-03-31",
+      "changes": [
+        { "type": "feature", "description": "新規予約：チェックイン・チェックアウト日自動調整。" }
+      ]
+    },
+    {
+      "version": "0.9.0",
+      "date": "2025-04-01",
+      "changes": [
+        { "type": "feature", "description": "アドオン：カテゴリ設定と食事数出力。" }
+      ]
+    },
+    {
+      "version": "0.9.1",
+      "date": "2025-04-07",
+      "changes": [
+        { "type": "feature", "description": "新規予約：同内容の予約複製（未解決）。" },
+        { "type": "feature", "description": "新規予約：プランパターン設定。" },
+        { "type": "user-request", "description": "予約編集：予約期間変更時のプランパターン維持（一部対応）。" }
+      ]
+    },
+    {
+      "version": "0.9.2",
+      "date": "2025-04-17",
+      "changes": [
+        { "type": "feature", "description": "予約編集：予約詳細でプラン色分け。" },
+        { "type": "feature", "description": "顧客：電話番号・メールアドレスで選択可能に。" }
+      ]
+    },
+    {
+      "version": "0.9.3",
+      "date": "2025-04-22",
+      "changes": [
+        { "type": "feature", "description": "予約カレンダー：一時未割当の空室移動。" },
+        { "type": "feature", "description": "PMS API：Google SheetsとPMS連携による予約照会。" }
+      ]
+    },
+    {
+      "version": "0.9.4",
+      "date": "2025-05-15",
+      "changes": [
+        { "type": "feature", "description": "通知：アラート通知の強調表示。" }
+      ]
+    },
+    {
+      "version": "0.9.5",
+      "date": "2025-05-28",
+      "changes": [
+        { "type": "feature", "description": "機能：領収書発行。" }
+      ]
+    },
+    {
+      "version": "0.9.6",
+      "date": "2025-06-10",
+      "changes": [
+        { "type": "feature", "description": "機能：領収書発行（0.9.5から継続）。" }
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "date": "2025-06-01",
+      "changes": [
+        { "type": "feature", "description": "予約管理システム - 直感的なカレンダーインターフェースによる完全な予約ライフサイクル管理" },
+        { "type": "feature", "description": "顧客管理・CRM - コミュニケーション追跡機能付きの高度な顧客関係管理システム" },
+        { "type": "feature", "description": "ウェイトリストシステム - 自動通知機能付きの包括的なゲスト待機リスト管理" },
+        { "type": "feature", "description": "請求・請求書発行 - 柔軟な料金設定、プラン、アドオン、自動請求書生成機能" },
+        { "type": "feature", "description": "レポート・分析 - 包括的な運営指標とビジネスインサイト機能" },
+        { "type": "feature", "description": "ユーザー管理 - Google OAuth統合によるロールベースアクセス制御" },
+        { "type": "feature", "description": "リアルタイム更新 - Socket.io統合によるライブ通知と更新機能" },
+        { "type": "feature", "description": "データインポート・エクスポート - 各種データソース用のCSV・Excel対応" },
+        { "type": "feature", "description": "メール通知 - nodemailerによる自動コミュニケーション機能" },
+        { "type": "feature", "description": "日本語サポート - 完全な日本語テキスト処理・変換機能" },
+        { "type": "feature", "description": "包括的ログ機能 - システム・監査証跡機能" },
+        { "type": "feature", "description": "OTA統合 - オンライン旅行代理店とのXMLベース通信" },
+        { "type": "improvement", "description": "データベース機能 - スキーマ進化用のバージョン管理SQLスクリプト（13個の移行ファイル）" },
+        { "type": "improvement", "description": "データ集約 - レポートパフォーマンス用のマテリアライズドビューとサマリーテーブル" },
+        { "type": "improvement", "description": "接続プーリング - コンテキスト対応プール選択による最適化されたデータベース接続" },
+        { "type": "improvement", "description": "バックグラウンドジョブ - メンテナンスとデータ処理用のスケジュールタスク" },
+        { "type": "improvement", "description": "PM2統合 - 本番環境プロセス管理" },
+        { "type": "improvement", "description": "開発スクリプト - 開発・デプロイ用の包括的なnpmスクリプト" },
+        { "type": "improvement", "description": "環境設定 - 柔軟な環境変数管理" },
+        { "type": "improvement", "description": "コード品質 - ESLint設定と開発ガイドライン" },
+        { "type": "feature", "description": "レスポンシブデザイン - モバイル対応インターフェース" },
+        { "type": "feature", "description": "日本語UI - 完全な日本語言語インターフェース" },
+        { "type": "feature", "description": "ロールベース権限 - 詳細なアクセス制御システム" },
+        { "type": "feature", "description": "リアルタイム通知 - ライブ更新とシステムアラート" },
+        { "type": "feature", "description": "Googleサービス統合 - OAuth認証とAPI統合" },
+        { "type": "feature", "description": "決済処理 - セキュアな決済ゲートウェイ統合" },
+        { "type": "feature", "description": "メールサービス - 自動通知用SMTP統合" },
+        { "type": "feature", "description": "ファイル処理 - PuppeteerによるPDF生成、Sharpによる画像処理" }
+      ]
+    },
+    {
+      "version": "1.0.1",
+      "date": "2025-06-11",
+      "changes": [
+        { "type": "bugfix", "description": "本番環境：アドオンが反映されない問題を修正。" },
+        { "type": "bugfix", "description": "本番環境：カレンダースクロールでデータが表示されない問題を修正。" },
+        { "type": "feature", "description": "本番環境：グローバルプランを非表示に。" },
+        { "type": "feature", "description": "CRM：関連会社・関連工事タブを追加。" },
+        { "type": "feature", "description": "CRM：ロイヤル顧客機能を追加。" },
+        { "type": "user-request", "description": "本番環境：顧客名の表示順を変更（ユーザー要望）。" },
+        { "type": "user-request", "description": "CRM：営業アクションの編集機能を追加（ユーザー要望）。" }
+      ]
+    },
+    {
+      "version": "1.0.2",
+      "date": "2025-06-23",
+      "changes": [
+        { "type": "feature", "description": "予約：チェックインキャンセル機能を追加（ユーザー要望）。" }
+      ]
+    },
+    {
+      "version": "1.0.4",
+      "date": "2025-07-17",
+      "changes": [
+        { "type": "feature", "description": "予約複製機能：別の予約者に予約を複製できるようになりました（内容はそのまま）。" },
+        { "type": "bugfix", "description": "カレンダー：日付変更時にスクロール位置がトップにリセットされるよう修正。" },
+        { "type": "improvement", "description": "カレンダー：部屋セルに区切り線を追加し視認性を向上。" },
+        { "type": "improvement", "description": "ローマ字自動大文字化：全大文字入力（例：NTT）をそのまま保持。" },
+        { "type": "bugfix", "description": "保留予約作成後、クライアントが即編集可能に。" },
+        { "type": "bugfix", "description": "プラン・機関編集から追加したアドオンが即時反映されるよう修正。" },
+        { "type": "improvement", "description": "食事数レポート：該当アドオンがない場合に明確なトーストメッセージを表示。" },
+        { "type": "bugfix", "description": "食事アドオン数が全予約エクスポート・レポートで正しく集計されるよう修正。" },
+        { "type": "improvement", "description": "チェックイン時に予約クライアントが不要に。" },
+        { "type": "improvement", "description": "カレンダー：全アイコンの意味を説明する凡例を追加。" },
+        { "type": "bugfix", "description": "保留中予約削除後、確認プロンプトが自動で閉じるよう修正。" }
+      ]
+    }
+  ],
+  "backlog": [
+    { "description": "通知：アラート通知設定（例：大口予約受注後1ヶ月後のアラート等）。" },
+    { "description": "新規予約：緊急部屋ホールド・保留ステータス。" },
+    { "description": "CRM：アップロード方式によるデータ記録。" },
+    { "description": "CRM：営業クール実績レポート。" }
+  ]
+}

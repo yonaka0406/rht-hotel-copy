@@ -1,0 +1,8 @@
+# Features Directory
+
+This directory contains feature-specific documentation organized by feature:
+- reservation-management/: Reservation system specifications
+- client-management/: CRM and client management features
+- billing-system/: Payment and billing functionality
+- waitlist-system/: Waitlist management features
+- reporting-analytics/: Reporting and analytics capabilities
