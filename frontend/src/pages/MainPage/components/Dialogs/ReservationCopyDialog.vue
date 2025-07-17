@@ -1,9 +1,9 @@
 <template>
   <div>
     <div v-if="!loading && availableRooms.length === 0" class="flex flex-col items-center justify-center p-4">
-      <i class="pi pi-inbox text-5xl text-gray-400 mb-4"></i>
+      <i class="pi pi-inbox text-5xl text-gray-400 mb-4" aria-hidden="true"></i>
       <p class="text-lg text-gray-600">この期間に利用可能な部屋はありません。</p>
-      <Button label="閉じる" @click="$emit('close')" class="mt-4" />
+      <Button label="閉じる" @click="$emit('close')" class="mt-4" aria-label="閉じる" />
     </div>
     <div v-else>
       <div class="mb-4">
@@ -12,6 +12,8 @@
           label="複製先の予約者を検索"
           optionLabel="name"
           class="mt-6"
+          aria-label="複製先の予約者を検索"
+          ref="firstInput"
         />
         <FloatLabel class="mt-6">
           <MultiSelect
@@ -20,6 +22,7 @@
             :options="availableRooms"
             optionLabel="label"
             fluid
+            aria-label="部屋を追加"
           />
           <label for="move-room">部屋を追加</label>
         </FloatLabel>
@@ -28,7 +31,7 @@
       <!-- Room Mapping Table -->
       <div v-if="targetRooms.length > 0 && originalRooms.length > 0" class="mt-6">
         <h3 class="text-lg font-semibold mb-3">部屋設定の複製元を選択</h3>
-        <DataTable :value="roomMappings" class="p-datatable-sm">
+        <DataTable :value="roomMappings" class="p-datatable-sm" aria-label="部屋マッピングテーブル">
           <Column field="newRoom" header="新しい部屋">
             <template #body="slotProps">
               <span class="font-medium">{{ slotProps.data.newRoomLabel }}</span>
@@ -44,6 +47,7 @@
                 placeholder="複製元を選択"
                 class="w-full"
                 @change="updateRoomMapping(slotProps.data)"
+                aria-label="複製元の部屋を選択"
               />
             </template>
           </Column>
@@ -59,13 +63,14 @@
       </div>
 
       <div class="flex justify-end gap-2 mt-6">
-        <Button label="キャンセル" icon="pi pi-times" severity="secondary" outlined @click="$emit('close')" />
+        <Button label="キャンセル" icon="pi pi-times" severity="secondary" outlined @click="$emit('close')" aria-label="キャンセル" />
         <Button 
           label="複製" 
           icon="pi pi-copy" 
           severity="success" 
           :disabled="!selectedClient || targetRooms.length === 0 || !isMappingComplete" 
           @click="copyReservation" 
+          aria-label="予約を複製"
         />
       </div>
     </div>
@@ -74,7 +79,7 @@
 
 <script setup>
   // Vue
-  import { ref, onMounted, computed, watch } from 'vue';
+  import { ref, onMounted, computed, watch, nextTick } from 'vue';
   import { useRouter } from 'vue-router';
   import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
   import { useToast } from 'primevue/usetoast';
@@ -98,6 +103,7 @@
   const targetRooms = ref([]);
   const loading = ref(true);
   const roomMappings = ref([]);
+  const firstInput = ref(null);
 
   const availableRooms = computed(() => {
     return availableRoomsForCopy.value.map(room => ({
@@ -163,6 +169,11 @@
   onMounted(async () => {
     try {
       await fetchReservationForCopy(props.reservation_id);
+      await nextTick();
+      // Set focus to the first input (client autocomplete) when dialog opens
+      if (firstInput.value && firstInput.value.$el && firstInput.value.$el.querySelector('input')) {
+        firstInput.value.$el.querySelector('input').focus();
+      }
     } catch (error) {
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約情報の取得に失敗しました。', life: 3000 });
     } finally {

@@ -53,6 +53,15 @@ This feature addresses the following requirements from the system requirements d
 3. WHEN dragging reservations on calendar THEN the system SHALL allow date modifications if rooms are available
 4. WHEN viewing calendar THEN the system SHALL show room availability and occupancy status
 
+### Reservation Copy
+
+1. WHEN a staff member selects a reservation and chooses the "Copy Reservation" action THEN the system SHALL display a dialog to select the new client and map rooms.
+2. WHEN the copy dialog is shown THEN the system SHALL display all available rooms for the same date range as the original reservation.
+3. WHEN the user completes room mapping and selects a new client THEN the system SHALL create a new reservation with all original details (rooms, dates, plans, addons, pricing) except payment records and guest assignments.
+4. WHEN a reservation is copied THEN the system SHALL set the new reservation status to "hold" by default.
+5. WHEN the copy operation is successful THEN the system SHALL redirect the user to the new reservation edit page and display a success confirmation message.
+6. WHEN the copy operation fails (e.g., due to unavailable rooms or validation errors) THEN the system SHALL display an appropriate error message and prevent the operation from proceeding.
+
 ## Current Implementation Status
 
 ### ✅ Implemented Features
@@ -72,6 +81,7 @@ This feature addresses the following requirements from the system requirements d
   - Reservation retrieval (`GET /api/reservation/info`)
   - Reservation modification (`PUT /api/reservation/update/*`)
   - Reservation deletion (`DELETE /api/reservation/delete/*`)
+  - Reservation copy (`POST /reservation/copy`)
   - Multi-room combo reservations (`POST /api/reservation/add/hold-combo`)
 
 - **Business Logic**: Advanced reservation management capabilities
