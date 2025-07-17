@@ -4,22 +4,49 @@
       <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2">システムヘルプ</h1>
       <p class="text-gray-600 dark:text-gray-300 text-sm sm:text-base">システムの使用方法と最新の更新情報をご確認いただけます。</p>
     </div>
-    
-    <TabView>
-      <TabPanel header="よくある質問" aria-label="よくある質問セクション">
-        <FAQSection />
-      </TabPanel>
-      <TabPanel header="更新履歴" aria-label="更新履歴セクション">
-        <ChangelogSection />
-      </TabPanel>
-    </TabView>
+    <Button 
+      label="ホームに戻る"
+      icon="pi pi-home"
+      class="p-button-sm mb-4"
+      @click="goHome"
+    />
+    <Tabs 
+      :value="activeTab"
+      @update:value="onTabChange"
+      class="mt-6"
+    >
+      <TabList>
+        <Tab :value="0">よくある質問</Tab>
+        <Tab :value="1">更新履歴</Tab>
+      </TabList>
+      <TabPanels>
+        <TabPanel :value="0">
+          <FAQSection />
+        </TabPanel>
+        <TabPanel :value="1">
+          <ChangelogSection />
+        </TabPanel>
+      </TabPanels>
+    </Tabs>
   </div>
 </template>
 
 <script setup>
-import { TabView, TabPanel } from 'primevue';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import Tabs from 'primevue/tabs';
+import TabList from 'primevue/tablist';
+import Tab from 'primevue/tab';
+import TabPanels from 'primevue/tabpanels';
+import TabPanel from 'primevue/tabpanel';
+import Button from 'primevue/button';
 import FAQSection from './components/FAQSection.vue';
 import ChangelogSection from './components/ChangelogSection.vue';
+
+const activeTab = ref(0);
+const router = useRouter();
+const goHome = () => router.push('/');
+const onTabChange = (val) => { activeTab.value = val; };
 </script>
 
 <style scoped>

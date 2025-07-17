@@ -106,46 +106,18 @@
 import { ref, computed, onMounted } from 'vue';
 import { Select, Button } from 'primevue';
 import Tag from 'primevue/tag';
+import changelogData from '../data/changelog-ja.json';
 
 // Reactive state
 const selectedVersion = ref(null);
 const selectedType = ref(null);
-const changelogData = ref({ entries: [] });
 const sortOrder = ref('desc'); // 'desc' (newest first) by default
 
 // Load changelog data
-onMounted(async () => {
-  try {
-    // Load changelog data from external JSON file
-    const response = await fetch('/data/changelog-ja.json');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    changelogData.value = data;
-  } catch (error) {
-    console.error('Failed to load changelog data:', error);
-    // Fallback to static data if loading fails
-    changelogData.value = {
-      entries: [
-        {
-          version: 'v1.0.0',
-          date: '2025-06-01',
-          changes: [
-            {
-              type: 'feature',
-              description: 'ホテル管理システムの初回リリース - 包括的な予約管理、顧客管理、請求機能を提供'
-            }
-          ]
-        }
-      ]
-    };
-  }
-});
 
 // Computed properties
 const versionOptions = computed(() => {
-  const versions = [...new Set(changelogData.value.entries.map(entry => entry.version))];
+  const versions = [...new Set(changelogData.entries.map(entry => entry.version))];
   return versions.map(version => ({ label: version, value: version }));
 });
 
@@ -157,7 +129,7 @@ const typeOptions = [
 ];
 
 const filteredEntries = computed(() => {
-  let entries = changelogData.value.entries;
+  let entries = changelogData.entries;
   
   if (selectedVersion.value) {
     entries = entries.filter(entry => entry.version === selectedVersion.value);

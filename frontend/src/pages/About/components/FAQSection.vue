@@ -24,53 +24,19 @@
 import { ref, computed, onMounted } from 'vue';
 import FAQSearchBar from './FAQSearchBar.vue';
 import FAQCategory from './FAQCategory.vue';
+import faqData from '../data/faq-content.json';
 
 // Reactive state
 const searchTerm = ref('');
-const faqData = ref({ categories: [] });
-
-// Load FAQ data
-onMounted(async () => {
-  try {
-    // Load FAQ data from external JSON file
-    const response = await fetch('/data/faq-content.json');
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    faqData.value = data;
-  } catch (error) {
-    console.error('Failed to load FAQ data:', error);
-    // Fallback to minimal static data if loading fails
-    faqData.value = {
-      categories: [
-        {
-          id: 'reservations',
-          title: '予約管理',
-          icon: 'pi-calendar',
-          questions: [
-            {
-              id: 'add-reservation',
-              question: '新しい予約を追加するにはどうすればよいですか？',
-              answer: 'FAQデータの読み込みに失敗しました。ページを再読み込みしてください。',
-              steps: [],
-              tags: ['予約', '新規', '追加']
-            }
-          ]
-        }
-      ]
-    };
-  }
-});
 
 // Computed properties
 const filteredCategories = computed(() => {
   if (!searchTerm.value) {
-    return faqData.value.categories;
+    return faqData.categories;
   }
   
   const term = searchTerm.value.toLowerCase();
-  return faqData.value.categories
+  return faqData.categories
     .map(category => ({
       ...category,
       questions: category.questions.filter(question => 
