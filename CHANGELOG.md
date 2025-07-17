@@ -180,6 +180,21 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.0.4] - 2025-07-17
+- Feature: Implemented 'Copy Reservation' function allowing users to duplicate a reservation for a different booker, preserving all other reservation details. (Feature Request #7)
+- Bugfix: Calendar View now resets scroll position to top when date is changed. (Bug #1)
+- Enhancement: Calendar View now displays visual lines/borders in room cells for better visibility. (Bug #2)
+- Enhancement: Romaji auto-capitalization now preserves all-uppercase input (e.g., 'NTT'). (Bug #4)
+- Bugfix: Client is now editable immediately after creating a hold reservation, without needing to refresh the page. (Bug #5)
+- Bugfix: Addons added from Plan/Addon Edit now appear immediately in the reservation edit page. (Bug #6)
+- Enhancement: When exporting the meals quantity report with no addons, a clear toast message is shown ('No meal data to export'). (Bug #8)
+- Bugfix: Meal addons are now correctly counted and appear in both the all reservations export and the meals report. (Bug #9)
+- Enhancement: Removed the requirement to have a reservation client in order to perform check-in. (Feature Request #11)
+- Enhancement: Added a legend to the Calendar view explaining the meaning of all icons used. (Feature Request #13)
+- Bugfix: After deleting a reservation, the confirmation prompt now closes automatically. (Bug #10, July 15, 2025)
+
+---
+
 ## [1.0.3] - 2025-07-16
 
 ### Added
@@ -242,6 +257,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
+- **1.0.4** (2025-07-17) - Added reservation copy function, calendar UI/UX improvements, bugfixes for client/edit/addon/meal exports, and new calendar legend.
 - **1.0.3** (2025-07-16) - Added comprehensive About/FAQ system with searchable help documentation and enhanced codebase documentation.
 - **1.0.2** (2025-06-23) - Added post-release features including production fixes, CRM enhancements, and new integrations.
 - **1.0.1** (2025-06-11) - Addressed production environment issues and introduced new CRM features.
@@ -270,3 +286,12 @@ For information about contributing to this project, please see our [Development 
 ## Support
 
 For support and troubleshooting, please refer to our [Documentation](docs/) or contact the development team.
+
+## Backlog
+
+The following bugs and feature requests are not yet completed (status: Open or In Progress):
+
+- Bug #3 / Feature Request: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it. 
+- Feature Request #10: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
+- Feature Request #12: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type.
+- Feature Request #14: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.

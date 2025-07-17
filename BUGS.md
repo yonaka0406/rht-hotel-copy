@@ -8,7 +8,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ### December 19, 2024
 
 #### Bug #1
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Calendar View scroll position doesn't reset when date is changed
 - **Steps to Reproduce**: 
@@ -234,3 +234,23 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 *Last Updated: July 15, 2025*
 *Total Bugs: 2* 
+
+# Backlog
+
+The following bugs and feature requests are not yet completed (status: Open or In Progress):
+
+#### Bug #3 / Feature Request
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
+
+#### Feature Request #10
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
+
+#### Feature Request #12
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type.
+
+#### Feature Request #14
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton. 
