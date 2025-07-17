@@ -87,7 +87,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to a missing state update or data fetch after editing via the plan/addon dialog.
 
 #### Feature Request #7
-- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a 'Copy Reservation' function that allows copying a reservation to a different booker, keeping all other reservation details the same.
 - **Steps to Reproduce**:
@@ -163,7 +163,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will help staff quickly identify flexible clients and optimize room assignments. Spec created at `.kiro/specs/calendar-visual-indicators/`.
 
 #### Feature Request #13
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Add a legend to the Calendar view explaining the meaning of all icons used.
 - **Steps to Reproduce**:
@@ -178,7 +178,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ### July 15, 2025
 
 #### Bug #10
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After deleting a reservation, the confirmation prompt '保留中予約を削除してもよろしいですか?' remains on screen instead of closing automatically.
 - **Steps to Reproduce**:
@@ -204,7 +204,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
 
 #### Feature Request #15
-- **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [x] In Progress [ ] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Add a FAQ page of the system with instructions for the use of the system.
 - **Steps to Reproduce**:
