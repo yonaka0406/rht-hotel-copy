@@ -10,3 +10,4 @@ api/config/google_sheets_credentials.json
 api/tmp/uploads/
 /api/tests/temp_assets/
 /server-config/pm2/logs
+/api/tests/mockDB

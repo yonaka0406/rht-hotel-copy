@@ -2764,11 +2764,14 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const firstRoomInfo = roomDetailsArray[0];
         const netAgtRmTypeCode = firstRoomInfo.RoomTypeCode;
         const roomTypeId = netAgtRmTypeCode ? await selectRoomTypeId(netAgtRmTypeCode) : null;
+        // Get room type name from roomMaster
+        const roomTypeName = roomTypeId ? (roomMaster.find(r => r.room_type_id === roomTypeId)?.rmtypename || '') : '';
         const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
 
         if (roomId === null) {
-          console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode}`);
-          throw new Error(`Transaction Error: Could not assign room_id for RoomTypeCode: ${netAgtRmTypeCode}. Transaction will be rolled back.`);
+          const triedDates = roomDetailsArray.map(item => item.RoomDate).join(', ');
+          console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]`);
+          throw new Error(`Transaction Error: Could not assign room_id for RoomTypeCode: ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]. Transaction will be rolled back.`);
         }
 
         roomsArrayWithID[roomKey] = roomDetailsArray.map(item => ({
@@ -3325,6 +3328,8 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         const firstRoomInfo = roomDetailsArray[0];
         const netAgtRmTypeCode = firstRoomInfo.RoomTypeCode;
         const roomTypeId = netAgtRmTypeCode ? await selectRoomTypeId(netAgtRmTypeCode) : null;
+        // Get room type name from roomMaster
+        const roomTypeName = roomTypeId ? (roomMaster.find(r => r.room_type_id === roomTypeId)?.rmtypename || '') : '';
         const roomId = roomTypeId ? await findFirstAvailableRoomId(roomTypeId) : null;
 
         if (roomId === null) {
