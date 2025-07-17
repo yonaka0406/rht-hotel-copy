@@ -216,6 +216,50 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
+### Bug #11
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA. This resulted in duplicate reservations and failures when attempting to edit the reservation.
+- **Steps to Reproduce**:
+  1. Experience a psql server outage (e.g., due to DoS).
+  2. Restart the psql server.
+  3. Observe that OTA reservations are added, but confirmation is not sent to the OTA.
+  4. Multiple copies of the same reservation are created.
+  5. Attempt to edit the reservation and observe that the edit fails.
+- **Expected Behavior**: OTA reservations should be confirmed and not duplicated after a server restart. Editing should work as expected.
+- **Actual Behavior**: Multiple copies of the same reservation are created, and editing fails.
+- **Environment**: psql server outage and restart, OTA integration
+- **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
+
+### Bug #12
+- **Status**: [x] Fixed [ ] Open [ ] In Progress [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
+- **Steps to Reproduce**:
+  1. Attempt to add or delete a payment in the ReservationPayments component.
+  2. Confirm the action in the dialog.
+  3. Observe that the dialog remains open after the action is completed.
+- **Expected Behavior**: The confirmation dialog should close automatically after the action is performed.
+- **Actual Behavior**: The dialog remained visible after the action.
+- **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
+- **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application.
+
+### Feature Request #16
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. Additionally, improve the OTA import logic: convert OTA XML reservation data to PMS format and save in a temp table, attempt to add to PMS reservations, and if any fail, cache the data and only clear the cache upon successful confirmation to the OTA. Notify users of unimported data in PMS, allowing them to change room types before the next OTA retry, which would use the updated mapping.
+- **Steps to Reproduce**:
+  1. Receive an OTA reservation for an unavailable room type.
+  2. System should identify possible upgrades using the room type hierarchy.
+  3. OTA XML data is converted and saved in a temp table.
+  4. If PMS import fails, data is cached and not cleared until OTA confirmation is successful.
+  5. User is notified of unimported data and can adjust room types in PMS.
+  6. On next OTA retry, the updated mapping is used.
+- **Expected Behavior**: Room upgrades are handled systematically, OTA import is robust, and users are notified of and can resolve import issues.
+- **Actual Behavior**: No room type hierarchy, OTA keeps sending duplicate reservations if import fails, and users are not notified of unimported data.
+- **Environment**: OTA integration, PMS import logic
+- **Additional Notes**: This will prevent duplicate reservations, improve upgrade handling, and provide better user feedback and control over OTA import issues.
+
 ---
 
 ## Bug Status Legend

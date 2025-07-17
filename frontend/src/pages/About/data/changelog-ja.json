@@ -195,6 +195,9 @@
     { "description": "通知：アラート通知設定（例：大口予約受注後1ヶ月後のアラート等）。" },
     { "description": "新規予約：緊急部屋ホールド・保留ステータス。" },
     { "description": "CRM：アップロード方式によるデータ記録。" },
-    { "description": "CRM：営業クール実績レポート。" }
+    { "description": "CRM：営業クール実績レポート。" },
+    { "description": "OTA障害時、psql再起動後に予約が重複登録され、確認が送信されない問題。" },
+    { "description": "ReservationPaymentsのConfirmDialogが追加・削除後に自動で閉じない問題。他のConfirmDialogも要確認。" },
+    { "description": "部屋タイプ階層を導入し、OTA予約のアップグレード判定とインポートロジック（XML→PMS変換、一時テーブル・キャッシュ・未インポート通知・OTA確認成功時のみキャッシュクリア）を改善。" }
   ]
 }
