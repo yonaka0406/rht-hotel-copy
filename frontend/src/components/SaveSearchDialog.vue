@@ -1,16 +1,16 @@
 <template>
-  <Dialog v-model:visible="visible" :modal="true" :closable="false" header="検索を保存" :style="{ width: '350px' }">
+  <Dialog v-model:visible="visible" :modal="true" :closable="false" header="検索を保存" :style="{ width: '350px' }" role="dialog" aria-modal="true" aria-labelledby="save-search-dialog-title">
     <div class="mb-4">
-      <label for="searchName" class="block mb-2 font-bold">検索名</label>
-      <InputText id="searchName" v-model="searchName" class="w-full" placeholder="例: 今週の未確定" />
+      <label for="searchName" class="block mb-2 font-bold" id="save-search-dialog-title">検索名</label>
+      <InputText id="searchName" v-model="searchName" class="w-full" placeholder="例: 今週の未確定" aria-label="検索名" />
     </div>
     <div class="mb-4">
       <label for="searchCategory" class="block mb-2 font-bold">カテゴリ</label>
-      <Select id="searchCategory" v-model="category" :options="categoryOptions" optionLabel="label" optionValue="value" editable class="w-full" placeholder="カテゴリを選択または入力" />
+      <Select id="searchCategory" v-model="category" :options="categoryOptions" optionLabel="label" optionValue="value" editable class="w-full" placeholder="カテゴリを選択または入力" aria-label="カテゴリ" />
     </div>
     <div class="flex justify-end gap-2">
-      <Button label="キャンセル" text @click="onCancel" />
-      <Button label="保存" :disabled="!searchName.trim()" @click="onSave" />
+      <Button label="キャンセル" text @click="onCancel" aria-label="キャンセル" />
+      <Button label="保存" :disabled="!searchName.trim()" @click="onSave" aria-label="保存" />
     </div>
   </Dialog>
 </template>

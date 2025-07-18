@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="search-suggestions-container" 
+    class="search-suggestions-container max-w-full overflow-x-auto" 
     role="listbox"
     :aria-activedescendant="activeItemId"
     aria-label="検索候補"

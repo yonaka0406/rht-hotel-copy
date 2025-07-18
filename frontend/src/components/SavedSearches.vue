@@ -1,13 +1,13 @@
 <template>
-  <div class="saved-searches">
+  <div class="saved-searches" role="navigation" aria-label="保存済み検索">
     <div class="flex items-center mb-2">
       <span class="font-bold mr-2">保存済み検索</span>
-      <Button label="新規保存" icon="pi pi-plus" size="small" @click="$emit('add')" class="mr-2" />
+      <Button label="新規保存" icon="pi pi-plus" size="small" @click="$emit('add')" class="mr-2" aria-label="新規保存" />
     </div>
     <div v-if="loading">読み込み中...</div>
     <div v-else-if="error" class="text-red-500">{{ error }}</div>
     <div v-else>
-      <div v-for="(group, category) in groupedSearches" :key="category" class="mb-2">
+      <div v-for="(group, category) in groupedSearches" :key="category" class="mb-2" role="group" :aria-label="category + 'グループ'">
         <div class="font-semibold text-sm text-gray-600 mb-1">{{ category }}</div>
         <ul class="list-none p-0 m-0" role="list">
           <li v-for="search in group" :key="search.id" class="flex items-center mb-1" role="listitem">

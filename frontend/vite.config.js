@@ -2,9 +2,14 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import tailwindcss from "@tailwindcss/vite";
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss(),],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    process.env.ANALYZE ? visualizer({ open: true }) : undefined,
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'), // Alias for cleaner imports

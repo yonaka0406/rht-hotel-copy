@@ -1,6 +1,6 @@
 <template>
-    <Panel class="m-2">        
-        <div>
+    <Panel class="m-2" role="main" aria-label="予約一覧">        
+        <div class="overflow-x-auto">
             <!-- Saved Searches UI -->
             <div class="mb-2 flex justify-end">
                 <SavedSearches :saved-searches="sortedSavedSearches" @add="onAddSavedSearch" @select="onSelectSavedSearch" @edit="onEditSavedSearch" @delete="onDeleteSavedSearch" @toggle-favorite="onToggleFavorite" />
@@ -47,40 +47,42 @@
                         />
                     </div>
                     
-                    <div class="mb-4 flex justify-end items-center">                        
+                    <div class="mb-4 flex flex-wrap justify-end items-center gap-2 sm:gap-4">                        
                         <span class="font-bold mr-4">滞在期間選択：</span>
-                        <Select v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2" @change="onRelativeDateChange" />
-                        <label class="mr-2">開始日:</label>
-                        <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
-                        <label class="ml-4 mr-2">終了日:</label>
-                        <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
+                        <Select v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2 min-h-[44px]" @change="onRelativeDateChange" aria-label="滞在期間選択" />
+                        <label class="mr-2" for="start-date-picker">開始日:</label>
+                        <DatePicker id="start-date-picker" v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" aria-label="開始日" class="min-h-[44px]" />
+                        <label class="ml-4 mr-2" for="end-date-picker">終了日:</label>
+                        <DatePicker id="end-date-picker" v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" aria-label="終了日" class="min-h-[44px]" />
                         <span class="ml-4 font-bold mr-2">料金範囲:</span>
-                        <InputNumber v-model="priceFilterMin" placeholder="最小" class="mr-2 w-24" />
-                        <InputNumber v-model="priceFilterMax" placeholder="最大" class="w-24" />
-                        <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
+                        <InputNumber v-model="priceFilterMin" placeholder="最小" class="mr-2 w-24 min-h-[44px]" aria-label="最小料金" />
+                        <InputNumber v-model="priceFilterMax" placeholder="最大" class="w-24 min-h-[44px]" aria-label="最大料金" />
+                        <Button label="適用" class="ml-4 min-h-[44px] min-w-[44px]" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" aria-label="フィルター適用" />
                         <Button
                             label="全フィルタークリア"
                             icon="pi pi-filter-slash"
                             severity="warning"
-                            class="ml-4"
+                            class="ml-4 min-h-[44px] min-w-[44px]"
                             @click="clearAllFilters"
                             v-tooltip.bottom="'全てのフィルターをリセットします'"
+                            aria-label="全フィルタークリア"
                         />
                         <!-- Export -->
                         <SplitButton 
                             label="エクスポート" 
                             icon="pi pi-file-export"
                             severity="help"
-                            class="ml-4"
+                            class="ml-4 min-h-[44px] min-w-[44px]"
                             @click="splitButtonExportReservations"
                             :model="exportOptions" 
+                            aria-label="エクスポート"
                         />
                     </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
                 <Column header="詳細" style="width: 1%;">
                     <template #body="slotProps">
-                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" :aria-expanded="isRowExpanded(slotProps.data) ? 'true' : 'false'">
+                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" :aria-expanded="isRowExpanded(slotProps.data) ? 'true' : 'false'" aria-label="詳細表示">
                             <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
                         </button>
                     </template>
@@ -321,12 +323,13 @@
 
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted } from 'vue'; 
+    import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'; 
     
-    import ReservationEdit from './ReservationEdit.vue';
+    // Lazy-load heavy/rarely-used components
+    const ReservationEdit = defineAsyncComponent(() => import('./ReservationEdit.vue'));
+    const SaveSearchDialog = defineAsyncComponent(() => import('@/components/SaveSearchDialog.vue'));
+    const SavedSearches = defineAsyncComponent(() => import('@/components/SavedSearches.vue'));
     import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
-    import SavedSearches from '@/components/SavedSearches.vue';
-    import SaveSearchDialog from '@/components/SaveSearchDialog.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
@@ -566,19 +569,21 @@
     });
 
     const filteredReservations = computed(() => {
-        let reservations = [];
+        let reservations;
 
         if (hasActiveSearch.value && searchResults.value.length > 0) {
-            // Start with search results
+            // When a search is active, use the search results
             reservations = searchResults.value.map(result =>
                 enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
             );
+        } else if (!hasActiveSearch.value) {
+            // When no search is active, use the full reservation list
+            reservations = reservationList.value.map(reservation =>
+                enhanceReservationWithMergedClients(reservation)
+            );
         } else {
-            // Start with all reservations
-            reservations = reservationList.value.map(reservation => ({
-                ...enhanceReservationWithMergedClients(reservation),
-                highlightedText: {}
-            }));
+            // When a search is active but returns no results, the list should be empty
+            reservations = [];
         }
 
         // Apply status filter for MultiSelect
@@ -711,7 +716,7 @@
     };
 
     const handleClearAllFilters = () => {
-        clearSearchFilters();
+        clearSearch();
         clearAllFilters();
     };
 
@@ -733,13 +738,23 @@
         showSaveDialog.value = true
     }
     const onSaveSearch = (name, category) => {
-        if (!name) return
+        if (!name) return;
+        const currentFilters = {
+            searchQuery: searchQuery.value,
+            status: filters.value.status.value,
+            priceMin: priceFilterMin.value,
+            priceMax: priceFilterMax.value,
+            startDate: startDateFilter.value,
+            endDate: endDateFilter.value,
+            relativeDate: relativeDateFilter.value,
+        };
         if (editSearch.value) {
             // Edit existing
             const idx = savedSearches.value.findIndex(s => s.id === editSearch.value.id)
             if (idx !== -1) {
                 savedSearches.value[idx].name = name
                 savedSearches.value[idx].category = category
+                savedSearches.value[idx].filters = currentFilters;
             }
         } else {
             // Add new
@@ -747,7 +762,7 @@
                 id: Date.now().toString(),
                 name,
                 category,
-                filters: [], // TODO: Save current filters
+                filters: currentFilters,
                 favorite: false
             })
         }
@@ -755,9 +770,17 @@
         editSearch.value = null
     }
     const onSelectSavedSearch = (search) => {
-        console.log('Selecting saved search:', search)
-        // Implement logic to apply saved search filters
-    }
+        if (!search.filters) return;
+        const f = search.filters;
+        searchQuery.value = f.searchQuery || '';
+        filters.value.status.value = f.status || null;
+        priceFilterMin.value = f.priceMin ?? null;
+        priceFilterMax.value = f.priceMax ?? null;
+        startDateFilter.value = f.startDate ? new Date(f.startDate) : new Date(new Date().setDate(new Date().getDate() - 6));
+        endDateFilter.value = f.endDate ? new Date(f.endDate) : new Date();
+        relativeDateFilter.value = f.relativeDate || null;
+        // Optionally trigger a search or reload data if needed
+    };
     const onDeleteSavedSearch = (search) => {
         savedSearches.value = savedSearches.value.filter(s => s.id !== search.id)
     }

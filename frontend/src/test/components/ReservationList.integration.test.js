@@ -27,6 +27,7 @@ vi.doMock('../../composables/useReportStore', () => ({
     exportMealCount: vi.fn(),
   })
 }));
+const mockClearSearch = vi.fn();
 vi.doMock('../../composables/useReservationSearch', () => ({
   useReservationSearch: () => ({
     get searchQuery() { return mockSearchQueryRef; },
@@ -38,7 +39,7 @@ vi.doMock('../../composables/useReservationSearch', () => ({
     get searchResultsCount() { return require('vue').ref(mockSearchResultsRef.value.length); },
     get hasActiveSearch() { return mockHasActiveSearchRef; },
     performSearch: vi.fn(),
-    clearSearch: vi.fn(),
+    clearSearch: mockClearSearch,
     addFilter: vi.fn(),
     removeFilter: vi.fn(),
     clearAllFilters: vi.fn(),
@@ -277,9 +278,12 @@ describe('ReservationList.vue Integration', () => {
         },
       },
     });
+    wrapper.vm.filters.status.value = ['confirmed'];
+
     await wrapper.vm.handleClearAllFilters();
     await wrapper.vm.$nextTick();
-    expect(mockSearchQueryRef.value).toBe('');
+
+    expect(mockClearSearch).toHaveBeenCalled();
     expect(wrapper.vm.filters.status.value).toBeNull();
   });
 }); 

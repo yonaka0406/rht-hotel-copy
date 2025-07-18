@@ -1,16 +1,21 @@
 <template>
-  <div class="reservation-search-bar">
-    <div class="search-input-wrapper">
+  <div class="reservation-search-bar px-2 py-2 sm:px-4 sm:py-2" role="search">
+    <div class="search-input-wrapper mb-2 sm:mb-0">
       <span class="p-input-icon-left p-input-icon-right w-full">
         <i class="pi pi-search" />
         <InputText
           v-model="localQuery"
-          class="w-full"
+          class="w-full min-h-[44px]"
           placeholder="予約ID、氏名、電話番号、メールアドレスで検索..."
           @input="onInput"
           @keydown="onKeydown"
+          @compositionstart="onCompositionStart"
+          @compositionend="onCompositionEnd"
           :disabled="disabled"
           aria-label="予約検索"
+          aria-autocomplete="list"
+          :aria-controls="showSuggestions ? 'search-suggestions-listbox' : null"
+          autocomplete="off"
         />
         <i v-if="delayedLoading" class="pi pi-spin pi-spinner" />
         <i v-else-if="localQuery && !disabled" class="pi pi-times cursor-pointer" @click="clearSearch" />
@@ -27,22 +32,24 @@
       @highlight="selectedSuggestionIndex = $event"
       @navigate="handleSuggestionNavigation"
       role="listbox"
+      id="search-suggestions-listbox"
+      class="max-w-full overflow-x-auto"
     />
 
     <!-- Active filters display -->
-    <div v-if="activeFilters.length > 0" class="active-filters">
+    <div v-if="activeFilters.length > 0" class="active-filters flex flex-wrap gap-2 mt-2" role="group" aria-label="アクティブフィルター">
       <span class="filter-label">フィルター:</span>
-      <div class="filter-tags">
-        <span v-for="(filter, index) in activeFilters" :key="index" class="filter-tag">
+      <div class="filter-tags flex flex-wrap gap-2">
+        <span v-for="(filter, index) in activeFilters" :key="index" class="filter-tag min-h-[44px] flex items-center">
           {{ filter.label }}
-          <button class="pi pi-times filter-remove" @click="removeFilter(filter.field)" aria-label="フィルター削除" tabindex="0"></button>
+          <button class="pi pi-times filter-remove ml-1 min-w-[44px] min-h-[44px] flex items-center justify-center" @click="removeFilter(filter.field)" aria-label="フィルター削除" tabindex="0"></button>
         </span>
-        <button class="clear-all" @click="clearAllFilters" aria-label="すべてクリア" tabindex="0">すべてクリア</button>
+        <button class="clear-all min-w-[44px] min-h-[44px] flex items-center justify-center" @click="clearAllFilters" aria-label="すべてクリア" tabindex="0">すべてクリア</button>
       </div>
     </div>
 
     <!-- Search results count -->
-    <div v-if="searchResultsCount !== null && !isSearching" class="search-results-count" aria-live="polite">
+    <div v-if="searchResultsCount !== null && !isSearching" class="search-results-count mt-2 sm:mt-0" aria-live="polite">
       {{ searchResultsCount }}件の検索結果
     </div>
   </div>
@@ -129,6 +136,8 @@ export default {
     // Delayed loading spinner
     const delayedLoading = ref(false);
     let loadingTimer = null;
+    // IME composition state
+    const isComposing = ref(false);
     watch(() => props.isSearching, (newVal) => {
       if (newVal) {
         loadingTimer = setTimeout(() => {
@@ -155,6 +164,7 @@ export default {
     
     // Handle input with debounce
     const onInput = () => {
+      if (isComposing.value) return;
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
@@ -169,6 +179,7 @@ export default {
     
     // Handle keyboard navigation
     const onKeydown = (event) => {
+      if (isComposing.value) return;
       if (!showSuggestions.value || props.suggestions.length === 0) {
         if (event.key === 'Enter') {
           emit('search', localQuery.value);
@@ -285,6 +296,14 @@ export default {
       }
       
       selectedSuggestionIndex.value = overallIndex;
+    };
+
+    // IME composition event handlers
+    const onCompositionStart = () => {
+      isComposing.value = true;
+    };
+    const onCompositionEnd = () => {
+      isComposing.value = false;
     };
     
     return {
