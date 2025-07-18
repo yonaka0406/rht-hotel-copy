@@ -258,6 +258,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ### Unreleased
 - Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
+- Global reservation search in the top menu.
+- Small design change in reservation list
 
 ---
 
