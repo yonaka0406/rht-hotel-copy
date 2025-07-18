@@ -31,6 +31,7 @@
       @select="selectSuggestion"
       @highlight="selectedSuggestionIndex = $event"
       @navigate="handleSuggestionNavigation"
+      @close-modal="$emit('close-modal')"
       role="listbox"
       id="search-suggestions-listbox"
       class="max-w-full overflow-x-auto"

@@ -311,13 +311,11 @@ export default {
       addToRecentSearches(suggestion);
 
       if (suggestion.reservation_id) {
-        console.debug('[SearchSuggestions] Routing to ReservationEdit:', suggestion.reservation_id);
+        console.debug('[SearchSuggestions] Emitting close-modal and routing to ReservationEdit:', suggestion.reservation_id);
+        emit('close-modal');
         router.push({
           name: 'ReservationEdit',
           params: { reservation_id: suggestion.reservation_id }
-        }).then(() => {
-          console.debug('[SearchSuggestions] Route navigation complete, emitting close-modal');
-          emit('close-modal');
         });
       }
       

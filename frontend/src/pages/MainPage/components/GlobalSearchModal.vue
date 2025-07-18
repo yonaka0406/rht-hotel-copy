@@ -29,6 +29,7 @@
         @suggestion-selected="onSuggestionSelected"
         @remove-filter="removeFilter"
         @clear-filters="clearAllFilters"
+        @close-modal="handleCloseModal"
       />
       
       <div v-if="searchResults.length > 0" class="search-results">
@@ -210,18 +211,6 @@ export default {
       accessibilityService.announceLoadingState(newIsSearching, searchQuery.value);
     });
 
-    // Watch for search query to fetch suggestions
-    watch(searchQuery, async (newQuery) => {
-      console.debug('[GlobalSearchModal] searchQuery changed:', newQuery);
-      if (newQuery && newQuery.trim().length > 0) {
-        await getSearchSuggestions(newQuery);
-        console.debug('[GlobalSearchModal] getSearchSuggestions result:', searchSuggestions.value);
-        // No assignment to searchSuggestions.value here
-      } else {
-        searchSuggestions.value = [];
-      }
-    });
-    
     // Handle keyboard navigation for search results
     const handleKeydown = (event) => {
       if (!props.visible || searchResults.value.length === 0) return;
