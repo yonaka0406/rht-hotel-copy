@@ -59,18 +59,12 @@
     </Toolbar>
     
     <!-- Drawer for Notifications -->
-    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知" class="dark:bg-gray-800 dark:text-white">
-        <ul v-if="holdReservations.length">
-            <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)" class="dark:text-white dark:hover:bg-gray-700">
-                    {{ reservation.hotel_name }}<span>保留中予約を完成させてください: </span><br/>
-                    {{ reservation.client_name }} @ {{ reservation.check_in }}
-                </button>
-                <Divider class="dark:border-gray-600" />
-            </li>
-        </ul>
-        <p v-else class="text-center text-gray-500 dark:text-gray-400">通知はありません。</p>
-    </Drawer>
+    <NotificationsDrawer
+        v-model:visible="showDrawer"
+        :hold-reservations="holdReservations"
+        :notification-severity="notificationSeverity"
+        @go-to-edit-reservation="goToEditReservationPage"
+    />
 
     <!-- Waitlist Display Modal -->
     <WaitlistDisplayModal
@@ -104,6 +98,7 @@
     // Components (for Waitlist Modal and Global Search)
     import WaitlistDisplayModal from './WaitlistDisplayModal.vue';
     import GlobalSearchModal from './GlobalSearchModal.vue';
+    import NotificationsDrawer from './NotificationsDrawer.vue';
 
     // Primevue
     import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
