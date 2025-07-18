@@ -1,55 +1,126 @@
-# Node.js 24 Upgrade: Design
+# Design Document
 
-## 1. Introduction
+## Overview
 
-This document outlines the technical design for upgrading the application from Node.js 22 to Node.js 24 using Docker. The primary goals of this upgrade are to enhance performance, leverage new features, and ensure long-term support, while also improving the consistency and reliability of our deployment process.
+This document describes the technical architecture for upgrading the application from Node.js 22 to Node.js 24 using Docker. The design focuses on creating a robust, containerized environment to ensure consistency, simplify deployments, and streamline the rollback process.
 
-## 2. Current Architecture
+## Architecture
 
-The application is currently built on Node.js 22. It is a monolithic application with a front-end client, a back-end API, and a connection to a PostgreSQL database. It is deployed on a single VPS without containerization.
+The containerized architecture will be as follows:
 
-## 3. Proposed Architecture
+```
+Docker Architecture:
+├── Dockerfile (Defines the Node.js 24 environment)
+├── .dockerignore (Excludes unnecessary files)
+├── docker-compose.yml (For local development and testing)
+└── Application Code (Running inside the container)
 
-The upgrade to Node.js 24 will be managed using Docker. This will not fundamentally change the application's architecture, but it will introduce containerization to standardize the environment and streamline deployments.
+Integration Points:
+├── CI/CD Pipeline (Automated builds and deployments)
+└── Local Development Environment (Using Docker Compose)
+```
 
-### 3.1. Dockerization
+## Components and Interfaces
 
-- A `Dockerfile` will be created at the root of the project.
-- The `Dockerfile` will use the official `node:24` image as its base.
-- It will copy the application code, install dependencies, and define the command to run the application.
-- A `.dockerignore` file will be created to exclude unnecessary files from the Docker image.
+### Core Components
 
-### 3.2. Dependency Management
+**Dockerfile**
+```dockerfile
+# Use the official Node.js 24 image
+FROM node:24-alpine
 
-- All `npm` packages will be audited for compatibility with Node.js 24.
-- `npm audit` will be used to identify and fix any vulnerabilities.
-- The `package-lock.json` file will be regenerated inside the Docker container during the build process.
+# Create app directory
+WORKDIR /usr/src/app
 
-### 3.3. Code Refactoring
+# Install app dependencies
+COPY package*.json ./
+RUN npm install
 
-- The codebase will be analyzed for any deprecated Node.js APIs.
-- ESLint rules will be updated to enforce best practices for Node.js 24.
-- Any code using deprecated features will be refactored.
+# Bundle app source
+COPY . .
 
-## 4. Testing Strategy
+# Expose port and start app
+EXPOSE 3000
+CMD [ "node", "server.js" ]
+```
 
-- **Unit Tests:** The existing Jest test suite will be run inside a Docker container to ensure all unit tests pass.
-- **Integration Tests:** The integration test suite will be run in a Dockerized environment to validate the interactions between the application and the database.
-- **End-to-End (E2E) Tests:** E2E tests will be performed against a running Docker container in a staging environment.
+**.dockerignore**
+```
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+```
 
-## 5. Deployment Plan
+**docker-compose.yml**
+```yaml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=app
+    ports:
+      - "5432:5432"
+```
 
-The deployment will be executed using Docker images:
+## Data Models
 
-1. **Image Build:** A new Docker image will be built with the Node.js 24 application.
-2. **Staging Environment:** The new Docker image will be deployed to a staging environment.
-3. **Canary Release:** The new image will be deployed to a small subset of users in production.
-4. **Full Rollout:** After a successful canary release, the new image will be rolled out to all users.
+There are no changes to the data models in this upgrade.
 
-## 6. Rollback Plan
+## Error Handling
 
-The use of Docker simplifies the rollback process significantly:
+Error handling will be managed within the application code as it is currently. The Dockerized environment itself will be monitored for any container-level errors.
 
-1. If any critical issues are discovered, the previous Docker image (running Node.js 22) will be redeployed.
-2. This provides an immediate rollback with minimal downtime.
-3. A post-mortem analysis will be conducted to identify the root cause of the failure.
+## Testing Strategy
+
+### Unit Testing
+- The existing Jest test suite will be run inside a Docker container.
+
+### Integration Testing
+- Integration tests will be run using Docker Compose to spin up the application and database containers.
+
+### Performance Testing
+- Performance testing will be conducted on the Dockerized application to ensure there is no performance degradation.
+
+## Key Design Decisions
+
+### 1. Base Docker Image
+- **`node:24-alpine`**: Chosen for its small size and security benefits.
+
+### 2. Local Development
+- **Docker Compose**: Used to replicate the production environment locally, ensuring consistency.
+
+### 3. CI/CD Integration
+- The CI/CD pipeline will be updated to build and push Docker images to a container registry.
+
+### 4. Deployment
+- Deployments will be done by pulling and running the new Docker image in the production environment.
+
+## Implementation Phases
+
+### Phase 1: Dockerization
+- Create the `Dockerfile` and `.dockerignore` file.
+- Create the `docker-compose.yml` file for local development.
+
+### Phase 2: Code and Dependency Update
+- Update `package.json` with compatible dependencies.
+- Refactor any code using deprecated Node.js APIs.
+
+### Phase 3: Testing
+- Run all test suites within the Dockerized environment.
+- Perform E2E testing on a staging environment.
+
+### Phase 4: Deployment
+- Integrate with the CI/CD pipeline.
+- Deploy the new Docker image to production.
