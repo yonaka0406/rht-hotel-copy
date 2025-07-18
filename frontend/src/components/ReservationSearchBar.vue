@@ -4,6 +4,7 @@
       <span class="p-input-icon-left p-input-icon-right w-full">
         <i class="pi pi-search" />
         <InputText
+          ref="inputRef"
           v-model="localQuery"
           class="w-full min-h-[44px]"
           placeholder="予約ID、氏名、電話番号、メールアドレスで検索..."
@@ -60,277 +61,180 @@
   </div>
 </template>
 
-<script>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
+<script setup>
+import { ref, watch, nextTick, onMounted, onBeforeUnmount, defineExpose } from 'vue';
 import { useReservationSearch } from '../composables/useReservationSearch';
 import SearchSuggestions from './SearchSuggestions.vue';
 import { InputText } from 'primevue';
 
-export default {
-  name: 'ReservationSearchBar',
-  
-  components: {
-    InputText,
-    SearchSuggestions
-  },
-  
-  props: {
-    /**
-     * Search query value
-     */
-    modelValue: {
-      type: String,
-      default: ''
-    },
-    
-    /**
-     * Search suggestions to display
-     */
-    suggestions: {
-      type: Array,
-      default: () => []
-    },
-    
-    /**
-     * Whether search is currently in progress
-     */
-    isSearching: {
-      type: Boolean,
-      default: false
-    },
-    
-    /**
-     * Active filters to display
-     */
-    activeFilters: {
-      type: Array,
-      default: () => []
-    },
-    
-    /**
-     * Search results count
-     */
-    searchResultsCount: {
-      type: Number,
-      default: null
-    },
-    
-    /**
-     * Whether the search input is disabled
-     */
-    disabled: {
-      type: Boolean,
-      default: false
+const props = defineProps({
+  modelValue: { type: String, default: '' },
+  suggestions: { type: Array, default: () => [] },
+  isSearching: { type: Boolean, default: false },
+  activeFilters: { type: Array, default: () => [] },
+  searchResultsCount: { type: Number, default: null },
+  disabled: { type: Boolean, default: false }
+});
+const emit = defineEmits([
+  'update:modelValue',
+  'search',
+  'clear',
+  'suggestion-selected',
+  'remove-filter',
+  'clear-filters',
+  'close-modal'
+]);
+
+const localQuery = ref(props.modelValue);
+const showSuggestions = ref(false);
+const selectedSuggestionIndex = ref(-1);
+const delayedLoading = ref(false);
+let loadingTimer = null;
+const isComposing = ref(false);
+
+const onCompositionStart = () => { isComposing.value = true; };
+const onCompositionEnd = () => { isComposing.value = false; };
+watch(() => props.isSearching, (newVal) => {
+  if (newVal) {
+    loadingTimer = setTimeout(() => {
+      delayedLoading.value = true;
+    }, 500);
+  } else {
+    clearTimeout(loadingTimer);
+    delayedLoading.value = false;
+  }
+});
+
+let debounceTimer = null;
+watch(() => props.modelValue, (newValue) => {
+  localQuery.value = newValue;
+});
+watch(localQuery, (newValue) => {
+  emit('update:modelValue', newValue);
+});
+
+const onInput = () => {
+  if (isComposing.value) return;
+  if (debounceTimer) clearTimeout(debounceTimer);
+  console.debug('[ReservationSearchBar] onInput:', localQuery.value);
+  debounceTimer = setTimeout(() => {
+    console.debug('[ReservationSearchBar] emit search:', localQuery.value);
+    emit('search', localQuery.value);
+    showSuggestions.value = localQuery.value.trim().length > 0;
+  }, 300);
+};
+
+const onKeydown = (event) => {
+  console.debug('[ReservationSearchBar] onKeydown:', event.key);
+  if (isComposing.value) return;
+  if (!showSuggestions.value || props.suggestions.length === 0) {
+    if (event.key === 'Enter') {
+      console.debug('[ReservationSearchBar] emit search (Enter):', localQuery.value);
+      emit('search', localQuery.value);
     }
-  },
-  
-  emits: [
-    'update:modelValue',
-    'search',
-    'clear',
-    'suggestion-selected',
-    'remove-filter',
-    'clear-filters'
-  ],
-  
-  setup(props, { emit }) {
-    // Local state
-    const localQuery = ref(props.modelValue);
-    const showSuggestions = ref(false);
-    const selectedSuggestionIndex = ref(-1);
-    // Delayed loading spinner
-    const delayedLoading = ref(false);
-    let loadingTimer = null;
-    // IME composition state
-    const isComposing = ref(false);
-
-    // Add missing handlers to silence Vue warnings
-    const onCompositionStart = () => { isComposing.value = true; };
-    const onCompositionEnd = () => { isComposing.value = false; };
-    watch(() => props.isSearching, (newVal) => {
-      if (newVal) {
-        loadingTimer = setTimeout(() => {
-          delayedLoading.value = true;
-        }, 500);
+    return;
+  }
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault();
+      selectedSuggestionIndex.value = (selectedSuggestionIndex.value + 1) % props.suggestions.length;
+      break;
+    case 'ArrowUp':
+      event.preventDefault();
+      selectedSuggestionIndex.value = selectedSuggestionIndex.value <= 0 
+        ? props.suggestions.length - 1 
+        : selectedSuggestionIndex.value - 1;
+      break;
+    case 'Enter':
+      event.preventDefault();
+      if (selectedSuggestionIndex.value >= 0) {
+        selectSuggestion(props.suggestions[selectedSuggestionIndex.value]);
       } else {
-        clearTimeout(loadingTimer);
-        delayedLoading.value = false;
-      }
-    });
-    
-    // Debounce timer for input
-    let debounceTimer = null;
-    
-    // Watch for external model changes
-    watch(() => props.modelValue, (newValue) => {
-      localQuery.value = newValue;
-    });
-    
-    // Watch for local query changes to emit update events
-    watch(localQuery, (newValue) => {
-      emit('update:modelValue', newValue);
-    });
-    
-    // Handle input with debounce
-    const onInput = () => {
-      if (isComposing.value) return;
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
-      console.debug('[ReservationSearchBar] onInput:', localQuery.value);
-      debounceTimer = setTimeout(() => {
-        console.debug('[ReservationSearchBar] emit search:', localQuery.value);
         emit('search', localQuery.value);
-        
-        // Show suggestions if query is not empty
-        showSuggestions.value = localQuery.value.trim().length > 0;
-      }, 300); // 300ms debounce
-    };
-    
-    // Handle keyboard navigation
-    const onKeydown = (event) => {
-      console.debug('[ReservationSearchBar] onKeydown:', event.key);
-      if (isComposing.value) return;
-      if (!showSuggestions.value || props.suggestions.length === 0) {
-        if (event.key === 'Enter') {
-          console.debug('[ReservationSearchBar] emit search (Enter):', localQuery.value);
-          emit('search', localQuery.value);
-        }
-        return;
       }
-      
-      switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault();
-          selectedSuggestionIndex.value = (selectedSuggestionIndex.value + 1) % props.suggestions.length;
-          break;
-          
-        case 'ArrowUp':
-          event.preventDefault();
-          selectedSuggestionIndex.value = selectedSuggestionIndex.value <= 0 
-            ? props.suggestions.length - 1 
-            : selectedSuggestionIndex.value - 1;
-          break;
-          
-        case 'Enter':
-          event.preventDefault();
-          if (selectedSuggestionIndex.value >= 0) {
-            selectSuggestion(props.suggestions[selectedSuggestionIndex.value]);
-          } else {
-            emit('search', localQuery.value);
-          }
-          break;
-          
-        case 'Escape':
-          event.preventDefault();
-          showSuggestions.value = false;
-          break;
-      }
-    };
-    
-    // Select a suggestion
-    const selectSuggestion = (suggestion) => {
-      // Use OTA reservation ID for search if present, otherwise fallback to name/email
-      const query = suggestion.ota_reservation_id || suggestion.name || suggestion.name_kanji || suggestion.name_kana || suggestion.email || '';
-      localQuery.value = query;
-      emit('suggestion-selected', suggestion);
+      break;
+    case 'Escape':
+      event.preventDefault();
       showSuggestions.value = false;
-      selectedSuggestionIndex.value = -1;
-
-      // Trigger search with the selected suggestion
-      emit('search', query);
-    };
-    
-    // Clear search
-    const clearSearch = () => {
-      console.debug('[ReservationSearchBar] clearSearch');
-      localQuery.value = '';
-      showSuggestions.value = false;
-      selectedSuggestionIndex.value = -1;
-      emit('clear');
-    };
-    
-    // Remove a filter
-    const removeFilter = (field) => {
-      emit('remove-filter', field);
-    };
-    
-    // Clear all filters
-    const clearAllFilters = () => {
-      emit('clear-filters');
-    };
-    
-    // Get human-readable label for suggestion type
-    const getSuggestionTypeLabel = (type) => {
-      const typeLabels = {
-        'guest_name': '宿泊者名',
-        'reservation_id': '予約ID',
-        'phone': '電話番号',
-        'email': 'メール'
-      };
-      
-      return typeLabels[type] || type;
-    };
-    
-    // Close suggestions when clicking outside
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.reservation-search-bar')) {
-        showSuggestions.value = false;
-      }
-    };
-    
-    // Add and remove global event listeners
-    onMounted(() => {
-      document.addEventListener('click', handleClickOutside);
-    });
-    
-    onBeforeUnmount(() => {
-      document.removeEventListener('click', handleClickOutside);
-    });
-    
-    // Handle navigation events from SearchSuggestions component
-    const handleSuggestionNavigation = (navigationInfo) => {
-      // This method receives navigation events from the SearchSuggestions component
-      // We can use this to update UI or perform additional actions when navigation occurs
-      
-      // Calculate overall index based on category and index
-      let overallIndex = 0;
-      const { category, index } = navigationInfo;
-      
-      if (category === 'recent') {
-        // Recent searches are always first
-        overallIndex = index;
-      } else {
-        // For other categories, we need to calculate the offset
-        // This is a simplified version - in a real implementation, we would need to
-        // know the exact structure of suggestions to calculate this correctly
-        overallIndex = index;
-        
-        // Add any offsets from previous categories
-        // This would need to be implemented based on the actual data structure
-      }
-      
-      selectedSuggestionIndex.value = overallIndex;
-    };
-
-    return {
-      localQuery,
-      showSuggestions,
-      selectedSuggestionIndex,
-      onInput,
-      onKeydown,
-      selectSuggestion,
-      clearSearch,
-      removeFilter,
-      clearAllFilters,
-      getSuggestionTypeLabel,
-      handleSuggestionNavigation,
-      delayedLoading,
-      onCompositionStart,
-      onCompositionEnd
-    };
+      break;
   }
 };
+
+const selectSuggestion = (suggestion) => {
+  const query = suggestion.ota_reservation_id || suggestion.name || suggestion.name_kanji || suggestion.name_kana || suggestion.email || '';
+  localQuery.value = query;
+  emit('suggestion-selected', suggestion);
+  showSuggestions.value = false;
+  selectedSuggestionIndex.value = -1;
+  emit('search', query);
+};
+
+const clearSearch = () => {
+  console.debug('[ReservationSearchBar] clearSearch');
+  localQuery.value = '';
+  showSuggestions.value = false;
+  selectedSuggestionIndex.value = -1;
+  emit('clear');
+};
+const removeFilter = (field) => {
+  emit('remove-filter', field);
+};
+const clearAllFilters = () => {
+  emit('clear-filters');
+};
+const getSuggestionTypeLabel = (type) => {
+  const typeLabels = {
+    'guest_name': '宿泊者名',
+    'reservation_id': '予約ID',
+    'phone': '電話番号',
+    'email': 'メール'
+  };
+  return typeLabels[type] || type;
+};
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.reservation-search-bar')) {
+    showSuggestions.value = false;
+  }
+};
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+const handleSuggestionNavigation = (navigationInfo) => {
+  let overallIndex = 0;
+  const { category, index } = navigationInfo;
+  if (category === 'recent') {
+    overallIndex = index;
+  } else {
+    overallIndex = index;
+  }
+  selectedSuggestionIndex.value = overallIndex;
+};
+const inputRef = ref(null);
+function focusInput() {
+  nextTick(() => {
+    let el = null;
+    if (inputRef.value) {
+      // Try PrimeVue InputText
+      if (inputRef.value.$el) {
+        el = inputRef.value.$el.querySelector('input');
+      }
+      // Try direct DOM input
+      if (!el && inputRef.value instanceof HTMLInputElement) {
+        el = inputRef.value;
+      }
+    }
+    console.debug('[ReservationSearchBar] focusInput el:', el, 'inputRef.value:', inputRef.value);
+    if (el && typeof el.focus === 'function') {
+      el.focus();
+      // Try again after a short delay in case the input is not yet ready
+      setTimeout(() => el.focus(), 50);
+    }
+  });
+}
+defineExpose({ focusInput });
 </script>
 
 <style scoped>

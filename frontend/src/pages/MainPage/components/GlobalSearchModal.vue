@@ -8,6 +8,7 @@
     :dismissableMask="true"
     @hide="onHide"
     @update:visible="$emit('update:visible', $event)"
+    @show="onDialogShow"
     class="global-search-modal"
   >
     <template #header>
@@ -19,6 +20,7 @@
     
     <div class="search-container">
       <ReservationSearchBar 
+        ref="searchBarRef"
         v-model="searchQuery"
         :suggestions="searchSuggestions"
         :is-searching="isSearching"
@@ -117,7 +119,7 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { Dialog, Button } from 'primevue';
 import ReservationSearchBar from '../../../components/ReservationSearchBar.vue';
@@ -179,17 +181,46 @@ export default {
     // Local state
     const selectedResultIndex = ref(-1);
     
+    // Add a ref for the ReservationSearchBar
+    const searchBarRef = ref(null);
+    
+    const onDialogShow = () => {
+      nextTick(() => {
+        let focused = false;
+        // Try to focus the input directly
+        if (searchBarRef.value && searchBarRef.value.focusInput) {
+          searchBarRef.value.focusInput();
+          // Check after a short delay if the input is focused
+          setTimeout(() => {
+            const dialogEl = document.querySelector('.global-search-modal');
+            const active = document.activeElement;
+            // Try to find the input inside the dialog
+            const input = dialogEl ? dialogEl.querySelector('input') : null;
+            if (input && active === input) {
+              focused = true;
+              console.debug('[GlobalSearchModal] Input was focused directly.');
+            } else {
+              // Fallback: dispatch Tab key event to move focus
+              if (dialogEl) {
+                console.debug('[GlobalSearchModal] Input not focused, dispatching Tab event as fallback.');
+                const tabEvent = new KeyboardEvent('keydown', {
+                  key: 'Tab',
+                  code: 'Tab',
+                  keyCode: 9,
+                  which: 9,
+                  bubbles: true
+                });
+                dialogEl.dispatchEvent(tabEvent);
+              }
+            }
+          }, 80);
+        }
+      });
+    };
+
     // Watch for visibility changes
     watch(() => props.visible, (newVisible) => {
       if (newVisible) {
-        // Focus search input when modal opens
-        setTimeout(() => {
-          const searchInput = document.querySelector('.global-search-modal input');
-          if (searchInput) {
-            searchInput.focus();
-          }
-        }, 100);
-        
         // Announce to screen readers
         accessibilityService.announce('グローバル検索モーダルが開きました。予約を検索できます。', 'assertive');
       } else {
@@ -450,7 +481,9 @@ export default {
       highlightMatch,
       onSuggestionSelected,
       onHide,
-      handleCloseModal
+      handleCloseModal,
+      searchBarRef,
+      onDialogShow
     };
   }
 };

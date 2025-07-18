@@ -57,7 +57,7 @@
         >
           <span class="suggestion-text">
             <div class="suggestion-main">
-              <span v-html="highlightMatch(item.text || item.name, searchQuery)" class="client-name"></span>
+              <span v-html="highlightMatch(getClientDisplayName(item), searchQuery)" class="client-name"></span>
               <span v-if="item.email" class="client-email">{{ item.email }}</span>
               <span v-if="item.phone" class="client-phone">{{ item.phone }}</span>
             </div>
@@ -537,6 +537,11 @@ export default {
       return null;
     };
     
+    // Add this method to get the display name in the correct order
+    const getClientDisplayName = (item) => {
+      return item.name_kanji || item.name_kana || item.name || '';
+    };
+
     // Cache suggestions to reduce API calls
     const cacheSuggestion = (query, suggestions) => {
       suggestionCache.value.set(query.toLowerCase(), {
@@ -586,7 +591,8 @@ export default {
       highlightMatch,
       navigateNext,
       navigatePrevious,
-      formatJpDate
+      formatJpDate,
+      getClientDisplayName
     };
   }
 };
