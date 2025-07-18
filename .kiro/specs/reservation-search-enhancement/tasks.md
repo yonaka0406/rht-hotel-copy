@@ -54,7 +54,12 @@
   - Write tests for suggestion selection and keyboard navigation
   - _Requirements: 1.5, 2.3, 5.1, 5.5_
 
-- [ ] 6. Implement global search modal for TopMenu
+- [x] 6. Implement global search modal for TopMenu
+
+
+
+
+
   - Create GlobalSearchModal.vue with modal dialog interface
   - Integrate ReservationSearchBar component into the modal
   - Add search results display with highlighting of matched terms
@@ -63,7 +68,12 @@
   - Write tests for modal interactions and navigation
   - _Requirements: 2.1.1, 2.1.2, 2.1.3, 2.1.4, 2.1.5, 2.2_
 
-- [ ] 7. Integrate global search into TopMenu
+- [x] 7. Integrate global search into TopMenu
+
+
+
+
+
   - Add search button/icon to TopMenu.vue component
   - Implement keyboard shortcut listener for global search activation
   - Add search modal state management and visibility controls

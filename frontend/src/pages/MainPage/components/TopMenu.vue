@@ -10,6 +10,16 @@
         <template #end>
             <div class="flex items-center gap-4">
 
+                <!-- Search Icon -->
+                <Button 
+                    class="p-button p-button-text dark:text-white" 
+                    aria-label="予約検索" 
+                    @click="openGlobalSearch"
+                    v-tooltip.bottom="{ value: '予約検索 (Ctrl+K)', class: 'small-tooltip' }"
+                >
+                    <i class="pi pi-search" style="font-size:larger" />
+                </Button>
+
                 <!-- Waitlist Icon (New) - Only show when 1 or more entries -->
                 <OverlayBadge v-if="waitlistBadgeCount >= 1" :value="waitlistBadgeCount" class="mr-2">
                     <Button class="p-button p-button-text dark:text-white" aria-label="順番待ちリスト" @click="openWaitlistModal">
@@ -67,11 +77,18 @@
         :visible="isWaitlistModalVisible"
         @update:visible="isWaitlistModalVisible = $event"
     />
+    
+    <!-- Global Search Modal -->
+    <GlobalSearchModal
+        :visible="isGlobalSearchVisible"
+        @update:visible="isGlobalSearchVisible = $event"
+        @select-reservation="onSelectReservation"
+    />
 </template>
 
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted } from 'vue';    
+    import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';    
     import { useRouter } from 'vue-router';
     const router = useRouter();
 
@@ -84,8 +101,9 @@
     const { holdReservations, fetchMyHoldReservations, setReservationId } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
-    // Components (for Waitlist Modal)
+    // Components (for Waitlist Modal and Global Search)
     import WaitlistDisplayModal from './WaitlistDisplayModal.vue';
+    import GlobalSearchModal from './GlobalSearchModal.vue';
 
     // Primevue
     import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
@@ -97,6 +115,7 @@
     const showDrawer = ref(false);
     // const waitlistBadgeCount = ref(0); // Will be replaced by a computed property
     const isWaitlistModalVisible = ref(false); // Controls visibility of the waitlist modal
+    const isGlobalSearchVisible = ref(false); // Controls visibility of the global search modal
 
     // --- Computed Properties ---
     const waitlistBadgeCount = computed(() => {
@@ -156,6 +175,22 @@
         isWaitlistModalVisible.value = true;
     };
 
+    const openGlobalSearch = () => {
+        isGlobalSearchVisible.value = true;
+    };
+
+    const onSelectReservation = async (reservation) => {
+        // Set the hotel context if needed
+        if (reservation.hotel_id) {
+            await setHotelId(reservation.hotel_id);
+        }
+        
+        // Set the reservation context
+        if (reservation.reservation_id) {
+            await setReservationId(reservation.reservation_id);
+        }
+    };
+
     const goToEditReservationPage = async (hotel_id, reservation_id) => {
         await setHotelId(hotel_id); // Set the hotel context in the store
         await setReservationId(reservation_id); // Set the reservation context in the store
@@ -175,7 +210,24 @@
         // Already called in SideMenu 
         // await fetchUser();
         // await fetchMyHoldReservations();
+        
+        // Register global keyboard shortcut for search
+        document.addEventListener('keydown', handleGlobalKeydown);
     });
+    
+    // Clean up event listener when component is unmounted
+    onBeforeUnmount(() => {
+        document.removeEventListener('keydown', handleGlobalKeydown);
+    });
+    
+    // Handle global keyboard shortcuts
+    const handleGlobalKeydown = (event) => {
+        // Ctrl+K or Cmd+K to open global search
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            openGlobalSearch();
+        }
+    };
 
     // --- Watchers ---
     watch(selectedHotelId,
