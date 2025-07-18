@@ -25,13 +25,6 @@
   - _Requirements: 1.5, 2.1, 2.3, 4.1, 4.2, 4.3, 5.1, 5.3_
 
 - [x] 4. Create enhanced search input component
-
-
-
-
-
-
-
   - Create ReservationSearchBar.vue with unified search input field
   - Implement real-time search suggestions dropdown with keyboard navigation
   - Add search operators support (quotes for exact match, minus for exclusion)
@@ -41,11 +34,6 @@
   - _Requirements: 2.1, 2.2, 2.4, 2.5, 3.5, 5.1, 5.4_
 
 - [x] 5. Build search suggestions and auto-complete
-
-
-
-
-
   - Create SearchSuggestions.vue component with categorized suggestions
   - Implement suggestion highlighting and keyboard selection
   - Add recent searches display and selection
@@ -55,11 +43,6 @@
   - _Requirements: 1.5, 2.3, 5.1, 5.5_
 
 - [x] 6. Implement global search modal for TopMenu
-
-
-
-
-
   - Create GlobalSearchModal.vue with modal dialog interface
   - Integrate ReservationSearchBar component into the modal
   - Add search results display with highlighting of matched terms
@@ -69,11 +52,6 @@
   - _Requirements: 2.1.1, 2.1.2, 2.1.3, 2.1.4, 2.1.5, 2.2_
 
 - [x] 7. Integrate global search into TopMenu
-
-
-
-
-
   - Add search button/icon to TopMenu.vue component
   - Implement keyboard shortcut listener for global search activation
   - Add search modal state management and visibility controls
@@ -81,23 +59,7 @@
   - Test integration with existing TopMenu functionality
   - _Requirements: 2.1.1, 2.1.5_
 
-- [ ] 8. Enhance ReservationList with advanced search
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- [x] 8. Enhance ReservationList with advanced search
   - Replace existing search inputs in ReservationList.vue with ReservationSearchBar
   - Integrate useReservationSearch composable for unified search functionality
   - Implement combined text search with existing date/status/price filters

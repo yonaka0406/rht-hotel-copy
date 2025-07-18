@@ -41,6 +41,7 @@
                     
                     <div class="mb-4 flex justify-end items-center">                        
                         <span class="font-bold mr-4">滞在期間選択：</span>
+                        <Dropdown v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2" @change="onRelativeDateChange" />
                         <label class="mr-2">開始日:</label>
                         <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
                         <label class="ml-4 mr-2">終了日:</label>
@@ -76,8 +77,8 @@
                 <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
                 
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel, filterCallback }">                        
-                        <Select 
+                    <template #filter="{ filterModel, filterCallback }">
+                        <MultiSelect 
                             v-model="filterModel.value" 
                             :options="statusOptions" 
                             optionLabel="label"
@@ -85,9 +86,10 @@
                             @change="filterCallback" 
                             placeholder="選択"
                             showClear 
+                            display="chip"
                             fluid
-                        />                        
-                    </template>                    
+                        />
+                    </template>
                     <template #body="slotProps">
                         <div class="flex justify-center items-center">
                             <span v-if="slotProps.data.status === 'hold'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause" v-tooltip="'保留中'"></i></span>
@@ -176,9 +178,9 @@
                 </Column>                
                 <Column field="price" header="料金" sortable style="width:2%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <div class="grid grid-cols-1">
-                            <Select v-model="priceFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid />
-                            <InputNumber v-model="priceFilter" placeholder="請求額フィルター" fluid />
+                        <div class="grid grid-cols-2 gap-2">
+                            <InputNumber v-model="priceFilterMin" placeholder="最小" fluid />
+                            <InputNumber v-model="priceFilterMax" placeholder="最大" fluid />
                         </div>
                     </template>
                     <template #body="slotProps">
@@ -316,7 +318,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton, MultiSelect, Dropdown } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -437,6 +439,8 @@
     const clientFilter = ref(null);
     const clientsJsonFilter = ref(null);
     const priceFilter = ref(null);
+    const priceFilterMin = ref(null);
+    const priceFilterMax = ref(null);
     const priceFilterCondition = ref("=");
     const paymentFilter = ref(null);
     const paymentFilterCondition = ref("=");
@@ -463,6 +467,8 @@
         // Reset price filter
         priceFilter.value = null;
         priceFilterCondition.value = "=";
+        priceFilterMin.value = null;
+        priceFilterMax.value = null;
 
         // Reset payment filter
         paymentFilter.value = null;
@@ -482,12 +488,12 @@
         const combinedFilters = [...searchActiveFilters.value];
         
         // Add traditional filters as search filters for display
-        if (filters.value.status?.value) {
-            const statusLabel = statusOptions.find(opt => opt.value === filters.value.status.value)?.label;
-            if (statusLabel) {
+        if (filters.value.status?.value && Array.isArray(filters.value.status.value) && filters.value.status.value.length > 0) {
+            const statusLabels = filters.value.status.value.map(status => statusOptions.find(opt => opt.value === status)?.label).filter(label => label);
+            if (statusLabels.length > 0) {
                 combinedFilters.push({
                     field: 'status',
-                    label: `ステータス: ${statusLabel}`,
+                    label: `ステータス: ${statusLabels.join(', ')}`,
                     value: filters.value.status.value,
                     operator: 'equals'
                 });
@@ -533,35 +539,51 @@
     });
 
     const filteredReservations = computed(() => {
-        let reservations;
+        let reservations = [];
 
-        if (hasActiveSearch.value) {
-            // When a search is active, use the search results directly.
-            // The search results should already contain the highlighted text.
-            reservations = searchResults.value.map(result => {
-                const enhancedReservation = enhanceReservationWithMergedClients(result.reservation);
-                return {
-                    ...enhancedReservation,
-                    highlightedText: result.highlightedText || {},
-                };
-            });
+        if (hasActiveSearch.value && searchResults.value.length > 0) {
+            // Start with search results
+            reservations = searchResults.value.map(result =>
+                enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
+            );
         } else {
-            // When no search is active, use the full reservation list.
-            reservations = reservationList.value.map(reservation => {
-                const enhancedReservation = enhanceReservationWithMergedClients(reservation);
-                return {
-                    ...enhancedReservation,
-                    highlightedText: {}, // No highlighting when not searching
-                };
-            });
+            // Start with all reservations
+            reservations = reservationList.value.map(reservation => ({
+                ...enhanceReservationWithMergedClients(reservation),
+                highlightedText: {}
+            }));
         }
 
-        // Apply traditional filters (like status) to the list of reservations
-        if (filters.value.status?.value) {
+        // Apply status filter for MultiSelect
+        if (filters.value.status?.value && Array.isArray(filters.value.status.value) && filters.value.status.value.length > 0) {
             reservations = reservations.filter(reservation =>
-                reservation.status === filters.value.status.value
+                filters.value.status.value.includes(reservation.status)
             );
         }
+
+        // Apply price range filter
+        if (priceFilterMin.value !== null && priceFilterMax.value !== null) {
+            reservations = reservations.filter(reservation => {
+                const price = parseFloat(reservation.price);
+                return price >= priceFilterMin.value && price <= priceFilterMax.value;
+            });
+        } else if (priceFilterMin.value !== null) {
+            reservations = reservations.filter(reservation => parseFloat(reservation.price) >= priceFilterMin.value);
+        } else if (priceFilterMax.value !== null) {
+            reservations = reservations.filter(reservation => parseFloat(reservation.price) <= priceFilterMax.value);
+        }
+
+        // Apply date range filter
+        if (startDateFilter.value && endDateFilter.value) {
+            const start = new Date(startDateFilter.value).setHours(0,0,0,0);
+            const end = new Date(endDateFilter.value).setHours(23,59,59,999);
+            reservations = reservations.filter(reservation => {
+                const checkIn = new Date(reservation.check_in).getTime();
+                return checkIn >= start && checkIn <= end;
+            });
+        }
+
+        // Add more filter logic here if needed
 
         return reservations;
     });
@@ -647,6 +669,8 @@
         if (field === 'price') {
             priceFilter.value = null;
             priceFilterCondition.value = "=";
+            priceFilterMin.value = null;
+            priceFilterMax.value = null;
         } else if (field === 'payment') {
             paymentFilter.value = null;
             paymentFilterCondition.value = "=";
@@ -745,6 +769,66 @@
         // No need to manually trigger @rowExpand or @rowCollapse unless other logic depends on it.
         // The v-model:expandedRows on DataTable handles the state.
     };
+
+    const relativeDateFilter = ref(null);
+    const relativeDateOptions = [
+      { label: '今日', value: 'today' },
+      { label: '今週', value: 'this_week' },
+      { label: '先月', value: 'last_month' }
+    ];
+    function onRelativeDateChange() {
+      const now = new Date();
+      if (relativeDateFilter.value === 'today') {
+        startDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (relativeDateFilter.value === 'this_week') {
+        const day = now.getDay();
+        const diffToMonday = (day === 0 ? 6 : day - 1);
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - diffToMonday);
+        startDateFilter.value = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
+        endDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (relativeDateFilter.value === 'last_month') {
+        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+        startDateFilter.value = firstDayLastMonth;
+        endDateFilter.value = lastDayLastMonth;
+      }
+    }
+
+    // Watch filters and persist to localStorage
+    watch([
+      () => filters.value.status?.value,
+      () => priceFilterMin.value,
+      () => priceFilterMax.value,
+      () => startDateFilter.value,
+      () => endDateFilter.value,
+      () => relativeDateFilter.value
+    ], () => {
+      const filterState = {
+        status: filters.value.status?.value,
+        priceMin: priceFilterMin.value,
+        priceMax: priceFilterMax.value,
+        startDate: startDateFilter.value,
+        endDate: endDateFilter.value,
+        relativeDate: relativeDateFilter.value
+      };
+      localStorage.setItem('reservationFilters', JSON.stringify(filterState));
+    }, { deep: true });
+
+    // Restore filters on mount
+    onMounted(() => {
+      const saved = localStorage.getItem('reservationFilters');
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (state.status) filters.value.status.value = state.status;
+        if (state.priceMin !== undefined) priceFilterMin.value = state.priceMin;
+        if (state.priceMax !== undefined) priceFilterMax.value = state.priceMax;
+        if (state.startDate) startDateFilter.value = new Date(state.startDate);
+        if (state.endDate) endDateFilter.value = new Date(state.endDate);
+        if (state.relativeDate) relativeDateFilter.value = state.relativeDate;
+      }
+    });
 </script>
 
 <style scoped>
