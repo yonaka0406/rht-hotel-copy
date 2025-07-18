@@ -505,14 +505,10 @@ export function useReservationStore() {
             // console.log('From Reservation Store => fetchReservation data:',data);
 
             if (!response.ok) {
+                if (response.status === 404) {
+                    reservationDetails.value = {};
+                }
                 throw new Error('Failed to fetch reservation details');
-            }
-
-            // Handle if no reservation was found
-            if (data.message) {
-                console.error(data.message); // Log message for debugging
-                reservationDetails.value = {}; // Reset reservationDetails
-                return; // Exit the function early since no reservation was found
             }
 
             // Format the date fields for each reservation in the array
