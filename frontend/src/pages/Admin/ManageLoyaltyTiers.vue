@@ -31,7 +31,7 @@
           <div class="grid grid-cols-12 gap-x-6 gap-y-5 p-fluid">
             <div class="col-span-12 md:col-span-6">
               <FloatLabel class="mt-6">
-              <Dropdown id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" @change="loadHotelLoyalSettings" class="w-full md:w-14rem" />
+              <Select id="hotel-loyal-hotel" v-model="hotelLoyalSettings.hotel_id" :options="hotels" optionLabel="name" optionValue="id" placeholder="ホテルを選択" @change="loadHotelLoyalSettings" class="w-full md:w-14rem" />
               <label for="hotel-loyal-hotel">ホテル</label>
             </FloatLabel>
           </div>
@@ -49,7 +49,7 @@
           </div>
           <div class="col-span-12 md:col-span-4">
             <FloatLabel class="mt-6">
-              <Dropdown id="hotel-loyal-logic" v-model="hotelLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
+              <Select id="hotel-loyal-logic" v-model="hotelLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
               <label for="hotel-loyal-logic">論理演算子</label>
             </FloatLabel>
           </div>
@@ -100,7 +100,7 @@
             </div>
              <div class="col-span-12 md:col-span-4">
               <FloatLabel class="mt-6">
-                <Dropdown id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
+                <Select id="brand-loyal-logic" v-model="brandLoyalSettings.logic_operator" :options="logicOperators" optionLabel="name" optionValue="code" placeholder="演算子を選択" class="w-full" />
                 <label for="brand-loyal-logic">論理演算子</label>
               </FloatLabel>
             </div>
@@ -127,7 +127,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import TabView from 'primevue/tabview';
 import TabPanel from 'primevue/tabpanel';
 import InputNumber from 'primevue/inputnumber';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import Button from 'primevue/button';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';

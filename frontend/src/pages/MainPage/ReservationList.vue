@@ -49,7 +49,7 @@
                     
                     <div class="mb-4 flex justify-end items-center">                        
                         <span class="font-bold mr-4">滞在期間選択：</span>
-                        <Dropdown v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2" @change="onRelativeDateChange" />
+                        <Select v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2" @change="onRelativeDateChange" />
                         <label class="mr-2">開始日:</label>
                         <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
                         <label class="ml-4 mr-2">終了日:</label>
@@ -331,7 +331,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton, MultiSelect, Dropdown } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton, MultiSelect } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
