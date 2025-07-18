@@ -18,7 +18,8 @@
       </div>
     </template>
     
-    <div class="search-container">
+    <!-- Apply v-focustrap to the modal content -->
+    <div class="search-container" v-focustrap>
       <ReservationSearchBar 
         ref="searchBarRef"
         v-model="searchQuery"

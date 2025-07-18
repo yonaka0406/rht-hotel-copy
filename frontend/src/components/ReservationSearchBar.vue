@@ -1,5 +1,5 @@
 <template>
-  <div class="reservation-search-bar px-2 py-2 sm:px-4 sm:py-2" role="search">
+  <div v-focustrap class="reservation-search-bar px-2 py-2 sm:px-4 sm:py-2" role="search">
     <div class="search-input-wrapper mb-2 sm:mb-0">
       <span class="p-input-icon-left p-input-icon-right w-full">
         <i class="pi pi-search" />
@@ -17,6 +17,7 @@
           aria-autocomplete="list"
           :aria-controls="showSuggestions ? 'search-suggestions-listbox' : null"
           autocomplete="off"
+          autofocus
         />
         <i v-if="delayedLoading" class="pi pi-spin pi-spinner" />
         <i v-else-if="localQuery && !disabled" class="pi pi-times cursor-pointer" @click="clearSearch" />

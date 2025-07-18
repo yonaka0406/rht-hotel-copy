@@ -195,47 +195,36 @@ describe('GlobalSearchModal functionality', () => {
     expect(highlightMatch('Hello', '')).toBe('Hello');
   });
 
-  // In jsdom, actual focus is unreliable for modals/portals. Test that focusInput is called instead.
   it('should call focusInput on show', async () => {
+    // This test ensures that when the modal becomes visible, it attempts to focus the search bar.
+    // We spy on the 'focusInput' method of the search bar component to verify this behavior.
+    const focusSpy = vi.fn();
+
     const wrapper = mount(GlobalSearchModal, {
       props: { visible: false },
       global: {
-        plugins: [[PrimeVue, { aria: { close: '閉じる' } }]],
-        components: { ReservationSearchBar },
-        config: {
-          globalProperties: {
-            $primevue: {
-              config: {
-                aria: { close: '閉じる' }
-              }
-            }
-          }
-        }
-      }
+        plugins: [PrimeVue],
+        stubs: {
+          ReservationSearchBar: {
+            template: '<div />',
+            methods: {
+              focusInput: focusSpy,
+            },
+          },
+        },
+      },
     });
 
+    // Trigger the modal to show
     await wrapper.setProps({ visible: true });
-    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick(); // Wait for DOM updates
 
-    // Wait for searchBarRef.value to be set (up to 200ms)
-    let searchBarRef = wrapper.vm.searchBarRef;
-    let attempts = 0;
-    while ((!searchBarRef || !searchBarRef.value) && attempts < 10) {
-      await new Promise(r => setTimeout(r, 20));
-      searchBarRef = wrapper.vm.searchBarRef;
-      attempts++;
-    }
-    if (searchBarRef && searchBarRef.value) {
-      const focusSpy = vi.fn();
-      searchBarRef.value.focusInput = focusSpy;
+    // The `onDialogShow` method, which calls `focusInput`, is triggered by the Dialog component internally.
+    // We need to wait for the next tick to allow the child component to be mounted and the ref to be set.
+    await wrapper.vm.$nextTick(); 
 
-      if (typeof wrapper.vm.onDialogShow === 'function') {
-        wrapper.vm.onDialogShow();
-      }
-
-      expect(focusSpy).toHaveBeenCalled();
-    } else {
-      throw new Error('searchBarRef or searchBarRef.value is not defined after waiting');
-    }
+    // Now, we check if our spy has been called.
+    // This confirms that the modal's logic to focus the input on show is working.
+    expect(focusSpy).toHaveBeenCalled();
   });
 });
