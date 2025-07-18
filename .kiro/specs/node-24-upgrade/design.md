@@ -1,47 +1,55 @@
 # Node.js 24 Upgrade: Design
 
-## Current State
+## 1. Introduction
 
-The application currently runs on Node.js 22. This version is stable, but upgrading to Node.js 24 offers performance improvements, new features, and extended long-term support.
+This document outlines the technical design for upgrading the application from Node.js 22 to Node.js 24 using Docker. The primary goals of this upgrade are to enhance performance, leverage new features, and ensure long-term support, while also improving the consistency and reliability of our deployment process.
 
-## Proposed Changes
+## 2. Current Architecture
 
-The upgrade to Node.js 24 will be performed in a phased approach to minimize disruption and ensure a smooth transition. The following steps outline the design of this upgrade process:
+The application is currently built on Node.js 22. It is a monolithic application with a front-end client, a back-end API, and a connection to a PostgreSQL database. It is deployed on a single VPS without containerization.
 
-### 1. Environment Setup
+## 3. Proposed Architecture
 
-- A new branch will be created for the upgrade to isolate the changes.
-- The `.nvmrc` file will be updated to specify Node.js 24.
-- All developers will be required to switch to the new Node.js version using `nvm`.
+The upgrade to Node.js 24 will be managed using Docker. This will not fundamentally change the application's architecture, but it will introduce containerization to standardize the environment and streamline deployments.
 
-### 2. Dependency Update
+### 3.1. Dockerization
 
-- All `npm` dependencies will be reviewed for compatibility with Node.js 24.
-- Outdated or incompatible packages will be updated to their latest compatible versions.
-- The `package-lock.json` file will be regenerated to reflect the changes.
+- A `Dockerfile` will be created at the root of the project.
+- The `Dockerfile` will use the official `node:24` image as its base.
+- It will copy the application code, install dependencies, and define the command to run the application.
+- A `.dockerignore` file will be created to exclude unnecessary files from the Docker image.
 
-### 3. Codebase Refactoring
+### 3.2. Dependency Management
 
-- The codebase will be scanned for any deprecated Node.js APIs.
-- Necessary refactoring will be performed to ensure compatibility with Node.js 24.
-- Particular attention will be paid to native addons, which may require recompilation.
+- All `npm` packages will be audited for compatibility with Node.js 24.
+- `npm audit` will be used to identify and fix any vulnerabilities.
+- The `package-lock.json` file will be regenerated inside the Docker container during the build process.
 
-### 4. Testing
+### 3.3. Code Refactoring
 
-- The existing test suite will be run to ensure all tests pass with Node.js 24.
-- Additional tests will be added to cover any new or modified functionality.
-- End-to-end testing will be performed to validate the application's stability.
+- The codebase will be analyzed for any deprecated Node.js APIs.
+- ESLint rules will be updated to enforce best practices for Node.js 24.
+- Any code using deprecated features will be refactored.
 
-### 5. Deployment
+## 4. Testing Strategy
 
-- The upgrade will be deployed to a staging environment for further testing.
-- After successful validation, the changes will be merged into the main branch.
-- The production environment will be updated to Node.js 24.
+- **Unit Tests:** The existing Jest test suite will be run inside a Docker container to ensure all unit tests pass.
+- **Integration Tests:** The integration test suite will be run in a Dockerized environment to validate the interactions between the application and the database.
+- **End-to-End (E2E) Tests:** E2E tests will be performed against a running Docker container in a staging environment.
 
-## Rollback Plan
+## 5. Deployment Plan
 
-In case of any critical issues, a rollback plan will be in place:
+The deployment will be executed using Docker images:
 
-- The new branch will be reverted.
-- The `.nvmrc` file will be restored to its previous state.
-- The production environment will be rolled back to Node.js 22.
+1. **Image Build:** A new Docker image will be built with the Node.js 24 application.
+2. **Staging Environment:** The new Docker image will be deployed to a staging environment.
+3. **Canary Release:** The new image will be deployed to a small subset of users in production.
+4. **Full Rollout:** After a successful canary release, the new image will be rolled out to all users.
+
+## 6. Rollback Plan
+
+The use of Docker simplifies the rollback process significantly:
+
+1. If any critical issues are discovered, the previous Docker image (running Node.js 22) will be redeployed.
+2. This provides an immediate rollback with minimal downtime.
+3. A post-mortem analysis will be conducted to identify the root cause of the failure.
