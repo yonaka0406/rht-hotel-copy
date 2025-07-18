@@ -67,6 +67,7 @@ async function onSave() {
     filters: {}, // TODO: pass actual filters from parent
     favorite: false
   }
+  console.debug('[SaveSearchDialog] onSave called with:', payload, 'editId:', props.editId);
   let result
   if (props.editId) {
     result = await update(props.editId, payload)
@@ -77,6 +78,7 @@ async function onSave() {
   visible.value = false
 }
 function onCancel() {
+  console.debug('[SaveSearchDialog] onCancel');
   emit('cancel')
   visible.value = false
 }

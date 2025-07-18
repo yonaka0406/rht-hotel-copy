@@ -571,12 +571,12 @@
     const filteredReservations = computed(() => {
         let reservations;
 
-        if (hasActiveSearch.value && searchResults.value.length > 0) {
+        if (hasActiveSearch.value && Array.isArray(searchResults.value) && searchResults.value.length > 0) {
             // When a search is active, use the search results
             reservations = searchResults.value.map(result =>
                 enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
             );
-        } else if (!hasActiveSearch.value) {
+        } else if (!hasActiveSearch.value && Array.isArray(reservationList.value)) {
             // When no search is active, use the full reservation list
             reservations = reservationList.value.map(reservation =>
                 enhanceReservationWithMergedClients(reservation)
@@ -585,6 +585,9 @@
             // When a search is active but returns no results, the list should be empty
             reservations = [];
         }
+
+        // Defensive: ensure reservations is always an array
+        if (!Array.isArray(reservations)) reservations = [];
 
         // Apply status filter for MultiSelect
         if (filters.value.status?.value && Array.isArray(filters.value.status.value) && filters.value.status.value.length > 0) {
@@ -677,6 +680,7 @@
 
     // Enhanced search event handlers
     const handleSearch = async (query) => {
+        console.debug('[ReservationList] handleSearch called with:', query);
         if (query.trim()) {
             await performSearch(query);
         } else {
@@ -859,6 +863,19 @@
 
     // Watcher for Guest/Payer Name
     // Removed clientsJsonFilterInput watcher
+
+    watch(searchQuery, async (newQuery) => {
+        console.debug('[ReservationList] searchQuery changed:', newQuery);
+        // If you have a fetchSearchSuggestions or getSearchSuggestions function, call and log it here
+        // Example:
+        // if (newQuery && newQuery.trim().length > 0) {
+        //   const suggestions = await fetchSearchSuggestions(newQuery);
+        //   console.debug('[ReservationList] fetchSearchSuggestions result:', suggestions);
+        //   searchSuggestions.value = suggestions;
+        // } else {
+        //   searchSuggestions.value = [];
+        // }
+    });
 
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){

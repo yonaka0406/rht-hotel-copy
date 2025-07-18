@@ -171,6 +171,7 @@
     };
 
     const openGlobalSearch = () => {
+        console.debug('[TopMenu] openGlobalSearch called');
         isGlobalSearchVisible.value = true;
     };
 
@@ -227,6 +228,7 @@
     // --- Watchers ---
     watch(selectedHotelId,
         (newHotelId, oldHotelId) => {
+            console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
             if (newHotelId && newHotelId !== oldHotelId) {
                 // Fetch waitlist entries for the new hotel to update the badge count.
                 // Only fetch entries with status 'waiting' and 'notified'.

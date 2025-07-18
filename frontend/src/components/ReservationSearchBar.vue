@@ -138,6 +138,10 @@ export default {
     let loadingTimer = null;
     // IME composition state
     const isComposing = ref(false);
+
+    // Add missing handlers to silence Vue warnings
+    const onCompositionStart = () => { isComposing.value = true; };
+    const onCompositionEnd = () => { isComposing.value = false; };
     watch(() => props.isSearching, (newVal) => {
       if (newVal) {
         loadingTimer = setTimeout(() => {
@@ -168,8 +172,9 @@ export default {
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
-      
+      console.debug('[ReservationSearchBar] onInput:', localQuery.value);
       debounceTimer = setTimeout(() => {
+        console.debug('[ReservationSearchBar] emit search:', localQuery.value);
         emit('search', localQuery.value);
         
         // Show suggestions if query is not empty
@@ -179,9 +184,11 @@ export default {
     
     // Handle keyboard navigation
     const onKeydown = (event) => {
+      console.debug('[ReservationSearchBar] onKeydown:', event.key);
       if (isComposing.value) return;
       if (!showSuggestions.value || props.suggestions.length === 0) {
         if (event.key === 'Enter') {
+          console.debug('[ReservationSearchBar] emit search (Enter):', localQuery.value);
           emit('search', localQuery.value);
         }
         return;
@@ -218,6 +225,7 @@ export default {
     
     // Select a suggestion
     const selectSuggestion = (suggestion) => {
+      console.debug('[ReservationSearchBar] selectSuggestion:', suggestion);
       localQuery.value = suggestion.text;
       emit('suggestion-selected', suggestion);
       showSuggestions.value = false;
@@ -229,6 +237,7 @@ export default {
     
     // Clear search
     const clearSearch = () => {
+      console.debug('[ReservationSearchBar] clearSearch');
       localQuery.value = '';
       showSuggestions.value = false;
       selectedSuggestionIndex.value = -1;
@@ -298,14 +307,6 @@ export default {
       selectedSuggestionIndex.value = overallIndex;
     };
 
-    // IME composition event handlers
-    const onCompositionStart = () => {
-      isComposing.value = true;
-    };
-    const onCompositionEnd = () => {
-      isComposing.value = false;
-    };
-    
     return {
       localQuery,
       showSuggestions,
@@ -318,7 +319,9 @@ export default {
       clearAllFilters,
       getSuggestionTypeLabel,
       handleSuggestionNavigation,
-      delayedLoading
+      delayedLoading,
+      onCompositionStart,
+      onCompositionEnd
     };
   }
 };

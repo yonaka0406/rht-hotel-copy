@@ -74,6 +74,21 @@ export function useApi() {
     return makeRequest(() => apiService.delete(endpoint, options));
   };
 
+  const apiCall = async (endpoint, method = 'GET', data = null, options = {}) => {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return get(endpoint, options);
+      case 'POST':
+        return post(endpoint, data, options);
+      case 'PUT':
+        return put(endpoint, data, options);
+      case 'DELETE':
+        return del(endpoint, options);
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -81,6 +96,7 @@ export function useApi() {
     post,
     put,
     del,
+    apiCall,
     clearAuthToken,
     handleAuthError
   };

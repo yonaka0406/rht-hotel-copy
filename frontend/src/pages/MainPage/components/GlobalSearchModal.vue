@@ -164,7 +164,8 @@ export default {
       performSearch,
       clearSearch,
       removeFilter,
-      clearAllFilters
+      clearAllFilters,
+      getSearchSuggestions
     } = useReservationSearch();
     
     // Initialize phonetic search for highlighting
@@ -203,6 +204,18 @@ export default {
     // Watch for loading state to announce to screen readers
     watch(isSearching, (newIsSearching) => {
       accessibilityService.announceLoadingState(newIsSearching, searchQuery.value);
+    });
+
+    // Watch for search query to fetch suggestions
+    watch(searchQuery, async (newQuery) => {
+      console.debug('[GlobalSearchModal] searchQuery changed:', newQuery);
+      if (newQuery && newQuery.trim().length > 0) {
+        await getSearchSuggestions(newQuery);
+        console.debug('[GlobalSearchModal] getSearchSuggestions result:', searchSuggestions.value);
+        // No assignment to searchSuggestions.value here
+      } else {
+        searchSuggestions.value = [];
+      }
     });
     
     // Handle keyboard navigation for search results

@@ -4,8 +4,9 @@
       <span class="font-bold mr-2">保存済み検索</span>
       <Button label="新規保存" icon="pi pi-plus" size="small" @click="$emit('add')" class="mr-2" aria-label="新規保存" />
     </div>
-    <div v-if="loading">読み込み中...</div>
-    <div v-else-if="error" class="text-red-500">{{ error }}</div>
+    <div v-if="Object.keys(groupedSearches).length === 0">
+      保存済み検索はありません
+    </div>
     <div v-else>
       <div v-for="(group, category) in groupedSearches" :key="category" class="mb-2" role="group" :aria-label="category + 'グループ'">
         <div class="font-semibold text-sm text-gray-600 mb-1">{{ category }}</div>
@@ -23,23 +24,26 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import Button from 'primevue/button'
-import { useSavedSearch } from '@/composables/useSavedSearch'
 
-const { savedSearches, loading, error, fetchAll } = useSavedSearch()
-
-onMounted(() => {
-  fetchAll()
+// Accept the prop from parent
+const props = defineProps({
+  savedSearches: {
+    type: Array,
+    default: () => []
+  }
 })
 
+// Use the prop for grouping
 const groupedSearches = computed(() => {
   const groups = {}
-  for (const search of savedSearches.value) {
+  for (const search of props.savedSearches) {
     const cat = search.category && search.category.trim() ? search.category : '未分類'
     if (!groups[cat]) groups[cat] = []
     groups[cat].push(search)
   }
+  console.debug('[SavedSearches] groupedSearches computed:', groups);
   return groups
 })
 </script>

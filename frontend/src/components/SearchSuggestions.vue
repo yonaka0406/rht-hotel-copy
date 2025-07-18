@@ -213,6 +213,11 @@ export default {
       }
     });
     
+    // Add a debug log when suggestions are rendered
+    watch(() => props.suggestions, (newSuggestions) => {
+      console.debug('[SearchSuggestions] suggestions prop changed:', newSuggestions);
+    });
+    
     // Methods
     const getCategoryLabel = (category) => {
       const labels = {
@@ -264,6 +269,7 @@ export default {
     };
     
     const selectSuggestion = (suggestion) => {
+      console.debug('[SearchSuggestions] selectSuggestion:', suggestion);
       emit('select', suggestion);
       
       // Add to recent searches
@@ -277,6 +283,7 @@ export default {
     };
     
     const addToRecentSearches = (suggestion) => {
+      console.debug('[SearchSuggestions] addToRecentSearches:', suggestion);
       // Create a copy with timestamp
       const recentItem = {
         ...suggestion,
