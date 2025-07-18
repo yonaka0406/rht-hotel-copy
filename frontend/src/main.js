@@ -10,6 +10,7 @@ import ConfirmationService from 'primevue/confirmationservice';
 import Ripple from 'primevue/ripple';
 import Tooltip from 'primevue/tooltip';
 import 'primeicons/primeicons.css'
+import { setApiDependencies } from './composables/useApi';
 
 // Set Japanese locale globally
 const japaneseLocale = {
@@ -37,4 +38,9 @@ app.use(ConfirmationService);
 app.use(router);
 app.directive('ripple', Ripple);
 app.directive('tooltip', Tooltip);
+
+// Set up global dependencies for API service
+// Note: This is a workaround for using Vue composables outside of setup functions
+setApiDependencies(router);
+
 app.mount('#app');
