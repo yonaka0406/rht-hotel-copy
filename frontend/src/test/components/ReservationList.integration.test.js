@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { vi } from 'vitest';
 import PrimeVue from 'primevue/config';
@@ -60,7 +60,7 @@ describe('ReservationList.vue Integration', () => {
   it('renders reservation data and allows search-only', async () => {
     vi.doMock('../../composables/useReportStore', () => ({
       useReportStore: () => ({
-        reservationList: { value: [mockReservations[0]] },
+        reservationList: ref([mockReservations[0]]),
         fetchReservationListView: vi.fn(),
         exportReservationList: vi.fn(),
         exportReservationDetails: vi.fn(),
@@ -69,19 +69,19 @@ describe('ReservationList.vue Integration', () => {
     }));
     vi.doMock('../../composables/useReservationSearch', () => ({
       useReservationSearch: () => ({
-        searchQuery: { value: '田中' },
-        searchResults: [
+        searchQuery: ref('田中'),
+        searchResults: ref([
           {
-            reservation: JSON.parse(JSON.stringify(mockReservations[0])),
+            reservation: mockReservations[0],
             highlightedText: { booker_name: '<mark>田中</mark>太郎' }
           }
-        ],
-        isSearching: false,
-        searchSuggestions: [],
-        activeFilters: { value: [] },
-        searchActiveFilters: { value: [] },
-        searchResultsCount: 1,
-        hasActiveSearch: true,
+        ]),
+        isSearching: ref(false),
+        searchSuggestions: ref([]),
+        activeFilters: ref([]),
+        searchActiveFilters: ref([]),
+        searchResultsCount: ref(1),
+        hasActiveSearch: ref(true),
         performSearch: vi.fn(),
         clearSearch: vi.fn(),
         addFilter: vi.fn(),
@@ -117,7 +117,7 @@ describe('ReservationList.vue Integration', () => {
   it('shows highlighting for reservation number, email, and phone', async () => {
     vi.doMock('../../composables/useReportStore', () => ({
       useReportStore: () => ({
-        reservationList: { value: [mockReservations[0]] },
+        reservationList: ref([mockReservations[0]]),
         fetchReservationListView: vi.fn(),
         exportReservationList: vi.fn(),
         exportReservationDetails: vi.fn(),
@@ -126,8 +126,8 @@ describe('ReservationList.vue Integration', () => {
     }));
     vi.doMock('../../composables/useReservationSearch', () => ({
       useReservationSearch: () => ({
-        searchQuery: { value: 'RES-001' },
-        searchResults: [
+        searchQuery: ref('RES-001'),
+        searchResults: ref([
           {
             reservation: JSON.parse(JSON.stringify(mockReservations[0])),
             highlightedText: {
@@ -136,13 +136,13 @@ describe('ReservationList.vue Integration', () => {
               phone: '<mark>090-1234-5678</mark>'
             }
           }
-        ],
-        isSearching: false,
-        searchSuggestions: [],
-        activeFilters: { value: [] },
-        searchActiveFilters: { value: [] },
-        searchResultsCount: 1,
-        hasActiveSearch: true,
+        ]),
+        isSearching: ref(false),
+        searchSuggestions: ref([]),
+        activeFilters: ref([]),
+        searchActiveFilters: ref([]),
+        searchResultsCount: ref(1),
+        hasActiveSearch: ref(true),
         performSearch: vi.fn(),
         clearSearch: vi.fn(),
         addFilter: vi.fn(),
@@ -180,7 +180,7 @@ describe('ReservationList.vue Integration', () => {
   it('combines search and filter', async () => {
     vi.doMock('../../composables/useReportStore', () => ({
       useReportStore: () => ({
-        reservationList: { value: [mockReservations[1]] },
+        reservationList: ref([mockReservations[1]]),
         fetchReservationListView: vi.fn(),
         exportReservationList: vi.fn(),
         exportReservationDetails: vi.fn(),
@@ -189,19 +189,19 @@ describe('ReservationList.vue Integration', () => {
     }));
     vi.doMock('../../composables/useReservationSearch', () => ({
       useReservationSearch: () => ({
-        searchQuery: { value: '山田' },
-        searchResults: [
+        searchQuery: ref('山田'),
+        searchResults: ref([
           {
             reservation: JSON.parse(JSON.stringify(mockReservations[1])),
             highlightedText: { booker_name: '<mark>山田</mark>花子' }
           }
-        ],
-        isSearching: false,
-        searchSuggestions: [],
-        activeFilters: { value: [] },
-        searchActiveFilters: { value: [] },
-        searchResultsCount: 1,
-        hasActiveSearch: true,
+        ]),
+        isSearching: ref(false),
+        searchSuggestions: ref([]),
+        activeFilters: ref([]),
+        searchActiveFilters: ref([]),
+        searchResultsCount: ref(1),
+        hasActiveSearch: ref(true),
         performSearch: vi.fn(),
         clearSearch: vi.fn(),
         addFilter: vi.fn(),
@@ -238,7 +238,7 @@ describe('ReservationList.vue Integration', () => {
   it('applies status filter only', async () => {
     vi.doMock('../../composables/useReportStore', () => ({
       useReportStore: () => ({
-        reservationList: { value: [mockReservations[0]] },
+        reservationList: ref([mockReservations[0]]),
         fetchReservationListView: vi.fn(),
         exportReservationList: vi.fn(),
         exportReservationDetails: vi.fn(),
@@ -247,14 +247,14 @@ describe('ReservationList.vue Integration', () => {
     }));
     vi.doMock('../../composables/useReservationSearch', () => ({
       useReservationSearch: () => ({
-        searchQuery: { value: '' },
-        searchResults: [],
-        isSearching: false,
-        searchSuggestions: [],
-        activeFilters: { value: [] },
-        searchActiveFilters: { value: [] },
-        searchResultsCount: 0,
-        hasActiveSearch: false,
+        searchQuery: ref(''),
+        searchResults: ref([]),
+        isSearching: ref(false),
+        searchSuggestions: ref([]),
+        activeFilters: ref([]),
+        searchActiveFilters: ref([]),
+        searchResultsCount: ref(0),
+        hasActiveSearch: ref(false),
         performSearch: vi.fn(),
         clearSearch: vi.fn(),
         addFilter: vi.fn(),

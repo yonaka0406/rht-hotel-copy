@@ -96,6 +96,8 @@
 
 
 
+
+
   - Replace existing search inputs in ReservationList.vue with ReservationSearchBar
   - Integrate useReservationSearch composable for unified search functionality
   - Implement combined text search with existing date/status/price filters

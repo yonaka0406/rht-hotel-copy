@@ -533,29 +533,35 @@
     });
 
     const filteredReservations = computed(() => {
-        let reservations = [];
+        let reservations;
 
-        // If there's an active search, use search results with highlightedText
-        if (hasActiveSearch.value && searchResults.value.length > 0) {
-            reservations = searchResults.value.map(result =>
-                enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
-            );
+        if (hasActiveSearch.value) {
+            // When a search is active, use the search results directly.
+            // The search results should already contain the highlighted text.
+            reservations = searchResults.value.map(result => {
+                const enhancedReservation = enhanceReservationWithMergedClients(result.reservation);
+                return {
+                    ...enhancedReservation,
+                    highlightedText: result.highlightedText || {},
+                };
+            });
         } else {
-            // Otherwise, use all reservations from the store with empty highlightedText
-            reservations = reservationList.value.map(reservation => ({
-                ...enhanceReservationWithMergedClients(reservation),
-                highlightedText: {}
-            }));
+            // When no search is active, use the full reservation list.
+            reservations = reservationList.value.map(reservation => {
+                const enhancedReservation = enhanceReservationWithMergedClients(reservation);
+                return {
+                    ...enhancedReservation,
+                    highlightedText: {}, // No highlighting when not searching
+                };
+            });
         }
 
-        // Apply status filter if set
+        // Apply traditional filters (like status) to the list of reservations
         if (filters.value.status?.value) {
             reservations = reservations.filter(reservation =>
                 reservation.status === filters.value.status.value
             );
         }
-
-        // Add more filter logic here if needed
 
         return reservations;
     });
