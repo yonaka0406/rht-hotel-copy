@@ -56,7 +56,28 @@
           tabindex="-1"
         >
           <span class="suggestion-text">
-            <span v-html="highlightMatch(item.text, searchQuery)"></span>
+            <div class="suggestion-main">
+              <span v-html="highlightMatch(item.text || item.name, searchQuery)" class="client-name"></span>
+              <span v-if="item.email" class="client-email">{{ item.email }}</span>
+              <span v-if="item.phone" class="client-phone">{{ item.phone }}</span>
+            </div>
+            <div class="suggestion-details">
+              <span v-if="item.check_in && item.check_out" class="reservation-dates">
+                [{{ formatJpDate(item.check_in) }} → {{ formatJpDate(item.check_out) }}]
+              </span>
+              <span v-else-if="item.check_in" class="reservation-dates">
+                [{{ formatJpDate(item.check_in) }}]
+              </span>
+              <span v-else-if="item.check_out" class="reservation-dates">
+                [→ {{ formatJpDate(item.check_out) }}]
+              </span>
+              <span v-if="item.number_of_people" class="reservation-people">
+                ({{ item.number_of_people }}名)
+              </span>
+              <span v-if="item.ota_reservation_id" class="ota-reservation-id">
+                OTA予約ID: {{ item.ota_reservation_id }}
+              </span>
+            </div>
           </span>
           <span v-if="item.count" class="suggestion-count">{{ item.count }}</span>
         </li>
@@ -73,6 +94,18 @@
 <script>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import accessibilityService from '../services/AccessibilityService';
+import { useRouter } from 'vue-router';
+
+function formatJpDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  // Convert to JST
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const yy = jst.getFullYear();
+  const mm = String(jst.getMonth() + 1).padStart(2, '0');
+  const dd = String(jst.getDate()).padStart(2, '0');
+  return `${yy}年${mm}月${dd}日`;
+}
 
 export default {
   name: 'SearchSuggestions',
@@ -118,6 +151,7 @@ export default {
   ],
   
   setup(props, { emit }) {
+    const router = useRouter();
     // Local state
     const recentSearches = ref([]);
     const selectedCategory = ref('');
@@ -274,6 +308,13 @@ export default {
       
       // Add to recent searches
       addToRecentSearches(suggestion);
+
+      if (suggestion.reservation_id) {
+        router.push({
+          name: 'ReservationEdit',
+          params: { reservation_id: suggestion.reservation_id }
+        });
+      }
       
       // Announce selection to screen readers
       accessibilityService.announce(
@@ -541,7 +582,8 @@ export default {
       selectSuggestion,
       highlightMatch,
       navigateNext,
-      navigatePrevious
+      navigatePrevious,
+      formatJpDate
     };
   }
 };
@@ -606,6 +648,23 @@ export default {
   background-color: rgba(0, 102, 204, 0.1);
 }
 
+.reservation-dates {
+  color: #888;
+  margin-left: 8px;
+  font-size: 0.9em;
+}
+.reservation-people {
+  color: #888;
+  margin-left: 4px;
+  font-size: 0.9em;
+}
+
+.ota-reservation-id {
+  color: #888;
+  margin-left: 8px;
+  font-size: 0.9em;
+}
+
 .suggestion-count {
   font-size: 0.8em;
   color: #666;
@@ -625,5 +684,33 @@ export default {
   padding: 16px;
   text-align: center;
   color: #666;
+}
+
+.suggestion-main {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 500;
+}
+
+.client-name {
+  color: #222;
+}
+
+.client-email, .client-phone {
+  color: #888;
+  font-size: 0.92em;
+}
+
+.suggestion-details {
+  display: flex;
+  gap: 10px;
+  font-size: 0.92em;
+  color: #666;
+  margin-top: 2px;
+}
+
+.reservation-dates, .reservation-people, .ota-reservation-id {
+  margin-right: 8px;
 }
 </style>

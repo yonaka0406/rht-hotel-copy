@@ -49,8 +49,12 @@
     </div>
 
     <!-- Search results count -->
-    <div v-if="searchResultsCount !== null && !isSearching" class="search-results-count mt-2 sm:mt-0" aria-live="polite">
+    <div v-if="searchResultsCount !== null && !isSearching && !showSuggestions" class="search-results-count mt-2 sm:mt-0" aria-live="polite">
       {{ searchResultsCount }}件の検索結果
+    </div>
+    <div v-if="searchResultsCount === 0 && !isSearching && !showSuggestions" class="search-no-results">
+      <i class="pi pi-info-circle"></i>
+      <span>検索結果がありません</span>
     </div>
   </div>
 </template>
@@ -225,14 +229,15 @@ export default {
     
     // Select a suggestion
     const selectSuggestion = (suggestion) => {
-      console.debug('[ReservationSearchBar] selectSuggestion:', suggestion);
-      localQuery.value = suggestion.text;
+      // Use OTA reservation ID for search if present, otherwise fallback to name/email
+      const query = suggestion.ota_reservation_id || suggestion.name || suggestion.name_kanji || suggestion.name_kana || suggestion.email || '';
+      localQuery.value = query;
       emit('suggestion-selected', suggestion);
       showSuggestions.value = false;
       selectedSuggestionIndex.value = -1;
-      
+
       // Trigger search with the selected suggestion
-      emit('search', suggestion.text);
+      emit('search', query);
     };
     
     // Clear search
@@ -432,6 +437,15 @@ export default {
   margin-top: 8px;
   font-size: 0.9em;
   color: #666;
+}
+
+.search-no-results {
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .cursor-pointer {

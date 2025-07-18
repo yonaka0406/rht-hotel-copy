@@ -227,12 +227,12 @@ export function useReservationSearch() {
         signal: currentSearchController.signal
       })
 
-      if (response.success) {
-        searchResults.value = response.results || []
+      if (response.results) {
+        searchResults.value = response.results
         
         // Cache the results
         searchCache.value.set(cacheKey, {
-          results: response.results || [],
+          results: response.results,
           timestamp: Date.now()
         })
         
@@ -500,15 +500,15 @@ export function useReservationSearch() {
         limit: searchConfig.value.maxSuggestions
       });
       
-      if (response.success) {
-        const suggestions = response.suggestions || []
-        searchSuggestions.value = suggestions
-        console.debug('[useReservationSearch] API suggestions:', suggestions);
+      if (Array.isArray(response.suggestions)) {
+        searchSuggestions.value = response.suggestions
+        console.debug('[useReservationSearch] API suggestions:', response.suggestions);
         // Cache the suggestions
         if (suggestionCache) {
-          suggestionCache.set(partialQuery, suggestions)
+          suggestionCache.set(partialQuery, response.suggestions)
         }
       } else {
+        searchSuggestions.value = []
         console.debug('[useReservationSearch] API response not successful:', response);
       }
     } catch (error) {
