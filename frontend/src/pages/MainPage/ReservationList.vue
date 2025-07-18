@@ -1,6 +1,11 @@
 <template>
     <Panel class="m-2">        
         <div>
+            <!-- Saved Searches UI -->
+            <div class="mb-2 flex justify-end">
+                <SavedSearches :saved-searches="sortedSavedSearches" @add="onAddSavedSearch" @select="onSelectSavedSearch" @edit="onEditSavedSearch" @delete="onDeleteSavedSearch" @toggle-favorite="onToggleFavorite" />
+            </div>
+            <SaveSearchDialog :visible="showSaveDialog" :model-value="editSearch ? editSearch.name : ''" :category="editSearch ? editSearch.category : ''" :edit-id="editSearch ? editSearch.id : null" @saved="onSavedSearch" @cancel="showSaveDialog = false; editSearch = null" />
             <DataTable
                 v-model:filters="filters"
                 v-model:selection="selectedReservations"
@@ -317,6 +322,8 @@
     
     import ReservationEdit from './ReservationEdit.vue';
     import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
+    import SavedSearches from '@/components/SavedSearches.vue';
+    import SaveSearchDialog from '@/components/SaveSearchDialog.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
@@ -691,6 +698,67 @@
         clearAllFilters();
     };
 
+    // Saved Searches State
+    const savedSearches = ref([
+        { id: '1', name: '今週の未確定', filters: [], favorite: false },
+        { id: '2', name: '高額予約', filters: [], favorite: false }
+    ])
+    const showSaveDialog = ref(false)
+    const editSearch = ref(null)
+
+    // Saved Searches Handlers
+    const onAddSavedSearch = () => {
+        editSearch.value = null
+        showSaveDialog.value = true
+    }
+    const onEditSavedSearch = (search) => {
+        editSearch.value = search
+        showSaveDialog.value = true
+    }
+    const onSaveSearch = (name, category) => {
+        if (!name) return
+        if (editSearch.value) {
+            // Edit existing
+            const idx = savedSearches.value.findIndex(s => s.id === editSearch.value.id)
+            if (idx !== -1) {
+                savedSearches.value[idx].name = name
+                savedSearches.value[idx].category = category
+            }
+        } else {
+            // Add new
+            savedSearches.value.push({
+                id: Date.now().toString(),
+                name,
+                category,
+                filters: [], // TODO: Save current filters
+                favorite: false
+            })
+        }
+        showSaveDialog.value = false
+        editSearch.value = null
+    }
+    const onSelectSavedSearch = (search) => {
+        console.log('Selecting saved search:', search)
+        // Implement logic to apply saved search filters
+    }
+    const onDeleteSavedSearch = (search) => {
+        savedSearches.value = savedSearches.value.filter(s => s.id !== search.id)
+    }
+    const onSavedSearch = (search) => {
+        showSaveDialog.value = false
+        editSearch.value = null
+        // Optionally show a toast or refresh UI
+        // toast.add({ severity: 'success', summary: '保存済み検索', detail: '検索が保存されました', life: 2000 })
+    }
+
+    // Sorted list: favorites first
+    const sortedSavedSearches = computed(() => {
+        return [...savedSearches.value].sort((a, b) => (b.favorite === true) - (a.favorite === true) || a.name.localeCompare(b.name))
+    })
+    const onToggleFavorite = (search) => {
+        const idx = savedSearches.value.findIndex(s => s.id === search.id)
+        if (idx !== -1) savedSearches.value[idx].favorite = !savedSearches.value[idx].favorite
+    }
 
 
     // Export

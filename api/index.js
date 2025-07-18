@@ -236,6 +236,7 @@ const xmlRoutes = require('./ota/xmlRoutes');
 const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist routes
 const bookingEngineRoutes = require('./routes/bookingEngineRoutes'); // Import booking engine routes
 const searchRoutes = require('./routes/searchRoutes'); // Import search routes
+const userSavedSearchRoutes = require('./routes/userSavedSearchRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -258,6 +259,7 @@ app.use('/api', xmlRoutes);
 app.use('/api', waitlistRoutes); 
 app.use('/api/search', searchRoutes); // Search functionality routes
 app.use('/api/booking-engine', bookingEngineRoutes);
+app.use('/api/user-saved-search', userSavedSearchRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {

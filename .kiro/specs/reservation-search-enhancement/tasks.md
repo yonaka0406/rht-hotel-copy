@@ -68,7 +68,7 @@
   - Write integration tests for enhanced search with existing filters
   - _Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 9. Implement advanced filtering capabilities
+- [x] 9. Implement advanced filtering capabilities
   - Add support for multiple status selections in filter interface
   - Implement price range filters (between X and Y) replacing simple comparison
   - Add relative date filters ("today", "this week", "last month")
@@ -77,7 +77,7 @@
   - Write tests for complex filter combinations and edge cases
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.5_
 
-- [ ] 10. Build saved searches functionality
+- [x] 10. Build saved searches functionality
   - Create SavedSearches.vue component for managing saved searches
   - Implement save current search dialog with naming interface
   - Add saved searches dropdown/list for quick access
