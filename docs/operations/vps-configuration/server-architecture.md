@@ -560,3 +560,24 @@ graph TD
 ```
 
 These diagrams provide a visual representation of the server architecture, network configuration, security layers, backup process, and recovery mechanisms implemented on the Sakura VPS.
+
+## Configuration Status Summary (as of July 2025)
+
+*The following configuration check was performed on **2025-07-18**.*
+
+The following table summarizes the current Sakura VPS configuration and its alignment with the recommendations in this document:
+
+| Area                        | Status/Configured? | Notes                                                                 |
+|-----------------------------|--------------------|-----------------------------------------------------------------------|
+| Security updates            | ✅ Yes             | `unattended-upgrades` active                                         |
+| System limits               | ✅ Yes             | `/etc/security/limits.conf` set for postgres                         |
+| Kernel parameters           | ✅ Yes             | All recommended sysctl values set                                     |
+| Transparent Huge Pages      | ✅ Yes             | Disabled (`[never]`)                                                 |
+| I/O scheduler               | ✅ Yes             | `mq-deadline` for `vda` (SSD)                                        |
+| Filesystem                  | ✅ Yes             | ext4 with `relatime`                                                 |
+| Time sync                   | ✅ Yes             | NTP active, clock synchronized                                       |
+| Firewall (iptables)         | ✅ Yes             | DROP policy, rate limiting, service-specific rules                    |
+| UFW                         | 🚫 Not installed   | Not needed since iptables is in use                                   |
+| Network config              | ✅ Yes             | Public/private interfaces, DNS, as per doc                            |
+
+**This table provides a quick reference for system administrators to verify that the server is configured according to best practices and project requirements.**
