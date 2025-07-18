@@ -42,6 +42,24 @@ export function useReservationSearch() {
     cacheExpiration: 5 * 60 * 1000 // 5 minutes
   })
 
+  // Import suggestion cache service
+  let suggestionCache = null
+  const initializeCache = async () => {
+    if (!suggestionCache) {
+      try {
+        const { default: cacheService } = await import('../services/SuggestionCacheService')
+        suggestionCache = cacheService
+      } catch (error) {
+        console.debug('Suggestion cache service not available, using local cache')
+        suggestionCache = {
+          get: () => null,
+          set: () => {},
+          has: () => false
+        }
+      }
+    }
+  }
+  
   // Search cache
   const searchCache = ref(new Map())
   
@@ -450,6 +468,18 @@ export function useReservationSearch() {
       return
     }
 
+    // Initialize cache service if needed
+    await initializeCache()
+    
+    // Check cache first
+    if (suggestionCache && suggestionCache.has(partialQuery)) {
+      const cachedSuggestions = suggestionCache.get(partialQuery)
+      if (cachedSuggestions) {
+        searchSuggestions.value = cachedSuggestions
+        return
+      }
+    }
+
     await initializeAPI()
     
     if (!apiCall) {
@@ -465,7 +495,13 @@ export function useReservationSearch() {
       })
       
       if (response.success) {
-        searchSuggestions.value = response.suggestions || []
+        const suggestions = response.suggestions || []
+        searchSuggestions.value = suggestions
+        
+        // Cache the suggestions
+        if (suggestionCache) {
+          suggestionCache.set(partialQuery, suggestions)
+        }
       }
     } catch (error) {
       console.error('Get suggestions error:', error)

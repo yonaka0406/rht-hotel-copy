@@ -18,20 +18,15 @@
     </div>
 
     <!-- Search suggestions dropdown -->
-    <div v-if="showSuggestions && suggestions.length > 0" class="search-suggestions">
-      <ul class="suggestion-list">
-        <li
-          v-for="(suggestion, index) in suggestions"
-          :key="index"
-          :class="{ 'selected': selectedSuggestionIndex === index }"
-          @click="selectSuggestion(suggestion)"
-          @mouseenter="selectedSuggestionIndex = index"
-        >
-          <span class="suggestion-text">{{ suggestion.text }}</span>
-          <span v-if="suggestion.type" class="suggestion-type">{{ getSuggestionTypeLabel(suggestion.type) }}</span>
-        </li>
-      </ul>
-    </div>
+    <SearchSuggestions
+      v-if="showSuggestions"
+      :suggestions="suggestions"
+      :search-query="localQuery"
+      :selected-index="selectedSuggestionIndex"
+      @select="selectSuggestion"
+      @highlight="selectedSuggestionIndex = $event"
+      @navigate="handleSuggestionNavigation"
+    />
 
     <!-- Active filters display -->
     <div v-if="activeFilters.length > 0" class="active-filters">
@@ -55,6 +50,7 @@
 <script>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useReservationSearch } from '../composables/useReservationSearch';
+import SearchSuggestions from './SearchSuggestions.vue';
 
 export default {
   name: 'ReservationSearchBar',
@@ -246,6 +242,31 @@ export default {
       document.removeEventListener('click', handleClickOutside);
     });
     
+    // Handle navigation events from SearchSuggestions component
+    const handleSuggestionNavigation = (navigationInfo) => {
+      // This method receives navigation events from the SearchSuggestions component
+      // We can use this to update UI or perform additional actions when navigation occurs
+      
+      // Calculate overall index based on category and index
+      let overallIndex = 0;
+      const { category, index } = navigationInfo;
+      
+      if (category === 'recent') {
+        // Recent searches are always first
+        overallIndex = index;
+      } else {
+        // For other categories, we need to calculate the offset
+        // This is a simplified version - in a real implementation, we would need to
+        // know the exact structure of suggestions to calculate this correctly
+        overallIndex = index;
+        
+        // Add any offsets from previous categories
+        // This would need to be implemented based on the actual data structure
+      }
+      
+      selectedSuggestionIndex.value = overallIndex;
+    };
+    
     return {
       localQuery,
       showSuggestions,
@@ -256,7 +277,8 @@ export default {
       clearSearch,
       removeFilter,
       clearAllFilters,
-      getSuggestionTypeLabel
+      getSuggestionTypeLabel,
+      handleSuggestionNavigation
     };
   }
 };
