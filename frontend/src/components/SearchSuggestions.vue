@@ -24,6 +24,7 @@
           @mouseenter="setSelectedItem('recent', index)"
           role="option"
           :aria-selected="isItemSelected('recent', index)"
+          tabindex="-1"
         >
           <span class="suggestion-text">{{ item.text }}</span>
           <span class="suggestion-action">
@@ -52,6 +53,7 @@
           @mouseenter="setSelectedItem(category, index)"
           role="option"
           :aria-selected="isItemSelected(category, index)"
+          tabindex="-1"
         >
           <span class="suggestion-text">
             <span v-html="highlightMatch(item.text, searchQuery)"></span>

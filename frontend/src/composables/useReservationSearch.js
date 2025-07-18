@@ -205,7 +205,7 @@ export function useReservationSearch() {
     await initializeAPI()
     
     if (!apiCall) {
-      searchError.value = 'Search functionality not available'
+      searchError.value = '検索機能が利用できません。'
       return
     }
 
@@ -237,7 +237,7 @@ export function useReservationSearch() {
         
         lastSearchTime.value = Date.now()
       } else {
-        throw new Error(response.message || 'Search failed')
+        throw new Error(response.message || '検索に失敗しました。')
       }
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -246,7 +246,7 @@ export function useReservationSearch() {
       }
       
       console.error('Search error:', error)
-      searchError.value = error.message || 'Search failed'
+      searchError.value = error.message || '検索に失敗しました。'
       searchResults.value = []
     } finally {
       isSearching.value = false

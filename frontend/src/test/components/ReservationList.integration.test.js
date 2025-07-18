@@ -1,21 +1,53 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { vi } from 'vitest';
 import PrimeVue from 'primevue/config';
 import { ref } from 'vue';
 
-vi.mock('../../composables/useHotelStore', () => ({
+// Move all vi.doMock calls for composables to the top
+let mockReservationListRef = ref([]);
+let mockSearchResultsRef = ref([]);
+let mockSearchQueryRef = ref('');
+let mockHasActiveSearchRef = ref(false);
+
+vi.doMock('../../composables/useHotelStore', () => ({
   useHotelStore: () => ({
-    selectedHotelId: { value: 1 },
+    selectedHotelId: ref(1),
     fetchHotels: vi.fn(),
     fetchHotel: vi.fn(),
   }),
 }));
 
-vi.mock('primevue/usetoast', () => ({
+vi.doMock('primevue/usetoast', () => ({
   useToast: () => ({
     add: vi.fn(),
   }),
+}));
+
+vi.doMock('../../composables/useReportStore', () => ({
+  useReportStore: () => ({
+    reservationList: mockReservationListRef,
+    fetchReservationListView: vi.fn(),
+    exportReservationList: vi.fn(),
+    exportReservationDetails: vi.fn(),
+    exportMealCount: vi.fn(),
+  })
+}));
+vi.doMock('../../composables/useReservationSearch', () => ({
+  useReservationSearch: () => ({
+    searchQuery: mockSearchQueryRef,
+    searchResults: mockSearchResultsRef,
+    isSearching: ref(false),
+    searchSuggestions: ref([]),
+    activeFilters: ref([]),
+    searchActiveFilters: ref([]),
+    searchResultsCount: ref(mockSearchResultsRef.value.length),
+    hasActiveSearch: mockHasActiveSearchRef,
+    performSearch: vi.fn(),
+    clearSearch: vi.fn(),
+    addFilter: vi.fn(),
+    removeFilter: vi.fn(),
+    clearAllFilters: vi.fn(),
+  })
 }));
 
 const mockReservations = [
@@ -49,47 +81,30 @@ const mockReservations = [
   }
 ];
 
+const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+
 describe('ReservationList.vue Integration', () => {
   let wrapper;
 
   afterEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mockReservationListRef.value = [];
+    mockSearchResultsRef.value = [];
+    mockSearchQueryRef.value = '';
+    mockHasActiveSearchRef.value = false;
   });
 
   it('renders reservation data and allows search-only', async () => {
-    vi.doMock('../../composables/useReportStore', () => ({
-      useReportStore: () => ({
-        reservationList: ref([mockReservations[0]]),
-        fetchReservationListView: vi.fn(),
-        exportReservationList: vi.fn(),
-        exportReservationDetails: vi.fn(),
-        exportMealCount: vi.fn(),
-      })
-    }));
-    vi.doMock('../../composables/useReservationSearch', () => ({
-      useReservationSearch: () => ({
-        searchQuery: ref('田中'),
-        searchResults: ref([
-          {
-            reservation: mockReservations[0],
-            highlightedText: { booker_name: '<mark>田中</mark>太郎' }
-          }
-        ]),
-        isSearching: ref(false),
-        searchSuggestions: ref([]),
-        activeFilters: ref([]),
-        searchActiveFilters: ref([]),
-        searchResultsCount: ref(1),
-        hasActiveSearch: ref(true),
-        performSearch: vi.fn(),
-        clearSearch: vi.fn(),
-        addFilter: vi.fn(),
-        removeFilter: vi.fn(),
-        clearAllFilters: vi.fn(),
-      })
-    }));
-    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+    mockReservationListRef.value = [...mockReservations];
+    mockSearchQueryRef.value = '田中';
+    mockHasActiveSearchRef.value = true;
+    mockSearchResultsRef.value = [
+      {
+        reservation: mockReservations[0],
+        highlightedText: { booker_name: '<mark>田中</mark>太郎' }
+      }
+    ];
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -110,47 +125,28 @@ describe('ReservationList.vue Integration', () => {
       },
     });
     await wrapper.vm.$nextTick();
-    console.log('filteredReservations[0]:', wrapper.vm.filteredReservations[0]);
+    // Debug output
+    console.log('searchResults:', wrapper.vm.searchResults);
+    console.log('reservationList:', wrapper.vm.reservationList);
+    console.log('filteredReservations:', wrapper.vm.filteredReservations);
+    expect(wrapper.vm.filteredReservations.length).toBeGreaterThan(0);
     expect(wrapper.vm.filteredReservations[0].highlightedText.booker_name).toBe('<mark>田中</mark>太郎');
   });
 
   it('shows highlighting for reservation number, email, and phone', async () => {
-    vi.doMock('../../composables/useReportStore', () => ({
-      useReportStore: () => ({
-        reservationList: ref([mockReservations[0]]),
-        fetchReservationListView: vi.fn(),
-        exportReservationList: vi.fn(),
-        exportReservationDetails: vi.fn(),
-        exportMealCount: vi.fn(),
-      })
-    }));
-    vi.doMock('../../composables/useReservationSearch', () => ({
-      useReservationSearch: () => ({
-        searchQuery: ref('RES-001'),
-        searchResults: ref([
-          {
-            reservation: JSON.parse(JSON.stringify(mockReservations[0])),
-            highlightedText: {
-              reservation_number: '<mark>RES-001</mark>',
-              email: '<mark>taro@example.com</mark>',
-              phone: '<mark>090-1234-5678</mark>'
-            }
-          }
-        ]),
-        isSearching: ref(false),
-        searchSuggestions: ref([]),
-        activeFilters: ref([]),
-        searchActiveFilters: ref([]),
-        searchResultsCount: ref(1),
-        hasActiveSearch: ref(true),
-        performSearch: vi.fn(),
-        clearSearch: vi.fn(),
-        addFilter: vi.fn(),
-        removeFilter: vi.fn(),
-        clearAllFilters: vi.fn(),
-      })
-    }));
-    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+    mockReservationListRef.value = [...mockReservations];
+    mockSearchQueryRef.value = 'RES-001';
+    mockHasActiveSearchRef.value = true;
+    mockSearchResultsRef.value = [
+      {
+        reservation: mockReservations[0],
+        highlightedText: {
+          reservation_number: '<mark>RES-001</mark>',
+          email: '<mark>taro@example.com</mark>',
+          phone: '<mark>090-1234-5678</mark>'
+        }
+      }
+    ];
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -171,45 +167,25 @@ describe('ReservationList.vue Integration', () => {
       },
     });
     await wrapper.vm.$nextTick();
-    console.log('filteredReservations[0]:', wrapper.vm.filteredReservations[0]);
+    console.log('searchResults:', wrapper.vm.searchResults);
+    console.log('reservationList:', wrapper.vm.reservationList);
+    console.log('filteredReservations:', wrapper.vm.filteredReservations);
+    expect(wrapper.vm.filteredReservations.length).toBeGreaterThan(0);
     expect(wrapper.vm.filteredReservations[0].highlightedText.reservation_number).toBe('<mark>RES-001</mark>');
     expect(wrapper.vm.filteredReservations[0].highlightedText.email).toBe('<mark>taro@example.com</mark>');
     expect(wrapper.vm.filteredReservations[0].highlightedText.phone).toBe('<mark>090-1234-5678</mark>');
   });
 
   it('combines search and filter', async () => {
-    vi.doMock('../../composables/useReportStore', () => ({
-      useReportStore: () => ({
-        reservationList: ref([mockReservations[1]]),
-        fetchReservationListView: vi.fn(),
-        exportReservationList: vi.fn(),
-        exportReservationDetails: vi.fn(),
-        exportMealCount: vi.fn(),
-      })
-    }));
-    vi.doMock('../../composables/useReservationSearch', () => ({
-      useReservationSearch: () => ({
-        searchQuery: ref('山田'),
-        searchResults: ref([
-          {
-            reservation: JSON.parse(JSON.stringify(mockReservations[1])),
-            highlightedText: { booker_name: '<mark>山田</mark>花子' }
-          }
-        ]),
-        isSearching: ref(false),
-        searchSuggestions: ref([]),
-        activeFilters: ref([]),
-        searchActiveFilters: ref([]),
-        searchResultsCount: ref(1),
-        hasActiveSearch: ref(true),
-        performSearch: vi.fn(),
-        clearSearch: vi.fn(),
-        addFilter: vi.fn(),
-        removeFilter: vi.fn(),
-        clearAllFilters: vi.fn(),
-      })
-    }));
-    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+    mockReservationListRef.value = [...mockReservations];
+    mockSearchQueryRef.value = '山田';
+    mockHasActiveSearchRef.value = true;
+    mockSearchResultsRef.value = [
+      {
+        reservation: mockReservations[1],
+        highlightedText: { booker_name: '<mark>山田</mark>花子' }
+      }
+    ];
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -230,39 +206,19 @@ describe('ReservationList.vue Integration', () => {
       },
     });
     await wrapper.vm.$nextTick();
-    console.log('filteredReservations[0]:', wrapper.vm.filteredReservations[0]);
+    console.log('searchResults:', wrapper.vm.searchResults);
+    console.log('reservationList:', wrapper.vm.reservationList);
+    console.log('filteredReservations:', wrapper.vm.filteredReservations);
+    expect(wrapper.vm.filteredReservations.length).toBeGreaterThan(0);
     expect(wrapper.vm.filteredReservations[0].highlightedText.booker_name).toBe('<mark>山田</mark>花子');
     expect(wrapper.vm.filteredReservations.some(r => r.status === 'hold')).toBe(true);
   });
 
   it('applies status filter only', async () => {
-    vi.doMock('../../composables/useReportStore', () => ({
-      useReportStore: () => ({
-        reservationList: ref([mockReservations[0]]),
-        fetchReservationListView: vi.fn(),
-        exportReservationList: vi.fn(),
-        exportReservationDetails: vi.fn(),
-        exportMealCount: vi.fn(),
-      })
-    }));
-    vi.doMock('../../composables/useReservationSearch', () => ({
-      useReservationSearch: () => ({
-        searchQuery: ref(''),
-        searchResults: ref([]),
-        isSearching: ref(false),
-        searchSuggestions: ref([]),
-        activeFilters: ref([]),
-        searchActiveFilters: ref([]),
-        searchResultsCount: ref(0),
-        hasActiveSearch: ref(false),
-        performSearch: vi.fn(),
-        clearSearch: vi.fn(),
-        addFilter: vi.fn(),
-        removeFilter: vi.fn(),
-        clearAllFilters: vi.fn(),
-      })
-    }));
-    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+    mockReservationListRef.value = [mockReservations[0]];
+    mockSearchQueryRef.value = '';
+    mockHasActiveSearchRef.value = false;
+    mockSearchResultsRef.value = [];
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -281,52 +237,25 @@ describe('ReservationList.vue Integration', () => {
           tooltip: {},
         },
       },
-      data() {
-        return {
-          tableLoading: false,
-          filters: { status: { value: 'confirmed' } },
-        };
-      },
     });
     await wrapper.vm.$nextTick();
+    console.log('searchResults:', wrapper.vm.searchResults);
+    console.log('reservationList:', wrapper.vm.reservationList);
+    console.log('filteredReservations:', wrapper.vm.filteredReservations);
     expect(wrapper.vm.filteredReservations.some(r => r.status === 'confirmed')).toBe(true);
     expect(wrapper.vm.filteredReservations.some(r => r.status !== 'confirmed')).toBe(false);
   });
 
   it('clears all filters and search', async () => {
-    const searchQuery = ref('田中');
-    vi.doMock('../../composables/useReportStore', () => ({
-      useReportStore: () => ({
-        reservationList: { value: [mockReservations[0]] },
-        fetchReservationListView: vi.fn(),
-        exportReservationList: vi.fn(),
-        exportReservationDetails: vi.fn(),
-        exportMealCount: vi.fn(),
-      })
-    }));
-    vi.doMock('../../composables/useReservationSearch', () => ({
-      useReservationSearch: () => ({
-        searchQuery,
-        searchResults: [
-          {
-            reservation: JSON.parse(JSON.stringify(mockReservations[0])),
-            highlightedText: { booker_name: '<mark>田中</mark>太郎' }
-          }
-        ],
-        isSearching: false,
-        searchSuggestions: [],
-        activeFilters: { value: [] },
-        searchActiveFilters: { value: [] },
-        searchResultsCount: 1,
-        hasActiveSearch: true,
-        performSearch: vi.fn(),
-        clearSearch: () => { searchQuery.value = ''; },
-        addFilter: vi.fn(),
-        removeFilter: vi.fn(),
-        clearAllFilters: () => { searchQuery.value = ''; },
-      })
-    }));
-    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
+    mockReservationListRef.value = [mockReservations[0]];
+    mockSearchQueryRef.value = '田中';
+    mockHasActiveSearchRef.value = true;
+    mockSearchResultsRef.value = [
+      {
+        reservation: mockReservations[0],
+        highlightedText: { booker_name: '<mark>田中</mark>太郎' }
+      }
+    ];
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -345,15 +274,10 @@ describe('ReservationList.vue Integration', () => {
           tooltip: {},
         },
       },
-      data() {
-        return {
-          tableLoading: false,
-        };
-      },
     });
     await wrapper.vm.handleClearAllFilters();
     await wrapper.vm.$nextTick();
-    expect(searchQuery.value).toBe('');
+    expect(mockSearchQueryRef.value).toBe('');
     expect(wrapper.vm.filters.status.value).toBeNull();
   });
 }); 

@@ -12,7 +12,7 @@
           :disabled="disabled"
           aria-label="予約検索"
         />
-        <i v-if="isSearching" class="pi pi-spin pi-spinner" />
+        <i v-if="delayedLoading" class="pi pi-spin pi-spinner" />
         <i v-else-if="localQuery && !disabled" class="pi pi-times cursor-pointer" @click="clearSearch" />
       </span>
     </div>
@@ -26,6 +26,7 @@
       @select="selectSuggestion"
       @highlight="selectedSuggestionIndex = $event"
       @navigate="handleSuggestionNavigation"
+      role="listbox"
     />
 
     <!-- Active filters display -->
@@ -34,14 +35,14 @@
       <div class="filter-tags">
         <span v-for="(filter, index) in activeFilters" :key="index" class="filter-tag">
           {{ filter.label }}
-          <i class="pi pi-times filter-remove" @click="removeFilter(filter.field)" />
+          <button class="pi pi-times filter-remove" @click="removeFilter(filter.field)" aria-label="フィルター削除" tabindex="0"></button>
         </span>
-        <span class="clear-all" @click="clearAllFilters">すべてクリア</span>
+        <button class="clear-all" @click="clearAllFilters" aria-label="すべてクリア" tabindex="0">すべてクリア</button>
       </div>
     </div>
 
     <!-- Search results count -->
-    <div v-if="searchResultsCount !== null && !isSearching" class="search-results-count">
+    <div v-if="searchResultsCount !== null && !isSearching" class="search-results-count" aria-live="polite">
       {{ searchResultsCount }}件の検索結果
     </div>
   </div>
@@ -125,6 +126,19 @@ export default {
     const localQuery = ref(props.modelValue);
     const showSuggestions = ref(false);
     const selectedSuggestionIndex = ref(-1);
+    // Delayed loading spinner
+    const delayedLoading = ref(false);
+    let loadingTimer = null;
+    watch(() => props.isSearching, (newVal) => {
+      if (newVal) {
+        loadingTimer = setTimeout(() => {
+          delayedLoading.value = true;
+        }, 500);
+      } else {
+        clearTimeout(loadingTimer);
+        delayedLoading.value = false;
+      }
+    });
     
     // Debounce timer for input
     let debounceTimer = null;
@@ -284,7 +298,8 @@ export default {
       removeFilter,
       clearAllFilters,
       getSuggestionTypeLabel,
-      handleSuggestionNavigation
+      handleSuggestionNavigation,
+      delayedLoading
     };
   }
 };

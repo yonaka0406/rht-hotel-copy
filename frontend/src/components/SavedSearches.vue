@@ -9,12 +9,12 @@
     <div v-else>
       <div v-for="(group, category) in groupedSearches" :key="category" class="mb-2">
         <div class="font-semibold text-sm text-gray-600 mb-1">{{ category }}</div>
-        <ul class="list-none p-0 m-0">
-          <li v-for="search in group" :key="search.id" class="flex items-center mb-1">
-            <Button :label="search.name" size="small" class="mr-2" @click="$emit('select', search)" />
-            <Button :icon="search.favorite ? 'pi pi-star-fill' : 'pi pi-star'" size="small" text @click="$emit('toggle-favorite', search)" class="mr-1" :severity="search.favorite ? 'warning' : undefined" v-tooltip="search.favorite ? 'お気に入り' : 'お気に入りに追加'" />
-            <Button icon="pi pi-pencil" size="small" text @click="$emit('edit', search)" class="mr-1" />
-            <Button icon="pi pi-trash" size="small" text severity="danger" @click="$emit('delete', search)" />
+        <ul class="list-none p-0 m-0" role="list">
+          <li v-for="search in group" :key="search.id" class="flex items-center mb-1" role="listitem">
+            <Button :label="search.name" size="small" class="mr-2" @click="$emit('select', search)" :aria-label="search.name + 'を選択'" />
+            <Button :icon="search.favorite ? 'pi pi-star-fill' : 'pi pi-star'" size="small" text @click="$emit('toggle-favorite', search)" class="mr-1" :severity="search.favorite ? 'warning' : undefined" v-tooltip="search.favorite ? 'お気に入り' : 'お気に入りに追加'" :aria-label="search.favorite ? 'お気に入り解除' : 'お気に入りに追加'" />
+            <Button icon="pi pi-pencil" size="small" text @click="$emit('edit', search)" class="mr-1" aria-label="編集" />
+            <Button icon="pi pi-trash" size="small" text severity="danger" @click="$emit('delete', search)" aria-label="削除" />
           </li>
         </ul>
       </div>

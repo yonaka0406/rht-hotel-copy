@@ -16,7 +16,7 @@
 </template>
 
 <script setup>
-import { ref, watch, defineProps, defineEmits } from 'vue'
+import { ref, watch, defineProps, defineEmits, nextTick } from 'vue'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
@@ -47,6 +47,10 @@ watch(() => props.visible, (val) => {
   if (val) {
     searchName.value = props.modelValue || ''
     category.value = props.category || ''
+    nextTick(() => {
+      const input = document.getElementById('searchName')
+      if (input) input.focus()
+    })
   }
 })
 watch(() => props.modelValue, (val) => {

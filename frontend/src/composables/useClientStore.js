@@ -39,7 +39,7 @@ export function useClientStore() {
             });
             // Check if the response is okay
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                throw new Error(`HTTPエラーが発生しました。ステータス: ${response.status}`);
             }
             // Log the response before parsing
             const data = await response.json();
@@ -58,7 +58,7 @@ export function useClientStore() {
             }
 
         } catch (error) {
-            console.error('Failed to fetch clients', error);
+            console.error('Failed to fetch clients.', error);
             setClients([]);            
             throw error;
         } finally {
@@ -89,7 +89,7 @@ export function useClientStore() {
                 group: selectedClientGroup.value,
             };            
         } catch (error) {
-            console.error('Failed to fetch client', error);
+            console.error('Failed to fetch client information.', error);
         }
     };
 
@@ -106,13 +106,13 @@ export function useClientStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to fetch client by name');
+                throw new Error('Failed to fetch client by name.');
             }
 
             const clientName = await response.json();            
             return clientName;
         } catch (error) {
-            console.error('Failed to fetch client by name', error);
+            console.error('Failed to fetch client by name.', error);
             throw error;
         }
     };
@@ -131,7 +131,7 @@ export function useClientStore() {
             return clientReservations;
             
         } catch (error) {
-            console.error('Failed to fetch client reservations', error);
+            console.error('Failed to fetch client reservations.', error);
         }
     };
     const fetchCustomerID = async (clientId, customerId) => {
@@ -149,7 +149,7 @@ export function useClientStore() {
             return client;
             
         } catch (error) {
-            console.error('Failed to fetch customer id', error);
+            console.error('Failed to fetch customer id.', error);
         }
     };
     const fetchClientGroups = async () => {
@@ -166,7 +166,7 @@ export function useClientStore() {
             groups.value = await response.json();
             
         } catch (error) {
-            console.error('Failed to fetch client groups', error);
+            console.error('Failed to fetch client groups.', error);
         }
     };
     // Fetch data for the selected client
@@ -185,7 +185,7 @@ export function useClientStore() {
 
             return selectedGroup.value;
         } catch (error) {
-            console.error('Failed to fetch group', error);
+            console.error('Failed to fetch group.', error);
         }
     };
     
@@ -202,13 +202,13 @@ export function useClientStore() {
           });
       
           if (!response.ok) {
-            throw new Error('Failed to create client');
+            throw new Error('Failed to create client.');
           }
       
           const newClient = await response.json();                  
           return newClient;
         } catch (error) {
-          console.error('Failed to create client', error);
+          console.error('Failed to create client.', error);
           throw error;
         }
     };
@@ -225,14 +225,14 @@ export function useClientStore() {
           });
       
           if (!response.ok) {
-            throw new Error('Failed to create client');
+            throw new Error('Failed to create client.');
           }
       
           const newClient = await response.json();
           appendClients(newClient);          
           return newClient;
         } catch (error) {
-          console.error('Failed to create client', error);
+          console.error('Failed to create client.', error);
           throw error;
         }
     };
@@ -457,7 +457,7 @@ export function useClientStore() {
             }
             // clients.value now contains all clients
         } catch (error) {
-            console.error('Failed to fetch all clients for filtering:', error);
+            console.error('Failed to fetch all clients for filtering.', error);
             // clients.value might be partially populated or just page 1;
             // fetchClients itself handles setting clients to [] on error for its own scope.
             // Depending on desired behavior, could clear clients.value here if any part fails.
@@ -560,7 +560,7 @@ export function useClientStore() {
             }
             commonRelationshipPairs.value = await response.json();
         } catch (error) {
-            console.error('Error fetching common relationship pairs:', error);
+            console.error('Error fetching common relationship pairs.', error);
             commonRelationshipPairs.value = [];
             throw error;
         } finally {

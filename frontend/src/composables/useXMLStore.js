@@ -142,14 +142,14 @@ export function useXMLStore() {
             const data = await response.text();
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error('Failed to retrieve data.');
             }
             
             template.value = data;
             
         } catch (error) {
             template.value = null;
-            console.error('Failed to fetch data', error);
+            console.error('Failed to retrieve data.', error);
         }
     };
     const fetchXMLRecentResponses = async() => {
@@ -166,14 +166,14 @@ export function useXMLStore() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error('Failed to retrieve data.');
             }
             
             responses.value = data;
             
         } catch (error) {
             responses.value = [];
-            console.error('Failed to fetch data', error);
+            console.error('Failed to retrieve data.', error);
         }
     };
     const insertXMLResponse = async(hotel_id, name, xml) => {
@@ -193,7 +193,7 @@ export function useXMLStore() {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', response.status, response.statusText, errorText);
-                throw new Error(`Failed to post data: ${response.status} ${response.statusText} ${errorText}`);
+                throw new Error('データの送信に失敗しました。');
             }
 
             const responseData = await response.json(); // Parse the JSON response from postXMLResponse
@@ -201,7 +201,7 @@ export function useXMLStore() {
             return responseData;
             
         } catch (error) {
-            console.error('Failed to post data', error);
+            console.error('Failed to send data.', error);
             throw error;
         }
     };
@@ -221,14 +221,14 @@ export function useXMLStore() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error('Failed to retrieve data.');
             }
             
             tlRoomMaster.value = data;
             
         } catch (error) {
             tlRoomMaster.value = null;
-            console.error('Failed to fetch data', error);
+            console.error('Failed to retrieve data.', error);
         }
     };
     const insertTLRoomMaster = async (roomData) => {
@@ -247,12 +247,12 @@ export function useXMLStore() {
             const data = await response.json();
         
             if (!response.ok) {
-                throw new Error('Failed to create room master');
+                throw new Error('Failed to create room master.');
             }
         
             return data;
         } catch (error) {
-            console.error('Failed to create room master', error);
+            console.error('Failed to create room master.', error);
             throw error; // Re-throw the error for handling in the component
         }
     };
@@ -270,14 +270,14 @@ export function useXMLStore() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error('Failed to retrieve data.');
             }
             
             tlPlanMaster.value = data;
             
         } catch (error) {
             tlPlanMaster.value = null;
-            console.error('Failed to fetch data', error);
+            console.error('Failed to retrieve data.', error);
         }
     };
     const insertTLPlanMaster = async (planData) => {
@@ -296,12 +296,12 @@ export function useXMLStore() {
             const data = await response.json();
         
             if (!response.ok) {
-                throw new Error('Failed to create plan master');
+                throw new Error('Failed to create plan master.');
             }
         
             return data;
         } catch (error) {
-            console.error('Failed to create plan master', error);
+            console.error('Failed to create plan master.', error);
             throw error; // Re-throw the error for handling in the component
         }
     };
@@ -316,13 +316,13 @@ export function useXMLStore() {
                 }
             });
             if (!response.ok) {
-                throw new Error('Failed to fetch data');
+                throw new Error('Failed to retrieve data.');
             }
             const data = await response.json();
             
             return data;
         } catch (error) {
-            console.error('Failed to fetch data', error);
+            console.error('Failed to retrieve data.', error);
         }        
     };
     const updateTLInventory = async (hotel_id, inventory) => {
@@ -342,7 +342,7 @@ export function useXMLStore() {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', response.status, response.statusText, errorText);
-                throw new Error(`Failed to post data: ${response.status} ${response.statusText} ${errorText}`);
+                throw new Error('Failed to send data.');
             }
             const data = await response.json();
             

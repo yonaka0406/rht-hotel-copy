@@ -15,7 +15,7 @@ export function useSavedSearch() {
       const res = await get(API_BASE)
       if (res) savedSearches.value = res
     } catch (e) {
-      error.value = e?.message || 'API error'
+      error.value = e?.message || 'APIエラーが発生しました。'
     }
   }
 
@@ -24,7 +24,7 @@ export function useSavedSearch() {
     try {
       return await get(`${API_BASE}/${id}`)
     } catch (e) {
-      error.value = e?.message || 'API error'
+      error.value = e?.message || 'APIエラーが発生しました。'
       return null
     }
   }
@@ -36,7 +36,7 @@ export function useSavedSearch() {
       if (created) savedSearches.value.push(created)
       return created
     } catch (e) {
-      error.value = e?.message || 'API error'
+      error.value = e?.message || 'APIエラーが発生しました。'
       return null
     }
   }
@@ -49,7 +49,7 @@ export function useSavedSearch() {
       if (updated && idx !== -1) savedSearches.value[idx] = updated
       return updated
     } catch (e) {
-      error.value = e?.message || 'API error'
+      error.value = e?.message || 'APIエラーが発生しました。'
       return null
     }
   }
@@ -61,7 +61,7 @@ export function useSavedSearch() {
       savedSearches.value = savedSearches.value.filter(s => s.id !== id)
       return true
     } catch (e) {
-      error.value = e?.message || 'API error'
+      error.value = e?.message || 'APIエラーが発生しました。'
       return false
     }
   }

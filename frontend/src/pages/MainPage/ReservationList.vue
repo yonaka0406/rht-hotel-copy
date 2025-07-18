@@ -11,7 +11,7 @@
                 v-model:selection="selectedReservations"
                 filterDisplay="row"
                 :value="filteredReservations"
-                :loading="tableLoading"
+                :loading="delayedLoading"
                 size="small"
                 :paginator="true"
                 :rows="25"
@@ -22,6 +22,9 @@
                 removableSort
                 v-model:expandedRows="expandedRows"
                 :rowExpansion="true"
+                :virtualScroll="true"
+                :virtualScrollItemSize="48"
+                aria-label="予約一覧テーブル"
             >
                 <template #header>
                     <div class="flex justify-between">
@@ -77,7 +80,7 @@
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
                 <Column header="詳細" style="width: 1%;">
                     <template #body="slotProps">
-                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button">
+                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" :aria-expanded="isRowExpanded(slotProps.data) ? 'true' : 'false'">
                             <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
                         </button>
                     </template>
@@ -353,6 +356,20 @@
         removeFilter,
         clearAllFilters: clearSearchFilters
     } = useReservationSearch();
+
+    // Delayed loading spinner for table
+    const delayedLoading = ref(false);
+    let loadingTimer = null;
+    watch(isSearching, (newVal) => {
+      if (newVal) {
+        loadingTimer = setTimeout(() => {
+          delayedLoading.value = true;
+        }, 500);
+      } else {
+        clearTimeout(loadingTimer);
+        delayedLoading.value = false;
+      }
+    });
 
     // Helper function
     const formatDate = (date) => {
