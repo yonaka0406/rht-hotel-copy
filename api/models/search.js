@@ -49,10 +49,15 @@ async function findClientSuggestionsByHotelAndTerm(requestId, hotelId, searchTer
       )
   `;
   const values = [hotelId, `%${searchTerm}%`];
+  console.log('[search.js] Executing suggestions query with values:', values);
   const { rows } = await pool.query(sql, values);
   console.log('[search.js] Raw DB rows:', rows);
 
-  const suggestions = rows.map(row => ({
+  // Sort by check_in DESC (more recent first)
+  const sortedRows = rows.sort((a, b) => new Date(b.check_in) - new Date(a.check_in));
+  console.log('[search.js] Sorted rows by check_in DESC:', sortedRows);
+
+  const suggestions = sortedRows.map(row => ({
     client_id: row.client_id,
     name: row.name,
     name_kana: row.name_kana,
@@ -64,6 +69,7 @@ async function findClientSuggestionsByHotelAndTerm(requestId, hotelId, searchTer
     check_out: row.check_out,
     number_of_people: row.number_of_people,
   }));
+  console.log('[search.js] Final mapped suggestions:', suggestions);
   return suggestions;
 }
 

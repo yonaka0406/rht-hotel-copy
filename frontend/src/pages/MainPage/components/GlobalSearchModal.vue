@@ -88,7 +88,7 @@
         <span>検索中...</span>
       </div>
       
-      <div v-else-if="hasActiveSearch && searchResultsCount === 0" class="search-no-results">
+      <div v-else-if="searchResultsCount === 0 && !isSearching && !showSuggestions" class="search-no-results">
         <i class="pi pi-info-circle"></i>
         <span>検索結果がありません</span>
       </div>
@@ -138,6 +138,10 @@ export default {
      * Controls the visibility of the modal
      */
     visible: {
+      type: Boolean,
+      default: false
+    },
+    showSuggestions: {
       type: Boolean,
       default: false
     }
@@ -351,10 +355,10 @@ export default {
       router.push({
         name: 'ReservationEdit',
         params: { reservation_id: reservation.reservation_id }
+      }).then(() => {
+        console.debug('[GlobalSearchModal] Route navigation complete, emitting close-modal');
+        emit('update:visible', false);
       });
-      
-      // Close the modal
-      closeModal();
       
       // Announce to screen readers
       accessibilityService.announce(
@@ -407,6 +411,11 @@ export default {
         document.removeEventListener('keydown', handleGlobalKeydown);
       };
     };
+
+    const handleCloseModal = () => {
+      console.debug('[GlobalSearchModal] handleCloseModal called, closing modal');
+      emit('update:visible', false);
+    };
     
     // Lifecycle hooks
     onMounted(() => {
@@ -451,7 +460,8 @@ export default {
       getStatusClass,
       highlightMatch,
       onSuggestionSelected,
-      onHide
+      onHide,
+      handleCloseModal
     };
   }
 };

@@ -147,7 +147,8 @@ export default {
   emits: [
     'select',
     'highlight',
-    'navigate'
+    'navigate',
+    'close-modal'
   ],
   
   setup(props, { emit }) {
@@ -305,14 +306,18 @@ export default {
     const selectSuggestion = (suggestion) => {
       console.debug('[SearchSuggestions] selectSuggestion:', suggestion);
       emit('select', suggestion);
-      
+
       // Add to recent searches
       addToRecentSearches(suggestion);
 
       if (suggestion.reservation_id) {
+        console.debug('[SearchSuggestions] Routing to ReservationEdit:', suggestion.reservation_id);
         router.push({
           name: 'ReservationEdit',
           params: { reservation_id: suggestion.reservation_id }
+        }).then(() => {
+          console.debug('[SearchSuggestions] Route navigation complete, emitting close-modal');
+          emit('close-modal');
         });
       }
       
