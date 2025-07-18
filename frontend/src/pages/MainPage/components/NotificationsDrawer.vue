@@ -13,18 +13,18 @@
         <span v-if="holdReservations.length" class="ml-2 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">{{ holdReservations.length }}</span>
       </div>
     </template>
-    <div class="py-3 min-h-[120px]">
+    <div class="py-3 min-h-[120px] flex flex-col h-full" style="height: 100%;">
       <template v-if="holdReservations.length">
         <VirtualScroller
           :items="holdReservations"
           :itemSize="110"
-          class="space-y-3"
-          style="height: 440px;"
+          class="space-y-3 flex-1 min-h-0"
+          style="flex: 1 1 auto; min-height: 0;"
         >
           <template #item="{ item: reservation, index }">
             <div
               :key="index"
-              class="mx-2 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex flex-col gap-2 hover:shadow-md transition cursor-pointer"
+              class="mx-2 mb-3 last:mb-0 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex flex-col gap-2 hover:shadow-md transition cursor-pointer"
               @click="handleGoToEditReservation(reservation.hotel_id, reservation.reservation_id)"
             >
               <div class="grid grid-cols-2 gap-x-4 mb-1">
@@ -123,5 +123,9 @@ function formatDateJP(dateStr) {
 }
 .gap-x-4 {
   column-gap: 1rem;
+}
+.flex-1 {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 </style> 
