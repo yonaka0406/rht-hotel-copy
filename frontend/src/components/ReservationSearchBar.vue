@@ -1,12 +1,12 @@
 <template>
-  <div v-focustrap class="reservation-search-bar px-2 py-2 sm:px-4 sm:py-2" role="search">
+  <div v-focustrap class="reservation-search-bar px-2 py-2 sm:px-4 sm:py-2" role="search" ref="searchBarRef">
     <div class="search-input-wrapper mb-2 sm:mb-0">
-      <span class="p-input-icon-left p-input-icon-right w-full">
-        <i class="pi pi-search" />
+      <span class="search-input-flex w-full">
+        <i class="pi pi-search search-icon" />
         <InputText
           ref="inputRef"
           v-model="localQuery"
-          class="w-full min-h-[44px]"
+          class="w-full min-h-[44px] px-9"
           placeholder="予約ID、氏名、電話番号、メールアドレスで検索..."
           @input="onInput"
           @keydown="onKeydown"
@@ -19,25 +19,53 @@
           autocomplete="off"
           autofocus
         />
-        <i v-if="delayedLoading" class="pi pi-spin pi-spinner" />
-        <i v-else-if="localQuery && !disabled" class="pi pi-times cursor-pointer" @click="clearSearch" />
+        <i v-if="delayedLoading" class="pi pi-spin pi-spinner clear-icon" />
+        <i v-else-if="localQuery && !disabled" class="pi pi-times cursor-pointer clear-icon" @click="clearSearch" />
       </span>
     </div>
 
-    <!-- Search suggestions dropdown -->
-    <SearchSuggestions
-      v-if="showSuggestions"
-      :suggestions="suggestions"
-      :search-query="localQuery"
-      :selected-index="selectedSuggestionIndex"
-      @select="selectSuggestion"
-      @highlight="selectedSuggestionIndex = $event"
-      @navigate="handleSuggestionNavigation"
-      @close-modal="$emit('close-modal')"
-      role="listbox"
-      id="search-suggestions-listbox"
-      class="max-w-full overflow-x-auto"
-    />
+    <!-- Search suggestions dropdown rendered via teleport -->
+    <teleport to="body">
+      <ul
+        v-if="showSuggestions && props.suggestions.length > 0"
+        class="search-suggestions absolute z-50 bg-white border border-gray-200 rounded shadow"
+        :style="suggestionDropdownStyle"
+        role="listbox"
+        :aria-activedescendant="'suggestion-' + selectedSuggestionIndex"
+      >
+        <li
+          v-for="(suggestion, idx) in props.suggestions"
+          :key="idx"
+          :id="'suggestion-' + idx"
+          :class="['px-3 py-2 cursor-pointer', { 'bg-blue-100': idx === selectedSuggestionIndex } ]"
+          @mousedown.prevent="selectSuggestion(suggestion)"
+          @mouseenter="selectedSuggestionIndex = idx"
+          role="option"
+          :aria-selected="idx === selectedSuggestionIndex"
+        >
+          <span class="suggestion-text">
+            <div class="suggestion-main">
+              <span class="client-name">{{ suggestion.name_kanji || suggestion.name_kana || suggestion.name || '' }}</span>
+              <span v-if="suggestion.email" class="client-email">{{ suggestion.email }}</span>
+            </div>
+            <div class="suggestion-details">
+              <span v-if="suggestion.check_in && suggestion.check_out" class="reservation-dates">
+                [{{ formatJpDate(suggestion.check_in) }} → {{ formatJpDate(suggestion.check_out) }}]
+              </span>
+              <span v-else-if="suggestion.check_in" class="reservation-dates">
+                [{{ formatJpDate(suggestion.check_in) }}]
+              </span>
+              <span v-else-if="suggestion.check_out" class="reservation-dates">
+                [→ {{ formatJpDate(suggestion.check_out) }}]
+              </span>
+              <span v-if="suggestion.number_of_people" class="reservation-people">
+                ({{ suggestion.number_of_people }}名)
+              </span>
+            </div>
+          </span>
+        </li>
+      </ul>
+    </teleport>
 
     <!-- Active filters display -->
     <div v-if="activeFilters.length > 0" class="active-filters flex flex-wrap gap-2 mt-2" role="group" aria-label="アクティブフィルター">
@@ -197,11 +225,36 @@ const handleClickOutside = (event) => {
     showSuggestions.value = false;
   }
 };
+const searchBarRef = ref(null);
+const suggestionDropdownStyle = ref({});
+
+function updateSuggestionDropdownPosition() {
+  nextTick(() => {
+    if (!showSuggestions.value || !searchBarRef.value) return;
+    const inputEl = searchBarRef.value.querySelector('input');
+    if (!inputEl) return;
+    const rect = inputEl.getBoundingClientRect();
+    suggestionDropdownStyle.value = {
+      position: 'absolute',
+      top: `${rect.bottom + window.scrollY}px`,
+      left: `${rect.left + window.scrollX}px`,
+      width: `${rect.width}px`,
+      maxHeight: '60vh',
+      overflowY: 'auto',
+      minWidth: '220px',
+      zIndex: 9999
+    };
+  });
+}
+
+watch([showSuggestions, () => props.suggestions.length], ([show, len]) => {
+  if (show && len > 0) updateSuggestionDropdownPosition();
+});
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  window.addEventListener('resize', updateSuggestionDropdownPosition);
 });
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('resize', updateSuggestionDropdownPosition);
 });
 const handleSuggestionNavigation = (navigationInfo) => {
   let overallIndex = 0;
@@ -236,6 +289,16 @@ function focusInput() {
   });
 }
 defineExpose({ focusInput });
+function formatJpDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  // Convert to JST
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const yy = jst.getFullYear();
+  const mm = String(jst.getMonth() + 1).padStart(2, '0');
+  const dd = String(jst.getDate()).padStart(2, '0');
+  return `${yy}年${mm}月${dd}日`;
+}
 </script>
 
 <style scoped>
@@ -251,17 +314,7 @@ defineExpose({ focusInput });
 }
 
 .search-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #ddd;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 1000;
+  /* Remove left/right/width/max-width from here, handled inline */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -356,5 +409,63 @@ defineExpose({ focusInput });
 
 .cursor-pointer {
   cursor: pointer;
+}
+.suggestion-main {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 500;
+}
+.client-name {
+  color: #222;
+}
+.client-email {
+  color: #888;
+  font-size: 0.92em;
+}
+.suggestion-details {
+  display: flex;
+  gap: 10px;
+  font-size: 0.92em;
+  color: #666;
+  margin-top: 2px;
+}
+.reservation-dates, .reservation-people {
+  margin-right: 8px;
+}
+@media (max-width: 600px) {
+  .search-suggestions {
+    left: 0;
+    right: 0;
+    min-width: 0;
+    width: 98vw;
+    max-width: 98vw;
+  }
+}
+.search-input-flex {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+.search-icon {
+  position: absolute;
+  left: 16px;
+  font-size: 1.2rem;
+  color: #888;
+  z-index: 2;
+  pointer-events: none;
+}
+.clear-icon {
+  position: absolute;
+  right: 16px;
+  font-size: 1.2rem;
+  color: #888;
+  z-index: 2;
+  cursor: pointer;
+}
+.search-input-flex input {
+  padding-left: 2.2rem;
+  padding-right: 2.2rem;
 }
 </style>

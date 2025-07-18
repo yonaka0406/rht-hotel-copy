@@ -1,17 +1,44 @@
 <template>
-    <Panel class="m-2" role="main" aria-label="予約一覧">        
-        <div class="overflow-x-auto">
-            <!-- Saved Searches UI -->
-            <div class="mb-2 flex justify-end">
-                <SavedSearches :saved-searches="sortedSavedSearches" @add="onAddSavedSearch" @select="onSelectSavedSearch" @edit="onEditSavedSearch" @delete="onDeleteSavedSearch" @toggle-favorite="onToggleFavorite" />
-            </div>
-            <SaveSearchDialog :visible="showSaveDialog" :model-value="editSearch ? editSearch.name : ''" :category="editSearch ? editSearch.category : ''" :edit-id="editSearch ? editSearch.id : null" @saved="onSavedSearch" @cancel="showSaveDialog = false; editSearch = null" />
+    <Panel class="m-2">        
+        <!-- Filter/Action Card -->
+        <Card class="mb-4">
+            <template #content>
+                <div class="flex justify-end items-center flex-wrap">
+                    <span class="font-bold mr-4">滞在期間選択：</span>
+                    <label class="mr-2">開始日:</label>
+                    <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
+                    <label class="ml-4 mr-2">終了日:</label>
+                    <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
+                    <Button label="適用" class="ml-2" size="small" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
+                    <Button
+                        label="全フィルタークリア"
+                        icon="pi pi-filter-slash"
+                        severity="secondary"
+                        class="ml-2"
+                        size="small"
+                        @click="clearAllFilters"
+                        v-tooltip.bottom="'全てのフィルターをリセットします'"
+                    />
+                    <!-- Export -->
+                    <SplitButton 
+                        label="エクスポート" 
+                        icon="pi pi-file-export"
+                        severity="help"
+                        class="ml-2"
+                        size="small"
+                        @click="splitButtonExportReservations"
+                        :model="exportOptions" 
+                    />
+                </div>
+            </template>
+        </Card>
+        <div class="table-container">
             <DataTable
                 v-model:filters="filters"
                 v-model:selection="selectedReservations"
                 filterDisplay="row"
                 :value="filteredReservations"
-                :loading="delayedLoading"
+                :loading="tableLoading"
                 size="small"
                 :paginator="true"
                 :rows="25"
@@ -22,67 +49,16 @@
                 removableSort
                 v-model:expandedRows="expandedRows"
                 :rowExpansion="true"
-                :virtualScroll="true"
-                :virtualScrollItemSize="48"
-                aria-label="予約一覧テーブル"
             >
                 <template #header>
                     <div class="flex justify-between">
                         <span class="font-bold text-lg">{{ tableHeader }}</span>
                     </div>
-                    
-                    <!-- Enhanced Search Bar -->
-                    <div class="mb-4">
-                        <ReservationSearchBar
-                            v-model="searchQuery"
-                            :suggestions="searchSuggestions"
-                            :is-searching="isSearching"
-                            :active-filters="combinedActiveFilters"
-                            :search-results-count="hasActiveSearch ? displayedReservationsCount : null"
-                            @search="handleSearch"
-                            @clear="handleClearSearch"
-                            @suggestion-selected="handleSuggestionSelected"
-                            @remove-filter="handleRemoveFilter"
-                            @clear-filters="handleClearAllFilters"
-                        />
-                    </div>
-                    
-                    <div class="mb-4 flex flex-wrap justify-end items-center gap-2 sm:gap-4">                        
-                        <span class="font-bold mr-4">滞在期間選択：</span>
-                        <Select v-model="relativeDateFilter" :options="relativeDateOptions" optionLabel="label" optionValue="value" placeholder="日付範囲を選択" class="mr-2 min-h-[44px]" @change="onRelativeDateChange" aria-label="滞在期間選択" />
-                        <label class="mr-2" for="start-date-picker">開始日:</label>
-                        <DatePicker id="start-date-picker" v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" aria-label="開始日" class="min-h-[44px]" />
-                        <label class="ml-4 mr-2" for="end-date-picker">終了日:</label>
-                        <DatePicker id="end-date-picker" v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" aria-label="終了日" class="min-h-[44px]" />
-                        <span class="ml-4 font-bold mr-2">料金範囲:</span>
-                        <InputNumber v-model="priceFilterMin" placeholder="最小" class="mr-2 w-24 min-h-[44px]" aria-label="最小料金" />
-                        <InputNumber v-model="priceFilterMax" placeholder="最大" class="w-24 min-h-[44px]" aria-label="最大料金" />
-                        <Button label="適用" class="ml-4 min-h-[44px] min-w-[44px]" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" aria-label="フィルター適用" />
-                        <Button
-                            label="全フィルタークリア"
-                            icon="pi pi-filter-slash"
-                            severity="warning"
-                            class="ml-4 min-h-[44px] min-w-[44px]"
-                            @click="clearAllFilters"
-                            v-tooltip.bottom="'全てのフィルターをリセットします'"
-                            aria-label="全フィルタークリア"
-                        />
-                        <!-- Export -->
-                        <SplitButton 
-                            label="エクスポート" 
-                            icon="pi pi-file-export"
-                            severity="help"
-                            class="ml-4 min-h-[44px] min-w-[44px]"
-                            @click="splitButtonExportReservations"
-                            :model="exportOptions" 
-                            aria-label="エクスポート"
-                        />
-                    </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
                 <Column header="詳細" style="width: 1%;">
                     <template #body="slotProps">
-                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button" :aria-expanded="isRowExpanded(slotProps.data) ? 'true' : 'false'" aria-label="詳細表示">
+                        <button @click="toggleRowExpansion(slotProps.data)" class="p-button p-button-text p-button-rounded" type="button">
                             <i :class="isRowExpanded(slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'" style="font-size: 0.875rem;"></i>
                         </button>
                     </template>
@@ -90,8 +66,8 @@
                 <Column selectionMode="multiple" headerStyle="width: 1%"></Column>
                 
                 <Column field="status" filterField="status" header="ステータス" style="width:1%" :showFilterMenu="false">
-                    <template #filter="{ filterModel, filterCallback }">
-                        <MultiSelect 
+                    <template #filter="{ filterModel, filterCallback }">                        
+                        <Select 
                             v-model="filterModel.value" 
                             :options="statusOptions" 
                             optionLabel="label"
@@ -99,10 +75,10 @@
                             @change="filterCallback" 
                             placeholder="選択"
                             showClear 
-                            display="chip"
                             fluid
-                        />
-                    </template>
+                            size="small"
+                        />                        
+                    </template>                    
                     <template #body="slotProps">
                         <div class="flex justify-center items-center">
                             <span v-if="slotProps.data.status === 'hold'" class="px-2 py-1 rounded-md bg-yellow-200 text-yellow-700"><i class="pi pi-pause" v-tooltip="'保留中'"></i></span>
@@ -115,58 +91,17 @@
                     </template>                    
                 </Column>
                 <Column field="booker_name" filterField="booker_name" header="予約者" style="width:3%" :showFilterMenu="false">
-                    <!-- Removed old InputText filter for booker_name -->
-                    <template #body="slotProps">
-                        <span v-if="slotProps.data.highlightedText?.booker_name" 
-                              v-html="slotProps.data.highlightedText.booker_name">
-                        </span>
-                        <span v-else>
-                            {{ slotProps.data.booker_name }}
-                        </span>
+                    <template #filter="{ filterModel }">
+                        <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" size="small" />
                     </template>
                 </Column>
                 <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%" :showFilterMenu="false">
-                    <!-- Removed old InputText filter for clients_json -->
+                    <template #filter="{ filterModel }">
+                        <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索" size="small" />
+                    </template>
                     <template #body="{ data }">
-                        <span v-if="data.highlightedText?.clients_json" 
-                              v-html="data.highlightedText.clients_json"
-                              v-tooltip="formatClientNames(data.clients_json)" 
-                              style="white-space: pre-line;">
-                        </span>
-                        <span v-else-if="data.clients_json" 
-                              v-tooltip="formatClientNames(data.clients_json)" 
-                              style="white-space: pre-line;">
+                        <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
                             {{ getVisibleClientNames(data.clients_json) }}
-                        </span>
-                    </template>
-                </Column>
-                <Column field="reservation_number" header="予約番号" style="width:2%">
-                    <template #body="slotProps">
-                        <span v-if="slotProps.data.highlightedText?.reservation_number"
-                              v-html="slotProps.data.highlightedText.reservation_number">
-                        </span>
-                        <span v-else>
-                            {{ slotProps.data.reservation_number }}
-                        </span>
-                    </template>
-                </Column>
-                <Column field="email" header="メール" style="width:3%">
-                    <template #body="slotProps">
-                        <span v-if="slotProps.data.highlightedText?.email"
-                              v-html="slotProps.data.highlightedText.email">
-                        </span>
-                        <span v-else>
-                            {{ slotProps.data.email }}
-                        </span>
-                    </template>
-                </Column>
-                <Column field="phone" header="電話番号" style="width:2%">
-                    <template #body="slotProps">
-                        <span v-if="slotProps.data.highlightedText?.phone"
-                              v-html="slotProps.data.highlightedText.phone">
-                        </span>
-                        <span v-else>
-                            {{ slotProps.data.phone }}
                         </span>
                     </template>
                 </Column>
@@ -191,9 +126,9 @@
                 </Column>                
                 <Column field="price" header="料金" sortable style="width:2%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <div class="grid grid-cols-2 gap-2">
-                            <InputNumber v-model="priceFilterMin" placeholder="最小" fluid />
-                            <InputNumber v-model="priceFilterMax" placeholder="最大" fluid />
+                        <div class="grid grid-cols-1">
+                            <Select v-model="priceFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid size="small" />
+                            <InputNumber v-model="priceFilter" placeholder="請求額フィルター" fluid size="small" />
                         </div>
                     </template>
                     <template #body="slotProps">
@@ -205,8 +140,8 @@
                 <Column field="payment" header="支払い" sortable style="width:2%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
                         <div class="grid grid-cols-1">
-                            <Select v-model="paymentFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid />
-                            <InputNumber v-model="paymentFilter" placeholder="支払額フィルター" fluid />
+                            <Select v-model="paymentFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid size="small" />
+                            <InputNumber v-model="paymentFilter" placeholder="支払額フィルター" fluid size="small" />
                         </div>
                     </template>
                     <template #body="slotProps">
@@ -323,18 +258,14 @@
 
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted, defineAsyncComponent } from 'vue'; 
+    import { ref, computed, watch, onMounted } from 'vue'; 
     
-    // Lazy-load heavy/rarely-used components
-    const ReservationEdit = defineAsyncComponent(() => import('./ReservationEdit.vue'));
-    const SaveSearchDialog = defineAsyncComponent(() => import('@/components/SaveSearchDialog.vue'));
-    const SavedSearches = defineAsyncComponent(() => import('@/components/SavedSearches.vue'));
-    import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
+    import ReservationEdit from './ReservationEdit.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton, MultiSelect } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -342,37 +273,6 @@
     const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails, exportMealCount } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
-    
-    // Search functionality
-    import { useReservationSearch } from '@/composables/useReservationSearch';
-    const {
-        searchQuery,
-        searchResults,
-        isSearching,
-        searchSuggestions,
-        activeFilters: searchActiveFilters,
-        searchResultsCount,
-        hasActiveSearch,
-        performSearch,
-        clearSearch,
-        addFilter,
-        removeFilter,
-        clearAllFilters: clearSearchFilters
-    } = useReservationSearch();
-
-    // Delayed loading spinner for table
-    const delayedLoading = ref(false);
-    let loadingTimer = null;
-    watch(isSearching, (newVal) => {
-      if (newVal) {
-        loadingTimer = setTimeout(() => {
-          delayedLoading.value = true;
-        }, 500);
-      } else {
-        clearTimeout(loadingTimer);
-        delayedLoading.value = false;
-      }
-    });
 
     // Helper function
     const formatDate = (date) => {
@@ -467,10 +367,10 @@
         { label: 'キャンセル', value: 'cancelled' }
     ];
     const clientFilter = ref(null);
+    const clientFilterInput = ref(null); // For booker_name filter
     const clientsJsonFilter = ref(null);
+    const clientsJsonFilterInput = ref(null); // For clients_json filter
     const priceFilter = ref(null);
-    const priceFilterMin = ref(null);
-    const priceFilterMax = ref(null);
     const priceFilterCondition = ref("=");
     const paymentFilter = ref(null);
     const paymentFilterCondition = ref("=");
@@ -491,14 +391,12 @@
         }
 
         // Reset text input fields (which will trigger watchers to reset actual filters)
-        // clientFilterInput.value = ''; // Or null, ensure consistency
-        // clientsJsonFilterInput.value = ''; // Or null
+        clientFilterInput.value = ''; // Or null, ensure consistency
+        clientsJsonFilterInput.value = ''; // Or null
 
         // Reset price filter
         priceFilter.value = null;
         priceFilterCondition.value = "=";
-        priceFilterMin.value = null;
-        priceFilterMax.value = null;
 
         // Reset payment filter
         paymentFilter.value = null;
@@ -513,141 +411,116 @@
         toast.add({ severity: 'info', summary: 'フィルタークリア', detail: '全てのフィルターをクリアしました。', life: 3000 });
     };
 
-    // Enhanced search integration
-    const combinedActiveFilters = computed(() => {
-        const combinedFilters = [...searchActiveFilters.value];
-        
-        // Add traditional filters as search filters for display
-        if (filters.value.status?.value && Array.isArray(filters.value.status.value) && filters.value.status.value.length > 0) {
-            const statusLabels = filters.value.status.value.map(status => statusOptions.find(opt => opt.value === status)?.label).filter(label => label);
-            if (statusLabels.length > 0) {
-                combinedFilters.push({
-                    field: 'status',
-                    label: `ステータス: ${statusLabels.join(', ')}`,
-                    value: filters.value.status.value,
-                    operator: 'equals'
-                });
-            }
-        }
-        
-        if (priceFilter.value !== null) {
-            combinedFilters.push({
-                field: 'price',
-                label: `料金: ${priceFilterCondition.value} ${formatCurrency(priceFilter.value)}`,
-                value: priceFilter.value,
-                operator: priceFilterCondition.value
-            });
-        }
-        
-        if (paymentFilter.value !== null) {
-            combinedFilters.push({
-                field: 'payment',
-                label: `支払い: ${paymentFilterCondition.value} ${formatCurrency(paymentFilter.value)}`,
-                value: paymentFilter.value,
-                operator: paymentFilterCondition.value
-            });
-        }
-        
-        // Add date range filter if both dates are set
-        if (startDateFilter.value && endDateFilter.value) {
-            combinedFilters.push({
-                field: 'date_range',
-                label: `期間: ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`,
-                value: {
-                    start: formatDate(startDateFilter.value),
-                    end: formatDate(endDateFilter.value)
-                },
-                operator: 'between'
-            });
-        }
-        
-        return combinedFilters;
-    });
-
-    const displayedReservationsCount = computed(() => {
-        return hasActiveSearch.value ? searchResults.value.length : filteredReservations.value.length;
-    });
-
     const filteredReservations = computed(() => {
-        let reservations;
-
-        if (hasActiveSearch.value && Array.isArray(searchResults.value) && searchResults.value.length > 0) {
-            // When a search is active, use the search results
-            reservations = searchResults.value.map(result =>
-                enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
-            );
-        } else if (!hasActiveSearch.value && Array.isArray(reservationList.value)) {
-            // When no search is active, use the full reservation list
-            reservations = reservationList.value.map(reservation =>
-                enhanceReservationWithMergedClients(reservation)
-            );
-        } else {
-            // When a search is active but returns no results, the list should be empty
-            reservations = [];
+        let filteredList = reservationList.value;
+        // Debug: log the first reservation's clients_json and payers_json
+        if (filteredList && filteredList.length > 0) {
+            console.log('[ReservationList] first reservation clients_json:', filteredList[0].clients_json);
+            console.log('[ReservationList] first reservation payers_json:', filteredList[0].payers_json);
         }
+        // merged_clients
+        if(filteredList){
+            filteredList = filteredList.map(reservation => {
+                const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
+                    ...client,
+                    role: "guest"
+                })) : [];
+                const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
+                    ...payer,
+                    role: "payer"
+                })) : [];
 
-        // Defensive: ensure reservations is always an array
-        if (!Array.isArray(reservations)) reservations = [];
+                // Merge guests and payers while keeping unique client_id
+                const uniqueClients = new Map();
+                [...guests, ...payers].forEach(client => {
+                    if (!uniqueClients.has(client.client_id)) {
+                        uniqueClients.set(client.client_id, client);
+                    }
+                });               
 
-        // Apply status filter for MultiSelect
-        if (filters.value.status?.value && Array.isArray(filters.value.status.value) && filters.value.status.value.length > 0) {
-            reservations = reservations.filter(reservation =>
-                filters.value.status.value.includes(reservation.status)
-            );
+                return {
+                    ...reservation,
+                    merged_clients: Array.from(uniqueClients.values())
+                };
+            });
+        }               
+
+        if (clientFilter.value !== null && clientFilter.value !== '') {
+            const filterClients = clientFilter.value.toLowerCase();
+            filteredList = filteredList.filter(reservation => {
+                // Booker fields
+                const bookerFields = [
+                    reservation.booker_name,
+                    reservation.booker_name_kana,
+                    reservation.booker_name_kanji
+                ].filter(Boolean).map(x => x.toLowerCase());
+
+                // All clients in clients_json and payers_json
+                const allClients = [];
+                if (Array.isArray(reservation.clients_json)) {
+                    allClients.push(...reservation.clients_json);
+                }
+                if (Array.isArray(reservation.payers_json)) {
+                    allClients.push(...reservation.payers_json);
+                }
+                const clientFields = allClients.flatMap(client => [
+                    client.name,
+                    client.name_kana,
+                    client.name_kanji
+                ].filter(Boolean).map(x => x.toLowerCase()));
+
+                // Debug logs
+                console.log('[ClientFilter] filter value:', filterClients);
+                console.log('[ClientFilter] bookerFields:', bookerFields);
+                console.log('[ClientFilter] clientFields:', clientFields);
+
+                // Match if any field contains the filter string
+                const match = [...bookerFields, ...clientFields].some(field => field.includes(filterClients));
+                console.log('[ClientFilter] reservation id', reservation.id, 'match:', match);
+                return match;
+            });
         }
-
-        // Apply price range filter
-        if (priceFilterMin.value !== null && priceFilterMax.value !== null) {
-            reservations = reservations.filter(reservation => {
+        if (clientsJsonFilter.value !== null && clientsJsonFilter.value !== ''){
+            filteredList = filteredList.filter(reservation => {
+                const clients = reservation.clients_json;
+                const filterClients = clientsJsonFilter.value.toLowerCase();
+                return clients.some(client => 
+                    (client.name && client.name.toLowerCase().includes(filterClients)) ||
+                    (client.name_kana && client.name_kana.toLowerCase().includes(filterClients)) ||
+                    (client.name_kanji && client.name_kanji.toLowerCase().includes(filterClients))
+                );                
+            });
+        }
+        if (priceFilter.value !== null) {
+            filteredList = filteredList.filter(reservation => {
                 const price = parseFloat(reservation.price);
-                return price >= priceFilterMin.value && price <= priceFilterMax.value;
-            });
-        } else if (priceFilterMin.value !== null) {
-            reservations = reservations.filter(reservation => parseFloat(reservation.price) >= priceFilterMin.value);
-        } else if (priceFilterMax.value !== null) {
-            reservations = reservations.filter(reservation => parseFloat(reservation.price) <= priceFilterMax.value);
+                const filterPrice = parseFloat(priceFilter.value);    
+                          
+                if (priceFilterCondition.value === ">") {                
+                    return price > filterPrice;
+                } else if (priceFilterCondition.value === "<") {                    
+                    return price < filterPrice;
+                } else {                    
+                    return price === filterPrice;
+                }
+            });            
         }
-
-        // Apply date range filter
-        if (startDateFilter.value && endDateFilter.value) {
-            const start = new Date(startDateFilter.value).setHours(0,0,0,0);
-            const end = new Date(endDateFilter.value).setHours(23,59,59,999);
-            reservations = reservations.filter(reservation => {
-                const checkIn = new Date(reservation.check_in).getTime();
-                return checkIn >= start && checkIn <= end;
-            });
+        if (paymentFilter.value !== null) {
+            filteredList = filteredList.filter(reservation => {
+                const payment = parseFloat(reservation.payment);
+                const filterPayment = parseFloat(paymentFilter.value);
+                if (paymentFilterCondition.value === ">") {                    
+                    return payment > filterPayment;
+                } else if (paymentFilterCondition.value === "<") {                    
+                    return payment < filterPayment;
+                } else {                    
+                    return payment === filterPayment;
+                }
+            });            
         }
-
-        // Add more filter logic here if needed
-
-        return reservations;
+        
+        return filteredList
     });
-
-    // Helper function to enhance reservations with merged clients and highlighting
-    const enhanceReservationWithMergedClients = (reservation, highlightedText = null) => {
-        const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
-            ...client,
-            role: "guest"
-        })) : [];
-        const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
-            ...payer,
-            role: "payer"
-        })) : [];
-
-        // Merge guests and payers while keeping unique client_id
-        const uniqueClients = new Map();
-        [...guests, ...payers].forEach(client => {
-            if (!uniqueClients.has(client.client_id)) {
-                uniqueClients.set(client.client_id, client);
-            }
-        });               
-
-        return {
-            ...reservation,
-            merged_clients: Array.from(uniqueClients.values()),
-            highlightedText: highlightedText || {}
-        };
-    };
 
     // Data Table
     const tableHeader = ref(`予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`)
@@ -677,133 +550,6 @@
         // console.log('selectedReservation:',selectedReservation.value)        ;
         drawerVisible.value = true;
     };
-
-    // Enhanced search event handlers
-    const handleSearch = async (query) => {
-        console.debug('[ReservationList] handleSearch called with:', query);
-        if (query.trim()) {
-            await performSearch(query);
-        } else {
-            clearSearch();
-        }
-    };
-
-    const handleClearSearch = () => {
-        clearSearch();
-        // Also clear traditional search inputs to maintain consistency
-        // clientFilterInput.value = '';
-        // clientsJsonFilterInput.value = '';
-    };
-
-    const handleSuggestionSelected = (suggestion) => {
-        // The search will be triggered automatically by the search bar
-        // We can add additional logic here if needed
-        console.log('Suggestion selected:', suggestion);
-    };
-
-    const handleRemoveFilter = (field) => {
-        if (field === 'price') {
-            priceFilter.value = null;
-            priceFilterCondition.value = "=";
-            priceFilterMin.value = null;
-            priceFilterMax.value = null;
-        } else if (field === 'payment') {
-            paymentFilter.value = null;
-            paymentFilterCondition.value = "=";
-        } else if (field === 'status') {
-            if (filters.value.status) {
-                filters.value.status.value = null;
-            }
-        } else {
-            removeFilter(field);
-        }
-    };
-
-    const handleClearAllFilters = () => {
-        clearSearch();
-        clearAllFilters();
-    };
-
-    // Saved Searches State
-    const savedSearches = ref([
-        { id: '1', name: '今週の未確定', filters: [], favorite: false },
-        { id: '2', name: '高額予約', filters: [], favorite: false }
-    ])
-    const showSaveDialog = ref(false)
-    const editSearch = ref(null)
-
-    // Saved Searches Handlers
-    const onAddSavedSearch = () => {
-        editSearch.value = null
-        showSaveDialog.value = true
-    }
-    const onEditSavedSearch = (search) => {
-        editSearch.value = search
-        showSaveDialog.value = true
-    }
-    const onSaveSearch = (name, category) => {
-        if (!name) return;
-        const currentFilters = {
-            searchQuery: searchQuery.value,
-            status: filters.value.status.value,
-            priceMin: priceFilterMin.value,
-            priceMax: priceFilterMax.value,
-            startDate: startDateFilter.value,
-            endDate: endDateFilter.value,
-            relativeDate: relativeDateFilter.value,
-        };
-        if (editSearch.value) {
-            // Edit existing
-            const idx = savedSearches.value.findIndex(s => s.id === editSearch.value.id)
-            if (idx !== -1) {
-                savedSearches.value[idx].name = name
-                savedSearches.value[idx].category = category
-                savedSearches.value[idx].filters = currentFilters;
-            }
-        } else {
-            // Add new
-            savedSearches.value.push({
-                id: Date.now().toString(),
-                name,
-                category,
-                filters: currentFilters,
-                favorite: false
-            })
-        }
-        showSaveDialog.value = false
-        editSearch.value = null
-    }
-    const onSelectSavedSearch = (search) => {
-        if (!search.filters) return;
-        const f = search.filters;
-        searchQuery.value = f.searchQuery || '';
-        filters.value.status.value = f.status || null;
-        priceFilterMin.value = f.priceMin ?? null;
-        priceFilterMax.value = f.priceMax ?? null;
-        startDateFilter.value = f.startDate ? new Date(f.startDate) : new Date(new Date().setDate(new Date().getDate() - 6));
-        endDateFilter.value = f.endDate ? new Date(f.endDate) : new Date();
-        relativeDateFilter.value = f.relativeDate || null;
-        // Optionally trigger a search or reload data if needed
-    };
-    const onDeleteSavedSearch = (search) => {
-        savedSearches.value = savedSearches.value.filter(s => s.id !== search.id)
-    }
-    const onSavedSearch = (search) => {
-        showSaveDialog.value = false
-        editSearch.value = null
-        // Optionally show a toast or refresh UI
-        // toast.add({ severity: 'success', summary: '保存済み検索', detail: '検索が保存されました', life: 2000 })
-    }
-
-    // Sorted list: favorites first
-    const sortedSavedSearches = computed(() => {
-        return [...savedSearches.value].sort((a, b) => (b.favorite === true) - (a.favorite === true) || a.name.localeCompare(b.name))
-    })
-    const onToggleFavorite = (search) => {
-        const idx = savedSearches.value.findIndex(s => s.id === search.id)
-        if (idx !== -1) savedSearches.value[idx].favorite = !savedSearches.value[idx].favorite
-    }
-
 
     // Export
     const exportOptions = ref([
@@ -859,23 +605,14 @@
     );  
     
     // Watcher for Booker Name
-    // Removed clientFilterInput watcher
+    watch(clientFilterInput, debounce((newValue) => {
+        clientFilter.value = newValue;
+    }, 400)); // 400ms debounce
 
     // Watcher for Guest/Payer Name
-    // Removed clientsJsonFilterInput watcher
-
-    watch(searchQuery, async (newQuery) => {
-        console.debug('[ReservationList] searchQuery changed:', newQuery);
-        // If you have a fetchSearchSuggestions or getSearchSuggestions function, call and log it here
-        // Example:
-        // if (newQuery && newQuery.trim().length > 0) {
-        //   const suggestions = await fetchSearchSuggestions(newQuery);
-        //   console.debug('[ReservationList] fetchSearchSuggestions result:', suggestions);
-        //   searchSuggestions.value = suggestions;
-        // } else {
-        //   searchSuggestions.value = [];
-        // }
-    });
+    watch(clientsJsonFilterInput, debounce((newValue) => {
+        clientsJsonFilter.value = newValue;
+    }, 400)); // 400ms debounce
 
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){
@@ -897,67 +634,38 @@
         // No need to manually trigger @rowExpand or @rowCollapse unless other logic depends on it.
         // The v-model:expandedRows on DataTable handles the state.
     };
-
-    const relativeDateFilter = ref(null);
-    const relativeDateOptions = [
-      { label: '今日', value: 'today' },
-      { label: '今週', value: 'this_week' },
-      { label: '先月', value: 'last_month' }
-    ];
-    function onRelativeDateChange() {
-      const now = new Date();
-      if (relativeDateFilter.value === 'today') {
-        startDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        endDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      } else if (relativeDateFilter.value === 'this_week') {
-        const day = now.getDay();
-        const diffToMonday = (day === 0 ? 6 : day - 1);
-        const monday = new Date(now);
-        monday.setDate(now.getDate() - diffToMonday);
-        startDateFilter.value = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate());
-        endDateFilter.value = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      } else if (relativeDateFilter.value === 'last_month') {
-        const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-        startDateFilter.value = firstDayLastMonth;
-        endDateFilter.value = lastDayLastMonth;
-      }
-    }
-
-    // Watch filters and persist to localStorage
-    watch([
-      () => filters.value.status?.value,
-      () => priceFilterMin.value,
-      () => priceFilterMax.value,
-      () => startDateFilter.value,
-      () => endDateFilter.value,
-      () => relativeDateFilter.value
-    ], () => {
-      const filterState = {
-        status: filters.value.status?.value,
-        priceMin: priceFilterMin.value,
-        priceMax: priceFilterMax.value,
-        startDate: startDateFilter.value,
-        endDate: endDateFilter.value,
-        relativeDate: relativeDateFilter.value
-      };
-      localStorage.setItem('reservationFilters', JSON.stringify(filterState));
-    }, { deep: true });
-
-    // Restore filters on mount
-    onMounted(() => {
-      const saved = localStorage.getItem('reservationFilters');
-      if (saved) {
-        const state = JSON.parse(saved);
-        if (state.status) filters.value.status.value = state.status;
-        if (state.priceMin !== undefined) priceFilterMin.value = state.priceMin;
-        if (state.priceMax !== undefined) priceFilterMax.value = state.priceMax;
-        if (state.startDate) startDateFilter.value = new Date(state.startDate);
-        if (state.endDate) endDateFilter.value = new Date(state.endDate);
-        if (state.relativeDate) relativeDateFilter.value = state.relativeDate;
-      }
-    });
 </script>
 
 <style scoped>
+.table-container {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-radius: 10px;
+    overflow-x: auto;
+    background: #fff;
+    padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+}
+:deep(.p-datatable-thead > tr) {
+    background: #f6f8fa;
+}
+:deep(.p-datatable-tbody > tr:hover) {
+    background: #e6f0fa;
+    transition: background 0.2s;
+}
+:deep(.p-datatable-tbody > tr > td),
+:deep(.p-datatable-thead > tr > th) {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+:deep(.p-datatable) {
+    border-radius: 10px;
+    overflow: hidden;
+}
+@media (max-width: 900px) {
+    .table-container {
+        padding: 0.2rem;
+    }
+    :deep(.p-datatable) {
+        font-size: 0.95rem;
+    }
+}
 </style>

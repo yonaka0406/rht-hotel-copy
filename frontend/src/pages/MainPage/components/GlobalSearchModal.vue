@@ -340,6 +340,9 @@ export default {
     const onSuggestionSelected = (suggestion) => {
       // Reset selected result index
       selectedResultIndex.value = -1;
+      if (suggestion && suggestion.reservation_id) {
+        selectReservation(suggestion);
+      }
     };
     
     // Select a reservation

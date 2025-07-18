@@ -306,7 +306,7 @@ export default {
     const selectSuggestion = (suggestion) => {
       console.debug('[SearchSuggestions] selectSuggestion:', suggestion);
       emit('select', suggestion);
-
+      
       // Add to recent searches
       addToRecentSearches(suggestion);
 
@@ -541,7 +541,7 @@ export default {
     const getClientDisplayName = (item) => {
       return item.name_kanji || item.name_kana || item.name || '';
     };
-
+    
     // Cache suggestions to reduce API calls
     const cacheSuggestion = (query, suggestions) => {
       suggestionCache.value.set(query.toLowerCase(), {
