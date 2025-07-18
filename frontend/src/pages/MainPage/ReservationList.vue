@@ -1,6 +1,38 @@
 <template>
     <Panel class="m-2">        
-        <div>
+        <!-- Filter/Action Card -->
+        <Card class="mb-4">
+            <template #content>
+                <div class="flex justify-end items-center flex-wrap">
+                    <span class="font-bold mr-4">滞在期間選択：</span>
+                    <label class="mr-2">開始日:</label>
+                    <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
+                    <label class="ml-4 mr-2">終了日:</label>
+                    <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
+                    <Button label="適用" class="ml-2" size="small" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
+                    <Button
+                        label="全フィルタークリア"
+                        icon="pi pi-filter-slash"
+                        severity="secondary"
+                        class="ml-2"
+                        size="small"
+                        @click="clearAllFilters"
+                        v-tooltip.bottom="'全てのフィルターをリセットします'"
+                    />
+                    <!-- Export -->
+                    <SplitButton 
+                        label="エクスポート" 
+                        icon="pi pi-file-export"
+                        severity="help"
+                        class="ml-2"
+                        size="small"
+                        @click="splitButtonExportReservations"
+                        :model="exportOptions" 
+                    />
+                </div>
+            </template>
+        </Card>
+        <div class="table-container">
             <DataTable
                 v-model:filters="filters"
                 v-model:selection="selectedReservations"
@@ -21,31 +53,6 @@
                 <template #header>
                     <div class="flex justify-between">
                         <span class="font-bold text-lg">{{ tableHeader }}</span>
-                    </div>
-                    <div class="mb-4 flex justify-end items-center">                        
-                        <span class="font-bold mr-4">滞在期間選択：</span>
-                        <label class="mr-2">開始日:</label>
-                        <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
-                        <label class="ml-4 mr-2">終了日:</label>
-                        <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
-                        <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
-                        <Button
-                            label="全フィルタークリア"
-                            icon="pi pi-filter-slash"
-                            severity="warning"
-                            class="ml-4"
-                            @click="clearAllFilters"
-                            v-tooltip.bottom="'全てのフィルターをリセットします'"
-                        />
-                        <!-- Export -->
-                        <SplitButton 
-                            label="エクスポート" 
-                            icon="pi pi-file-export"
-                            severity="help"
-                            class="ml-4"
-                            @click="splitButtonExportReservations"
-                            :model="exportOptions" 
-                        />
                     </div>
                 </template>
                 <template #empty> 指定されている期間中では予約ありません。 </template>                
@@ -69,6 +76,7 @@
                             placeholder="選択"
                             showClear 
                             fluid
+                            size="small"
                         />                        
                     </template>                    
                     <template #body="slotProps">
@@ -84,12 +92,12 @@
                 </Column>
                 <Column field="booker_name" filterField="booker_name" header="予約者" style="width:3%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" />
+                        <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" size="small" />
                     </template>
                 </Column>
                 <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
-                        <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索" />
+                        <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索" size="small" />
                     </template>
                     <template #body="{ data }">
                         <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
@@ -119,8 +127,8 @@
                 <Column field="price" header="料金" sortable style="width:2%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
                         <div class="grid grid-cols-1">
-                            <Select v-model="priceFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid />
-                            <InputNumber v-model="priceFilter" placeholder="請求額フィルター" fluid />
+                            <Select v-model="priceFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid size="small" />
+                            <InputNumber v-model="priceFilter" placeholder="請求額フィルター" fluid size="small" />
                         </div>
                     </template>
                     <template #body="slotProps">
@@ -132,8 +140,8 @@
                 <Column field="payment" header="支払い" sortable style="width:2%" :showFilterMenu="false">
                     <template #filter="{ filterModel }">
                         <div class="grid grid-cols-1">
-                            <Select v-model="paymentFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid />
-                            <InputNumber v-model="paymentFilter" placeholder="支払額フィルター" fluid />
+                            <Select v-model="paymentFilterCondition" :options="['=', '>', '<']" placeholder="条件" fluid size="small" />
+                            <InputNumber v-model="paymentFilter" placeholder="支払額フィルター" fluid size="small" />
                         </div>
                     </template>
                     <template #body="slotProps">
@@ -405,6 +413,11 @@
 
     const filteredReservations = computed(() => {
         let filteredList = reservationList.value;
+        // Debug: log the first reservation's clients_json and payers_json
+        if (filteredList && filteredList.length > 0) {
+            console.log('[ReservationList] first reservation clients_json:', filteredList[0].clients_json);
+            console.log('[ReservationList] first reservation payers_json:', filteredList[0].payers_json);
+        }
         // merged_clients
         if(filteredList){
             filteredList = filteredList.map(reservation => {
@@ -432,16 +445,39 @@
             });
         }               
 
-        if (clientFilter.value !== null && clientFilter.value !== ''){
+        if (clientFilter.value !== null && clientFilter.value !== '') {
+            const filterClients = clientFilter.value.toLowerCase();
             filteredList = filteredList.filter(reservation => {
-                const clientName = reservation.booker_name.toLowerCase();
-                const clientNameKana = reservation.booker_name_kana ? reservation.booker_name_kana.toLowerCase() : '';
-                const clientNameKanji = reservation.booker_name_kanji ? reservation.booker_name_kanji.toLowerCase() : '';
-                const filterClients = clientFilter.value.toLowerCase();
-                
-                return (clientName && clientName.includes(filterClients)) ||
-                    (clientNameKana && clientNameKana.includes(filterClients)) ||
-                    (clientNameKanji && clientNameKanji.includes(filterClients))                     
+                // Booker fields
+                const bookerFields = [
+                    reservation.booker_name,
+                    reservation.booker_name_kana,
+                    reservation.booker_name_kanji
+                ].filter(Boolean).map(x => x.toLowerCase());
+
+                // All clients in clients_json and payers_json
+                const allClients = [];
+                if (Array.isArray(reservation.clients_json)) {
+                    allClients.push(...reservation.clients_json);
+                }
+                if (Array.isArray(reservation.payers_json)) {
+                    allClients.push(...reservation.payers_json);
+                }
+                const clientFields = allClients.flatMap(client => [
+                    client.name,
+                    client.name_kana,
+                    client.name_kanji
+                ].filter(Boolean).map(x => x.toLowerCase()));
+
+                // Debug logs
+                console.log('[ClientFilter] filter value:', filterClients);
+                console.log('[ClientFilter] bookerFields:', bookerFields);
+                console.log('[ClientFilter] clientFields:', clientFields);
+
+                // Match if any field contains the filter string
+                const match = [...bookerFields, ...clientFields].some(field => field.includes(filterClients));
+                console.log('[ClientFilter] reservation id', reservation.id, 'match:', match);
+                return match;
             });
         }
         if (clientsJsonFilter.value !== null && clientsJsonFilter.value !== ''){
@@ -601,4 +637,35 @@
 </script>
 
 <style scoped>
+.table-container {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-radius: 10px;
+    overflow-x: auto;
+    background: #fff;
+    padding: 0.5rem 0.5rem 1.5rem 0.5rem;
+}
+:deep(.p-datatable-thead > tr) {
+    background: #f6f8fa;
+}
+:deep(.p-datatable-tbody > tr:hover) {
+    background: #e6f0fa;
+    transition: background 0.2s;
+}
+:deep(.p-datatable-tbody > tr > td),
+:deep(.p-datatable-thead > tr > th) {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+:deep(.p-datatable) {
+    border-radius: 10px;
+    overflow: hidden;
+}
+@media (max-width: 900px) {
+    .table-container {
+        padding: 0.2rem;
+    }
+    :deep(.p-datatable) {
+        font-size: 0.95rem;
+    }
+}
 </style>

@@ -1,5 +1,6 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { usePhoneticSearch } from './usePhoneticSearch.js'
+import { useHotelStore } from '@/composables/useHotelStore';
 
 /**
  * Core reservation search composable
@@ -42,6 +43,24 @@ export function useReservationSearch() {
     cacheExpiration: 5 * 60 * 1000 // 5 minutes
   })
 
+  // Import suggestion cache service
+  let suggestionCache = null
+  const initializeCache = async () => {
+    if (!suggestionCache) {
+      try {
+        const { default: cacheService } = await import('../services/SuggestionCacheService')
+        suggestionCache = cacheService
+      } catch (error) {
+        console.debug('Suggestion cache service not available, using local cache')
+        suggestionCache = {
+          get: () => null,
+          set: () => {},
+          has: () => false
+        }
+      }
+    }
+  }
+  
   // Search cache
   const searchCache = ref(new Map())
   
@@ -187,7 +206,7 @@ export function useReservationSearch() {
     await initializeAPI()
     
     if (!apiCall) {
-      searchError.value = 'Search functionality not available'
+      searchError.value = '検索機能が利用できません。'
       return
     }
 
@@ -208,18 +227,18 @@ export function useReservationSearch() {
         signal: currentSearchController.signal
       })
 
-      if (response.success) {
-        searchResults.value = response.results || []
+      if (response.results) {
+        searchResults.value = response.results
         
         // Cache the results
         searchCache.value.set(cacheKey, {
-          results: response.results || [],
+          results: response.results,
           timestamp: Date.now()
         })
         
         lastSearchTime.value = Date.now()
       } else {
-        throw new Error(response.message || 'Search failed')
+        throw new Error(response.message || '検索に失敗しました。')
       }
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -228,7 +247,7 @@ export function useReservationSearch() {
       }
       
       console.error('Search error:', error)
-      searchError.value = error.message || 'Search failed'
+      searchError.value = error.message || '検索に失敗しました。'
       searchResults.value = []
     } finally {
       isSearching.value = false
@@ -445,9 +464,24 @@ export function useReservationSearch() {
    * @returns {Promise<void>}
    */
   async function getSearchSuggestions(partialQuery) {
+    console.debug('[useReservationSearch] getSearchSuggestions called with:', partialQuery);
     if (!partialQuery || partialQuery.length < 2) {
       searchSuggestions.value = []
+      console.debug('[useReservationSearch] query too short, returning empty array');
       return
+    }
+
+    // Initialize cache service if needed
+    await initializeCache()
+    
+    // Check cache first
+    if (suggestionCache && suggestionCache.has(partialQuery)) {
+      const cachedSuggestions = suggestionCache.get(partialQuery)
+      if (cachedSuggestions) {
+        searchSuggestions.value = cachedSuggestions
+        console.debug('[useReservationSearch] cache hit:', cachedSuggestions);
+        return
+      }
     }
 
     await initializeAPI()
@@ -455,20 +489,30 @@ export function useReservationSearch() {
     if (!apiCall) {
       // Provide basic local suggestions
       searchSuggestions.value = []
+      console.debug('[useReservationSearch] apiCall not available, returning empty array');
       return
     }
 
     try {
-      const response = await apiCall('/search/suggestions', 'POST', {
+      const { selectedHotelId } = useHotelStore();
+      const response = await apiCall(`/search/suggestions/${selectedHotelId.value}`, 'POST', {
         query: partialQuery,
-        maxSuggestions: searchConfig.value.maxSuggestions
-      })
+        limit: searchConfig.value.maxSuggestions
+      });
       
-      if (response.success) {
-        searchSuggestions.value = response.suggestions || []
+      if (Array.isArray(response.suggestions)) {
+        searchSuggestions.value = response.suggestions
+        console.debug('[useReservationSearch] API suggestions:', response.suggestions);
+        // Cache the suggestions
+        if (suggestionCache) {
+          suggestionCache.set(partialQuery, response.suggestions)
+        }
+      } else {
+        searchSuggestions.value = []
+        console.debug('[useReservationSearch] API response not successful:', response);
       }
     } catch (error) {
-      console.error('Get suggestions error:', error)
+      console.error('[useReservationSearch] Get suggestions error:', error)
       searchSuggestions.value = []
     }
   }

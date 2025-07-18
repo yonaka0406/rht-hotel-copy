@@ -1,12 +1,16 @@
 // composables/useApi.js
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useToast } from 'primevue/usetoast';
 import { apiService, AuthError } from '@/utils/apiService';
 
+// Global router reference that can be set from main.js
+let globalRouter = null;
+
+// Function to set global router from main.js
+export function setApiDependencies(router) {
+  globalRouter = router;
+}
+
 export function useApi() {
-  const router = useRouter();
-  const toast = useToast();
   const isLoading = ref(false);
   const error = ref(null);
 
@@ -24,15 +28,17 @@ export function useApi() {
     } else if (errorType === 'JWT_EXPIRED') {
       message = 'セッションの有効期限が切れました。再度ログインしてください。';
     }
-
-    toast.add({
-      severity: 'warn',
-      summary: 'ログイン必要',
-      detail: message,
-      life: 5000
-    });
-
-    router.push('/login');
+    
+    // Log the message to console
+    console.warn(message);
+    
+    // Use router if available
+    if (globalRouter) {
+      globalRouter.push('/login');
+    } else {
+      // Fallback to window.location
+      window.location.href = '/login';
+    }
   };
 
   const makeRequest = async (requestFn) => {
@@ -68,6 +74,21 @@ export function useApi() {
     return makeRequest(() => apiService.delete(endpoint, options));
   };
 
+  const apiCall = async (endpoint, method = 'GET', data = null, options = {}) => {
+    switch (method.toUpperCase()) {
+      case 'GET':
+        return get(endpoint, options);
+      case 'POST':
+        return post(endpoint, data, options);
+      case 'PUT':
+        return put(endpoint, data, options);
+      case 'DELETE':
+        return del(endpoint, options);
+      default:
+        throw new Error(`Unsupported method: ${method}`);
+    }
+  };
+
   return {
     isLoading,
     error,
@@ -75,6 +96,7 @@ export function useApi() {
     post,
     put,
     del,
+    apiCall,
     clearAuthToken,
     handleAuthError
   };

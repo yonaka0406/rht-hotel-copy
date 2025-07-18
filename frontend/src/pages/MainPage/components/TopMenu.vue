@@ -10,6 +10,16 @@
         <template #end>
             <div class="flex items-center gap-4">
 
+                <!-- Search Icon -->
+                <Button 
+                    class="p-button p-button-text dark:text-white" 
+                    aria-label="予約検索" 
+                    @click="openGlobalSearch"
+                    v-tooltip.bottom="{ value: '予約検索 (Ctrl+K)', class: 'small-tooltip' }"
+                >
+                    <i class="pi pi-search" style="font-size:larger" />
+                </Button>
+
                 <!-- Waitlist Icon (New) - Only show when 1 or more entries -->
                 <OverlayBadge v-if="waitlistBadgeCount >= 1" :value="waitlistBadgeCount" class="mr-2">
                     <Button class="p-button p-button-text dark:text-white" aria-label="順番待ちリスト" @click="openWaitlistModal">
@@ -49,29 +59,30 @@
     </Toolbar>
     
     <!-- Drawer for Notifications -->
-    <Drawer v-model:visible="showDrawer" position="right" :style="{ width: '300px' }" header="通知" class="dark:bg-gray-800 dark:text-white">
-        <ul v-if="holdReservations.length">
-            <li v-for="(reservation, index) in holdReservations" :key="index" class="m-2">
-                <button @click="goToEditReservationPage(reservation.hotel_id, reservation.reservation_id)" class="dark:text-white dark:hover:bg-gray-700">
-                    {{ reservation.hotel_name }}<span>保留中予約を完成させてください: </span><br/>
-                    {{ reservation.client_name }} @ {{ reservation.check_in }}
-                </button>
-                <Divider class="dark:border-gray-600" />
-            </li>
-        </ul>
-        <p v-else class="text-center text-gray-500 dark:text-gray-400">通知はありません。</p>
-    </Drawer>
+    <NotificationsDrawer
+        v-model:visible="showDrawer"
+        :hold-reservations="holdReservations"
+        :notification-severity="notificationSeverity"
+        @go-to-edit-reservation="goToEditReservationPage"
+    />
 
     <!-- Waitlist Display Modal -->
     <WaitlistDisplayModal
         :visible="isWaitlistModalVisible"
         @update:visible="isWaitlistModalVisible = $event"
     />
+    
+    <!-- Global Search Modal -->
+    <GlobalSearchModal
+        :visible="isGlobalSearchVisible"
+        @update:visible="isGlobalSearchVisible = $event"
+        @select-reservation="onSelectReservation"
+    />
 </template>
 
 <script setup>
     // Vue
-    import { ref, computed, watch, onMounted } from 'vue';    
+    import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';    
     import { useRouter } from 'vue-router';
     const router = useRouter();
 
@@ -84,8 +95,10 @@
     const { holdReservations, fetchMyHoldReservations, setReservationId } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
-    // Components (for Waitlist Modal)
+    // Components (for Waitlist Modal and Global Search)
     import WaitlistDisplayModal from './WaitlistDisplayModal.vue';
+    import GlobalSearchModal from './GlobalSearchModal.vue';
+    import NotificationsDrawer from './NotificationsDrawer.vue';
 
     // Primevue
     import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
@@ -97,6 +110,7 @@
     const showDrawer = ref(false);
     // const waitlistBadgeCount = ref(0); // Will be replaced by a computed property
     const isWaitlistModalVisible = ref(false); // Controls visibility of the waitlist modal
+    const isGlobalSearchVisible = ref(false); // Controls visibility of the global search modal
 
     // --- Computed Properties ---
     const waitlistBadgeCount = computed(() => {
@@ -156,6 +170,23 @@
         isWaitlistModalVisible.value = true;
     };
 
+    const openGlobalSearch = () => {
+        console.debug('[TopMenu] openGlobalSearch called');
+        isGlobalSearchVisible.value = true;
+    };
+
+    const onSelectReservation = async (reservation) => {
+        // Set the hotel context if needed
+        if (reservation.hotel_id) {
+            await setHotelId(reservation.hotel_id);
+        }
+        
+        // Set the reservation context
+        if (reservation.reservation_id) {
+            await setReservationId(reservation.reservation_id);
+        }
+    };
+
     const goToEditReservationPage = async (hotel_id, reservation_id) => {
         await setHotelId(hotel_id); // Set the hotel context in the store
         await setReservationId(reservation_id); // Set the reservation context in the store
@@ -175,11 +206,29 @@
         // Already called in SideMenu 
         // await fetchUser();
         // await fetchMyHoldReservations();
+        
+        // Register global keyboard shortcut for search
+        document.addEventListener('keydown', handleGlobalKeydown);
     });
+    
+    // Clean up event listener when component is unmounted
+    onBeforeUnmount(() => {
+        document.removeEventListener('keydown', handleGlobalKeydown);
+    });
+    
+    // Handle global keyboard shortcuts
+    const handleGlobalKeydown = (event) => {
+        // Ctrl+K or Cmd+K to open global search
+        if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+            event.preventDefault();
+            openGlobalSearch();
+        }
+    };
 
     // --- Watchers ---
     watch(selectedHotelId,
         (newHotelId, oldHotelId) => {
+            console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
             if (newHotelId && newHotelId !== oldHotelId) {
                 // Fetch waitlist entries for the new hotel to update the badge count.
                 // Only fetch entries with status 'waiting' and 'notified'.

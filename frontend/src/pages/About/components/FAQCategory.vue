@@ -35,7 +35,12 @@
                   <span
                     v-for="tag in question.tags"
                     :key="tag"
-                    class="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded-full"
+                    :class="[
+                      'px-2 py-1 text-xs rounded-full',
+                      tag === '未検証:要確認'
+                        ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border border-red-400 font-bold'
+                        : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+                    ]"
                   >
                     {{ tag }}
                   </span>

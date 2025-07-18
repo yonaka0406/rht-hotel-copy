@@ -84,7 +84,57 @@ const getPhoneticVariants = async (req, res) => {
   }
 };
 
+const SearchModel = require('../models/search');
+
+/**
+ * Provide search suggestions (placeholder)
+ */
+const getSuggestions = async (req, res) => {
+  const hotelId = req.params.hotelId;
+  const query = req.body.query;
+  const searchTerm = query ? query.trim() : '';
+
+  try {
+    const rows = await SearchModel.findClientSuggestionsByHotelAndTerm(req.requestId, hotelId, searchTerm);
+
+    const suggestions = rows.map(row => ({
+      client_id: row.client_id,
+      name: row.name,
+      name_kana: row.name_kana,
+      name_kanji: row.name_kanji,
+      email: row.email,
+      phone: row.phone,
+      reservation_id: row.reservation_id,
+      check_in: row.check_in,
+      check_out: row.check_out,
+      number_of_people: row.number_of_people,
+    }));
+
+    console.log(`[getSuggestions] DB results:`, suggestions);
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('[getSuggestions] Error:', error);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+};
+
+/**
+ * Search for reservations (placeholder)
+ */
+const searchReservations = async (req, res) => {
+  try {
+    // For now, return an empty array
+    res.json({ results: [] });
+  } catch (error) {
+    console.error('Error searching reservations:', error);
+    res.status(500).json({ error: 'Failed to search reservations' });
+  }
+};
+
 module.exports = {
   convertText: convertTextEndpoint,
-  getPhoneticVariants
+  getPhoneticVariants,
+  getSuggestions,
+  searchReservations
 };

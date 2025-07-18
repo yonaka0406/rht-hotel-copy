@@ -31,11 +31,11 @@ export function useProjectStore() {
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                throw new Error(`Failed to fetch related projects: ${errorData.message || response.status}`);
+                throw new Error(`Failed to retrieve related projects. ${errorData.message || response.status}`);
             }
             relatedProjects.value = await response.json();
         } catch (error) {
-            console.error('Error fetching related projects:', error);
+            console.error('Failed to retrieve related projects.', error);
             relatedProjects.value = [];
         } finally {
             isLoadingRelatedProjects.value = false;
@@ -59,15 +59,15 @@ export function useProjectStore() {
             });
             const responseData = await response.json();
             if (!response.ok) {
-                console.error('Failed to create project. Server response:', responseData);
-                throw new Error(responseData.message || `Failed to create project: ${response.status}`);
+                console.error('Failed to create project.');
+                throw new Error(responseData.message || `プロジェクトの作成に失敗しました。`);
             }
             // Optionally, trigger a refresh of related projects or allProjects list if relevant
             // For example, if the newly created project should appear in the allProjects list:
             // await fetchAllProjects({ page: allProjectsCurrentPage.value, searchTerm: allProjectsSearchTerm.value, filters: allProjectsFilters.value });
             return responseData;
         } catch (error) {
-            console.error('Error creating project:', error);
+            console.error('Failed to create project.', error);
             throw error;
         } finally {
             // isCreatingProject.value = false;
@@ -107,13 +107,13 @@ export function useProjectStore() {
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
+                throw new Error(errorData.message || `HTTP error occurred. Status: ${response.status}`);
             }
             const data = await response.json();
             allProjects.value = data.projects;
             allProjectsTotalCount.value = data.totalItems; 
         } catch (error) {
-            console.error('Failed to fetch all projects:', error);
+            console.error('Failed to retrieve all projects.', error);
             allProjects.value = [];
             allProjectsTotalCount.value = 0;
         } finally {
@@ -139,8 +139,8 @@ export function useProjectStore() {
             });
             const responseData = await response.json();
             if (!response.ok) {
-                console.error('Failed to update project. Server response:', responseData);
-                throw new Error(responseData.message || `Failed to update project: ${response.status}`);
+                console.error('Failed to update project.', error);
+                throw new Error(responseData.message || `Failed to update project. ${response.status}`);
             }
             // Optionally, refresh the specific project in the allProjects list or refetch if necessary
             // For example:
@@ -150,7 +150,7 @@ export function useProjectStore() {
             // }
             return responseData;
         } catch (error) {
-            console.error(`Error updating project with ID ${projectId}:`, error);
+            console.error(`Failed to update project with ID ${projectId}.`, error);
             throw error;
         } finally {
             // isLoadingUpdateProject.value = false;
@@ -206,7 +206,7 @@ const deleteProjectById = async (projectId) => {
         return { success: true, message: 'Project deleted successfully' }; // Or simply return void/true
 
     } catch (error) {
-        console.error(`Error deleting project with ID ${projectId}:`, error);
+        console.error(`Failed to delete project with ID ${projectId}.`, error);
         throw error; // Re-throw to be caught by the component
     } finally {
         // isLoadingAllProjects.value = false; // Reset loading state

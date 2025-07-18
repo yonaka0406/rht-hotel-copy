@@ -39,6 +39,7 @@
                 fluid
                 @blur="validatePassword"
                 autocomplete="current-password"
+                aria-autocomplete="list"
               />
               <label for="password" class="dark:text-gray-200">パスワード</label>
             </FloatLabel>

@@ -18,7 +18,7 @@ export function useUserStore() {
     
             users.value = await response.json();
         } catch (error) {
-            console.error('Failed to fetch users', error);
+            console.error('Failed to fetch users.', error);
         }
     };
     const fetchUser = async () => {
@@ -34,7 +34,7 @@ export function useUserStore() {
     
             logged_user.value = await response.json();
         } catch (error) {
-            console.error('Failed to fetch user', error);
+            console.error('Failed to fetch user information.', error);
         }
     };
 
@@ -42,7 +42,7 @@ export function useUserStore() {
         try {
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
-                throw new Error('Authentication token not found.');
+                throw new Error('認証トークンが見つかりません。');
             }
 
             const response = await fetch('/api/user/calendar/create-google', {
@@ -62,7 +62,7 @@ export function useUserStore() {
             
             return responseData; 
         } catch (error) {
-            console.error('Failed to create user calendar:', error);
+            console.error('Failed to create user calendar.', error);
             throw error; // Re-throw to be caught by the component
         }
     }
@@ -72,7 +72,7 @@ export function useUserStore() {
         try {
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
-                throw new Error('Authentication token not found.');
+                throw new Error('認証トークンが見つかりません。');
             }
 
             const response = await fetch('/api/user/calendar/sync-from-google', {
@@ -92,7 +92,7 @@ export function useUserStore() {
             // responseData should contain { message: '...', details: { actionsCreated, actionsUpdated, actionsFailed } }
             return responseData; 
         } catch (error) {
-            console.error('Failed to trigger calendar sync:', error);
+            console.error('Failed to trigger calendar sync.', error);
             throw error; // Re-throw to be caught by the component
         }
     };    
