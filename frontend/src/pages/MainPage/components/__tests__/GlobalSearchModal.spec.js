@@ -1,12 +1,33 @@
 import { describe, it, expect, vi } from 'vitest';
+import { mount } from '@vue/test-utils';
+import GlobalSearchModal from '../GlobalSearchModal.vue';
+import ReservationSearchBar from '../../../../components/ReservationSearchBar.vue';
+import { ref, defineComponent, h } from 'vue';
+import PrimeVue from 'primevue/config';
 
 // Mock the composables and services
 vi.mock('../../../../composables/useReservationSearch', () => ({
-  useReservationSearch: vi.fn()
+  useReservationSearch: vi.fn(() => ({
+    searchQuery: ref(''),
+    searchResults: ref([]),
+    isSearching: ref(false),
+    searchSuggestions: ref([]),
+    activeFilters: ref([]),
+    searchError: ref(null),
+    hasActiveSearch: ref(false),
+    searchResultsCount: ref(0),
+    performSearch: vi.fn(),
+    clearSearch: vi.fn(),
+    removeFilter: vi.fn(),
+    clearAllFilters: vi.fn(),
+    getSearchSuggestions: vi.fn(),
+  }))
 }));
 
 vi.mock('../../../../composables/usePhoneticSearch', () => ({
-  usePhoneticSearch: vi.fn()
+  usePhoneticSearch: vi.fn(() => ({
+    phoneticMatch: vi.fn(() => false), // mock implementation
+  }))
 }));
 
 vi.mock('vue-router', () => ({
@@ -172,5 +193,49 @@ describe('GlobalSearchModal functionality', () => {
     // Test with empty inputs
     expect(highlightMatch('', 'test')).toBe('');
     expect(highlightMatch('Hello', '')).toBe('Hello');
+  });
+
+  // In jsdom, actual focus is unreliable for modals/portals. Test that focusInput is called instead.
+  it('should call focusInput on show', async () => {
+    const wrapper = mount(GlobalSearchModal, {
+      props: { visible: false },
+      global: {
+        plugins: [[PrimeVue, { aria: { close: '閉じる' } }]],
+        components: { ReservationSearchBar },
+        config: {
+          globalProperties: {
+            $primevue: {
+              config: {
+                aria: { close: '閉じる' }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    await wrapper.setProps({ visible: true });
+    await wrapper.vm.$nextTick();
+
+    // Wait for searchBarRef.value to be set (up to 200ms)
+    let searchBarRef = wrapper.vm.searchBarRef;
+    let attempts = 0;
+    while ((!searchBarRef || !searchBarRef.value) && attempts < 10) {
+      await new Promise(r => setTimeout(r, 20));
+      searchBarRef = wrapper.vm.searchBarRef;
+      attempts++;
+    }
+    if (searchBarRef && searchBarRef.value) {
+      const focusSpy = vi.fn();
+      searchBarRef.value.focusInput = focusSpy;
+
+      if (typeof wrapper.vm.onDialogShow === 'function') {
+        wrapper.vm.onDialogShow();
+      }
+
+      expect(focusSpy).toHaveBeenCalled();
+    } else {
+      throw new Error('searchBarRef or searchBarRef.value is not defined after waiting');
+    }
   });
 });
