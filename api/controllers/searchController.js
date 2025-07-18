@@ -84,7 +84,21 @@ const getPhoneticVariants = async (req, res) => {
   }
 };
 
+/**
+ * Provide search suggestions (placeholder)
+ */
+const getSuggestions = async (req, res) => {
+  try {
+    // For now, return an empty array or simple suggestions
+    res.json({ suggestions: [] });
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ error: 'Failed to fetch suggestions' });
+  }
+};
+
 module.exports = {
   convertText: convertTextEndpoint,
-  getPhoneticVariants
+  getPhoneticVariants,
+  getSuggestions
 };
