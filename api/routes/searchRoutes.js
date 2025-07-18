@@ -7,5 +7,6 @@ const searchController = require('../controllers/searchController');
 router.post('/convert-text', authMiddleware, searchController.convertText);
 router.post('/phonetic-variants', authMiddleware, searchController.getPhoneticVariants);
 router.post('/suggestions/:hotelId', authMiddleware, searchController.getSuggestions);
+router.post('/reservations', authMiddleware, searchController.searchReservations);
 
 module.exports = router;

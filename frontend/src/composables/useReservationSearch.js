@@ -495,7 +495,7 @@ export function useReservationSearch() {
 
     try {
       const { selectedHotelId } = useHotelStore();
-      const response = await apiCall(`/reservations/search/suggestions/${selectedHotelId.value}`, 'POST', {
+      const response = await apiCall(`/search/suggestions/${selectedHotelId.value}`, 'POST', {
         query: partialQuery,
         limit: searchConfig.value.maxSuggestions
       });

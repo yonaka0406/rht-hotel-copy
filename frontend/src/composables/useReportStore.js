@@ -436,7 +436,7 @@ export function useReportStore() {
         const effectiveHotelId = (hotelId === null || hotelId === 0 || hotelId === 'all') ? 'all' : hotelId;
 
         try {
-            const data = await api.post(`/reservations/search/suggestions/${effectiveHotelId}`, {
+            const data = await api.post(`/search/suggestions/${effectiveHotelId}`, {
                 query: partialQuery.trim(),
                 limit: 10 // Limit suggestions for performance
             });
