@@ -1,17 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mount } from '@vue/test-utils';
-import PrimeVue from 'primevue/config';
-import { ref } from 'vue';
-
-// Move all vi.doMock calls for composables to the top
-let mockReservationListRef = ref([]);
-let mockSearchResultsRef = ref([]);
-let mockSearchQueryRef = ref('');
-let mockHasActiveSearchRef = ref(false);
+// Move all vi.doMock calls to the very top
+let mockReservationListRef = undefined;
+let mockSearchResultsRef = undefined;
+let mockSearchQueryRef = undefined;
+let mockHasActiveSearchRef = undefined;
 
 vi.doMock('../../composables/useHotelStore', () => ({
   useHotelStore: () => ({
-    selectedHotelId: ref(1),
+    selectedHotelId: require('vue').ref(1),
     fetchHotels: vi.fn(),
     fetchHotel: vi.fn(),
   }),
@@ -25,7 +20,7 @@ vi.doMock('primevue/usetoast', () => ({
 
 vi.doMock('../../composables/useReportStore', () => ({
   useReportStore: () => ({
-    reservationList: mockReservationListRef,
+    get reservationList() { return mockReservationListRef; },
     fetchReservationListView: vi.fn(),
     exportReservationList: vi.fn(),
     exportReservationDetails: vi.fn(),
@@ -34,14 +29,14 @@ vi.doMock('../../composables/useReportStore', () => ({
 }));
 vi.doMock('../../composables/useReservationSearch', () => ({
   useReservationSearch: () => ({
-    searchQuery: mockSearchQueryRef,
-    searchResults: mockSearchResultsRef,
-    isSearching: ref(false),
-    searchSuggestions: ref([]),
-    activeFilters: ref([]),
-    searchActiveFilters: ref([]),
-    searchResultsCount: ref(mockSearchResultsRef.value.length),
-    hasActiveSearch: mockHasActiveSearchRef,
+    get searchQuery() { return mockSearchQueryRef; },
+    get searchResults() { return mockSearchResultsRef; },
+    isSearching: require('vue').ref(false),
+    searchSuggestions: require('vue').ref([]),
+    activeFilters: require('vue').ref([]),
+    searchActiveFilters: require('vue').ref([]),
+    get searchResultsCount() { return require('vue').ref(mockSearchResultsRef.value.length); },
+    get hasActiveSearch() { return mockHasActiveSearchRef; },
     performSearch: vi.fn(),
     clearSearch: vi.fn(),
     addFilter: vi.fn(),
@@ -49,6 +44,11 @@ vi.doMock('../../composables/useReservationSearch', () => ({
     clearAllFilters: vi.fn(),
   })
 }));
+
+import { describe, it, expect, afterEach } from 'vitest';
+import { mount } from '@vue/test-utils';
+import PrimeVue from 'primevue/config';
+import { ref } from 'vue';
 
 const mockReservations = [
   {
@@ -81,30 +81,29 @@ const mockReservations = [
   }
 ];
 
-const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
-
 describe('ReservationList.vue Integration', () => {
   let wrapper;
 
   afterEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mockReservationListRef.value = [];
-    mockSearchResultsRef.value = [];
-    mockSearchQueryRef.value = '';
-    mockHasActiveSearchRef.value = false;
+    mockReservationListRef = undefined;
+    mockSearchResultsRef = undefined;
+    mockSearchQueryRef = undefined;
+    mockHasActiveSearchRef = undefined;
   });
 
   it('renders reservation data and allows search-only', async () => {
-    mockReservationListRef.value = [...mockReservations];
-    mockSearchQueryRef.value = '田中';
-    mockHasActiveSearchRef.value = true;
-    mockSearchResultsRef.value = [
+    mockReservationListRef = ref([...mockReservations]);
+    mockSearchQueryRef = ref('田中');
+    mockHasActiveSearchRef = ref(true);
+    mockSearchResultsRef = ref([
       {
         reservation: mockReservations[0],
         highlightedText: { booker_name: '<mark>田中</mark>太郎' }
       }
-    ];
+    ]);
+    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -125,7 +124,6 @@ describe('ReservationList.vue Integration', () => {
       },
     });
     await wrapper.vm.$nextTick();
-    // Debug output
     console.log('searchResults:', wrapper.vm.searchResults);
     console.log('reservationList:', wrapper.vm.reservationList);
     console.log('filteredReservations:', wrapper.vm.filteredReservations);
@@ -134,10 +132,10 @@ describe('ReservationList.vue Integration', () => {
   });
 
   it('shows highlighting for reservation number, email, and phone', async () => {
-    mockReservationListRef.value = [...mockReservations];
-    mockSearchQueryRef.value = 'RES-001';
-    mockHasActiveSearchRef.value = true;
-    mockSearchResultsRef.value = [
+    mockReservationListRef = ref([...mockReservations]);
+    mockSearchQueryRef = ref('RES-001');
+    mockHasActiveSearchRef = ref(true);
+    mockSearchResultsRef = ref([
       {
         reservation: mockReservations[0],
         highlightedText: {
@@ -146,7 +144,8 @@ describe('ReservationList.vue Integration', () => {
           phone: '<mark>090-1234-5678</mark>'
         }
       }
-    ];
+    ]);
+    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -177,15 +176,16 @@ describe('ReservationList.vue Integration', () => {
   });
 
   it('combines search and filter', async () => {
-    mockReservationListRef.value = [...mockReservations];
-    mockSearchQueryRef.value = '山田';
-    mockHasActiveSearchRef.value = true;
-    mockSearchResultsRef.value = [
+    mockReservationListRef = ref([...mockReservations]);
+    mockSearchQueryRef = ref('山田');
+    mockHasActiveSearchRef = ref(true);
+    mockSearchResultsRef = ref([
       {
         reservation: mockReservations[1],
         highlightedText: { booker_name: '<mark>山田</mark>花子' }
       }
-    ];
+    ]);
+    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -215,10 +215,11 @@ describe('ReservationList.vue Integration', () => {
   });
 
   it('applies status filter only', async () => {
-    mockReservationListRef.value = [mockReservations[0]];
-    mockSearchQueryRef.value = '';
-    mockHasActiveSearchRef.value = false;
-    mockSearchResultsRef.value = [];
+    mockReservationListRef = ref([mockReservations[0]]);
+    mockSearchQueryRef = ref('');
+    mockHasActiveSearchRef = ref(false);
+    mockSearchResultsRef = ref([]);
+    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
@@ -247,15 +248,16 @@ describe('ReservationList.vue Integration', () => {
   });
 
   it('clears all filters and search', async () => {
-    mockReservationListRef.value = [mockReservations[0]];
-    mockSearchQueryRef.value = '田中';
-    mockHasActiveSearchRef.value = true;
-    mockSearchResultsRef.value = [
+    mockReservationListRef = ref([mockReservations[0]]);
+    mockSearchQueryRef = ref('田中');
+    mockHasActiveSearchRef = ref(true);
+    mockSearchResultsRef = ref([
       {
         reservation: mockReservations[0],
         highlightedText: { booker_name: '<mark>田中</mark>太郎' }
       }
-    ];
+    ]);
+    const { default: ReservationList } = await import('../../pages/MainPage/ReservationList.vue');
     wrapper = mount(ReservationList, {
       global: {
         plugins: [[PrimeVue, {}]],
