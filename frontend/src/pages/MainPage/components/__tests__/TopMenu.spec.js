@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import TopMenu from '../TopMenu.vue';
+import { ref } from 'vue';
 
 // Mock the components and composables
 vi.mock('vue-router', () => ({
@@ -20,13 +21,13 @@ vi.mock('@/composables/useHotelStore', () => ({
   useHotelStore: vi.fn(() => ({
     hotels: [{ id: 1, name: 'Test Hotel' }],
     setHotelId: vi.fn(),
-    selectedHotelId: { value: 1 }
+    selectedHotelId: ref(1)
   }))
 }));
 
 vi.mock('@/composables/useReservationStore', () => ({
   useReservationStore: vi.fn(() => ({
-    holdReservations: { value: [] },
+    holdReservations: ref([]),
     fetchMyHoldReservations: vi.fn(),
     setReservationId: vi.fn()
   }))
@@ -83,6 +84,12 @@ describe('TopMenu', () => {
           Divider: true,
           WaitlistDisplayModal: true,
           GlobalSearchModal: true
+        },
+        directives: {
+          tooltip: {
+            mounted() {},
+            updated() {},
+          }
         }
       }
     });

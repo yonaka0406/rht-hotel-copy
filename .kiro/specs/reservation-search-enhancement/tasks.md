@@ -82,6 +82,20 @@
   - _Requirements: 2.1.1, 2.1.5_
 
 - [ ] 8. Enhance ReservationList with advanced search
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   - Replace existing search inputs in ReservationList.vue with ReservationSearchBar
   - Integrate useReservationSearch composable for unified search functionality
   - Implement combined text search with existing date/status/price filters

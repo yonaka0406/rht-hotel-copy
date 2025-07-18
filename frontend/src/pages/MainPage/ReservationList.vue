@@ -22,6 +22,23 @@
                     <div class="flex justify-between">
                         <span class="font-bold text-lg">{{ tableHeader }}</span>
                     </div>
+                    
+                    <!-- Enhanced Search Bar -->
+                    <div class="mb-4">
+                        <ReservationSearchBar
+                            v-model="searchQuery"
+                            :suggestions="searchSuggestions"
+                            :is-searching="isSearching"
+                            :active-filters="combinedActiveFilters"
+                            :search-results-count="hasActiveSearch ? displayedReservationsCount : null"
+                            @search="handleSearch"
+                            @clear="handleClearSearch"
+                            @suggestion-selected="handleSuggestionSelected"
+                            @remove-filter="handleRemoveFilter"
+                            @clear-filters="handleClearAllFilters"
+                        />
+                    </div>
+                    
                     <div class="mb-4 flex justify-end items-center">                        
                         <span class="font-bold mr-4">滞在期間選択：</span>
                         <label class="mr-2">開始日:</label>
@@ -83,17 +100,58 @@
                     </template>                    
                 </Column>
                 <Column field="booker_name" filterField="booker_name" header="予約者" style="width:3%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
-                        <InputText v-model="clientFilterInput" type="text" placeholder="予約者 氏名・カナ・漢字検索" />
+                    <!-- Removed old InputText filter for booker_name -->
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.highlightedText?.booker_name" 
+                              v-html="slotProps.data.highlightedText.booker_name">
+                        </span>
+                        <span v-else>
+                            {{ slotProps.data.booker_name }}
+                        </span>
                     </template>
                 </Column>
                 <Column field="clients_json" filterField="clients_json" header="宿泊者・支払者" style="width:3%" :showFilterMenu="false">
-                    <template #filter="{ filterModel }">
-                        <InputText v-model="clientsJsonFilterInput" type="text" placeholder="宿泊者・支払者 氏名・カナ・漢字検索" />
-                    </template>
+                    <!-- Removed old InputText filter for clients_json -->
                     <template #body="{ data }">
-                        <span v-if="data.clients_json" v-tooltip="formatClientNames(data.clients_json)" style="white-space: pre-line;">
+                        <span v-if="data.highlightedText?.clients_json" 
+                              v-html="data.highlightedText.clients_json"
+                              v-tooltip="formatClientNames(data.clients_json)" 
+                              style="white-space: pre-line;">
+                        </span>
+                        <span v-else-if="data.clients_json" 
+                              v-tooltip="formatClientNames(data.clients_json)" 
+                              style="white-space: pre-line;">
                             {{ getVisibleClientNames(data.clients_json) }}
+                        </span>
+                    </template>
+                </Column>
+                <Column field="reservation_number" header="予約番号" style="width:2%">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.highlightedText?.reservation_number"
+                              v-html="slotProps.data.highlightedText.reservation_number">
+                        </span>
+                        <span v-else>
+                            {{ slotProps.data.reservation_number }}
+                        </span>
+                    </template>
+                </Column>
+                <Column field="email" header="メール" style="width:3%">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.highlightedText?.email"
+                              v-html="slotProps.data.highlightedText.email">
+                        </span>
+                        <span v-else>
+                            {{ slotProps.data.email }}
+                        </span>
+                    </template>
+                </Column>
+                <Column field="phone" header="電話番号" style="width:2%">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.highlightedText?.phone"
+                              v-html="slotProps.data.highlightedText.phone">
+                        </span>
+                        <span v-else>
+                            {{ slotProps.data.phone }}
                         </span>
                     </template>
                 </Column>
@@ -253,6 +311,7 @@
     import { ref, computed, watch, onMounted } from 'vue'; 
     
     import ReservationEdit from './ReservationEdit.vue';
+    import ReservationSearchBar from '@/components/ReservationSearchBar.vue';
 
     // Primevue
     import { useToast } from "primevue/usetoast";
@@ -265,6 +324,23 @@
     const { reservationList, fetchReservationListView, exportReservationList, exportReservationDetails, exportMealCount } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
+    
+    // Search functionality
+    import { useReservationSearch } from '@/composables/useReservationSearch';
+    const {
+        searchQuery,
+        searchResults,
+        isSearching,
+        searchSuggestions,
+        activeFilters: searchActiveFilters,
+        searchResultsCount,
+        hasActiveSearch,
+        performSearch,
+        clearSearch,
+        addFilter,
+        removeFilter,
+        clearAllFilters: clearSearchFilters
+    } = useReservationSearch();
 
     // Helper function
     const formatDate = (date) => {
@@ -359,9 +435,7 @@
         { label: 'キャンセル', value: 'cancelled' }
     ];
     const clientFilter = ref(null);
-    const clientFilterInput = ref(null); // For booker_name filter
     const clientsJsonFilter = ref(null);
-    const clientsJsonFilterInput = ref(null); // For clients_json filter
     const priceFilter = ref(null);
     const priceFilterCondition = ref("=");
     const paymentFilter = ref(null);
@@ -383,8 +457,8 @@
         }
 
         // Reset text input fields (which will trigger watchers to reset actual filters)
-        clientFilterInput.value = ''; // Or null, ensure consistency
-        clientsJsonFilterInput.value = ''; // Or null
+        // clientFilterInput.value = ''; // Or null, ensure consistency
+        // clientsJsonFilterInput.value = ''; // Or null
 
         // Reset price filter
         priceFilter.value = null;
@@ -403,88 +477,114 @@
         toast.add({ severity: 'info', summary: 'フィルタークリア', detail: '全てのフィルターをクリアしました。', life: 3000 });
     };
 
-    const filteredReservations = computed(() => {
-        let filteredList = reservationList.value;
-        // merged_clients
-        if(filteredList){
-            filteredList = filteredList.map(reservation => {
-                const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
-                    ...client,
-                    role: "guest"
-                })) : [];
-                const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
-                    ...payer,
-                    role: "payer"
-                })) : [];
-
-                // Merge guests and payers while keeping unique client_id
-                const uniqueClients = new Map();
-                [...guests, ...payers].forEach(client => {
-                    if (!uniqueClients.has(client.client_id)) {
-                        uniqueClients.set(client.client_id, client);
-                    }
-                });               
-
-                return {
-                    ...reservation,
-                    merged_clients: Array.from(uniqueClients.values())
-                };
-            });
-        }               
-
-        if (clientFilter.value !== null && clientFilter.value !== ''){
-            filteredList = filteredList.filter(reservation => {
-                const clientName = reservation.booker_name.toLowerCase();
-                const clientNameKana = reservation.booker_name_kana ? reservation.booker_name_kana.toLowerCase() : '';
-                const clientNameKanji = reservation.booker_name_kanji ? reservation.booker_name_kanji.toLowerCase() : '';
-                const filterClients = clientFilter.value.toLowerCase();
-                
-                return (clientName && clientName.includes(filterClients)) ||
-                    (clientNameKana && clientNameKana.includes(filterClients)) ||
-                    (clientNameKanji && clientNameKanji.includes(filterClients))                     
-            });
-        }
-        if (clientsJsonFilter.value !== null && clientsJsonFilter.value !== ''){
-            filteredList = filteredList.filter(reservation => {
-                const clients = reservation.clients_json;
-                const filterClients = clientsJsonFilter.value.toLowerCase();
-                return clients.some(client => 
-                    (client.name && client.name.toLowerCase().includes(filterClients)) ||
-                    (client.name_kana && client.name_kana.toLowerCase().includes(filterClients)) ||
-                    (client.name_kanji && client.name_kanji.toLowerCase().includes(filterClients))
-                );                
-            });
-        }
-        if (priceFilter.value !== null) {
-            filteredList = filteredList.filter(reservation => {
-                const price = parseFloat(reservation.price);
-                const filterPrice = parseFloat(priceFilter.value);    
-                          
-                if (priceFilterCondition.value === ">") {                
-                    return price > filterPrice;
-                } else if (priceFilterCondition.value === "<") {                    
-                    return price < filterPrice;
-                } else {                    
-                    return price === filterPrice;
-                }
-            });            
-        }
-        if (paymentFilter.value !== null) {
-            filteredList = filteredList.filter(reservation => {
-                const payment = parseFloat(reservation.payment);
-                const filterPayment = parseFloat(paymentFilter.value);
-                if (paymentFilterCondition.value === ">") {                    
-                    return payment > filterPayment;
-                } else if (paymentFilterCondition.value === "<") {                    
-                    return payment < filterPayment;
-                } else {                    
-                    return payment === filterPayment;
-                }
-            });            
+    // Enhanced search integration
+    const combinedActiveFilters = computed(() => {
+        const combinedFilters = [...searchActiveFilters.value];
+        
+        // Add traditional filters as search filters for display
+        if (filters.value.status?.value) {
+            const statusLabel = statusOptions.find(opt => opt.value === filters.value.status.value)?.label;
+            if (statusLabel) {
+                combinedFilters.push({
+                    field: 'status',
+                    label: `ステータス: ${statusLabel}`,
+                    value: filters.value.status.value,
+                    operator: 'equals'
+                });
+            }
         }
         
-        return filteredList
+        if (priceFilter.value !== null) {
+            combinedFilters.push({
+                field: 'price',
+                label: `料金: ${priceFilterCondition.value} ${formatCurrency(priceFilter.value)}`,
+                value: priceFilter.value,
+                operator: priceFilterCondition.value
+            });
+        }
+        
+        if (paymentFilter.value !== null) {
+            combinedFilters.push({
+                field: 'payment',
+                label: `支払い: ${paymentFilterCondition.value} ${formatCurrency(paymentFilter.value)}`,
+                value: paymentFilter.value,
+                operator: paymentFilterCondition.value
+            });
+        }
+        
+        // Add date range filter if both dates are set
+        if (startDateFilter.value && endDateFilter.value) {
+            combinedFilters.push({
+                field: 'date_range',
+                label: `期間: ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`,
+                value: {
+                    start: formatDate(startDateFilter.value),
+                    end: formatDate(endDateFilter.value)
+                },
+                operator: 'between'
+            });
+        }
+        
+        return combinedFilters;
     });
+
+    const displayedReservationsCount = computed(() => {
+        return hasActiveSearch.value ? searchResults.value.length : filteredReservations.value.length;
+    });
+
+    const filteredReservations = computed(() => {
+        let reservations = [];
+
+        // If there's an active search, use search results with highlightedText
+        if (hasActiveSearch.value && searchResults.value.length > 0) {
+            reservations = searchResults.value.map(result =>
+                enhanceReservationWithMergedClients(result.reservation, result.highlightedText)
+            );
+        } else {
+            // Otherwise, use all reservations from the store with empty highlightedText
+            reservations = reservationList.value.map(reservation => ({
+                ...enhanceReservationWithMergedClients(reservation),
+                highlightedText: {}
+            }));
+        }
+
+        // Apply status filter if set
+        if (filters.value.status?.value) {
+            reservations = reservations.filter(reservation =>
+                reservation.status === filters.value.status.value
+            );
+        }
+
+        // Add more filter logic here if needed
+
+        return reservations;
+    });
+
+    // Helper function to enhance reservations with merged clients and highlighting
+    const enhanceReservationWithMergedClients = (reservation, highlightedText = null) => {
+        const guests = Array.isArray(reservation.clients_json) ? reservation.clients_json.map(client => ({
+            ...client,
+            role: "guest"
+        })) : [];
+        const payers = Array.isArray(reservation.payers_json) ? reservation.payers_json.map(payer => ({
+            ...payer,
+            role: "payer"
+        })) : [];
+
+        // Merge guests and payers while keeping unique client_id
+        const uniqueClients = new Map();
+        [...guests, ...payers].forEach(client => {
+            if (!uniqueClients.has(client.client_id)) {
+                uniqueClients.set(client.client_id, client);
+            }
+        });               
+
+        return {
+            ...reservation,
+            merged_clients: Array.from(uniqueClients.values()),
+            highlightedText: highlightedText || {}
+        };
+    };
 
     // Data Table
     const tableHeader = ref(`予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`)
@@ -514,6 +614,51 @@
         // console.log('selectedReservation:',selectedReservation.value)        ;
         drawerVisible.value = true;
     };
+
+    // Enhanced search event handlers
+    const handleSearch = async (query) => {
+        if (query.trim()) {
+            await performSearch(query);
+        } else {
+            clearSearch();
+        }
+    };
+
+    const handleClearSearch = () => {
+        clearSearch();
+        // Also clear traditional search inputs to maintain consistency
+        // clientFilterInput.value = '';
+        // clientsJsonFilterInput.value = '';
+    };
+
+    const handleSuggestionSelected = (suggestion) => {
+        // The search will be triggered automatically by the search bar
+        // We can add additional logic here if needed
+        console.log('Suggestion selected:', suggestion);
+    };
+
+    const handleRemoveFilter = (field) => {
+        if (field === 'price') {
+            priceFilter.value = null;
+            priceFilterCondition.value = "=";
+        } else if (field === 'payment') {
+            paymentFilter.value = null;
+            paymentFilterCondition.value = "=";
+        } else if (field === 'status') {
+            if (filters.value.status) {
+                filters.value.status.value = null;
+            }
+        } else {
+            removeFilter(field);
+        }
+    };
+
+    const handleClearAllFilters = () => {
+        clearSearchFilters();
+        clearAllFilters();
+    };
+
+
 
     // Export
     const exportOptions = ref([
@@ -569,14 +714,10 @@
     );  
     
     // Watcher for Booker Name
-    watch(clientFilterInput, debounce((newValue) => {
-        clientFilter.value = newValue;
-    }, 400)); // 400ms debounce
+    // Removed clientFilterInput watcher
 
     // Watcher for Guest/Payer Name
-    watch(clientsJsonFilterInput, debounce((newValue) => {
-        clientsJsonFilter.value = newValue;
-    }, 400)); // 400ms debounce
+    // Removed clientsJsonFilterInput watcher
 
     watch(selectedReservations, (newValue) => {     
         if(drawerVisible.value === false){

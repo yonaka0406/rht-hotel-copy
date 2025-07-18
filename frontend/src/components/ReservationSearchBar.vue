@@ -51,9 +51,15 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useReservationSearch } from '../composables/useReservationSearch';
 import SearchSuggestions from './SearchSuggestions.vue';
+import { InputText } from 'primevue';
 
 export default {
   name: 'ReservationSearchBar',
+  
+  components: {
+    InputText,
+    SearchSuggestions
+  },
   
   props: {
     /**
