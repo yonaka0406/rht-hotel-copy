@@ -1,4 +1,4 @@
-# Node.js 24 Upgrade: Tasks
+# Implementation Plan
 
 - [ ] 1. Planning and Setup
   - Create a new branch in Git for the Node.js 24 upgrade.
