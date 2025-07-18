@@ -173,12 +173,13 @@ describe('ReservationList.vue Advanced Filters Integration', () => {
   it('filters by date range', async () => {
     wrapper = await mountWithFilters();
     wrapper.vm.filters.status.value = null;
-    wrapper.vm.startDateFilter = new Date('2024-05-01'); // June 1, 2024 local
-    wrapper.vm.endDateFilter = new Date('2024-05-02');   // June 2, 2024 local
+    wrapper.vm.priceFilterMin = null;
+    wrapper.vm.priceFilterMax = null;
+    wrapper.vm.startDateFilter = new Date('2024-06-01');
+    wrapper.vm.endDateFilter = new Date('2024-06-02');
     await wrapper.vm.$nextTick();
     await wrapper.vm.$nextTick();
     const filtered = wrapper.vm.filteredReservations;
-    console.log('filtered by date range:', filtered);
     expect(filtered.length).toBe(2);
     const start = new Date('2024-06-01T00:00:00Z').getTime();
     const end = new Date('2024-06-02T00:00:00Z').getTime();
@@ -225,14 +226,14 @@ describe('ReservationList.vue Advanced Filters Integration', () => {
   it('returns all when no filters are set', async () => {
     wrapper = await mountWithFilters();
     wrapper.vm.filters.status.value = null;
+    wrapper.vm.priceFilterMin = null;
+    wrapper.vm.priceFilterMax = null;
     wrapper.vm.startDateFilter = new Date('2000-01-01');
     wrapper.vm.endDateFilter = new Date('2100-01-01');
     await wrapper.vm.$nextTick();
     await wrapper.vm.$nextTick();
     await wrapper.vm.$nextTick();
-    console.log('reservationList:', wrapper.vm.reservationList);
     const filtered = wrapper.vm.filteredReservations;
-    console.log('filtered all:', filtered);
     expect(filtered.length).toBe(3);
   });
 

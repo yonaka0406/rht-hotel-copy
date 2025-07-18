@@ -46,6 +46,9 @@
                         <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
                         <label class="ml-4 mr-2">終了日:</label>
                         <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
+                        <span class="ml-4 font-bold mr-2">料金範囲:</span>
+                        <InputNumber v-model="priceFilterMin" placeholder="最小" class="mr-2 w-24" />
+                        <InputNumber v-model="priceFilterMax" placeholder="最大" class="w-24" />
                         <Button label="適用" class="ml-4" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
                         <Button
                             label="全フィルタークリア"
