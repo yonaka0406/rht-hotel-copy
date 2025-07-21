@@ -88,11 +88,11 @@
 
     // Stores
     import { useUserStore } from '@/composables/useUserStore';
-    const { logged_user, fetchUser } = useUserStore();
+    const { logged_user } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, setHotelId, selectedHotelId } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, fetchMyHoldReservations, setReservationId } = useReservationStore();
+    const { holdReservations, setReservationId } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -101,7 +101,7 @@
     import NotificationsDrawer from './NotificationsDrawer.vue';
 
     // Primevue
-    import { Toolbar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue';
+    import { Toolbar, OverlayBadge, Select, Button } from 'primevue';
 
     // --- Store Instances ---
     const waitlistStore = useWaitlistStore();
