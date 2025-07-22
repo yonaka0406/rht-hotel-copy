@@ -291,8 +291,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: July 15, 2025*
-*Total Bugs: 2* 
+*Last Updated: July 22, 2025*
+*Total Bugs: 13*
+*Open: 4*
+*Fixed: 9*
 
 # Backlog
 
