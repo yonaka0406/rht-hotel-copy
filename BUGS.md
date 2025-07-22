@@ -175,6 +175,21 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This will help users quickly understand the meaning of icons and improve usability.
 
+### July 21, 2025
+
+#### Bug #13
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: The user opened a 3 room reservation and tried to edit one room to a different check in check out period. In the calendar view, when that happens the different room is moved to a new reservation. In the ReservationEdit the same behaviour was expected, but nothing happens.
+- **Steps to Reproduce**: 
+  1. Open a reservation with multiple rooms.
+  2. Edit one room to have a different check-in/check-out period.
+  3. Observe that the room is not moved to a new reservation.
+- **Expected Behavior**: When a room's check-in/check-out period is changed to be different from the other rooms in the reservation, it should be moved to a new reservation.
+- **Actual Behavior**: The room's dates are changed, but it is not moved to a new reservation.
+- **Environment**: ReservationEdit
+- **Additional Notes**: This behavior is inconsistent with the calendar view, where a new reservation is created in this scenario.
+
 ### July 15, 2025
 
 #### Bug #10
