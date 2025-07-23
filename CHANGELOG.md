@@ -271,6 +271,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## Version History
+
+- **1.0.5** (2025-07-23) - OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously. Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
 - **1.0.4** (2025-07-17) - Added reservation copy function, calendar UI/UX improvements, bugfixes for client/edit/addon/meal exports, and new calendar legend.
 - **1.0.3** (2025-07-16) - Added comprehensive About/FAQ system with searchable help documentation and enhanced codebase documentation.
 - **1.0.2** (2025-06-23) - Added post-release features including production fixes, CRM enhancements, and new integrations.
