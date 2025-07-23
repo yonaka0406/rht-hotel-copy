@@ -2623,11 +2623,9 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const requiredFields = [
     { path: 'BasicInformation.CheckInDate', value: BasicInformation.CheckInDate },
     { path: 'BasicInformation.CheckOutDate', value: BasicInformation.CheckOutDate },
-    { path: 'BasicInformation.TravelAgencyBookingNumber', value: BasicInformation.TravelAgencyBookingNumber }
+    { path: 'BasicInformation.TravelAgencyBookingNumber', value: BasicInformation.TravelAgencyBookingNumber },
+    { path: 'Basic.ReservationID', value: Basic.ReservationID }
   ];
-  
-  // Use TravelAgencyBookingNumber as the reservation ID since Basic.ReservationID may not exist
-  const otaReservationId = BasicInformation.TravelAgencyBookingNumber;
 
   const missingFields = requiredFields.filter(field => !field.value || field.value === '');
   if (missingFields.length > 0) {
@@ -2639,7 +2637,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   try {
     logger.info(`[${requestId}] Starting OTA reservation transaction`, {
       hotel_id,
-      reservation_id: otaReservationId,
+      reservation_id: Basic.ReservationID,
       check_in: BasicInformation.CheckInDate,
       check_out: BasicInformation.CheckOutDate,
       guest_name: Member?.UserName || BasicInformation?.GuestOrGroupNameKanjiName
@@ -2649,14 +2647,14 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     logger.debug(`[${requestId}] Transaction started`);
 
     // Check for existing reservation with same OTA ID inside transaction
-    logger.debug(`[${requestId}] Checking for existing reservation with OTA ID: ${otaReservationId}`);
+    logger.debug(`[${requestId}] Checking for existing reservation with OTA ID: ${Basic.ReservationID}`);
     const existingReservation = await client.query(
       'SELECT id FROM reservations WHERE hotel_id = $1 AND ota_reservation_id = $2 AND cancelled IS NULL',
-      [hotel_id, otaReservationId]
+      [hotel_id, Basic.ReservationID]
     );
 
     if (existingReservation.rows.length > 0) {
-      throw new Error(`Reservation with OTA ID ${otaReservationId} already exists`);
+      throw new Error(`Reservation with OTA ID ${Basic.ReservationID} already exists`);
     }
 
     // Move room and plan master queries inside transaction
@@ -2831,7 +2829,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     const reservation = await client.query(query, values);
     const reservationId = reservation.rows[0].id;
     logger.info(`[${requestId}] Created reservation with ID: ${reservationId}`, {
-      ota_reservation_id: otaReservationId,
+      ota_reservation_id: Basic.ReservationID,
       client_id: reservationClientId,
       transaction_state: 'reservation_created'
     });
