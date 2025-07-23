@@ -180,6 +180,16 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## 1.0.5 (2025-07-23)
+
+- Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
+- Global reservation search in the top menu.
+- Small design change in reservation list
+- OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously.
+- Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
+
+---
+
 ## [1.0.4] - 2025-07-17
 - Feature: Implemented 'Copy Reservation' function allowing users to duplicate a reservation for a different booker, preserving all other reservation details. (Feature Request #7)
 - Bugfix: Calendar View now resets scroll position to top when date is changed. (Bug #1)
@@ -257,9 +267,6 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry).
 
 ### Unreleased
-- Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
-- Global reservation search in the top menu.
-- Small design change in reservation list
 
 ---
 

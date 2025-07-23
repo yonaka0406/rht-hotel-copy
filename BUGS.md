@@ -5,6 +5,34 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ## Bug Reports
 
+### July 23, 2025
+
+#### Bug #X: OTA Reservation Transaction Issue
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: OTA reservations were not wrapped inside a database transaction. As a result, when multiple OTA reservation requests were processed, reservations without errors could be registered multiple times in the system, leading to duplicate bookings.
+- **Steps to Reproduce**:
+  1. Make an OTA reservation with valid data.
+  2. Trigger multiple reservation requests in parallel or in quick succession.
+  3. Observe that the same reservation is registered more than once.
+- **Expected Behavior**: Each reservation should be registered only once, and all operations should be atomic to prevent duplicates.
+- **Actual Behavior**: Multiple identical reservations are created if requests are processed simultaneously.
+- **Environment**: OTA integration
+- **Additional Notes**: Ensure all reservation creation logic is wrapped in a transaction to maintain data integrity.
+
+#### Bug #Y: Addon Quantity Calculation Issue
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The quantity of addons for a reservation was calculated based on the total number of people in the reservation, instead of the number of people per room. This caused incorrect addon quantities when multiple rooms were booked under a single reservation.
+- **Steps to Reproduce**:
+  1. Create a reservation with multiple rooms and different numbers of people per room.
+  2. Add an addon to the reservation.
+  3. Observe that the addon quantity is based on the total reservation people, not per-room people.
+- **Expected Behavior**: Addon quantity should be calculated based on the number of people in each room, not the total across all rooms.
+- **Actual Behavior**: Addon quantity is based on the total reservation people, leading to over- or under-counts.
+- **Environment**: OTA and reservation system
+- **Additional Notes**: Calculation logic should be revised to use per-room people counts when determining addon quantities.
+
 ### December 19, 2024
 
 #### Bug #1

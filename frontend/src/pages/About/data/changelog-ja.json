@@ -1,5 +1,5 @@
 {
-  "entries": [
+  "entries": [    
     {
       "version": "0.1.0",
       "date": "2025-02-21",
@@ -188,6 +188,17 @@
         { "type": "improvement", "description": "チェックイン時に予約クライアントが不要に。" },
         { "type": "improvement", "description": "カレンダー：全アイコンの意味を説明する凡例を追加。" },
         { "type": "bugfix", "description": "保留中予約削除後、確認プロンプトが自動で閉じるよう修正。" }
+      ]
+    },
+    {
+      "version": "1.0.5",
+      "date": "2025-07-23",
+      "changes": [
+        { "type": "bugfix", "description": "OTA予約がトランザクションで処理されるようになり、同時リクエスト時の重複登録を防止しました。" },
+        { "type": "bugfix", "description": "アドオンの数量計算が予約全体人数ではなく部屋ごとの人数単位になり、複数部屋予約時の数量誤りを修正しました。" },
+        { "type": "bugfix", "description": "PrimeVueのConfirmDialogが追加・削除後に正しく閉じるようになりました（Bug #12）。" },
+        { "type": "feature", "description": "グローバル予約検索機能をトップメニューに追加。" },
+        { "type": "design", "description": "予約一覧のデザインを一部変更。" }
       ]
     }
   ],
