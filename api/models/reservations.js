@@ -19,7 +19,7 @@ const formatDate = (date) => {
 
 // Function to Select
 
-const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut) => {
+const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, client = null) => {
   const pool = getPool(requestId);
   const query = `
     WITH occupied_rooms AS (
@@ -55,7 +55,8 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut) => {
   const values = [checkIn, checkOut, hotelId];
 
   try {
-    const result = await pool.query(query, values);
+    const executor = client ? client : pool;
+    const result = await executor.query(query, values);
     return result.rows; // Return available rooms
   } catch (err) {
     console.error('Error fetching available rooms:', err);
@@ -2352,18 +2353,19 @@ const deleteReservationPayment = async (requestId, id, userId) => {
       await client.query(deleteInvoiceQuery, [invoiceId, reservationPayment.hotel_id]);
     }
 
+    // Delete the payment record itself
     const deleteQuery = `
       DELETE FROM reservation_payments
       WHERE id = $1
       RETURNING *;
     `;
-    const deleteResults = await pool.query(deleteQuery, [id]);
+    const deleteResults = await client.query(deleteQuery, [id]);
 
     await client.query('COMMIT');
     return { success: true };
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error:', err);
+    throw err;
   } finally {
     client.release();
   }
@@ -2544,7 +2546,17 @@ function translateSettlementDiv(SettlementDiv) {
   }
   return settlementDivMap[SettlementDiv] || '未設定';
 }
-const addOTAReservation = async (requestId, hotel_id, data) => {
+const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
+  // Use passed client if provided, otherwise create a new one
+  let internalClient;
+  let shouldRelease = false;
+  if (client) {
+    internalClient = client;
+  } else {
+    const pool = getPool(requestId);
+    internalClient = await pool.connect();
+    shouldRelease = true;
+  }
   // XML
   // console.log('addOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
@@ -2570,9 +2582,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   const RoomAndGuestList = data?.RoomAndGuestInformation?.RoomAndGuestList || {};
   // console.log('addOTAReservation RoomAndGuestList:', RoomAndGuestList);
 
-  // Query
-  const pool = getPool(requestId);
-  const client = await pool.connect();
+  // Query  
   let query = '';
   let values = '';
 
@@ -2643,7 +2653,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     }
   };
 
-  const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
+  const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate, internalClient);
   const assignedRoomIds = new Set();
 
   const findFirstAvailableRoomId = (room_type_id) => {
@@ -2655,7 +2665,9 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
   };
 
   try {
-    await client.query('BEGIN');
+    if (shouldRelease) {
+      await internalClient.query('BEGIN');
+    }
 
     // Client info
     const clientData = {
@@ -2696,7 +2708,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       clientData.created_by,
       clientData.updated_by
     ];
-    const newClient = await client.query(query, values);
+    const newClient = await internalClient.query(query, values);
     const reservationClientId = newClient.rows[0].id;
     //const reservationClientId = 88;    
     console.log('addOTAReservation client:', newClient.rows[0]);
@@ -2726,7 +2738,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         Basic.Email || Member.UserMailAddr || '',
         1
       ];
-      const newAddress = await client.query(query, values);
+      const newAddress = await internalClient.query(query, values);
       console.log('addOTAReservation addresses:', newAddress.rows[0]);
     }
 
@@ -2751,7 +2763,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     ];
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
-    const reservation = await client.query(query, values);
+    const reservation = await internalClient.query(query, values);
     const reservationId = reservation.rows[0].id;
     console.log('addOTAReservation reservations:', reservation.rows[0]);
 
@@ -2862,7 +2874,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
           totalPeopleCount,
           roomDetail.TotalPerRoomRate,
         ];
-        const reservationDetails = await client.query(query, values);
+        const reservationDetails = await internalClient.query(query, values);
         const reservationDetailsId = reservationDetails.rows[0].id;
 
         if (reservationDetails.rows.length === 0) {
@@ -2883,7 +2895,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
           roomDetail.TotalPerRoomRate,
         ];
         // console.log('editOTAReservation reservation_rates:', values);
-        const reservationRates = await client.query(query, values);
+        const reservationRates = await internalClient.query(query, values);
         console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
@@ -2909,7 +2921,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
               1
             ];
 
-            const reservationAddon = await client.query(query, values);
+            const reservationAddon = await internalClient.query(query, values);
             console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
@@ -2973,7 +2985,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
             1
           ];
 
-          const reservationPayments = await client.query(query, values);
+          const reservationPayments = await internalClient.query(query, values);
           console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
@@ -3022,7 +3034,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
                 1
               ];
 
-              const reservationPayments = await client.query(query, values);
+              const reservationPayments = await internalClient.query(query, values);
               console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
@@ -3033,21 +3045,27 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
 
-    await client.query('COMMIT');
+    if (shouldRelease) {
+      await internalClient.query('COMMIT');
+    }
     return { success: true };
   } catch (err) {
     console.error("Transaction failed, error message:", err.message);
     console.error("Full error object:", err);
     try {
       console.log("Attempting to roll back transaction...");
-      await client.query('ROLLBACK');
-      console.log("Transaction successfully rolled back");
+      if (shouldRelease) {
+        await internalClient.query('ROLLBACK');
+        console.log("Transaction successfully rolled back");
+      }
     } catch (rollbackErr) {
       console.error("Failed to roll back transaction:", rollbackErr);
     }
     return { success: false, error: err.message };
   } finally {
-    client.release();
+    if (shouldRelease) {
+      internalClient.release();
+    }
   }
 };
 const editOTAReservation = async (requestId, hotel_id, data) => {
@@ -3173,7 +3191,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     await client.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
     await client.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
 
-    const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
+    const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate, internalClient);
     const assignedRoomIds = new Set();
 
     const findFirstAvailableRoomId = (room_type_id) => {

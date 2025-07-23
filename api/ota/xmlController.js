@@ -3,6 +3,7 @@ const xml2js = require('xml2js');
 const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster, selectTLPlanMaster, insertTLPlanMaster } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
+const { getPool } = require('../config/database');
 const logger = require('../config/logger'); // Winston logger
 
 // GET
@@ -286,64 +287,106 @@ const getOTAReservations = async (req, res) => {
             let successfulProcessing = 0;
             logger.info(`Processing ${formattedReservations.length} reservations for hotel_id: ${hotel_id}`);
 
-            // Function for each formatted reservation
-            for (const reservation of formattedReservations) {
-                try {
-                    const classification = reservation.TransactionType.DataClassification;
-                    // logger.debug('Type of OTA transaction:', classification);
-                    if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
-                        unsupportedClassifications++;
-                        logger.warn(`Unsupported DataClassification: ${classification}. Setting allReservationsSuccessful to false.`, {
+            // Get database client for transaction
+            const pool = getPool(req.requestId);
+            const client = await pool.connect();
+
+            try {
+                // Begin transaction
+                await client.query('BEGIN');
+                logger.debug(`Started transaction for hotel_id: ${hotel_id}`);
+
+                // Function for each formatted reservation
+                for (const reservation of formattedReservations) {
+                    try {
+                        const classification = reservation.TransactionType.DataClassification;
+                        // logger.debug('Type of OTA transaction:', classification);
+                        if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
+                            unsupportedClassifications++;
+                            logger.warn(`Unsupported DataClassification: ${classification}. Setting allReservationsSuccessful to false.`, {
+                                reservationId: reservation.UniqueID?.ID || 'No ID',
+                                classification,
+                                hotel_id,
+                                requestId: req.requestId,
+                            });
+                            allReservationsSuccessful = false;
+                            continue; // Continue checking other reservations
+                        }
+
+                        let result = { success: false };
+                        if (reservation.TransactionType.DataClassification === 'NewBookReport'){
+                            result = await addOTAReservation(req.requestId, hotel_id, reservation, client);
+                            // logger.debug(result);
+                        }
+                        else if (reservation.TransactionType.DataClassification === 'ModificationReport'){
+                            result = await editOTAReservation(req.requestId, hotel_id, reservation, client);
+                            // logger.debug(result);
+                        }
+                        else if (reservation.TransactionType.DataClassification === 'CancellationReport'){
+                            result = await cancelOTAReservation(req.requestId, hotel_id, reservation, client);
+                            // logger.debug(result);
+                        }
+
+                        // If any reservation fails, mark the entire batch as unsuccessful
+                        if (!result.success) {
+                            failedProcessing++;
+                            logger.warn(`Failed to process OTA reservation. Setting allReservationsSuccessful to false.`, {
+                                reservationId: reservation.UniqueID?.ID || 'No ID',
+                                classification,
+                                hotel_id,
+                                requestId: req.requestId,
+                                result,
+                            });
+                            allReservationsSuccessful = false;
+                            break; // Break out of loop on first failure to rollback transaction
+                        } else {
+                            successfulProcessing++;
+                        }
+
+                    } catch (dbError) {
+                        exceptions++;
+                        logger.warn('Exception during OTA reservation processing. Setting allReservationsSuccessful to false.', {
                             reservationId: reservation.UniqueID?.ID || 'No ID',
-                            classification,
+                            classification: reservation.TransactionType?.DataClassification || 'Unknown Classification',
                             hotel_id,
                             requestId: req.requestId,
+                            error: dbError.message,
+                            stack: dbError.stack,
                         });
-                        allReservationsSuccessful = false;
-                        continue; // Continue checking other reservations
+                        allReservationsSuccessful = false; // Mark as unsuccessful if any error occurs
+                        break; // Break out of loop on exception to rollback transaction
                     }
-
-                    let result = { success: false };
-                    if (reservation.TransactionType.DataClassification === 'NewBookReport'){
-                        result = await addOTAReservation(req.requestId, hotel_id, reservation);
-                        // logger.debug(result);
-                    }
-                    else if (reservation.TransactionType.DataClassification === 'ModificationReport'){
-                        result = await editOTAReservation(req.requestId, hotel_id, reservation);
-                        // logger.debug(result);
-                    }
-                    else if (reservation.TransactionType.DataClassification === 'CancellationReport'){
-                        result = await cancelOTAReservation(req.requestId, hotel_id, reservation);
-                        // logger.debug(result);
-                    }
-
-                    // If any reservation fails, mark the entire batch as unsuccessful
-                    if (!result.success) {
-                        failedProcessing++;
-                        logger.warn(`Failed to process OTA reservation. Setting allReservationsSuccessful to false.`, {
-                            reservationId: reservation.UniqueID?.ID || 'No ID',
-                            classification,
-                            hotel_id,
-                            requestId: req.requestId,
-                            result,
-                        });
-                        allReservationsSuccessful = false;
-                    } else {
-                        successfulProcessing++;
-                    }
-
-                } catch (dbError) {
-                    exceptions++;
-                    logger.warn('Exception during OTA reservation processing. Setting allReservationsSuccessful to false.', {
-                        reservationId: reservation.UniqueID?.ID || 'No ID',
-                        classification: reservation.TransactionType?.DataClassification || 'Unknown Classification',
-                        hotel_id,
-                        requestId: req.requestId,
-                        error: dbError.message,
-                        stack: dbError.stack,
-                    });
-                    allReservationsSuccessful = false; // Mark as unsuccessful if any error occurs 
                 }
+
+                // Commit or rollback transaction based on success
+                if (allReservationsSuccessful) {
+                    await client.query('COMMIT');
+                    logger.info(`Transaction committed successfully for hotel_id: ${hotel_id}`);
+                } else {
+                    await client.query('ROLLBACK');
+                    logger.warn(`Transaction rolled back due to failures for hotel_id: ${hotel_id}`);
+                }
+
+            } catch (transactionError) {
+                // Rollback transaction on any error
+                try {
+                    await client.query('ROLLBACK');
+                    logger.error(`Transaction rolled back due to error for hotel_id: ${hotel_id}`, {
+                        error: transactionError.message,
+                        stack: transactionError.stack,
+                        requestId: req.requestId
+                    });
+                } catch (rollbackError) {
+                    logger.error(`Failed to rollback transaction for hotel_id: ${hotel_id}`, {
+                        rollbackError: rollbackError.message,
+                        originalError: transactionError.message,
+                        requestId: req.requestId
+                    });
+                }
+                allReservationsSuccessful = false;
+            } finally {
+                // Always release the client back to the pool
+                client.release();
             }
 
             // Send OK to OTA server
