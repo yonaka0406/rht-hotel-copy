@@ -30,6 +30,23 @@ export default defineConfig({
     /*outDir: '../api/public', // backend's public folder*/
     outDir: 'dist',
     emptyOutDir: true, // Clears the directory before building
-    sourcemap: true, // or 'inline' to embed the source map in the output file
+    
+    // Memory optimization for low-RAM VPS builds
+    minify: false, // Disable minification to reduce memory usage
+    sourcemap: false, // Disable source maps to save memory
+    
+    // Rollup options for further memory optimization
+    rollupOptions: {
+      output: {
+        // Reduce chunk size to lower memory pressure
+        manualChunks: {
+          vendor: ['vue', 'vue-router'],
+          ui: ['primevue', 'primeicons'],
+        }
+      }
+    },
+    
+    // Reduce concurrent processing
+    target: 'es2015', // Use older target for simpler transforms
   },
 });
