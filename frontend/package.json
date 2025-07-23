@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "NODE_OPTIONS='--max-old-space-size=4096 --optimize-for-size' vite build --mode production",
-    "build:dev": "NODE_OPTIONS='--max-old-space-size=4096 --optimize-for-size' vite build --mode development",
-    "build:memory-safe": "NODE_OPTIONS='--max-old-space-size=6144 --optimize-for-size --max-semi-space-size=128' vite build --mode production",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode production",
+    "build:dev": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode development",
+    "build:memory-safe": "NODE_OPTIONS='--max-old-space-size=6144 --max-semi-space-size=128' vite build --mode production",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
