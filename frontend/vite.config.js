@@ -41,13 +41,11 @@ export default defineConfig({
       output: {
         manualChunks: {
           // Split Vue and core dependencies
-          vue: ['vue', 'vue-router'],
-          // Split ECharts separately (memory intensive)
-          echarts: ['echarts', 'vue-echarts', 'zrender'],
-          // Split PrimeVue UI components
-          primevue: ['primevue', '@primevue/forms', '@primeuix/themes', 'primeicons'],
+          vue: ['vue', 'vue-router', 'pinia'],
+          // Split UI libraries if you're using any
+          ui: ['@headlessui/vue', '@heroicons/vue'],
           // Split utility libraries
-          utils: ['axios', 'papaparse', 'uuid', 'socket.io-client'],
+          utils: ['axios', 'lodash', 'dayjs'],
         },
         // Reduce chunk size
         chunkFileNames: (chunkInfo) => {
@@ -90,7 +88,7 @@ export default defineConfig({
   
   // Optimize dependency handling
   optimizeDeps: {
-    include: ['vue', 'vue-router', 'axios'],
-    exclude: ['echarts', 'vue-echarts'], // Let ECharts load dynamically
+    include: ['vue', 'vue-router', 'pinia'],
+    exclude: ['@vueuse/core'], // Exclude large optional dependencies
   },
 });
