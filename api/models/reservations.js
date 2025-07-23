@@ -2651,7 +2651,7 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     // Check for existing reservation with same OTA ID inside transaction
     logger.debug(`[${requestId}] Checking for existing reservation with OTA ID: ${otaReservationId}`);
     const existingReservation = await client.query(
-      'SELECT id FROM reservations WHERE hotel_id = $1 AND ota_reservation_id = $2',
+      'SELECT id FROM reservations WHERE hotel_id = $1 AND ota_reservation_id = $2 AND cancelled IS NULL',
       [hotel_id, otaReservationId]
     );
 
