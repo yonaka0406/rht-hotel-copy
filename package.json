@@ -5,8 +5,8 @@
     "scripts": {
         "start": "npm run build && npm run start:backend",
         "serve": "npm run build:frontend development && npm run start:backend",
-        "serve:dev": "npm run build:frontend --mode development && sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env development --only backend-dev",        
-        "serve:prod": "npm run build:frontend && sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
+        "serve:dev": "npm run build:frontend --mode development && sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env development --only backend-dev",
+        "serve:prod": "npm run build:frontend production && sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/ && sudo systemctl restart apache2 && pm2 startOrRestart ecosystem.config.js --env production --only backend-prod",
         "start:backend:dev": "pm2 start ecosystem.config.js --env development --only backend-dev",
         "start:backend:prod": "pm2 start ecosystem.config.js --env production --only backend-prod",
         "stop:backend:dev": "pm2 stop backend-dev",
