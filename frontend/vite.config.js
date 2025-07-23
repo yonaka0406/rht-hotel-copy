@@ -39,9 +39,16 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Reduce chunk size to lower memory pressure
-        manualChunks: {
-          vendor: ['vue', 'vue-router'],
-          ui: ['primevue', 'primeicons'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') || id.includes('vue-router')) {
+              return 'vendor';
+            }
+            if (id.includes('primevue')) {
+              return 'ui';
+            }
+            return 'vendor';
+          }
         }
       }
     },
