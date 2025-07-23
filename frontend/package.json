@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096 --optimize-for-size' vite build --mode production",
+    "build:dev": "NODE_OPTIONS='--max-old-space-size=4096 --optimize-for-size' vite build --mode development",
+    "build:memory-safe": "NODE_OPTIONS='--max-old-space-size=6144 --optimize-for-size --max-semi-space-size=128' vite build --mode production",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "analyze": "NODE_OPTIONS='--max-old-space-size=4096' ANALYZE=true vite build --mode production"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.1",
