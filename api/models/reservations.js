@@ -2847,15 +2847,17 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
+        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+
         const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
         if (addons && Array.isArray(addons)) {
           addons.forEach(addon => {
             // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
-            addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
+            // addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
+            addon.quantity = totalPeopleCount || 1;
           });
         }
-
-        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+        
 
         query = `
           INSERT INTO reservation_details (
@@ -3429,15 +3431,15 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
         }
 
+        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+
         const addons = await getAllPlanAddons(requestId, plans_global_id, plans_hotel_id, hotel_id);
         if (addons && Array.isArray(addons)) {
           addons.forEach(addon => {
             // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
-            addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
+            addon.quantity = totalPeopleCount || 1;
           });
-        }
-
-        const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
+        }       
 
         query = `
           INSERT INTO reservation_details (
