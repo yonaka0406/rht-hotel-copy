@@ -201,8 +201,9 @@ const selectXMLRecentResponses = async (requestId) => {
     }
 };
 
-const selectTLRoomMaster = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const selectTLRoomMaster = async (requestId, hotel_id, client = null) => {
+    // Use provided transaction client if available, otherwise get pool connection
+    const dbClient = client || getPool(requestId);
     const query = `
         SELECT * 
         FROM sc_tl_rooms 
@@ -211,7 +212,7 @@ const selectTLRoomMaster = async (requestId, hotel_id) => {
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await dbClient.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error finding master by hotel_id:', err);
@@ -264,8 +265,9 @@ const insertTLRoomMaster = async (requestId, data) => {
     }
 };
 
-const selectTLPlanMaster = async (requestId, hotel_id) => {
-    const pool = getPool(requestId);
+const selectTLPlanMaster = async (requestId, hotel_id, client = null) => {
+    // Use provided transaction client if available, otherwise get pool connection
+    const dbClient = client || getPool(requestId);
     const query = `
         SELECT * 
         FROM sc_tl_plans
@@ -274,7 +276,7 @@ const selectTLPlanMaster = async (requestId, hotel_id) => {
     const values = [hotel_id];
 
     try {
-        const result = await pool.query(query, values);
+        const result = await dbClient.query(query, values);
         return result.rows;
     } catch (err) {
         console.error('Error finding master by hotel_id:', err);

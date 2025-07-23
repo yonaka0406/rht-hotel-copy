@@ -2618,44 +2618,109 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
     return 'other';
   };
-  const roomMaster = await selectTLRoomMaster(requestId, hotel_id);
-  // console.log('selectTLRoomMaster:', roomMaster);
-  const selectRoomTypeId = (code) => {
-    const match = roomMaster.find(item => item.netagtrmtypecode === code);
-    return match ? match.room_type_id : null;
-  };
-  const planMaster = await selectTLPlanMaster(requestId, hotel_id);
 
-  const selectPlanId = async (code) => {
-    // console.log('selectTLPlanMaster:', planMaster);  
-    console.log('selectPlanId code:', code);
-    const match = planMaster.find(item => item.plangroupcode == code);
-    if (match) {
-      return {
+  // Input validation
+  const requiredFields = [
+    { path: 'BasicInformation.CheckInDate', value: BasicInformation.CheckInDate },
+    { path: 'BasicInformation.CheckOutDate', value: BasicInformation.CheckOutDate },
+    { path: 'BasicInformation.TravelAgencyBookingNumber', value: BasicInformation.TravelAgencyBookingNumber },
+    { path: 'Basic.ReservationID', value: Basic.ReservationID }
+  ];
+
+  const missingFields = requiredFields.filter(field => !field.value || field.value === '');
+  if (missingFields.length > 0) {
+    const errorMsg = `Missing required fields: ${missingFields.map(f => f.path).join(', ')}`;
+    logger.error(`[${requestId}] Validation error: ${errorMsg}`, { hotel_id, data });
+    return { success: false, error: errorMsg };
+  }
+
+  try {
+    logger.info(`[${requestId}] Starting OTA reservation transaction`, {
+      hotel_id,
+      reservation_id: Basic.ReservationID,
+      check_in: BasicInformation.CheckInDate,
+      check_out: BasicInformation.CheckOutDate,
+      guest_name: Member?.UserName || BasicInformation?.GuestOrGroupNameKanjiName
+    });
+
+    await client.query('BEGIN');
+    logger.debug(`[${requestId}] Transaction started`);
+
+    // Check for existing reservation with same OTA ID inside transaction
+    logger.debug(`[${requestId}] Checking for existing reservation with OTA ID: ${Basic.ReservationID}`);
+    const existingReservation = await client.query(
+      'SELECT id FROM reservations WHERE hotel_id = $1 AND ota_reservation_id = $2 AND cancelled IS NULL',
+      [hotel_id, Basic.ReservationID]
+    );
+
+    if (existingReservation.rows.length > 0) {
+      throw new Error(`Reservation with OTA ID ${Basic.ReservationID} already exists`);
+    }
+
+    // Move room and plan master queries inside transaction
+    logger.debug(`[${requestId}] Fetching room master data`);
+    const roomMaster = await selectTLRoomMaster(requestId, hotel_id, client);
+    logger.debug(`[${requestId}] Fetched ${roomMaster.length} room types`);
+    
+    const selectRoomTypeId = (code) => {
+      const match = roomMaster.find(item => item.netagtrmtypecode === code);
+      return match ? match.room_type_id : null;
+    };
+
+    logger.debug(`[${requestId}] Fetching plan master data`);
+    const planMaster = await selectTLPlanMaster(requestId, hotel_id, client);
+    logger.debug(`[${requestId}] Fetched ${planMaster.length} plan types`);
+
+    const selectPlanId = async (code) => {
+      logger.debug(`[${requestId}] Looking up plan for code: ${code}`);
+      const match = planMaster.find(item => item.plangroupcode == code);
+      const result = match ? {
         plans_global_id: match.plans_global_id,
         plans_hotel_id: match.plans_hotel_id,
-      };
-    } else {
-      return {
+      } : {
         plans_global_id: null,
         plans_hotel_id: null,
       };
-    }
-  };
+      logger.debug(`[${requestId}] Plan lookup result for ${code}:`, result);
+      return result;
+    };
 
-  const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate);
-  const assignedRoomIds = new Set();
+    // Get available rooms within transaction with proper locking
+    logger.debug(`[${requestId}] Fetching available rooms`);
+    const availableRooms = await client.query(`
+      WITH occupied_rooms AS (
+        SELECT room_id 
+        FROM reservation_details
+        WHERE date >= $1 AND date < $2
+        AND room_id IS NOT NULL
+        AND cancelled IS NULL
+      )
+      SELECT 
+        r.id AS room_id,
+        r.room_type_id,
+        rt.name AS room_type_name,
+        r.room_number,
+        r.floor,
+        r.capacity,
+        r.smoking,
+        r.for_sale
+      FROM rooms r
+      JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
+      WHERE r.hotel_id = $3
+      AND r.id NOT IN (SELECT room_id FROM occupied_rooms)
+      AND r.for_sale = TRUE
+      ORDER BY r.room_type_id, r.capacity DESC
+    `, [BasicInformation.CheckInDate, BasicInformation.CheckOutDate, hotel_id]);
 
-  const findFirstAvailableRoomId = (room_type_id) => {
-    const availableRoom = availableRooms.find(room =>
-      room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
-    );
+    logger.debug(`[${requestId}] Found ${availableRooms.rows.length} available rooms`);
+    const assignedRoomIds = new Set();
 
-    return availableRoom?.room_id || null;
-  };
-
-  try {
-    await client.query('BEGIN');
+    const findFirstAvailableRoomId = (room_type_id) => {
+      const availableRoom = availableRooms.rows.find(room =>
+        room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
+      );
+      return availableRoom?.room_id || null;
+    };
 
     // Client info
     const clientData = {
@@ -2696,8 +2761,13 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
       clientData.created_by,
       clientData.updated_by
     ];
+    logger.debug(`[${requestId}] Creating new client record`);
     const newClient = await client.query(query, values);
     const reservationClientId = newClient.rows[0].id;
+    logger.info(`[${requestId}] Created client with ID: ${reservationClientId}`, {
+      client_name: newClient.rows[0].name,
+      transaction_state: 'client_created'
+    });
     //const reservationClientId = 88;    
     console.log('addOTAReservation client:', newClient.rows[0]);
 
@@ -2726,7 +2796,11 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         Basic.Email || Member.UserMailAddr || '',
         1
       ];
+      logger.debug(`[${requestId}] Creating address record for client ${reservationClientId}`);
       const newAddress = await client.query(query, values);
+      logger.debug(`[${requestId}] Created address with ID: ${newAddress.rows[0].id}`, {
+        transaction_state: 'address_created'
+      });
       console.log('addOTAReservation addresses:', newAddress.rows[0]);
     }
 
@@ -2751,8 +2825,14 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
     ];
     // console.log('addOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
+    logger.debug(`[${requestId}] Creating reservation record`);
     const reservation = await client.query(query, values);
     const reservationId = reservation.rows[0].id;
+    logger.info(`[${requestId}] Created reservation with ID: ${reservationId}`, {
+      ota_reservation_id: Basic.ReservationID,
+      client_id: reservationClientId,
+      transaction_state: 'reservation_created'
+    });
     console.log('addOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
@@ -2770,6 +2850,15 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
 
         if (roomId === null) {
           const triedDates = roomDetailsArray.map(item => item.RoomDate).join(', ');
+          logger.error(`[${requestId}] No available room found`, {
+            room_type_code: netAgtRmTypeCode,
+            room_type_id: roomTypeId,
+            room_type_name: roomTypeName,
+            dates: triedDates,
+            transaction_state: 'room_assignment_failed',
+            client_id: reservationClientId,
+            reservation_id: reservationId
+          });
           console.error(`ERROR: No available room found for RoomTypeCode ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]`);
           throw new Error(`Transaction Error: Could not assign room_id for RoomTypeCode: ${netAgtRmTypeCode} (room_type_id: ${roomTypeId}, room_type_name: ${roomTypeName}) for dates: [${triedDates}]. Transaction will be rolled back.`);
         }
@@ -2866,9 +2955,19 @@ const addOTAReservation = async (requestId, hotel_id, data) => {
         const reservationDetailsId = reservationDetails.rows[0].id;
 
         if (reservationDetails.rows.length === 0) {
+          logger.error(`[${requestId}] Failed to create reservation detail`, {
+            transaction_state: 'reservation_detail_failed',
+            room_id: roomDetail.room_id,
+            date: roomDetail.RoomDate
+          });
           console.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
+        logger.debug(`[${requestId}] Created reservation detail with ID: ${reservationDetailsId}`, {
+          transaction_state: 'reservation_detail_created',
+          room_id: roomDetail.room_id,
+          date: roomDetail.RoomDate
+        });
         console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
 
         query = `
