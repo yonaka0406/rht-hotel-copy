@@ -3068,7 +3068,18 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     }
   }
 };
-const editOTAReservation = async (requestId, hotel_id, data) => {
+
+const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
+  // Use passed client if provided, otherwise create a new one
+  let internalClient;
+  let shouldRelease = false;
+  if (client) {
+    internalClient = client;
+  } else {
+    const pool = getPool(requestId);
+    internalClient = await pool.connect();
+    shouldRelease = true;
+  }
   // XML
   // console.log('editOTAReservation data:', data);
   const SalesOfficeInformation = data?.SalesOfficeInformation || {};
@@ -3096,9 +3107,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
 
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
 
-  // Query
-  const pool = getPool(requestId);
-  const client = await pool.connect();
+  // Query  
   let query = '';
   let values = '';
 
@@ -3168,7 +3177,9 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
   };
 
   try {
-    await client.query('BEGIN');
+    if (shouldRelease) {
+      await internalClient.query('BEGIN');
+    }
 
     // Fetch the existing reservation_id
     query = `
@@ -3177,10 +3188,12 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         WHERE ota_reservation_id = $1 AND hotel_id = $2;
     `;
     values = [otaReservationId, hotel_id];
-    const existingReservationResult = await client.query(query, values);
+    const existingReservationResult = await internalClient.query(query, values);
 
     if (existingReservationResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+      if (shouldRelease) {
+        await internalClient.query('ROLLBACK');
+      }
       return { success: false, error: `Reservation with OTA ID ${otaReservationId} not found.` };
     }
 
@@ -3188,8 +3201,8 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     const clientIdToUpdate = existingReservationResult.rows[0].reservation_client_id;
 
     // --- Delete existing reservation details and payments ---    
-    await client.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
-    await client.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
+    await internalClient.query(`DELETE FROM reservation_details WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
+    await internalClient.query(`DELETE FROM reservation_payments WHERE reservation_id = $1 AND hotel_id = $2`, [reservationIdToUpdate, hotel_id]);
 
     const availableRooms = await selectAvailableRooms(requestId, hotel_id, BasicInformation.CheckInDate, BasicInformation.CheckOutDate, internalClient);
     const assignedRoomIds = new Set();
@@ -3248,7 +3261,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       clientData.updated_by,
       clientIdToUpdate,
     ];
-    const newClient = await client.query(query, values);
+    const newClient = await internalClient.query(query, values);
     console.log('editOTAReservation client:', newClient.rows[0]);
 
     // Insert address
@@ -3303,7 +3316,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
         Basic.Email || Member.UserMailAddr || '',
         1
       ];
-      const newAddress = await client.query(query, values);
+      const newAddress = await internalClient.query(query, values);
       console.log('editOTAReservation addresses:', newAddress.rows[0]);
     }
 
@@ -3333,7 +3346,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
     ];
     // console.log('editOTAReservation reservations:', values);  
     // const reservation = {id: 0};    
-    const reservation = await client.query(query, values);
+    const reservation = await internalClient.query(query, values);
     console.log('editOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
@@ -3443,7 +3456,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
           totalPeopleCount,
           roomDetail.TotalPerRoomRate,
         ];
-        const reservationDetails = await client.query(query, values);
+        const reservationDetails = await internalClient.query(query, values);
         const reservationDetailsId = reservationDetails.rows[0].id;
 
         if (reservationDetails.rows.length === 0) {
@@ -3464,7 +3477,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
           roomDetail.TotalPerRoomRate,
         ];
         // console.log('editOTAReservation reservation_rates:', values);
-        const reservationRates = await client.query(query, values);
+        const reservationRates = await internalClient.query(query, values);
         console.log('editOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
@@ -3490,7 +3503,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
               1
             ];
 
-            const reservationAddon = await client.query(query, values);
+            const reservationAddon = await internalClient.query(query, values);
             console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
@@ -3554,7 +3567,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
             1
           ];
 
-          const reservationPayments = await client.query(query, values);
+          const reservationPayments = await internalClient.query(query, values);
           console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
@@ -3603,7 +3616,7 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
                 1
               ];
 
-              const reservationPayments = await client.query(query, values);
+              const reservationPayments = await internalClient.query(query, values);
               console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
@@ -3614,31 +3627,56 @@ const editOTAReservation = async (requestId, hotel_id, data) => {
       }
     }
 
-    await client.query('COMMIT');
+    if (shouldRelease) {
+      await internalClient.query('COMMIT');
+    }
     return { success: true };
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error("Transaction failed:", err.message);
+    try {
+      if (shouldRelease) {
+        await internalClient.query('ROLLBACK');
+        // Detailed debug log for rollback
+        const otaReservationId = data?.BasicInformation?.TravelAgencyBookingNumber;
+        const hotelId = hotel_id;
+        const reservationId = (typeof existingReservationResult !== 'undefined' && existingReservationResult.rows && existingReservationResult.rows[0]) ? existingReservationResult.rows[0].id : null;
+        console.error(
+          `[editOTAReservation] Transaction rolled back for reservationId: ${reservationId}, OTA booking number: ${otaReservationId}, hotelId: ${hotelId}`
+        );
+      }
+    } catch (rollbackErr) {
+      console.error("[editOTAReservation] Failed to roll back transaction:", rollbackErr);
+    }
     return { success: false, error: err.message };
   } finally {
-    client.release();
+    if (shouldRelease) {
+      internalClient.release();
+    }
   }
-};
-const cancelOTAReservation = async (requestId, hotel_id, data) => {
+}
+const cancelOTAReservation = async (requestId, hotel_id, data, client = null) => {
+  let internalClient;
+  let shouldRelease = false;
+  if (client) {
+    internalClient = client;
+  } else {
+    const pool = getPool(requestId);
+    internalClient = await pool.connect();
+    shouldRelease = true;
+  }
   // XML
   const BasicInformation = data?.BasicInformation || {};
   const otaReservationId = BasicInformation?.TravelAgencyBookingNumber;
   const Extendmytrip = data?.RisaplsInformation?.AgentNativeInformation?.Extendmytrip || {};
   const cancellationCharge = parseInt(Extendmytrip?.CancellationCharge || '0', 10);
 
-  // Query
-  const pool = getPool(requestId);
-  const client = await pool.connect();
+  // Query  
   let query = '';
   let values = '';
 
   try {
-    await client.query('BEGIN');
+    if (shouldRelease) {
+      await internalClient.query('BEGIN');
+    }
 
     // Fetch the existing reservation_id
     query = `
@@ -3647,10 +3685,12 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
         WHERE ota_reservation_id = $1 AND hotel_id = $2;
     `;
     values = [otaReservationId, hotel_id];
-    const existingReservationResult = await client.query(query, values);
+    const existingReservationResult = await internalClient.query(query, values);
 
     if (existingReservationResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+      if (shouldRelease) {
+        await internalClient.query('ROLLBACK');
+      }
       return { success: false, error: `Reservation with OTA ID ${otaReservationId} not found.` };
     }
 
@@ -3668,7 +3708,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
       reservationIdToUpdate,
       hotel_id,
     ];
-    const reservation = await client.query(query, values);
+    const reservation = await internalClient.query(query, values);
     console.log('cancelOTAReservation reservations:', reservation.rows[0]);
 
     query = `
@@ -3684,7 +3724,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
       reservationIdToUpdate,
       hotel_id,
     ];
-    const reservationDetails = await client.query(query, values);
+    const reservationDetails = await internalClient.query(query, values);
     console.log('cancelOTAReservation reservation_details:', reservationDetails.rows[0]);
 
     if (cancellationCharge > 0) {
@@ -3696,7 +3736,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
         LIMIT 1;
       `;
       values = [reservationIdToUpdate, hotel_id];
-      const latestReservationDetailResult = await client.query(query, values);
+      const latestReservationDetailResult = await internalClient.query(query, values);
 
       if (latestReservationDetailResult.rows.length > 0) {
         const latestReservationDetailId = latestReservationDetailResult.rows[0].id;
@@ -3716,7 +3756,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
           hotel_id,
           cancellationCharge,
         ];
-        const firstReservationDetail = await client.query(query, values);
+        const firstReservationDetail = await internalClient.query(query, values);
         console.log('cancelOTAReservation reservation_details:', firstReservationDetail.rows[0]);
 
         query = `
@@ -3735,28 +3775,34 @@ const cancelOTAReservation = async (requestId, hotel_id, data) => {
           hotel_id,
           cancellationCharge,
         ];
-        const reservationRates = await client.query(query, values);
+        const reservationRates = await internalClient.query(query, values);
         console.log('cancelOTAReservation reservation_rates:', reservationRates.rows[0]);
       } else {
         console.warn('No reservation details found to update reservation_rates.');
       }
     }
 
-    await client.query('COMMIT');
+    if (shouldRelease) {
+      await internalClient.query('COMMIT');
+    }
     return { success: true };
   } catch (err) {
     console.error("Transaction failed, error message:", err.message);
     console.error("Full error object:", err);
     try {
       console.log("Attempting to roll back transaction...");
-      await client.query('ROLLBACK');
+      if (shouldRelease) {
+        await internalClient.query('ROLLBACK');
+      }
       console.log("Transaction successfully rolled back");
     } catch (rollbackErr) {
       console.error("Failed to roll back transaction:", rollbackErr);
     }
     return { success: false, error: err.message };
   } finally {
-    client.release();
+    if (shouldRelease) {
+      internalClient.release();
+    }
   }
 };
 
