@@ -30,65 +30,6 @@ export default defineConfig({
     /*outDir: '../api/public', // backend's public folder*/
     outDir: 'dist',
     emptyOutDir: true, // Clears the directory before building
-    sourcemap: false, // Disable sourcemaps in production to save memory
-    
-    // Memory optimization settings
-    chunkSizeWarningLimit: 1000,
-    minify: 'terser',
-    
-    rollupOptions: {
-      // Optimize chunking to reduce memory usage
-      output: {
-        manualChunks: {
-          // Split Vue and core dependencies
-          vue: ['vue', 'vue-router', 'pinia'],
-          // Split UI libraries if you're using any
-          ui: ['@headlessui/vue', '@heroicons/vue'],
-          // Split utility libraries
-          utils: ['axios', 'lodash', 'dayjs'],
-        },
-        // Reduce chunk size
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop().replace('.js', '') : 'chunk';
-          return `js/${facadeModuleId}-[hash].js`;
-        }
-      },
-      
-      // Memory management during build
-      onwarn(warning, warn) {
-        // Suppress certain warnings that don't affect functionality
-        if (warning.code === 'LARGE_BUNDLE') return;
-        warn(warning);
-      }
-    },
-    
-    // Terser options for better memory management
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info'],
-        passes: 1, // Reduce passes to save memory
-      },
-      mangle: {
-        safari10: true,
-      },
-      format: {
-        comments: false,
-      },
-    },
-    
-    // Target modern browsers to reduce polyfill overhead
-    target: 'es2020',
-    
-    // Reduce CSS optimization complexity
-    cssCodeSplit: true,
-    cssMinify: true,
-  },
-  
-  // Optimize dependency handling
-  optimizeDeps: {
-    include: ['vue', 'vue-router', 'pinia'],
-    exclude: ['@vueuse/core'], // Exclude large optional dependencies
+    sourcemap: true, // or 'inline' to embed the source map in the output file
   },
 });
