@@ -1599,28 +1599,41 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
 
+  let query = '';
+  let values = [];
+
   try {
     await client.query('BEGIN');
 
+    // Track reservation updates
+    const reservationUpdates = {};
+
     // Loop through roomData to update each reservation
-    for (const data of roomData) {
-      const { id, hotel_id, date, room_id } = data;
+    for (const data of roomData) {      
+      const { id, hotel_id, date, room_id, reservation_id, check_in, check_out } = data;
+
+      query = `
+        UPDATE reservations
+        SET check_in = $1, check_out = $2, updated_by = $3
+        WHERE id = $4 AND hotel_id = $5
+      `;
+      values = [check_in, check_out, user_id, reservation_id, hotel_id];
+      const resultReservation = await client.query(query, values);
 
       // Perform the update query for each entry
-      const updateQuery = `
-          UPDATE reservation_details
-          SET date = $1, room_id = $2, updated_by = $3
-          WHERE id = $4 AND hotel_id = $5
-          RETURNING *;
+      query = `
+        UPDATE reservation_details
+        SET date = $1, room_id = $2, updated_by = $3
+        WHERE id = $4 AND hotel_id = $5
+        RETURNING *;
       `;
 
-      const values = [date, room_id, user_id, id, hotel_id];
-
-      // Execute the query
-      const result = await client.query(updateQuery, values);
-
-      await client.query('COMMIT');
+      values = [date, room_id, user_id, id, hotel_id];
+      const resultReservationDetails = await client.query(query, values);      
     }
+
+    await client.query('COMMIT');
+
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error occurred during update:', err);
