@@ -268,6 +268,9 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ### Unreleased
 
+#### Fixed
+- Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
+
 #### Optimizations
 - Build Process: Optimized Vite build configuration for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
 
