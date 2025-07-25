@@ -9,14 +9,14 @@ services:
     container_name: wehub-db
     restart: always
     environment:
-      # FIX: Changed the default database name to match the user name
-      POSTGRES_DB: ${POSTGRES_DB:-user}
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       # Exposes the database on your local machine's port 5432
       - "5432:5432"
-    volumes:
+    volumes:      
+      # This line mounts your local scripts into the container
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       # Persists database data on your host machine
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -58,14 +58,10 @@ services:
       redis:
         condition: service_healthy
     environment:
-      # --- IMPORTANT ---
-      # These variables tell your app how to connect to the other services.
-      # Docker Compose creates a network where the hostname is the service name.
       DB_HOST: db
       DB_USER: ${POSTGRES_USER:-user}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      # FIX: Changed the default database name to match the user name
-      DB_DATABASE: ${POSTGRES_DB:-user}
+      DB_DATABASE: wehub
       DB_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
