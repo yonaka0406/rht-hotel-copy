@@ -1,0 +1,18 @@
+# Ignore node_modules folders
+node_modules/
+frontend/node_modules/
+
+# Ignore logs and temporary files
+npm-debug.log
+*.log
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore build output
+frontend/dist/
+frontend/.cache
+
+# Ignore Git directory
+.git/

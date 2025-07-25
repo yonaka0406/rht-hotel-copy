@@ -1,0 +1,79 @@
+# ---- 1. Builder Stage ----
+# Use the official Node.js 22 image based on Debian 12 (Bookworm)
+FROM node:22-bookworm AS builder
+
+# Install build tools for native modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src/app
+
+# Copy package files first to leverage Docker cache
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+
+# Install dependencies for both root and frontend
+RUN npm install
+RUN npm --prefix frontend install --force --legacy-peer-deps
+
+# Now, copy the rest of the source code
+COPY . .
+
+# !!! --- FIX --- !!!
+# Clear npm cache and reinstall/rebuild native modules after copying source
+# This ensures native binaries are built for the correct architecture
+RUN npm cache clean --force
+RUN rm -rf frontend/node_modules/.cache
+
+# Remove node_modules entirely and reinstall fresh
+RUN rm -rf frontend/node_modules
+# Use npm ci for more reliable builds if package-lock exists
+RUN if [ -f "frontend/package-lock.json" ]; then \
+    npm --prefix frontend ci --force; \
+    else \
+    npm --prefix frontend install --force --legacy-peer-deps; \
+    fi
+
+# Rebuild specific native modules that commonly cause issues in Docker
+# Focus on lightningcss which is used by @tailwindcss/vite
+RUN cd frontend && npm rebuild lightningcss --force || true
+RUN cd frontend && npm rebuild @rollup/rollup-linux-x64-gnu --force || true
+RUN cd frontend && npm rebuild esbuild --force || true
+
+# Alternative: Install lightningcss native binary directly if rebuild fails
+RUN cd frontend && npm install lightningcss-linux-x64-gnu --save-dev --force || true
+
+# Alternative fix: Install rollup globally if the above doesn't work
+# RUN npm install -g rollup
+
+# Build the frontend
+ENV NODE_ENV=production
+RUN npm run build:frontend
+
+# Remove development dependencies for a smaller final image
+RUN npm prune --production
+
+# ---- 2. Production Stage ----
+# Use the lighter -slim version of the same Debian release for the final image
+FROM node:22-bookworm-slim AS production
+
+ENV NODE_ENV=production
+WORKDIR /usr/src/app
+
+# Create a non-root user for better security
+RUN addgroup --system --gid 1001 appgroup && adduser --system --uid 1001 --ingroup appgroup appuser
+
+# Copy only the necessary production artifacts from the builder stage
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
+COPY --from=builder --chown=appuser:appgroup /usr/src/app/package*.json ./
+
+USER appuser
+EXPOSE 3000
+
+# Start the backend server using pm2-runtime for containerized environments
+CMD [ "npx", "pm2-runtime", "start", "api/index.js" ]
