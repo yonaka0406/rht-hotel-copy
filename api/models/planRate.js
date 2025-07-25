@@ -143,16 +143,18 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         
         // Sequential Calculation
         let currentTotal = baseRateTotal;
-        // 1. Apply Group A Percentage Effect (tax_type_id != 1)
+        // 1. Apply Group A Percentage Effect (taxable, tax_type_id != 1)
         currentTotal = currentTotal * (1 + groupAPercentageEffect);
         // 2. Round down to the nearest 100
         currentTotal = Math.floor(currentTotal / 100) * 100;
-        // 3. Apply Group B Percentage Effect (tax_type_id == 1)
-        currentTotal = currentTotal * (1 + groupBPercentageEffect);
-        // 4. Final round down (simple floor)
+        // 3. Apply Group B Percentage Effect (non-taxable, tax_type_id == 1)
+        const groupBAdjustment = currentTotal * groupBPercentageEffect;
+        // 4. Add Group B Adjustment and Flat Fee Total (both non-taxable)
+        currentTotal = currentTotal + groupBAdjustment + flatFeeTotal;
+        // 5. Final floor to ensure we don't have any decimal places
         currentTotal = Math.floor(currentTotal);
-        // 5. Add Flat Fee Total
-        currentTotal = currentTotal + flatFeeTotal;
+        // 6. Ensure the price is not negative
+        currentTotal = Math.max(0, currentTotal);
 
         // console.log('Calculated price:', currentTotal);
         return currentTotal;
