@@ -141,22 +141,47 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
             }
         });
         
+        // Debug log with timestamp
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] DEBUG - Calculation Inputs:`, {
+            baseRateTotal,
+            groupAPercentageEffect,
+            groupBPercentageEffect,
+            flatFeeTotal,
+            'groupA_adj': groupAPercentageEffect * 100 + '%',
+            'groupB_adj': groupBPercentageEffect * 100 + '%',
+            'flat_fee': flatFeeTotal
+        });
+
         // Sequential Calculation
         let currentTotal = baseRateTotal;
-        // 1. Apply Group A Percentage Effect (taxable, tax_type_id != 1)
-        currentTotal = currentTotal * (1 + groupAPercentageEffect);
+        console.log(`[${timestamp}] DEBUG - Starting with base rate:`, currentTotal);
+        
+        // 1. Apply Group A Percentage Effect (taxable)
+        const afterGroupA = currentTotal * (1 + groupAPercentageEffect);
+        console.log(`[${timestamp}] DEBUG - After Group A (${groupAPercentageEffect * 100}%):`, afterGroupA);
+        currentTotal = afterGroupA;
+        
         // 2. Round down to the nearest 100
-        currentTotal = Math.floor(currentTotal / 100) * 100;
-        // 3. Apply Group B Percentage Effect (non-taxable, tax_type_id == 1)
+        const afterRounding = Math.floor(currentTotal / 100) * 100;
+        console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
+        currentTotal = afterRounding;
+        
+        // 3. Calculate Group B Adjustment (non-taxable, applied after rounding like flat fees)
         const groupBAdjustment = currentTotal * groupBPercentageEffect;
+        console.log(`[${timestamp}] DEBUG - Group B Adjustment (${groupBPercentageEffect * 100}% of ${currentTotal}):`, groupBAdjustment);
+        
         // 4. Add Group B Adjustment and Flat Fee Total (both non-taxable)
-        currentTotal = currentTotal + groupBAdjustment + flatFeeTotal;
+        const beforeFinalFloor = currentTotal + groupBAdjustment + flatFeeTotal;
+        console.log(`[${timestamp}] DEBUG - Before final floor (Total + GroupB + FlatFee):`, beforeFinalFloor);
+        
         // 5. Final floor to ensure we don't have any decimal places
-        currentTotal = Math.floor(currentTotal);
+        currentTotal = Math.floor(beforeFinalFloor);
+        
         // 6. Ensure the price is not negative
         currentTotal = Math.max(0, currentTotal);
-
-        // console.log('Calculated price:', currentTotal);
+        
+        console.log(`[${timestamp}] DEBUG - Final calculated price:`, currentTotal);
         return currentTotal;
     } catch (err) {
         console.error('Error calculating price:', err);
