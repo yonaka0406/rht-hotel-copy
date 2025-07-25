@@ -38,12 +38,14 @@ RUN if [ -f "frontend/package-lock.json" ]; then \
     fi
 
 # Rebuild specific native modules that commonly cause issues in Docker
-# Focus on lightningcss which is used by @tailwindcss/vite
+# Focus on Tailwind CSS v4 native dependencies
+RUN cd frontend && npm rebuild @tailwindcss/oxide --force || true
 RUN cd frontend && npm rebuild lightningcss --force || true
 RUN cd frontend && npm rebuild @rollup/rollup-linux-x64-gnu --force || true
 RUN cd frontend && npm rebuild esbuild --force || true
 
-# Alternative: Install lightningcss native binary directly if rebuild fails
+# If native rebuilds fail, try installing platform-specific packages
+RUN cd frontend && npm install @tailwindcss/oxide-linux-x64-gnu --save-dev --force || true
 RUN cd frontend && npm install lightningcss-linux-x64-gnu --save-dev --force || true
 
 # Alternative fix: Install rollup globally if the above doesn't work
