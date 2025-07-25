@@ -1,0 +1,77 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # The PostgreSQL Database Service
+  db:
+    image: postgres:16-alpine
+    container_name: wehub-db
+    restart: always
+    environment:
+      # FIX: Changed the default database name to match the user name
+      POSTGRES_DB: ${POSTGRES_DB:-user}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      # Exposes the database on your local machine's port 5432
+      - "5432:5432"
+    volumes:
+      # Persists database data on your host machine
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The Redis 7 Service
+  redis:
+    image: redis:7-alpine
+    container_name: wehub-redis
+    restart: always
+    ports:
+      # Exposes Redis on your local machine's port 6379
+      - "6379:6379"
+    volumes:
+      # Persists Redis data
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Your Node.js Application Service
+  app:
+    # This builds the image from the Dockerfile in the current directory
+    build: .
+    container_name: wehub-app
+    restart: always
+    ports:
+      # Mapped host port 3000 to the container's port 5000 where the app is running
+      - "3000:5000"
+    depends_on:
+      # Ensures that the app starts only after the db and redis are healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # --- IMPORTANT ---
+      # These variables tell your app how to connect to the other services.
+      # Docker Compose creates a network where the hostname is the service name.
+      DB_HOST: db
+      DB_USER: ${POSTGRES_USER:-user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      # FIX: Changed the default database name to match the user name
+      DB_DATABASE: ${POSTGRES_DB:-user}
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NODE_ENV: development
+
+# Volumes to persist data
+volumes:
+  postgres_data:
+  redis_data:

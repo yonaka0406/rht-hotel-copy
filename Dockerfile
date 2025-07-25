@@ -1,6 +1,6 @@
 # ---- 1. Builder Stage ----
 # Use the official Node.js 22 image based on Debian 12 (Bookworm)
-FROM node:22-bookworm AS builder
+FROM node:22 AS builder
 
 # Install build tools for native modules
 RUN apt-get update && apt-get install -y \
@@ -59,7 +59,7 @@ RUN npm prune --production
 
 # ---- 2. Production Stage ----
 # Use the lighter -slim version of the same Debian release for the final image
-FROM node:22-bookworm-slim AS production
+FROM node:22 AS production
 
 # Install runtime dependencies required by sharp
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -75,7 +75,7 @@ RUN addgroup --system --gid 1001 appgroup && adduser --system --uid 1001 --ingro
 # Copy package files from the builder stage
 COPY --from=builder /usr/src/app/package*.json ./
 
-RUN npm install --production
+RUN npm install --production --include=optional sharp
 # Copy only the necessary production artifacts from the builder stage
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
