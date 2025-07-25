@@ -22,7 +22,6 @@ RUN npm --prefix frontend install --force --legacy-peer-deps
 # Now, copy the rest of the source code
 COPY . .
 
-# !!! --- FIX --- !!!
 # Clear npm cache and reinstall/rebuild native modules after copying source
 # This ensures native binaries are built for the correct architecture
 RUN npm cache clean --force
@@ -62,17 +61,30 @@ RUN npm prune --production
 # Use the lighter -slim version of the same Debian release for the final image
 FROM node:22-bookworm-slim AS production
 
+# Install runtime dependencies required by sharp
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libvips \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 WORKDIR /usr/src/app
 
 # Create a non-root user for better security
-RUN addgroup --system --gid 1001 appgroup && adduser --system --uid 1001 --ingroup appgroup appuser
+RUN addgroup --system --gid 1001 appgroup && adduser --system --uid 1001 --ingroup appgroup --home /usr/src/app appuser
 
+# Copy package files from the builder stage
+COPY --from=builder /usr/src/app/package*.json ./
+
+RUN npm install --production
 # Copy only the necessary production artifacts from the builder stage
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/frontend/dist ./frontend/dist
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/api ./api
 COPY --from=builder --chown=appuser:appgroup /usr/src/app/package*.json ./
+
+# Change ownership of the app directory itself. This allows the non-root user
+# (and pm2) to create necessary files like the .pm2 folder.
+RUN chown appuser:appgroup /usr/src/app
 
 USER appuser
 EXPOSE 3000
