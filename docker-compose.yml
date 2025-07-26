@@ -57,12 +57,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      DB_HOST: wehub-db
-      DB_USER: ${POSTGRES_USER:-user}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      DB_DATABASE: wehub
-      DB_PORT: 5432
+    environment:      
+      PG_HOST: wehub-db
+      PG_USER: ${POSTGRES_USER:-user}
+      PG_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      PG_DATABASE: wehub
+      PG_PORT: 5432
       REDIS_HOST: redis
       REDIS_PORT: 6379
       NODE_ENV: development
