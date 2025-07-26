@@ -486,8 +486,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Fallback for SPA routes (Must come last)
 app.get('/*splat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  //res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});  
 
 // Start the server
 /*
