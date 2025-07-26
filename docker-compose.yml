@@ -58,7 +58,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      DB_HOST: db
+      DB_HOST: wehub-db
       DB_USER: ${POSTGRES_USER:-user}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-password}
       DB_DATABASE: wehub
@@ -66,6 +66,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       NODE_ENV: development
+      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL_HTTP: http://localhost:3000
 
   # pgAdmin Service
   pgadmin:
