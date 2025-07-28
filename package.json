@@ -4,8 +4,8 @@
     "private": true,
     "scripts": {
         "build": "npm run build:frontend",
-        "build:frontend": "npm --prefix frontend run build",
-        "build:frontend:dev": "npm --prefix frontend run build --mode development",
+        "build:frontend": "npm --prefix frontend run build production",
+        "build:frontend:dev": "npm --prefix frontend run build development",
         "deploy:frontend:test": "sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/",
         "deploy:frontend:prod": "sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/",
         "stop:apache": "sudo systemctl stop apache2",
