@@ -7,10 +7,26 @@ const isValidCondition = (row, date) => {
     // Custom parser for TEXT format condition_value
     const parseConditionValue = (value) => {
         if (!value) return [];
-        return value
-            .replace(/[{}"]/g, '') // Remove curly braces and quotes
-            .split(',')           // Split by comma
-            .map((v) => v.trim().toLowerCase()); // Normalize values
+        
+        try {
+            // Try to parse as JSON first (for properly formatted JSON arrays)
+            if (value.startsWith('[') && value.endsWith(']')) {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) {
+                    return parsed.map(v => String(v).trim().toLowerCase());
+                }
+            }
+            
+            // Fallback to string parsing for malformed JSON or plain strings
+            return value
+                .replace(/[\[\]{}]"/g, '') // Remove square brackets, curly braces and quotes
+                .split(',')                 // Split by comma
+                .map(v => v.trim().toLowerCase()) // Normalize values
+                .filter(v => v);             // Remove empty strings
+        } catch (e) {
+            console.error('Error parsing condition value:', { value, error: e.message });
+            return [];
+        }
     };
 
     const parsedCondition = parseConditionValue(condition_value);
@@ -23,11 +39,21 @@ const isValidCondition = (row, date) => {
     
     switch (condition_type) {
         case 'month': {
-            const targetMonth = targetDate.toLocaleString('en-US', { month: 'long' }).toLowerCase(); // Get month name
-            // console.log('Target Month:', targetMonth);
-            const match = parsedCondition.includes(targetMonth);
-            // console.log('Condition Check (Month):', match);
-            return match;
+            // Get month in English only to match frontend behavior
+            const targetMonth = targetDate.toLocaleString('en-US', { month: 'long' }).toLowerCase();
+            
+            // Debug log to see what we're comparing
+            /*
+            console.log(`[${new Date().toISOString()}] Month Check - `, {
+                targetMonth,
+                conditionValue: condition_value,
+                parsedCondition,
+                matches: parsedCondition.includes(targetMonth)
+            });
+            */
+            
+            // Check if English month name matches
+            return parsedCondition.includes(targetMonth);
         }
 
         case 'day_of_week': {
@@ -132,8 +158,8 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
                 } else if (row.adjustment_type === 'percentage') {
                     if (row.tax_type_id === 1) { // Group B: Value is direct percentage (e.g., 2.5 for 2.5%)
                         groupBPercentageEffect += value / 100;
-                    } else { // Group A: Value is a multiplier (e.g., -0.04 for -4%)
-                        groupAPercentageEffect += value;
+                    } else { // Group A: Value is a percentage (e.g., -20 for -20%)
+                        groupAPercentageEffect += value / 100; // Convert percentage to decimal
                     }
                 } else if (row.adjustment_type === 'flat_fee') {
                     flatFeeTotal += value;
@@ -143,6 +169,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         
         // Debug log with timestamp
         const timestamp = new Date().toISOString();
+        /*
         console.log(`[${timestamp}] DEBUG - Calculation Inputs:`, {
             baseRateTotal,
             groupAPercentageEffect,
@@ -152,28 +179,29 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
             'groupB_adj': groupBPercentageEffect * 100 + '%',
             'flat_fee': flatFeeTotal
         });
+        */
 
         // Sequential Calculation
         let currentTotal = baseRateTotal;
-        console.log(`[${timestamp}] DEBUG - Starting with base rate:`, currentTotal);
+        //console.log(`[${timestamp}] DEBUG - Starting with base rate:`, currentTotal);
         
         // 1. Apply Group A Percentage Effect (taxable)
         const afterGroupA = currentTotal * (1 + groupAPercentageEffect);
-        console.log(`[${timestamp}] DEBUG - After Group A (${groupAPercentageEffect * 100}%):`, afterGroupA);
+        //console.log(`[${timestamp}] DEBUG - After Group A (${groupAPercentageEffect * 100}%):`, afterGroupA);
         currentTotal = afterGroupA;
         
         // 2. Round down to the nearest 100
         const afterRounding = Math.floor(currentTotal / 100) * 100;
-        console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
+        //console.log(`[${timestamp}] DEBUG - After rounding to nearest 100:`, afterRounding);
         currentTotal = afterRounding;
         
         // 3. Calculate Group B Adjustment (non-taxable, applied after rounding like flat fees)
         const groupBAdjustment = currentTotal * groupBPercentageEffect;
-        console.log(`[${timestamp}] DEBUG - Group B Adjustment (${groupBPercentageEffect * 100}% of ${currentTotal}):`, groupBAdjustment);
+        //console.log(`[${timestamp}] DEBUG - Group B Adjustment (${groupBPercentageEffect * 100}% of ${currentTotal}):`, groupBAdjustment);
         
         // 4. Add Group B Adjustment and Flat Fee Total (both non-taxable)
         const beforeFinalFloor = currentTotal + groupBAdjustment + flatFeeTotal;
-        console.log(`[${timestamp}] DEBUG - Before final floor (Total + GroupB + FlatFee):`, beforeFinalFloor);
+        //console.log(`[${timestamp}] DEBUG - Before final floor (Total + GroupB + FlatFee):`, beforeFinalFloor);
         
         // 5. Final floor to ensure we don't have any decimal places
         currentTotal = Math.floor(beforeFinalFloor);
@@ -181,7 +209,7 @@ const getPriceForReservation = async (requestId, plans_global_id, plans_hotel_id
         // 6. Ensure the price is not negative
         currentTotal = Math.max(0, currentTotal);
         
-        console.log(`[${timestamp}] DEBUG - Final calculated price:`, currentTotal);
+        //console.log(`[${timestamp}] DEBUG - Final calculated price:`, currentTotal);
         return currentTotal;
     } catch (err) {
         console.error('Error calculating price:', err);

@@ -269,6 +269,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ### Unreleased
 
 #### Fixed
+- Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
 - Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
 
 #### Optimizations

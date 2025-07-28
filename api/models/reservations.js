@@ -2037,41 +2037,70 @@ const updateReservationRoomPlan = async (requestId, reservationId, hotelId, room
     const validDays = daysOfTheWeek.map(d => d.value);
     // Filter detailsArray to keep only dates that match daysOfTheWeek
     detailsArray = detailsArray.filter(detail => {
-      const detailDate = detail.date; // Convert string date to Date object      
-      const dayOfWeek = detailDate.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-      return validDays.includes(dayOfWeek);
+      const dayOfWeek = detail.date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+      const isIncluded = validDays.includes(dayOfWeek);
+      //console.log(`Detail ID ${detail.id} for date ${detail.date} (${dayOfWeek}): ${isIncluded ? 'INCLUDED' : 'EXCLUDED'}`);
+      return isIncluded;
     });
+
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Will update ${detailsArray.length} reservation details`);
 
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {
-      const { id } = detail;
+      const { id, date } = detail;
+      //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Processing detail ID ${id} for date ${date}`);
 
-      // 1. Update Plan      
-      if (plan) {
-        await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
-      } else {
-        console.log('[updateReservationDetailPlan] Skipped because plan is null');
+      try {
+        // 1. Update Plan      
+        if (plan) {
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Updating plan for detail ${id}`);
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Successfully updated plan for detail ${id}`);
+        } else {
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Skipping plan update for detail ${id} - no plan provided`);
+        }
+
+        // 2. Update Addons
+        if (addons && addons.length > 0) {
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Updating ${addons.length} addons for detail ${id}`);
+          await updateReservationDetailAddon(requestId, id, addons, user_id);
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Successfully updated addons for detail ${id}`);
+        } else {
+          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] No addons to update for detail ${id}`);
+        }
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error updating detail ${id}:`, error);
+        throw error; // Re-throw to trigger transaction rollback
       }
-
-      // 2. Update Addons
-      await updateReservationDetailAddon(requestId, id, addons, user_id);
-
     });
 
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Starting parallel updates for ${updatePromises.length} details`);
     await Promise.all(updatePromises);
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] All detail updates completed`);
 
     // 3. Recalculate Price after updating plans and addons
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Starting price recalculation`);
     await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id);
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Price recalculation completed`);
 
     await client.query('COMMIT');
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Transaction committed successfully`);
 
   } catch (error) {
+    console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in transaction:`, error);
     await client.query('ROLLBACK');
-    console.error('Error updating room plan:', error);
+    console.error(`[${new Date().toISOString()}] [Request ${requestId}] Transaction rolled back`);
     throw error;
   } finally {
+    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Releasing database connection`);
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    /*
+    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Connection released. Pool status:`, {
+      total: pool.totalCount,
+      idle: pool.idleCount,
+      waiting: pool.waitingCount
+    });
+    */
   }
 };
 const updateReservationRoomPattern = async (requestId, reservationId, hotelId, roomId, pattern, user_id) => {
@@ -2106,7 +2135,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       if (plan) {
         await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
       } else {
-        console.log('[updateReservationDetailPlan] Skipped because plan is null');
+        //console.log('[updateReservationDetailPlan] Skipped because plan is null');
       }
 
       // 2. Update Addons
@@ -2127,7 +2156,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
     throw error;
   } finally {
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id) => {
@@ -2213,7 +2242,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
     throw error;
   } finally {
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 
@@ -2323,7 +2352,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
     throw new Error('Database error');
   } finally {
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 const deleteReservationPayment = async (requestId, id, userId) => {
