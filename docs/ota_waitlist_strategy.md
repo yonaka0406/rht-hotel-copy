@@ -26,39 +26,7 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
      - This prevents new reservations from being accepted for those specific room types/dates
    - The existing OTA inventory update mechanism will be used, requiring minimal changes
 
-3. **UI Enhancements**
-   - Add a new status option (ID: 3) to the existing `statusOptions` array:
-     ```javascript
-     const statusOptions = [
-         { id: 0, value: '未設定' },
-         { id: 1, value: '販売中' },
-         { id: 2, value: '売り止め' },
-         { id: 3, value: 'Not for Sale' }  // New status
-     ];
-     ```
-   - Update the `getStatusClass` function to include styling for the new status:
-     ```javascript
-     const getStatusClass = (statusId) => {
-         switch(statusId) {
-             case 1: return 'status-available';
-             case 2: return 'status-sold-out';
-             case 3: return 'status-not-for-sale';
-             default: return 'status-default';
-         }
-     };
-     ```
-   - Add corresponding CSS for the new status:
-     ```css
-     .status-not-for-sale {
-         background-color: #ffebee;
-         color: #c62828;
-         padding: 0.25rem 0.5rem;
-         border-radius: 4px;
-         font-weight: 500;
-     }
-     ```
-
-4. **PMS User Alerts**
+3. **PMS User Alerts**
    - Add visual indicators in the PMS reservation calendar for dates with failed OTA reservations
    - Display a warning banner when users attempt to create reservations for affected dates
    - Include details about the OTA conflict in the reservation details view
@@ -102,23 +70,53 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
   - [ ] Create conflict detection service
     ```javascript
     // New service: otaConflictService.js
-    const detectOTAConflicts = async (requestId, hotelId, checkInDate, checkOutDate, roomTypeId, client = null) => {
+    const detectOTAConflicts = async (requestId, hotelId, checkInDate, checkOutDate, roomTypeId, roomsRequired, client = null) => {
       // 1. Get available rooms for the date range
+      const availableRooms = await getNumberOfAvailableRooms(requestId, hotelId, checkInDate, checkOutDate, roomTypeId, client);
       // 2. Check against OTA inventory for potential conflicts
+      if (availableRooms < roomsRequired) {
+        return {
+          conflict: true,
+          available: availableRooms,
+          required: roomsRequired,
+        };
+      }
       // 3. Return conflict details if any
+      return { conflict: false };
     };
     
     const getOTAConflictDetails = async (requestId, hotelId, dateRange) => {
       // Get detailed conflict information for UI display
     };
+
+    const getNumberOfAvailableRooms = async (requestId, hotelId, checkIn, checkOut, roomTypeId, client = null) => {
+      // This function will be in api/models/reservations.js
+      // It will return the number of available rooms for a given room type and date range
+    };
     ```
     - [ ] Add conflict detection before reservation operations in `getOTAReservations`:
       ```javascript
       // In getOTAReservations function
-      for (const reservation of formattedReservations) {
-        // 1. Extract reservation details (dates, room type, etc.)
-        // 2. Call detectOTAConflicts()
-        // 3. If conflicts found, mark as failed and collect conflict details
+      const { newBookings, modifications, cancellations, conflicts } = await validateReservationBatch(formattedReservations);
+
+        if (conflicts.length > 0) {
+            // Handle conflicts
+            logger.warn(`OTA conflicts detected for hotel_id: ${hotel_id}`, { conflicts });
+            // For now, we'll just log the conflicts and not proceed with the transaction.
+            // In the future, we can add logic to notify the user or take other actions.
+            return res.status(409).json({ message: 'OTA conflicts detected', conflicts });
+        }
+
+      for (const cancellation of cancellations) {
+        // ... process cancellations
+      }
+
+      for (const modification of modifications) {
+        // ... process modifications
+      }
+
+      for (const newBooking of newBookings) {
+        // ... process new bookings
       }
       ```
   
@@ -269,32 +267,47 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
   - [ ] Enhance `getOTAReservations` in `xmlController.js`:
     ```javascript
     // New pre-validation step
+    const extractReservationDetails = (reservation) => {
+      // Logic to extract check-in date, check-out date, room type, and rooms required from the reservation object
+      return {
+        checkInDate: reservation.BasicInformation.CheckInDate,
+        checkOutDate: reservation.BasicInformation.CheckOutDate,
+        roomTypeId: reservation.RoomAndGuestInformation.RoomAndGuestList[0].RoomInformation.RoomTypeCode,
+        roomsRequired: 1, // Assuming 1 room per reservation for now
+      };
+    };
+
     const validateReservationBatch = async (reservations) => {
       const validationResults = {
-        valid: [],
+        newBookings: [],
+        modifications: [],
+        cancellations: [],
         conflicts: [],
         errors: []
       };
       
       for (const res of reservations) {
         try {
-          const conflicts = await detectOTAConflicts(
-            requestId,
-            hotel_id,
-            res.checkInDate,
-            res.checkOutDate,
-            res.roomTypeId,
-            client
-          );
-          
-          if (conflicts.length > 0) {
-            validationResults.conflicts.push({
-              reservation: res,
-              conflicts
-            });
-          } else {
-            validationResults.valid.push(res);
-          }
+            const classification = res.TransactionType.DataClassification;
+            if (classification === 'NewBookReport') {
+                const { checkInDate, checkOutDate, roomTypeId, roomsRequired } = extractReservationDetails(res);
+                const conflicts = await detectOTAConflicts(requestId, hotel_id, checkInDate, checkOutDate, roomTypeId, roomsRequired, client);
+                if (conflicts.conflict) {
+                    validationResults.conflicts.push({ reservation: res, details: conflicts });
+                } else {
+                    validationResults.newBookings.push(res);
+                }
+            } else if (classification === 'ModificationReport') {
+                const { checkInDate, checkOutDate, roomTypeId, roomsRequired } = extractReservationDetails(res);
+                const conflicts = await detectOTAConflicts(requestId, hotel_id, checkInDate, checkOutDate, roomTypeId, roomsRequired, client);
+                if (conflicts.conflict) {
+                    validationResults.conflicts.push({ reservation: res, details: conflicts });
+                } else {
+                    validationResults.modifications.push(res);
+                }
+            } else if (classification === 'CancellationReport') {
+                validationResults.cancellations.push(res);
+            }
         } catch (error) {
           validationResults.errors.push({
             reservation: res,
@@ -307,30 +320,6 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
     };
     ```
     
-  - [ ] Implement batch processing for OTA status updates:
-    ```javascript
-    // New function in otaInventoryService.js
-    const updateOTAInventoryStatus = async (requestId, updates) => {
-      const results = [];
-      
-      for (const update of updates) {
-        try {
-          // Use same mechanism as otaInventory.vue
-          const result = await updateTLInventory(
-            update.hotelId,
-            update.roomTypeId,
-            update.date,
-            '3' // Not for Sale status
-          );
-          results.push({ ...update, success: true, result });
-        } catch (error) {
-          results.push({ ...update, success: false, error });
-        }
-      }
-      
-      return results;
-    };
-    ```
     
   - [ ] Add error handling and retry logic:
     ```javascript
@@ -358,7 +347,7 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
     // In addOTAReservation function
     const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       // 1. Extract reservation details
-      const { checkInDate, checkOutDate, roomTypeId } = extractReservationDetails(data);
+      const { checkInDate, checkOutDate, roomTypeId, roomsRequired } = extractReservationDetails(data);
       
       // 2. Check for conflicts
       const conflicts = await detectOTAConflicts(
@@ -367,21 +356,14 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
         checkInDate,
         checkOutDate,
         roomTypeId,
+        roomsRequired,
         client
       );
       
-      if (conflicts.length > 0) {
-        // 3. If conflicts found, mark OTA inventory as "Not for Sale"
-        await updateOTAInventoryStatus(requestId, [{
-          hotelId: hotel_id,
-          roomTypeId,
-          date: checkInDate,
-          status: '3' // Not for Sale
-        }]);
-        
+      if (conflicts.conflict) {
         throw new OTAReservationConflictError({
           message: 'OTA reservation conflict detected',
-          conflicts,
+          details: conflicts,
           reservation: data
         });
       }
@@ -393,24 +375,47 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
     
   - [ ] Update `editOTAReservation` and `cancelOTAReservation`:
     ```javascript
-    // Similar conflict detection as addOTAReservation
-    // For cancels, we may want to update OTA inventory back to available
-    const handleCancel = async (requestId, reservationId) => {
+    const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
+        // 1. Extract reservation details
+        const { checkInDate, checkOutDate, roomTypeId, roomsRequired } = extractReservationDetails(data);
+      
+        // 2. Check for conflicts
+        const conflicts = await detectOTAConflicts(
+            requestId,
+            hotel_id,
+            checkInDate,
+            checkOutDate,
+            roomTypeId,
+            roomsRequired,
+            client
+        );
+      
+        if (conflicts.conflict) {
+            throw new OTAReservationConflictError({
+                message: 'OTA reservation conflict detected',
+                details: conflicts,
+                reservation: data
+            });
+        }
+      
+        // 4. Proceed with reservation if no conflicts
+        // ... existing reservation logic ...
+    };
+
+    const cancelOTAReservation = async (requestId, hotel_id, data, client = null) => {
       // 1. Get reservation details
-      const reservation = await getReservationDetails(reservationId);
-      
-      // 2. Process cancellation
-      await cancelReservationInPMS(reservationId);
-      
-      // 3. Update OTA inventory if needed
-      if (isOTAreservation(reservation)) {
-        await updateOTAInventoryStatus(requestId, [{
-          hotelId: reservation.hotel_id,
-          roomTypeId: reservation.room_type_id,
-          date: reservation.check_in_date,
-          status: '1' // Available
-        }]);
-      }
+      const reservation = await getReservationByOTAId(data.UniqueID.ID);
+
+      // 2. Process cancellation in PMS
+      await cancelReservationInPMS(reservation.id);
+
+      // 3. Update OTA inventory to make the room available again
+      await updateOTAInventoryStatus(requestId, [{
+        hotelId: reservation.hotel_id,
+        roomTypeId: reservation.room_type_id,
+        date: reservation.check_in_date,
+        status: '1' // Available
+      }]);
     };
     ```
 
@@ -500,6 +505,9 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
     ```
 
 ### Phase 4: Testing & Deployment (Week 4)
+- [ ] **Local Development Testing**
+  - [ ] In `xmlController.js`, comment out `await client.query('COMMIT');` and replace it with `await client.query('ROLLBACK');` to allow for repeated testing against the local database without permanently altering the data.
+
 - [ ] **Testing Strategy**
   ```javascript
   // test/ota/conflictDetection.test.js
@@ -565,6 +573,111 @@ When processing reservations from Online Travel Agencies (OTAs) through XML inte
   - [ ] API documentation for new endpoints
   - [ ] Admin guide for conflict resolution
   - [ ] Operational runbook for support team
+
+### Testing Strategy
+
+```javascript
+// test/ota/otaProcessing.test.js
+const assert = require('assert');
+const { detectOTAConflicts } = require('../services/otaConflictService');
+const { getNumberOfAvailableRooms, extractReservationDetails } = require('../models/reservations');
+
+// Mock data
+const mockReservations = [
+    {
+        TransactionType: { DataClassification: 'NewBookReport' },
+        BasicInformation: { CheckInDate: '2025-08-01', CheckOutDate: '2025-08-05' },
+        RoomAndGuestInformation: { RoomAndGuestList: [{ RoomInformation: { RoomTypeCode: 'single' } }] },
+    },
+    {
+        TransactionType: { DataClassification: 'ModificationReport' },
+        BasicInformation: { CheckInDate: '2025-08-01', CheckOutDate: '2025-08-05' },
+        RoomAndGuestInformation: { RoomAndGuestList: [{ RoomInformation: { RoomTypeCode: 'double' } }] },
+    },
+    {
+        TransactionType: { DataClassification: 'CancellationReport' },
+    },
+];
+
+async function testReorderReservations() {
+    console.log('Running test: testReorderReservations');
+    const reordered = reorderReservations(mockReservations);
+    assert.strictEqual(reordered[0].TransactionType.DataClassification, 'CancellationReport', 'Test Case 1 Failed: Cancellation should be first');
+    assert.strictEqual(reordered[1].TransactionType.DataClassification, 'ModificationReport', 'Test Case 2 Failed: Modification should be second');
+    assert.strictEqual(reordered[2].TransactionType.DataClassification, 'NewBookReport', 'Test Case 3 Failed: New booking should be third');
+    console.log('Test passed: testReorderReservations');
+}
+
+async function testDetectOTAConflicts() {
+    console.log('Running test: testDetectOTAConflicts');
+    
+    // Mock the dependencies
+    const originalGetNumberOfAvailableRooms = getNumberOfAvailableRooms;
+    getNumberOfAvailableRooms = async () => 0;
+    
+    const conflict = await detectOTAConflicts('test-request', 1, mockReservations[0]);
+    assert.strictEqual(conflict.conflict, true, 'Test Case 1 Failed: Conflict should be detected');
+
+    getNumberOfAvailableRooms = async () => 1;
+    const noConflict = await detectOTAConflicts('test-request', 1, mockReservations[0]);
+    assert.strictEqual(noConflict.conflict, false, 'Test Case 2 Failed: Conflict should not be detected');
+    
+    // Restore the original function
+    getNumberOfAvailableRooms = originalGetNumberOfAvailableRooms;
+    
+    console.log('Test passed: testDetectOTAConflicts');
+}
+
+function reorderReservations(reservations) {
+    const cancellations = reservations.filter(r => r.TransactionType.DataClassification === 'CancellationReport');
+    const modifications = reservations.filter(r => r.TransactionType.DataClassification === 'ModificationReport');
+    const newBookings = reservations.filter(r => r.TransactionType.DataClassification === 'NewBookReport');
+    return [...cancellations, ...modifications, ...newBookings];
+}
+
+async function runTests() {
+    await testReorderReservations();
+    await testDetectOTAConflicts();
+}
+
+runTests();
+```
+
+## Helper Functions
+
+```javascript
+const getNumberOfAvailableRooms = async (requestId, hotelId, checkIn, checkOut, roomTypeId, client = null) => {
+  // This function will be in api/models/reservations.js
+  // It will return the number of available rooms for a given room type and date range
+};
+
+const extractReservationDetails = (reservation) => {
+  // Logic to extract check-in date, check-out date, room type, and rooms required from the reservation object
+  return {
+    checkInDate: reservation.BasicInformation.CheckInDate,
+    checkOutDate: reservation.BasicInformation.CheckOutDate,
+    roomTypeId: reservation.RoomAndGuestInformation.RoomAndGuestList[0].RoomInformation.RoomTypeCode,
+    roomsRequired: 1, // Assuming 1 room per reservation for now
+  };
+};
+```
+
+### Database Schema
+
+A new table, `ota_reservation_queue`, will be created to store incoming OTA reservations before they are processed.
+
+```sql
+CREATE TABLE ota_reservation_queue (
+    id SERIAL PRIMARY KEY,
+    hotel_id INTEGER NOT NULL,
+    ota_reservation_id VARCHAR(255) NOT NULL,
+    reservation_data JSONB NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, processed, failed
+    conflict_details JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
 
 ## Technical Considerations
 
