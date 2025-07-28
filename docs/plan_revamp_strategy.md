@@ -206,6 +206,86 @@ UNIQUE (hotel_id, hotel_plan_id, COALESCE(addons_global_id, 0), COALESCE(addons_
     - Handle room-type specific mappings
     - _Requirements: Maintain rate calculations, preserve addon relationships_
 
+### Data Migration Details
+
+Here are the detailed steps and example SQL queries for the data migration. Note that these are examples and may need to be adapted for the specific production environment.
+
+#### 2.1 Migrate Global Plans to Categories
+
+First, we'll populate the `plan_categories` table by selecting the distinct plan names from the old `plans_global` table.
+
+```sql
+INSERT INTO plan_categories (name, description, color, display_order, created_by)
+SELECT 
+    name,
+    description,
+    COALESCE(color, '#D3D3D3'),
+    display_order,
+    1 -- Or the ID of a default system user
+FROM plans_global;
+```
+
+#### 2.2 Migrate Hotel Plans
+
+Next, we'll migrate the existing `plans_hotel` data into the new `hotel_plans` table. This query assumes that the old `plans_hotel` has a `plans_global_id` to link back to the global plan, which we use to find the new `category_id`.
+
+```sql
+INSERT INTO hotel_plans (hotel_id, category_id, name, description, plan_type, color, display_order, is_active, created_by)
+SELECT
+    ph.hotel_id,
+    pc.id AS category_id,
+    ph.name,
+    ph.description,
+    'per_room', -- Or derive from existing data if available
+    COALESCE(ph.color, '#D3D3D3'),
+    ph.display_order,
+    ph.is_active,
+    1 -- Or the ID of a default system user
+FROM plans_hotel ph
+JOIN plans_global pg ON ph.plans_global_id = pg.id
+JOIN plan_categories pc ON pg.name = pc.name;
+```
+
+*Note: This example assumes all migrated plans are hotel-level (`room_type_id` is NULL). If you have room-type specific plans in the old schema, you'll need to adjust this query to include the `room_type_id`.*
+
+#### 2.3 Migrate Plan Rates and Addons
+
+After migrating the plans, we need to update the `plans_rates` and `plan_addons` tables to reference the new `hotel_plans` table. This is more of an `UPDATE` operation than an `INSERT`.
+
+First, you would need to add a temporary column to `plans_hotel` to store the new `hotel_plan_id` after the migration.
+
+```sql
+ALTER TABLE plans_hotel ADD COLUMN new_hotel_plan_id INT;
+
+-- After running the hotel_plans migration, populate this new column
+UPDATE plans_hotel ph
+SET new_hotel_plan_id = (
+    SELECT hp.id 
+    FROM hotel_plans hp
+    WHERE hp.hotel_id = ph.hotel_id AND hp.name = ph.name AND hp.room_type_id IS NULL
+);
+
+-- Now, update plans_rates
+UPDATE plans_rates pr
+SET hotel_plan_id = (
+    SELECT ph.new_hotel_plan_id
+    FROM plans_hotel ph
+    WHERE pr.hotel_plan_id = ph.id AND pr.hotel_id = ph.hotel_id
+);
+
+-- And update plan_addons
+UPDATE plan_addons pa
+SET hotel_plan_id = (
+    SELECT ph.new_hotel_plan_id
+    FROM plans_hotel ph
+    WHERE pa.hotel_plan_id = ph.id AND pa.hotel_id = ph.hotel_id
+);
+
+-- Finally, you can drop the temporary column
+ALTER TABLE plans_hotel DROP COLUMN new_hotel_plan_id;
+
+```
+
 - [ ] 3. API and Service Layer Updates
   - [ ] 3.1 Create new endpoints for plan management
     - CRUD operations for plan categories
@@ -339,6 +419,18 @@ UNIQUE (hotel_id, hotel_plan_id, COALESCE(addons_global_id, 0), COALESCE(addons_
 2. **Consistency**: Maintain comparability through categories
 3. **Scalability**: Easy to add room-type specific plans
 4. **Maintainability**: Clear separation of concerns
+
+## Risks and Mitigations
+
+| Risk | Probability | Impact | Mitigation |
+| :--- | :--- | :--- | :--- |
+| **Data Migration Failure** | Medium | High | - Wrap migration in a transaction<br>- Perform dry runs on staging<br>- Test rollback procedures |
+| **Performance Degradation** | Medium | High | - Benchmark queries on staging<br>- Optimize indexes and queries<br>- Monitor performance post-deployment |
+| **User Confusion** | Low | Medium | - Conduct UAT with pilot users<br>- Provide training and documentation<br>- Gather feedback post-launch |
+
+## Plan Comparability
+
+Plan comparability will be maintained through the `plan_categories` table. Plans belonging to the same category are considered comparable across different hotels and room types. This allows for consistent reporting and filtering, even with per-hotel customizations. The `display_order` field within the category will provide a default sorting, which can be overridden at the hotel or room-type level.
 
 ## Future Considerations
 1. Plan versioning
