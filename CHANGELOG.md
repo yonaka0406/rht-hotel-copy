@@ -180,6 +180,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## 1.0.6 (2025-07-28)
+
+- Bugfix: Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
+- Bugfix: Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
+- Optimization: Build Process: Optimized Vite build configuration for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
+
 ## 1.0.5 (2025-07-23)
 
 - Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
@@ -252,33 +258,9 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## Future Releases
-
-### Planned Features
-- Advanced reporting dashboard with customizable metrics
-- Advanced analytics and business intelligence features
-
-### Backlog
-- Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
-- New Reservation: Urgent room hold and pending status. (#017)
-- CRM: Data recording via upload method. (#037)
-- CRM: Sales cool performance report. (#041)
-- Bug #11: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA, resulting in duplicate reservations and edit failures.
-- Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry).
-
-### Unreleased
-
-#### Fixed
-- Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
-- Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
-
-#### Optimizations
-- Build Process: Optimized Vite build configuration for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
-
----
-
 ## Version History
 
+- **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target.
 - **1.0.5** (2025-07-23) - OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously. Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
 - **1.0.4** (2025-07-17) - Added reservation copy function, calendar UI/UX improvements, bugfixes for client/edit/addon/meal exports, and new calendar legend.
 - **1.0.3** (2025-07-16) - Added comprehensive About/FAQ system with searchable help documentation and enhanced codebase documentation.
@@ -302,6 +284,24 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## Unreleased
+
+---
+## Future Releases
+
+### Planned Features
+- Advanced reporting dashboard with customizable metrics
+- Advanced analytics and business intelligence features
+
+### Backlog
+- Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
+- New Reservation: Urgent room hold and pending status. (#017)
+- CRM: Data recording via upload method. (#037)
+- CRM: Sales cool performance report. (#041)
+- Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry, the quantity of rooms in OTA should reflect the not imported entries as well).
+
+---
+
 ## Contributing
 
 For information about contributing to this project, please see our [Development Guidelines](instructions.md).
@@ -309,12 +309,3 @@ For information about contributing to this project, please see our [Development 
 ## Support
 
 For support and troubleshooting, please refer to our [Documentation](docs/) or contact the development team.
-
-## Backlog
-
-The following bugs and feature requests are not yet completed (status: Open or In Progress):
-
-- Bug #3 / Feature Request: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it. 
-- Feature Request #10: Create a page for part-time staff that displays only limited, essential information in a defined format, such as in/out clients and rooms for the week.
-- Feature Request #12: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type.
-- Feature Request #14: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.
