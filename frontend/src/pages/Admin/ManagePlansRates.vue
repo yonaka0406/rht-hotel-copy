@@ -1166,30 +1166,83 @@
     });
 
     const totalPriceForSelectedDay = computed(() => {
+        console.group('Calculating totalPriceForSelectedDay');
+        console.log('Selected Date:', selectedDate.value);
+        
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
+            console.log('No filtered conditions found');
+            console.groupEnd();
             return null;
         }
+        
+        console.log('Filtered Conditions:', filteredCurrentConditions.value);
+        
         let baseRate = 0, percentage = 0, flatFee = 0;
         const selectedDateObj = new Date(selectedDate.value);
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
-        filteredCurrentConditions.value.forEach(rate => {
+        
+        console.log('Selected Day:', selectedDay);
+        console.log('Selected Month:', selectedMonth);
+        
+        filteredCurrentConditions.value.forEach((rate, index) => {
+            console.group(`Rate #${index + 1}`);
+            console.log('Rate:', rate);
+            
             let match = false;
             if (rate.condition_type === 'day_of_week') {
-                match = toArray(rate.condition_value).includes(selectedDay);
+                const conditionValues = toArray(rate.condition_value);
+                console.log('Day of week check - Condition values:', conditionValues, 'Selected day:', selectedDay);
+                match = conditionValues.includes(selectedDay);
             } else if (rate.condition_type === 'month') {
-                match = toArray(rate.condition_value).includes(selectedMonth);
+                const conditionValues = toArray(rate.condition_value);
+                console.log('Month check - Condition values:', conditionValues, 'Selected month:', selectedMonth);
+                match = conditionValues.includes(selectedMonth);
             } else if (rate.condition_type === 'no_restriction') {
+                console.log('No restriction - match is true');
                 match = true;
             }
+            
+            console.log('Does this rate match?', match);
+            
             if (match) {
-                if (rate.adjustment_type === 'base_rate') baseRate += parseFloat(rate.adjustment_value) || 0;
-                if (rate.adjustment_type === 'percentage') percentage += parseFloat(rate.adjustment_value) || 0;
-                if (rate.adjustment_type === 'flat_fee') flatFee += parseFloat(rate.adjustment_value) || 0;
+                const value = parseFloat(rate.adjustment_value) || 0;
+                console.log(`Matched rate - Type: ${rate.adjustment_type}, Value: ${value}`);
+                
+                if (rate.adjustment_type === 'base_rate') {
+                    console.log(`Adding to baseRate: ${value} (was ${baseRate})`);
+                    baseRate += value;
+                } else if (rate.adjustment_type === 'percentage') {
+                    console.log(`Adding to percentage: ${value} (was ${percentage})`);
+                    percentage += value;
+                } else if (rate.adjustment_type === 'flat_fee') {
+                    console.log(`Adding to flatFee: ${value} (was ${flatFee})`);
+                    flatFee += value;
+                }
+            } else {
+                console.log('Rate did not match conditions');
             }
+            
+            console.groupEnd();
         });
-        const priceWithPercentage = Math.round((baseRate * (1 + percentage / 100)) * 100) / 100;
-        const finalPrice = priceWithPercentage + flatFee;
+        
+        console.log('After processing all rates:');
+        console.log('Base Rate:', baseRate);
+        console.log('Percentage:', percentage);
+        console.log('Flat Fee:', flatFee);
+        
+        // Apply percentage adjustment and round down to nearest 100, matching backend logic
+        const priceAfterPercentage = baseRate * (1 + percentage / 100);
+        const roundedPrice = Math.floor(priceAfterPercentage / 100) * 100;
+        console.log('Price after percentage calculation:', priceAfterPercentage);
+        console.log('Price after rounding down to nearest 100:', roundedPrice);
+        
+        // Add flat fee after rounding
+        const finalPrice = roundedPrice + flatFee;
+        console.log('Final price after adding flat fee:', finalPrice);
+        
+        console.groupEnd();
+        
         return finalPrice > 0 ? finalPrice : null;
     });
 
