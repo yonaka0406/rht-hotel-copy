@@ -5,6 +5,28 @@ All notable changes to the Hotel Management System will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+## [Unreleased]
+
+### Added
+- **User Experience**: Added toast notifications in Japanese for permission-denied (403) errors to improve user feedback when they don't have permission to perform an action.
+
+---
+## Future Releases
+
+### Planned Features
+- Advanced reporting dashboard with customizable metrics
+- Advanced analytics and business intelligence features
+
+### Backlog
+- Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
+- New Reservation: Urgent room hold and pending status. (#017)
+- CRM: Data recording via upload method. (#037)
+- CRM: Sales cool performance report. (#041)
+- Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry, the quantity of rooms in OTA should reflect the not imported entries as well).
+
+---
+
 ## [0.1.0] - 2025-02-21
 
 ### Added
@@ -180,52 +202,12 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## 1.0.6 (2025-07-28)
+## [1.0.1] - 2025-06-11
 
-- Bugfix: Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
-- Bugfix: Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
-- Optimization: Build Process: Optimized Vite build configuration for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
-
-## 1.0.5 (2025-07-23)
-
-- Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
-- Global reservation search in the top menu.
-- Small design change in reservation list
-- OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously.
-- Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
-
----
-
-## [1.0.4] - 2025-07-17
-- Feature: Implemented 'Copy Reservation' function allowing users to duplicate a reservation for a different booker, preserving all other reservation details. (Feature Request #7)
-- Bugfix: Calendar View now resets scroll position to top when date is changed. (Bug #1)
-- Enhancement: Calendar View now displays visual lines/borders in room cells for better visibility. (Bug #2)
-- Enhancement: Romaji auto-capitalization now preserves all-uppercase input (e.g., 'NTT'). (Bug #4)
-- Bugfix: Client is now editable immediately after creating a hold reservation, without needing to refresh the page. (Bug #5)
-- Bugfix: Addons added from Plan/Addon Edit now appear immediately in the reservation edit page. (Bug #6)
-- Enhancement: When exporting the meals quantity report with no addons, a clear toast message is shown ('No meal data to export'). (Bug #8)
-- Bugfix: Meal addons are now correctly counted and appear in both the all reservations export and the meals report. (Bug #9)
-- Enhancement: Removed the requirement to have a reservation client in order to perform check-in. (Feature Request #11)
-- Enhancement: Added a legend to the Calendar view explaining the meaning of all icons used. (Feature Request #13)
-- Bugfix: After deleting a reservation, the confirmation prompt now closes automatically. (Bug #10, July 15, 2025)
-
----
-
-## [1.0.3] - 2025-07-16
-
-### Added
-- **About/FAQ System** - Comprehensive help system with searchable FAQ and changelog display
-- **System Help Documentation** - Step-by-step instructions for all major system functions
-- **Japanese FAQ Content** - Complete FAQ coverage for reservations, clients, reports, billing, and system management
-- **Interactive Search** - Real-time FAQ search with highlighting and filtering capabilities
-- **Changelog Display** - Version history with filtering by type and version
-- **Mobile-Responsive Design** - Optimized layout for all device sizes
-- **Accessibility Features** - ARIA labels, keyboard navigation, and screen reader support
-
-### Improved
-- **Documentation System** - Enhanced codebase documentation and structured help content
-- **User Experience** - Intuitive tabbed interface for help content navigation
-- **Content Management** - External JSON files for easy FAQ and changelog updates
+### Fixed
+- Production Environment: Add-ons not reflected. (#033)
+- Production Environment: Customer name display order changed. (#035)
+- CRM: Editing sales actions. (#038)
 
 ---
 
@@ -249,12 +231,54 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## [1.0.1] - 2025-06-11
+## [1.0.3] - 2025-07-16
 
-### Fixed
-- Production Environment: Add-ons not reflected. (#033)
-- Production Environment: Customer name display order changed. (#035)
-- CRM: Editing sales actions. (#038)
+### Added
+- **About/FAQ System** - Comprehensive help system with searchable FAQ and changelog display
+- **System Help Documentation** - Step-by-step instructions for all major system functions
+- **Japanese FAQ Content** - Complete FAQ coverage for reservations, clients, reports, billing, and system management
+- **Interactive Search** - Real-time FAQ search with highlighting and filtering capabilities
+- **Changelog Display** - Version history with filtering by type and version
+- **Mobile-Responsive Design** - Optimized layout for all device sizes
+- **Accessibility Features** - ARIA labels, keyboard navigation, and screen reader support
+
+### Improved
+- **Documentation System** - Enhanced codebase documentation and structured help content
+- **User Experience** - Intuitive tabbed interface for help content navigation
+- **Content Management** - External JSON files for easy FAQ and changelog updates
+
+---
+
+## [1.0.4] - 2025-07-17
+- Feature: Implemented 'Copy Reservation' function allowing users to duplicate a reservation for a different booker, preserving all other reservation details. (Feature Request #7)
+- Bugfix: Calendar View now resets scroll position to top when date is changed. (Bug #1)
+- Enhancement: Calendar View now displays visual lines/borders in room cells for better visibility. (Bug #2)
+- Enhancement: Romaji auto-capitalization now preserves all-uppercase input (e.g., 'NTT'). (Bug #4)
+- Bugfix: Client is now editable immediately after creating a hold reservation, without needing to refresh the page. (Bug #5)
+- Bugfix: Addons added from Plan/Addon Edit now appear immediately in the reservation edit page. (Bug #6)
+- Enhancement: When exporting the meals quantity report with no addons, a clear toast message is shown ('No meal data to export'). (Bug #8)
+- Bugfix: Meal addons are now correctly counted and appear in both the all reservations export and the meals report. (Bug #9)
+- Enhancement: Removed the requirement to have a reservation client in order to perform check-in. (Feature Request #11)
+- Enhancement: Added a legend to the Calendar view explaining the meaning of all icons used. (Feature Request #13)
+- Bugfix: After deleting a reservation, the confirmation prompt now closes automatically. (Bug #10, July 15, 2025)
+
+---
+
+## 1.0.5 (2025-07-23)
+
+- Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
+- Global reservation search in the top menu.
+- Small design change in reservation list
+- OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously.
+- Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
+
+---
+
+## 1.0.6 (2025-07-28)
+
+- Bugfix: Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
+- Bugfix: Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
+- Optimization: Build Process: Optimized Vite build configuration for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
 
 ---
 
@@ -281,24 +305,6 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **0.3.0** (2025-03-11) - Implemented room movement for full rooms, calendar grid lines, drag-and-drop room changes, and vacancy count display.
 - **0.2.0** (2025-03-07) - Changed warning design for drag-and-drop, increased date/room font size, separated Primevue Japanese display/date range, partially resolved date change method, and added ability to add/reduce rooms in confirmed reservations.
 - **0.1.0** (2025-02-21) - Initial pre-release with color-coded reservation calendar, alert notification settings (not started), and employee stay index.
-
----
-
-## Unreleased
-
----
-## Future Releases
-
-### Planned Features
-- Advanced reporting dashboard with customizable metrics
-- Advanced analytics and business intelligence features
-
-### Backlog
-- Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
-- New Reservation: Urgent room hold and pending status. (#017)
-- CRM: Data recording via upload method. (#037)
-- CRM: Sales cool performance report. (#041)
-- Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry, the quantity of rooms in OTA should reflect the not imported entries as well).
 
 ---
 
