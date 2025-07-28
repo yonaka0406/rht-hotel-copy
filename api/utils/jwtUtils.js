@@ -42,11 +42,13 @@ const verifyToken = (token) => {
     });
     return { success: true, decoded };
   } catch (error) {
+    /*
     console.error('Token Verification Detailed Error:', {
       name: error.name,
       message: error.message,
       stack: error.stack
     });
+    */
 
     // Return specific error types for better handling
     if (error.name === 'JsonWebTokenError') {
