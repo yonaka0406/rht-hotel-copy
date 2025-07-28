@@ -304,8 +304,8 @@
                 dayPlanSelections.value[day.value] = null;
             }
         }
-        console.log('openEditGlobalPattern data:', editGlobalPattern.value);
-        console.log('openEditGlobalPattern dayPlanSelections:', dayPlanSelections.value);
+        // console.log('openEditGlobalPattern data:', editGlobalPattern.value);
+        // console.log('openEditGlobalPattern dayPlanSelections:', dayPlanSelections.value);
         showEditGlobalDialog.value = true;
     };
     const saveGlobalPattern = async() => {
@@ -421,8 +421,8 @@
         await fetchPlansForHotel(selectedHotel.value.id);
         hotelPlans.value = plans.value;
 
-        console.log('selectHotel hotel:', selectedHotel.value);
-        console.log('selectHotel hotelPlans:', hotelPlans.value);
+        // console.log('selectHotel hotel:', selectedHotel.value);
+        // console.log('selectHotel hotelPlans:', hotelPlans.value);
     };
     const allHotelPatterns = ref([]);
     const hotelPatterns = computed(() => {
@@ -438,8 +438,8 @@
     const showHotelDialog = ref(false);
     const showEditHotelDialog = ref(false);
     const getPatternCount = (hotel_id) => {
-        console.log('getPatternCount hotel_id:', hotel_id);
-        console.log('getPatternCount allHotelPatterns:', allHotelPatterns.value);
+        // console.log('getPatternCount hotel_id:', hotel_id);
+        // console.log('getPatternCount allHotelPatterns:', allHotelPatterns.value);
         return allHotelPatterns.value.filter(pattern => pattern.hotel_id === hotel_id).length;
     };
     const newHotelPatternReset = (hotel_id) => {
@@ -471,8 +471,8 @@
                 dayPlanSelections.value[day.value] = null;
             }
         }
-        console.log('openEditHotelPattern data:', editHotelPattern.value);
-        console.log('openEditHotelPattern dayPlanSelections:', dayPlanSelections.value);
+        // console.log('openEditHotelPattern data:', editHotelPattern.value);
+        // console.log('openEditHotelPattern dayPlanSelections:', dayPlanSelections.value);
         showEditHotelDialog.value = true;
     };
     const saveHotelPattern = async() => {
@@ -518,7 +518,7 @@
 
         newHotelPattern.value.template = template;
 
-        console.log('saveHotelPattern newHotelPattern:', newHotelPattern.value);
+        // console.log('saveHotelPattern newHotelPattern:', newHotelPattern.value);
         
         await createPlanPattern(newHotelPattern.value);
         newHotelPatternReset();
@@ -592,14 +592,14 @@
         await fetchPlansGlobal();
         globalPlans.value = plans.value;
                 
-        console.log('onMounted ManagePlansPatterns patterns:', patterns.value);
-        console.log('onMounted ManagePlansPatterns globalPlans:', globalPlans.value);
-        console.log('onMounted ManagePlansPatterns globalPlans:', globalPlans.value);
+        // console.log('onMounted ManagePlansPatterns patterns:', patterns.value);
+        // console.log('onMounted ManagePlansPatterns globalPlans:', globalPlans.value);
+        // console.log('onMounted ManagePlansPatterns globalPlans:', globalPlans.value);
 
     });
 
     watch(dayPlanSelections, (newSelections) => {
-        console.log('dayPlanSelections changed:', newSelections);
+        // console.log('dayPlanSelections changed:', newSelections);
     }, { deep: true });
 
 </script>
