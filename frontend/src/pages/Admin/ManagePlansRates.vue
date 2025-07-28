@@ -694,17 +694,17 @@
         showAdjustmentDialog.value = true;
     };
     const openEditAdjustmentDialog = (adjustmentData) => {
-        console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
+        // console.log('[openEditAdjustmentDialog] adjustmentData:', adjustmentData);
         editAdjustment.value = { ...adjustmentData };
         // Ensure condition_type is set before updating options
         updateEditConditionValues();
         // Log condition_type and conditionValues
-        console.log('[openEditAdjustmentDialog] condition_type:', editAdjustment.value.condition_type);
-        console.log('[openEditAdjustmentDialog] conditionValues:', conditionValues.value);
+        // console.log('[openEditAdjustmentDialog] condition_type:', editAdjustment.value.condition_type);
+        // console.log('[openEditAdjustmentDialog] conditionValues:', conditionValues.value);
         // Normalize condition_value to match option values (lowercase)
         let normalized = toArray(editAdjustment.value.condition_value).map(v => typeof v === 'string' ? v.toLowerCase() : v);
         selectedEditConditions.value = normalized;
-        console.log('[openEditAdjustmentDialog] selectedEditConditions:', selectedEditConditions.value);
+        // console.log('[openEditAdjustmentDialog] selectedEditConditions:', selectedEditConditions.value);
         showEditAdjustmentDialog.value = true;
     };
     const updateConditionValues = () => {
@@ -730,8 +730,8 @@
         } else {
             conditionValues.value = [];
         }
-        console.log('[updateEditConditionValues] condition_type:', editAdjustment.value.condition_type);
-        console.log('[updateEditConditionValues] conditionValues:', conditionValues.value);
+        // console.log('[updateEditConditionValues] condition_type:', editAdjustment.value.condition_type);
+        // console.log('[updateEditConditionValues] conditionValues:', conditionValues.value);
     };
     const saveAdjustment = async () => {
         // Validation
@@ -787,7 +787,7 @@
             condition_value: JSON.stringify(newAdjustment.value.condition_value),
         };
 
-        console.log('[saveAdjustment] Sending:', formattedAdjustment);
+        // console.log('[saveAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/${props.plan.id}/rates`, {
@@ -882,7 +882,7 @@
             condition_value: JSON.stringify(editAdjustment.value.condition_value),
         };
 
-        console.log('[updateAdjustment] Sending:', formattedAdjustment);
+        // console.log('[updateAdjustment] Sending:', formattedAdjustment);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/plans/rates/${editAdjustment.value.id}`, {  // Use adjustment ID for PUT request
@@ -1161,87 +1161,87 @@
     }, { immediate: true });
 
     watch(selectedEditConditions, (newVal) => {
-        console.log('[watch selectedEditConditions] newVal:', newVal);
+        // console.log('[watch selectedEditConditions] newVal:', newVal);
         editAdjustment.value.condition_value = newVal;
     });
 
     const totalPriceForSelectedDay = computed(() => {
-        console.group('Calculating totalPriceForSelectedDay');
-        console.log('Selected Date:', selectedDate.value);
+        // console.group('Calculating totalPriceForSelectedDay');
+        // console.log('Selected Date:', selectedDate.value);
         
         if (!filteredCurrentConditions.value || filteredCurrentConditions.value.length === 0) {
-            console.log('No filtered conditions found');
-            console.groupEnd();
+            // console.log('No filtered conditions found');
+            // console.groupEnd();
             return null;
         }
         
-        console.log('Filtered Conditions:', filteredCurrentConditions.value);
+        // console.log('Filtered Conditions:', filteredCurrentConditions.value);
         
         let baseRate = 0, percentage = 0, flatFee = 0;
         const selectedDateObj = new Date(selectedDate.value);
         const selectedDay = selectedDateObj.toLocaleString('en-us', { weekday: 'short' }).toLowerCase();
         const selectedMonth = selectedDateObj.toLocaleString('en-us', { month: 'long' }).toLowerCase();
         
-        console.log('Selected Day:', selectedDay);
-        console.log('Selected Month:', selectedMonth);
+        // console.log('Selected Day:', selectedDay);
+        // console.log('Selected Month:', selectedMonth);
         
         filteredCurrentConditions.value.forEach((rate, index) => {
-            console.group(`Rate #${index + 1}`);
-            console.log('Rate:', rate);
+            // console.group(`Rate #${index + 1}`);
+            // console.log('Rate:', rate);
             
             let match = false;
             if (rate.condition_type === 'day_of_week') {
                 const conditionValues = toArray(rate.condition_value);
-                console.log('Day of week check - Condition values:', conditionValues, 'Selected day:', selectedDay);
+                // console.log('Day of week check - Condition values:', conditionValues, 'Selected day:', selectedDay);
                 match = conditionValues.includes(selectedDay);
             } else if (rate.condition_type === 'month') {
                 const conditionValues = toArray(rate.condition_value);
-                console.log('Month check - Condition values:', conditionValues, 'Selected month:', selectedMonth);
+                // console.log('Month check - Condition values:', conditionValues, 'Selected month:', selectedMonth);
                 match = conditionValues.includes(selectedMonth);
             } else if (rate.condition_type === 'no_restriction') {
-                console.log('No restriction - match is true');
+                // console.log('No restriction - match is true');
                 match = true;
             }
             
-            console.log('Does this rate match?', match);
+            // console.log('Does this rate match?', match);
             
             if (match) {
                 const value = parseFloat(rate.adjustment_value) || 0;
-                console.log(`Matched rate - Type: ${rate.adjustment_type}, Value: ${value}`);
+                // console.log(`Matched rate - Type: ${rate.adjustment_type}, Value: ${value}`);
                 
                 if (rate.adjustment_type === 'base_rate') {
-                    console.log(`Adding to baseRate: ${value} (was ${baseRate})`);
+                    // console.log(`Adding to baseRate: ${value} (was ${baseRate})`);
                     baseRate += value;
                 } else if (rate.adjustment_type === 'percentage') {
-                    console.log(`Adding to percentage: ${value} (was ${percentage})`);
+                    // console.log(`Adding to percentage: ${value} (was ${percentage})`);
                     percentage += value;
                 } else if (rate.adjustment_type === 'flat_fee') {
-                    console.log(`Adding to flatFee: ${value} (was ${flatFee})`);
+                    // console.log(`Adding to flatFee: ${value} (was ${flatFee})`);
                     flatFee += value;
                 }
             } else {
-                console.log('Rate did not match conditions');
+                // console.log('Rate did not match conditions');
             }
             
-            console.groupEnd();
+            // console.groupEnd();
         });
         
-        console.log('After processing all rates:');
-        console.log('Base Rate:', baseRate);
-        console.log('Percentage:', percentage);
-        console.log('Flat Fee:', flatFee);
+        // console.log('After processing all rates:');
+        // console.log('Base Rate:', baseRate);
+        // console.log('Percentage:', percentage);
+        // console.log('Flat Fee:', flatFee);
         
         // Apply percentage adjustment and round down to nearest 100, matching backend logic
         const priceAfterPercentage = baseRate * (1 + percentage / 100);
         const roundedPrice = Math.floor(priceAfterPercentage / 100) * 100;
-        console.log('Price after percentage calculation:', priceAfterPercentage);
-        console.log('Price after rounding down to nearest 100:', roundedPrice);
+        // console.log('Price after percentage calculation:', priceAfterPercentage);
+        // console.log('Price after rounding down to nearest 100:', roundedPrice);
         
         // Add flat fee after rounding
         const finalPrice = roundedPrice + flatFee;
-        console.log('Final price after adding flat fee:', finalPrice);
+        // console.log('Final price after adding flat fee:', finalPrice);
         
-        console.groupEnd();
+        // console.groupEnd();
         
         return finalPrice > 0 ? finalPrice : null;
     });
