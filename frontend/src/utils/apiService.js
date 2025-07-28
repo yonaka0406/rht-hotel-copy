@@ -67,6 +67,22 @@ class ApiService {
         throw new AuthError(data.errorType, data.error);
       }
 
+      // Handle permission denied (403) errors
+      if (response.status === 403) {
+        // Import toast here to avoid circular dependencies
+        const { useToast } = await import('primevue/usetoast');
+        const toast = useToast();
+        
+        toast.add({
+          severity: 'warn',
+          summary: '権限エラー',
+          detail: 'この操作を実行する権限がありません。',
+          life: 5000
+        });
+        
+        throw new Error('Forbidden: You do not have permission to perform this action.');
+      }
+
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
