@@ -50,7 +50,7 @@ const getEnvConfig = (req) => {
   return config;
 };
 
-// Serve the static files from the Vue app's 'dist' directory
+// Serve the static files from the Vue app's 'dist' directory //DOCKER CHANGE
 const frontendDistPath = path.join(__dirname, '../frontend/dist');
 app.use(express.static(frontendDistPath));
 
@@ -486,7 +486,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Fallback for SPA routes (Must come last)
 app.get('/*splat', (req, res) => {
-  //res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  //res.sendFile(path.join(__dirname, 'public', 'index.html')); //DOCKER CHANGE
   res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
 });  
 
