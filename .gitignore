@@ -12,3 +12,4 @@ api/tmp/uploads/
 /server-config/pm2/logs
 /api/tests/mockDB
 docker-entrypoint-initdb.d/wehub-backup.dump
+
