@@ -861,17 +861,72 @@
             }
         };
         const applyPlanChanges = async () => {
-            try {               
-                await setRoomPlan(reservationInfo.value.hotel_id, selectedGroup.value.room_id, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value, selectedDays.value);
-                        
+            try {                      
+                //console.group('applyPlanChanges - Debug Info');
+                //console.log('1. Starting plan changes with data:');
+                //console.log('   - Hotel ID:', reservationInfo.value.hotel_id);
+                //console.log('   - Room ID:', selectedGroup.value.room_id);
+                //console.log('   - Reservation ID:', reservationInfo.value.reservation_id);
+                //console.log('   - Selected Plan:', selectedPlan.value);
+                //console.log('   - Selected Addons:', selectedAddon.value);
+                //console.log('   - Selected Days:', selectedDays.value);
+                
+                //console.log('2. Calling setRoomPlan with parameters:');
+                const params = {
+                    hotel_id: reservationInfo.value.hotel_id,
+                    room_id: selectedGroup.value.room_id,
+                    reservation_id: reservationInfo.value.reservation_id,
+                    plan: selectedPlan.value,
+                    addons: selectedAddon.value,
+                    daysOfTheWeek: selectedDays.value
+                };
+                //console.log('   Parameters:', JSON.parse(JSON.stringify(params)));
+                
+                // Make the API call
+                //console.log('3. Making API call to update room plan...');
+                const startTime = performance.now();
+                const result = await setRoomPlan(
+                    reservationInfo.value.hotel_id, 
+                    selectedGroup.value.room_id, 
+                    reservationInfo.value.reservation_id, 
+                    selectedPlan.value, 
+                    selectedAddon.value, 
+                    selectedDays.value
+                );
+                const endTime = performance.now();
+                
+                //console.log(`4. API call completed in ${(endTime - startTime).toFixed(2)}ms`);
+                //console.log('   API Response:', result);
+                
                 closeRoomEditDialog();
     
                 // Provide feedback to the user
                 toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+                //console.groupEnd();
                 
             } catch (error) {
-                console.error('Failed to apply changes:', error);                
-                toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
+                console.error('Failed to apply changes:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    response: error.response?.data
+                });
+                //console.groupEnd();
+                
+                let errorMessage = '変更の適用に失敗しました。';
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+                
+                toast.add({ 
+                    severity: 'error', 
+                    summary: 'エラー', 
+                    detail: errorMessage, 
+                    life: 5000 
+                });
             }
         };
         const applyPatternChanges = async () => {
