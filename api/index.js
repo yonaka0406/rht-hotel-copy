@@ -50,6 +50,10 @@ const getEnvConfig = (req) => {
   return config;
 };
 
+// Serve the static files from the Vue app's 'dist' directory //DOCKER CHANGE
+const frontendDistPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDistPath));
+
 // *** IMPORTANT: CORS middleware should typically come very early ***
 // It needs to handle OPTIONS preflight requests before other middleware process the actual request.
 // Use dynamic origin based on request for more flexibility if needed,
@@ -482,8 +486,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Fallback for SPA routes (Must come last)
 app.get('/*splat', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  //res.sendFile(path.join(__dirname, 'public', 'index.html')); //DOCKER CHANGE
+  res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+});  
 
 // Start the server
 /*
@@ -495,7 +500,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
 // Start the servers
 httpServer.listen(PORT, '0.0.0.0', () => {
-  // logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
+  logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
 /*
