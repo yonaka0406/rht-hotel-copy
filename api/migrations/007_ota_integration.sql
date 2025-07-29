@@ -445,3 +445,22 @@ CREATE TABLE xml_responses (
    response XML NOT NULL,
    PRIMARY KEY (id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+CREATE TABLE ota_reservation_queue (
+   id SERIAL PRIMARY KEY,
+   hotel_id INTEGER NOT NULL,
+   ota_reservation_id VARCHAR(255) NOT NULL,
+   transaction_id VARCHAR(255) NOT NULL, -- Unique transaction ID from OTA
+   reservation_data JSONB NOT NULL,
+   status VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, processed, failed
+   conflict_details JSONB,
+   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+   CONSTRAINT uq_ota_transaction UNIQUE (hotel_id, transaction_id)
+);
+
+-- Index for faster lookups by transaction_id
+CREATE INDEX idx_ota_reservation_transaction ON ota_reservation_queue (hotel_id, transaction_id);
+
+-- Index for querying by status
+CREATE INDEX idx_ota_reservation_status ON ota_reservation_queue (status);
