@@ -5,6 +5,55 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ## Bug Reports
 
+### July 29, 2025
+
+#### Bug #18: Calendar Scrollbar Disappears on Date Selection
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The horizontal scrollbar in the reservation calendar disappears when a date is selected, making it difficult to navigate between dates.
+- **Steps to Reproduce**:
+  1. Open the reservation calendar
+  2. Select a date
+  3. Observe that the horizontal scrollbar disappears
+- **Expected Behavior**: The horizontal scrollbar should remain visible and functional at all times
+- **Actual Behavior**: The scrollbar disappears after date selection
+- **Environment**: 
+  - Reservation Calendar view
+  - May be related to screen resolution
+- **Additional Notes**:
+  - Need to investigate if this is specific to certain screen resolutions
+  - Should test with various window sizes and devices
+  - May require CSS fixes to ensure consistent scrollbar behavior
+
+### July 27, 2025
+
+#### Bug #17: Employee Reservation Price Requirement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The system currently requires a plan/price for employee reservations, but users want to allow confirming employee stays without pricing. However, this could be exploited by marking a reservation as employee to bypass pricing, then changing it back to a regular guest.
+- **Current Behavior**: System blocks confirmation of employee reservations without a plan/price.
+- **Requested Change**: Allow confirming employee reservations without a plan/price.
+- **Security Concern**: Potential bypass if users can change reservation type after confirmation.
+- **Suggested Solutions**:
+  1. Allow price-less employee reservations but prevent type changes after confirmation, or
+  2. Implement an audit trail for reservation type changes, or
+  3. Require manager approval for type changes, or
+  4. Keep current behavior but improve the UI to make it clearer why price is required
+- **Environment**: Reservation confirmation flow
+
+#### Bug #14: Unresponsive 'Return to Confirmed' Button
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The 'Return to Confirmed' (確定に戻す) button does not respond when clicked after check-in. This appears to be related to the PrimeVue ConfirmDialog implementation.
+- **Steps to Reproduce**:
+  1. Check in a reservation
+  2. Click on the 'Return to Confirmed' (確定に戻す) button
+  3. Observe that no confirmation dialog appears and no action is taken
+- **Expected Behavior**: A confirmation dialog should appear, and upon confirmation, the reservation status should change back to 'Confirmed'.
+- **Actual Behavior**: No response when clicking the button.
+- **Environment**: Reservation management interface, PrimeVue components
+- **Additional Notes**: Initial investigation suggests this may be related to the PrimeVue ConfirmDialog component not being properly triggered or handled.
+
 ### July 23, 2025
 
 #### Bug #X: OTA Reservation Transaction Issue
@@ -343,3 +392,40 @@ The following bugs and feature requests are not yet completed (status: Open or I
 #### Feature Request #14
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton. 
+
+#### Feature Request #15: Plan Display Order and Categories (2025/07/24)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: 
+  - Allow setting the display order of plans
+  - Enable configuration of facility display order in dropdowns
+  - Implement global plan categories and organize hotel plans by room type
+  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
+
+#### Feature Request #16: Configurable Reservation Inquiry Button (2025/07/29)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: 
+  - Add a button to open reservation inquiry in a Google Drive spreadsheet
+  - Make the Google Drive link configurable per hotel in the admin interface
+  - Add a new field in the hotel edit screen (not in the hotels table) for the Google Drive URL
+  - **Button Locations**:
+    1. Reservation Edit page
+    2. Reservation Calendar page
+  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - **Additional Notes**: 
+    - This will allow each hotel to have their own reservation inquiry spreadsheet without hardcoding the link in the application.
+    - The button should be clearly visible and consistently placed in both locations.
+
+#### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: 
+  - Currently, the calendar shows the booker's name for all reservations
+  - For OTA reservations, show the name of the actual guest(s) instead
+  - **Implementation Considerations**:
+    - Need to verify if OTA API provides guest names
+    - Handle cases with multiple guests (show primary guest or all names?)
+    - Consider adding a fallback to booker name if guest name is unavailable
+  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - **Additional Notes**:
+    - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
+    - Need to investigate what guest information is currently being captured from OTA bookings
