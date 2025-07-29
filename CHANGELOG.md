@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **User Experience**: Added toast notifications in Japanese for permission-denied (403) errors to improve user feedback when they don't have permission to perform an action.
+- **Employee Reservations**: Added support for employee reservations without requiring a plan/price, including visual distinction in the UI and confirmation dialogs for type changes.
 
 ### Fixed
 - **Reservation Management**: Fixed the unresponsive 'Return to Confirmed' button by correcting the ConfirmDialog instance reference in the reservation panel. The button now properly shows a confirmation dialog and allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
 - **Calendar View**: Fixed the disappearing scrollbar issue in the reservation calendar by updating the table container's CSS. The scrollbar now remains visible and functional when needed, improving navigation between dates. (Bug #18)
+- **Employee Reservations**: Fixed the issue preventing confirmation of employee reservations without a plan/price. Implemented restrictions to prevent changing reservation type after confirmation. (Bug #17)
 
 ---
 ## Future Releases

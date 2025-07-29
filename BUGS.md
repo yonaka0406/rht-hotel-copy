@@ -32,12 +32,18 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ### July 27, 2025
 
 #### Bug #17: Employee Reservation Price Requirement
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The system currently requires a plan/price for employee reservations, but users want to allow confirming employee stays without pricing. However, this could be exploited by marking a reservation as employee to bypass pricing, then changing it back to a regular guest.
 - **Current Behavior**: System blocks confirmation of employee reservations without a plan/price.
 - **Requested Change**: Allow confirming employee reservations without a plan/price.
 - **Security Concern**: Potential bypass if users can change reservation type after confirmation.
+- **Resolution**:
+  - Updated the system to allow employee reservations without a plan/price
+  - Implemented restrictions to prevent changing reservation type after confirmation
+  - Added visual distinction for employee reservations in the UI
+  - Added confirmation dialogs for type changes
+- **Date Fixed**: 2025-07-29
 - **Suggested Solutions**:
   1. Allow price-less employee reservations but prevent type changes after confirmation, or
   2. Implement an audit trail for reservation type changes, or
