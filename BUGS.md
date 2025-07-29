@@ -42,7 +42,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: Reservation confirmation flow
 
 #### Bug #14: Unresponsive 'Return to Confirmed' Button
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The 'Return to Confirmed' (確定に戻す) button does not respond when clicked after check-in. This appears to be related to the PrimeVue ConfirmDialog implementation.
 - **Steps to Reproduce**:
@@ -52,7 +52,8 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Expected Behavior**: A confirmation dialog should appear, and upon confirmation, the reservation status should change back to 'Confirmed'.
 - **Actual Behavior**: No response when clicking the button.
 - **Environment**: Reservation management interface, PrimeVue components
-- **Additional Notes**: Initial investigation suggests this may be related to the PrimeVue ConfirmDialog component not being properly triggered or handled.
+- **Resolution**: Fixed by ensuring the correct ConfirmDialog instance ('recovery' group) is used for the confirmation dialog. The issue was caused by a mismatch between the dialog group in the template and the one referenced in the code.
+- **Date Fixed**: 2025-07-29
 
 ### July 23, 2025
 

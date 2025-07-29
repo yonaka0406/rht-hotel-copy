@@ -6,10 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
-## [Unreleased]
+## Unreleased
 
 ### Added
 - **User Experience**: Added toast notifications in Japanese for permission-denied (403) errors to improve user feedback when they don't have permission to perform an action.
+
+### Fixed
+- **Reservation Management**: Fixed the unresponsive 'Return to Confirmed' button by correcting the ConfirmDialog instance reference in the reservation panel. The button now properly shows a confirmation dialog and allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
 
 ---
 ## Future Releases
