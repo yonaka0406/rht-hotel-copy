@@ -524,7 +524,7 @@
     }; 
 
     onMounted( async () => {   
-        console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
+        // console.log('onMounted ReservationPayments;', props.reservation_details, props.reservation_payments);
         
         await setHotelId(props.reservation_details[0].hotel_id);        
         await fetchHotel();
