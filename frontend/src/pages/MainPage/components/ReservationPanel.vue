@@ -91,7 +91,7 @@
             <Divider />
         </div>  
 
-        <div class="field flex flex-col">
+        <div class="field flex flex-col" v-if="reservationType !== '社員'">
             <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
         </div>
         <div class="field flex flex-col ">
@@ -124,11 +124,25 @@
                     class="p-button-rounded p-button-text"
                     @click="showHistoryDialog"
                 />
-    </div>
-    <ConfirmDialog group="delete"></ConfirmDialog>
-    <ConfirmDialog group="cancel"></ConfirmDialog>
-    <ConfirmDialog group="recovery"></ConfirmDialog>
-            <div class="grid grid-cols-4 gap-x-6">
+            </div>
+            <ConfirmDialog group="delete"></ConfirmDialog>
+            <ConfirmDialog group="cancel"></ConfirmDialog>
+            <ConfirmDialog group="recovery"></ConfirmDialog>
+            
+            <!-- Delete button for employee reservations (always shown when status is 保留中) -->
+            <div v-if="reservationType === '社員' && reservationStatus === '保留中'" class="grid grid-cols-4 gap-x-6">
+                <div class="field flex flex-col">
+                    <Button 
+                        label="社員予約を削除" 
+                        severity="danger"
+                        fluid
+                        @click="deleteReservation"
+                    />                    
+                </div>
+            </div>
+            
+            <!-- Regular status buttons (hidden for employee reservations) -->
+            <div v-if="reservationType !== '社員'" class="grid grid-cols-4 gap-x-6">
                 <div v-if="reservationStatus === '保留中' || reservationStatus === '確定'" class="field flex flex-col">
                     <Button 
                         label="仮予約として保存"                                     
@@ -190,7 +204,7 @@
                 </div>                
                 <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
                     <Button 
-                        label="保留中予約を削除" 
+                        :label="reservationType === '社員' ? '社員予約を削除' : '保留中予約を削除'" 
                         severity="danger"
                         fluid
                         @click="deleteReservation"
@@ -628,10 +642,18 @@
     const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
     
     const reservationTypeSelected = ref(null);
-    const reservationTypeOptions = [
-        { label: '通常予約', value: 'default' },
-        { label: '社員', value: 'employee' },
-    ];
+    const reservationTypeOptions = computed(() => {
+        // Only show employee option when status is 'hold' (保留中)
+        if (reservationStatus.value === '保留中') {
+            return [
+                { label: '通常予約', value: 'default' },
+                { label: '社員', value: 'employee' },
+            ];
+        }
+        return [
+            { label: '通常予約', value: 'default' },
+        ];
+    });
 
     // Helper
     const formatDate = (date) => {
@@ -729,11 +751,16 @@
     const updateReservationType = async () => {
         // Add your logic here to update the reservation type in the database
         try {
-            const selectedType = reservationTypeOptions.find(option => option.value === reservationTypeSelected.value)?.value;            
-            await setReservationType(selectedType);
+            // Access the computed property value with .value
+            const selectedOption = reservationTypeOptions.value.find(option => option.value === reservationTypeSelected.value);
+            if (!selectedOption) {
+                throw new Error('Invalid reservation type selected');
+            }
+            
+            await setReservationType(selectedOption.value);
 
             // Handle success, e.g., show a success message
-            toast.add({ severity: 'success', summary: '成功', detail: '予約種類更新されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約種類が更新されました。', life: 3000 });
             
         } catch (error) {
             console.error('Error updating reservation type:', error);
