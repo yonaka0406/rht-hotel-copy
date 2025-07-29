@@ -110,7 +110,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: The date filtering functionality works properly, but the scroll position needs to reset to top when date changes for better user experience
 
 #### Bug #2
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Calendar View needs visual lines/borders in room cells for better visibility
 - **Steps to Reproduce**: 
@@ -136,7 +136,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This is to prevent accidental room type changes during free move operations. Spec created at `.kiro/specs/room-change-confirmation/`.
 
 #### Bug #4 / Feature Request
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Romaji auto-capitalization should preserve all-uppercase input (e.g., 'NTT' should not become 'Ntt').
 - **Steps to Reproduce**:
@@ -148,7 +148,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This is important for company names and acronyms that are conventionally written in all caps.
 
 #### Bug #5
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
 - **Steps to Reproduce**:
@@ -161,7 +161,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This may be due to stale state or missing data reload after navigation.
 
 #### Bug #6
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Addon is not reflected in the reservation edit page when added from the プラン・機関編集 (Plan/Addon Edit) button, but appears when added from the day details.
 - **Steps to Reproduce**:
@@ -189,7 +189,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Backend functionality for copying reservations including all rates, addons, and details has been implemented and tested. Spec created at `.kiro/specs/reservation-copy-feature/`.
 
 #### Bug #8 / Feature Request
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: When exporting the meals quantity report and there are no addons, the toast response should be more informative (e.g., 'No meal data to export') instead of a generic or silent response.
 - **Steps to Reproduce**:
@@ -201,7 +201,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: Improves user experience and reduces confusion when no data is available for export.
 
 #### Bug #9
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The count of addons (especially meals) may not be correct in the all reservations export CSV. For the same period, reservation_details CSV showed meal addons that did not appear in the meals report, indicating a possible data extraction or filtering bug.
 - **Steps to Reproduce**:
@@ -227,7 +227,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will help part-time staff focus on their tasks without being overwhelmed by unnecessary details. Spec created at `.kiro/specs/part-time-staff-dashboard/`.
 
 #### Feature Request #11
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Remove the requirement to have a reservation client in order to perform check-in.
 - **Steps to Reproduce**:
@@ -320,7 +320,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
 ### Bug #11
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA. This resulted in duplicate reservations and failures when attempting to edit the reservation.
 - **Steps to Reproduce**:
@@ -335,7 +335,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
 
 ### Bug #12
-- **Status**: [x] Fixed [ ] Open [ ] In Progress [x] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
 - **Steps to Reproduce**:
