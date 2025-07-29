@@ -55,7 +55,7 @@ function unpatchPlanRateModelAfterTesting(model) {
     describe('planRateModel.getPriceForReservation (Sequential Logic & Enhanced Output)', () => {
         // Test Case for the specific production scenario
         it('Test Case: Base 9300, +1500 seasonal (Jul-Sep), -22% GroupA, 500 flat fee (Nov-Apr) for 2025-07-25', async () => {
-            const params = { base: 9300, seasonal: 1500, groupA_adj: -0.22, flatFee: 500 };
+            const params = { base: 9300, seasonal: 1500, groupA_adj: -22, flatFee: 500 };
             mockDbQueryResult = {
                 rows: [
                     { adjustment_type: 'base_rate', total_value: params.base, tax_type_id: null, condition_type: 'none', condition_value: null },
@@ -94,7 +94,7 @@ function unpatchPlanRateModelAfterTesting(model) {
 
         // Test Case 1: Your specific example
         it('Test Case 1: Base 1400, GroupA -4%, GroupB +2.5%, FF 0', async () => {
-            const params = { base: 1400, groupA_adj: -0.04, groupB_adj: 2.5, flatFee: 0 };
+            const params = { base: 1400, groupA_adj: -4, groupB_adj: 2.5, flatFee: 0 };
             mockDbQueryResult = {
                 rows: [
                     { adjustment_type: 'base_rate', total_value: params.base, tax_type_id: null, condition_type: 'none', condition_value: null },
@@ -112,8 +112,8 @@ function unpatchPlanRateModelAfterTesting(model) {
         });
 
         // Test Case 2: Only Group A percentage, shows rounding to 100
-        it('Test Case 2: Base 1080, GroupA +10% (-0.10 val for tax_type_id !=1), FF 0', async () => {
-            const params = { base: 1080, groupA_adj: 0.10, groupB_adj: 0, flatFee: 0 };
+        it('Test Case 2: Base 1080, GroupA +10% (10 val for tax_type_id !=1), FF 0', async () => {
+            const params = { base: 1080, groupA_adj: 10, groupB_adj: 0, flatFee: 0 };
              mockDbQueryResult = {
                 rows: [
                     { adjustment_type: 'base_rate', total_value: params.base, tax_type_id: null, condition_type: 'none', condition_value: null },
@@ -165,7 +165,7 @@ function unpatchPlanRateModelAfterTesting(model) {
 
         // Test Case 5: Zero base rate, with all types of adjustments
         it('Test Case 5: Base 0, GroupA +10%, GroupB +5%, FF 30', async () => {
-            const params = { base: 0, groupA_adj: 0.10, groupB_adj: 5, flatFee: 30 };
+            const params = { base: 0, groupA_adj: 10, groupB_adj: 5, flatFee: 30 };
             mockDbQueryResult = {
                 rows: [
                     { adjustment_type: 'base_rate', total_value: params.base, tax_type_id: null, condition_type: 'none', condition_value: null },
@@ -188,7 +188,7 @@ function unpatchPlanRateModelAfterTesting(model) {
                 rows: [
                     { adjustment_type: 'base_rate', total_value: params.base, tax_type_id: null, condition_type: 'none', condition_value: null },
                     { adjustment_type: 'percentage', tax_type_id: 2, total_value: -0.05, condition_type: 'none', condition_value: null }, // Group A
-                    { adjustment_type: 'percentage', tax_type_id: 3, total_value: 0.15, condition_type: 'none', condition_value: null },  // Group A
+                    { adjustment_type: 'percentage', tax_type_id: 3, total_value: 15, condition_type: 'none', condition_value: null },  // Group A
                     { adjustment_type: 'percentage', tax_type_id: 1, total_value: 2, condition_type: 'none', condition_value: null },    // Group B
                     { adjustment_type: 'percentage', tax_type_id: 1, total_value: 3, condition_type: 'none', condition_value: null },    // Group B
                     { adjustment_type: 'flat_fee', total_value: params.flatFee, tax_type_id: null, condition_type: 'none', condition_value: null }
