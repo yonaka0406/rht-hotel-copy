@@ -272,6 +272,34 @@ const getOTAReservations = async (req, res) => {
                             }
 
                             formattedReservations.push(reservationData);
+                            
+                            // Add reservation to OTA queue
+                            try {
+                                const transactionId = reservationData.TransactionType?.DataID;
+                                if (!transactionId) {
+                                    logger.warn('Skipping queue insertion - Missing transaction ID', { reservationData });
+                                } else {
+                                    await insertOTAReservationQueue(req.requestId, {
+                                        hotelId: hotel_id,
+                                        otaReservationId: reservationData.BasicInformation?.TravelAgencyBookingNumber || `temp_${Date.now()}`,
+                                        transactionId: transactionId,
+                                        reservationData: reservationData,
+                                        status: 'pending',
+                                        conflictDetails: null
+                                    });
+                                    logger.debug('Successfully added reservation to OTA queue', { 
+                                        transactionId,
+                                        hotelId: hotel_id 
+                                    });
+                                }
+                            } catch (queueError) {
+                                // Log the error but don't stop processing other reservations
+                                logger.error('Error adding reservation to OTA queue:', {
+                                    error: queueError.message,
+                                    transactionId: reservationData.TransactionType?.DataID,
+                                    hotelId: hotel_id
+                                });
+                            }
                         }
                     } catch (parseError) {
                         logger.error('Error parsing infoTravelXML:', parseError);
