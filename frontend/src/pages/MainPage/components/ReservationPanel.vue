@@ -767,8 +767,8 @@
 
         // Specific confirmation for Checked In -> Confirmed
         if (reservationStatus.value === 'チェックイン' && status === 'confirmed') {
-            confirm.require({
-                group: 'default',
+            confirmRecovery.require({
+                group: 'recovery',
                 message: 'チェックイン済みの予約を確定済みに戻しますか？',
                 header: 'ステータス変更確認',
                 icon: 'pi pi-exclamation-triangle',
@@ -784,11 +784,11 @@
                         console.error('Error updating reservation status:', error);
                         toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
                     }
-                    confirm.close('default');
+                    confirmRecovery.close('recovery');
                 },
                 reject: () => {
                     toast.add({ severity: 'info', summary: 'キャンセル', detail: 'ステータス変更はキャンセルされました。', life: 3000 });
-                    confirm.close('default');
+                    confirmRecovery.close('recovery');
                 }
             });
             return; // Stop further execution for this specific case
