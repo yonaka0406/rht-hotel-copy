@@ -75,27 +75,31 @@
                     class="flex items-center">
                     <div>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
+                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').type === 'employee'">
+                        <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>
+                      </template>
+                      <template
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'hold'">
                         <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
                       </template>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
                         <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>
                       </template>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
                         <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
                       </template>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
                         <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>
                       </template>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
                         <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
                       </template>
                       <template
-                        v-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block'">
                         <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
                       </template>
                     </div>
@@ -130,8 +134,11 @@
             <span class="flex items-center gap-1"><i
                 class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>チェックアウト済み</span>
             <span class="flex items-center gap-1"><i
+                class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>社員</span>
+            <span class="flex items-center gap-1"><i
                 class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>ブロック</span>
             <span class="flex items-center gap-1"><i class="pi pi-circle"></i>空室</span>
+
           </div>
         </Fieldset>
       </template>
@@ -294,7 +301,7 @@ const uniqueLegendItems = computed(() => {
   });
 
   legendItems.push({ plan_name: '仮予約', plan_color: '#ead59f' });
-  legendItems.push({ plan_name: '社員', plan_color: '#f1bfce' });
+  legendItems.push({ plan_name: '社員', plan_color: '#f3e5f5' });
   legendItems.push({ plan_name: 'OTA', plan_color: '#9fead5' });
 
   return legendItems;
@@ -416,11 +423,11 @@ const getCellStyle = (room_id, date, useTemp = false) => {
   let roomColor = '#d3063d';
   let style = {};
 
-  if (roomInfo && roomInfo.status === 'provisory') {
+  if (roomInfo && roomInfo.type === 'employee') {
+    roomColor = '#f3e5f5';
+    style = { backgroundColor: roomColor };
+  } else if (roomInfo && roomInfo.status === 'provisory') {
     roomColor = '#ead59f';
-    style = { backgroundColor: `${roomColor}` };
-  } else if (roomInfo && roomInfo.type === 'employee') {
-    roomColor = '#f1bfce';
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
     roomColor = '#9fead5';
@@ -1427,7 +1434,7 @@ watch(dragMode, async (newVal, oldVal) => {
   height: calc(100vh - 200px);
   overflow-y: auto;
   max-width: 100%;
-  position: relative;  
+  position: relative;
   scrollbar-color: rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1);
 }
 
