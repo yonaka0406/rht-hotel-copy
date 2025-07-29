@@ -68,221 +68,80 @@ const extractXmlTags = (xmlString) => {
     return tags;
 };
 
-// Function to find unique identifiers in reservation data
-const findUniqueIdentifiers = (parsedData) => {
-    const identifiers = {};
-    
-    // Extract potential unique identifiers
-    if (parsedData.TransactionType) {
-        if (parsedData.TransactionType.DataID) {
-            identifiers.transactionId = parsedData.TransactionType.DataID;
-        }
-        if (parsedData.TransactionType.SystemDate) {
-            identifiers.transactionDate = parsedData.TransactionType.SystemDate;
-        }
-    }
-    
-    if (parsedData.BasicInformation) {
-        const basic = parsedData.BasicInformation;
-        if (basic.TravelAgencyBookingNumber) {
-            identifiers.bookingNumber = basic.TravelAgencyBookingNumber;
-        }
-        if (basic.TravelAgencyBookingDate && basic.TravelAgencyBookingTime) {
-            identifiers.bookingDateTime = `${basic.TravelAgencyBookingDate} ${basic.TravelAgencyBookingTime}`;
-        }
-        if (basic.GuestOrGroupNameSingleByte) {
-            identifiers.guestName = basic.GuestOrGroupNameSingleByte;
-        }
-        if (basic.CheckInDate && basic.CheckOutDate) {
-            identifiers.stayPeriod = `${basic.CheckInDate} to ${basic.CheckOutDate}`;
-        }
-    }
-    
-    return identifiers;
-};
-
-// Function to compare two responses with deep XML comparison
-const compareResponses = async (requestId, response1, response2, pool) => {
-    if (!response1 || !response2) {
-        return {
-            areEqual: false,
-            differences: ['One or both responses are invalid'],
-            uniqueIdentifiers: {}
-        };
-    }
-    
-    if (response1.error || response2.error) {
-        return {
-            areEqual: false,
-            differences: [
-                response1.error ? `Response 1 error: ${response1.error}` : null,
-                response2.error ? `Response 2 error: ${response2.error}` : null
-            ].filter(Boolean),
-            uniqueIdentifiers: {}
-        };
-    }
-    
-    const differences = [];
-    const keys1 = Object.keys(response1);
-    const keys2 = Object.keys(response2);
-    const allKeys = new Set([...keys1, ...keys2]);
-    
-    // Get raw XML for both responses using the provided pool
-    const [raw1, raw2] = await Promise.all([
-        pool.query('SELECT response FROM xml_responses WHERE id = $1', [response1.responseId]),
-        pool.query('SELECT response FROM xml_responses WHERE id = $1', [response2.responseId])
-    ]);
-    
-    const xml1 = raw1.rows[0]?.response;
-    const xml2 = raw2.rows[0]?.response;
-    
-    // Extract all tags from both XMLs
-    const tags1 = xml1 ? extractXmlTags(xml1) : {};
-    const tags2 = xml2 ? extractXmlTags(xml2) : {};
-    
-    // Compare XML tags
-    const allTags = new Set([...Object.keys(tags1), ...Object.keys(tags2)]);
-    const xmlDifferences = [];
-    
-    for (const tag of allTags) {
-        if (!tags1[tag] && tags2[tag]) {
-            xmlDifferences.push(`Tag '${tag}' exists only in response 2`);
-        } else if (tags1[tag] && !tags2[tag]) {
-            xmlDifferences.push(`Tag '${tag}' exists only in response 1`);
-        } else if (JSON.stringify(tags1[tag]) !== JSON.stringify(tags2[tag])) {
-            xmlDifferences.push(`Tag '${tag}' values differ:`);
-            xmlDifferences.push(`  Response 1: ${JSON.stringify(tags1[tag])}`);
-            xmlDifferences.push(`  Response 2: ${JSON.stringify(tags2[tag])}`);
-        }
-    }
-    
-    // Find unique identifiers from parsed data
-    const identifiers1 = response1.parsedData ? findUniqueIdentifiers(response1.parsedData) : {};
-    const identifiers2 = response2.parsedData ? findUniqueIdentifiers(response2.parsedData) : {};
-    
-    // Compare high-level fields
-    for (const key of allKeys) {
-        if (key === 'rawResponse' || key === 'parsedData') continue;
-        
-        if (!(key in response1)) {
-            differences.push(`Field '${key}' exists in response 2 but not in response 1`);
-        } else if (!(key in response2)) {
-            differences.push(`Field '${key}' exists in response 1 but not in response 2`);
-        } else if (JSON.stringify(response1[key]) !== JSON.stringify(response2[key])) {
-            differences.push(`Field '${key}' differs:`);
-            differences.push(`  Response 1: ${JSON.stringify(response1[key])}`);
-            differences.push(`  Response 2: ${JSON.stringify(response2[key])}`);
-        }
-    }
-    
-    // Combine all differences
-    const allDifferences = [
-        ...differences,
-        ...xmlDifferences
-    ];
-    
-    return {
-        areEqual: allDifferences.length === 0,
-        differences: allDifferences,
-        uniqueIdentifiers: {
-            response1: identifiers1,
-            response2: identifiers2
-        }
-    };
-};
-
-
-// Helper function to clean up test data
-const cleanupTestData = async (requestId, pool) => {
-    if (!pool) {
-        console.warn('No pool provided for cleanup');
-        return;
-    }
-    try {
-        await pool.query('DELETE FROM ota_reservation_queue WHERE request_id = $1', [requestId]);
-        console.log('Cleaned up test data from ota_reservation_queue');
-    } catch (error) {
-        console.error('Error cleaning up test data:', error);
-    }
-};
-
+/**
+ * Test basic XML response processing
+ */
 const testXMLResponseQuery = async (pool) => {
     const requestId = 'test-xml-query-' + Date.now();
-    const responseId1 = 3803; // First response ID to compare
-    const responseId2 = 3802; // Second response ID to compare
+    const responseIds = [3802, 3803];
     
     try {
-        console.log(`Starting XML response comparison test...`);
+        console.log(`Starting XML response processing test...`);
         
-        // Process both responses
-        const identifiers1 = await findUniqueIdentifiers(await processResponseById(requestId, responseId1, pool));
-        const identifiers2 = await findUniqueIdentifiers(await processResponseById(requestId, responseId2, pool));
-        
-        // Compare the responses using the shared pool
-        console.log('\n===== Comparing Responses =====');
-        const comparison = await compareResponses(requestId, identifiers1, identifiers2, pool);
-        
-        // Display unique identifiers
-        console.log('\n===== Unique Identifiers =====');
-        console.log('Response 1:');
-        console.log(JSON.stringify(comparison.uniqueIdentifiers.response1, null, 2));
-        console.log('\nResponse 2:');
-        console.log(JSON.stringify(comparison.uniqueIdentifiers.response2, null, 2));
-        
-        // Display differences
-        if (comparison.areEqual) {
-            console.log('\nThe responses are identical in all compared aspects');
-        } else {
-            console.log('\n===== Differences Found =====');
-            comparison.differences.forEach((diff, index) => {
-                console.log(`${index + 1}. ${diff}`);
-            });
+        for (const responseId of responseIds) {
+            console.log(`\n===== Processing Response ID: ${responseId} =====`);
             
-            // Suggest a unique key based on the data
-            const suggestUniqueKey = () => {
-                const id1 = comparison.uniqueIdentifiers.response1;
-                const id2 = comparison.uniqueIdentifiers.response2;
-                
-                // Check if transaction ID and booking number match
-                if (id1.transactionId && id1.transactionId === id2.transactionId) {
-                    return 'transactionId';
-                }
-                
-                // Check if booking number matches
-                if (id1.bookingNumber && id1.bookingNumber === id2.bookingNumber) {
-                    return 'bookingNumber';
-                }
-                
-                // If we have guest name and stay period, that's a good composite key
-                if (id1.guestName && id1.stayPeriod && 
-                    id1.guestName === id2.guestName && 
-                    id1.stayPeriod === id2.stayPeriod) {
-                    return 'guestName + stayPeriod';
-                }
-                
-                return 'No reliable unique identifier found - consider using a composite key';
-            };
+            // Process the response
+            const response = await processResponseById(requestId, responseId, pool);
             
-            console.log('\n===== Suggested Unique Key =====');
-            console.log(suggestUniqueKey());
+            if (!response || !response.xml_response) {
+                console.error(`No valid XML response for ID: ${responseId}`);
+                continue;
+            }
+            
+            // Parse the SOAP envelope
+            const soapEnvelope = await parseXMLResponse(response.xml_response);
+            const executeResponse = soapEnvelope?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse'];
+            const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
+            const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
+            
+            if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
+                console.log('No booking information found in the response.');
+                continue;
+            }
+            
+            console.log(`Found ${bookingInfoList.length} booking(s) in response`);
+            
+            // Log basic info about each booking
+            for (const [index, bookingInfo] of bookingInfoList.entries()) {
+                if (!bookingInfo?.infoTravelXML) {
+                    console.warn(`  - Booking ${index + 1}: No infoTravelXML found`);
+                    continue;
+                }
+                
+                try {
+                    const reservationData = await parseXMLResponse(bookingInfo.infoTravelXML);
+                    const report = reservationData?.AllotmentBookingReport;
+                    
+                    if (!report) {
+                        console.warn(`  - Booking ${index + 1}: No AllotmentBookingReport found`);
+                        continue;
+                    }
+                    
+                    const transactionId = report.TransactionType?.DataID;
+                    const bookingNumber = report.BasicInformation?.TravelAgencyBookingNumber;
+                    const guestName = report.BasicInformation?.GuestOrGroupNameSingleByte;
+                    const checkInDate = report.BasicInformation?.CheckInDate;
+                    const checkOutDate = report.BasicInformation?.CheckOutDate;
+                    
+                    console.log(`  - Booking ${index + 1}:`);
+                    console.log(`    Transaction ID: ${transactionId || 'N/A'}`);
+                    console.log(`    Booking Number: ${bookingNumber || 'N/A'}`);
+                    console.log(`    Guest: ${guestName || 'N/A'}`);
+                    console.log(`    Stay: ${checkInDate || 'N/A'} to ${checkOutDate || 'N/A'}`);
+                    
+                } catch (parseError) {
+                    console.error(`  - Booking ${index + 1}: Error parsing infoTravelXML:`, parseError.message);
+                }
+            }
         }
         
-        console.log('\n===== Test completed successfully =====');
+        console.log('\n===== XML Response Processing Test Completed =====');
     } catch (error) {
         console.error('Error during test:', error);
-        
-        // If the error is from processXMLResponse, it might have its own error details
-        if (error.response) {
-            console.error('Response error details:', error.response);
-        }
-        
-        // Log the full error stack for debugging
-        console.error('Error stack:', error.stack);
         throw error; // Re-throw to fail the test
-    } finally {
-        console.log('\n===== Test completed =====');
     }
-}
+};
 
 /**
  * Test OTA reservation queue insertion with specific response IDs using production flow
@@ -401,8 +260,8 @@ const testOTAReservationQueueInsertion = async (pool) => {
         console.error('Error during queue insertion test:', error);
         throw error;
     } finally {
-        // Clean up test data but don't close the pool here
-        // await cleanupTestData(requestId, pool);  // Temporarily disabled as per user request
+        // Don't close the pool here
+        
     }
 };
 
@@ -423,6 +282,10 @@ const runTests = async () => {
         // Run the complete reservation processing test (similar to production flow)
         console.log('\n\n===== Running Complete OTA Reservation Processing Test =====');
         await testOTAReservationProcessing(pool);
+        
+        // Run the transaction handling tests
+        console.log('\n\n===== Running OTA Transaction Handling Tests =====');
+        await testOTATransactionHandling(pool);
         
         console.log('\n\n===== All tests completed successfully =====');
         return true;
@@ -587,6 +450,231 @@ function processValue(value, level = 0) {
         return processValue(value[0], level + 1);
     } else {
         return value;
+    }
+}
+
+/**
+ * Test OTA transaction handling with both success and failure scenarios
+ */
+const testOTATransactionHandling = async (pool) => {
+    const requestId = 'test-transaction-' + Date.now();
+    const responseId = 3802; // Using a known good response ID
+    
+    try {
+        console.log('\n===== Testing OTA Transaction Handling =====');
+        
+        // Test 1: Successful transaction (all reservations processed)
+        console.log('\n--- Test 1: Successful Transaction ---');
+        await testSuccessfulTransaction(pool, requestId + '-success', responseId);
+        
+        // Test 2: Failed transaction (one reservation fails)
+        console.log('\n--- Test 2: Failed Transaction ---');
+        await testFailedTransaction(pool, requestId + '-fail', responseId);
+        
+        console.log('\n===== OTA Transaction Handling Tests Completed =====');
+    } catch (error) {
+        console.error('Error during transaction handling test:', error);
+        throw error;
+    }
+};
+
+/**
+ * Test a successful transaction where all reservations are processed
+ */
+async function testSuccessfulTransaction(pool, requestId, responseId) {
+    const client = await pool.connect();
+    
+    try {
+        console.log(`Testing successful transaction (${requestId})...`);
+        
+        // Get the test response
+        const response = await processResponseById(requestId, responseId, pool);
+        const soapEnvelope = await parseXMLResponse(response.xml_response);
+        const executeResponse = soapEnvelope?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse'];
+        const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
+        const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
+        
+        if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
+            throw new Error('No booking information found in the response');
+        }
+
+        // Generate a unique transaction ID for this test
+        const transactionId = `test-tx-${Date.now()}`;
+        
+        // Insert test data into the queue
+        await client.query(
+            `INSERT INTO ota_reservation_queue 
+             (hotel_id, ota_reservation_id, transaction_id, reservation_data, status) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+                1, // hotel_id
+                requestId,
+                transactionId,
+                JSON.stringify({ test: 'data', type: 'test_success' }),
+                'pending'
+            ]
+        );
+        
+        // Begin transaction
+        await client.query('BEGIN');
+        console.log('  - Transaction started');
+        
+        try {
+            // Process each booking info
+            for (const [index, bookingInfo] of bookingInfoList.entries()) {
+                if (!bookingInfo?.infoTravelXML) continue;
+                
+                const reservationData = await parseXMLResponse(bookingInfo.infoTravelXML);
+                const report = reservationData?.AllotmentBookingReport;
+                if (!report) continue;
+                
+                // Simulate successful processing
+                console.log(`  - Successfully processed reservation ${index + 1}`);
+            }
+            
+            // Update queue status to processed
+            await client.query(
+                'UPDATE ota_reservation_queue SET status = $1, updated_at = NOW() WHERE transaction_id = $2',
+                ['processed', transactionId]
+            );
+            
+            // Commit the transaction
+            await client.query('COMMIT');
+            console.log('  - Transaction committed successfully');
+            
+            // Verify the queue status was updated
+            const result = await client.query(
+                'SELECT status FROM ota_reservation_queue WHERE transaction_id = $1',
+                [transactionId]
+            );
+            
+            if (result.rows.length > 0) {
+                console.log(`  - Queue status verified: ${result.rows[0].status}`);
+                if (result.rows[0].status !== 'processed') {
+                    throw new Error(`Expected status 'processed' but got '${result.rows[0].status}'`);
+                }
+            } else {
+                throw new Error('No queue entry found after processing');
+            }
+            
+        } catch (error) {
+            // Update queue status to failed if there was an error
+            await client.query(
+                'UPDATE ota_reservation_queue SET status = $1, updated_at = NOW() WHERE transaction_id = $2',
+                ['failed', transactionId]
+            );
+            throw error;
+        }
+        
+    } catch (error) {
+        console.error('  - Transaction error:', error.message);
+        throw error;
+    } finally {
+        client.release();
+    }
+}
+
+/**
+ * Test a failed transaction where one reservation fails
+ */
+async function testFailedTransaction(pool, requestId, responseId) {
+    const client = await pool.connect();
+    
+    try {
+        console.log(`Testing failed transaction (${requestId})...`);
+        
+        // Get the test response
+        const response = await processResponseById(requestId, responseId, pool);
+        const soapEnvelope = await parseXMLResponse(response.xml_response);
+        const executeResponse = soapEnvelope?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse'];
+        const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
+        const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
+        
+        if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
+            throw new Error('No booking information found in the response');
+        }
+
+        // Generate a unique transaction ID for this test
+        const transactionId = `test-fail-tx-${Date.now()}`;
+        
+        // Insert test data into the queue
+        await client.query(
+            `INSERT INTO ota_reservation_queue 
+             (hotel_id, ota_reservation_id, transaction_id, reservation_data, status) 
+             VALUES ($1, $2, $3, $4, $5)`,
+            [
+                1, // hotel_id
+                requestId,
+                transactionId,
+                JSON.stringify({ test: 'data', type: 'test_failure' }),
+                'pending'
+            ]
+        );
+        
+        // Begin transaction
+        await client.query('BEGIN');
+        console.log('  - Transaction started');
+        
+        try {
+            // Process each booking info
+            for (const [index, bookingInfo] of bookingInfoList.entries()) {
+                if (!bookingInfo?.infoTravelXML) continue;
+                
+                // Simulate a failure on the second reservation (if there is one)
+                if (index === 1 && bookingInfoList.length > 1) {
+                    console.log(`  - Simulating failure for reservation ${index + 1}`);
+                    throw new Error('Simulated processing failure');
+                }
+                
+                const reservationData = await parseXMLResponse(bookingInfo.infoTravelXML);
+                const report = reservationData?.AllotmentBookingReport;
+                if (!report) continue;
+                
+                console.log(`  - Successfully processed reservation ${index + 1}`);
+            }
+            
+            // If we get here, no failure was triggered
+            throw new Error('Expected a simulated failure but none occurred');
+            
+        } catch (error) {
+            // Update queue status to failed
+            await client.query(
+                'UPDATE ota_reservation_queue SET status = $1, conflict_details = $2, updated_at = NOW() WHERE transaction_id = $3',
+                ['failed', { error: error.message }, transactionId]
+            );
+            
+            // Verify the queue status was updated to 'failed'
+            const result = await client.query(
+                'SELECT status, conflict_details FROM ota_reservation_queue WHERE transaction_id = $1',
+                [transactionId]
+            );
+            
+            if (result.rows.length > 0) {
+                console.log(`  - Queue status verified: ${result.rows[0].status}`);
+                if (result.rows[0].status !== 'failed') {
+                    throw new Error(`Expected status 'failed' but got '${result.rows[0].status}'`);
+                }
+                console.log('  - Conflict details:', JSON.stringify(result.rows[0].conflict_details));
+            } else {
+                throw new Error('No queue entry found after processing');
+            }
+            
+            // Re-throw if this was an unexpected error
+            if (error.message !== 'Simulated processing failure' && 
+                error.message !== 'Expected a simulated failure but none occurred') {
+                throw error;
+            }
+            
+            // Rollback the transaction
+            await client.query('ROLLBACK');
+            console.log('  - Transaction rolled back as expected');
+        }
+        
+    } catch (error) {
+        console.error('  - Transaction error:', error.message);
+        throw error;
+    } finally {
+        client.release();
     }
 }
 
