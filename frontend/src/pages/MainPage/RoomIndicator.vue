@@ -234,7 +234,8 @@
     }
 
     const reservedRoomIds = new Set(
-      reservedRoomsDayView.value?.reservations            
+      reservedRoomsDayView.value?.reservations
+        ?.filter(room => room.cancelled === null)
         ?.map((res) => res.room_id) || []
     );
     // console.log('reservedRoomIds:',reservedRoomIds)
@@ -249,7 +250,8 @@
       }
 
       return formatDate(checkInDate) === formatDate(selectedDateObj) &&
-      room.status !== 'block';
+      room.status !== 'block' &&
+      room.cancelled === null;
     }) || [];
 
     const checkOutToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
@@ -262,7 +264,8 @@
       }
       
       return formatDate(checkOutDate) === formatDate(selectedDateObj) &&
-      room.status !== 'block';
+      room.status !== 'block' &&
+      room.cancelled === null;
     }) || [];
 
 

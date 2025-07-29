@@ -7,6 +7,22 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ### July 29, 2025
 
+#### Bug #19: Cancelled Reservations Show in Room Indicator
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Cancelled reservations were incorrectly displayed in the Room Indicator page. The system was not properly filtering out reservations with 'cancelled' status from the room indicator view.
+- **Steps to Reproduce**:
+  1. Create a reservation and cancel it.
+  2. Navigate to the Room Indicator page.
+  3. Observe that the cancelled reservation is still visible.
+- **Expected Behavior**: Cancelled reservations should not appear in the Room Indicator page.
+- **Affected Component**: `frontend/src/pages/MainPage/RoomIndicator.vue`
+- **Resolution**:
+  - Updated filtering logic in RoomIndicator.vue to exclude cancelled reservations from all room groups
+  - Modified reservedRoomIds to only include non-cancelled reservations when determining room availability
+- **Date Fixed**: 2025-07-29
+- **Additional Notes**: The fix ensures that rooms with only cancelled reservations now correctly appear in the 空室 (available) section.
+
 #### Bug #18: Calendar Scrollbar Disappears on Date Selection
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
