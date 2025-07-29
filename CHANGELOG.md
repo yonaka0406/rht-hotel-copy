@@ -8,15 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-### Added
-- **User Experience**: Added toast notifications in Japanese for permission-denied (403) errors to improve user feedback when they don't have permission to perform an action.
-- **Employee Reservations**: Added support for employee reservations without requiring a plan/price, including visual distinction in the UI and confirmation dialogs for type changes.
-
-### Fixed
-- **Reservation Management**: Fixed the unresponsive 'Return to Confirmed' button by correcting the ConfirmDialog instance reference in the reservation panel. The button now properly shows a confirmation dialog and allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
-- **Calendar View**: Fixed the disappearing scrollbar issue in the reservation calendar by updating the table container's CSS. The scrollbar now remains visible and functional when needed, improving navigation between dates. (Bug #18)
-- **Employee Reservations**: Fixed the issue preventing confirmation of employee reservations without a plan/price. Implemented restrictions to prevent changing reservation type after confirmation. (Bug #17)
-- **Room Indicator**: Fixed cancelled reservations appearing in the Room Indicator view. Updated filtering logic to properly exclude cancelled reservations and ensure rooms with only cancelled reservations appear as available. (Bug #19)
 
 ---
 ## Future Releases
@@ -289,8 +280,20 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## 1.0.7 (2025-07-29)
+
+- Bugfix: Fixed the unresponsive 'Return to Confirmed' button in the reservation panel. The button now properly allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
+- Bugfix: Fixed the disappearing scrollbar issue in the reservation calendar by updating the table container's CSS, improving navigation between dates. (Bug #18)
+- Bugfix: Resolved an issue preventing confirmation of employee reservations without a plan/price and implemented restrictions to prevent changing reservation type after confirmation. (Bug #17)
+- Bugfix: Fixed cancelled reservations appearing in the Room Indicator view by updating the filtering logic to properly exclude them and ensure rooms with only cancelled reservations appear as available. (Bug #19)
+- Enhancement: Added toast notifications in Japanese for permission-denied (403) errors to improve user feedback.
+- Enhancement: Added support for employee reservations without requiring a plan/price, including visual distinction in the UI and confirmation dialogs for type changes.
+
+---
+
 ## Version History
 
+- **1.0.7** (2025-07-29) - Fixed issues with reservation management UI and calendar navigation. Improved employee reservation handling and room indicator filtering. Added Japanese error notifications for better user feedback.
 - **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target.
 - **1.0.5** (2025-07-23) - OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously. Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
 - **1.0.4** (2025-07-17) - Added reservation copy function, calendar UI/UX improvements, bugfixes for client/edit/addon/meal exports, and new calendar legend.
