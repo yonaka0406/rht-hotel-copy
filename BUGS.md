@@ -8,7 +8,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ### July 29, 2025
 
 #### Bug #18: Calendar Scrollbar Disappears on Date Selection
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The horizontal scrollbar in the reservation calendar disappears when a date is selected, making it difficult to navigate between dates.
 - **Steps to Reproduce**:
@@ -20,10 +20,14 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
   - Reservation Calendar view
   - May be related to screen resolution
+- **Resolution**:
+  - Updated table container CSS to use `overflow-y: auto`
+  - Added scrollbar styling for better visibility
+  - Adjusted container height calculation
+- **Date Fixed**: 2025-07-29
 - **Additional Notes**:
-  - Need to investigate if this is specific to certain screen resolutions
-  - Should test with various window sizes and devices
-  - May require CSS fixes to ensure consistent scrollbar behavior
+  - The scrollbar now remains visible when needed
+  - Improved scrollbar styling for better user experience
 
 ### July 27, 2025
 

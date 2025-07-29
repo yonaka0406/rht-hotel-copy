@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Reservation Management**: Fixed the unresponsive 'Return to Confirmed' button by correcting the ConfirmDialog instance reference in the reservation panel. The button now properly shows a confirmation dialog and allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
+- **Calendar View**: Fixed the disappearing scrollbar issue in the reservation calendar by updating the table container's CSS. The scrollbar now remains visible and functional when needed, improving navigation between dates. (Bug #18)
 
 ---
 ## Future Releases
