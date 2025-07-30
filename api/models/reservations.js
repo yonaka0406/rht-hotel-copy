@@ -2590,6 +2590,17 @@ function translateSettlementDiv(SettlementDiv) {
   }
   return settlementDivMap[SettlementDiv] || '未設定';
 }
+
+const sanitizeName = (name) => {
+  if (!name) return '';
+  // Remove text in 【】, ［］, 〖〗, 〘〙, 〚〛 brackets and trim whitespace
+  return name
+    .replace(/[【〖〘〚]([^】〗〙〛]*)[】〗〙〛]/g, '')  // Remove various bracket types
+    .replace(/\[([^\]]*)\]/g, '')  // Remove standard brackets
+    .replace(/\s+/g, ' ')          // Replace multiple spaces with single space
+    .trim();
+};
+
 const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
   // Use passed client if provided, otherwise create a new one
   let internalClient;
@@ -2727,7 +2738,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     };
 
     let finalName, finalNameKana, finalNameKanji;
-    const { name, nameKana, nameKanji } = await processNameString(clientData.name);
+    const sanitizedName = sanitizeName(clientData.name);
+    const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
     finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
     if (clientData.name_kana) {
       finalNameKana = toFullWidthKana(clientData.name_kana);
@@ -2936,8 +2948,14 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
          if (guestList && Array.isArray(guestList) && guestList.length > 0) {
           console.log('Processing guest information from GuestInformationList');
            for (const guest of guestList) {
+            const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
+            const sanitizedName = sanitizeName(rawName);
+            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+            
             guestData = {
-              name: guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',                
+              name: name,                
+              name_kana: nameKana,
+              name_kanji: nameKanji,
               date_of_birth: guest?.GuestDateOfBirth || null,
               legal_or_natural_person: selectNature(guest?.GuestGender || 1),
               gender: selectGender(guest?.GuestGender || '2'),
@@ -2946,8 +2964,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               created_by: 1,
               updated_by: 1,
             };
-              
-            const { name, nameKana, nameKanji } = await processNameString(guestData.name);
+
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
               finalNameKana = toFullWidthKana(guestData.name_kana);
@@ -4316,4 +4333,5 @@ module.exports = {
   editOTAReservation,
   cancelOTAReservation,
   insertCopyReservation,
+  sanitizeName,
 };

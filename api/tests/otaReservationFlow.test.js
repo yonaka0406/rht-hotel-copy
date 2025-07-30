@@ -360,10 +360,11 @@ async function testCompleteOTAReservationFlow() {
                     console.log('\n  - Verifying reservation_clients entries for OTA reservations...');
                     const reservationIds = otaReservations.rows.map(r => r.id);
                     const reservationClientsResults = await dbClient.query(`
-                        SELECT rc.*, r.ota_reservation_id, rd.room_id
+                        SELECT rc.*, r.ota_reservation_id, rd.room_id, c.name, c.name_kanji
                         FROM reservation_clients rc
                         JOIN reservation_details rd ON rc.reservation_details_id = rd.id
                         JOIN reservations r ON rd.reservation_id = r.id
+                        JOIN clients c ON c.id = rc.client_id
                         WHERE r.id = ANY($1::uuid[])
                     `, [reservationIds]);
                     
@@ -372,7 +373,9 @@ async function testCompleteOTAReservationFlow() {
                         reservationClientsResults.rows.forEach((row, index) => {
                             console.log(`    ${index + 1}. Reservation: ${row.ota_reservation_id}, ` +
                                        `Room: ${row.room_id}, ` +
-                                       `Client: ${row.client_id}`);
+                                       `Client: ${row.client_id}` +
+                                       `Client Name: ${row.name}` +
+                                       `Client Kanji: ${row.name_kanji}`);
                         });
                     } else {
                         console.log('  - No entries found in reservation_clients for the OTA reservations');
