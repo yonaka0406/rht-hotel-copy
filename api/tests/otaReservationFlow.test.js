@@ -1,3 +1,19 @@
+/**
+ * WARNING: This test modifies the production database.
+ * 
+ * This test performs actual database operations including:
+ * - Inserting test reservations
+ * - Updating reservation statuses
+ * - Modifying the ota_reservation_queue table
+ * 
+ * DO NOT run this test against a production database without proper precautions.
+ * To enable this test, remove or comment out the return statement below.
+ */
+
+// Prevent accidental execution
+console.error('\x1b[31m%s\x1b[0m', '\nWARNING: This test modifies the database. Execution is blocked by default.\n');
+return;
+
 // Import required modules
 const { Pool } = require('pg');
 require('dotenv').config();
