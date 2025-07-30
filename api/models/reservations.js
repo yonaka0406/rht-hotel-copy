@@ -3080,7 +3080,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               updated_by: 1,
             };
                     
-            const { name, nameKana, nameKanji } = await processNameString(guestData.name);
+            const sanitizedName = sanitizeName(guestData.name);
+            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
               finalNameKana = toFullWidthKana(guestData.name_kana);
@@ -3506,7 +3507,6 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       const availableRoom = availableRooms.find(room =>
         room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
       );
-
       return availableRoom?.room_id || null;
     };
 
@@ -3524,7 +3524,8 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     };
 
     let finalName, finalNameKana, finalNameKanji;
-    const { name, nameKana, nameKanji } = await processNameString(clientData.name);
+    const sanitizedName = sanitizeName(clientData.name);
+    const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
     finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
     if (clientData.name_kana) {
       finalNameKana = toFullWidthKana(clientData.name_kana);
@@ -3594,7 +3595,6 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         SELECT * FROM updated
         UNION ALL
         SELECT * FROM inserted;
-
       `;
 
       values = [
