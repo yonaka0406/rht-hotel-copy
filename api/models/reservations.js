@@ -2951,15 +2951,21 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
               finalNameKana = toFullWidthKana(guestData.name_kana);
-            }    
+            }
             
-            // Insert new client
+            // First, try to find an existing client with the same details
             query = `
-              INSERT INTO clients (
-                name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-              RETURNING *;
-            `;
+              SELECT id FROM clients 
+              WHERE name = $1 
+                AND name_kana = $2 
+                AND name_kanji IS NOT DISTINCT FROM $3 
+                AND date_of_birth IS NOT DISTINCT FROM $4 
+                AND legal_or_natural_person = $5 
+                AND gender = $6 
+                AND email = $7 
+                AND phone = $8 
+              LIMIT 1;
+            `;  
 
             values = [
               finalName,
@@ -2969,13 +2975,37 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               guestData.legal_or_natural_person,
               guestData.gender,
               guestData.email,
-              guestData.phone,
-              guestData.created_by,
-              guestData.updated_by
+              guestData.phone
             ];
-            
-            const newClient = await internalClient.query(query, values);            
-            insertedClients.push(newClient.rows[0]);
+
+            const existingClient = await internalClient.query(query, values);
+            if (existingClient.rows.length > 0) {
+              insertedClients.push(existingClient.rows[0]);
+            } else{
+              // Insert new client
+              query = `
+                INSERT INTO clients (
+                  name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                RETURNING *;
+              `;
+
+              values = [
+                finalName,
+                finalNameKana,
+                finalNameKanji,
+                guestData.date_of_birth,
+                guestData.legal_or_natural_person,
+                guestData.gender,
+                guestData.email,
+                guestData.phone,
+                guestData.created_by,
+                guestData.updated_by
+              ];
+
+              const newClient = await internalClient.query(query, values);            
+              insertedClients.push(newClient.rows[0]);
+            } 
            }
          }
         }
@@ -3039,15 +3069,44 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               finalNameKana = toFullWidthKana(guestData.name_kana);
             }
 
-            // Insert new client
+            // First, try to find an existing client with the same details
             query = `
+              SELECT id FROM clients 
+              WHERE name = $1 
+                AND name_kana = $2 
+                AND name_kanji IS NOT DISTINCT FROM $3 
+                AND date_of_birth IS NOT DISTINCT FROM $4 
+                AND legal_or_natural_person = $5 
+                AND gender = $6 
+                AND email = $7 
+                AND phone = $8 
+              LIMIT 1;
+            `;  
+
+            values = [
+              finalName,
+              finalNameKana,
+              finalNameKanji,
+              guestData.date_of_birth,
+              guestData.legal_or_natural_person,
+              guestData.gender,
+              guestData.email,
+              guestData.phone
+            ];
+
+            const existingClient = await internalClient.query(query, values);
+            if (existingClient.rows.length > 0) {
+              reservationGuestId = existingClient.rows[0].id;
+            } else{
+              // Insert new client
+              query = `
               INSERT INTO clients (
                 name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
               RETURNING *;
-            `;
+              `;
 
-            values = [
+              values = [
               finalName,
               finalNameKana,
               finalNameKanji,
@@ -3058,10 +3117,11 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               guestData.phone,
               guestData.created_by,
               guestData.updated_by
-            ];
-            
-            const newClient = await internalClient.query(query, values);
-            reservationGuestId = newClient.rows[0].id;
+              ];
+
+              const newClient = await internalClient.query(query, values);
+              reservationGuestId = newClient.rows[0].id;
+            }            
          } else {
           reservationGuestId = reservationClientId;             
          }
