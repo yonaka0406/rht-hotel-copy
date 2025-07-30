@@ -355,31 +355,36 @@ async function testCompleteOTAReservationFlow() {
                     otaReservations.rows.forEach(row => {
                         console.log(`    - ${row.ota_reservation_id} (Status: ${row.status}, Guest: ${row.guest_name})`);
                     });
-                } else {
-                    console.log('  - No OTA reservations found with the expected IDs');
-                }
-                
-                // Get all reservations for context
-                const allReservations = await dbClient.query(
-                    `SELECT r.id, r.ota_reservation_id, r.status, r.check_in, r.check_out, c.name AS guest_name, r.type 
-                     FROM reservations r 
-                     JOIN clients c ON r.reservation_client_id = c.id 
-                     WHERE r.hotel_id = 10 
-                     ORDER BY r.created_at DESC 
-                     LIMIT 5`
-                );
-                
-                console.log('\n  - Latest reservations in database (for context):');
-                allReservations.rows.forEach(row => {
-                    console.log(`    - ID: ${row.id}, OTA ID: ${row.ota_reservation_id || 'N/A'}, Status: ${row.status}, Guest: ${row.guest_name}`);
-                });
-                
-                // Verify we found all expected OTA reservations
-                const foundOtaIds = otaReservations.rows.map(r => r.ota_reservation_id);
-                const missingOtaIds = expectedOtaIds.filter(id => !foundOtaIds.includes(id));
-                
-                if (missingOtaIds.length > 0) {
-                    throw new Error(`Failed to find OTA reservations with IDs: ${missingOtaIds.join(', ')}`);
+                    
+                    // Verify reservation_clients entries for each reservation
+                    console.log('\n  - Verifying reservation_clients entries for OTA reservations...');
+                    const reservationIds = otaReservations.rows.map(r => r.id);
+                    const reservationClientsResults = await dbClient.query(`
+                        SELECT rc.*, r.ota_reservation_id, rd.room_id
+                        FROM reservation_clients rc
+                        JOIN reservation_details rd ON rc.reservation_details_id = rd.id
+                        JOIN reservations r ON rd.reservation_id = r.id
+                        WHERE r.id = ANY($1::uuid[])
+                    `, [reservationIds]);
+                    
+                    if (reservationClientsResults.rows.length > 0) {
+                        console.log(`  - Found ${reservationClientsResults.rows.length} entries in reservation_clients:`);
+                        reservationClientsResults.rows.forEach((row, index) => {
+                            console.log(`    ${index + 1}. Reservation: ${row.ota_reservation_id}, ` +
+                                       `Room: ${row.room_id}, ` +
+                                       `Client: ${row.client_id}`);
+                        });
+                    } else {
+                        console.log('  - No entries found in reservation_clients for the OTA reservations');
+                    }
+                    
+                    // Check for missing OTA reservations
+                    const foundOtaIds = otaReservations.rows.map(r => r.ota_reservation_id);
+                    const missingOtaIds = expectedOtaIds.filter(id => !foundOtaIds.includes(id));
+                    
+                    if (missingOtaIds.length > 0) {
+                        throw new Error(`Failed to find OTA reservations with IDs: ${missingOtaIds.join(', ')}`);
+                    }
                 }
                 
                 console.log('\n===== OTA Reservation Flow Test Completed =====');

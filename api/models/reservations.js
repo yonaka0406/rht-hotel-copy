@@ -2930,6 +2930,26 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         }
         console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
 
+        // Commented out guest processing for now - testing with booker's client ID
+        console.log('Skipping guest processing - using booker\'s client ID');
+        
+        // Add booker's client ID to reservation_clients for testing
+        try {
+            if (reservationClientId) {
+                const result = await internalClient.query(`
+                    INSERT INTO reservation_clients (
+                        hotel_id, reservation_details_id, client_id, created_by, updated_by
+                    ) VALUES ($1, $2, $3, 1, 1)
+                    RETURNING *;
+                `, [hotel_id, reservationDetailsId, reservationClientId]);
+                console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+            } else {
+                console.log('No reservationClientId available to add to reservation_clients');
+            }
+        } catch (error) {
+            console.error('Error adding booker to reservation_clients:', error);
+        }
+
         query = `
           INSERT INTO reservation_rates (
               hotel_id, reservation_details_id, adjustment_value, tax_type_id, tax_rate, price, created_by
