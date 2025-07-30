@@ -11,8 +11,8 @@
  */
 
 // Prevent accidental execution
-console.error('\x1b[31m%s\x1b[0m', '\nWARNING: This test modifies the database. Execution is blocked by default.\n');
-return;
+//console.error('\x1b[31m%s\x1b[0m', '\nWARNING: This test modifies the database. Execution is blocked by default.\n');
+//return;
 
 // Import required modules
 const { Pool } = require('pg');
