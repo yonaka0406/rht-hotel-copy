@@ -96,7 +96,8 @@ async function testCompleteOTAReservationFlow() {
     try {
         // Test database connection with processResponseById
         console.log('Testing database connection...');
-        const testResponse = await processResponseById(requestId, 3802, pool);
+        //const testResponse = await processResponseById(requestId, 3802, pool);
+        const testResponse = await processResponseById(requestId, 2417, pool);
         console.log('Successfully connected to database and fetched test response:', testResponse ? 'Response found' : 'No response found');
         
         console.log('===== Starting Complete OTA Reservation Flow Test =====');
@@ -109,7 +110,8 @@ async function testCompleteOTAReservationFlow() {
         dbClient = await pool.connect();
         
         // Test data - using response ID 3802 which contains multiple reservations
-        const responseId = 3802;
+        //const responseId = 3802;
+        const responseId = 2417;
         const hotelId = 10; // Using hotel_id = 10 as per database configuration
         
         // --- Step 1: Get and parse XML response ---
