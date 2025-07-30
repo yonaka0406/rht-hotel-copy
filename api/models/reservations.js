@@ -7,8 +7,6 @@ const { getPriceForReservation, getRatesForTheDay } = require('../models/planRat
 const { selectTLRoomMaster, selectTLPlanMaster } = require('../ota/xmlModel');
 const logger = require('../config/logger');
 
-
-
 // Helper
 const formatDate = (date) => {
   const year = date.getFullYear();
@@ -16,6 +14,10 @@ const formatDate = (date) => {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+// Default times for reservations
+const DEFAULT_CHECK_IN_TIME = '16:00';
+const DEFAULT_CHECK_OUT_TIME = '10:00';
 
 // Function to Select
 
@@ -2791,13 +2793,14 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'ota', $8, $9, $10, 1, 1)
       RETURNING *;
     `;
+
     values = [
       hotel_id,
       reservationClientId,
       BasicInformation.CheckInDate,
-      BasicInformation.CheckInTime,
+      BasicInformation.CheckInTime || DEFAULT_CHECK_IN_TIME,
       BasicInformation.CheckOutDate,
-      BasicInformation.CheckOutTime,
+      BasicInformation.CheckOutTime || DEFAULT_CHECK_OUT_TIME,
       BasicInformation.GrandTotalPaxCount,
       SalesOfficeInformation.SalesOfficeCompanyName,
       BasicInformation.TravelAgencyBookingNumber,
@@ -3380,9 +3383,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     `;
     values = [
       BasicInformation.CheckInDate,
-      BasicInformation.CheckInTime,
+      BasicInformation.CheckInTime || DEFAULT_CHECK_IN_TIME,
       BasicInformation.CheckOutDate,
-      BasicInformation.CheckOutTime,
+      BasicInformation.CheckOutTime || DEFAULT_CHECK_OUT_TIME,
       BasicInformation.GrandTotalPaxCount,
       reservationComment,
       reservationIdToUpdate,
