@@ -54,8 +54,24 @@ async function processQueuedReservations(requestId, reservations, client) {
             transactionId: reservation._transactionId,
             reservationKeys: Object.keys(reservation).filter(k => !k.startsWith('_')),
             hasReservationData: !!reservation.reservationData,
-            dataType: reservation.reservationData ? typeof reservation.reservationData : 'none'
+            dataType: reservation.reservationData ? typeof reservation.reservationData : 'none',
+            transactionInProgress: client ? 'Using provided transaction' : 'No transaction provided'
         });
+        
+        // Log the actual transaction status
+        try {
+            const txStatus = await client.query('SELECT txid_current_if_assigned() as txid');
+            logger.debug(`[processQueuedReservations] Transaction status`, {
+                requestId,
+                transactionId: reservation._transactionId,
+                txid: txStatus.rows[0].txid
+            });
+        } catch (txErr) {
+            logger.error(`[processQueuedReservations] Error checking transaction status`, {
+                requestId,
+                error: txErr.message
+            });
+        }
         
         // Log detailed reservation data structure
         logger.debug('[processQueuedReservations] Full reservation data:', {
@@ -95,31 +111,71 @@ async function processQueuedReservations(requestId, reservations, client) {
             let result = { success: false };
             
             // Process based on reservation type
-            switch(classification) {
-                case 'NewBookReport':
-                    result = await addOTAReservation(requestId, hotelId, reservationData, client);
-                    break;
-                    
-                case 'ModificationReport':
-                    result = await editOTAReservation(requestId, hotelId, reservationData, client);
-                    break;
-                    
-                case 'CancellationReport':
-                    result = await cancelOTAReservation(requestId, hotelId, reservationData, client);
-                    break;
-                    
-                default:
-                    throw new Error(`Unsupported reservation type: ${classification}`);
+            logger.debug(`[processQueuedReservations] Processing reservation type: ${classification}`, {
+                requestId,
+                reservationId: reservation._otaReservationId,
+                transactionId: reservation._transactionId
+            });
+
+            try {
+                switch(classification) {
+                    case 'NewBookReport':
+                        logger.debug(`[processQueuedReservations] Calling addOTAReservation`, {
+                            requestId,
+                            reservationId: reservation._otaReservationId,
+                            hotelId,
+                            hasClient: !!client
+                        });
+                        result = await addOTAReservation(requestId, hotelId, reservationData, client);
+                        break;
+                        
+                    case 'ModificationReport':
+                        logger.debug(`[processQueuedReservations] Calling editOTAReservation`, {
+                            requestId,
+                            reservationId: reservation._otaReservationId,
+                            hotelId,
+                            hasClient: !!client
+                        });
+                        result = await editOTAReservation(requestId, hotelId, reservationData, client);
+                        break;
+                        
+                    case 'CancellationReport':
+                        logger.debug(`[processQueuedReservations] Calling cancelOTAReservation`, {
+                            requestId,
+                            reservationId: reservation._otaReservationId,
+                            hotelId,
+                            hasClient: !!client
+                        });
+                        result = await cancelOTAReservation(requestId, hotelId, reservationData, client);
+                        break;
+                        
+                    default:
+                        throw new Error(`Unsupported reservation type: ${classification}`);
+                }
+                
+                logger.debug(`[processQueuedReservations] Reservation processed successfully`, {
+                    requestId,
+                    reservationId: reservation._otaReservationId,
+                    result: result
+                });
+            } catch (processErr) {
+                logger.error(`[processQueuedReservations] Error processing reservation`, {
+                    requestId,
+                    reservationId: reservation._otaReservationId,
+                    error: processErr.message,
+                    stack: processErr.stack
+                });
+                throw processErr; // Re-throw to be caught by the outer try-catch
             }
 
             // Update queue status
             if (result.success) {
-                await updateOTAReservationQueue(requestId, {
-                    hotelId,
-                    otaReservationId,
-                    status: 'processed',
-                    conflictDetails: null
-                });
+                await updateOTAReservationQueue(
+                    requestId,
+                    reservation._queueId,  // The queue entry ID
+                    'processed',           // Status
+                    null                   // conflictDetails
+                );
                 results.processed++;
                 results.details.push({
                     otaReservationId,

@@ -195,14 +195,16 @@ async function testCompleteOTAReservationFlow() {
                 // Process the reservations
                 await processQueuedReservations(requestId, formattedReservations, dbClient);
                 
-                // If we get here, the transaction was successful
-                console.log('  - Transaction completed successfully');
+                // Commit the transaction
+                await dbClient.query('COMMIT');
+                console.log('  - Transaction committed successfully');
                 transactionSucceeded = true;
                 
                 // Verify the queue entries are marked as processed
                 console.log('\n--- Step 4: Verifying Queue Entries are Marked as Processed ---');
                 
-                const queueResults = await pool.query(
+                // Use the same client for verification to ensure we see committed changes
+                const queueResults = await dbClient.query(
                     'SELECT * FROM ota_reservation_queue WHERE status = $1 ORDER BY id',
                     ['processed']
                 );
@@ -213,17 +215,171 @@ async function testCompleteOTAReservationFlow() {
                     throw new Error('No queue entries were marked as processed in the database');
                 }
                 
-                console.log('  - First processed queue entry:', {
-                    id: queueResults.rows[0]?.id,
-                    status: queueResults.rows[0]?.status,
-                    updated_at: queueResults.rows[0]?.updated_at
+                // Get the actual OTA reservation IDs from the queued reservations
+                const otaIdsToVerify = queuedReservations.map(res => {
+                    return res.otaReservationId || res._otaReservationId || 
+                           (res.reservationData?.BasicInformation?.TravelAgencyBookingNumber);
+                }).filter(Boolean);
+                
+                console.log('  - Verifying OTA reservations with IDs:', otaIdsToVerify);
+                
+                if (otaIdsToVerify.length === 0) {
+                    throw new Error('No OTA reservation IDs found in queued reservations');
+                }
+                
+                // First, log all recent reservations for debugging
+                const recentReservations = await dbClient.query(
+                    'SELECT id, ota_reservation_id, status, check_in, check_out, created_at ' +
+                    'FROM reservations WHERE hotel_id = $1 ORDER BY created_at DESC LIMIT 10',
+                    [10] // hotel_id = 10
+                );
+                console.log('  - Most recent reservations in database:', recentReservations.rows);
+
+                // Then verify the specific reservations we're looking for
+                const reservationResults = await dbClient.query(
+                    'SELECT * FROM reservations WHERE ota_reservation_id = ANY($1::text[])',
+                    [otaIdsToVerify]
+                );
+                
+                console.log(`  - Found ${reservationResults.rows.length} matching reservations in the database`);
+                
+                if (reservationResults.rows.length > 0) {
+                    console.log('  - Matching reservations found:', reservationResults.rows.map(r => ({
+                        id: r.id,
+                        ota_reservation_id: r.ota_reservation_id,
+                        status: r.status,
+                        check_in: r.check_in,
+                        check_out: r.check_out,
+                        created_at: r.created_at
+                    })));
+                } else {
+                    console.log('  - No matching reservations found with the expected OTA IDs');
+                    console.log('  - This might be expected if the test is verifying a failure case');
+                }
+                
+                // Verify the reservations were actually added to the database
+                console.log('\n--- Step 5: Verifying Reservations in Database ---');
+                
+                // Verify the specific OTA reservations were created
+                console.log('\n--- Step 5: Verifying Specific OTA Reservations in Database ---');
+                
+                // Debug: Log the complete structure of queuedReservations with all properties
+                console.log('  - queuedReservations:', JSON.stringify(queuedReservations, (key, value) => {
+                    if (key === 'reservationData' && value && typeof value === 'object') {
+                        return '[Object - reservationData]';
+                    }
+                    return value;
+                }, 2));
+
+                // Log each reservation with all its properties
+                console.log('  - Detailed queuedReservations inspection:');
+                queuedReservations.forEach((res, idx) => {
+                    console.log(`    Reservation ${idx + 1}:`);
+                    console.log(`      - Type: ${res.type || 'undefined'}`);
+                    console.log(`      - Status: ${res.status || 'undefined'}`);
+                    console.log(`      - _otaReservationId: ${res._otaReservationId || 'undefined'}`);
+                    console.log(`      - otaReservationId: ${res.otaReservationId || 'undefined'}`);
+                    console.log(`      - reservation.otaReservationId: ${res.reservation?.otaReservationId || 'undefined'}`);
+                    console.log(`      - reservationData: ${res.reservationData ? 'exists' : 'undefined'}`);
+                    console.log(`      - _queueId: ${res._queueId || 'undefined'}`);
+                    console.log(`      - _transactionId: ${res._transactionId || 'undefined'}`);
+                    console.log(`      - _queueStatus: ${res._queueStatus || 'undefined'}`);
+                    console.log(`      - _error: ${res._error || 'undefined'}`);
+                    console.log(`      - All properties: ${Object.keys(res).join(', ')}`);
                 });
+
+                // Get the OTA reservation IDs from the queued reservations
+                const expectedOtaIds = queuedReservations.map(res => {
+                    // Check all possible locations where the OTA ID might be stored
+                    const possibleIds = [
+                        res.otaReservationId,
+                        res._otaReservationId,
+                        res.reservation?.otaReservationId,
+                        res.reservationData?.BasicInformation?.TravelAgencyBookingNumber,
+                        res.reservationData?.BasicInformation?.TravelAgencyBookingId,
+                        res.reservationData?.BasicInformation?.ReservationID,
+                        res.reservationData?.BasicInformation?.ReservationId
+                    ];
+                    
+                    const foundId = possibleIds.find(id => id !== undefined && id !== null);
+                    if (!foundId) {
+                        console.error('Could not find OTA ID in reservation:', JSON.stringify(res, null, 2));
+                        throw new Error('No OTA ID found in reservation data');
+                    }
+                    return foundId;
+                });
+                
+                console.log('  - Verifying OTA reservations with IDs:', expectedOtaIds);
+                
+                console.log('  - Extracted OTA IDs:', expectedOtaIds);
+                
+                if (expectedOtaIds.length === 0) {
+                    console.error('  - ERROR: No OTA reservation IDs could be extracted from queuedReservations');
+                    console.error('  - Full queuedReservations object:', JSON.stringify(queuedReservations, null, 2));
+                    throw new Error('No OTA reservation IDs found in queuedReservations');
+                }
+                
+                console.log('  - Verifying OTA reservations with IDs:', expectedOtaIds);
+                
+                // First, verify the specific OTA reservations exist
+                const otaReservations = await dbClient.query(
+                    `SELECT r.id, r.ota_reservation_id, r.status, r.check_in, r.check_out, c.name AS guest_name, r.type 
+                     FROM reservations r 
+                     JOIN clients c ON r.reservation_client_id = c.id 
+                     WHERE r.hotel_id = 10 AND r.ota_reservation_id = ANY($1::text[])
+                     ORDER BY r.created_at DESC`,
+                    [expectedOtaIds]
+                );
+                
+                console.log(`  - Found ${otaReservations.rows.length} OTA reservations with the expected IDs`);
+                
+                // Log details of found OTA reservations
+                if (otaReservations.rows.length > 0) {
+                    console.log('  - OTA Reservations found:');
+                    otaReservations.rows.forEach(row => {
+                        console.log(`    - ${row.ota_reservation_id} (Status: ${row.status}, Guest: ${row.guest_name})`);
+                    });
+                } else {
+                    console.log('  - No OTA reservations found with the expected IDs');
+                }
+                
+                // Get all reservations for context
+                const allReservations = await dbClient.query(
+                    `SELECT r.id, r.ota_reservation_id, r.status, r.check_in, r.check_out, c.name AS guest_name, r.type 
+                     FROM reservations r 
+                     JOIN clients c ON r.reservation_client_id = c.id 
+                     WHERE r.hotel_id = 10 
+                     ORDER BY r.created_at DESC 
+                     LIMIT 5`
+                );
+                
+                console.log('\n  - Latest reservations in database (for context):');
+                allReservations.rows.forEach(row => {
+                    console.log(`    - ID: ${row.id}, OTA ID: ${row.ota_reservation_id || 'N/A'}, Status: ${row.status}, Guest: ${row.guest_name}`);
+                });
+                
+                // Verify we found all expected OTA reservations
+                const foundOtaIds = otaReservations.rows.map(r => r.ota_reservation_id);
+                const missingOtaIds = expectedOtaIds.filter(id => !foundOtaIds.includes(id));
+                
+                if (missingOtaIds.length > 0) {
+                    throw new Error(`Failed to find OTA reservations with IDs: ${missingOtaIds.join(', ')}`);
+                }
                 
                 console.log('\n===== OTA Reservation Flow Test Completed =====');
                 console.log('- All queue entries were properly marked as processed');
-                console.log('- Reservations were successfully added to the database');
+                console.log(`- Successfully verified ${otaReservations.rows.length} OTA reservations in the database`);
                 
             } catch (processError) {
+                if (isTransactionActive) {
+                    try {
+                        await dbClient.query('ROLLBACK');
+                        console.log('  - Transaction rolled back due to error');
+                    } catch (rollbackError) {
+                        console.error('  - Error rolling back transaction:', rollbackError.message);
+                    }
+                }
+                
                 if (transactionSucceeded) {
                     console.log('  - Error verifying processed queue entries:', processError.message);
                     throw processError;
@@ -234,7 +390,8 @@ async function testCompleteOTAReservationFlow() {
                 // Verify the queue entries are marked as failed
                 console.log('\n--- Step 4: Verifying Queue Entries are Marked as Failed ---');
                 
-                const queueResults = await pool.query(
+                // Use the same client for verification to ensure we see committed changes
+                const queueResults = await dbClient.query(
                     'SELECT * FROM ota_reservation_queue WHERE status = $1 ORDER BY id',
                     ['failed']
                 );
