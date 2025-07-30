@@ -2733,11 +2733,18 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       finalNameKana = toFullWidthKana(clientData.name_kana);
     }
 
+    // First, try to find an existing client with the same details
     query = `
-      INSERT INTO clients (
-        name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING *;
+      SELECT id FROM clients 
+      WHERE name = $1 
+        AND name_kana = $2 
+        AND name_kanji IS NOT DISTINCT FROM $3 
+        AND date_of_birth IS NOT DISTINCT FROM $4 
+        AND legal_or_natural_person = $5 
+        AND gender = $6 
+        AND email = $7 
+        AND phone = $8 
+      LIMIT 1;
     `;
 
     values = [
@@ -2748,43 +2755,72 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       clientData.legal_or_natural_person,
       clientData.gender,
       clientData.email,
-      clientData.phone,
-      clientData.created_by,
-      clientData.updated_by
+      clientData.phone
     ];
-    const newClient = await internalClient.query(query, values);
-    const reservationClientId = newClient.rows[0].id;
-    //const reservationClientId = 88;    
-    console.log('addOTAReservation client:', newClient.rows[0]);
 
-    // Insert address
-    if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
+    const existingClient = await internalClient.query(query, values);
+    let reservationClientId;
+
+    if (existingClient.rows.length > 0) {
+      // Use existing client
+      reservationClientId = existingClient.rows[0].id;
+      console.log('Using existing client with ID:', reservationClientId);
+    } else {
+      // Insert new client
       query = `
-        INSERT INTO addresses (
-          client_id, address_name, representative_name, street, state, 
-          city, postal_code, country, phone, fax, 
-          email, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO clients (
+          name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *;
       `;
 
       values = [
-        reservationClientId,
-        'OTA登録',
-        finalNameKanji || finalName,
-        Basic.Address || Member.UserAddr || '',
-        '',
-        '',
-        Basic.PostalCode || Member.UserZip || '',
-        '',
-        Basic.PhoneNumber || Member.UserTel || '',
-        '',
-        Basic.Email || Member.UserMailAddr || '',
-        1
+        finalName,
+        finalNameKana,
+        finalNameKanji,
+        clientData.date_of_birth,
+        clientData.legal_or_natural_person,
+        clientData.gender,
+        clientData.email,
+        clientData.phone,
+        clientData.created_by,
+        clientData.updated_by
       ];
-      const newAddress = await internalClient.query(query, values);
-      console.log('addOTAReservation addresses:', newAddress.rows[0]);
-    }
+      
+      const newClient = await internalClient.query(query, values);
+      reservationClientId = newClient.rows[0].id;
+      console.log('Created new client with ID:', reservationClientId);
+      console.log('addOTAReservation client:', newClient.rows[0]);
+
+      // Only insert address for new clients
+      if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
+        query = `
+          INSERT INTO addresses (
+            client_id, address_name, representative_name, street, state, 
+            city, postal_code, country, phone, fax, 
+            email, created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          RETURNING *;
+        `;
+
+        values = [
+          reservationClientId,
+          'OTA登録',
+          finalNameKanji || finalName,
+          Basic.Address || Member.UserAddr || '',
+          '',
+          '',
+          Basic.PostalCode || Member.UserZip || '',
+          '',
+          Basic.PhoneNumber || Member.UserTel || '',
+          '',
+          Basic.Email || Member.UserMailAddr || '',
+          1
+        ];
+        const newAddress = await internalClient.query(query, values);
+        console.log('addOTAReservation addresses:', newAddress.rows[0]);
+      }
+    } 
 
     // Insert reservations
     query = `
