@@ -2942,70 +2942,47 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           }
 
           // Process guest information if available in RoomAndRoomRateInformation
-         const guestInformation = info?.GuestInformation;
-         const guestList = guestInformation?.GuestInformationList;
+          const guestInformation = info?.GuestInformation;
+          const guestList = guestInformation?.GuestInformationList;
 
-         if (guestList && Array.isArray(guestList) && guestList.length > 0) {
-          console.log('Processing guest information from GuestInformationList');
-           for (const guest of guestList) {
-            const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
-            const sanitizedName = sanitizeName(rawName);
-            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
-            
-            guestData = {
-              name: name,                
-              name_kana: nameKana,
-              name_kanji: nameKanji,
-              date_of_birth: guest?.GuestDateOfBirth || null,
-              legal_or_natural_person: selectNature(guest?.GuestGender || 1),
-              gender: selectGender(guest?.GuestGender || '2'),
-              email: Basic.Email || '',
-              phone: Basic.PhoneNumber || '',
-              created_by: 1,
-              updated_by: 1,
-            };
+          if (guestList && Array.isArray(guestList) && guestList.length > 0) {
+            console.log('Processing guest information from GuestInformationList');
+            for (const guest of guestList) {
+              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
+              const sanitizedName = sanitizeName(rawName);
+              const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+              
+              guestData = {
+                name: name,                
+                name_kana: nameKana,
+                name_kanji: nameKanji,
+                date_of_birth: guest?.GuestDateOfBirth || null,
+                legal_or_natural_person: selectNature(guest?.GuestGender || 1),
+                gender: selectGender(guest?.GuestGender || '2'),
+                email: Basic.Email || '',
+                phone: Basic.PhoneNumber || '',
+                created_by: 1,
+                updated_by: 1,
+              };
 
-            finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
-            if (guestData.name_kana) {
-              finalNameKana = toFullWidthKana(guestData.name_kana);
-            }
-            
-            // First, try to find an existing client with the same details
-            query = `
-              SELECT id FROM clients 
-              WHERE name = $1 
-                AND name_kana = $2 
-                AND name_kanji IS NOT DISTINCT FROM $3 
-                AND date_of_birth IS NOT DISTINCT FROM $4 
-                AND legal_or_natural_person = $5 
-                AND gender = $6 
-                AND email = $7 
-                AND phone = $8 
-              LIMIT 1;
-            `;  
-
-            values = [
-              finalName,
-              finalNameKana,
-              finalNameKanji,
-              guestData.date_of_birth,
-              guestData.legal_or_natural_person,
-              guestData.gender,
-              guestData.email,
-              guestData.phone
-            ];
-
-            const existingClient = await internalClient.query(query, values);
-            if (existingClient.rows.length > 0) {
-              insertedClients.push(existingClient.rows[0]);
-            } else{
-              // Insert new client
+              finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+              if (guestData.name_kana) {
+                finalNameKana = toFullWidthKana(guestData.name_kana);
+              }
+              
+              // First, try to find an existing client with the same details
               query = `
-                INSERT INTO clients (
-                  name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                RETURNING *;
-              `;
+                SELECT id FROM clients 
+                WHERE name = $1 
+                  AND name_kana = $2 
+                  AND name_kanji IS NOT DISTINCT FROM $3 
+                  AND date_of_birth IS NOT DISTINCT FROM $4 
+                  AND legal_or_natural_person = $5 
+                  AND gender = $6 
+                  AND email = $7 
+                  AND phone = $8 
+                LIMIT 1;
+              `;  
 
               values = [
                 finalName,
@@ -3015,16 +2992,39 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 guestData.legal_or_natural_person,
                 guestData.gender,
                 guestData.email,
-                guestData.phone,
-                guestData.created_by,
-                guestData.updated_by
+                guestData.phone
               ];
 
-              const newClient = await internalClient.query(query, values);            
-              insertedClients.push(newClient.rows[0]);
-            } 
-           }
-         }
+              const existingClient = await internalClient.query(query, values);
+              if (existingClient.rows.length > 0) {
+                insertedClients.push(existingClient.rows[0]);
+              } else{
+                // Insert new client
+                query = `
+                  INSERT INTO clients (
+                    name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                  RETURNING *;
+                `;
+
+                values = [
+                  finalName,
+                  finalNameKana,
+                  finalNameKanji,
+                  guestData.date_of_birth,
+                  guestData.legal_or_natural_person,
+                  guestData.gender,
+                  guestData.email,
+                  guestData.phone,
+                  guestData.created_by,
+                  guestData.updated_by
+                ];
+
+                const newClient = await internalClient.query(query, values);            
+                insertedClients.push(newClient.rows[0]);
+              } 
+            }
+          }
         }
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
@@ -3722,6 +3722,91 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             plans_global_id = plan_gid;
             plans_hotel_id = plan_hid;
           }
+
+          // Process guest information if available in RoomAndRoomRateInformation
+          const guestInformation = info?.GuestInformation;
+          const guestList = guestInformation?.GuestInformationList;
+
+          if (guestList && Array.isArray(guestList) && guestList.length > 0) {
+            console.log('Processing guest information from GuestInformationList');
+            for (const guest of guestList) {
+              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
+              const sanitizedName = sanitizeName(rawName);
+              const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+              
+              guestData = {
+                name: name,                
+                name_kana: nameKana,
+                name_kanji: nameKanji,
+                date_of_birth: guest?.GuestDateOfBirth || null,
+                legal_or_natural_person: selectNature(guest?.GuestGender || 1),
+                gender: selectGender(guest?.GuestGender || '2'),
+                email: Basic.Email || '',
+                phone: Basic.PhoneNumber || '',
+                created_by: 1,
+                updated_by: 1,
+              };
+
+              finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+              if (guestData.name_kana) {
+                finalNameKana = toFullWidthKana(guestData.name_kana);
+              }
+              
+              // First, try to find an existing client with the same details
+              query = `
+                SELECT id FROM clients 
+                WHERE name = $1 
+                  AND name_kana = $2 
+                  AND name_kanji IS NOT DISTINCT FROM $3 
+                  AND date_of_birth IS NOT DISTINCT FROM $4 
+                  AND legal_or_natural_person = $5 
+                  AND gender = $6 
+                  AND email = $7 
+                  AND phone = $8 
+                LIMIT 1;
+              `;  
+
+              values = [
+                finalName,
+                finalNameKana,
+                finalNameKanji,
+                guestData.date_of_birth,
+                guestData.legal_or_natural_person,
+                guestData.gender,
+                guestData.email,
+                guestData.phone
+              ];
+
+              const existingClient = await internalClient.query(query, values);
+              if (existingClient.rows.length > 0) {
+                insertedClients.push(existingClient.rows[0]);
+              } else{
+                // Insert new client
+                query = `
+                  INSERT INTO clients (
+                    name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                  RETURNING *;
+                `;
+
+                values = [
+                  finalName,
+                  finalNameKana,
+                  finalNameKanji,
+                  guestData.date_of_birth,
+                  guestData.legal_or_natural_person,
+                  guestData.gender,
+                  guestData.email,
+                  guestData.phone,
+                  guestData.created_by,
+                  guestData.updated_by
+                ];
+
+                const newClient = await internalClient.query(query, values);            
+                insertedClients.push(newClient.rows[0]);
+              } 
+            }
+          }
         }
 
         const totalPeopleCount = roomDetail.RoomPaxMaleCount * 1 || 0 + roomDetail.RoomPaxFemaleCount * 1 || 0 + roomDetail.RoomChildA70Count * 1 || 0 + roomDetail.RoomChildB50Count * 1 || 0 + roomDetail.RoomChildC30Count * 1 || 0 + roomDetail.RoomChildDNoneCount * 1 || 0;
@@ -3759,6 +3844,120 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
         console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
+
+        if(!insertedClients || insertedClients.length === 0) {
+          // if insertedClients array is empty, add just one entry of client id in reservation_clients
+          if (Member?.UserName?.trim()) {
+            const guestData = {
+              name: BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '',
+              name_kana: BasicInformation?.GuestOrGroupNameSingleByte?.trim() || '',
+              date_of_birth: null,
+              legal_or_natural_person: selectNature(1),
+              gender: selectGender('2'),
+              email: Basic.Email || '',
+              phone: Basic.PhoneNumber || '',
+              created_by: 1,
+              updated_by: 1,
+            };
+                    
+            const sanitizedName = sanitizeName(guestData.name);
+            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
+            finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
+            if (guestData.name_kana) {
+              finalNameKana = toFullWidthKana(guestData.name_kana);
+            }
+
+            // First, try to find an existing client with the same details
+            query = `
+              SELECT id FROM clients 
+              WHERE name = $1 
+                AND name_kana = $2 
+                AND name_kanji IS NOT DISTINCT FROM $3 
+                AND date_of_birth IS NOT DISTINCT FROM $4 
+                AND legal_or_natural_person = $5 
+                AND gender = $6 
+                AND email = $7 
+                AND phone = $8 
+              LIMIT 1;
+            `;  
+
+            values = [
+              finalName,
+              finalNameKana,
+              finalNameKanji,
+              guestData.date_of_birth,
+              guestData.legal_or_natural_person,
+              guestData.gender,
+              guestData.email,
+              guestData.phone
+            ];
+
+            const existingClient = await internalClient.query(query, values);
+            if (existingClient.rows.length > 0) {
+              reservationGuestId = existingClient.rows[0].id;
+            } else{
+              // Insert new client
+              query = `
+              INSERT INTO clients (
+                name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, created_by, updated_by
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              RETURNING *;
+              `;
+
+              values = [
+              finalName,
+              finalNameKana,
+              finalNameKanji,
+              guestData.date_of_birth,
+              guestData.legal_or_natural_person,
+              guestData.gender,
+              guestData.email,
+              guestData.phone,
+              guestData.created_by,
+              guestData.updated_by
+              ];
+
+              const newClient = await internalClient.query(query, values);
+              reservationGuestId = newClient.rows[0].id;
+            }            
+         } else {
+          reservationGuestId = reservationClientId;             
+         }
+
+          // Add booker's client ID to reservation_clients for testing
+          try {
+            if (reservationGuestId) {
+                    const result = await internalClient.query(`
+                        INSERT INTO reservation_clients (
+                            hotel_id, reservation_details_id, client_id, created_by, updated_by
+                        ) VALUES ($1, $2, $3, 1, 1)
+                        RETURNING *;
+                    `, [hotel_id, reservationDetailsId, reservationGuestId]);
+                    console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+            } else {
+                console.log('No reservationGuestId available to add to reservation_clients');
+            }
+          } catch (error) {
+              console.error('Error adding booker to reservation_clients:', error);
+          }
+
+        } else {
+          // Add each client from insertedClients to reservation_clients
+          for (const client of insertedClients) {
+            try {
+              const result = await internalClient.query(`
+                INSERT INTO reservation_clients (
+                  hotel_id, reservation_details_id, client_id, created_by, updated_by
+                ) VALUES ($1, $2, $3, 1, 1)
+                RETURNING *;
+              `, [hotel_id, reservationDetailsId, client.id]);
+              console.log('Added guest to reservation_clients:', result.rows[0]);
+            } catch (error) {
+              console.error('Error adding guest to reservation_clients:', error);
+              throw error; // Re-throw to trigger transaction rollback
+            }
+          }
+        }
 
         query = `
           INSERT INTO reservation_rates (
