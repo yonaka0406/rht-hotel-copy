@@ -1,10 +1,281 @@
 require("dotenv").config();
 const xml2js = require('xml2js');
-const { selectXMLTemplate, selectXMLRecentResponses, insertXMLRequest, insertXMLResponse, selectTLRoomMaster, insertTLRoomMaster, selectTLPlanMaster, insertTLPlanMaster } = require('../ota/xmlModel');
+const { 
+    selectXMLTemplate, 
+    selectXMLRecentResponses, 
+    insertXMLRequest, 
+    insertXMLResponse, 
+    selectTLRoomMaster, 
+    insertTLRoomMaster, 
+    selectTLPlanMaster, 
+    insertTLPlanMaster,
+    insertOTAReservationQueue,
+    updateOTAReservationQueue,
+    getOTAReservationsByTransaction
+} = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
 const { getPool } = require('../config/database');
 const logger = require('../config/logger'); // Winston logger
+
+/**
+ * Process reservation data and add to OTA queue
+ * @param {string} requestId - The request ID for logging
+ * @param {object} reservationData - The parsed reservation data
+ * @param {number} hotelId - The hotel ID
+ * @returns {Promise<object>} - The processed reservation data
+ */
+/**
+ * Process queued reservations within a transaction
+ * @param {string} requestId - The request ID for logging
+ * @param {Array} reservations - Array of queued reservations
+ * @param {object} client - Database client with active transaction
+ * @returns {Promise<object>} - Processing results
+ */
+async function processQueuedReservations(requestId, reservations, client) {
+    const results = {
+        total: reservations.length,
+        processed: 0,
+        failed: 0,
+        details: []
+    };
+
+    logger.debug('[processQueuedReservations] Starting to process queued reservations', {
+        requestId,
+        totalReservations: reservations.length,
+        sampleReservation: JSON.stringify(reservations[0], null, 2) // Log first reservation as sample
+    });
+
+    for (const [index, reservation] of reservations.entries()) {
+        logger.debug(`[processQueuedReservations] Processing reservation ${index + 1}/${reservations.length}`, {
+            requestId,
+            reservationId: reservation._otaReservationId,
+            queueId: reservation._queueId,
+            transactionId: reservation._transactionId,
+            reservationKeys: Object.keys(reservation).filter(k => !k.startsWith('_')),
+            hasReservationData: !!reservation.reservationData,
+            dataType: reservation.reservationData ? typeof reservation.reservationData : 'none'
+        });
+        
+        // Log detailed reservation data structure
+        logger.debug('[processQueuedReservations] Full reservation data:', {
+            requestId,
+            reservation: JSON.stringify(reservation, null, 2).substring(0, 1000) // Limit size
+        });
+        
+        try {
+            const { reservationData, hotelId, otaReservationId, transactionId } = reservation;
+            
+            // Log reservation data structure
+            logger.debug('[processQueuedReservations] Reservation data structure:', {
+                requestId,
+                hasTransactionType: !!reservationData?.TransactionType,
+                transactionTypeKeys: reservationData?.TransactionType ? Object.keys(reservationData.TransactionType) : 'none',
+                dataClassification: reservationData?.TransactionType?.DataClassification || 'none',
+                topLevelKeys: reservationData ? Object.keys(reservationData) : 'none'
+            });
+            
+            const classification = reservationData.TransactionType?.DataClassification;
+            
+            if (!classification) {
+                logger.error('[processQueuedReservations] Missing classification in reservation data', {
+                    requestId,
+                    reservationData: JSON.stringify(reservationData, null, 2).substring(0, 1000)
+                });
+                throw new Error('Missing transaction type classification in reservation data');
+            }
+            
+            logger.debug(`[processQueuedReservations] Processing ${classification} for reservation`, {
+                requestId,
+                hotelId,
+                otaReservationId,
+                transactionId
+            });
+
+            let result = { success: false };
+            
+            // Process based on reservation type
+            switch(classification) {
+                case 'NewBookReport':
+                    result = await addOTAReservation(requestId, hotelId, reservationData, client);
+                    break;
+                    
+                case 'ModificationReport':
+                    result = await editOTAReservation(requestId, hotelId, reservationData, client);
+                    break;
+                    
+                case 'CancellationReport':
+                    result = await cancelOTAReservation(requestId, hotelId, reservationData, client);
+                    break;
+                    
+                default:
+                    throw new Error(`Unsupported reservation type: ${classification}`);
+            }
+
+            // Update queue status
+            if (result.success) {
+                await updateOTAReservationQueue(requestId, {
+                    hotelId,
+                    otaReservationId,
+                    status: 'processed',
+                    conflictDetails: null
+                });
+                results.processed++;
+                results.details.push({
+                    otaReservationId,
+                    status: 'success',
+                    message: result.message
+                });
+            } else {
+                throw new Error(result.message || 'Failed to process reservation');
+            }
+            
+        } catch (error) {
+            const { hotelId, otaReservationId, transactionId } = reservation;
+            const errorMessage = error.message || 'Unknown error processing reservation';
+            
+            // Update each queue entry individually to ensure all are marked as failed
+            logger.debug('[processQueuedReservations] Marking queue entries as failed', {
+                requestId,
+                transactionId,
+                otaReservationId,
+                error: errorMessage
+            });
+            
+            // Get all queue entries for this transaction
+            const queueEntries = await client.query(
+                'SELECT id, status, ota_reservation_id FROM ota_reservation_queue WHERE transaction_id = $1',
+                [transactionId]
+            );
+            
+            logger.debug('[processQueuedReservations] Found queue entries to update', {
+                requestId,
+                transactionId,
+                entryCount: queueEntries.rowCount
+            });
+            
+            // Update each entry individually
+            const updatePromises = queueEntries.rows.map(async (entry) => {
+                try {
+                    await updateOTAReservationQueue(
+                        requestId,
+                        entry.id,
+                        'failed',
+                        { error: errorMessage }
+                    );
+                    logger.debug('[processQueuedReservations] Updated queue entry', {
+                        requestId,
+                        queueId: entry.id,
+                        otaReservationId: entry.ota_reservation_id,
+                        status: 'failed'
+                    });
+                    return true;
+                } catch (updateError) {
+                    logger.error('[processQueuedReservations] Failed to update queue entry', {
+                        requestId,
+                        queueId: entry.id,
+                        otaReservationId: entry.ota_reservation_id,
+                        error: updateError.message
+                    });
+                    return false;
+                }
+            });
+            
+            // Wait for all updates to complete
+            const updateResults = await Promise.all(updatePromises);
+            const successfulUpdates = updateResults.filter(Boolean).length;
+            
+            logger.debug('[processQueuedReservations] Queue entries update summary', {
+                requestId,
+                transactionId,
+                totalEntries: queueEntries.rowCount,
+                successfulUpdates,
+                failedUpdates: queueEntries.rowCount - successfulUpdates
+            });
+            
+            if (successfulUpdates === 0 && queueEntries.rowCount > 0) {
+                throw new Error('Failed to update any queue entries to failed status');
+            }
+            
+            results.failed++;
+            results.details.push({
+                otaReservationId: otaReservationId || 'unknown',
+                status: 'failed',
+                message: errorMessage
+            });
+            
+            // Re-throw to trigger transaction rollback
+            throw error;
+        }
+    }
+    
+    return results;
+}
+
+/**
+ * Process and queue a single reservation
+ * @param {string} requestId - The request ID for logging
+ * @param {object} reservationData - The parsed reservation data
+ * @param {number} hotelId - The hotel ID
+ * @returns {Promise<object>} - The processed reservation data
+ */
+async function processAndQueueReservation(requestId, reservationData, hotelId) {
+    try {
+        const transactionId = reservationData.TransactionType?.DataID;
+        const otaReservationId = reservationData.BasicInformation?.TravelAgencyBookingNumber || `temp_${Date.now()}`;
+        
+        if (!transactionId) {
+            logger.warn('Skipping queue insertion - Missing transaction ID', { 
+                requestId,
+                hotelId,
+                otaReservationId 
+            });
+            return { ...reservationData, _queueStatus: 'skipped' };
+        }
+        
+        // Add to OTA queue
+        const queueResult = await insertOTAReservationQueue(requestId, {
+            hotelId,
+            otaReservationId,
+            transactionId,
+            reservationData,
+            status: 'pending',
+            conflictDetails: null
+        });
+        
+        const queueEntryId = queueResult?.id;
+        
+        logger.debug('Successfully added reservation to OTA queue', { 
+            requestId,
+            hotelId,
+            transactionId,
+            otaReservationId,
+            queueEntryId
+        });
+        
+        return { 
+            ...reservationData, 
+            _queueStatus: 'queued',
+            _transactionId: transactionId,
+            _otaReservationId: otaReservationId,
+            _queueId: queueEntryId
+        };
+        
+    } catch (error) {
+        logger.error('Error processing and queuing reservation:', {
+            requestId,
+            hotelId,
+            error: error.message,
+            stack: error.stack
+        });
+        
+        return { 
+            ...reservationData, 
+            _queueStatus: 'error',
+            _error: error.message
+        };
+    }
+}
 
 // GET
 const getXMLTemplate = async (req, res) => {
@@ -172,141 +443,266 @@ const createTLPlanMaster = async (req, res) => {
 
 const getOTAReservations = async (req, res) => {
     const name = 'BookingInfoOutputService';
+    const requestId = req.requestId;
 
     try {
-        const hotels = await getAllHotelSiteController(req.requestId);
+        const hotels = await getAllHotelSiteController(requestId);
         if (!hotels || hotels.length === 0) {
             logger.warn('No hotels found.');
             return res.status(404).send({ error: 'No hotels found.' });
         }
 
+        // Process each hotel's reservations
         for (const hotel of hotels) {
-            const hotel_id = hotel.hotel_id;
+            const hotelId = hotel.hotel_id;
+            let dbPool;
+            let dbClient;
+            let isTransactionActive = false;
 
-            // Get the template with credentials already injected
-            let template = await selectXMLTemplate(req.requestId, hotel_id, name);
-            if (!template) {
-                logger.warn(`XML template not found for hotel_id: ${hotel_id}`);
-                continue;
-            }
+            try {
+                // Initialize database connection
+                dbPool = getPool(requestId);
+                dbClient = await dbPool.connect();
+                isTransactionActive = false;
 
-            // Fetch the data
-            const reservations = await submitXMLTemplate(req, res, hotel_id, name, template);
-            // logger.debug('getOTAReservations reservations', reservations);
-
-            const executeResponse = reservations['S:Envelope']['S:Body']['ns2:executeResponse'];
-            // logger.debug('getOTAReservations executeResponse', executeResponse);
-
-            const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
-            const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? bookingInfoListWrapper : [bookingInfoListWrapper];
-            // logger.debug('getOTAReservations bookingInfoList', bookingInfoList);
-
-            if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
-                logger.info('No booking information found in the response.');
-                return [];
-            }
-
-            const formattedReservations = [];
-            // Process each bookingInfo to parse the inner infoTravelXML
-            for (const [idx, bookingInfo] of (Array.isArray(bookingInfoList) ? bookingInfoList : [bookingInfoList]).entries()) {
-                // Diagnostic: Log the index and value if bookingInfo is falsy
-                if (!bookingInfo) {
-                    logger.warn(
-                        `Skipping undefined or null bookingInfo object at index ${idx}.`,
-                        { bookingInfoList, executeResponse }
-                    );
-                    // Possible causes:
-                    // - The API response did not include bookingInfo objects for this hotel.
-                    // - bookingInfoList contains null/undefined entries (possibly due to empty bookings).
-                    // - The XML structure changed or is malformed.
-                    continue; // Skip to the next iteration
+                // Get the template with credentials already injected
+                const template = await selectXMLTemplate(requestId, hotelId, name);
+                if (!template) {
+                    logger.warn(`XML template not found for hotel_id: ${hotelId}`, { requestId });
+                    continue;
                 }
-                // Diagnostic: Log the bookingInfo object if needed
-                // logger.debug(`Processing bookingInfo at index ${idx}:`, bookingInfo);
 
-                const infoTravelXML = bookingInfo.infoTravelXML;
-                // logger.debug('getOTAReservations infoTravelXML', infoTravelXML);
+                // Fetch the OTA reservations
+                const reservations = await submitXMLTemplate(req, res, hotelId, name, template);
+                const executeResponse = reservations?.['S:Envelope']?.['S:Body']?.['ns2:executeResponse'];
+                const bookingInfoListWrapper = executeResponse?.return?.bookingInfoList;
+                const bookingInfoList = Array.isArray(bookingInfoListWrapper) ? 
+                    bookingInfoListWrapper : 
+                    (bookingInfoListWrapper ? [bookingInfoListWrapper] : []);
 
-                if (infoTravelXML) {
+                if (!bookingInfoList || bookingInfoList.length === 0 || bookingInfoList[0] === null) {
+                    logger.info('No booking information found in the response.', { requestId, hotelId });
+                    continue;
+                }
+
+                // Process each bookingInfo to parse the inner infoTravelXML and add to queue
+                const queuedReservations = [];
+                
+                for (const [idx, bookingInfo] of bookingInfoList.entries()) {
+                    if (!bookingInfo?.infoTravelXML) {
+                        logger.warn(`Skipping booking info at index ${idx} - missing infoTravelXML`, { 
+                            requestId,
+                            hotelId,
+                            index: idx 
+                        });
+                        continue;
+                    }
+
                     try {
+                        // Parse the inner XML
                         const parsedXML = await new Promise((resolve, reject) => {
-                            xml2js.parseString(infoTravelXML, { explicitArray: false }, (err, result) => {
-                                if (err) {
-                                    reject(err);
-                                } else {
-                                    resolve(result);
-                                }
+                            xml2js.parseString(bookingInfo.infoTravelXML, { explicitArray: false }, (err, result) => {
+                                if (err) reject(err);
+                                else resolve(result);
                             });
                         });
 
                         const allotmentBookingReport = parsedXML?.AllotmentBookingReport;
+                        if (!allotmentBookingReport) {
+                            logger.warn('No AllotmentBookingReport found in parsed XML', { 
+                                requestId,
+                                hotelId,
+                                index: idx 
+                            });
+                            continue;
+                        }
 
-                        if (allotmentBookingReport) {
-                            const reservationData = {};
+                        // Process and queue the reservation
+                        const queuedReservation = await processAndQueueReservation(
+                            requestId, 
+                            allotmentBookingReport, 
+                            hotelId
+                        );
+                        
+                        if (queuedReservation._queueStatus === 'queued') {
+                            queuedReservations.push({
+                                ...queuedReservation,
+                                _originalBookingInfo: bookingInfo
+                            });
+                        } else if (queuedReservation._queueStatus === 'error') {
+                            logger.error('Failed to queue reservation', {
+                                requestId,
+                                hotelId,
+                                error: queuedReservation._error,
+                                reservation: queuedReservation
+                            });
+                        }
+                        
+                    } catch (parseError) {
+                        logger.error('Error parsing infoTravelXML:', {
+                            requestId,
+                            hotelId,
+                            index: idx,
+                            error: parseError.message,
+                            stack: parseError.stack
+                        });
+                    }
+                }
 
-                            function processValue(value, level = 0, keyPath = '') {
-                                // logger.debug(`${'  '.repeat(level)}[Level ${level}] Processing key: ${keyPath} - Type: ${typeof value}, isArray: ${Array.isArray(value)}`);
+                // Skip if no valid reservations were queued
+                if (queuedReservations.length === 0) {
+                    logger.info('No valid reservations to process', { requestId, hotelId });
+                    continue;
+                }
 
-                                if (typeof value === 'object' && value !== null) {
-                                    const innerData = {};
-                                    for (const innerKey in value) {
-                                        if (Object.hasOwnProperty.call(value, innerKey)) {
-                                            innerData[innerKey] = processValue(value[innerKey], level + 1, keyPath ? `${keyPath}.${innerKey}` : innerKey);
-                                        }
-                                    }
-                                    return innerData;
-                                } else if (Array.isArray(value) && value.length === 1) {
-                                    // logger.debug(`${'  '.repeat(level + 1)}[Level ${level + 1}] Single element array - unwrapping`);
-                                    return processValue(value[0], level + 1, keyPath + '[0]');
-                                } else {
-                                    return value;
-                                }
-                            }
+                logger.info(`Successfully queued ${queuedReservations.length} reservations for processing`, { 
+                    requestId, 
+                    hotelId 
+                });
 
-                            for (const key in allotmentBookingReport) {
-                                if (Object.hasOwnProperty.call(allotmentBookingReport, key)) {
-                                    // logger.debug(`[Level 0] Starting processing for key: ${key}`);
-                                    reservationData[key] = processValue(allotmentBookingReport[key], 1, key);
-                                    // logger.debug(`[Level 0] Finished processing for key: ${key} - Result type: ${typeof reservationData[key]}, isArray: ${Array.isArray(reservationData[key])}`);
-                                }
-                            }
+                // Start transaction for processing reservations
+                try {
+                    await dbClient.query('BEGIN');
+                    isTransactionActive = true;
+                    logger.debug(`Started transaction for hotel_id: ${hotelId}`, { requestId });
 
-                            formattedReservations.push(reservationData);
-                            
-                            // Add reservation to OTA queue
+                    // Process all queued reservations in the transaction
+                    const processResults = await processQueuedReservations(
+                        requestId,
+                        queuedReservations,
+                        dbClient
+                    );
+
+                    // If we get here, all reservations were processed successfully
+                    await dbClient.query('COMMIT');
+                    isTransactionActive = false;
+                    logger.info(`Successfully processed ${processResults.processed} reservations for hotel_id: ${hotelId}`, {
+                        requestId,
+                        ...processResults
+                    });
+
+                    // Send success notification to OTA
+                    const outputId = executeResponse?.return?.configurationSettings?.outputId;
+                    if (outputId) {
+                        try {
+                            await successOTAReservations(req, res, hotelId, outputId);
+                            logger.info('Successfully notified OTA of completed processing', {
+                                requestId,
+                                hotelId,
+                                outputId
+                            });
+                        } catch (notifyError) {
+                            logger.error('Error notifying OTA of completed processing', {
+                                requestId,
+                                hotelId,
+                                outputId,
+                                error: notifyError.message,
+                                stack: notifyError.stack
+                            });
+                            // Don't fail the entire process if notification fails
+                        }
+                    } else {
+                        logger.warn('No outputId found for OTA notification', { requestId, hotelId });
+                    }
+
+                } catch (processError) {
+                    // Log the error and attempt to rollback if needed
+                    logger.error('Error processing reservations:', {
+                        requestId,
+                        hotelId,
+                        error: processError.message,
+                        stack: processError.stack
+                    });
+
+                    if (isTransactionActive) {
+                        try {
+                            await dbClient.query('ROLLBACK');
+                            isTransactionActive = false;
+                            logger.info('Transaction rolled back due to error', { requestId, hotelId });
+                        } catch (rollbackError) {
+                            logger.error('Error rolling back transaction:', {
+                                requestId,
+                                hotelId,
+                                error: rollbackError.message,
+                                originalError: processError.message
+                            });
+                        }
+                    }
+
+                    // Update all reservations in this batch to failed status
+                    await Promise.all(queuedReservations.map(async (reservation) => {
+                        if (reservation._queueStatus === 'queued') {
                             try {
-                                const transactionId = reservationData.TransactionType?.DataID;
-                                if (!transactionId) {
-                                    logger.warn('Skipping queue insertion - Missing transaction ID', { reservationData });
-                                } else {
-                                    await insertOTAReservationQueue(req.requestId, {
-                                        hotelId: hotel_id,
-                                        otaReservationId: reservationData.BasicInformation?.TravelAgencyBookingNumber || `temp_${Date.now()}`,
-                                        transactionId: transactionId,
-                                        reservationData: reservationData,
-                                        status: 'pending',
-                                        conflictDetails: null
-                                    });
-                                    logger.debug('Successfully added reservation to OTA queue', { 
-                                        transactionId,
-                                        hotelId: hotel_id 
-                                    });
-                                }
-                            } catch (queueError) {
-                                // Log the error but don't stop processing other reservations
-                                logger.error('Error adding reservation to OTA queue:', {
-                                    error: queueError.message,
-                                    transactionId: reservationData.TransactionType?.DataID,
-                                    hotelId: hotel_id
+                                await updateOTAReservationQueue(requestId, {
+                                    hotelId,
+                                    otaReservationId: reservation._otaReservationId,
+                                    status: 'failed',
+                                    conflictDetails: { 
+                                        error: 'Batch processing failed',
+                                        details: processError.message 
+                                    }
+                                });
+                            } catch (updateError) {
+                                logger.error('Error updating reservation status after failure:', {
+                                    requestId,
+                                    hotelId,
+                                    otaReservationId: reservation._otaReservationId,
+                                    error: updateError.message
                                 });
                             }
                         }
-                    } catch (parseError) {
-                        logger.error('Error parsing infoTravelXML:', parseError);
+                    }));
+                } finally {
+                    if (isTransactionActive) {
+                        try {
+                            await dbClient.query('ROLLBACK');
+                            logger.warn('Transaction was still active in finally block - rolled back', { 
+                                requestId, 
+                                hotelId 
+                            });
+                        } catch (rollbackError) {
+                            logger.error('Error in final rollback:', {
+                                requestId,
+                                hotelId,
+                                error: rollbackError.message
+                            });
+                        }
+                    }
+                    
+                    // Always release the client back to the pool
+                    if (dbClient) {
+                        try {
+                            await dbClient.release();
+                        } catch (releaseError) {
+                            logger.error('Error releasing database client:', {
+                                requestId,
+                                hotelId,
+                                error: releaseError.message
+                            });
+                        }
+                    }
+                }
+            } catch (hotelError) {
+                logger.error('Error processing hotel reservations:', {
+                    requestId,
+                    hotelId: hotel?.hotel_id || 'unknown',
+                    error: hotelError.message,
+                    stack: hotelError.stack
+                });
+            } finally {
+                // Make sure client is released even if an error occurs
+                if (dbClient) {
+                    try {
+                        await dbClient.release();
+                    } catch (releaseError) {
+                        logger.error('Error releasing database client:', {
+                            requestId,
+                            hotelId: hotel?.hotel_id || 'unknown',
+                            error: releaseError.message
+                        });
                     }
                 }
             }
-            // logger.debug('Formatted Reservations:', formattedReservations);
 
             let allReservationsSuccessful = true;
             let unsupportedClassifications = 0;
@@ -950,4 +1346,6 @@ module.exports = {
     successOTAReservations,
     updateInventoryMultipleDays,
     manualUpdateInventoryMultipleDays,
+    processAndQueueReservation,
+    processQueuedReservations
 };
