@@ -2737,12 +2737,11 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       updated_by: 1,
     };
 
-    let finalName, finalNameKana, finalNameKanji;
-    const sanitizedName = sanitizeName(clientData.name);
-    const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+    let finalName, finalNameKana, finalNameKanji;    
+    const { name, nameKana, nameKanji } = await processNameString(sanitizeName(clientData.name));
     finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
     if (clientData.name_kana) {
-      finalNameKana = toFullWidthKana(clientData.name_kana);
+      finalNameKana = toFullWidthKana(sanitizeName(clientData.name_kana));
     }
 
     // First, try to find an existing client with the same details
@@ -2948,9 +2947,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
             console.log('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
-              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
-              const sanitizedName = sanitizeName(rawName);
-              const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
+              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';              
+              const { name, nameKana, nameKanji } = await processNameString(sanitizeName(rawName));
               
               guestData = {
                 name: name,                
@@ -2967,7 +2965,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
               finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
               if (guestData.name_kana) {
-                finalNameKana = toFullWidthKana(guestData.name_kana);
+                finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
               }
               
               // First, try to find an existing client with the same details
@@ -3084,7 +3082,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
-              finalNameKana = toFullWidthKana(guestData.name_kana);
+              finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
             }
 
             // First, try to find an existing client with the same details
@@ -3528,7 +3526,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
     finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
     if (clientData.name_kana) {
-      finalNameKana = toFullWidthKana(clientData.name_kana);
+      finalNameKana = toFullWidthKana(sanitizeName(clientData.name_kana));
     }
 
     query = `
@@ -3712,6 +3710,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
         let plans_global_id = null;
         let plans_hotel_id = null;
+        let reservationGuestId = null;
+        let guestData = {};
+        let insertedClients = [];
 
         for (const info of roomRateArray) {
           const planGroupCode = info?.RoomInformation?.PlanGroupCode;
@@ -3749,7 +3750,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
               finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
               if (guestData.name_kana) {
-                finalNameKana = toFullWidthKana(guestData.name_kana);
+                finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
               }
               
               // First, try to find an existing client with the same details
@@ -3864,7 +3865,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
-              finalNameKana = toFullWidthKana(guestData.name_kana);
+              finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
             }
 
             // First, try to find an existing client with the same details

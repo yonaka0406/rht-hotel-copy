@@ -375,9 +375,10 @@ async function testCompleteOTAReservationFlow() {
                         reservationClientsResults.rows.forEach((row, index) => {
                             console.log(`    ${index + 1}. Reservation: ${row.ota_reservation_id}, ` +
                                        `Room: ${row.room_id}, ` +
-                                       `Client: ${row.client_id}` +
-                                       `Client Name: ${row.name}` +
-                                       `Client Kanji: ${row.name_kanji}`);
+                                       `Client: ${row.client_id}, ` +
+                                       `Client Name: ${row.name}, ` +
+                                       `Client Kanji: ${row.name_kanji}, `+
+                                       `Client Kana: ${row.name_kana}`);
                         });
                     } else {
                         console.log('  - No entries found in reservation_clients for the OTA reservations');
