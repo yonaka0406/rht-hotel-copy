@@ -270,7 +270,7 @@
     const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
     import { useClientStore } from '@/composables/useClientStore';
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { updateHotelCalendar } = useHotelStore();
+    const { applyCalendarSettings } = useHotelStore();
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
     
@@ -541,7 +541,7 @@
 
     const submitTempBlock = async () => {
         try {
-            const result = await updateHotelCalendar(selectedHotelId.value, [props.room_id], formatDate(today.value), formatDate(today.value), 'Temporary Block by user', 'temp');
+            const result = await applyCalendarSettings(selectedHotelId.value, formatDate(today.value), formatDate(today.value), [props.room_id], 'Temporary Block by user', 'temp');
             if (result.success) {
                 toast.add({ severity: 'success', summary: '成功', detail: '仮ブロックを作成しました。', life: 3000 });
                 dialogVisible.value = false;
