@@ -104,8 +104,8 @@ CREATE TABLE hotels (
     bank_account_type TEXT,
     bank_account_number TEXT,
     bank_account_name TEXT,
+    google_drive_url TEXT
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
-    updated_by INT DEFAULT NULL REFERENCES users(id),
-    google_drive_url TEXT
+    updated_by INT DEFAULT NULL REFERENCES users(id)    
 );
