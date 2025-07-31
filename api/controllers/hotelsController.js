@@ -283,7 +283,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       return res.status(400).json({ error: error.message });
     }
 
-    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name  } = req.body;
+    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url  } = req.body;
     const updated_by = req.user.id;
 
     let validatedFormalName, validatedName, validatedAddress, validatedEmail, validatedPhoneNumber;
@@ -299,7 +299,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
 
     try {
-      const updatedHotel = await updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, updated_by);
+      const updatedHotel = await updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, updated_by);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }
