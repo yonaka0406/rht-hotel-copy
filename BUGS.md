@@ -5,6 +5,35 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ## Bug Reports
 
+### July 31, 2025
+
+#### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When rooms are added to a reservation after it has been confirmed, the billable status of the new room details is not automatically set to true, even though the reservation is confirmed.
+- **Steps to Reproduce**:
+  1. Create a new reservation and confirm it (status changes to 'Confirmed' and billable becomes true)
+  2. Add a new room to the confirmed reservation
+  3. The new room's billable status remains false
+- **Expected Behavior**: 
+  - When a room is added to a confirmed reservation, its billable status should be set to true to match the reservation's confirmed status.
+  - The UI should clearly indicate when a room is not billable with a visual indicator (e.g., strikethrough text, different background color, or an icon).
+- **Actual Behavior**: 
+  - Newly added rooms maintain billable = false even in confirmed reservations.
+  - There is no visual indication in the UI that a room is not billable.
+- **Affected Component**: 
+  - Reservation update/room addition logic
+  - Room display components
+- **UI Requirements**:
+  - Add a visual indicator (e.g., strikethrough, different color, or icon) for non-billable rooms
+  - The indicator should be visible in all relevant views (reservation details, room assignments, billing, etc.)
+  - Consider adding a tooltip explaining why a room is not billable
+- **Environment**: Reservation management system
+- **Additional Notes**: 
+  - This can lead to rooms not being included in billing calculations
+  - The issue likely stems from the room addition logic not checking the reservation's confirmed status
+  - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
+
 ### July 29, 2025
 
 #### Bug #19: Cancelled Reservations Show in Room Indicator
@@ -165,7 +194,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 #### Bug #5
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
 - **Steps to Reproduce**:
   1. Create a hold reservation.
@@ -350,7 +378,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: psql server outage and restart, OTA integration
 - **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
 
-### Bug #12
+#### Bug #12
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
@@ -363,7 +391,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
 - **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application.
 
-### Feature Request #16
+#### Feature Request #16
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. Additionally, improve the OTA import logic: convert OTA XML reservation data to PMS format and save in a temp table, attempt to add to PMS reservations, and if any fail, cache the data and only clear the cache upon successful confirmation to the OTA. Notify users of unimported data in PMS, allowing them to change room types before the next OTA retry, which would use the updated mapping.
@@ -395,9 +423,9 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: July 22, 2025*
-*Total Bugs: 13*
-*Open: 4*
+*Last Updated: July 31, 2025*
+*Total Bugs: 14*
+*Open: 5*
 *Fixed: 9*
 
 # Backlog
