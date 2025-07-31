@@ -259,6 +259,80 @@ async function processQueuedReservations(requestId, reservations, client) {
                 status: 'failed',
                 message: errorMessage
             });
+
+            // --- START: Custom logic to set dates to not-for-sale on failure ---
+            try {
+                logger.info('[processQueuedReservations] Initiating not-for-sale process for transaction.', {
+                    requestId,
+                    hotelId,
+                    transactionId
+                });
+
+                if (reservations.length > 0) {
+                    const allDates = new Set();
+                    const allGroupCodes = new Set();
+
+                    for (const res of reservations) {
+                        const resData = res.reservationData || res;
+                        if (resData && resData.BasicInformation && resData.RisaplsInformation?.RisaplsCommonInformation?.RoomAndRoomRateInformation) {
+                            const { CheckInDate: checkIn, CheckOutDate: checkOut } = resData.BasicInformation;
+                            const roomAndRateInfo = resData.RisaplsInformation.RisaplsCommonInformation.RoomAndRoomRateInformation;
+
+                            // Collect group codes
+                            let groupCodes = [];
+                            if (Array.isArray(roomAndRateInfo)) {
+                                groupCodes = roomAndRateInfo.map(item => item.RoomInformation?.NetRmTypeGroupCode);
+                            } else if (typeof roomAndRateInfo === 'object' && roomAndRateInfo !== null) {
+                                groupCodes = Object.values(roomAndRateInfo).map(item => item.RoomInformation?.NetRmTypeGroupCode);
+                            }
+                            groupCodes.filter(Boolean).forEach(code => allGroupCodes.add(code));
+
+                            // Collect dates
+                            if (checkIn && checkOut) {
+                                try {
+                                    const startDate = new Date(checkIn.slice(0,4), checkIn.slice(4,6) - 1, checkIn.slice(6,8));
+                                    const endDate = new Date(checkOut.slice(0,4), checkOut.slice(4,6) - 1, checkOut.slice(6,8));
+                                    for (let d = startDate; d < endDate; d.setDate(d.getDate() + 1)) {
+                                        const saleDate = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}${d.getDate().toString().padStart(2, '0')}`;
+                                        allDates.add(saleDate);
+                                    }
+                                } catch(dateError){
+                                    logger.error("Error parsing dates in not-for-sale logic", { checkIn, checkOut, dateError });
+                                }
+                            }
+                        }
+                    }
+
+                    const uniqueDates = Array.from(allDates);
+                    const uniqueGroupCodes = Array.from(allGroupCodes);
+
+                    if (uniqueDates.length > 0 && uniqueGroupCodes.length > 0) {
+                        const inventoryToUpdate = [];
+                        for (const saleDate of uniqueDates) {
+                            for (const groupCode of uniqueGroupCodes) {
+                                inventoryToUpdate.push({
+                                    saleDate: saleDate,
+                                    netRmTypeGroupCode: groupCode
+                                });
+                            }
+                        }
+                        
+                        if (inventoryToUpdate.length > 0) {
+                            await setDatesNotForSale({ requestId }, null, hotelId, inventoryToUpdate);
+                        }
+                    }
+                }
+            } catch (nfsError) {
+                logger.error('[processQueuedReservations] Failed to execute transaction-wide not-for-sale logic.', {
+                    requestId,
+                    hotelId,
+                    transactionId,
+                    error: nfsError.message,
+                    stack: nfsError.stack
+                });
+            }
+            // --- END: Custom logic ---
+
             
             // Re-throw to trigger transaction rollback
             throw error;
@@ -1389,6 +1463,111 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
 
 };
 
+const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
+    const name = 'NetStockBulkAdjustmentService';
+    const requestId = req.requestId || `failed-res-${Date.now()}`;
+
+    logger.info('[setDatesNotForSale] Attempting to set dates as not for sale', {
+        requestId,
+        hotel_id,
+        inventoryCount: inventory.length
+    });
+
+    if (!inventory || inventory.length === 0) {
+        logger.warn('[setDatesNotForSale] Initial inventory is empty, skipping API call.', { requestId, hotel_id });
+        return;
+    }
+
+    // Helper function to format date to YYYYMMDD
+    const formatYYYYMMDD = (dateString) => {
+        const date = new Date(dateString);
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+            return null; // Return null for invalid dates
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-indexed
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    };
+
+    const currentDateYYYYMMDD = formatYYYYMMDD(new Date());
+    const filteredInventory = inventory.filter(item => item.saleDate >= currentDateYYYYMMDD);
+
+    if (filteredInventory.length === 0) {
+        logger.warn('[setDatesNotForSale] Inventory is empty after filtering past dates, skipping API call.', {
+            requestId,
+            hotel_id,
+            originalCount: inventory.length
+        });
+        return;
+    }
+
+    try {
+        const template = await selectXMLTemplate(requestId, hotel_id, name);
+        if (!template) {
+            throw new Error(`XML template not found for ${name}.`);
+        }
+
+        let adjustmentTargetXml = '';
+        filteredInventory.forEach((item) => {
+            adjustmentTargetXml += `
+                <adjustmentTarget>
+                    <adjustmentProcedureCode>1</adjustmentProcedureCode>
+                    <netRmTypeGroupCode>${item.netRmTypeGroupCode}</netRmTypeGroupCode>
+                    <adjustmentDate>${item.saleDate}</adjustmentDate>
+                    <remainingCount>0</remainingCount>
+                    <salesStatus>2</salesStatus>
+                </adjustmentTarget>
+            `;
+        });
+
+        let xmlBody = template.replace(
+            `<adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate}}</adjustmentDate>
+               <remainingCount>{{remainingCount}}</remainingCount>
+               <salesStatus>{{salesStatus}}</salesStatus>               
+            </adjustmentTarget>
+            <adjustmentTarget>
+               <adjustmentProcedureCode>{{adjustmentProcedureCode2}}</adjustmentProcedureCode>
+               <netRmTypeGroupCode>{{netRmTypeGroupCode2}}</netRmTypeGroupCode>
+               <adjustmentDate>{{adjustmentDate2}}</adjustmentDate>
+               <remainingCount>{{remainingCount2}}</remainingCount>
+               <salesStatus>{{salesStatus2}}</salesStatus>               
+            </adjustmentTarget>`,
+            adjustmentTargetXml
+        );
+        
+        // Replace request ID placeholder if it exists in the template
+        if (xmlBody.includes('{{requestId}}')) {
+            let reqId = (requestId).toString();
+            if (reqId.length > 8) {
+                reqId = reqId.slice(-8);
+            }
+            xmlBody = xmlBody.replace('{{requestId}}', reqId);
+        }
+
+        await submitXMLTemplate({ requestId }, null, hotel_id, name, xmlBody);
+
+        logger.info('[setDatesNotForSale] Successfully sent request to set dates as not for sale.', {
+            requestId,
+            hotel_id
+        });
+
+    } catch (error) {
+        logger.error('[setDatesNotForSale] Failed to set dates as not for sale.', {
+            requestId,
+            hotel_id,
+            error: error.message,
+            stack: error.stack,
+        });
+        // We log the error but don't re-throw, as this is a non-critical side-effect
+        // of a failed reservation. The main error handling will continue.
+    }
+};
+
 module.exports = {
     getXMLTemplate,
     getXMLRecentResponses,
@@ -1403,5 +1582,6 @@ module.exports = {
     updateInventoryMultipleDays,
     manualUpdateInventoryMultipleDays,
     processAndQueueReservation,
-    processQueuedReservations
+    processQueuedReservations,
+    setDatesNotForSale
 };
