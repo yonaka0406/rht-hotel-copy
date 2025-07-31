@@ -1,10 +1,5 @@
 // Test setup file for Vitest
 import { vi } from 'vitest'
-import { config } from '@vue/test-utils'
-import PrimeVue from 'primevue/config'
-import ToastService from 'primevue/toastservice'
-import ConfirmationService from 'primevue/confirmationservice'
-import Tooltip from 'primevue/tooltip'
 
 // Mock console methods to reduce noise in tests
 global.console = {
@@ -28,26 +23,4 @@ if (!window.matchMedia) {
   };
 }
 
-config.global.plugins = [PrimeVue, ToastService, ConfirmationService]
-config.global.directives = {
-  tooltip: Tooltip,
-}
-
-// Mock the router
-const mockRouter = {
-  push: vi.fn(),
-  resolve: vi.fn().mockReturnValue({ href: '' }),
-};
-
-vi.mock('vue-router', () => ({
-  useRouter: () => mockRouter,
-  onBeforeRouteLeave: vi.fn(),
-}));
-
-vi.mock('@/composables/useApi', async (importOriginal) => {
-  const original = await importOriginal();
-  return {
-    ...original,
-    setApiDependencies: vi.fn(),
-  };
-});
+// Global test utilities can be added here
