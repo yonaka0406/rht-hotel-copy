@@ -61,6 +61,10 @@
             <InputText id="address" v-model="selectedHotel.address" />              
           </div>
           <div class="flex flex-col">
+            <label for="google_drive_url" class="font-medium mb-2 block">Google Drive URL</label>
+            <InputText id="google_drive_url" v-model="selectedHotel.google_drive_url" />
+          </div>
+          <div class="flex flex-col">
             <label for="latitude" class="font-medium mb-2 block">緯度</label>
             <InputNumber id="latitude" v-model="selectedHotel.latitude" :minFractionDigits="6" />
           </div>
