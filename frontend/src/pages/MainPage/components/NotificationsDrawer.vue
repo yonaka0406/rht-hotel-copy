@@ -10,11 +10,12 @@
       <div class="flex items-center gap-2 w-full">
         <i class="pi pi-bell text-xl" :class="notificationSeverityIcon" />
         <span class="font-semibold text-lg">通知</span>
-        <span v-if="holdReservations.length" class="ml-2 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">{{ holdReservations.length }}</span>
+        <span v-if="totalNotifications" class="ml-2 text-xs bg-red-500 text-white rounded-full px-2 py-0.5">{{ totalNotifications }}</span>
       </div>
     </template>
     <div class="py-3 min-h-[120px] flex flex-col h-full" style="height: 100%;">
       <template v-if="holdReservations.length">
+        <h3 class="font-bold text-lg mb-2 px-2">保留中の予約</h3>
         <VirtualScroller
           :items="holdReservations"
           :itemSize="110"
@@ -62,7 +63,36 @@
           </template>
         </VirtualScroller>
       </template>
-      <template v-else>
+      <template v-if="tempBlockedReservations.length">
+        <h3 class="font-bold text-lg my-2 px-2">仮ブロック</h3>
+        <VirtualScroller
+          :items="tempBlockedReservations"
+          :itemSize="80"
+          class="space-y-3 flex-1 min-h-0"
+          style="flex: 1 1 auto; min-height: 0;"
+        >
+          <template #item="{ item: reservation, index }">
+            <div
+              :key="index"
+              class="mx-2 mb-3 last:mb-0 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex flex-col gap-2"
+            >
+              <div class="flex items-center gap-2">
+                <i class="pi pi-lock text-orange-500" />
+                <span class="font-semibold">{{ reservation.client_name }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-calendar text-blue-500" />
+                <span>{{ formatDateJP(reservation.date) }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-building text-yellow-500" />
+                <span>{{ reservation.room_number }}号室</span>
+              </div>
+            </div>
+          </template>
+        </VirtualScroller>
+      </template>
+      <template v-if="!holdReservations.length && !tempBlockedReservations.length">
         <div class="flex flex-col items-center justify-center h-32 text-gray-400 dark:text-gray-500">
           <i class="pi pi-inbox text-3xl mb-2" />
           <span>通知はありません。</span>
@@ -82,6 +112,10 @@ const props = defineProps({
     type: Array,
     required: true
   },
+  tempBlockedReservations: {
+    type: Array,
+    required: true
+  },
   notificationSeverity: {
     type: [String, null],
     default: null
@@ -93,6 +127,10 @@ const emit = defineEmits(['update:visible', 'go-to-edit-reservation']);
 function handleGoToEditReservation(hotel_id, reservation_id) {
   emit('go-to-edit-reservation', hotel_id, reservation_id);
 }
+
+const totalNotifications = computed(() => {
+    return props.holdReservations.length + props.tempBlockedReservations.length;
+});
 
 const notificationSeverityIcon = computed(() => {
   if (props.notificationSeverity === 'danger') return 'text-red-500';

@@ -64,7 +64,15 @@
                             icon="pi pi-calendar"
                             @click="openDialog" 
                         />
-                    </div>                    
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <Button
+                            label="仮ブロック"
+                            icon="pi pi-lock"
+                            @click="submitTempBlock"
+                            severity="warning"
+                        />
+                    </div>
                 </div>
             </template>            
         </Card>
@@ -261,6 +269,8 @@
     import { useReservationStore } from '@/composables/useReservationStore';    
     const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
     import { useClientStore } from '@/composables/useClientStore';
+    import { useHotelStore } from '@/composables/useHotelStore';
+    const { updateHotelCalendar } = useHotelStore();
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
     
@@ -527,6 +537,21 @@
         await setReservationId(reservation_id);
                 
         router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });                          
+    };
+
+    const submitTempBlock = async () => {
+        try {
+            const result = await updateHotelCalendar(selectedHotelId.value, [props.room_id], formatDate(today.value), formatDate(today.value), 'Temporary Block by user', 'temp');
+            if (result.success) {
+                toast.add({ severity: 'success', summary: '成功', detail: '仮ブロックを作成しました。', life: 3000 });
+                dialogVisible.value = false;
+            } else {
+                toast.add({ severity: 'error', summary: 'エラー', detail: '仮ブロックの作成に失敗しました。', life: 3000 });
+            }
+        } catch (error) {
+            console.error('Error creating temporary block:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: '仮ブロックの作成に失敗しました。', life: 3000 });
+        }
     };
 
     // Fetch reservation details on mount

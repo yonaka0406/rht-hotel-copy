@@ -62,6 +62,7 @@
     <NotificationsDrawer
         v-model:visible="showDrawer"
         :hold-reservations="holdReservations"
+        :temp-blocked-reservations="tempBlockedReservations"
         :notification-severity="notificationSeverity"
         @go-to-edit-reservation="goToEditReservationPage"
     />
@@ -92,7 +93,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, setHotelId, selectedHotelId } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, setReservationId } = useReservationStore();
+    const { holdReservations, setReservationId, reservedRooms } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -163,6 +164,13 @@
     // Computed property for bell animation class
     const bellAnimationClass = computed(() => {
       return holdReservations.value.length > 0 ? 'animate-bell-icon' : '';
+    });
+
+    const tempBlockedReservations = computed(() => {
+        if (!reservedRooms.value) {
+            return [];
+        }
+        return reservedRooms.value.filter(room => room.status === 'block' && room.client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
     });
 
     // --- Methods ---

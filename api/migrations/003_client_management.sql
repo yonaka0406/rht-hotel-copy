@@ -197,3 +197,6 @@ FROM (
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
 */
+
+INSERT INTO clients (id, name, created_by, updated_by)
+VALUES ('22222222-2222-2222-2222-222222222222', 'Temporary Block', 1, 1);

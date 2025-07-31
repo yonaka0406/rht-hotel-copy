@@ -383,7 +383,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   };
   const editHotelCalendar = async (req, res) => {
     const { startDate: startDateParam, endDate: endDateParam } = req.params;
-    const { hotelId: hotelIdFromBody, roomIds, comment } = req.body;
+    const { hotelId: hotelIdFromBody, roomIds, comment, block_type } = req.body;
     const updated_by = req.user.id;
 
     let numericHotelId, validatedStartDate, validatedEndDate, validatedRoomIds = [];
@@ -407,7 +407,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
 
     try {
-      const updatedRoom = await updateHotelCalendar(req.requestId, numericHotelId, validatedRoomIds, validatedStartDate, validatedEndDate, comment, updated_by);
+      const updatedRoom = await updateHotelCalendar(req.requestId, numericHotelId, validatedRoomIds, validatedStartDate, validatedEndDate, comment, updated_by, block_type);
       if (!updatedRoom.success) { 
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }

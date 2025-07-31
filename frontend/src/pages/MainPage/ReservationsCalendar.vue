@@ -26,7 +26,7 @@
 
       <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
         ref="tableContainer" @scroll="onScroll">
-        <table class="table-auto w-full mb-2" @dragover.prevent @contextmenu.prevent="showContextMenu($event)">
+        <table class="table-auto w-full mb-2" @dragover.prevent>
           <thead>
             <tr>
               <th
@@ -58,6 +58,7 @@
                 @dblclick="handleCellClick(room, date)" @dragstart="handleDragStart($event, room.room_id, date)"
                 @dragend="endDrag()" @dragover.prevent @dragenter="highlightDropZone($event, room.room_id, date)"
                 @dragleave="removeHighlight($event, room.room_id, date)" @drop="handleDrop($event, room.room_id, date)"
+                @contextmenu.prevent="showContextMenu($event, room, date)"
                 draggable="true" :style="getCellStyle(room.room_id, date, dragMode === 'reorganizeRooms')" :class="[
                   'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
                   isCellFirst(room.room_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
@@ -99,8 +100,12 @@
                         <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
                       </template>
                       <template
-                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block'">
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '11111111-1111-1111-1111-111111111111'">
                         <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
+                      </template>
+                      <template
+                        v-else-if="fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').status === 'block' && fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms').client_id === '22222222-2222-2222-2222-222222222222'">
+                        <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
                       </template>
                     </div>
                     <div class="ml-1 dark:text-gray-100">
@@ -137,6 +142,8 @@
                 class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>社員</span>
             <span class="flex items-center gap-1"><i
                 class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>ブロック</span>
+            <span class="flex items-center gap-1"><i
+                class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>仮ブロック</span>
             <span class="flex items-center gap-1"><i class="pi pi-circle"></i>空室</span>
 
           </div>
@@ -247,7 +254,7 @@ import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, 
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, deleteBlockedRooms } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
@@ -428,6 +435,12 @@ const getCellStyle = (room_id, date, useTemp = false) => {
     style = { backgroundColor: roomColor };
   } else if (roomInfo && roomInfo.status === 'provisory') {
     roomColor = '#ead59f';
+    style = { backgroundColor: `${roomColor}` };
+  } else if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222') {
+    roomColor = '#fed7aa';
+    style = { backgroundColor: `${roomColor}` };
+  } else if (roomInfo && roomInfo.status === 'block') {
+    roomColor = '#fca5a5';
     style = { backgroundColor: `${roomColor}` };
   } else if (roomInfo && (roomInfo.type === 'ota' || roomInfo.type === 'web')) {
     roomColor = '#9fead5';
@@ -645,10 +658,46 @@ const speedDialModel = ref([
     command: () => (dragMode.value = 'reorganizeRooms'),
   },
 ]);
-const contextMenuModel = ref(speedDialModel.value);
-const showContextMenu = (event) => {
+const contextMenuModel = ref([]);
+const showContextMenu = (event, room, date) => {
+  const roomInfo = fillRoomInfo(room.room_id, date);
+  const isReserved = isRoomReserved(room.room_id, date);
+
+  const menuItems = [
+    {
+      label: '予約移動',
+      icon: 'pi pi-address-book',
+      command: () => (dragMode.value = 'reservation'),
+    },
+    {
+      label: '日ごとに部屋移動',
+      icon: 'pi pi-calendar',
+      command: () => (dragMode.value = 'roomByDay'),
+    },
+    {
+      label: 'フリー移動',
+      icon: 'pi pi-arrows-alt',
+      command: () => (dragMode.value = 'reorganizeRooms'),
+    },
+    { separator: true }
+  ];
+
+
+  if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222' && roomInfo.created_by === logged_user.value[0].id) {
+    menuItems.push({
+      label: '仮ブロック削除',
+      icon: 'pi pi-lock-open',
+      command: async () => {
+        await deleteBlockedRooms(roomInfo.reservation_id);
+        await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      },
+    });
+  }
+
+  contextMenuModel.value = menuItems;
   cm.value.show(event);
 };
+
 const handleCellClick = async (room, date) => {
   const key = `${room.room_id}_${date}`;
 
