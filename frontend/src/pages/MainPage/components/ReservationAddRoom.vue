@@ -265,12 +265,10 @@
 
     // Stores
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { selectedHotelId, selectedHotelRooms } = useHotelStore();
+    const { selectedHotelId, selectedHotelRooms, applyCalendarSettings } = useHotelStore();
     import { useReservationStore } from '@/composables/useReservationStore';    
     const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
     import { useClientStore } from '@/composables/useClientStore';
-    import { useHotelStore } from '@/composables/useHotelStore';
-    const { applyCalendarSettings } = useHotelStore();
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
 
     
