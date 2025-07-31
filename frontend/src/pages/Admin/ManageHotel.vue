@@ -59,10 +59,20 @@
           <div class="flex flex-col">
             <label for="address" class="font-medium mb-2 block">住所</label>
             <InputText id="address" v-model="selectedHotel.address" />              
-          </div>
-          <div class="flex flex-col">
-            <label for="google_drive_url" class="font-medium mb-2 block">Google Drive URL</label>
-            <InputText id="google_drive_url" v-model="selectedHotel.google_drive_url" />
+          </div>          
+          <div class="flex flex-col">            
+            <div class="flex justify-between items-center mb-2">
+              <label for="google_drive_url" class="font-medium flex items-center">
+                <span class="p-inputgroup-addon">
+                  <i class="pi pi-google mr-1"></i>
+                </span>
+                グーグルドライブURL
+              </label>
+              <Button icon="pi pi-external-link" @click="openGoogleDriveUrl" :disabled="!selectedHotel.google_drive_url" />
+            </div>
+            <div class="p-inputgroup">              
+              <InputText id="google_drive_url" v-model="selectedHotel.google_drive_url" fluid />              
+            </div>
           </div>
           <div class="flex flex-col">
             <label for="latitude" class="font-medium mb-2 block">緯度</label>
@@ -809,6 +819,12 @@
     } catch (error) {
       console.error('部屋作成エラー:', error);
       toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
+    }
+  };
+
+  const openGoogleDriveUrl = () => {
+    if (selectedHotel.value.google_drive_url) {
+      window.open(selectedHotel.value.google_drive_url, '_blank');
     }
   };
 
