@@ -392,7 +392,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application.
 
 #### Feature Request #16
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. Additionally, improve the OTA import logic: convert OTA XML reservation data to PMS format and save in a temp table, attempt to add to PMS reservations, and if any fail, cache the data and only clear the cache upon successful confirmation to the OTA. Notify users of unimported data in PMS, allowing them to change room types before the next OTA retry, which would use the updated mapping.
 - **Steps to Reproduce**:
@@ -458,7 +458,7 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
 
 #### Feature Request #16: Configurable Reservation Inquiry Button (2025/07/29)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 
   - Add a button to open reservation inquiry in a Google Drive spreadsheet
   - Make the Google Drive link configurable per hotel in the admin interface

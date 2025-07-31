@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Configurable Reservation Inquiry Button: Added functionality to open reservation inquiries in a Google Drive spreadsheet. The Google Drive link is now configurable per hotel in the admin interface, with a dedicated field in the hotel edit screen. The button is available in the Side Menu.
 
 
 ---
