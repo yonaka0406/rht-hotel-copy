@@ -34,6 +34,53 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   - The issue likely stems from the room addition logic not checking the reservation's confirmed status
   - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
 
+#### Bug #21: Meal Counts Query Not Returning
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The meal counts query is not returning any results. Need to investigate the cause.
+- **Environment**: Reporting module
+- **Additional Notes**: Check database connection and query logic for any issues.
+
+#### Feature Request #18: Parking Management Function
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add functionality to manage parking spaces and assignments for guests.
+- **Requirements**:
+  - Track available parking spaces
+  - Assign parking spots to reservations
+  - Generate parking reports
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #19: Enhanced Log Viewing
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Improve log viewing to include:
+  - Plans and addons changes
+  - Room number changes
+  - Client information modifications
+- **Priority**: [ ] Low [x] Medium [ ] Critical
+- **Additional Notes**: This will help with auditing and tracking changes in the system.
+
+#### UI Change Request #1: Rename Mode
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Change the name of the mode from "予約移動" to "デフォルト" (Default)
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Additional Notes**: This is a simple UI text change to improve clarity.
+
+#### Feature Request #20: Client-based Meal Count Report
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Create a new report that shows meal counts grouped by client instead of by date.
+- **Requirements**:
+  - User will provide the specific format
+  - Should be exportable to common formats (CSV, Excel)
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #21: Hotel Display Order in Top Menu
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add the ability to set the display order of hotels in the top menu.
+- **Requirements**:
+  - Add a sort order field to the hotels table
+  - Update the menu generation to respect this order
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### July 29, 2025
 
 #### Bug #19: Cancelled Reservations Show in Room Indicator
@@ -363,7 +410,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
-### Bug #11
+#### Bug #11
 - **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA. This resulted in duplicate reservations and failures when attempting to edit the reservation.
@@ -424,8 +471,8 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 ---
 
 *Last Updated: July 31, 2025*
-*Total Bugs: 14*
-*Open: 5*
+*Total Bugs: 15*
+*Open: 6*
 *Fixed: 9*
 
 # Backlog
@@ -484,3 +531,4 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**:
     - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
     - Need to investigate what guest information is currently being captured from OTA bookings
+
