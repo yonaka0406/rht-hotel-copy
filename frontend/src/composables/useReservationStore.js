@@ -97,6 +97,32 @@ export function useReservationStore() {
         }
     };
 
+    const convertBlockToReservation = async (reservationId, client) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/convert/${reservationId}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ client }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to convert block to reservation');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();
+        } catch (error) {
+            setReservationIsUpdating(false);
+            console.error('Error converting block to reservation:', error);
+            throw error;
+        }
+    };
+
     // Set
     const setReservationId = (id) => {
         // console.log('From Reservation Store => setReservationId:',reservationId.value);
@@ -1107,5 +1133,6 @@ export function useReservationStore() {
         createHoldReservationCombo,
         fetchReservationForCopy,
         copyReservation,
+        convertBlockToReservation,
     };
 }
