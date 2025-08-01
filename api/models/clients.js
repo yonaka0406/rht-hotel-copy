@@ -137,7 +137,7 @@ const getAllClients = async (requestId, limit, offset) => {
       ,CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key
       ,CASE WHEN clients.legal_or_natural_person = 'legal' THEN TRUE ELSE FALSE END AS is_legal_person
     FROM clients
-    WHERE id <> '11111111-1111-1111-1111-111111111111'
+    WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
     ORDER BY name ASC
     LIMIT $1 OFFSET $2
   `;
@@ -154,7 +154,7 @@ const getTotalClientsCount = async (requestId) => {
   const query = `
     SELECT COUNT(*)
     FROM clients
-    WHERE id <> '11111111-1111-1111-1111-111111111111'
+    WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
   `;
   try {
     const result = await pool.query(query);
@@ -897,7 +897,7 @@ const findLegalPersonClients = async (requestId, queryParams = {}) => {
                 CONCAT(clients.name, clients.name_kana, clients.name_kanji) AS full_name_key,
                 TRUE AS is_legal_person
         FROM clients
-        WHERE id <> '11111111-1111-1111-1111-111111111111'
+        WHERE id not in('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222')
           AND clients.legal_or_natural_person = 'legal'
         ORDER BY name ASC
         LIMIT $1 OFFSET $2;
