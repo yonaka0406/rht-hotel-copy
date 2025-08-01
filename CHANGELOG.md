@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+### Added
+- Calendar: Added quick temp block functionality in the calendar drawer for faster room holds. (#017)
+  - Users can now quickly create and remove temporary blocks directly from the calendar view
+  - Visual indicators show which rooms are temporarily blocked
+  - Streamlined workflow for holding rooms during high-demand periods
 
 ---
 ## Future Releases
@@ -18,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Backlog
 - Notifications: Alert notification settings (e.g., alert for large bookings 1 month after receiving order for bookings several months out). (#004)
-- New Reservation: Urgent room hold and pending status. (#017)
 - CRM: Data recording via upload method. (#037)
 - CRM: Sales cool performance report. (#041)
 - Feature Request #16: Implement room type hierarchy for systematic upgrades and improve OTA import logic (convert XML to PMS format, use temp table and cache, notify user of unimported data, only clear cache on OTA confirmation success, allow PMS-side room type changes before retry, the quantity of rooms in OTA should reflect the not imported entries as well).
