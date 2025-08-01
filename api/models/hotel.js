@@ -167,7 +167,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
     const end = new Date(endDate);
     const dateArray = [];
 
-    for (let dt = start; dt <= end; dt.setDate(dt.getDate() + 1)) {
+    for (let dt = new Date(start); dt < end; dt.setDate(dt.getDate() + 1)) {
       dateArray.push(new Date(dt));
     }
 
