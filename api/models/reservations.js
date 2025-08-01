@@ -72,12 +72,14 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       reservation_details.id
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
+      ,reservations.reservation_client_id as client_id
       ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
       ,reservations.status
       ,reservations.type
+      ,reservations.created_at
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name

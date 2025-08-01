@@ -37,7 +37,8 @@ CREATE TABLE clients (
 -- Default Client for status block
 INSERT INTO clients (id, name, name_kana, name_kanji, date_of_birth, legal_or_natural_person, gender, email, phone, fax, created_by, updated_by)
 VALUES
-('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1);
+('11111111-1111-1111-1111-111111111111', '予約不可', 'ヨヤクフカ', '予約不可', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1),
+('22222222-2222-2222-2222-222222222222', '押さえ', 'オサエ', '押さえ', NULL, 'legal', 'other', NULL, '1234567890', NULL, 1, 1);
 
 CREATE TABLE client_relationships (
     id SERIAL PRIMARY KEY,

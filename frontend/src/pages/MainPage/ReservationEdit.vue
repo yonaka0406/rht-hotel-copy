@@ -65,7 +65,6 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
     
-    
     // Primevue
     import { Card } from 'primevue';
         

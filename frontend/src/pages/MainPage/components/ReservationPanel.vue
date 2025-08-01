@@ -85,7 +85,7 @@
         <div class="field">
             <p class="font-bold flex justify-start items-center">備考：<span
                     class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
-            <Textarea v-model="reservationInfo.comment" @keydown="handleKeydown" fluid />
+            <Textarea v-model="reservationInfo.comment" @keydown="handleKeydown" fluid />            
         </div>
 
         <div class="field flex flex-col col-span-2">
@@ -105,7 +105,7 @@
                 <template v-else-if="reservationType === 'OTA' || reservationType === '自社WEB'">
                     <div class="text-left">
                         <Badge class="mr-1" severity="secondary">エージェント（{{ reservationType }}）</Badge>{{
-                        reservationInfo.agent }} <br>
+                            reservationInfo.agent }} <br>
                         <Badge class="mr-1" severity="secondary">予約番号</Badge>{{ reservationInfo.ota_reservation_id }}
                     </div>
                 </template>
@@ -292,7 +292,7 @@
                                                             <div class="mr-2">{{ slotProps.option.name }} </div>
                                                             <Badge severity="secondary">{{
                                                                 slotProps.option.template_type === 'global' ? 'グローバル' :
-                                                                'ホテル' }}</Badge>
+                                                                    'ホテル' }}</Badge>
                                                         </div>
                                                     </template>
                                                 </Select>
@@ -1230,7 +1230,8 @@ const onActionClick = () => {
 };
 
 onMounted(async () => {
-
+    // console.log('[ReservationPanel] Reservation loaded:', reservationInfo.value);
+    
     reservationTypeSelected.value = reservationInfo.value.type;
     selectedClient.value = reservationInfo.value.client_id;
     cancelStartDate.value = new Date(reservationInfo.value.check_in);

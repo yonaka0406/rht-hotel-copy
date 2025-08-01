@@ -129,6 +129,7 @@
     <ReservationAddRoom v-if="!hasReservation"     
       :room_id="selectedRoomID"
       :date="selectedDate"
+      @temp-block-close="handleTempBlock"
     />
     <ReservationEdit
         v-if="hasReservation"
@@ -333,12 +334,14 @@
   });
   
   const openNewReservation = (room) => {
-    selectedDate.value = formatDate(today);
+    console.log('[openNewReservation] Using selected date:', selectedDate.value);
     selectedRoomID.value = room.room_id;
     hasReservation.value = false;
     drawerVisible.value = true;
   };
+  
   const openEditReservation = (room) => {        
+    console.log('[openEditReservation] Current selectedDate:', selectedDate.value);
     selectedReservationID.value = room.id;
     selectedRoomID.value = room.room_id;        
     hasReservation.value = true;
@@ -353,6 +356,11 @@
     // You can also prevent the error from propagating further
     return false; // Prevents error propagation
   });
+
+  const handleTempBlock = (data) => {
+    // Close any open dialogs or drawers
+    drawerVisible.value = false;
+  };
 
   // Mount
   onMounted(async () => {
@@ -415,10 +423,11 @@
     }
   });
   watch(selectedDate, async (newValue, oldValue) => {
-        if (newValue !== oldValue) {
-          // console.log('selectedDate changed to:',newValue);
-          await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-        }
+    console.log('[selectedDate watcher] Date changed from', oldValue, 'to', newValue);
+    if (newValue !== oldValue) {
+      console.log('[selectedDate watcher] Fetching reservations for date:', newValue);
+      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+    }
   }, { deep: true });
 
 </script>

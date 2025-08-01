@@ -28,7 +28,7 @@
                 </OverlayBadge>
                 
                 <!-- Notifications Icon -->                
-                <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
+                <OverlayBadge :value="notificationsBadgeCount" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
                         <i class="pi pi-bell" :class="bellAnimationClass" style="font-size:larger" />
                     </Button>
@@ -62,6 +62,7 @@
     <NotificationsDrawer
         v-model:visible="showDrawer"
         :hold-reservations="holdReservations"
+        :temp-blocked-reservations="tempBlockedReservations"
         :notification-severity="notificationSeverity"
         @go-to-edit-reservation="goToEditReservationPage"
     />
@@ -90,9 +91,9 @@
     import { useUserStore } from '@/composables/useUserStore';
     const { logged_user } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, setHotelId, selectedHotelId } = useHotelStore(); // selectedHotelId is a ref
+    const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, setReservationId } = useReservationStore();
+    const { holdReservations, setReservationId, reservedRooms } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -149,6 +150,12 @@
         return greetingText;
     });
 
+    const notificationsBadgeCount = computed(() => {
+        const holdCount = Array.isArray(holdReservations.value) ? holdReservations.value.length : 0;
+        const tempBlockedCount = Array.isArray(tempBlockedReservations.value) ? tempBlockedReservations.value.length : 0;
+        return holdCount + tempBlockedCount;
+    });
+
     // Computed property for dynamic severity string based on notification count    
     const notificationSeverity = computed(() => {
       const count = holdReservations.value.length;
@@ -165,13 +172,23 @@
       return holdReservations.value.length > 0 ? 'animate-bell-icon' : '';
     });
 
+    const tempBlockedReservations = computed(() => {
+        // console.log('[TopMenu] hotelBlockedRooms:', hotelBlockedRooms.value);
+        if (!hotelBlockedRooms.value) {
+            return [];
+        }
+        const filtered = hotelBlockedRooms.value.filter(room => room.reservation_client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
+        // console.log('[TopMenu] filtered hotelBlockedRooms:', filtered);
+        return filtered;
+    });
+
     // --- Methods ---
     const openWaitlistModal = () => {
         isWaitlistModalVisible.value = true;
     };
 
     const openGlobalSearch = () => {
-        console.debug('[TopMenu] openGlobalSearch called');
+        // console.debug('[TopMenu] openGlobalSearch called');
         isGlobalSearchVisible.value = true;
     };
 
@@ -228,11 +245,12 @@
     // --- Watchers ---
     watch(selectedHotelId,
         (newHotelId, oldHotelId) => {
-            console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
+            // console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
             if (newHotelId && newHotelId !== oldHotelId) {
                 // Fetch waitlist entries for the new hotel to update the badge count.
                 // Only fetch entries with status 'waiting' and 'notified'.
                 waitlistStore.fetchWaitlistEntries(newHotelId, { filters: { status: ['waiting', 'notified'] } });
+                fetchBlockedRooms(selectedHotelId.value);
             } else if (!newHotelId) {
                 // Clear entries if no hotel is selected
                 waitlistStore.entries.value = [];
