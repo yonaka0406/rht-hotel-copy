@@ -451,25 +451,59 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     }
   };
   const editBlockedRooms = async (req, res) => {
-    const { id: idParam } = req.params;
-    const user_id = req.user.id;
+    console.log('=== editBlockedRooms called ===');
+    console.log('Request params:', req.params);
+    console.log('User:', req.user);
+    
+    const { id: blockId } = req.params;
+    const user_id = req.user?.id;
+    
+    console.log('Block ID parameter:', blockId);
+    console.log('User ID:', user_id);
 
-    let numericBlockId;
-    try {
-      numericBlockId = validateNumericParam(idParam, 'Blocked Rooms Entry ID');
-    } catch (error) {
-      return res.status(400).json({ error: error.message });
+    if (!blockId) {
+        console.error('No block ID provided');
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Block ID is required',
+            receivedId: blockId
+        });
     }
 
     try {
-      const unblock = await deleteBlockedRooms(req.requestId, numericBlockId, user_id);
-      if (!unblock) {
-        return res.status(404).json({ success: false, message: 'Reservation not found' });
-      }
-      res.status(200).json({ success: true, message: 'Calendar settings updated.' });
+        console.log('Attempting to delete blocked room with ID:', blockId);
+        const unblock = await deleteBlockedRooms(req.requestId, blockId, user_id);
+        
+        if (!unblock) {
+            console.warn('Blocked room not found for ID:', blockId);
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Reservation not found',
+                blockId: blockId
+            });
+        }
+        
+        console.log('Successfully unblocked room with ID:', blockId);
+        res.status(200).json({ 
+            success: true, 
+            message: 'Calendar settings updated.',
+            blockId: blockId
+        });
     } catch (error) {
-      console.error('Error updating hotel:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+        console.error('Error in editBlockedRooms:', {
+            error: error.message,
+            stack: error.stack,
+            blockId: blockId,
+            userId: user_id,
+            requestId: req.requestId
+        });
+        
+        const statusCode = error.message.includes('Invalid') ? 400 : 500;
+        res.status(statusCode).json({ 
+            success: false, 
+            message: error.message || 'Internal server error',
+            error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
   };
 
