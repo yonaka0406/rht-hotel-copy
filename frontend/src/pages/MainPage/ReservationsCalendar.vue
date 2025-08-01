@@ -174,6 +174,9 @@
           </Button>
         </div>
         <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom.room_id" />
+
+        <Button v-if="isTempBlock" label="仮ブロック解除" icon="pi pi-unlock" @click="removeTempBlock" severity="danger" class="ml-2 mr-4" />
+        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-unlock" @click="removeTempBlock" severity="success" disabled />
       </div>
 
       <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-close="handleTempBlock" />
@@ -254,7 +257,7 @@ import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, 
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
-const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, deleteBlockedRooms } = useHotelStore();
+const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
@@ -680,19 +683,7 @@ const showContextMenu = (event, room, date) => {
       command: () => (dragMode.value = 'reorganizeRooms'),
     },
     { separator: true }
-  ];
-
-
-  if (roomInfo && roomInfo.status === 'block' && roomInfo.client_id === '22222222-2222-2222-2222-222222222222' && roomInfo.created_by === logged_user.value[0].id) {
-    menuItems.push({
-      label: '仮ブロック削除',
-      icon: 'pi pi-lock-open',
-      command: async () => {
-        await deleteBlockedRooms(roomInfo.reservation_id);
-        await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-      },
-    });
-  }
+  ];  
 
   contextMenuModel.value = menuItems;
   cm.value.show(event);
@@ -1334,6 +1325,41 @@ const handleTempBlock = (data) => {
   // console.log('Temp block created:', data);
   // Close any open dialogs or drawers
   drawerVisible.value = false;
+};
+
+const isTempBlock = computed(() => {
+    if(reservationDetails.value.reservation){
+        console.log ('isTempBlock reservationDetails', reservationDetails.value.reservation, reservationDetails.value?.reservation[0].client_id === '22222222-2222-2222-2222-222222222222' && 
+        reservationDetails.value?.reservation[0].status === 'block');
+    }else {
+      return;
+    }
+    
+    return reservationDetails.value?.reservation[0].client_id === '22222222-2222-2222-2222-222222222222' && 
+    reservationDetails.value?.reservation[0].status === 'block';
+});
+
+const removeTempBlock = async () => {
+    try {
+        await removeCalendarSettings(reservationDetails.value.reservation[0].reservation_id);
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: '仮ブロックが削除されました。', 
+            life: 3000 
+        });
+
+        drawerVisible.value = false;
+
+    } catch (error) {
+        console.error('Error removing temporary block:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '仮ブロックの削除に失敗しました。',
+            life: 3000
+        });
+    }
 };
 
 // Mount

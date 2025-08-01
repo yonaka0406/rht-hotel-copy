@@ -16,21 +16,6 @@
         <div class="col-span-3">
             <p class="font-bold mb-1">備考：</p>
             <Textarea v-model="reservationInfo.comment" fluid disabled style="background-color: transparent;" />
-            <div v-if="isTempBlock" class="mt-2 flex gap-2">
-                <Button 
-                    label="仮ブロック削除" 
-                    icon="pi pi-lock-open" 
-                    @click="removeTempBlock"
-                    severity="danger"
-                    class="flex-1"
-                />
-                <Button 
-                    label="予約追加に進む" 
-                    icon="pi pi-arrow-right" 
-                    :disabled="true"
-                    class="flex-1"
-                />
-            </div>
         </div>
     </div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">
@@ -512,8 +497,6 @@ import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
-import { useHotelStore } from '@/composables/useHotelStore';
-const { removeCalendarSettings } = useHotelStore();
 
 const reservationTypeSelected = ref(null);
 const reservationTypeOptions = computed(() => {
@@ -1244,32 +1227,6 @@ const actionOptions = [
 ];
 const onActionClick = () => {
     // Default action if needed
-};
-
-const isTempBlock = computed(() => {
-    return reservationInfo.value?.client_id === '22222222-2222-2222-2222-222222222222' && 
-           reservationInfo.value?.status === 'block';
-});
-
-const removeTempBlock = async () => {
-    try {
-        await removeCalendarSettings(props.reservation_id);
-        toast.add({ 
-            severity: 'success', 
-            summary: '成功', 
-            detail: '仮ブロックが削除されました。', 
-            life: 3000 
-        });
-        await router.push({ name: 'ReservationsCalendar' });
-    } catch (error) {
-        console.error('Error removing temporary block:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '仮ブロックの削除に失敗しました。',
-            life: 3000
-        });
-    }
 };
 
 onMounted(async () => {
