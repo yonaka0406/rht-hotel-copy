@@ -1,7 +1,7 @@
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
-  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern,
+  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation
 } = require('../models/reservations');
@@ -1226,5 +1226,56 @@ const copyReservation = async (req, res) => {
   }
 };
 
+const convertBlockToReservation = async (req, res) => {
+  const { id } = req.params;
+  const { client } = req.body;
+  const user_id = req.user.id;
+
+  if (!client) {
+    return res.status(400).json({ error: 'Client information is required' });
+  }
+
+  try {
+    let finalClientId = client.id;
+    
+    // If client doesn't have an ID, create a new client
+    if (!finalClientId) {
+      logger.warn(`[CONVERT_BLOCK] No client_id provided, creating new client`, { 
+        name: client.name, 
+        email: client.email,
+        phone: client.phone 
+      });
+      
+      const clientData = {
+        name: client.name || '',
+        legal_or_natural_person: client.legal_or_natural_person || 'natural',
+        gender: client.gender || null,
+        email: client.email || null,
+        phone: client.phone || null,
+        created_by: user_id,
+        updated_by: user_id,
+      };
+
+      const newClient = await addClientByName(req.requestId, clientData);
+      finalClientId = newClient.id;
+      logger.warn(`[CONVERT_BLOCK] Created new client`, { client_id: finalClientId });
+    }
+
+    // Update the reservation with the client ID
+    const updatedReservation = await updateBlockToReservation(req.requestId, id, finalClientId, user_id);
+    
+    res.status(200).json({ 
+      message: 'Reservation updated successfully', 
+      reservation: updatedReservation 
+    });
+  } catch (error) {
+    logger.error('[convertBlockToReservation][controller] Error converting block to reservation:', error);
+    const status = error.message.includes('not found') ? 404 : 500;
+    res.status(status).json({ 
+      error: error.message || 'Failed to convert block to reservation' 
+    });
+  }
+};
+
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation };
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, convertBlockToReservation };
