@@ -976,6 +976,32 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
     client.release();
   }
 };
+
+const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE reservations
+    SET
+      status = 'hold',
+      reservation_client_id = $1,
+      updated_by = $2
+    WHERE id = $3::UUID AND status = 'block'
+    RETURNING *;
+  `;
+  const values = [clientId, userId, reservationId];
+
+  try {
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('Reservation not found or not in "block" status.');
+    }
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error updating block to reservation:', err);
+    throw new Error('Database error');
+  }
+};
+
 const insertBulkReservationPayment = async (requestId, data, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
@@ -4078,6 +4104,7 @@ module.exports = {
   updateReservationRoomWithCreate,
   updateReservationRoomPlan,
   updateReservationRoomPattern,
+  updateBlockToReservation,
   deleteHoldReservationById,
   deleteReservationAddonsByDetailId,
   deleteReservationClientsByDetailId,
