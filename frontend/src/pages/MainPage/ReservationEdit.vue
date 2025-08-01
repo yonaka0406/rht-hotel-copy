@@ -1,18 +1,7 @@
 <template>
     <!-- Top Panel -->
     <Card class="m-2">
-        <template #title>
-            <div class="flex justify-between">
-                <span>予約編集</span>
-                <Button
-                    v-if="reservationStatus === 'block' && reservation_details && reservation_details[0].client_id === '22222222-2222-2222-2222-222222222222' && reservation_details[0].created_by === logged_user[0].id"
-                    label="仮ブロック削除"
-                    icon="pi pi-lock-open"
-                    @click="removeTempBlock"
-                    severity="danger"
-                />
-            </div>
-        </template>
+        <template #title>予約編集</template>
         <template #content>
             <ReservationPanel 
                 v-if="reservationId && reservation_details"
@@ -75,14 +64,9 @@
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
-    import { useUserStore } from '@/composables/useUserStore';
-    import { useHotelStore } from '@/composables/useHotelStore';
-    const { deleteBlockedRooms } = useHotelStore();
-    const { logged_user } = useUserStore();
-    
     
     // Primevue
-    import { Card, Button } from 'primevue';
+    import { Card } from 'primevue';
         
     const hotelId = ref(null);
     const reservationStatus = ref(null);
@@ -140,15 +124,6 @@
             socket.value.disconnect();
         }
     });
-
-    const removeTempBlock = async () => {
-        try {
-            await deleteBlockedRooms(props.reservation_id);
-            router.push({ name: 'ReservationsCalendar' });
-        } catch (error) {
-            console.error('Error removing temporary block:', error);
-        }
-    };
 
     // Watcher
     watch(reservationIsUpdating, async (newVal, oldVal) => {
