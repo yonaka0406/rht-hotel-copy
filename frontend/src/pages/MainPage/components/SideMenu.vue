@@ -176,7 +176,7 @@ import { Menubar, OverlayBadge, Select, Drawer, Divider, Button } from 'primevue
 
 // Function to update menu items
 const updateMenuItems = () => {
-  console.log('Updating menu items...');
+  // console.log('Updating menu items...');
   const items = [
     { label: 'ホーム', icon: 'pi pi-fw pi-home', route: '/reservations/day', type: 'link', command: () => router.push('/reservations/day') },
     { label: 'ダッシュボード', icon: 'pi pi-fw pi-chart-bar', route: '/dashboard', type: 'link', command: () => { router.push('/dashboard'); } },
@@ -187,19 +187,19 @@ const updateMenuItems = () => {
   ];
 
   if (selectedHotel.value?.google_drive_url) {
-    console.log('Adding 予約紹介 menu with URL:', selectedHotel.value.google_drive_url);
+    // console.log('Adding 予約紹介 menu with URL:', selectedHotel.value.google_drive_url);
     items.push({
       label: '予約紹介',
       icon: 'pi pi-fw pi-google',
       type: 'link',
       route: '/google/dummy-route',
       command: () => {
-        console.log('予約紹介 clicked, opening URL:', selectedHotel.value.google_drive_url);
+        // console.log('予約紹介 clicked, opening URL:', selectedHotel.value.google_drive_url);
         window.open(selectedHotel.value.google_drive_url, '_blank');
       }
     });
   } else {
-    console.log('予約紹介 menu not added - missing google_drive_url');
+    // console.log('予約紹介 menu not added - missing google_drive_url');
   }
 
   items.push(
@@ -209,7 +209,7 @@ const updateMenuItems = () => {
     { label: '領収書', icon: 'pi pi-fw pi-receipt', route: '/billing/receipts', type: 'link', command: () => router.push({ name: 'Receipts' }) },
   );
 
-  console.log('Final menu items:', JSON.stringify(items, null, 2));
+  // console.log('Final menu items:', JSON.stringify(items, null, 2));
   return items;
 };
 
@@ -218,7 +218,7 @@ const menuItems = ref(updateMenuItems());
 
 // Watch for changes in selectedHotel and update menu items
 watch(selectedHotel, () => {
-  console.log('selectedHotel changed, updating menu items');
+  // console.log('selectedHotel changed, updating menu items');
   menuItems.value = updateMenuItems();
 }, { immediate: true });
 
