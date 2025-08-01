@@ -189,7 +189,8 @@ import { useReservationStore } from '@/composables/useReservationStore';
 const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
-
+import { useUserStore } from '@/composables/useUserStore';
+const { fetchUser, logged_user } = useUserStore();
 
 // Form
 const today = ref(new Date(props.date));
@@ -458,6 +459,12 @@ const goToEditReservationPage = async (reservation_id) => {
 
 const submitTempBlock = async () => {
     try {
+        // Get the username from the user store with a fallback
+        await fetchUser();
+        const userName = (logged_user.value && logged_user.value.length > 0 && logged_user.value[0]?.name)
+                        ? logged_user.value[0].name
+                        : 'User'; // Default name if not available or structure is different
+            
         // Create a new date object for check_out and subtract one day
         const adjustedCheckOut = new Date(reservationDetails.value.check_out);
         adjustedCheckOut.setDate(adjustedCheckOut.getDate() - 1);
@@ -467,7 +474,7 @@ const submitTempBlock = async () => {
             reservationDetails.value.check_in,
             adjustedCheckOut.toISOString().split('T')[0], // Format as YYYY-MM-DD
             [props.room_id],
-            'Temporary Block by user',
+            `${userName}の部屋押さえ`,
             'temp'
         );
         if (result.success) {
