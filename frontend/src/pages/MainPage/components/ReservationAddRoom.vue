@@ -539,9 +539,7 @@
 
     const submitTempBlock = async () => {
         try {
-            const checkOutDate = new Date(reservationDetails.value.check_out);
-            checkOutDate.setDate(checkOutDate.getDate() - 1);
-            const result = await applyCalendarSettings(selectedHotelId.value, reservationDetails.value.check_in, formatDate(checkOutDate), [props.room_id], 'Temporary Block by user', 'temp');
+            const result = await applyCalendarSettings(selectedHotelId.value, reservationDetails.value.check_in, reservationDetails.value.check_out, [props.room_id], 'Temporary Block by user', 'temp');
             if (result.success) {
                 toast.add({ severity: 'success', summary: '成功', detail: '仮ブロックを作成しました。', life: 3000 });
                 dialogVisible.value = false;
