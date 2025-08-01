@@ -167,10 +167,13 @@
     });
 
     const tempBlockedReservations = computed(() => {
+        console.log('reservedRooms:', reservedRooms.value);
         if (!reservedRooms.value) {
             return [];
         }
-        return reservedRooms.value.filter(room => room.status === 'block' && room.client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
+        const filtered = reservedRooms.value.filter(room => room.status === 'block' && room.client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
+        console.log('filtered temp blocks:', filtered);
+        return filtered;
     });
 
     // --- Methods ---
