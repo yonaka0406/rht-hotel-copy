@@ -129,7 +129,7 @@
         <Fieldset legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
           <div class="flex flex-wrap items-center gap-4">
             <span class="flex items-center gap-1"><i
-                class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>保留中（仮押さえ）</span>
+                class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>保留中</span>
             <span class="flex items-center gap-1"><i
                 class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>仮予約</span>
             <span class="flex items-center gap-1"><i

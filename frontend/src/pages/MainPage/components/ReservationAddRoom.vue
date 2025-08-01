@@ -38,7 +38,7 @@
                         <Button label="新規予約" icon="pi pi-calendar" @click="openDialog" />
                     </div>
                     <div class="col-span-1 mt-6">
-                        <Button label="仮ブロック" icon="pi pi-lock" @click="submitTempBlock" severity="warning" />                        
+                        <Button label="仮ブロック" icon="pi pi-lock" @click="submitTempBlock" severity="warn" />                        
                     </div>
                 </div>
             </template>
