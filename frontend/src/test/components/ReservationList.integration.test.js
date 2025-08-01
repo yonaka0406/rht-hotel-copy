@@ -286,4 +286,4 @@ describe('ReservationList.vue Integration', () => {
     expect(mockClearSearch).toHaveBeenCalled();
     expect(wrapper.vm.filters.status.value).toBeNull();
   });
-}); 
+});

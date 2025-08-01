@@ -20,4 +20,4 @@ describe('usePhoneticSearch performance', () => {
       phoneticMatch('たなかたろう', name)
     }
   })
-}) 
+})

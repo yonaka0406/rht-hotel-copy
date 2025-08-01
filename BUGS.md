@@ -5,6 +5,82 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ## Bug Reports
 
+### July 31, 2025
+
+#### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When rooms are added to a reservation after it has been confirmed, the billable status of the new room details is not automatically set to true, even though the reservation is confirmed.
+- **Steps to Reproduce**:
+  1. Create a new reservation and confirm it (status changes to 'Confirmed' and billable becomes true)
+  2. Add a new room to the confirmed reservation
+  3. The new room's billable status remains false
+- **Expected Behavior**: 
+  - When a room is added to a confirmed reservation, its billable status should be set to true to match the reservation's confirmed status.
+  - The UI should clearly indicate when a room is not billable with a visual indicator (e.g., strikethrough text, different background color, or an icon).
+- **Actual Behavior**: 
+  - Newly added rooms maintain billable = false even in confirmed reservations.
+  - There is no visual indication in the UI that a room is not billable.
+- **Affected Component**: 
+  - Reservation update/room addition logic
+  - Room display components
+- **UI Requirements**:
+  - Add a visual indicator (e.g., strikethrough, different color, or icon) for non-billable rooms
+  - The indicator should be visible in all relevant views (reservation details, room assignments, billing, etc.)
+  - Consider adding a tooltip explaining why a room is not billable
+- **Environment**: Reservation management system
+- **Additional Notes**: 
+  - This can lead to rooms not being included in billing calculations
+  - The issue likely stems from the room addition logic not checking the reservation's confirmed status
+  - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
+
+#### Bug #21: Meal Counts Query Not Returning
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The meal counts query is not returning any results. Need to investigate the cause.
+- **Environment**: Reporting module
+- **Additional Notes**: Check database connection and query logic for any issues.
+
+#### Feature Request #18: Parking Management Function
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add functionality to manage parking spaces and assignments for guests.
+- **Requirements**:
+  - Track available parking spaces
+  - Assign parking spots to reservations
+  - Generate parking reports
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #19: Enhanced Log Viewing
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Improve log viewing to include:
+  - Plans and addons changes
+  - Room number changes
+  - Client information modifications
+- **Priority**: [ ] Low [x] Medium [ ] Critical
+- **Additional Notes**: This will help with auditing and tracking changes in the system.
+
+#### UI Change Request #1: Rename Mode
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Change the name of the mode from "予約移動" to "デフォルト" (Default)
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Additional Notes**: This is a simple UI text change to improve clarity.
+
+#### Feature Request #20: Client-based Meal Count Report
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Create a new report that shows meal counts grouped by client instead of by date.
+- **Requirements**:
+  - User will provide the specific format
+  - Should be exportable to common formats (CSV, Excel)
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #21: Hotel Display Order in Top Menu
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: Add the ability to set the display order of hotels in the top menu.
+- **Requirements**:
+  - Add a sort order field to the hotels table
+  - Update the menu generation to respect this order
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### July 29, 2025
 
 #### Bug #19: Cancelled Reservations Show in Room Indicator
@@ -165,7 +241,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 #### Bug #5
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
 - **Steps to Reproduce**:
   1. Create a hold reservation.
@@ -335,7 +410,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: 
 - **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
 
-### Bug #11
+#### Bug #11
 - **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA. This resulted in duplicate reservations and failures when attempting to edit the reservation.
@@ -350,7 +425,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: psql server outage and restart, OTA integration
 - **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
 
-### Bug #12
+#### Bug #12
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
@@ -363,8 +438,8 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
 - **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application.
 
-### Feature Request #16
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+#### Feature Request #16
+- **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. Additionally, improve the OTA import logic: convert OTA XML reservation data to PMS format and save in a temp table, attempt to add to PMS reservations, and if any fail, cache the data and only clear the cache upon successful confirmation to the OTA. Notify users of unimported data in PMS, allowing them to change room types before the next OTA retry, which would use the updated mapping.
 - **Steps to Reproduce**:
@@ -395,9 +470,9 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: July 22, 2025*
-*Total Bugs: 13*
-*Open: 4*
+*Last Updated: July 31, 2025*
+*Total Bugs: 15*
+*Open: 6*
 *Fixed: 9*
 
 # Backlog
@@ -430,7 +505,7 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
 
 #### Feature Request #16: Configurable Reservation Inquiry Button (2025/07/29)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 
   - Add a button to open reservation inquiry in a Google Drive spreadsheet
   - Make the Google Drive link configurable per hotel in the admin interface
@@ -456,3 +531,4 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**:
     - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
     - Need to investigate what guest information is currently being captured from OTA bookings
+

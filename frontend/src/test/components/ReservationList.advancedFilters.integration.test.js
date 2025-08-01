@@ -247,4 +247,4 @@ describe('ReservationList.vue Advanced Filters Integration', () => {
     const filtered = wrapper.vm.filteredReservations;
     expect(filtered.length).toBe(0);
   });
-}); 
+});

@@ -72,11 +72,11 @@ describe('SearchSuggestions.vue', () => {
 
     // Check category headings
     expect(wrapper.find('.category-title').text()).toContain('宿泊者名');
-    
+
     // Check suggestion items
     const items = wrapper.findAll('.suggestion-list li');
     expect(items.length).toBe(3);
-    
+
     // Check first suggestion content
     expect(items[0].text()).toContain('John Smith');
     expect(items[0].find('.suggestion-count').text()).toBe('3');
@@ -87,7 +87,7 @@ describe('SearchSuggestions.vue', () => {
       { text: 'John Smith', type: 'guest_name' },
     ];
 
-    const wrapper = createComponent({ 
+    const wrapper = createComponent({
       suggestions,
       searchQuery: 'John'
     });
@@ -103,12 +103,12 @@ describe('SearchSuggestions.vue', () => {
     ];
 
     const wrapper = createComponent({ suggestions });
-    
+
     await wrapper.find('.suggestion-list li').trigger('click');
-    
+
     expect(wrapper.emitted().select).toBeTruthy();
     expect(wrapper.emitted().select[0][0]).toEqual(suggestions[0]);
-    
+
     // Check accessibility announcement
     expect(accessibilityService.announce).toHaveBeenCalledWith(
       expect.stringContaining('John Smith'),
@@ -122,15 +122,15 @@ describe('SearchSuggestions.vue', () => {
     ];
 
     const wrapper = createComponent({ suggestions });
-    
+
     await wrapper.find('.suggestion-list li').trigger('click');
-    
+
     // Check localStorage was called
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       'recentSearches',
       expect.any(String)
     );
-    
+
     // Parse the saved data
     const savedData = JSON.parse(localStorageMock.setItem.mock.calls[0][1]);
     expect(savedData[0].text).toBe('John Smith');
@@ -140,14 +140,14 @@ describe('SearchSuggestions.vue', () => {
     const recentSearches = [
       { text: 'Previous Search', type: 'guest_name', timestamp: Date.now() }
     ];
-    
+
     localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(recentSearches));
-    
+
     const wrapper = createComponent();
-    
+
     // Wait for component to mount and process
     await wrapper.vm.$nextTick();
-    
+
     // Check if recent searches section exists
     expect(wrapper.find('.category-title').text()).toContain('最近の検索');
     expect(wrapper.find('.suggestion-list li').text()).toContain('Previous Search');
@@ -160,10 +160,10 @@ describe('SearchSuggestions.vue', () => {
     ];
 
     const wrapper = createComponent({ suggestions });
-    
+
     // Call navigation method directly
     wrapper.vm.navigateNext();
-    
+
     expect(wrapper.emitted().navigate).toBeTruthy();
     expect(wrapper.emitted().navigate[0][0]).toEqual({
       category: 'guest_name',
@@ -177,23 +177,23 @@ describe('SearchSuggestions.vue', () => {
     ];
 
     const wrapper = createComponent({ suggestions });
-    
+
     // Check container ARIA attributes
     expect(wrapper.attributes('role')).toBe('listbox');
     expect(wrapper.attributes('aria-label')).toBe('検索候補');
-    
+
     // Check list item ARIA attributes
     const listItem = wrapper.find('.suggestion-list li');
     expect(listItem.attributes('role')).toBe('option');
     expect(listItem.attributes('aria-selected')).toBe('false');
   });
-  
+
   it('properly escapes special regex characters in search query for highlighting', () => {
     const suggestions = [
       { text: 'John (Smith)', type: 'guest_name' },
     ];
 
-    const wrapper = createComponent({ 
+    const wrapper = createComponent({
       suggestions,
       searchQuery: '(Smith)'
     });

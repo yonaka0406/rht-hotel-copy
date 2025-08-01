@@ -93,4 +93,4 @@ describe('useSavedSearch', () => {
     await composable.fetchAll()
     expect(composable.error.value).toBeTruthy()
   })
-}) 
+})
