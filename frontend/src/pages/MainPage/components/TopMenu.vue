@@ -173,12 +173,12 @@
     });
 
     const tempBlockedReservations = computed(() => {
-        console.log('[TopMenu] hotelBlockedRooms:', hotelBlockedRooms.value);
+        // console.log('[TopMenu] hotelBlockedRooms:', hotelBlockedRooms.value);
         if (!hotelBlockedRooms.value) {
             return [];
         }
         const filtered = hotelBlockedRooms.value.filter(room => room.reservation_client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
-        console.log('[TopMenu] filtered hotelBlockedRooms:', filtered);
+        // console.log('[TopMenu] filtered hotelBlockedRooms:', filtered);
         return filtered;
     });
 
@@ -188,7 +188,7 @@
     };
 
     const openGlobalSearch = () => {
-        console.debug('[TopMenu] openGlobalSearch called');
+        // console.debug('[TopMenu] openGlobalSearch called');
         isGlobalSearchVisible.value = true;
     };
 
@@ -245,7 +245,7 @@
     // --- Watchers ---
     watch(selectedHotelId,
         (newHotelId, oldHotelId) => {
-            console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
+            // console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
             if (newHotelId && newHotelId !== oldHotelId) {
                 // Fetch waitlist entries for the new hotel to update the badge count.
                 // Only fetch entries with status 'waiting' and 'notified'.

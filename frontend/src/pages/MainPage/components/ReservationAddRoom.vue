@@ -59,9 +59,9 @@
                                         <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                                         <i v-else class="pi pi-user"></i>
                                         {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                        slotProps.option.name || '' }}
+                                            slotProps.option.name || '' }}
                                         <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
-                                            }})</span>
+                                        }})</span>
                                     </p>
                                     <div class="flex items-center gap-2">
                                         <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
@@ -172,6 +172,8 @@ const props = defineProps({
         required: true,
     },
 });
+
+const emit = defineEmits(['tempBlockCreated']);
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -470,6 +472,15 @@ const submitTempBlock = async () => {
         );
         if (result.success) {
             toast.add({ severity: 'success', summary: '成功', detail: '仮ブロックを作成しました。', life: 3000 });
+
+            // Emit event with the new block data
+            emit('tempBlockCreated', {
+                roomId: props.room_id,
+                checkIn: reservationDetails.value.check_in,
+                checkOut: reservationDetails.value.check_out,
+                reservationId: result.reservation?.id
+            });
+
             dialogVisible.value = false;
         } else {
             toast.add({ severity: 'error', summary: 'エラー', detail: '仮ブロックの作成に失敗しました。', life: 3000 });

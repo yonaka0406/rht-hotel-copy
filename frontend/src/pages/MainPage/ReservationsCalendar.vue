@@ -176,7 +176,7 @@
         <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom.room_id" />
       </div>
 
-      <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" />
+      <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-created="handleTempBlockCreated" />
     </Drawer>
 
     <Drawer v-model:visible="reservationCardVisible" :modal="false" :position="'right'"
@@ -1329,6 +1329,11 @@ const handleScroll = debounce(async (event) => {
     isLoading.value = false;
   }
 }, 10);
+
+const handleTempBlockCreated = (data) => {
+   // Close any open dialogs or drawers
+   drawerVisible.value = false;
+};
 
 // Mount
 onMounted(async () => {

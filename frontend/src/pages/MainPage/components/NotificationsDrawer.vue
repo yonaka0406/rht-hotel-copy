@@ -148,11 +148,11 @@ function formatDateJP(dateStr) {
 }
 
 onMounted(() => {
-  console.log('[NotificationsDrawer] tempBlockedReservations:', props.tempBlockedReservations);
+  // console.log('[NotificationsDrawer] tempBlockedReservations:', props.tempBlockedReservations);
 });
 
 watch(() => props.tempBlockedReservations, (newVal) => {
-  console.log('[NotificationsDrawer] Updated tempBlockedReservations:', newVal);
+  // console.log('[NotificationsDrawer] Updated tempBlockedReservations:', newVal);
 }, { immediate: true, deep: true });
 
 </script>

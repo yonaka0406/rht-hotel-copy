@@ -129,6 +129,7 @@
     <ReservationAddRoom v-if="!hasReservation"     
       :room_id="selectedRoomID"
       :date="selectedDate"
+      @temp-block-created="handleTempBlockCreated"
     />
     <ReservationEdit
         v-if="hasReservation"
@@ -353,6 +354,11 @@
     // You can also prevent the error from propagating further
     return false; // Prevents error propagation
   });
+
+  const handleTempBlockCreated = (data) => {
+    // Close any open dialogs or drawers
+    drawerVisible.value = false;
+  };
 
   // Mount
   onMounted(async () => {
