@@ -329,7 +329,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
 const selectBlockedRooms = async (requestId, hotelId) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT r.*, d.room_id, d.room_type_name, d.room_number, h.name
+    SELECT r.*, r.check_in as start_date, (r.check_out - INTERVAL '1 day') as end_date, d.room_id, d.room_type_name, d.room_number, h.name
     FROM 
       hotels h,
       reservations r
@@ -361,6 +361,16 @@ const selectBlockedRooms = async (requestId, hotelId) => {
   }
 };
 const deleteBlockedRooms = async (requestId, reservationId, userID) => {
+  console.log('=== deleteBlockedRooms called ===');
+  console.log('Input parameters:', { requestId, reservationId, userID });
+  
+  // Validate reservationId is a valid UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(reservationId)) {
+    console.error('Invalid UUID format for reservationId:', reservationId);
+    throw new Error('Invalid reservation ID format');
+  }
+
   const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
@@ -371,12 +381,30 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
     RETURNING *;
   `, userID, reservationId);
 
+  console.log('Generated SQL query:', query);
+
   try {
-    const result = await pool.query(query);    
+    console.log('Attempting to delete reservation with ID:', reservationId);
+    const result = await pool.query(query);
+    console.log('Delete result:', {
+      rowCount: result.rowCount,
+      rows: result.rows
+    });
+    
+    if (result.rowCount === 0) {
+      console.warn('No rows were deleted - reservation not found or not a block type');
+    }
+    
     return true;
   } catch (err) {
-    console.error('Error deleting reservation:', err);
-    throw new Error('Database error');
+    console.error('Error deleting reservation:', {
+      error: err.message,
+      code: err.code,
+      detail: err.detail,
+      query: query,
+      parameters: { reservationId, userID }
+    });
+    throw new Error('Database error: ' + err.message);
   }
 };
 
