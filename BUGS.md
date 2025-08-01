@@ -35,11 +35,11 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
 
 #### Bug #21: Meal Counts Query Not Returning
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The meal counts query is not returning any results. Need to investigate the cause.
+- **Description**: The meal counts query was not returning any results due to incorrect join conditions in the query.
+- **Resolution**: Fixed the SQL query to properly join the reservations and meal count tables.
 - **Environment**: Reporting module
-- **Additional Notes**: Check database connection and query logic for any issues.
 
 #### Feature Request #18: Parking Management Function
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
