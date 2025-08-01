@@ -91,7 +91,7 @@
     import { useUserStore } from '@/composables/useUserStore';
     const { logged_user } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, setHotelId, selectedHotelId } = useHotelStore(); // selectedHotelId is a ref
+    const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
     const { holdReservations, setReservationId, reservedRooms } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
@@ -167,12 +167,12 @@
     });
 
     const tempBlockedReservations = computed(() => {
-        console.log('reservedRooms:', reservedRooms.value);
-        if (!reservedRooms.value) {
+        console.log('[TopMenu] hotelBlockedRooms:', hotelBlockedRooms.value);
+        if (!hotelBlockedRooms.value) {
             return [];
         }
-        const filtered = reservedRooms.value.filter(room => room.status === 'block' && room.client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
-        console.log('filtered temp blocks:', filtered);
+        const filtered = hotelBlockedRooms.value.filter(room => room.reservation_client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
+        console.log('[TopMenu] filtered hotelBlockedRooms:', filtered);
         return filtered;
     });
 
@@ -244,6 +244,7 @@
                 // Fetch waitlist entries for the new hotel to update the badge count.
                 // Only fetch entries with status 'waiting' and 'notified'.
                 waitlistStore.fetchWaitlistEntries(newHotelId, { filters: { status: ['waiting', 'notified'] } });
+                fetchBlockedRooms(selectedHotelId.value);
             } else if (!newHotelId) {
                 // Clear entries if no hotel is selected
                 waitlistStore.entries.value = [];
