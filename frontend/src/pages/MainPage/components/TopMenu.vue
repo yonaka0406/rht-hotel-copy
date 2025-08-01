@@ -28,7 +28,7 @@
                 </OverlayBadge>
                 
                 <!-- Notifications Icon -->                
-                <OverlayBadge :value="holdReservations.length" class="mr-2" :severity="notificationSeverity">
+                <OverlayBadge :value="notificationsBadgeCount" class="mr-2" :severity="notificationSeverity">
                     <Button class="p-button p-button-text dark:text-white" aria-label="通知" :severity="notificationSeverity" @click="showDrawer = true">
                         <i class="pi pi-bell" :class="bellAnimationClass" style="font-size:larger" />
                     </Button>
@@ -148,6 +148,12 @@
             greetingText += ` <small style="color: red; margin-left: 8px;">閲覧者</small>`;
         }
         return greetingText;
+    });
+
+    const notificationsBadgeCount = computed(() => {
+        const holdCount = Array.isArray(holdReservations.value) ? holdReservations.value.length : 0;
+        const tempBlockedCount = Array.isArray(tempBlockedReservations.value) ? tempBlockedReservations.value.length : 0;
+        return holdCount + tempBlockedCount;
     });
 
     // Computed property for dynamic severity string based on notification count    
