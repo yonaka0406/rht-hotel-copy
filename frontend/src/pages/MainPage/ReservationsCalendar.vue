@@ -634,7 +634,7 @@ const dragMode = ref('reservation');
 const dragModeLabel = computed(() => {
   switch (dragMode.value) {
     case 'reservation':
-      return '予約移動';
+      return 'デフォルト';
     case 'roomByDay':
       return '日ごとに部屋移動';
     case 'reorganizeRooms':
@@ -646,7 +646,7 @@ const dragModeLabel = computed(() => {
 const cm = ref(null);
 const speedDialModel = ref([
   {
-    label: '予約移動',
+    label: 'デフォルト',
     icon: 'pi pi-address-book',
     command: () => (dragMode.value = 'reservation'),
   },
@@ -668,7 +668,7 @@ const showContextMenu = (event, room, date) => {
 
   const menuItems = [
     {
-      label: '予約移動',
+      label: 'デフォルト',
       icon: 'pi pi-address-book',
       command: () => (dragMode.value = 'reservation'),
     },

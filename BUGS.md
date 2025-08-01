@@ -60,7 +60,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Additional Notes**: This will help with auditing and tracking changes in the system.
 
 #### UI Change Request #1: Rename Mode
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: Change the name of the mode from "予約移動" to "デフォルト" (Default)
 - **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
 - **Additional Notes**: This is a simple UI text change to improve clarity.

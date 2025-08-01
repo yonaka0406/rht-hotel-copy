@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Visual indicators show which rooms are temporarily blocked
   - Streamlined workflow for holding rooms during high-demand periods
 
+### Changed
+- UI: Renamed mode from "予約移動" to "デフォルト" (Default) in the reservation calendar for better clarity (#1)
+
 ---
 ## Future Releases
 
