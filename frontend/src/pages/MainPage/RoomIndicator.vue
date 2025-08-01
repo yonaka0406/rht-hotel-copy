@@ -129,7 +129,7 @@
     <ReservationAddRoom v-if="!hasReservation"     
       :room_id="selectedRoomID"
       :date="selectedDate"
-      @temp-block-created="handleTempBlockCreated"
+      @temp-block-close="handleTempBlock"
     />
     <ReservationEdit
         v-if="hasReservation"
@@ -355,7 +355,7 @@
     return false; // Prevents error propagation
   });
 
-  const handleTempBlockCreated = (data) => {
+  const handleTempBlock = (data) => {
     // Close any open dialogs or drawers
     drawerVisible.value = false;
   };

@@ -176,7 +176,7 @@
         <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom.room_id" />
       </div>
 
-      <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-created="handleTempBlockCreated" />
+      <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-close="handleTempBlock" />
     </Drawer>
 
     <Drawer v-model:visible="reservationCardVisible" :modal="false" :position="'right'"
@@ -1330,9 +1330,10 @@ const handleScroll = debounce(async (event) => {
   }
 }, 10);
 
-const handleTempBlockCreated = (data) => {
-   // Close any open dialogs or drawers
-   drawerVisible.value = false;
+const handleTempBlock = (data) => {
+  // console.log('Temp block created:', data);
+  // Close any open dialogs or drawers
+  drawerVisible.value = false;
 };
 
 // Mount
