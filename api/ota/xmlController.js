@@ -586,6 +586,7 @@ const getOTAReservations = async (req, res) => {
                 logger.warn('No hotels found.');
                 return res.status(404).send({ error: 'No hotels found.' });
             }
+            console.log('[getOTAReservations] getAllHotelSiteController response:', hotels)
         } catch (hotelError) {
             logger.error('Error fetching hotels:', {
                 requestId,
