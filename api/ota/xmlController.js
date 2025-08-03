@@ -53,8 +53,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             queueId: reservation._queueId,
             transactionId: reservation._transactionId,
             reservationKeys: Object.keys(reservation).filter(k => !k.startsWith('_')),
-            hasReservationData: !!reservation.reservationData,
-            dataType: reservation.reservationData ? typeof reservation.reservationData : 'none',
+            hasTransactionType: !!reservation.TransactionType,
             transactionInProgress: client ? 'Using provided transaction' : 'No transaction provided'
         });
         
@@ -80,18 +79,20 @@ async function processQueuedReservations(requestId, reservations, client) {
         });
         
         try {
-            const { reservationData, hotelId, otaReservationId, transactionId } = reservation;
+            // Use the reservation object directly since it already contains the data at the top level
+            const { _queueId, _otaReservationId, _transactionId, ...reservationData } = reservation;
+            const hotelId = reservationData.hotelId; // This should be set from processAndQueueReservation
             
             // Log reservation data structure
             logger.debug('[processQueuedReservations] Reservation data structure:', {
                 requestId,
-                hasTransactionType: !!reservationData?.TransactionType,
-                transactionTypeKeys: reservationData?.TransactionType ? Object.keys(reservationData.TransactionType) : 'none',
-                dataClassification: reservationData?.TransactionType?.DataClassification || 'none',
-                topLevelKeys: reservationData ? Object.keys(reservationData) : 'none'
+                hasTransactionType: !!reservation.TransactionType,
+                transactionTypeKeys: reservation.TransactionType ? Object.keys(reservation.TransactionType) : 'none',
+                dataClassification: reservation.TransactionType?.DataClassification || 'none',
+                topLevelKeys: Object.keys(reservation).filter(k => !k.startsWith('_'))
             });
             
-            const classification = reservationData.TransactionType?.DataClassification;
+            const classification = reservation.TransactionType?.DataClassification;
             
             if (!classification) {
                 logger.error('[processQueuedReservations] Missing classification in reservation data', {
@@ -104,8 +105,8 @@ async function processQueuedReservations(requestId, reservations, client) {
             logger.debug(`[processQueuedReservations] Processing ${classification} for reservation`, {
                 requestId,
                 hotelId,
-                otaReservationId,
-                transactionId
+                otaReservationId: reservation._otaReservationId,
+                transactionId: reservation._transactionId
             });
 
             let result = { success: false };
@@ -178,7 +179,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                 );
                 results.processed++;
                 results.details.push({
-                    otaReservationId,
+                    otaReservationId: reservation._otaReservationId,
                     status: 'success',
                     message: result.message
                 });
