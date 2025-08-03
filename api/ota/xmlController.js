@@ -838,7 +838,21 @@ const getOTAReservations = async (req, res) => {
             let failedProcessing = 0;
             let exceptions = 0;
             let successfulProcessing = 0;
-            logger.info(`Processing ${formattedReservations.length} reservations for hotel_id: ${hotel_id}`);
+            logger.info(`Processing ${queuedReservations.length} reservations for hotel_id: ${hotelId}`, {
+                requestId,
+                hotelId
+            });
+
+            // If there are no reservations to process, return early
+            if (queuedReservations.length === 0) {
+                logger.info('No reservations to process', { requestId, hotelId });
+                return {
+                    success: true,
+                    message: 'No reservations to process',
+                    processed: 0,
+                    details: []
+                };
+            }
 
             // Get database client for transaction
             const pool = getPool(req.requestId);
@@ -847,37 +861,42 @@ const getOTAReservations = async (req, res) => {
             try {
                 // Begin transaction
                 await client.query('BEGIN');
-                logger.debug(`Started transaction for hotel_id: ${hotel_id}`);
+                logger.debug(`Started transaction for hotel_id: ${hotelId}`);
 
-                // Function for each formatted reservation
-                for (const reservation of formattedReservations) {
+                // Process each queued reservation
+                for (const reservation of queuedReservations) {
                     try {
-                        const classification = reservation.TransactionType.DataClassification;
-                        // logger.debug('Type of OTA transaction:', classification);
+                        const classification = reservation.TransactionType?.DataClassification;
+                        if (!classification) {
+                            logger.warn('Missing classification in reservation data', {
+                                requestId,
+                                hotelId,
+                                reservationId: reservation._otaReservationId
+                            });
+                            unsupportedClassifications++;
+                            continue;
+                        }
+
                         if (!['NewBookReport', 'ModificationReport', 'CancellationReport'].includes(classification)) {
                             unsupportedClassifications++;
-                            logger.warn(`Unsupported DataClassification: ${classification}. Setting allReservationsSuccessful to false.`, {
+                            logger.warn(`Unsupported DataClassification: ${classification}`, {
                                 reservationId: reservation.UniqueID?.ID || 'No ID',
                                 classification,
-                                hotel_id,
+                                hotelId,
                                 requestId: req.requestId,
                             });
-                            allReservationsSuccessful = false;
-                            continue; // Continue checking other reservations
+                            continue;
                         }
 
                         let result = { success: false };
                         if (reservation.TransactionType.DataClassification === 'NewBookReport'){
-                            result = await addOTAReservation(req.requestId, hotel_id, reservation, client);
-                            // logger.debug(result);
+                            result = await addOTAReservation(req.requestId, hotelId, reservation, client);
                         }
                         else if (reservation.TransactionType.DataClassification === 'ModificationReport'){
-                            result = await editOTAReservation(req.requestId, hotel_id, reservation, client);
-                            // logger.debug(result);
+                            result = await editOTAReservation(req.requestId, hotelId, reservation, client);
                         }
                         else if (reservation.TransactionType.DataClassification === 'CancellationReport'){
-                            result = await cancelOTAReservation(req.requestId, hotel_id, reservation, client);
-                            // logger.debug(result);
+                            result = await cancelOTAReservation(req.requestId, hotelId, reservation, client);
                         }
 
                         // If any reservation fails, mark the entire batch as unsuccessful
@@ -886,7 +905,7 @@ const getOTAReservations = async (req, res) => {
                             logger.warn(`Failed to process OTA reservation. Setting allReservationsSuccessful to false.`, {
                                 reservationId: reservation.UniqueID?.ID || 'No ID',
                                 classification,
-                                hotel_id,
+                                hotelId,
                                 requestId: req.requestId,
                                 result,
                             });
@@ -901,7 +920,7 @@ const getOTAReservations = async (req, res) => {
                         logger.warn('Exception during OTA reservation processing. Setting allReservationsSuccessful to false.', {
                             reservationId: reservation.UniqueID?.ID || 'No ID',
                             classification: reservation.TransactionType?.DataClassification || 'Unknown Classification',
-                            hotel_id,
+                            hotelId,
                             requestId: req.requestId,
                             error: dbError.message,
                             stack: dbError.stack,
@@ -914,23 +933,23 @@ const getOTAReservations = async (req, res) => {
                 // Commit or rollback transaction based on success
                 if (allReservationsSuccessful) {
                     await client.query('COMMIT');
-                    logger.info(`Transaction committed successfully for hotel_id: ${hotel_id}`);
+                    logger.info(`Transaction committed successfully for hotel_id: ${hotelId}`);
                 } else {
                     await client.query('ROLLBACK');
-                    logger.warn(`Transaction rolled back due to failures for hotel_id: ${hotel_id}`);
+                    logger.warn(`Transaction rolled back due to failures for hotel_id: ${hotelId}`);
                 }
 
             } catch (transactionError) {
                 // Rollback transaction on any error
                 try {
                     await client.query('ROLLBACK');
-                    logger.error(`Transaction rolled back due to error for hotel_id: ${hotel_id}`, {
+                    logger.error(`Transaction rolled back due to error for hotel_id: ${hotelId}`, {
                         error: transactionError.message,
                         stack: transactionError.stack,
                         requestId: req.requestId
                     });
                 } catch (rollbackError) {
-                    logger.error(`Failed to rollback transaction for hotel_id: ${hotel_id}`, {
+                    logger.error(`Failed to rollback transaction for hotel_id: ${hotelId}`, {
                         rollbackError: rollbackError.message,
                         originalError: transactionError.message,
                         requestId: req.requestId
@@ -943,8 +962,8 @@ const getOTAReservations = async (req, res) => {
             }
 
             // Send OK to OTA server
-            logger.info(`Processing summary for hotel_id ${hotel_id}:`, {
-                totalReservations: formattedReservations.length,
+            logger.info(`Processing summary for hotel_id ${hotelId}:`, {
+                totalReservations: queuedReservations.length,
                 successfulProcessing,
                 failedProcessing,
                 unsupportedClassifications,
@@ -952,15 +971,15 @@ const getOTAReservations = async (req, res) => {
                 allReservationsSuccessful
             });
             if(!allReservationsSuccessful) {
-                logger.warn('Some reservations failed processing for hotel_id:', hotel_id, 'Skipping OutputCompleteService');
+                logger.warn('Some reservations failed processing for hotel_id:', hotelId, 'Skipping OutputCompleteService');
                 continue; // Skip to next hotel
             }else{
                 const outputId =  executeResponse?.return?.configurationSettings?.outputId;
                 if (outputId) {
-                    await successOTAReservations(req, res, hotel_id, outputId);
-                    logger.info('All reservations successfully processed for hotel_id:', hotel_id);
+                    await successOTAReservations(req, res, hotelId, outputId);
+                    logger.info('All reservations successfully processed for hotel_id:', hotelId);
                 } else {
-                    logger.error('No outputId found in response for hotel_id:', hotel_id);
+                    logger.error('No outputId found in response for hotel_id:', hotelId);
                 }
             }
 
