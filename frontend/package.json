@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --mode $npm_config_mode",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"
