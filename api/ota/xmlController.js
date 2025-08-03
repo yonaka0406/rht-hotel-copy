@@ -576,18 +576,26 @@ const getOTAReservations = async (req, res) => {
     const name = 'BookingInfoOutputService';
     const requestId = req.requestId || 'no-request-id';
     let hotels = [];
-    let queuedReservations = []; // Moved to function scope
+    let queuedReservations = [];
+
+    console.log(`[${requestId}] Starting getOTAReservations`);
 
     try {
         // Get hotels with retry logic for database connection
         try {
+            console.log(`[${requestId}] Attempting to fetch hotels using getAllHotelSiteController`);
             hotels = await getAllHotelSiteController(requestId);
+            console.log(`[${requestId}] getAllHotelSiteController returned ${hotels?.length || 0} hotels`);
+            
             if (!hotels || hotels.length === 0) {
-                logger.warn('No hotels found.');
-                return res.status(404).send({ error: 'No hotels found.' });
+                const errorMsg = 'No hotels found.';
+                console.error(`[${requestId}] ${errorMsg}`);
+                logger.warn(errorMsg);
+                return res.status(404).send({ error: errorMsg });
             }
-            console.log('[getOTAReservations] getAllHotelSiteController response:', hotels)
         } catch (hotelError) {
+            const errorMsg = `Error fetching hotels: ${hotelError.message}`;
+            console.error(`[${requestId}] ${errorMsg}`, { stack: hotelError.stack });
             logger.error('Error fetching hotels:', {
                 requestId,
                 error: hotelError.message,
@@ -595,24 +603,33 @@ const getOTAReservations = async (req, res) => {
             });
             return res.status(500).send({ 
                 error: 'Database connection error',
-                details: 'Could not connect to the database server. Please check if PostgreSQL is running.'
+                details: 'Could not connect to the database server. Please check if PostgreSQL is running.',
+                originalError: hotelError.message
             });
         }
 
         // Process each hotel's reservations
-        for (const hotel of hotels) {
+        console.log(`[${requestId}] Starting to process ${hotels.length} hotels`);
+        
+        for (const [index, hotel] of hotels.entries()) {
             const hotelId = hotel.hotel_id;
             let dbClient;
             let isTransactionActive = false;
 
-            console.log('[getOTAReservations] hotel for loop:', hotel);
+            console.log(`[${requestId}] [${index+1}/${hotels.length}] Processing hotel ID: ${hotelId}`);
 
             try {
                 // Get database pool and client with error handling
+                console.log(`[${requestId}] [Hotel ${hotelId}] Getting database pool`);
                 const pool = getPool(requestId);
+                
                 try {
+                    console.log(`[${requestId}] [Hotel ${hotelId}] Attempting to connect to database`);
                     dbClient = await pool.connect();
+                    console.log(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
                 } catch (connectError) {
+                    const errorMsg = `Database connection error for hotel ${hotelId}: ${connectError.message}`;
+                    console.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
                     logger.error('Database connection error:', {
                         requestId,
                         hotelId,
@@ -628,7 +645,7 @@ const getOTAReservations = async (req, res) => {
                     logger.warn(`XML template not found for hotel_id: ${hotelId}`, { requestId });
                     continue;
                 }
-                console.log('[getOTAReservations] selectXMLTemplate response:', template)
+                console.log(`[${requestId}] [Hotel ${hotelId}] selectXMLTemplate response: ${template}`);
 
                 // Fetch the OTA reservations
                 const reservations = await submitXMLTemplate(req, res, hotelId, name, template);
@@ -835,8 +852,12 @@ const getOTAReservations = async (req, res) => {
                 // Make sure client is released even if an error occurs
                 if (dbClient) {
                     try {
+                        console.log(`[${requestId}] [Hotel ${hotelId}] Releasing database client`);
                         await dbClient.release();
+                        console.log(`[${requestId}] [Hotel ${hotelId}] Database client released`);
                     } catch (releaseError) {
+                        const errorMsg = `Error releasing database client for hotel ${hotelId}: ${releaseError.message}`;
+                        console.error(`[${requestId}] ${errorMsg}`);
                         logger.error('Error releasing database client:', {
                             requestId,
                             hotelId: hotel?.hotel_id || 'unknown',
@@ -847,10 +868,21 @@ const getOTAReservations = async (req, res) => {
             }
         }
 
+        console.log(`[${requestId}] Completed processing all hotels`);
         return res.status(200).send({ message: 'Processed all hotels.' });
+        
     } catch (error) {
-        logger.error('Error in getOTAReservations:', error);
-        return res.status(500).send({ error: 'An error occurred while processing hotels.' });
+        const errorMsg = `Unexpected error in getOTAReservations: ${error.message}`;
+        console.error(`[${requestId}] ${errorMsg}`, { stack: error.stack });
+        logger.error('Error in getOTAReservations:', {
+            requestId,
+            error: error.message,
+            stack: error.stack
+        });
+        return res.status(500).send({ 
+            error: 'An unexpected error occurred while processing hotels.',
+            details: error.message 
+        });
     }
 };
 const successOTAReservations = async (req, res, hotel_id, outputId) => {
