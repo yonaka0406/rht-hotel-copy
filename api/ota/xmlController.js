@@ -819,19 +819,6 @@ const getOTAReservations = async (req, res) => {
                             });
                         }
                     }
-                    
-                    // Always release the client back to the pool
-                    if (dbClient) {
-                        try {
-                            await dbClient.release();
-                        } catch (releaseError) {
-                            logger.error('Error releasing database client:', {
-                                requestId,
-                                hotelId,
-                                error: releaseError.message
-                            });
-                        }
-                    }
                 }
             } catch (hotelError) {
                 logger.error('Error processing hotel reservations:', {
