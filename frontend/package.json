@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:frontend": "npm --prefix frontend run build -- --mode production",
-    "build:frontend:dev": "npm --prefix frontend run build -- --mode development",    
+    "build": "vite build",      
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"
