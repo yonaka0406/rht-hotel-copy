@@ -763,15 +763,15 @@ const getOTAReservations = async (req, res) => {
                     await Promise.all(queuedReservations.map(async (reservation) => {
                         if (reservation._queueStatus === 'queued') {
                             try {
-                                await updateOTAReservationQueue(requestId, {
-                                    hotelId,
-                                    otaReservationId: reservation._otaReservationId,
-                                    status: 'failed',
-                                    conflictDetails: { 
+                                await updateOTAReservationQueue(
+                                    requestId,                                     
+                                    reservation._otaReservationId,
+                                    'failed',
+                                    { 
                                         error: 'Batch processing failed',
                                         details: processError.message 
                                     }
-                                });
+                                );
                             } catch (updateError) {
                                 logger.error('Error updating reservation status after failure:', {
                                     requestId,
