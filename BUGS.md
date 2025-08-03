@@ -74,12 +74,14 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
 #### Feature Request #21: Hotel Display Order in Top Menu
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: Add the ability to set the display order of hotels in the top menu.
 - **Requirements**:
   - Add a sort order field to the hotels table
   - Update the menu generation to respect this order
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Resolution**: Added a `sort_order` column to the `hotels` table and updated the API to sort hotels by this field. The admin panel was also updated to allow editing of the sort order.
+- **Date Fixed**: 2025-08-03
 
 ### July 29, 2025
 
