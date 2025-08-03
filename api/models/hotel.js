@@ -32,6 +32,7 @@ const getHotelByID = async (requestId, id) => {
   }
 };
 const getAllHotelSiteController = async (requestId) => {
+  console.log('[getAllHotelSiteController] Called in hotels.js');
   const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
@@ -41,6 +42,7 @@ const getAllHotelSiteController = async (requestId) => {
   
   try {
     const result = await pool.query(query);
+    console.log('[getAllHotelSiteController] success');
     return result.rows;
   } catch (err) {
     console.error('Error selecting data:', err);
