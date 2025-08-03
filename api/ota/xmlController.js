@@ -605,6 +605,8 @@ const getOTAReservations = async (req, res) => {
             let dbClient;
             let isTransactionActive = false;
 
+            console.log('[getOTAReservations] hotel for loop:', hotel);
+
             try {
                 // Get database pool and client with error handling
                 const pool = getPool(requestId);
@@ -626,6 +628,7 @@ const getOTAReservations = async (req, res) => {
                     logger.warn(`XML template not found for hotel_id: ${hotelId}`, { requestId });
                     continue;
                 }
+                console.log('[getOTAReservations] selectXMLTemplate response:', template)
 
                 // Fetch the OTA reservations
                 const reservations = await submitXMLTemplate(req, res, hotelId, name, template);
