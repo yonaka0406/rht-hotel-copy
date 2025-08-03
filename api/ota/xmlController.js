@@ -574,27 +574,50 @@ const createTLPlanMaster = async (req, res) => {
 
 const getOTAReservations = async (req, res) => {
     const name = 'BookingInfoOutputService';
-    const requestId = req.requestId;
+    const requestId = req.requestId || 'no-request-id';
+    let hotels = [];
+    let queuedReservations = []; // Moved to function scope
 
     try {
-        const hotels = await getAllHotelSiteController(requestId);
-        if (!hotels || hotels.length === 0) {
-            logger.warn('No hotels found.');
-            return res.status(404).send({ error: 'No hotels found.' });
+        // Get hotels with retry logic for database connection
+        try {
+            hotels = await getAllHotelSiteController(requestId);
+            if (!hotels || hotels.length === 0) {
+                logger.warn('No hotels found.');
+                return res.status(404).send({ error: 'No hotels found.' });
+            }
+        } catch (hotelError) {
+            logger.error('Error fetching hotels:', {
+                requestId,
+                error: hotelError.message,
+                stack: hotelError.stack
+            });
+            return res.status(500).send({ 
+                error: 'Database connection error',
+                details: 'Could not connect to the database server. Please check if PostgreSQL is running.'
+            });
         }
 
         // Process each hotel's reservations
         for (const hotel of hotels) {
             const hotelId = hotel.hotel_id;
-            let dbPool;
             let dbClient;
             let isTransactionActive = false;
 
             try {
-                // Initialize database connection
-                dbPool = getPool(requestId);
-                dbClient = await dbPool.connect();
-                isTransactionActive = false;
+                // Get database pool and client with error handling
+                const pool = getPool(requestId);
+                try {
+                    dbClient = await pool.connect();
+                } catch (connectError) {
+                    logger.error('Database connection error:', {
+                        requestId,
+                        hotelId,
+                        error: connectError.message,
+                        stack: connectError.stack
+                    });
+                    continue; // Skip to next hotel if we can't connect
+                }
 
                 // Get the template with credentials already injected
                 const template = await selectXMLTemplate(requestId, hotelId, name);
@@ -617,8 +640,7 @@ const getOTAReservations = async (req, res) => {
                 }
 
                 // Process each bookingInfo to parse the inner infoTravelXML and add to queue
-                const queuedReservations = [];
-                
+                queuedReservations = []; // Reset for each hotel
                 for (const [idx, bookingInfo] of bookingInfoList.entries()) {
                     if (!bookingInfo?.infoTravelXML) {
                         logger.warn(`Skipping booking info at index ${idx} - missing infoTravelXML`, { 
