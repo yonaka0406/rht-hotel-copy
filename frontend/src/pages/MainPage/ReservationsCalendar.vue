@@ -176,10 +176,19 @@
         <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom.room_id" />
 
         <Button v-if="isTempBlock" label="仮ブロック解除" icon="pi pi-unlock" @click="removeTempBlock" severity="danger" class="ml-2 mr-4" />
-        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-unlock" @click="removeTempBlock" severity="success" disabled />
+        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-check" @click="openClientDialog" severity="success" />
       </div>
 
       <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-close="handleTempBlock" />
+      
+      <!-- Client Dialog -->
+      <ClientForReservationDialog 
+        v-model="showClientDialog"
+        :client="currentClient"
+        :reservation-details="reservationDetails"
+        @save="handleClientSave"
+        @close="showClientDialog = false"
+      />
     </Drawer>
 
     <Drawer v-model:visible="reservationCardVisible" :modal="false" :position="'right'"
@@ -222,6 +231,9 @@
         </div>
       </div>
     </Drawer>
+
+    <ClientForReservationDialog v-model="showClientDialog" :client="currentClient" :reservation-details="reservationDetails"
+      @save="handleClientSave" @close="showClientDialog = false" />
   </div>
 
   <ConfirmDialog group="templating">
@@ -242,6 +254,7 @@ const router = useRouter();
 
 import ReservationEdit from './ReservationEdit.vue';
 import ReservationAddRoom from './components/ReservationAddRoom.vue';
+import ClientForReservationDialog from './components/Dialogs/ClientForReservationDialog.vue';
 
 //Websocket
 import io from 'socket.io-client';
@@ -1359,6 +1372,58 @@ const removeTempBlock = async () => {
             detail: '仮ブロックの削除に失敗しました。',
             life: 3000
         });
+    }
+};
+
+// Dialogs
+const showClientDialog = ref(false);
+const currentClient = ref({});
+
+const openClientDialog = () => {
+    // Initialize client data from reservation if available
+    if (reservationDetails.value?.reservation?.[0]?.client) {
+        currentClient.value = { ...reservationDetails.value.reservation[0].client };
+    } else {
+        currentClient.value = {
+            name: '',
+            email: '',
+            phone: '',
+            legal_or_natural_person: 'natural',
+            gender: ''
+        };
+    }
+    showClientDialog.value = true;
+};
+
+const handleClientSave = async (clientData) => {
+    try {
+        // Update the reservation with the client data
+        const reservationId = reservationDetails.value?.reservation?.[0]?.id;
+        if (reservationId) {
+            // Call the API to update the reservation with the client data
+            await updateBlockToReservation(reservationId, clientData);
+            
+            // Show success message
+            toast.add({ severity: 'success', summary: '成功', detail: 'クライアント情報を保存しました', life: 3000 });
+            
+            // Close the dialog
+            showClientDialog.value = false;
+            
+            // Refresh the reservations to show updated data
+            await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+            
+            // Close the drawer
+            drawerVisible.value = false;
+        }
+    } catch (error) {
+        console.error('Error saving client data:', error);
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: error.response?.data?.error || 'クライアント情報の保存中にエラーが発生しました', 
+            life: 3000 
+        });
+    }
     }
 };
 
