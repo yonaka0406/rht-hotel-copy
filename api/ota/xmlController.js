@@ -389,7 +389,8 @@ async function processAndQueueReservation(requestId, reservationData, hotelId) {
             _queueStatus: 'queued',
             _transactionId: transactionId,
             _otaReservationId: otaReservationId,
-            _queueId: queueEntryId
+            _queueId: queueEntryId,
+            hotelId: hotelId
         };
         
     } catch (error) {
