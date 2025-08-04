@@ -38,6 +38,8 @@ Stores information about each individual parking spot.
 -   **`spot_type`**: `VARCHAR(50)` (Enum-like: 'standard', 'large', 'compact', 'ev', 'accessible')
 -   **`capacity_units`**: `INTEGER` (The number of standard units this spot can provide. A large spot might have a capacity of 2 or 3).
 -   **`blocks_parking_spot_id`**: `INTEGER` (Nullable Foreign Key to `parking_spots.id`). This explicitly links an "inner" spot to the "outer" spot that blocks it. An outer spot will have this as `NULL`.
+-   **`grid_x`**: `INTEGER` (The column position of the spot in a visual grid layout).
+-   **`grid_y`**: `INTEGER` (The row position of the spot in a visual grid layout).
 -   **`is_active`**: `BOOLEAN` (To easily enable/disable a spot without deleting it)
 -   **`created_at`**, **`updated_at`**: `TIMESTAMPTZ`
 
@@ -90,8 +92,10 @@ A new controller will be created to manage parking-related CRUD operations.
 ### 4.1. New Parking Management Page (Admin)
 
 -   A new UI section for managing `Vehicle Categories` will be added.
--   The form for editing a `Parking Spot` will allow setting its `capacity_units`.
--   **Parking Lot Layout View:** A new component will be created to render a visual representation of the parking lot. Each spot will be a clickable element, color-coded by its status (available, reserved, blocked). Clicking a spot will provide details.
+-   **Drag-and-Drop Parking Lot Editor:** A new component will be created to allow managers to visually configure the parking lot.
+    -   It will feature a palette of spot types that can be dragged onto a grid.
+    -   Dropping a spot on the grid will create it and set its `grid_x`/`grid_y` coordinates.
+    -   Existing spots can be dragged to new positions to update their coordinates.
 -   **Parking Calendar View:** A new calendar/timeline view will be created, similar to the existing room reservation calendar. The rows will be parking spots and the columns will be days, showing a timeline of bookings and blocks.
 
 ### 4.2. Reservation Creation/Editing UI
@@ -101,6 +105,7 @@ A new controller will be created to manage parking-related CRUD operations.
 
 ## 5. Key Design Decisions
 
--   **Vehicle Categories:** Linking parking needs to user-defined vehicle categories provides a good balance between precision and ease of use. It's more intuitive for staff than abstract "capacity units".
+-   **Vehicle Categories:** Linking parking needs to user-defined vehicle categories provides a good balance between precision and ease of use.
+-   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout will provide a highly intuitive and efficient user experience.
 -   **Visual Management:** The addition of a visual parking lot layout and a calendar view will provide a much more intuitive and efficient user experience for managing parking inventory.
 -   ... (other key decisions remain the same) ...
