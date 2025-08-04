@@ -4488,6 +4488,34 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
   }
 };
 
+const selectFailedOtaReservations = async (requestId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      id,
+      ota_reservation_id,
+      reservation_data->'TransactionType'->>'SystemDate' AS date_received,
+      reservation_data->'TransactionType'->>'DataClassification' AS transaction_type,
+      reservation_data->'BasicInformation'->>'CheckInDate' AS check_in_date,
+      reservation_data->'BasicInformation'->>'CheckOutDate' AS check_out_date,
+      created_at
+    FROM
+      ota_reservation_queue
+    WHERE
+      status = 'failed'
+    ORDER BY
+      created_at DESC;
+  `;
+
+  try {
+    const result = await pool.query(query);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching failed OTA reservations:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectAvailableRooms,
   selectReservedRooms,
@@ -4536,4 +4564,5 @@ module.exports = {
   cancelOTAReservation,
   insertCopyReservation,
   sanitizeName,
+  selectFailedOtaReservations,
 };
