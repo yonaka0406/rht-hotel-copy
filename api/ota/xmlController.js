@@ -40,14 +40,14 @@ async function processQueuedReservations(requestId, reservations, client) {
         details: []
     };
 
-    console.log('[processQueuedReservations] Starting to process queued reservations', {
+    logger.debug('[processQueuedReservations] Starting to process queued reservations', {
         requestId,
         totalReservations: reservations.length,
         sampleReservation: JSON.stringify(reservations[0], null, 2) // Log first reservation as sample
     });
 
     for (const [index, reservation] of reservations.entries()) {
-        console.log(`[processQueuedReservations] Processing reservation ${index + 1}/${reservations.length}`, {
+        logger.debug(`[processQueuedReservations] Processing reservation ${index + 1}/${reservations.length}`, {
             requestId,
             reservationId: reservation._otaReservationId,
             queueId: reservation._queueId,
@@ -60,7 +60,7 @@ async function processQueuedReservations(requestId, reservations, client) {
         // Log the actual transaction status
         try {
             const txStatus = await client.query('SELECT txid_current_if_assigned() as txid');
-            console.log(`[processQueuedReservations] Transaction status`, {
+            logger.debug(`[processQueuedReservations] Transaction status`, {
                 requestId,
                 transactionId: reservation._transactionId,
                 txid: txStatus.rows[0].txid
@@ -73,7 +73,7 @@ async function processQueuedReservations(requestId, reservations, client) {
         }
         
         // Log detailed reservation data structure
-        console.log('[processQueuedReservations] Full reservation data:', {
+        logger.debug('[processQueuedReservations] Full reservation data:', {
             requestId,
             reservation: JSON.stringify(reservation, null, 2).substring(0, 1000) // Limit size
         });
@@ -84,7 +84,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const hotelId = reservationData.hotelId; // This should be set from processAndQueueReservation
             
             // Log reservation data structure
-            console.log('[processQueuedReservations] Reservation data structure:', {
+            logger.debug('[processQueuedReservations] Reservation data structure:', {
                 requestId,
                 hasTransactionType: !!reservation.TransactionType,
                 transactionTypeKeys: reservation.TransactionType ? Object.keys(reservation.TransactionType) : 'none',
@@ -102,7 +102,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                 throw new Error('Missing transaction type classification in reservation data');
             }
             
-            console.log(`[processQueuedReservations] Processing ${classification} for reservation`, {
+            logger.debug(`[processQueuedReservations] Processing ${classification} for reservation`, {
                 requestId,
                 hotelId,
                 otaReservationId: reservation._otaReservationId,
@@ -112,7 +112,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             let result = { success: false };
             
             // Process based on reservation type
-            console.log(`[processQueuedReservations] Processing reservation type: ${classification}`, {
+            logger.debug(`[processQueuedReservations] Processing reservation type: ${classification}`, {
                 requestId,
                 reservationId: reservation._otaReservationId,
                 transactionId: reservation._transactionId
@@ -121,7 +121,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             try {
                 switch(classification) {
                     case 'NewBookReport':
-                        console.log(`[processQueuedReservations] Calling addOTAReservation`, {
+                        logger.debug(`[processQueuedReservations] Calling addOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -131,7 +131,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         break;
                         
                     case 'ModificationReport':
-                        console.log(`[processQueuedReservations] Calling editOTAReservation`, {
+                        logger.debug(`[processQueuedReservations] Calling editOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -141,7 +141,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         break;
                         
                     case 'CancellationReport':
-                        console.log(`[processQueuedReservations] Calling cancelOTAReservation`, {
+                        logger.debug(`[processQueuedReservations] Calling cancelOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -154,7 +154,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         throw new Error(`Unsupported reservation type: ${classification}`);
                 }
                 
-                console.log(`[processQueuedReservations] Reservation processed successfully`, {
+                logger.debug(`[processQueuedReservations] Reservation processed successfully`, {
                     requestId,
                     reservationId: reservation._otaReservationId,
                     result: result
@@ -192,7 +192,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const errorMessage = error.message || 'Unknown error processing reservation';
             
             // Update each queue entry individually to ensure all are marked as failed
-            console.log('[processQueuedReservations] Marking queue entries as failed', {
+            logger.debug('[processQueuedReservations] Marking queue entries as failed', {
                 requestId,
                 transactionId,
                 otaReservationId,
@@ -205,7 +205,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                 [transactionId]
             );
             
-            console.log('[processQueuedReservations] Found queue entries to update', {
+            logger.debug('[processQueuedReservations] Found queue entries to update', {
                 requestId,
                 transactionId,
                 entryCount: queueEntries.rowCount
@@ -220,7 +220,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         'failed',
                         { error: errorMessage }
                     );
-                    console.log('[processQueuedReservations] Updated queue entry', {
+                    logger.debug('[processQueuedReservations] Updated queue entry', {
                         requestId,
                         queueId: entry.id,
                         otaReservationId: entry.ota_reservation_id,
@@ -242,7 +242,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const updateResults = await Promise.all(updatePromises);
             const successfulUpdates = updateResults.filter(Boolean).length;
             
-            console.log('[processQueuedReservations] Queue entries update summary', {
+            logger.debug('[processQueuedReservations] Queue entries update summary', {
                 requestId,
                 transactionId,
                 totalEntries: queueEntries.rowCount,
@@ -376,7 +376,7 @@ async function processAndQueueReservation(requestId, reservationData, hotelId) {
         
         const queueEntryId = queueResult?.id;
         
-        console.log('Successfully added reservation to OTA queue', { 
+        logger.debug('Successfully added reservation to OTA queue', { 
             requestId,
             hotelId,
             transactionId,
@@ -437,7 +437,7 @@ const postXMLResponse = async (req, res) => {
     const { hotel_id, name } = req.params;
     const xml = req.body.toString('utf8');
 
-    // console.log('postXMLResponse', req.params, xml);
+    // logger.debug('postXMLResponse', req.params, xml);
 
     try {
         const parser = new xml2js.Parser();
@@ -446,11 +446,11 @@ const postXMLResponse = async (req, res) => {
                 console.error('Error parsing XML:', err);
                 return res.status(400).json({ error: 'Invalid XML' });
             }
-            // console.log('Parsed XML:', result);
+            // logger.debug('Parsed XML:', result);
 
             try {
                 const responseXml = await submitXMLTemplate(req, res, hotel_id, name, xml);
-                // console.log('XML response added successfully', responseXml);
+                // logger.debug('XML response added successfully', responseXml);
                 res.json({ response: 'XML response added successfully', data: responseXml });
             } catch (error) {
                 console.error('Error in submitXMLTemplate:', error);
@@ -466,7 +466,7 @@ const postXMLResponse = async (req, res) => {
 
 // Lincoln
 const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
-    // console.log('submitXMLTemplate', name, xml);    
+    // logger.debug('submitXMLTemplate', name, xml);    
     
     try {        
         // Save the request in the database
@@ -495,8 +495,8 @@ const submitXMLTemplate = async (req, res, hotel_id, name, xml) => {
 
         // Save the response using insertXMLResponse
         const responseXml = await response.text();
-        // console.log('Response XML:', responseXml);
-        // console.log('Inserting XML response into database...');
+        // logger.debug('Response XML:', responseXml);
+        // logger.debug('Inserting XML response into database...');
         await insertXMLResponse(req.requestId, hotel_id, name, responseXml);
 
         // Parse the XML response using xml2js
@@ -579,14 +579,14 @@ const getOTAReservations = async (req, res) => {
     let hotels = [];
     let queuedReservations = [];
 
-    console.log(`[${requestId}] Starting getOTAReservations`);
+    logger.debug(`[${requestId}] Starting getOTAReservations`);
 
     try {
         // Get hotels with retry logic for database connection
         try {
-            console.log(`[${requestId}] Attempting to fetch hotels using getAllHotelSiteController`);
+            logger.debug(`[${requestId}] Attempting to fetch hotels using getAllHotelSiteController`);
             hotels = await getAllHotelSiteController(requestId);
-            console.log(`[${requestId}] getAllHotelSiteController returned ${hotels?.length || 0} hotels`);
+            logger.debug(`[${requestId}] getAllHotelSiteController returned ${hotels?.length || 0} hotels`);
             
             if (!hotels || hotels.length === 0) {
                 const errorMsg = 'No hotels found.';
@@ -610,24 +610,24 @@ const getOTAReservations = async (req, res) => {
         }
 
         // Process each hotel's reservations
-        console.log(`[${requestId}] Starting to process ${hotels.length} hotels`);
+        logger.debug(`[${requestId}] Starting to process ${hotels.length} hotels`);
         
         for (const [index, hotel] of hotels.entries()) {
             const hotelId = hotel.hotel_id;
             let dbClient;
             let isTransactionActive = false;
 
-            console.log(`[${requestId}] [${index+1}/${hotels.length}] Processing hotel ID: ${hotelId}`);
+            logger.debug(`[${requestId}] [${index+1}/${hotels.length}] Processing hotel ID: ${hotelId}`);
 
             try {
                 // Get database pool and client with error handling
-                console.log(`[${requestId}] [Hotel ${hotelId}] Getting database pool`);
+                logger.debug(`[${requestId}] [Hotel ${hotelId}] Getting database pool`);
                 const pool = getPool(requestId);
                 
                 try {
-                    console.log(`[${requestId}] [Hotel ${hotelId}] Attempting to connect to database`);
+                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Attempting to connect to database`);
                     dbClient = await pool.connect();
-                    console.log(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
+                    logger.debug(`[${requestId}] [Hotel ${hotelId}] Successfully connected to database`);
                 } catch (connectError) {
                     const errorMsg = `Database connection error for hotel ${hotelId}: ${connectError.message}`;
                     console.error(`[${requestId}] ${errorMsg}`, { stack: connectError.stack });
@@ -646,7 +646,7 @@ const getOTAReservations = async (req, res) => {
                     logger.warn(`XML template not found for hotel_id: ${hotelId}`, { requestId });
                     continue;
                 }
-                console.log(`[${requestId}] [Hotel ${hotelId}] selectXMLTemplate response: ${template}`);
+                logger.debug(`[${requestId}] [Hotel ${hotelId}] selectXMLTemplate response: ${template}`);
 
                 // Fetch the OTA reservations
                 const reservations = await submitXMLTemplate(req, res, hotelId, name, template);
@@ -739,7 +739,7 @@ const getOTAReservations = async (req, res) => {
                 try {
                     await dbClient.query('BEGIN');
                     isTransactionActive = true;
-                    console.log(`Started transaction for hotel_id: ${hotelId}`, { requestId });
+                    logger.debug(`Started transaction for hotel_id: ${hotelId}`, { requestId });
 
                     // Process all queued reservations in the transaction
                     const processResults = await processQueuedReservations(
@@ -853,9 +853,9 @@ const getOTAReservations = async (req, res) => {
                 // Make sure client is released even if an error occurs
                 if (dbClient) {
                     try {
-                        console.log(`[${requestId}] [Hotel ${hotelId}] Releasing database client`);
+                        logger.debug(`[${requestId}] [Hotel ${hotelId}] Releasing database client`);
                         await dbClient.release();
-                        console.log(`[${requestId}] [Hotel ${hotelId}] Database client released`);
+                        logger.debug(`[${requestId}] [Hotel ${hotelId}] Database client released`);
                     } catch (releaseError) {
                         const errorMsg = `Error releasing database client for hotel ${hotelId}: ${releaseError.message}`;
                         console.error(`[${requestId}] ${errorMsg}`);
@@ -869,7 +869,7 @@ const getOTAReservations = async (req, res) => {
             }
         }
 
-        console.log(`[${requestId}] Completed processing all hotels`);
+        logger.debug(`[${requestId}] Completed processing all hotels`);
         return res.status(200).send({ message: 'Processed all hotels.' });
         
     } catch (error) {
@@ -963,7 +963,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     if (!Array.isArray(inventory)) {
         return res.status(400).send({ error: 'Inventory data must be an array.' });
     }
-    // console.log('updateInventoryMultipleDays triggered')
+    // logger.debug('updateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
 
@@ -980,7 +980,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         return `${year}${month}${day}`;
     };
 
-    // console.log('updateInventoryMultipleDays:', hotel_id, name);
+    // logger.debug('updateInventoryMultipleDays:', hotel_id, name);
 
     const template = await selectXMLTemplate(req.requestId, hotel_id, name);
     if (!template) {
@@ -1017,7 +1017,7 @@ const updateInventoryMultipleDays = async (req, res) => {
             return `${year}${month}${day}`;
         })();
 
-        // console.log('itemDate:', itemDate, itemDate >= currentDate);
+        // logger.debug('itemDate:', itemDate, itemDate >= currentDate);
 
         return itemDate >= currentDate;
     });
@@ -1043,7 +1043,7 @@ const updateInventoryMultipleDays = async (req, res) => {
     if (!minDate || !maxDate) {
         return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
     }
-    // console.log('getInventoryDateRange', minDate, maxDate);
+    // logger.debug('getInventoryDateRange', minDate, maxDate);
     
     // Check current stock using checkOTAStock for the relevant date range
     let stockCheckResults;
@@ -1071,7 +1071,7 @@ const updateInventoryMultipleDays = async (req, res) => {
         const expectedRemainingCount = parseInt(item.total_rooms) - parseInt(item.room_count);
         const lookupKey = `${item.netrmtypegroupcode}-${itemDateYYYYMMDD}`;
 
-        // console.log('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
+        // logger.debug('needsUpdate check', lookupKey, 'count', expectedRemainingCount)
 
         const currentRemainingStock = stockCheckMap.get(lookupKey);
 
@@ -1081,13 +1081,13 @@ const updateInventoryMultipleDays = async (req, res) => {
             if (expectedRemainingCount < 0) { // Ensure expectedRemainingCount is not negative
                  if (currentRemainingStock !== 0) {
                      needsUpdate = true;
-                     // console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
+                     // logger.debug(`Mismatch found for ${lookupKey}: Inventory calculated ${0}, Stock is ${currentRemainingStock}`);
                      break; // Found a mismatch, no need to check further
                  }
             } else {
                  if (currentRemainingStock !== expectedRemainingCount) {
                      needsUpdate = true;
-                     // console.log(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
+                     // logger.debug(`Mismatch found for ${lookupKey}: Inventory calculated ${expectedRemainingCount}, Stock is ${currentRemainingStock}`);
                      break; // Found a mismatch, no need to check further
                  }
             }
@@ -1098,7 +1098,7 @@ const updateInventoryMultipleDays = async (req, res) => {
 
     // If no mismatch was found, skip the update process
     if (!needsUpdate) {
-        // console.log('Inventory matches current stock. No update needed.');
+        // logger.debug('Inventory matches current stock. No update needed.');
         return res.status(200).send({ message: 'Inventory already matches current stock. No update needed.' });
     }
 
@@ -1204,7 +1204,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     const hotel_id = req.params.hotel_id;
     const log_id = req.params.log_id;
     const inventory = req.body;
-    // console.log('manualUpdateInventoryMultipleDays triggered')
+    // logger.debug('manualUpdateInventoryMultipleDays triggered')
 
     const name = 'NetStockBulkAdjustmentService';
 
@@ -1271,7 +1271,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
     if (!minDate || !maxDate) {
         return res.status(200).send({ message: 'No valid date range could be determined from inventory.' });
     }
-    // console.log('getInventoryDateRange', minDate, maxDate);
+    // logger.debug('getInventoryDateRange', minDate, maxDate);
 
     // --- Proceed with batch ---
 
@@ -1330,7 +1330,7 @@ const manualUpdateInventoryMultipleDays = async (req, res) => {
         }
         xmlBody = xmlBody.replace('{{requestId}}', requestId);
 
-        // console.log('updateInventoryMultipleDays xmlBody:', xmlBody);
+        // logger.debug('updateInventoryMultipleDays xmlBody:', xmlBody);
 
         try {
             const apiResponse = await submitXMLTemplate(req, res, hotel_id, name, xmlBody);
