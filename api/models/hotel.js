@@ -32,7 +32,7 @@ const getHotelByID = async (requestId, id) => {
   }
 };
 const getAllHotelSiteController = async (requestId) => {
-  console.log('[getAllHotelSiteController] Called in hotels.js');
+  console.log(`[${requestId}] [getAllHotelSiteController] Starting`);
   const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
@@ -40,13 +40,38 @@ const getAllHotelSiteController = async (requestId) => {
     ORDER BY hotel_id
   `;
   
+  console.log(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
+  
   try {
-    const result = await pool.query(query);
-    console.log('[getAllHotelSiteController] success');
-    return result.rows;
+    console.log(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
+    const client = await pool.connect();
+    
+    try {
+      console.log(`[${requestId}] [getAllHotelSiteController] Executing query`);
+      const startTime = Date.now();
+      const result = await client.query(query);
+      const duration = Date.now() - startTime;
+      
+      console.log(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
+      console.log(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+      
+      if (result.rows.length > 0) {
+        console.log(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+      }
+      
+      return result.rows;
+    } finally {
+      console.log(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+      client.release();
+    }
   } catch (err) {
-    console.error('Error selecting data:', err);
-    throw new Error('Database error');
+    console.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
+      error: err.message,
+      code: err.code,
+      stack: err.stack,
+      query: query
+    });
+    throw new Error(`Database error: ${err.message}`);
   }
 };
 const getHotelSiteController = async (requestId, id) => {
