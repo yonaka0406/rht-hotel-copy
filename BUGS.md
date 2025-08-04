@@ -472,9 +472,9 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: August 1, 2025*
-*Total Bugs: 15*
-*Open: 5*
+*Last Updated: August 4, 2025*
+*Total Bugs: 16*
+*Open: 6*
 *Fixed: 10*
 
 # Backlog
@@ -533,4 +533,3 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**:
     - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
     - Need to investigate what guest information is currently being captured from OTA bookings
-
