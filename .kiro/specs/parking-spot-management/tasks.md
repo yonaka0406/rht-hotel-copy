@@ -31,17 +31,18 @@ This plan breaks down the development of the Parking Spot Management module into
     -   [ ] Create a new Vue page component (e.g., `src/pages/Admin/ManageParking.vue`).
     -   [ ] Add a new section to the admin UI for managing `Vehicle Categories`.
     -   [ ] **Implement Drag-and-Drop Layout Editor:**
+        -   [ ] Research and install a suitable drag-and-drop library (e.g., `vuedraggable.next`).
         -   [ ] Create a component that allows users to drag spot types onto a grid to create and position them.
         -   [ ] When a spot is created or moved, the frontend should construct the `layout_info` JSON object.
         -   [ ] Provide a properties panel for editing the `x`, `y`, `z`, and `orientation` values within the `layout_info` object.
         -   [ ] Implement a "linking mode" where users can drag between spots to set the `blocks_parking_spot_id` relationship.
-    -   [ ] **Implement Parking Calendar View:** Create a timeline view for parking spots.
     -   [ ] Create a UI for blocking spots for certain date ranges.
     -   [ ] Create a new composable store (`src/composables/useParkingStore.js`).
 
 ## Phase 3: Staff Frontend Implementation
 
--   [ ] **5. Integrate Parking with Reservation UI:**
+-   [ ] **5. Implement Parking Calendar View:** Create a timeline view for parking spots, similar to the room reservation calendar.
+-   [ ] **6. Integrate Parking with Reservation UI:**
     -   [ ] Modify the reservation creation/editing component to include a dropdown to select a `Vehicle Category`.
     -   [ ] Update the `useReservationStore.js` composable to pass the `vehicle_category_id` to the API.
     -   [ ] Display assigned parking spot information in the reservation details view.
@@ -49,18 +50,19 @@ This plan breaks down the development of the Parking Spot Management module into
 
 ## Phase 4: Testing and Refinement
 
--   [ ] **6. Write Backend Tests:**
+-   [ ] **7. Write Backend Tests:**
     -   [ ] Write unit tests for the new functions in `api/models/parking.js`.
     -   [ ] Write integration tests for the new API endpoints, ensuring they correctly handle the `layout_info` JSONB field.
     -   [ ] Write tests to ensure the reservation logic correctly uses vehicle categories to assign spots.
 
--   [ ] **7. Write Frontend Tests:**
+-   [ ] **8. Write Frontend Tests:**
     -   [ ] Write component tests for the new drag-and-drop layout editor.
     -   [ ] Write component tests for the new parking and vehicle category management UI.
     -   [ ] Write tests for the modified reservation creation form.
+    -   [ ] Write component tests for the new Parking Calendar View.
 
 ## Phase 5: Documentation and Final Review
 
--   [ ] **8. Documentation and Final Review:**
+-   [ ] **9. Documentation and Final Review:**
     -   [ ] Update the main `README.md` and any relevant documentation to reflect the new feature.
     -   [ ] Perform a final code review and user acceptance testing (UAT).

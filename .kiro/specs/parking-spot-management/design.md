@@ -107,6 +107,7 @@ A new controller will be created to manage parking-related CRUD operations.
 
 -   **Vehicle Categories:** Linking parking needs to user-defined vehicle categories provides a good balance between precision and ease of use.
 -   **Flexible Layout Data:** Using a single `JSONB` column (`layout_info`) for coordinates and orientation provides a flexible, future-proof way to store layout information.
--   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout, including the ability to visually link in-line spots, will provide a highly intuitive and efficient user experience.
+-   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout is recommended.
+    -   **Library Suggestion:** For a Vue 3 project, **`vuedraggable.next`** is a powerful and flexible choice for this kind of interface.
 -   **Visual Management:** The addition of a visual parking lot layout and a calendar view will provide a much more intuitive and efficient user experience for managing parking inventory.
 -   ... (other key decisions remain the same) ...
