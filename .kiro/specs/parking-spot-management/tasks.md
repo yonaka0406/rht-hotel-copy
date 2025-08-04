@@ -29,7 +29,9 @@ This plan breaks down the development of the Parking Spot Management module into
 -   [ ] **4. Create Parking Management Admin UI:**
     -   [ ] Create a new Vue page component (e.g., `src/pages/Admin/ManageParking.vue`).
     -   [ ] Add a new section to the admin UI for managing `Vehicle Categories`.
-    -   [ ] **Implement Drag-and-Drop Layout Editor:** Create a component that allows users to drag spot types onto a grid to create and position them. Dragging existing spots should update their coordinates.
+    -   [ ] **Implement Drag-and-Drop Layout Editor:**
+        -   [ ] Create a component that allows users to drag spot types onto a grid to create and position them.
+        -   [ ] Implement a "linking mode" where users can drag between spots to set the `blocks_parking_spot_id` relationship.
     -   [ ] **Implement Parking Calendar View:** Create a timeline view for parking spots.
     -   [ ] Create a UI for blocking spots for certain date ranges.
     -   [ ] Create a new composable store (`src/composables/useParkingStore.js`).
@@ -48,7 +50,7 @@ This plan breaks down the development of the Parking Spot Management module into
     -   [ ] Write tests to ensure the reservation logic correctly uses vehicle categories to assign spots.
 
 -   [ ] **7. Write Frontend Tests:**
-    -   [ ] Write component tests for the new drag-and-drop layout editor.
+    -   [ ] Write component tests for the new drag-and-drop layout editor, including the in-line linking functionality.
     -   [ ] Write component tests for the new parking and vehicle category management UI, including the layout and calendar views.
     -   [ ] Write tests for the modified reservation creation form.
 

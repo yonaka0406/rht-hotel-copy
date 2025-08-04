@@ -96,6 +96,7 @@ A new controller will be created to manage parking-related CRUD operations.
     -   It will feature a palette of spot types that can be dragged onto a grid.
     -   Dropping a spot on the grid will create it and set its `grid_x`/`grid_y` coordinates.
     -   Existing spots can be dragged to new positions to update their coordinates.
+    -   **In-line Linking:** The editor will have a "linking mode" where the user can drag from one spot to another to visually create the `blocks_parking_spot_id` relationship.
 -   **Parking Calendar View:** A new calendar/timeline view will be created, similar to the existing room reservation calendar. The rows will be parking spots and the columns will be days, showing a timeline of bookings and blocks.
 
 ### 4.2. Reservation Creation/Editing UI
@@ -106,6 +107,6 @@ A new controller will be created to manage parking-related CRUD operations.
 ## 5. Key Design Decisions
 
 -   **Vehicle Categories:** Linking parking needs to user-defined vehicle categories provides a good balance between precision and ease of use.
--   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout will provide a highly intuitive and efficient user experience.
+-   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout, including the ability to visually link in-line spots, will provide a highly intuitive and efficient user experience.
 -   **Visual Management:** The addition of a visual parking lot layout and a calendar view will provide a much more intuitive and efficient user experience for managing parking inventory.
 -   ... (other key decisions remain the same) ...
