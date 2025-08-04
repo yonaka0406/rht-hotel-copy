@@ -1,6 +1,6 @@
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
-  getFailedOtaReservations,
+  selectFailedOtaReservations,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
@@ -1229,7 +1229,7 @@ const copyReservation = async (req, res) => {
 
 const getFailedOtaReservations = async (req, res) => {
   try {
-    const reservations = await getFailedOtaReservations(req.requestId);
+    const reservations = await selectFailedOtaReservations(req.requestId);
 
     if (reservations.length === 0) {
       return res.status(404).json({ message: 'No failed OTA reservations found.' });

@@ -4488,7 +4488,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
   }
 };
 
-const getFailedOtaReservations = async (requestId) => {
+const selectFailedOtaReservations = async (requestId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
@@ -4564,5 +4564,5 @@ module.exports = {
   cancelOTAReservation,
   insertCopyReservation,
   sanitizeName,
-  getFailedOtaReservations,
+  selectFailedOtaReservations,
 };

@@ -106,7 +106,7 @@
                 <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                   <i class="pi pi-tag text-purple-500 text-xs" />
                   <span>種別:</span>
-                  <span class="font-medium">{{ reservation.transaction_type }}</span>
+                  <span class="font-medium">{{ getOtaTransactionLabel(reservation.transaction_type) }}</span>
                 </div>
                 <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
                   <i class="pi pi-calendar-plus text-green-500 text-xs" />
@@ -135,7 +135,22 @@
 
 <script setup>
 // Vue
-import { defineProps, defineEmits, computed, onMounted, watch } from 'vue';
+import { defineProps, defineEmits, computed, onMounted } from 'vue';
+
+// PrimeVue
+import Drawer from 'primevue/drawer';
+import VirtualScroller from 'primevue/virtualscroller';
+
+// OTA Transaction Type Mapping
+const getOtaTransactionLabel = (transactionType) => {
+  const typeMap = {
+    'NewBookReport': '新規予約',
+    'ModificationReport': '予約変更',
+    'CancellationReport': '予約キャンセル',
+    'default': 'その他'
+  };
+  return typeMap[transactionType] || typeMap.default;
+};
 
 const props = defineProps({
   visible: Boolean,
@@ -158,9 +173,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:visible', 'go-to-edit-reservation']);
-
-// Primevue
-import { Drawer, VirtualScroller } from 'primevue';
 
 function handleGoToEditReservation(hotel_id, reservation_id) {
   emit('go-to-edit-reservation', hotel_id, reservation_id);
@@ -193,10 +205,6 @@ function formatDateJP(dateStr) {
 onMounted(() => {
   // console.log('[NotificationsDrawer] tempBlockedReservations:', props.tempBlockedReservations);
 });
-
-watch(() => props.tempBlockedReservations, (newVal) => {
-  // console.log('[NotificationsDrawer] Updated tempBlockedReservations:', newVal);
-}, { immediate: true, deep: true });
 
 </script>
 
