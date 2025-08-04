@@ -38,8 +38,7 @@ Stores information about each individual parking spot.
 -   **`spot_type`**: `VARCHAR(50)` (Enum-like: 'standard', 'large', 'compact', 'ev', 'accessible')
 -   **`capacity_units`**: `INTEGER` (The number of standard units this spot can provide. A large spot might have a capacity of 2 or 3).
 -   **`blocks_parking_spot_id`**: `INTEGER` (Nullable Foreign Key to `parking_spots.id`). This explicitly links an "inner" spot to the "outer" spot that blocks it. An outer spot will have this as `NULL`.
--   **`grid_x`**: `INTEGER` (The column position of the spot in a visual grid layout).
--   **`grid_y`**: `INTEGER` (The row position of the spot in a visual grid layout).
+-   **`layout_info`**: `JSONB` (Stores layout information like coordinates and orientation. e.g., `{"x": 10, "y": 20, "z": 0, "orientation": 90}`).
 -   **`is_active`**: `BOOLEAN` (To easily enable/disable a spot without deleting it)
 -   **`created_at`**, **`updated_at`**: `TIMESTAMPTZ`
 
@@ -69,7 +68,7 @@ A new controller will be created to manage parking-related CRUD operations.
 -   **`PUT /api/vehicle_categories/:id`**: Update a vehicle category.
 -   **`DELETE /api/vehicle_categories/:id`**: Delete a vehicle category.
 
--   ... (endpoints for lots and spots remain the same) ...
+-   ... (endpoints for lots and spots remain the same, but the spot endpoints will now accept and return the `layout_info` JSON object) ...
 
 -   **`POST /api/parking/block`**: Create a "block" reservation for a parking spot.
 
@@ -94,8 +93,8 @@ A new controller will be created to manage parking-related CRUD operations.
 -   A new UI section for managing `Vehicle Categories` will be added.
 -   **Drag-and-Drop Parking Lot Editor:** A new component will be created to allow managers to visually configure the parking lot.
     -   It will feature a palette of spot types that can be dragged onto a grid.
-    -   Dropping a spot on the grid will create it and set its `grid_x`/`grid_y` coordinates.
-    -   Existing spots can be dragged to new positions to update their coordinates.
+    -   Dropping a spot on the grid will create it and set its `layout_info` with default values.
+    -   A properties panel will allow editing the `x`, `y`, `z`, and `orientation` values in the `layout_info`.
     -   **In-line Linking:** The editor will have a "linking mode" where the user can drag from one spot to another to visually create the `blocks_parking_spot_id` relationship.
 -   **Parking Calendar View:** A new calendar/timeline view will be created, similar to the existing room reservation calendar. The rows will be parking spots and the columns will be days, showing a timeline of bookings and blocks.
 
@@ -107,6 +106,7 @@ A new controller will be created to manage parking-related CRUD operations.
 ## 5. Key Design Decisions
 
 -   **Vehicle Categories:** Linking parking needs to user-defined vehicle categories provides a good balance between precision and ease of use.
+-   **Flexible Layout Data:** Using a single `JSONB` column (`layout_info`) for coordinates and orientation provides a flexible, future-proof way to store layout information.
 -   **Drag-and-Drop Layout:** A drag-and-drop interface for configuring the parking lot layout, including the ability to visually link in-line spots, will provide a highly intuitive and efficient user experience.
 -   **Visual Management:** The addition of a visual parking lot layout and a calendar view will provide a much more intuitive and efficient user experience for managing parking inventory.
 -   ... (other key decisions remain the same) ...
