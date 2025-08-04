@@ -40,14 +40,14 @@ async function processQueuedReservations(requestId, reservations, client) {
         details: []
     };
 
-    logger.debug('[processQueuedReservations] Starting to process queued reservations', {
+    console.log('[processQueuedReservations] Starting to process queued reservations', {
         requestId,
         totalReservations: reservations.length,
         sampleReservation: JSON.stringify(reservations[0], null, 2) // Log first reservation as sample
     });
 
     for (const [index, reservation] of reservations.entries()) {
-        logger.debug(`[processQueuedReservations] Processing reservation ${index + 1}/${reservations.length}`, {
+        console.log(`[processQueuedReservations] Processing reservation ${index + 1}/${reservations.length}`, {
             requestId,
             reservationId: reservation._otaReservationId,
             queueId: reservation._queueId,
@@ -60,7 +60,7 @@ async function processQueuedReservations(requestId, reservations, client) {
         // Log the actual transaction status
         try {
             const txStatus = await client.query('SELECT txid_current_if_assigned() as txid');
-            logger.debug(`[processQueuedReservations] Transaction status`, {
+            console.log(`[processQueuedReservations] Transaction status`, {
                 requestId,
                 transactionId: reservation._transactionId,
                 txid: txStatus.rows[0].txid
@@ -73,7 +73,7 @@ async function processQueuedReservations(requestId, reservations, client) {
         }
         
         // Log detailed reservation data structure
-        logger.debug('[processQueuedReservations] Full reservation data:', {
+        console.log('[processQueuedReservations] Full reservation data:', {
             requestId,
             reservation: JSON.stringify(reservation, null, 2).substring(0, 1000) // Limit size
         });
@@ -84,7 +84,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const hotelId = reservationData.hotelId; // This should be set from processAndQueueReservation
             
             // Log reservation data structure
-            logger.debug('[processQueuedReservations] Reservation data structure:', {
+            console.log('[processQueuedReservations] Reservation data structure:', {
                 requestId,
                 hasTransactionType: !!reservation.TransactionType,
                 transactionTypeKeys: reservation.TransactionType ? Object.keys(reservation.TransactionType) : 'none',
@@ -102,7 +102,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                 throw new Error('Missing transaction type classification in reservation data');
             }
             
-            logger.debug(`[processQueuedReservations] Processing ${classification} for reservation`, {
+            console.log(`[processQueuedReservations] Processing ${classification} for reservation`, {
                 requestId,
                 hotelId,
                 otaReservationId: reservation._otaReservationId,
@@ -112,7 +112,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             let result = { success: false };
             
             // Process based on reservation type
-            logger.debug(`[processQueuedReservations] Processing reservation type: ${classification}`, {
+            console.log(`[processQueuedReservations] Processing reservation type: ${classification}`, {
                 requestId,
                 reservationId: reservation._otaReservationId,
                 transactionId: reservation._transactionId
@@ -121,7 +121,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             try {
                 switch(classification) {
                     case 'NewBookReport':
-                        logger.debug(`[processQueuedReservations] Calling addOTAReservation`, {
+                        console.log(`[processQueuedReservations] Calling addOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -131,7 +131,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         break;
                         
                     case 'ModificationReport':
-                        logger.debug(`[processQueuedReservations] Calling editOTAReservation`, {
+                        console.log(`[processQueuedReservations] Calling editOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -141,7 +141,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         break;
                         
                     case 'CancellationReport':
-                        logger.debug(`[processQueuedReservations] Calling cancelOTAReservation`, {
+                        console.log(`[processQueuedReservations] Calling cancelOTAReservation`, {
                             requestId,
                             reservationId: reservation._otaReservationId,
                             hotelId,
@@ -154,7 +154,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         throw new Error(`Unsupported reservation type: ${classification}`);
                 }
                 
-                logger.debug(`[processQueuedReservations] Reservation processed successfully`, {
+                console.log(`[processQueuedReservations] Reservation processed successfully`, {
                     requestId,
                     reservationId: reservation._otaReservationId,
                     result: result
@@ -192,7 +192,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const errorMessage = error.message || 'Unknown error processing reservation';
             
             // Update each queue entry individually to ensure all are marked as failed
-            logger.debug('[processQueuedReservations] Marking queue entries as failed', {
+            console.log('[processQueuedReservations] Marking queue entries as failed', {
                 requestId,
                 transactionId,
                 otaReservationId,
@@ -205,7 +205,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                 [transactionId]
             );
             
-            logger.debug('[processQueuedReservations] Found queue entries to update', {
+            console.log('[processQueuedReservations] Found queue entries to update', {
                 requestId,
                 transactionId,
                 entryCount: queueEntries.rowCount
@@ -220,7 +220,7 @@ async function processQueuedReservations(requestId, reservations, client) {
                         'failed',
                         { error: errorMessage }
                     );
-                    logger.debug('[processQueuedReservations] Updated queue entry', {
+                    console.log('[processQueuedReservations] Updated queue entry', {
                         requestId,
                         queueId: entry.id,
                         otaReservationId: entry.ota_reservation_id,
@@ -242,7 +242,7 @@ async function processQueuedReservations(requestId, reservations, client) {
             const updateResults = await Promise.all(updatePromises);
             const successfulUpdates = updateResults.filter(Boolean).length;
             
-            logger.debug('[processQueuedReservations] Queue entries update summary', {
+            console.log('[processQueuedReservations] Queue entries update summary', {
                 requestId,
                 transactionId,
                 totalEntries: queueEntries.rowCount,
@@ -376,7 +376,7 @@ async function processAndQueueReservation(requestId, reservationData, hotelId) {
         
         const queueEntryId = queueResult?.id;
         
-        logger.debug('Successfully added reservation to OTA queue', { 
+        console.log('Successfully added reservation to OTA queue', { 
             requestId,
             hotelId,
             transactionId,
@@ -738,7 +738,7 @@ const getOTAReservations = async (req, res) => {
                 try {
                     await dbClient.query('BEGIN');
                     isTransactionActive = true;
-                    logger.debug(`Started transaction for hotel_id: ${hotelId}`, { requestId });
+                    console.log(`Started transaction for hotel_id: ${hotelId}`, { requestId });
 
                     // Process all queued reservations in the transaction
                     const processResults = await processQueuedReservations(
