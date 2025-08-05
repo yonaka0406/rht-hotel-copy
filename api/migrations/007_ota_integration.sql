@@ -466,3 +466,4 @@ CREATE INDEX idx_ota_reservation_transaction ON ota_reservation_queue (hotel_id,
 CREATE INDEX idx_ota_reservation_status ON ota_reservation_queue (status);
 
 -- Grant permissions on the sequence to the application user
+GRANT USAGE, SELECT ON SEQUENCE ota_reservation_queue_id_seq TO application_user;
