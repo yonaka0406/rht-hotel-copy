@@ -47,7 +47,7 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Badge from 'primevue/badge';
 import Dropdown from 'primevue/dropdown';
-import { FilterMatchMode } from 'primevue/api';
+import { FilterMatchMode } from '@primevue/core/api';
 
 const props = defineProps({
   hotelId: {
