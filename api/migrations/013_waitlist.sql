@@ -63,11 +63,6 @@ CREATE TRIGGER trg_waitlist_entries_updated_at
     EXECUTE FUNCTION update_waitlist_entries_updated_at();
 
 -- Grant permissions (adjust user name if necessary)
-GRANT SELECT, INSERT, UPDATE, DELETE ON waitlist_entries TO rhtsys_user;
--- The line below was removed because 'id UUID PRIMARY KEY DEFAULT gen_random_uuid()' does not create a sequence named waitlist_entries_id_seq
--- GRANT USAGE, SELECT ON SEQUENCE waitlist_entries_id_seq TO rhtsys_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
 
 -- Add a default value for communication_preference if it wasn't included initially
 -- This is added based on the WaitlistEntryDialog.vue which includes this field.

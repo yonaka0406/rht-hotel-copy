@@ -1,18 +1,4 @@
 -- TODO: Consider granting more granular permissions to rhtsys_user following the principle of least privilege.
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
-GRANT CREATE ON SCHEMA public TO rhtsys_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO rhtsys_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO rhtsys_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-GRANT USAGE, SELECT ON SEQUENCES TO rhtsys_user;
-GRANT REFERENCES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_roles TO rhtsys_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE user_status TO rhtsys_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE users TO rhtsys_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE logs_user TO rhtsys_user;
-
-
 CREATE TABLE user_status (
     id SERIAL PRIMARY KEY,
     status_name VARCHAR(50) NOT NULL UNIQUE,
@@ -58,8 +44,8 @@ CREATE TABLE users (
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- TODO: Replace with a secure method for initial admin user creation in production.
--- INSERT INTO users (email, password_hash, role_id)
--- VALUES ('root@wehub.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
+INSERT INTO users (id, email, password_hash, role_id)
+VALUES (1, 'root@wehub.com', crypt('rootPassword!@123', gen_salt('bf')), 1);
 
 ALTER TABLE users
 ADD COLUMN created_by INT REFERENCES users(id),

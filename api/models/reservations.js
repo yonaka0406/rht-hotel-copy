@@ -885,6 +885,13 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
   try {
     await client.query('BEGIN');
 
+    // Get reservation status
+    const reservationStatusQuery = `
+      SELECT status FROM reservations WHERE id = $1::UUID;
+    `;
+    const reservationStatusResult = await pool.query(reservationStatusQuery, [reservationId]);
+    const reservationStatus = reservationStatusResult.rows[0]?.status;
+
     // Update the number_of_people in the reservations table
     const updateReservationQuery = `
       UPDATE reservations
@@ -896,8 +903,8 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 
     // Copy one existing room_id in the reservation_details table
     const copyRoomQuery = `
-      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by)
-      SELECT hotel_id, reservation_id, date, $1, NULL, NULL, $2, 0, created_by, $3
+      INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, number_of_people, price, created_by, updated_by, billable)
+      SELECT hotel_id, reservation_id, date, $1, NULL, NULL, $2, 0, created_by, $3, $5
       FROM reservation_details
       WHERE (hotel_id, reservation_id, room_id) IN (
         SELECT hotel_id, reservation_id, room_id
@@ -907,7 +914,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
       )
       RETURNING *;
     `;
-    const result = await pool.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId]);
+    const result = await pool.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId, reservationStatus === 'confirmed']);
 
     await client.query('COMMIT');
     return result.rows[0];
