@@ -48,8 +48,9 @@ CREATE TABLE reservation_parking (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
-    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE
-);
+    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
+    PRIMARY KEY (hotel_id, id)
+) PARTITION BY LIST (hotel_id);
 
 -- Indexes for performance
 CREATE INDEX idx_parking_lots_hotel_id ON parking_lots(hotel_id);
