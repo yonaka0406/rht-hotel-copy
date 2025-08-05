@@ -284,6 +284,19 @@
                     <label>人数</label>
                 </FloatLabel>
                 </div>
+          <div class="col-span-1">
+            <FloatLabel>
+                <Select
+                    v-model="reservationDetails.vehicle_category_id"
+                    :options="vehicleCategories"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="車両カテゴリーを選択"
+                    fluid
+                />
+                <label>車両カテゴリー</label>
+            </FloatLabel>
+          </div>
             </div>
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
@@ -327,6 +340,8 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore';
+    import { useParkingStore } from '@/composables/useParkingStore';
+    const { vehicleCategories, fetchVehicleCategories } = useParkingStore();
 
     // Stores
     const waitlistStore = useWaitlistStore();
@@ -694,6 +709,7 @@
         gender: 'other',
         email: null,
         phone: null,
+        vehicle_category_id: null,
     });
     const personTypeOptions = [
         { label: '法人', value: 'legal' },
@@ -827,7 +843,10 @@
         }
         
         // console.log(reservationDetails.value, consolidatedCombos.value);
-        const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);
+        const reservation = await createHoldReservationCombo({
+            ...reservationDetails.value,
+            vehicle_category_id: reservationDetails.value.vehicle_category_id,
+        }, consolidatedCombos.value);
         toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
         await fetchMyHoldReservations();
         await goToEditReservationPage(reservation.reservation.id); 
@@ -845,6 +864,7 @@
         await fetchHotels();
         await fetchHotel();  
         await checkDates();
+        await fetchVehicleCategories();
         
         comboRow.value.room_type_id = roomTypes.value[0].room_type_id;        
         reservationDetails.value.hotel_id = selectedHotelId.value;

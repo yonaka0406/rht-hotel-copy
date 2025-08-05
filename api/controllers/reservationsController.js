@@ -181,6 +181,7 @@ const createReservationHold = async (req, res) => {
     gender,
     email,
     phone,
+    vehicle_category_id,
   } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
@@ -223,6 +224,7 @@ const createReservationHold = async (req, res) => {
       check_in,
       check_out,
       number_of_people,
+      vehicle_category_id,
       created_by,
       updated_by
     };

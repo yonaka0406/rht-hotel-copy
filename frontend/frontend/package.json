@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "vuedraggable": "^4.1.0"
   }
 }

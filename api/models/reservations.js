@@ -1,4 +1,3 @@
-const { getPool } = require('../config/database');
 const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
@@ -64,6 +63,47 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
     console.error('Error fetching available rooms:', err);
     throw new Error('Database error');
   }
+};
+
+const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client = null) => {
+    const pool = getPool(requestId);
+    const query = `
+        WITH occupied_spots AS (
+            SELECT
+                parking_spot_id
+            FROM
+                reservation_parking
+            WHERE
+                date >= $1 AND date < $2
+                AND parking_spot_id IS NOT NULL
+        )
+        SELECT
+            ps.id AS parking_spot_id,
+            ps.spot_number,
+            ps.spot_type,
+            ps.capacity_units
+        FROM
+            parking_spots ps
+        JOIN
+            parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE
+            pl.hotel_id = $3
+            AND ps.is_active = TRUE
+            AND ps.capacity_units >= $4
+            AND ps.id NOT IN (SELECT parking_spot_id FROM occupied_spots)
+        ORDER BY ps.capacity_units, ps.id;
+    `;
+
+    const values = [checkIn, checkOut, hotelId, capacity_units_required];
+
+    try {
+        const executor = client ? client : pool;
+        const result = await executor.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error fetching available parking spots:', err);
+        throw new Error('Database error');
+    }
 };
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
@@ -763,31 +803,77 @@ const selectReservationPayments = async (requestId, hotelId, reservationId) => {
 // Function to Add
 
 const addReservationHold = async (requestId, reservation) => {
-  const pool = getPool(requestId);
-  const query = `
-    INSERT INTO reservations (
-      hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING *;
-  `;
+    const pool = getPool(requestId);
+    const client = await pool.connect();
 
-  const values = [
-    reservation.hotel_id,
-    reservation.reservation_client_id,
-    reservation.check_in,
-    reservation.check_out,
-    reservation.number_of_people,
-    reservation.created_by,
-    reservation.updated_by
-  ];
+    try {
+        await client.query('BEGIN');
 
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the inserted client
-  } catch (err) {
-    console.error('Error adding reservation hold:', err);
-    throw new Error('Database error');
-  }
+        const reservationQuery = `
+            INSERT INTO reservations (
+                hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *;
+        `;
+        const reservationValues = [
+            reservation.hotel_id,
+            reservation.reservation_client_id,
+            reservation.check_in,
+            reservation.check_out,
+            reservation.number_of_people,
+            reservation.created_by,
+            reservation.updated_by
+        ];
+        const reservationResult = await client.query(reservationQuery, reservationValues);
+        const newReservation = reservationResult.rows[0];
+
+        if (reservation.vehicle_category_id) {
+            const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
+            const categoryResult = await client.query(categoryQuery, [reservation.vehicle_category_id]);
+            if (categoryResult.rows.length === 0) {
+                throw new Error('Vehicle category not found');
+            }
+            const { capacity_units_required } = categoryResult.rows[0];
+
+            const availableSpots = await selectAvailableParkingSpots(requestId, reservation.hotel_id, reservation.check_in, reservation.check_out, capacity_units_required, client);
+            if (availableSpots.length === 0) {
+                throw new Error('No available parking spots for the selected vehicle category and dates');
+            }
+            const spotToReserve = availableSpots[0];
+
+            const dateArray = [];
+            for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
+                dateArray.push(new Date(dt));
+            }
+
+            for (const date of dateArray) {
+                const parkingQuery = `
+                    INSERT INTO reservation_parking (hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by)
+                    VALUES ($1, $2, $3, $4, $5, 'reserved', $6, $7)
+                `;
+                const parkingValues = [
+                    reservation.hotel_id,
+                    newReservation.id,
+                    reservation.vehicle_category_id,
+                    spotToReserve.parking_spot_id,
+                    date,
+                    reservation.created_by,
+                    reservation.updated_by
+                ];
+                await client.query(parkingQuery, parkingValues);
+            }
+        }
+
+        await client.query('COMMIT');
+        return newReservation;
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error adding reservation hold:', err);
+        throw new Error('Database error: ' + err.message);
+    } finally {
+        client.release();
+    }
 };
 const addReservationDetail = async (requestId, detail) => {
   const pool = getPool(requestId);
@@ -1160,6 +1246,10 @@ const updateReservationStatus = async (requestId, reservationData) => {
         id,
         hotel_id,
       ];
+      await pool.query(query, values);
+
+      const deleteParkingQuery = 'DELETE FROM reservation_parking WHERE reservation_id = $1';
+      await pool.query(deleteParkingQuery, [id]);
     }
     if (resStatus === 'cancelled' && type === 'full-fee') {
       console.log('Cancelled with billable true');
@@ -4542,7 +4632,15 @@ const selectFailedOtaReservations = async (requestId) => {
   }
 };
 
+let getPool = require('../config/database').getPool;
+
+// Test hook to allow overriding getPool in tests
+const __setGetPool = (newGetPool) => {
+    getPool = newGetPool;
+};
+
 module.exports = {
+  __setGetPool, // Export for testing
   selectAvailableRooms,
   selectReservedRooms,
   selectReservation,

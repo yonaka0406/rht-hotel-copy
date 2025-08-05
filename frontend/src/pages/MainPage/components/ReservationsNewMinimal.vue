@@ -279,6 +279,19 @@
               <label>人数</label>
             </FloatLabel>
           </div>
+          <div class="col-span-1">
+            <FloatLabel>
+                <Select
+                    v-model="reservationDetails.vehicle_category_id"
+                    :options="vehicleCategories"
+                    optionLabel="name"
+                    optionValue="id"
+                    placeholder="車両カテゴリーを選択"
+                    fluid
+                />
+                <label>車両カテゴリー</label>
+            </FloatLabel>
+          </div>
         </div>
         <template #footer>
           <Button label="閉じる" icon="pi pi-times" @click="closeDialog" class="p-button-danger p-button-text p-button-sm" />
@@ -332,6 +345,8 @@
   const { clients, fetchClients, setClientsIsLoading } = useClientStore();
   import { useReservationStore } from '@/composables/useReservationStore';
   const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations } = useReservationStore();
+  import { useParkingStore } from '@/composables/useParkingStore';
+  const { vehicleCategories, fetchVehicleCategories } = useParkingStore();
   
   // Form
   const inDate = ref(new Date());
@@ -376,6 +391,7 @@
     gender: 'other',
     email: null,
     phone: null,
+    vehicle_category_id: null,
   });
   const personTypeOptions = [
     { label: '法人', value: 'legal' },
@@ -733,7 +749,10 @@
           'Authorization': `Bearer ${authToken}`, // Authorization header with token
           'Content-Type': 'application/json', // Content-Type for JSON data
         },
-        body: JSON.stringify(reservationDetails.value), // Send the reservation details as JSON
+        body: JSON.stringify({
+            ...reservationDetails.value,
+            vehicle_category_id: reservationDetails.value.vehicle_category_id,
+        }),
       });
 
       if (response.ok) {
@@ -988,6 +1007,7 @@
     //console.log('onMounted triggered');      
     await fetchHotels();
     await fetchHotel();
+    await fetchVehicleCategories();
 
     const today = new Date();
     const initialMinDate = new Date(today);
