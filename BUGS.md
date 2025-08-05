@@ -154,8 +154,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **High**: Significant issue, affects core functionality
 - **Critical**: Blocking issue, prevents system from working properly
 
-### August 4, 2025
-
 ---
 
 *Last Updated: August 4, 2025*

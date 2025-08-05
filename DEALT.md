@@ -2,7 +2,7 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
-### August 4, 2025
+### August 5, 2025
 
 #### Feature Request #25: Show OTA Queue Table
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
