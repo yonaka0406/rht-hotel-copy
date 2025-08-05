@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 - Feature: Show OTA Queue Table in Admin page.
-- Bugfix: Set billable status for new rooms in confirmed reservations.
+- Bugfix: Copy billable status as well when adding new rooms to existing reservations.
 ---
 ## Future Releases
 

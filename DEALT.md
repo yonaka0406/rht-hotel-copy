@@ -2,9 +2,9 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
-### August 4, 2025
+## August 5, 2025
 
-#### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations
+### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: When rooms are added to a reservation after it has been confirmed, the billable status of the new room details is not automatically set to true, even though the reservation is confirmed.
@@ -30,11 +30,9 @@ This document contains all fixed and closed issues that were previously tracked 
   - This can lead to rooms not being included in billing calculations
   - The issue likely stems from the room addition logic not checking the reservation's confirmed status
   - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
-- **Date Fixed**: 2025-08-04
+- **Date Fixed**: 2025-08-05
 
-### August 5, 2025
-
-#### Feature Request #25: Show OTA Queue Table
+### Feature Request #25: Show OTA Queue Table
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: Show in the Admin page, OTA exchange page, hotel page, a data table with the recent entries in the ota queue table for that hotel, with the date created, status, reservation id and booker name.
@@ -47,7 +45,7 @@ This document contains all fixed and closed issues that were previously tracked 
     - Reservation ID
     - Booker Name
 - **Additional Notes**: This will help with monitoring the OTA queue and debugging any issues.
-- **Date Fixed**: 2025-08-04
+- **Date Fixed**: 2025-08-05
 
 ## August 4, 2025
 
