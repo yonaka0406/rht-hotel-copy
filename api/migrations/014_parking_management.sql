@@ -50,7 +50,6 @@ CREATE TABLE reservation_parking (
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
-    PRIMARY KEY (hotel_id, id),
     UNIQUE (hotel_id, parking_spot_id, date, cancelled)
 ) PARTITION BY LIST (hotel_id);
 
