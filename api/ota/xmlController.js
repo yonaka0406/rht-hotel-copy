@@ -11,8 +11,7 @@ const {
     insertTLPlanMaster,
     insertOTAReservationQueue,
     updateOTAReservationQueue,
-    getOTAReservationsByTransaction,
-    selectOTAReservationQueue
+    getOTAReservationsByTransaction
 } = require('../ota/xmlModel');
 const { getAllHotelSiteController } = require('../models/hotel');
 const { addOTAReservation, editOTAReservation, cancelOTAReservation } = require('../models/reservations');
@@ -420,16 +419,6 @@ const getXMLTemplate = async (req, res) => {
         res.send(template);
     } catch (error) {
         console.error('Error getting xml template:', error);
-        res.status(500).json({ error: error.message });
-    }
-};
-
-const getRecentQueuedReservations = async (req, res) => {
-    try {
-        const queue = await selectOTAReservationQueue(req.requestId);
-        res.json(queue);
-    } catch (error) {
-        console.error('Error getting ota queue:', error);
         res.status(500).json({ error: error.message });
     }
 };
@@ -1494,7 +1483,6 @@ const setDatesNotForSale = async (req, res, hotel_id, inventory) => {
 
 module.exports = {
     getXMLTemplate,
-    getRecentQueuedReservations,
     getXMLRecentResponses,
     postXMLResponse,
     submitXMLTemplate,

@@ -43,7 +43,10 @@
         </div>
         <div>
             <Card>
-                <template #title>レイアウトエディタ</template>
+                <template #title>
+                    レイアウトエディタ
+                    <p class="text-sm text-gray-500">100 capacity units = 幅2.5m × 長さ5.0m</p>
+                </template>
                 <template #content>
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-2">
@@ -84,6 +87,25 @@
                 <Button label="保存" icon="pi pi-check" class="p-button-text" @click="saveCategory" />
             </template>
         </Dialog>
+
+        <Dialog v-model:visible="spotDialog" :style="{width: '450px'}" header="駐車場スポット詳細" :modal="true" class="p-fluid">
+            <div class="field">
+                <label for="spot_number">スポット番号</label>
+                <InputText id="spot_number" v-model.trim="spot.spot_number" required="true" autofocus />
+            </div>
+            <div class="field">
+                <label for="spot_type">スポットタイプ</label>
+                <InputText id="spot_type" v-model.trim="spot.spot_type" />
+            </div>
+            <div class="field">
+                <label for="capacity_units">容量ユニット</label>
+                <InputNumber id="capacity_units" v-model="spot.capacity_units" integeronly />
+            </div>
+            <template #footer>
+                <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="hideSpotDialog"/>
+                <Button label="保存" icon="pi pi-check" class="p-button-text" @click="saveSpot" />
+            </template>
+        </Dialog>
     </div>
 </template>
 
@@ -108,11 +130,22 @@ const toast = useToast();
 const loading = ref(false);
 const categoryDialog = ref(false);
 const category = ref({});
+const spotDialog = ref(false);
+const spot = ref({});
 const spotTypes = ref([
     { id: 1, name: 'Standard' },
     { id: 2, name: 'Large' },
     { id: 3, name: 'In-line' },
 ]);
+
+const hideSpotDialog = () => {
+    spotDialog.value = false;
+};
+
+const saveSpot = async () => {
+    // Save spot logic here
+    spotDialog.value = false;
+};
 
 onMounted(() => {
     loading.value = true;

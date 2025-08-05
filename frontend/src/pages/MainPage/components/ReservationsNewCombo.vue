@@ -890,6 +890,12 @@
     watch(totalPeople, (newTotal) => {
         reservationDetails.value.number_of_people = newTotal;
     });
+    watch(vehicleCategories, (newVal) => {
+        if (newVal && newVal.length > 0) {
+            reservationDetails.value.vehicle_category_id = 1;
+        }
+    });
+
     watch(() => selectedHotelId.value,
         async(newId) => {
             await fetchHotels();

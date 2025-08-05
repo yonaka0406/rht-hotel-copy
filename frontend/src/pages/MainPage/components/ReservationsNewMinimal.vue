@@ -953,6 +953,12 @@
     },
     { deep: true } // Use deep to watch for nested object changes
   );
+  watch(vehicleCategories, (newVal) => {
+    if (newVal && newVal.length > 0) {
+        reservationDetails.value.vehicle_category_id = 1;
+    }
+  });
+
   watch(reservation_id, async (newId) => {
     // console.log('Updated reservation_id:', newId);
     if(!newId){

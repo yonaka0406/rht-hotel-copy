@@ -497,32 +497,6 @@ const updateOTAReservationQueue = async (requestId, id, status, conflictDetails 
     }
 };
 
-const selectOTAReservationQueue = async (requestId) => {
-    const pool = getPool(requestId);
-    try {
-        let query = `
-            SELECT
-                oq.id,
-                oq.hotel_id,
-                h.name as hotel_name,
-                oq.ota_reservation_id,
-                oq.status,
-                oq.created_at,
-                oq.reservation_data->'BasicInformation'->>'GuestOrGroupNameSingleByte' as booker_name
-            FROM
-                ota_reservation_queue oq
-            JOIN
-                hotels h ON oq.hotel_id = h.id
-            ORDER BY oq.created_at DESC LIMIT 100
-        `;
-        const result = await pool.query(query);
-        return result.rows;
-    } catch (error) {
-        console.error('Error in selectOTAReservationQueue:', error);
-        throw error;
-    }
-};
-
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -534,6 +508,5 @@ module.exports = {
     selectTLPlanMaster,
     insertTLPlanMaster,
     insertOTAReservationQueue,
-    updateOTAReservationQueue,
-    selectOTAReservationQueue
+    updateOTAReservationQueue
 };

@@ -3,7 +3,7 @@ const format = require('pg-format');
 // Vehicle Category
 const getVehicleCategories = async (requestId) => {
     const pool = getPool(requestId);
-    const query = 'SELECT * FROM vehicle_categories ORDER BY id';
+    const query = 'SELECT * FROM vehicle_categories ORDER BY capacity_units_required, name';
     const result = await pool.query(query);
     return result.rows;
 };

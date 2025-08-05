@@ -2,7 +2,6 @@ import { ref, watch } from 'vue';
 
 const template = ref(null);
 const responses = ref([]);
-const otaQueue = ref([]);
 
 const sc_serviceLabels = ref([
     { id: "NetRoomTypeMasterSearchService", label: "部屋タイプマスタ検索(ネット販売)" },
@@ -354,35 +353,9 @@ export function useXMLStore() {
         }
     };
 
-    const fetchOtaQueue = async () => {
-        try {
-            const authToken = localStorage.getItem('authToken');
-            const url = '/api/ota-queue';
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                },
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error('Failed to retrieve data.');
-            }
-
-            otaQueue.value = data;
-
-        } catch (error) {
-            otaQueue.value = [];
-            console.error('Failed to retrieve data.', error);
-        }
-    };
-
     return {        
         template,
         responses,
-        otaQueue,
         sc_serviceLabels,
         sc_fieldLabels,
         tlRoomMaster,
@@ -398,6 +371,5 @@ export function useXMLStore() {
         insertTLPlanMaster,
         fetchInventoryForTL,
         updateTLInventory,
-        fetchOtaQueue,
     };
 }

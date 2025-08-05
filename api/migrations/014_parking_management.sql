@@ -4,7 +4,7 @@
 CREATE TABLE vehicle_categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    capacity_units_required INTEGER NOT NULL DEFAULT 1,
+    capacity_units_required INTEGER NOT NULL DEFAULT 100,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -25,7 +25,7 @@ CREATE TABLE parking_spots (
     parking_lot_id INTEGER REFERENCES parking_lots(id) ON DELETE CASCADE,
     spot_number VARCHAR(50) NOT NULL,
     spot_type VARCHAR(50) DEFAULT 'standard',
-    capacity_units INTEGER NOT NULL DEFAULT 1,
+    capacity_units INTEGER NOT NULL DEFAULT 100,
     blocks_parking_spot_id INTEGER REFERENCES parking_spots(id) ON DELETE SET NULL,
     layout_info JSONB,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -82,3 +82,11 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 CREATE TRIGGER update_reservation_parking_updated_at
 BEFORE UPDATE ON reservation_parking
 FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
+
+-- Default Vehicle Categories
+INSERT INTO vehicle_categories (name, capacity_units_required) VALUES
+('普通乗用車', 100),
+('軽自動車', 58),
+('オートバイ', 20),
+('バン・ピックアップ', 110),
+('2t　トラック', 120);

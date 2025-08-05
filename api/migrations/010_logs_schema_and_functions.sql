@@ -207,3 +207,36 @@ BEGIN
     RETURN NEW; -- Changed from RETURN NULL
 END;
 $$ LANGUAGE plpgsql;
+
+-- PARKING BLOCK LOGS
+CREATE TABLE logs_parking (
+    id SERIAL PRIMARY KEY,
+    log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INT REFERENCES users(id),
+    table_name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    record_id UUID NOT NULL, -- reservation_parking uses UUID
+    changes JSONB,
+    ip_address INET
+);
+CREATE INDEX idx_logs_parking_record_id ON logs_parking(record_id);
+
+CREATE OR REPLACE FUNCTION log_parking_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO logs_parking (user_id, table_name, action, record_id, changes, ip_address)
+    VALUES (
+        COALESCE(NEW.updated_by, OLD.updated_by, NEW.created_by),
+        TG_TABLE_NAME,
+        TG_OP,
+        COALESCE(NEW.id, OLD.id),
+        CASE
+            WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)::jsonb
+            WHEN TG_OP = 'INSERT' THEN row_to_json(NEW)::jsonb
+            ELSE jsonb_build_object('old', row_to_json(OLD)::jsonb, 'new', row_to_json(NEW)::jsonb)
+        END,
+        inet_client_addr()
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
