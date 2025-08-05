@@ -885,12 +885,6 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
   try {
     await client.query('BEGIN');
 
-    // Get reservation status
-    const reservationStatusQuery = `
-      SELECT status FROM reservations WHERE id = $1::UUID;
-    `;
-    const reservationStatusResult = await client.query(reservationStatusQuery, [reservationId]);
-    const reservationStatus = reservationStatusResult.rows[0]?.status;
 
     // Update the number_of_people in the reservations table
     const updateReservationQuery = `
