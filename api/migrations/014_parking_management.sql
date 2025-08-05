@@ -35,7 +35,7 @@ CREATE TABLE parking_spots (
 
 -- 4. Reservation Parking Table
 CREATE TABLE reservation_parking (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID UNIQUE DEFAULT gen_random_uuid(),
     hotel_id INTEGER NOT NULL,
     reservation_id UUID NOT NULL,
     vehicle_category_id INTEGER REFERENCES vehicle_categories(id) ON DELETE SET NULL,
@@ -43,13 +43,15 @@ CREATE TABLE reservation_parking (
     date DATE NOT NULL,
     status VARCHAR(50) NOT NULL,
     comment TEXT,
+    cancelled UUID DEFAULT NULL,
     price NUMERIC(10, 2) DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
-    PRIMARY KEY (hotel_id, id)
+    PRIMARY KEY (hotel_id, id),
+    UNIQUE (hotel_id, parking_spot_id, date, cancelled)
 ) PARTITION BY LIST (hotel_id);
 
 -- Indexes for performance

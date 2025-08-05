@@ -1248,8 +1248,8 @@ const updateReservationStatus = async (requestId, reservationData) => {
       ];
       await pool.query(query, values);
 
-      const deleteParkingQuery = 'DELETE FROM reservation_parking WHERE reservation_id = $1';
-      await pool.query(deleteParkingQuery, [id]);
+      const updateParkingQuery = 'UPDATE reservation_parking SET cancelled = gen_random_uuid() WHERE reservation_id = $1';
+      await pool.query(updateParkingQuery, [id]);
     }
     if (resStatus === 'cancelled' && type === 'full-fee') {
       console.log('Cancelled with billable true');
