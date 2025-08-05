@@ -4,7 +4,7 @@ const { validateNumericParam, validateNonEmptyStringParam, validateDateStringPar
 // Vehicle Category
 const getVehicleCategories = async (req, res) => {
     try {
-        const categories = await parkingModel.getVehicleCategories(req.requestId, req.params.hotel_id);
+        const categories = await parkingModel.getVehicleCategories(req.requestId);
         res.json(categories);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -13,8 +13,8 @@ const getVehicleCategories = async (req, res) => {
 
 const createVehicleCategory = async (req, res) => {
     try {
-        const { hotel_id, name, capacity_units_required } = req.body;
-        const newCategory = await parkingModel.createVehicleCategory(req.requestId, { hotel_id, name, capacity_units_required });
+        const { name, capacity_units_required } = req.body;
+        const newCategory = await parkingModel.createVehicleCategory(req.requestId, { name, capacity_units_required });
         res.status(201).json(newCategory);
     } catch (error) {
         res.status(500).json({ message: error.message });

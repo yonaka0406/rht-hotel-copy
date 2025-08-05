@@ -1,18 +1,17 @@
 const format = require('pg-format');
 
 // Vehicle Category
-const getVehicleCategories = async (requestId, hotel_id) => {
+const getVehicleCategories = async (requestId) => {
     const pool = getPool(requestId);
-    const query = 'SELECT * FROM vehicle_categories WHERE hotel_id = $1 ORDER BY id';
-    const values = [hotel_id];
-    const result = await pool.query(query, values);
+    const query = 'SELECT * FROM vehicle_categories ORDER BY id';
+    const result = await pool.query(query);
     return result.rows;
 };
 
-const createVehicleCategory = async (requestId, { hotel_id, name, capacity_units_required }) => {
+const createVehicleCategory = async (requestId, { name, capacity_units_required }) => {
     const pool = getPool(requestId);
-    const query = 'INSERT INTO vehicle_categories (hotel_id, name, capacity_units_required) VALUES ($1, $2, $3) RETURNING *';
-    const values = [hotel_id, name, capacity_units_required];
+    const query = 'INSERT INTO vehicle_categories (name, capacity_units_required) VALUES ($1, $2) RETURNING *';
+    const values = [name, capacity_units_required];
     const result = await pool.query(query, values);
     return result.rows[0];
 };

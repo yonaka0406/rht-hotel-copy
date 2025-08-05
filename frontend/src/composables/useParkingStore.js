@@ -13,7 +13,7 @@ export function useParkingStore() {
     const fetchVehicleCategories = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/vehicle-categories/${selectedHotelId.value}`, {
+            const response = await fetch(`/api/vehicle-categories`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             vehicleCategories.value = await response.json();
@@ -31,7 +31,7 @@ export function useParkingStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(category),
+                body: JSON.stringify({ name: category.name, capacity_units_required: category.capacity_units_required }),
             });
             return await response.json();
         } catch (error) {
@@ -48,7 +48,7 @@ export function useParkingStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(category),
+                body: JSON.stringify({ name: category.name, capacity_units_required: category.capacity_units_required }),
             });
             return await response.json();
         } catch (error) {

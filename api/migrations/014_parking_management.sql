@@ -3,7 +3,6 @@
 -- 1. Vehicle Categories Table
 CREATE TABLE vehicle_categories (
     id SERIAL PRIMARY KEY,
-    hotel_id INTEGER REFERENCES hotels(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     capacity_units_required INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -52,7 +51,6 @@ CREATE TABLE reservation_parking (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_vehicle_categories_hotel_id ON vehicle_categories(hotel_id);
 CREATE INDEX idx_parking_lots_hotel_id ON parking_lots(hotel_id);
 CREATE INDEX idx_parking_spots_parking_lot_id ON parking_spots(parking_lot_id);
 CREATE INDEX idx_reservation_parking_hotel_id ON reservation_parking(hotel_id);
