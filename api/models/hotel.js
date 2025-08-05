@@ -243,7 +243,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
           console.log('Attempting to insert reservation...');
           await client.query(
             `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, comment, created_by, updated_by)
-            VALUES ($1, $2, $3, $4, $5, 0, 'block', $6, $7, $7)
+            VALUES ($1, $2, $3, $4, $5, 1, 'block', $6, $7, $7)
             ON CONFLICT (hotel_id, id) DO NOTHING`,
             [
                 mockReservationId,
