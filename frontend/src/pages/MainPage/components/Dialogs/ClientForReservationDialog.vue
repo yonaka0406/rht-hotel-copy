@@ -336,39 +336,43 @@ const validatePhone = (phone) => {
 
 // Handle form submission
 const handleSave = () => {
-    validateEmail(localReservationDetails.value.email);
-    validatePhone(localReservationDetails.value.phone);
+    // Skip validation if a client is selected (has an ID)
+    if (!localClient.value || !localClient.value.id) {
+        validateEmail(localReservationDetails.value.email);
+        validatePhone(localReservationDetails.value.phone);
 
-    if (!localReservationDetails.value.email && !localReservationDetails.value.phone) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
-            life: 3000,
-        });
-        return;
+        if (!localReservationDetails.value.email && !localReservationDetails.value.phone) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: 'メールアドレスまたは電話番号の少なくとも 1 つを入力する必要があります。',
+                life: 3000,
+            });
+            return;
+        }
+
+        if (localReservationDetails.value.email && !isValidEmail.value) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効なメールアドレスを入力してください。',
+                life: 3000,
+            });
+            return;
+        }
+
+        if (localReservationDetails.value.phone && !isValidPhone.value) {
+            toast.add({
+                severity: 'warn',
+                summary: '注意',
+                detail: '有効な電話番号を入力してください。',
+                life: 3000,
+            });
+            return;
+        }
     }
 
-    if (localReservationDetails.value.email && !isValidEmail.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効なメールアドレスを入力してください。',
-            life: 3000,
-        });
-        return;
-    }
-
-    if (localReservationDetails.value.phone && !isValidPhone.value) {
-        toast.add({
-            severity: 'warn',
-            summary: '注意',
-            detail: '有効な電話番号を入力してください。',
-            life: 3000,
-        });
-        return;
-    }
-
+    // Proceed with save if validation passes or client is selected
     emit('save', localReservationDetails.value);
 };
 
