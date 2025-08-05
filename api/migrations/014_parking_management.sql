@@ -35,7 +35,7 @@ CREATE TABLE parking_spots (
 
 -- 4. Reservation Parking Table
 CREATE TABLE reservation_parking (
-    id UUID UNIQUE DEFAULT gen_random_uuid(),
+    id UUID DEFAULT gen_random_uuid(),
     hotel_id INTEGER NOT NULL,
     reservation_id UUID NOT NULL,
     vehicle_category_id INTEGER REFERENCES vehicle_categories(id) ON DELETE SET NULL,
