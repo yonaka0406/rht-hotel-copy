@@ -176,10 +176,19 @@
         <ReservationEdit :reservation_id="reservationId" :room_id="selectedRoom.room_id" />
 
         <Button v-if="isTempBlock" label="仮ブロック解除" icon="pi pi-unlock" @click="removeTempBlock" severity="danger" class="ml-2 mr-4" />
-        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-unlock" @click="removeTempBlock" severity="success" disabled />
+        <Button v-if="isTempBlock" label="予約追加へ進む" icon="pi pi-check" @click="openClientDialog" severity="success" />
       </div>
 
       <ReservationAddRoom v-else :room_id="selectedRoom.room_id" :date="selectedDate" @temp-block-close="handleTempBlock" />
+      
+      <!-- Client Dialog -->
+      <ClientForReservationDialog 
+        v-model="showClientDialog"
+        :client="currentClient"
+        :reservation-details="reservationDetails"
+        @save="handleClientSave"
+        @close="showClientDialog = false"
+      />
     </Drawer>
 
     <Drawer v-model:visible="reservationCardVisible" :modal="false" :position="'right'"
@@ -222,6 +231,9 @@
         </div>
       </div>
     </Drawer>
+
+    <ClientForReservationDialog v-model="showClientDialog" :client="currentClient" :reservation-details="reservationDetails"
+      @save="handleClientSave" @close="showClientDialog = false" />
   </div>
 
   <ConfirmDialog group="templating">
@@ -242,6 +254,7 @@ const router = useRouter();
 
 import ReservationEdit from './ReservationEdit.vue';
 import ReservationAddRoom from './components/ReservationAddRoom.vue';
+import ClientForReservationDialog from './components/Dialogs/ClientForReservationDialog.vue';
 
 //Websocket
 import io from 'socket.io-client';
@@ -259,7 +272,7 @@ import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, 
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
+const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom, convertBlockToReservation } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
 const { logged_user } = useUserStore();
 
@@ -1358,6 +1371,68 @@ const removeTempBlock = async () => {
             summary: 'エラー',
             detail: '仮ブロックの削除に失敗しました。',
             life: 3000
+        });
+    }
+};
+
+// Dialogs
+const showClientDialog = ref(false);
+const currentClient = ref({});
+
+const openClientDialog = () => {
+    // Initialize client data
+    currentClient.value = null;
+
+    // Initialize reservation details
+    const reservation = reservationDetails.value?.reservation?.[0];
+    if (reservation) {
+        reservationDetails.value = {
+            ...reservationDetails.value,
+            check_in: reservation.check_in,
+            check_out: reservation.check_out,
+            number_of_nights: calculateNights(new Date(reservation.check_in), new Date(reservation.check_out)),
+            number_of_people: reservation.number_of_people || 1
+        };
+    }
+
+    console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
+    console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
+
+    showClientDialog.value = true;
+};
+
+const calculateNights = (checkIn, checkOut) => {
+    const diffTime = Math.abs(checkOut - checkIn);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const handleClientSave = async (clientData) => {
+    try {
+        // Update the reservation with the client data
+        const reservationId = reservationDetails.value?.reservation?.[0]?.reservation_id;
+        if (reservationId) {
+            // Call the API to convert block to reservation with the client data            
+            await convertBlockToReservation(reservationId, clientData);
+            
+            // Show success message
+            toast.add({ severity: 'success', summary: '成功', detail: 'クライアント情報を保存しました', life: 3000 });
+            
+            // Close the dialog
+            showClientDialog.value = false;
+            
+            // Refresh the reservations to show updated data
+            await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+            
+            // Close the drawer
+            drawerVisible.value = false;
+        }
+    } catch (error) {
+        console.error('Error saving client data:', error);
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: error.response?.data?.error || 'クライアント情報の保存中にエラーが発生しました', 
+            life: 3000 
         });
     }
 };

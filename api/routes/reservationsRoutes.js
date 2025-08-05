@@ -22,6 +22,7 @@ router.post('/reservation/move/room', authMiddlewareCRUDAccess, reservationsCont
 router.post('/reservation/payment/add', authMiddlewareCRUDAccess, reservationsController.createReservationPayment);
 router.post('/reservation/payment/bulk-add', authMiddlewareCRUDAccess, reservationsController.createBulkReservationPayment);
 router.post('/reservation/update/details', authMiddlewareCRUDAccess, reservationsController.createReservationDetails);
+
 router.put('/reservation/update/details/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetail);
 router.put('/reservation/update/detail/status/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetailStatus);
 router.put('/reservation/update/guest/:id', authMiddlewareCRUDAccess, reservationsController.editReservationGuests);
@@ -38,6 +39,8 @@ router.put('/reservation/update/client/:id', authMiddlewareCRUDAccess, reservati
 router.put('/reservation/update/calendar/:id', authMiddlewareCRUDAccess, reservationsController.editRoomFromCalendar);
 router.put('/reservation/update/free/calendar', authMiddlewareCRUDAccess, reservationsController.editCalendarFreeChange);
 router.put('/reservation/update/room/guestnumber/:id', authMiddlewareCRUDAccess, reservationsController.editRoomGuestNumber);
+router.put('/reservation/convert/:id', authMiddlewareCRUDAccess, reservationsController.convertBlockToReservation);
+
 router.delete('/reservation/delete/hold/:id', authMiddlewareCRUDAccess, reservationsController.deleteHoldReservation);
 router.delete('/reservation/delete/room/:id', authMiddlewareCRUDAccess, reservationsController.deleteRoomFromReservation);
 router.delete('/reservation/payment/delete/:id', authMiddlewareCRUDAccess, reservationsController.delReservationPayment);

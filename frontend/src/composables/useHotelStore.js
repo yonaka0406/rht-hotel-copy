@@ -165,7 +165,7 @@ export function useHotelStore() {
     };
 
     // Calendar
-    const applyCalendarSettings = async (hotelId, startDate, endDate, roomIds, comment, block_type) => {
+    const applyCalendarSettings = async (hotelId, startDate, endDate, roomIds, number_of_people, comment, block_type) => {
         const authToken = localStorage.getItem('authToken');
 
         const response = await fetch(`/api/hotel-calendar/update/${startDate}/${endDate}`, {
@@ -174,7 +174,7 @@ export function useHotelStore() {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ hotelId, roomIds, comment, block_type })
+            body: JSON.stringify({ hotelId, roomIds, number_of_people, comment, block_type })
         });
 
         const data = await response.json();
