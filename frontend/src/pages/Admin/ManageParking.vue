@@ -15,7 +15,7 @@
                         <Column header="操作">
                             <template #body="slotProps">
                                 <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editCategory(slotProps.data)" />
-                                <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteCategory(slotProps.data)" />
+                            <Button v-if="slotProps.data.id !== 1" icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteCategory(slotProps.data)" />
                             </template>
                         </Column>
                     </DataTable>
@@ -80,7 +80,7 @@
             </div>
             <div class="field">
                 <label for="capacity">必要ユニット</label>
-                <InputNumber id="capacity" v-model="category.capacity_units_required" integeronly />
+                <InputNumber id="capacity" v-model="category.capacity_units_required" integeronly :style="{ background: capacityGradient }" />
             </div>
             <template #footer>
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="hideDialog"/>
@@ -99,7 +99,7 @@
             </div>
             <div class="field">
                 <label for="capacity_units">容量ユニット</label>
-                <InputNumber id="capacity_units" v-model="spot.capacity_units" integeronly />
+                <InputNumber id="capacity_units" v-model="spot.capacity_units" integeronly :style="{ background: capacityGradient }" />
             </div>
             <template #footer>
                 <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="hideSpotDialog"/>
@@ -221,4 +221,19 @@ const deleteCategory = async (prod) => {
     toast.add({severity:'success', summary: '成功', detail: 'カテゴリーが削除されました', life: 3000});
     fetchVehicleCategories();
 };
+
+const capacityGradient = computed(() => {
+    if (vehicleCategories.value.length < 2) {
+        return 'none';
+    }
+    const sortedCategories = [...vehicleCategories.value].sort((a, b) => a.capacity_units_required - b.capacity_units_required);
+    const min = sortedCategories[0].capacity_units_required;
+    const max = sortedCategories[sortedCategories.length - 1].capacity_units_required;
+    const stops = sortedCategories.map(cat => {
+        const percentage = ((cat.capacity_units_required - min) / (max - min)) * 100;
+        const color = `hsl(${120 - percentage * 1.2}, 100%, 50%)`;
+        return `${color} ${percentage}%`;
+    });
+    return `linear-gradient(to right, ${stops.join(', ')})`;
+});
 </script>
