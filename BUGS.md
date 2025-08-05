@@ -284,19 +284,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: psql server outage and restart, OTA integration
 - **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
 
-#### Bug #12
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action. All Confirm dialogs in the system should be checked to ensure they close properly after actions.
-- **Steps to Reproduce**:
-  1. Attempt to add or delete a payment in the ReservationPayments component.
-  2. Confirm the action in the dialog.
-  3. Observe that the dialog remains open after the action is completed.
-- **Expected Behavior**: The confirmation dialog should close automatically after the action is performed.
-- **Actual Behavior**: The dialog remained visible after the action.
-- **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
-- **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application.
-
 #### Feature Request #16
 - **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -362,20 +349,6 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - Implement global plan categories and organize hotel plans by room type
   - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
   - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
-
-#### Feature Request #16: Configurable Reservation Inquiry Button (2025/07/29)
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Description**: 
-  - Add a button to open reservation inquiry in a Google Drive spreadsheet
-  - Make the Google Drive link configurable per hotel in the admin interface
-  - Add a new field in the hotel edit screen (not in the hotels table) for the Google Drive URL
-  - **Button Locations**:
-    1. Reservation Edit page
-    2. Reservation Calendar page
-  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-  - **Additional Notes**: 
-    - This will allow each hotel to have their own reservation inquiry spreadsheet without hardcoding the link in the application.
-    - The button should be clearly visible and consistently placed in both locations.
 
 #### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed

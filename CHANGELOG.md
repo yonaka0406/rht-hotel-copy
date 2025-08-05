@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-
-- **Refactored Client Reservation Dialog**: Extracted client selection and details form into a reusable `ClientForReservationDialog` component. (#042)
-  - Improved code organization and maintainability by separating concerns
-  - Encapsulated client search and selection logic within the dialog component
-  - Enhanced form validation and error handling
-  - Streamlined the reservation creation workflow
-
 ---
 ## Future Releases
 
@@ -266,7 +259,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## 1.0.5 (2025-07-23)
+## [1.0.5] - 2025-07-23
 
 - Bugfix: PrimeVue ConfirmDialog did not close after add/delete; all Confirm dialogs in the system now close properly after actions. (Bug #12)
 - Global reservation search in the top menu.
@@ -276,7 +269,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## 1.0.6 (2025-07-28)
+## [1.0.6] - 2025-07-28
 
 - Bugfix: Frontend: Fixed a bug where the frontend was not displaying the right calculation of plan rates.
 - Bugfix: Reservation Calendar: Fixed an issue where check-in and check-out dates were not being updated after a free move operation in the calendar view.
@@ -284,7 +277,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## 1.0.7 (2025-07-29)
+## [1.0.7] - 2025-07-29
 
 - Bugfix: Fixed the unresponsive 'Return to Confirmed' button in the reservation panel. The button now properly allows changing the status from 'Checked In' back to 'Confirmed'. (Bug #14)
 - Bugfix: Fixed the disappearing scrollbar issue in the reservation calendar by updating the table container's CSS, improving navigation between dates. (Bug #18)
@@ -295,23 +288,28 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
-## 1.1.0 (2025-08-04)
-- OTA Reservations: Fixed transaction handling for OTA reservations to prevent duplicate bookings and ensure data consistency. Added proper error handling and transaction rollback on failures.
+## [1.1.0] - 2025-08-04
+- Feature: Fixed transaction handling for OTA reservations to prevent duplicate bookings and ensure data consistency. Added proper error handling and transaction rollback on failures.
 - UI/UX: Added Japanese labels for OTA transaction types (NewBookReport → 新規予約, ModificationReport → 予約変更, CancellationReport → 予約キャンセル) in the notifications drawer.
 - Bugfix: Resolved issue where hotelId was not being properly passed through the OTA reservation processing pipeline.
-- Configurable Reservation Inquiry Button: Added functionality to open reservation inquiries in a Google Drive spreadsheet. The Google Drive link is now configurable per hotel in the admin interface, with a dedicated field in the hotel edit screen. The button is available in the Side Menu.
-- Hotel Display Order: Added the ability to set the display order of hotels in the top menu. A `sort_order` field has been added to the hotels table, and the admin panel has been updated to allow editing of this new field.
-- Calendar: Added quick temp block functionality in the calendar drawer for faster room holds. (#017)
+- Feature: Added functionality to open reservation inquiries in a Google Drive spreadsheet. The Google Drive link is now configurable per hotel in the admin interface, with a dedicated field in the hotel edit screen. The button is available in the Side Menu.
+- Feature: Added the ability to set the display order of hotels in the top menu. A `sort_order` field has been added to the hotels table, and the admin panel has been updated to allow editing of this new field.
+- Feature: Added quick temp block functionality in the calendar drawer for faster room holds. (#017)
   - Users can now quickly create and remove temporary blocks directly from the calendar view
   - Visual indicators show which rooms are temporarily blocked
   - Streamlined workflow for holding rooms during high-demand periods
 - UI: Renamed mode from "予約移動" to "デフォルト" (Default) in the reservation calendar for better clarity (#1)
+- Refactor: Extracted client selection and details form into a reusable `ClientForReservationDialog` component. (#042)
+  - Improved code organization and maintainability by separating concerns
+  - Encapsulated client search and selection logic within the dialog component
+  - Enhanced form validation and error handling
+  - Streamlined the reservation creation workflow
 
 ---
 
 ## Version History
 
-- **1.1.0** (2025-08-04) - Enhanced OTA reservation handling with transaction support and Japanese UI improvements. Added hotel display ordering and calendar temp block functionality.
+- **1.1.0** (2025-08-04) - Refactored client reservation dialog for better maintainability. Enhanced OTA reservation handling with transaction support and Japanese UI improvements. Added hotel display ordering and calendar temp block functionality.
 - **1.0.7** (2025-07-29) - Fixed issues with reservation management UI and calendar navigation. Improved employee reservation handling and room indicator filtering. Added Japanese error notifications for better user feedback.
 - **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target.
 - **1.0.5** (2025-07-23) - OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously. Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.

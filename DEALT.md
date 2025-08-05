@@ -152,3 +152,37 @@ This document contains all fixed and closed issues that were previously tracked 
   2. Scroll down to view content lower in the page
   3. Change/update the date selection
   4. Observe that the date range updates but scroll position remains at the previous location
+
+## July 29, 2025
+
+### Feature Request #16: Configurable Reservation Inquiry Button
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Added a button to open reservation inquiry in a Google Drive spreadsheet
+  - Made the Google Drive link configurable per hotel in the admin interface
+  - Added a new field in the hotel edit screen for the Google Drive URL
+  - **Button Locations**:
+    1. Reservation Edit page
+    2. Reservation Calendar page
+- **Implementation Notes**: 
+  - Each hotel can now have its own reservation inquiry spreadsheet without hardcoding the link in the application
+  - The button is clearly visible and consistently placed in both locations
+- **Date Implemented**: July 29, 2025
+
+## August 5, 2025
+
+### Bug #12: PrimeVue ConfirmDialog Not Closing After Actions
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action.
+- **Steps to Reproduce**:
+  1. Attempt to add or delete a payment in the ReservationPayments component
+  2. Confirm the action in the dialog
+  3. Observe that the dialog remains open after the action is completed
+- **Expected Behavior**: The confirmation dialog should close automatically after the action is performed
+- **Actual Behavior**: The dialog remained visible after the action
+- **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
+- **Resolution**: Implemented programmatic closing of the dialog after successful action completion
+- **Date Fixed**: August 5, 2025
+- **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application
