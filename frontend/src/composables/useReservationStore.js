@@ -6,6 +6,7 @@ const availableRooms = ref([]);
 const availableRoomsForCopy = ref([]);
 const reservedRooms = ref([]);
 const holdReservations = ref([]);
+const failedOtaReservations = ref([]);
 const reservationId = ref(null);
 const reservationDetails = ref({});
 const reservedRoomsDayView = ref([]);
@@ -1087,12 +1088,48 @@ export function useReservationStore() {
         reservedRooms.value = [];
     });
 
+    const fetchFailedOtaReservations = async () => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/failed-ota`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    failedOtaReservations.value = [];
+                } else {
+                    const errorText = await response.text();
+                    console.error(`API Error: ${response.status} ${response.statusText} ${errorText}`);
+                }
+                return;
+            }
+
+            const data = await response.json();
+            if (data.reservations) {
+                failedOtaReservations.value = data.reservations;
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error("Error fetching failed OTA reservations:", error);
+        }
+    };
+
     return {
         reservationIsUpdating,
         availableRooms,
         availableRoomsForCopy,
         reservedRooms,
         holdReservations,
+        failedOtaReservations,
         reservationId,
         reservationDetails,
         reservedRoomsDayView,
@@ -1121,6 +1158,7 @@ export function useReservationStore() {
         fetchAvailableRooms,
         fetchReservedRooms,
         fetchMyHoldReservations, 
+        fetchFailedOtaReservations,
         fetchReservationsToday,
         fetchReservationPayments,
         addRoomToReservation,

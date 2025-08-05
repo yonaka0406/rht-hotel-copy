@@ -7,7 +7,7 @@ const getAllHotels = async (requestId) => {
     SELECT 
       hotels.* 
     FROM hotels 
-    ORDER BY id ASC
+    ORDER BY sort_order ASC, id ASC
   `;
 
   try {
@@ -32,6 +32,7 @@ const getHotelByID = async (requestId, id) => {
   }
 };
 const getAllHotelSiteController = async (requestId) => {
+  console.log(`[${requestId}] [getAllHotelSiteController] Starting`);
   const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
@@ -39,12 +40,38 @@ const getAllHotelSiteController = async (requestId) => {
     ORDER BY hotel_id
   `;
   
+  console.log(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
+  
   try {
-    const result = await pool.query(query);
-    return result.rows;
+    console.log(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
+    const client = await pool.connect();
+    
+    try {
+      console.log(`[${requestId}] [getAllHotelSiteController] Executing query`);
+      const startTime = Date.now();
+      const result = await client.query(query);
+      const duration = Date.now() - startTime;
+      
+      console.log(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
+      console.log(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+      
+      if (result.rows.length > 0) {
+        console.log(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+      }
+      
+      return result.rows;
+    } finally {
+      console.log(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+      client.release();
+    }
   } catch (err) {
-    console.error('Error selecting data:', err);
-    throw new Error('Database error');
+    console.error(`[${requestId}] [getAllHotelSiteController] Error executing query:`, {
+      error: err.message,
+      code: err.code,
+      stack: err.stack,
+      query: query
+    });
+    throw new Error(`Database error: ${err.message}`);
   }
 };
 const getHotelSiteController = async (requestId, id) => {
@@ -64,7 +91,7 @@ const getHotelSiteController = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-const updateHotel = async (requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, updated_by) => {
+const updateHotel = async (requestId, id, formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, sort_order, updated_by) => {
   const pool = getPool(requestId);
     const query = `
       UPDATE hotels SET 
@@ -82,11 +109,12 @@ const updateHotel = async (requestId, id, formal_name, name, postal_code, addres
         ,bank_account_number = $12
         ,bank_account_name = $13
         ,google_drive_url = $14
-        ,updated_by = $15
-      WHERE id = $16
+        ,sort_order = $15
+        ,updated_by = $16
+      WHERE id = $17
       RETURNING *
     `;
-    const values = [formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, updated_by, id];
+    const values = [formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, sort_order, updated_by, id];
   
     try {
       const result = await pool.query(query, values);

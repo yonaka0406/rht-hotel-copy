@@ -1,7 +1,7 @@
 # Bug Tracking Document
 
 ## Overview
-This document tracks all reported bugs and issues in the RHT Hotel system.
+This document tracks all reported bugs and issues in the RHT Hotel system that are currently open or in progress.
 
 ## Bug Reports
 
@@ -34,13 +34,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   - The issue likely stems from the room addition logic not checking the reservation's confirmed status
   - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
 
-#### Bug #21: Meal Counts Query Not Returning
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The meal counts query is not returning any results. Need to investigate the cause.
-- **Environment**: Reporting module
-- **Additional Notes**: Check database connection and query logic for any issues.
-
 #### Feature Request #18: Parking Management Function
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Add functionality to manage parking spaces and assignments for guests.
@@ -59,12 +52,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 - **Priority**: [ ] Low [x] Medium [ ] Critical
 - **Additional Notes**: This will help with auditing and tracking changes in the system.
 
-#### UI Change Request #1: Rename Mode
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Change the name of the mode from "予約移動" to "デフォルト" (Default)
-- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
-- **Additional Notes**: This is a simple UI text change to improve clarity.
-
 #### Feature Request #20: Client-based Meal Count Report
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Create a new report that shows meal counts grouped by client instead of by date.
@@ -72,134 +59,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
   - User will provide the specific format
   - Should be exportable to common formats (CSV, Excel)
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
-#### Feature Request #21: Hotel Display Order in Top Menu
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Add the ability to set the display order of hotels in the top menu.
-- **Requirements**:
-  - Add a sort order field to the hotels table
-  - Update the menu generation to respect this order
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
-### July 29, 2025
-
-#### Bug #19: Cancelled Reservations Show in Room Indicator
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: Cancelled reservations were incorrectly displayed in the Room Indicator page. The system was not properly filtering out reservations with 'cancelled' status from the room indicator view.
-- **Steps to Reproduce**:
-  1. Create a reservation and cancel it.
-  2. Navigate to the Room Indicator page.
-  3. Observe that the cancelled reservation is still visible.
-- **Expected Behavior**: Cancelled reservations should not appear in the Room Indicator page.
-- **Affected Component**: `frontend/src/pages/MainPage/RoomIndicator.vue`
-- **Resolution**:
-  - Updated filtering logic in RoomIndicator.vue to exclude cancelled reservations from all room groups
-  - Modified reservedRoomIds to only include non-cancelled reservations when determining room availability
-- **Date Fixed**: 2025-07-29
-- **Additional Notes**: The fix ensures that rooms with only cancelled reservations now correctly appear in the 空室 (available) section.
-
-#### Bug #18: Calendar Scrollbar Disappears on Date Selection
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The horizontal scrollbar in the reservation calendar disappears when a date is selected, making it difficult to navigate between dates.
-- **Steps to Reproduce**:
-  1. Open the reservation calendar
-  2. Select a date
-  3. Observe that the horizontal scrollbar disappears
-- **Expected Behavior**: The horizontal scrollbar should remain visible and functional at all times
-- **Actual Behavior**: The scrollbar disappears after date selection
-- **Environment**: 
-  - Reservation Calendar view
-  - May be related to screen resolution
-- **Resolution**:
-  - Updated table container CSS to use `overflow-y: auto`
-  - Added scrollbar styling for better visibility
-  - Adjusted container height calculation
-- **Date Fixed**: 2025-07-29
-- **Additional Notes**:
-  - The scrollbar now remains visible when needed
-  - Improved scrollbar styling for better user experience
-
-### July 27, 2025
-
-#### Bug #17: Employee Reservation Price Requirement
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The system currently requires a plan/price for employee reservations, but users want to allow confirming employee stays without pricing. However, this could be exploited by marking a reservation as employee to bypass pricing, then changing it back to a regular guest.
-- **Current Behavior**: System blocks confirmation of employee reservations without a plan/price.
-- **Requested Change**: Allow confirming employee reservations without a plan/price.
-- **Security Concern**: Potential bypass if users can change reservation type after confirmation.
-- **Resolution**:
-  - Updated the system to allow employee reservations without a plan/price
-  - Implemented restrictions to prevent changing reservation type after confirmation
-  - Added visual distinction for employee reservations in the UI
-  - Added confirmation dialogs for type changes
-- **Date Fixed**: 2025-07-29
-- **Suggested Solutions**:
-  1. Allow price-less employee reservations but prevent type changes after confirmation, or
-  2. Implement an audit trail for reservation type changes, or
-  3. Require manager approval for type changes, or
-  4. Keep current behavior but improve the UI to make it clearer why price is required
-- **Environment**: Reservation confirmation flow
-
-#### Bug #14: Unresponsive 'Return to Confirmed' Button
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The 'Return to Confirmed' (確定に戻す) button does not respond when clicked after check-in. This appears to be related to the PrimeVue ConfirmDialog implementation.
-- **Steps to Reproduce**:
-  1. Check in a reservation
-  2. Click on the 'Return to Confirmed' (確定に戻す) button
-  3. Observe that no confirmation dialog appears and no action is taken
-- **Expected Behavior**: A confirmation dialog should appear, and upon confirmation, the reservation status should change back to 'Confirmed'.
-- **Actual Behavior**: No response when clicking the button.
-- **Environment**: Reservation management interface, PrimeVue components
-- **Resolution**: Fixed by ensuring the correct ConfirmDialog instance ('recovery' group) is used for the confirmation dialog. The issue was caused by a mismatch between the dialog group in the template and the one referenced in the code.
-- **Date Fixed**: 2025-07-29
-
-### July 23, 2025
-
-#### Bug #X: OTA Reservation Transaction Issue
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: OTA reservations were not wrapped inside a database transaction. As a result, when multiple OTA reservation requests were processed, reservations without errors could be registered multiple times in the system, leading to duplicate bookings.
-- **Steps to Reproduce**:
-  1. Make an OTA reservation with valid data.
-  2. Trigger multiple reservation requests in parallel or in quick succession.
-  3. Observe that the same reservation is registered more than once.
-- **Expected Behavior**: Each reservation should be registered only once, and all operations should be atomic to prevent duplicates.
-- **Actual Behavior**: Multiple identical reservations are created if requests are processed simultaneously.
-- **Environment**: OTA integration
-- **Additional Notes**: Ensure all reservation creation logic is wrapped in a transaction to maintain data integrity.
-
-#### Bug #Y: Addon Quantity Calculation Issue
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The quantity of addons for a reservation was calculated based on the total number of people in the reservation, instead of the number of people per room. This caused incorrect addon quantities when multiple rooms were booked under a single reservation.
-- **Steps to Reproduce**:
-  1. Create a reservation with multiple rooms and different numbers of people per room.
-  2. Add an addon to the reservation.
-  3. Observe that the addon quantity is based on the total reservation people, not per-room people.
-- **Expected Behavior**: Addon quantity should be calculated based on the number of people in each room, not the total across all rooms.
-- **Actual Behavior**: Addon quantity is based on the total reservation people, leading to over- or under-counts.
-- **Environment**: OTA and reservation system
-- **Additional Notes**: Calculation logic should be revised to use per-room people counts when determining addon quantities.
-
-### December 19, 2024
-
-#### Bug #1
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: Calendar View scroll position doesn't reset when date is changed
-- **Steps to Reproduce**: 
-  1. Open calendar view
-  2. Scroll down to view content lower in the page
-  3. Change/update the date selection
-  4. Observe that the date range updates but scroll position remains at the previous location
-- **Expected Behavior**: When a date is changed, the scroll position should automatically return to the top to match the newly selected date
-- **Actual Behavior**: Date range updates correctly, but scroll position stays where it was, causing misalignment between selected date and visible content
-- **Environment**: 
-- **Additional Notes**: The date filtering functionality works properly, but the scroll position needs to reset to top when date changes for better user experience
 
 #### Bug #2
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
@@ -470,10 +329,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system.
 
 ---
 
-*Last Updated: July 31, 2025*
-*Total Bugs: 15*
+*Last Updated: August 4, 2025*
+*Total Bugs: 16*
 *Open: 6*
-*Fixed: 9*
+*Fixed: 10*
 
 # Backlog
 
@@ -531,4 +390,3 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - **Additional Notes**:
     - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
     - Need to investigate what guest information is currently being captured from OTA bookings
-

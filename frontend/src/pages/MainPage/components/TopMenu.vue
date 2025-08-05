@@ -62,6 +62,7 @@
     <NotificationsDrawer
         v-model:visible="showDrawer"
         :hold-reservations="holdReservations"
+        :failed-ota-reservations="failedOtaReservations"
         :temp-blocked-reservations="tempBlockedReservations"
         :notification-severity="notificationSeverity"
         @go-to-edit-reservation="goToEditReservationPage"
@@ -93,7 +94,7 @@
     import { useHotelStore } from '@/composables/useHotelStore';
     const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms } = useHotelStore(); // selectedHotelId is a ref
     import { useReservationStore } from '@/composables/useReservationStore';
-    const { holdReservations, setReservationId, reservedRooms } = useReservationStore();
+    const { holdReservations, failedOtaReservations, fetchFailedOtaReservations, setReservationId, reservedRooms } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
 
     // Components (for Waitlist Modal and Global Search)
@@ -153,7 +154,8 @@
     const notificationsBadgeCount = computed(() => {
         const holdCount = Array.isArray(holdReservations.value) ? holdReservations.value.length : 0;
         const tempBlockedCount = Array.isArray(tempBlockedReservations.value) ? tempBlockedReservations.value.length : 0;
-        return holdCount + tempBlockedCount;
+        const failedOtaCount = Array.isArray(failedOtaReservations.value) ? failedOtaReservations.value.length : 0;
+        return holdCount + tempBlockedCount + failedOtaCount;
     });
 
     // Computed property for dynamic severity string based on notification count    
@@ -223,6 +225,7 @@
         // Already called in SideMenu 
         // await fetchUser();
         // await fetchMyHoldReservations();
+        fetchFailedOtaReservations();
         
         // Register global keyboard shortcut for search
         document.addEventListener('keydown', handleGlobalKeydown);

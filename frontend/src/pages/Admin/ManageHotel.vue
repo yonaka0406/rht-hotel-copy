@@ -79,6 +79,10 @@
             <label for="open_date" class="font-medium mb-2 block">オープン日</label>
             <DatePicker id="open_date" v-model="selectedHotel.open_date" dateFormat="yy-mm-dd" disabled />
           </div>
+          <div class="flex flex-col">
+            <label for="sort_order" class="font-medium mb-2 block">表示順</label>
+            <InputNumber id="sort_order" v-model="selectedHotel.sort_order" />
+          </div>
         </div>
       </template>
     </Card>
@@ -413,6 +417,7 @@ const selectHotelData = async (hotel) => {
   selectedHotel.value = { ...hotel };
   selectedHotel.value.facility_type = selectedHotel.value.facility_type === 'New' ? '新築' : '中古';
   selectedHotel.value.open_date = new Date(selectedHotel.value.open_date);
+  selectedHotel.value.sort_order = selectedHotel.value.sort_order || 0;
 
   siteControllerReset();
   siteController.value = await fetchHotelSiteController(selectedHotel.value.id);

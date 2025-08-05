@@ -44,63 +44,153 @@ const processXMLResponse = async (requestId, id) => {
         // 1. Retrieve the id response from xml_responses        
         const res = await pool.query('SELECT * FROM xml_responses WHERE id = $1', [id]);
         if (res.rows.length === 0) {
-            console.log('No XML responses found.');
-            return;
+            const error = new Error('No XML responses found.');
+            console.error(error.message);
+            throw error;
         }
-        const { id, name, response } = res.rows[0];
-        console.log(`Processing response ID: ${id} - Name: ${name}`);
+        const { id: responseId, name, response } = res.rows[0];
+        console.log(`Processing response ID: ${responseId} - Name: ${name}`);
 
-        // 2. Parse SOAP XML response
-        const parser = new xml2js.Parser({ explicitArray: false });
-        parser.parseString(response, async (err, result) => {
-            if (err) {
-                console.error('Error parsing SOAP XML:', err);
-                return;
-            }
-            const body = result['S:Envelope']['S:Body'];
+        // 2. Parse the SOAP XML response using the same approach as submitXMLTemplate
+        const parseXML = (xml) => {
+            return new Promise((resolve, reject) => {
+                xml2js.parseString(xml, { explicitArray: false }, (err, result) => {
+                    if (err) {
+                        console.error('Error parsing XML:', err);
+                        reject(err);
+                    } else {
+                        resolve(result);
+                    }
+                });
+            });
+        };
+
+        try {
+            // Parse the main SOAP response
+            const result = await parseXML(response);
+            const body = result?.['S:Envelope']?.['S:Body'];
+            
             if (!body || !body['ns2:executeResponse']) {
-                console.error('Invalid response format.');
-                return;
+                throw new Error('Invalid response format: Missing S:Envelope.S:Body.ns2:executeResponse');
             }
 
             // Extract `infoTravelXML` data
-            const returnData = body['ns2:executeResponse']['return'];
-            if (!returnData || !returnData.bookingInfoList || !returnData.bookingInfoList.infoTravelXML) {
-                console.error('No booking information found.');
-                return;
+            const returnData = body['ns2:executeResponse']?.['return'];
+        
+            // Check if bookingInfoList exists and is an array with at least one item
+            if (!returnData?.bookingInfoList || !Array.isArray(returnData.bookingInfoList) || returnData.bookingInfoList.length === 0) {
+                console.log('No valid bookingInfoList array found in returnData. Return data keys:', Object.keys(returnData || {}));
+                throw new Error('No booking information found in the response');
             }
-            const infoTravelXML = returnData.bookingInfoList.infoTravelXML;
+        
+            // Get the first booking info item (assuming it's the one we want)
+            const firstBookingInfo = returnData.bookingInfoList[0];
+        
+            if (!firstBookingInfo?.infoTravelXML) {
+                console.log('No infoTravelXML found in the first booking info item. Booking info keys:', Object.keys(firstBookingInfo || {}));
+                throw new Error('No booking information found in the response');
+            }
+        
+            // The infoTravelXML might be a string or an object with _text property
+            let infoTravelXML = firstBookingInfo.infoTravelXML;
+            
+            // If it's an object with _text property (from CDATA), use that
+            if (typeof infoTravelXML === 'object' && infoTravelXML._text) {
+                infoTravelXML = infoTravelXML._text;
+            }
+            
+            // If it's still not a string, try to stringify it
+            if (typeof infoTravelXML !== 'string') {
+                infoTravelXML = JSON.stringify(infoTravelXML);
+            }
+            
+            // Parse the inner booking XML
+            const bookingData = await parseXML(infoTravelXML);
+            const allotmentBookingReport = bookingData?.AllotmentBookingReport;
+            
+            if (!allotmentBookingReport) {
+                console.error('No AllotmentBookingReport found in the XML. Booking data keys:', Object.keys(bookingData || {}));
+                throw new Error('No AllotmentBookingReport found in the XML');
+            }
 
-            // 3. Parse extracted `infoTravelXML`
-            parser.parseString(infoTravelXML, async (err, bookingData) => {
-                if (err) {
-                    console.error('Error parsing booking XML:', err);
-                    return;
-                }
-                console.log('Parsed Booking Data:', JSON.stringify(bookingData, null, 2));
+            // Extract the transaction type and basic info
+            const transactionType = allotmentBookingReport.TransactionType || {};
+            const dataClassification = transactionType.DataClassification;
+            
+            if (!dataClassification) {
+                console.error('Could not determine report type. TransactionType:', transactionType);
+                throw new Error('Could not determine report type: Missing DataClassification');
+            }
 
-                const basicInfo = bookingData.AllotmentBookingReport.BasicInformation;
-                if (!basicInfo) {
-                    console.error('No basic booking information found.');
-                    return;
-                }
+            const basicInfo = allotmentBookingReport.BasicInformation || {};
+            const commonData = {
+                responseId,
+                name,
+                reportType: dataClassification,
+                travelAgencyBookingNumber: basicInfo.TravelAgencyBookingNumber,
+                travelAgencyBookingDate: basicInfo.TravelAgencyBookingDate,
+                guestName: basicInfo.GuestOrGroupNameSingleByte,
+                checkInDate: basicInfo.CheckInDate,
+                checkInTime: basicInfo.CheckInTime,
+                nights: basicInfo.Nights ? parseInt(basicInfo.Nights, 10) : 0,
+                totalRoomCount: basicInfo.TotalRoomCount ? parseInt(basicInfo.TotalRoomCount, 10) : 0,
+                grandTotalPaxCount: basicInfo.GrandTotalPaxCount ? parseInt(basicInfo.GrandTotalPaxCount, 10) : 0,
+                packagePlanName: basicInfo.PackagePlanName,
+                mealCondition: basicInfo.MealCondition,
+                rawResponse: response,
+                parsedData: allotmentBookingReport
+            };
 
-                // Extract required fields
-                const travelAgencyBookingNumber = basicInfo.TravelAgencyBookingNumber;
-                const travelAgencyBookingDate = basicInfo.TravelAgencyBookingDate;
-                const guestName = basicInfo.GuestOrGroupNameSingleByte;
-                const checkInDate = basicInfo.CheckInDate;
-                const checkInTime = basicInfo.CheckInTime;
-                const nights = parseInt(basicInfo.Nights, 10);
-                const totalRoomCount = parseInt(basicInfo.TotalRoomCount, 10);
-                const grandTotalPaxCount = parseInt(basicInfo.GrandTotalPaxCount, 10);
-                const packagePlanName = basicInfo.PackagePlanName;
-                const mealCondition = basicInfo.MealCondition;
-            });
-        });
+            // Handle different report types
+            switch(dataClassification) {
+                case 'NewBookReport':
+                    return {
+                        success: true,
+                        type: 'reservation',
+                        action: 'new',
+                        ...commonData
+                    };
 
+                case 'ModificationReport':
+                    return {
+                        success: true,
+                        type: 'reservation',
+                        action: 'modified',
+                        ...commonData
+                    };
+
+                case 'CancellationReport':
+                    return {
+                        success: true,
+                        type: 'cancellation',
+                        action: 'cancelled',
+                        ...commonData,
+                        cancellationDate: transactionType.SystemDate,
+                        cancellationNumber: transactionType.DataID
+                    };
+
+                default:
+                    console.warn(`Unhandled report type: ${dataClassification}`);
+                    return {
+                        success: false,
+                        error: `Unsupported report type: ${dataClassification}`,
+                        type: 'unknown',
+                        action: 'unknown',
+                        ...commonData
+                    };
+            }
+            
+        } catch (parseError) {
+            console.error('Error parsing XML:', parseError);
+            throw new Error(`Failed to parse XML response: ${parseError.message}`);
+        }
     } catch (error) {
-        console.error('Database error:', error);
+        console.error('Error processing XML response:', error);
+        return {
+            success: false,
+            error: error.message,
+            responseId: id
+        };
     }
 };
 
@@ -324,6 +414,89 @@ const insertTLPlanMaster = async (requestId, data) => {
     }
 };
 
+/**
+ * Add a reservation to the OTA reservation queue
+ * @param {string} requestId - Request ID for logging
+ * @param {object} options - Options object
+ * @param {number} options.hotelId - Hotel ID
+ * @param {string} options.otaReservationId - OTA's reservation ID
+ * @param {string} options.transactionId - Unique transaction ID from OTA
+ * @param {object} options.reservationData - Parsed reservation data
+ * @param {string} [options.status='pending'] - Status of the reservation (pending/processed/failed)
+ * @param {object} [options.conflictDetails=null] - Details of any conflicts
+ * @returns {Promise<object>} The created/updated queue entry
+ */
+const insertOTAReservationQueue = async (requestId, {
+    hotelId,
+    otaReservationId,
+    transactionId,
+    reservationData,
+    status = 'pending',
+    conflictDetails = null
+}) => {
+    const pool = getPool(requestId);
+    
+    try {
+        const result = await pool.query(
+            `INSERT INTO ota_reservation_queue 
+             (hotel_id, ota_reservation_id, transaction_id, reservation_data, status, conflict_details)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (hotel_id, transaction_id) 
+             DO UPDATE SET
+                 status = EXCLUDED.status,
+                 conflict_details = COALESCE(EXCLUDED.conflict_details, ota_reservation_queue.conflict_details),
+                 updated_at = CURRENT_TIMESTAMP
+             RETURNING *`,
+            [
+                hotelId,
+                otaReservationId,
+                transactionId,
+                reservationData,
+                status,
+                conflictDetails
+            ]
+        );
+        
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error in insertOTAReservationQueue:', error);
+        throw error;
+    }
+};
+
+/**
+ * Update the status of a reservation in the OTA queue
+ * @param {string} requestId - Request ID for logging
+ * @param {number} id - Queue entry ID
+ * @param {string} status - New status (pending/processed/failed)
+ * @param {object} [conflictDetails=null] - Optional conflict details
+ * @returns {Promise<object>} The updated queue entry
+ */
+const updateOTAReservationQueue = async (requestId, id, status, conflictDetails = null) => {
+    const pool = getPool(requestId);
+    
+    try {
+        const result = await pool.query(
+            `UPDATE ota_reservation_queue 
+             SET status = $1, 
+                 conflict_details = COALESCE($2, conflict_details),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $3
+             RETURNING *`,
+            [status, conflictDetails, id]
+        );
+        
+        if (result.rows.length === 0) {
+            throw new Error(`No reservation found with ID: ${id}`);
+        }
+        
+        return result.rows[0];
+    } catch (error) {
+        console.error('Error in updateOTAReservationQueue:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     insertXMLRequest,
     insertXMLResponse,
@@ -334,4 +507,6 @@ module.exports = {
     insertTLRoomMaster,
     selectTLPlanMaster,
     insertTLPlanMaster,
+    insertOTAReservationQueue,
+    updateOTAReservationQueue
 };

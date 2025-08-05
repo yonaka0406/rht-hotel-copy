@@ -105,6 +105,7 @@ CREATE TABLE hotels (
     bank_account_number TEXT,
     bank_account_name TEXT,
     google_drive_url TEXT,
+    sort_order INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id)    

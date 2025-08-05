@@ -283,10 +283,10 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       return res.status(400).json({ error: error.message });
     }
 
-    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url  } = req.body;
+    const { formal_name, name, postal_code, address, email, phone_number, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, sort_order } = req.body;
     const updated_by = req.user.id;
 
-    let validatedFormalName, validatedName, validatedAddress, validatedEmail, validatedPhoneNumber;
+    let validatedFormalName, validatedName, validatedAddress, validatedEmail, validatedPhoneNumber, validatedSortOrder;
     try {
       // numericId for req.params.id is already validated at the start of the function
       validatedFormalName = validateNonEmptyStringParam(formal_name, 'Formal Name');
@@ -294,12 +294,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       validatedAddress = validateNonEmptyStringParam(address, 'Address');
       validatedEmail = validateNonEmptyStringParam(email, 'Email');
       validatedPhoneNumber = validateNonEmptyStringParam(phone_number, 'Phone Number');
+      validatedSortOrder = validateIntegerParam(String(sort_order), 'Sort Order');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedHotel = await updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, updated_by);
+      const updatedHotel = await updateHotel(req.requestId, numericId, validatedFormalName, validatedName, postal_code, validatedAddress, validatedEmail, validatedPhoneNumber, latitude, longitude, bank_name, bank_branch_name, bank_account_type, bank_account_number, bank_account_name, google_drive_url, validatedSortOrder, updated_by);
       if (!updatedHotel) {
         return res.status(404).json({ message: 'Hotel not found' });
       }

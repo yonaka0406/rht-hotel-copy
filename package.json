@@ -1,11 +1,11 @@
 {
     "name": "rht-hotel",
-    "version": "1.0.6",
+    "version": "1.1.0",
     "private": true,
     "scripts": {
         "build": "npm run build:frontend",
-        "build:frontend": "npm --prefix frontend run build production",
-        "build:frontend:dev": "npm --prefix frontend run build development",
+        "build:frontend": "npm --prefix frontend run build -- --mode production",
+        "build:frontend:dev": "npm --prefix frontend run build -- --mode development",        
         "deploy:frontend:test": "sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/",
         "deploy:frontend:prod": "sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/",
         "stop:apache": "sudo systemctl stop apache2",

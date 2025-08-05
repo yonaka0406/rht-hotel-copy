@@ -1,5 +1,6 @@
 const { 
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
+  selectFailedOtaReservations,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
@@ -1274,8 +1275,23 @@ const convertBlockToReservation = async (req, res) => {
     res.status(status).json({ 
       error: error.message || 'Failed to convert block to reservation' 
     });
+
+const getFailedOtaReservations = async (req, res) => {
+  try {
+    const reservations = await selectFailedOtaReservations(req.requestId);
+
+    if (reservations.length === 0) {
+      return res.status(404).json({ message: 'No failed OTA reservations found.' });
+    }
+
+    return res.status(200).json({ reservations });
+  } catch (error) {
+    console.error('Error fetching failed OTA reservations:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching failed OTA reservations.' });
+
   }
 };
 
 module.exports = { getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, convertBlockToReservation };
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, convertBlockToReservation };
+

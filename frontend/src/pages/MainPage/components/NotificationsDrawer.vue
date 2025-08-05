@@ -83,7 +83,47 @@
           </template>
         </VirtualScroller>
       </template>
-      <template v-if="!holdReservations.length && !tempBlockedReservations.length">
+      <template v-if="failedOtaReservations.length">
+        <h3 class="font-bold text-lg my-2 px-2">OTA同期失敗</h3>
+        <VirtualScroller :items="failedOtaReservations" :itemSize="110" class="space-y-3 flex-1 min-h-0"
+          style="flex: 1 1 auto; min-height: 0;">
+          <template #item="{ item: reservation, index }">
+            <div :key="index"
+              class="mx-2 mb-3 last:mb-0 rounded-lg shadow-sm border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950 p-4 flex flex-col gap-2">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <i class="pi pi-exclamation-triangle text-red-500" />
+                  <span class="font-semibold text-red-800 dark:text-red-300">OTA同期失敗</span>
+                </div>
+                <span class="text-sm text-red-600 dark:text-red-400">{{ reservation.ota_reservation_id }}</span>
+              </div>
+              <div class="grid grid-cols-2 gap-x-4 text-sm">
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                  <i class="pi pi-calendar text-blue-500 text-xs" />
+                  <span>受信日:</span>
+                  <span class="font-medium">{{ formatDateJP(reservation.date_received) }}</span>
+                </div>
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                  <i class="pi pi-tag text-purple-500 text-xs" />
+                  <span>種別:</span>
+                  <span class="font-medium">{{ getOtaTransactionLabel(reservation.transaction_type) }}</span>
+                </div>
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                  <i class="pi pi-calendar-plus text-green-500 text-xs" />
+                  <span>IN:</span>
+                  <span class="font-medium">{{ formatDateJP(reservation.check_in_date) }}</span>
+                </div>
+                <div class="flex items-center gap-1 text-gray-700 dark:text-gray-300">
+                  <i class="pi pi-calendar-minus text-red-500 text-xs" />
+                  <span>OUT:</span>
+                  <span class="font-medium">{{ formatDateJP(reservation.check_out_date) }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </VirtualScroller>
+      </template>
+      <template v-if="!holdReservations.length && !tempBlockedReservations.length && !failedOtaReservations.length">
         <div class="flex flex-col items-center justify-center h-32 text-gray-400 dark:text-gray-500">
           <i class="pi pi-inbox text-3xl mb-2" />
           <span>通知はありません。</span>
@@ -95,11 +135,30 @@
 
 <script setup>
 // Vue
-import { defineProps, defineEmits, computed, onMounted, watch } from 'vue';
+import { defineProps, defineEmits, computed, onMounted } from 'vue';
+
+// PrimeVue
+import Drawer from 'primevue/drawer';
+import VirtualScroller from 'primevue/virtualscroller';
+
+// OTA Transaction Type Mapping
+const getOtaTransactionLabel = (transactionType) => {
+  const typeMap = {
+    'NewBookReport': '新規予約',
+    'ModificationReport': '予約変更',
+    'CancellationReport': '予約キャンセル',
+    'default': 'その他'
+  };
+  return typeMap[transactionType] || typeMap.default;
+};
 
 const props = defineProps({
   visible: Boolean,
   holdReservations: {
+    type: Array,
+    required: true
+  },
+  failedOtaReservations: {
     type: Array,
     required: true
   },
@@ -115,19 +174,15 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'go-to-edit-reservation']);
 
-// Primevue
-import { Drawer, VirtualScroller } from 'primevue';
-
 function handleGoToEditReservation(hotel_id, reservation_id) {
   emit('go-to-edit-reservation', hotel_id, reservation_id);
 }
 
 const totalNotifications = computed(() => {
   const holdCount = Array.isArray(props.holdReservations) ? props.holdReservations.length : 0;
-  console.log('totalNotifications holdCount', holdCount);
   const tempBlockedCount = Array.isArray(props.tempBlockedReservations) ? props.tempBlockedReservations.length : 0;
-  console.log('totalNotifications tempBlockedCount', tempBlockedCount);
-  return holdCount + tempBlockedCount;
+  const failedOtaCount = Array.isArray(props.failedOtaReservations) ? props.failedOtaReservations.length : 0;
+  return holdCount + tempBlockedCount + failedOtaCount;
 });
 
 const notificationSeverityIcon = computed(() => {
@@ -150,10 +205,6 @@ function formatDateJP(dateStr) {
 onMounted(() => {
   // console.log('[NotificationsDrawer] tempBlockedReservations:', props.tempBlockedReservations);
 });
-
-watch(() => props.tempBlockedReservations, (newVal) => {
-  // console.log('[NotificationsDrawer] Updated tempBlockedReservations:', newVal);
-}, { immediate: true, deep: true });
 
 </script>
 
