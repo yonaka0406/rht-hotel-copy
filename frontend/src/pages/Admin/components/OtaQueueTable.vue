@@ -6,6 +6,8 @@
       :paginator="true"
       :rows="15"
       :rowsPerPageOptions="[15, 25, 50]"
+      v-model:filters="filters"
+      filterDisplay="row"
     >
       <Column field="created_at" header="作成日時">
         <template #body="slotProps">
@@ -19,17 +21,33 @@
       </Column>
       <Column field="ota_reservation_id" header="予約ID"></Column>
       <Column field="booker_name" header="予約者名"></Column>
-      <Column field="hotel_name" header="ホテル名"></Column>
+      <Column field="hotel_name" header="ホテル名" :showFilterMenu="false">
+        <template #filter="{ filterModel, filterCallback }">
+          <Dropdown
+            v-model="filterModel.value"
+            :options="hotels"
+            optionLabel="name"
+            optionValue="name"
+            placeholder="ホテルで絞り込み"
+            class="p-column-filter"
+            :showClear="true"
+            @change="filterCallback()"
+          >
+          </Dropdown>
+        </template>
+      </Column>
     </DataTable>
   </div>
 </template>
 
 <script setup>
-import { onMounted, watch, computed } from 'vue';
+import { onMounted, watch, computed, ref } from 'vue';
 import { useXMLStore } from '@/composables/useXMLStore';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Badge from 'primevue/badge';
+import Dropdown from 'primevue/dropdown';
+import { FilterMatchMode } from 'primevue/api';
 
 const props = defineProps({
   hotelId: {
@@ -39,12 +57,23 @@ const props = defineProps({
 });
 
 const { otaQueue, fetchOtaQueue } = useXMLStore();
+const filters = ref({
+  hotel_name: { value: null, matchMode: FilterMatchMode.EQUALS },
+});
+const hotels = computed(() => {
+  const hotelSet = new Set();
+  otaQueue.value.forEach(item => {
+    hotelSet.add(JSON.stringify({ id: item.hotel_id, name: item.hotel_name }));
+  });
+  return Array.from(hotelSet).map(item => JSON.parse(item));
+});
 
 const filteredOtaQueue = computed(() => {
-  if (!props.hotelId) {
-    return otaQueue.value;
+  let queue = otaQueue.value;
+  if (props.hotelId) {
+    queue = queue.filter(item => item.hotel_id === props.hotelId);
   }
-  return otaQueue.value.filter(item => item.hotel_id === props.hotelId);
+  return queue;
 });
 
 const formatDateTime = (dateString) => {
