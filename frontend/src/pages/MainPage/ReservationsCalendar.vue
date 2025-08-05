@@ -1380,19 +1380,30 @@ const showClientDialog = ref(false);
 const currentClient = ref({});
 
 const openClientDialog = () => {
-    // Initialize client data from reservation if available
-    if (reservationDetails.value?.reservation?.[0]?.client) {
-        currentClient.value = { ...reservationDetails.value.reservation[0].client };
-    } else {
-        currentClient.value = {
-            name: '',
-            email: '',
-            phone: '',
-            legal_or_natural_person: 'natural',
-            gender: ''
+    // Initialize client data
+    currentClient.value = null;
+
+    // Initialize reservation details
+    const reservation = reservationDetails.value?.reservation?.[0];
+    if (reservation) {
+        reservationDetails.value = {
+            ...reservationDetails.value,
+            check_in: reservation.check_in,
+            check_out: reservation.check_out,
+            number_of_nights: calculateNights(new Date(reservation.check_in), new Date(reservation.check_out)),
+            number_of_people: reservation.number_of_people || 1
         };
     }
+
+    console.log('[ReservationsCalendar] openClientDialog: currentClient', currentClient.value);
+    console.log('[ReservationsCalendar] openClientDialog: reservationDetails', reservationDetails.value);
+
     showClientDialog.value = true;
+};
+
+const calculateNights = (checkIn, checkOut) => {
+    const diffTime = Math.abs(checkOut - checkIn);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const handleClientSave = async (clientData) => {

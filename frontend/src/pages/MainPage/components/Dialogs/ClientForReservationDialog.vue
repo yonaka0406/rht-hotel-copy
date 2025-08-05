@@ -361,6 +361,11 @@ const handleSave = () => {
 
 // Fetch clients on mount
 onMounted(async () => {
+    if (props.client === null){
+        console.log('[ClientForReservantionDialog] onMounted client is null');
+        localReservationDetails.value.legal_or_natural_person = 'legal';
+        localReservationDetails.value.gender = 'other';    
+    }    
     try {
         await fetchClients(1); // Fetch first page by default
     } catch (error) {
@@ -412,6 +417,7 @@ watch(() => localReservationDetails.value.legal_or_natural_person, (newValue) =>
     if (newValue === 'natural' && localReservationDetails.value.client_id == null) {
         localReservationDetails.value.gender = 'male';
     }
+    
     console.log('localReservationDetails legal_or_natural_person:', newValue, localReservationDetails.value.gender);
 },
 );
