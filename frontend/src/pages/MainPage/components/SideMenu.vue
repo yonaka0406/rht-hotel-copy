@@ -46,6 +46,18 @@
           </a>
         </router-link>
 
+        <div v-else-if="!item.route && item.command && item.type === 'link'" @click="item.command" :class="[
+          'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group cursor-pointer',
+          isCollapsed ? 'px-0 justify-center' : 'px-6'
+        ]">
+          <i :class="[item.icon, 'text-lg', isCollapsed ? '' : 'mr-3']"></i>
+          <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+          <span v-if="isCollapsed"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0">
+            {{ item.label }}
+          </span>
+        </div>
+
         <Divider v-if="item.separator" class="my-2 border-emerald-700 dark:border-emerald-600" />
       </template>
     </nav>
@@ -192,7 +204,6 @@ const updateMenuItems = () => {
       label: '予約紹介',
       icon: 'pi pi-fw pi-google',
       type: 'link',
-      route: '/google/dummy-route',
       command: () => {
         // console.log('予約紹介 clicked, opening URL:', selectedHotel.value.google_drive_url);
         window.open(selectedHotel.value.google_drive_url, '_blank');
