@@ -241,6 +241,7 @@ const submitTempBlock = async () => {
             reservationDetails.value.check_in,
             adjustedCheckOut.toISOString().split('T')[0], // Format as YYYY-MM-DD
             [props.room_id],
+            reservationDetails.value.number_of_people,
             `${userName}の部屋押さえ`,
             'temp'
         );

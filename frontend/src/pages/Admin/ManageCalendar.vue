@@ -163,7 +163,7 @@ const applyToAllHotels = async () => {
         return;
     }
     try {
-        const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null, comment.value, 'block');
+        const response = await applyCalendarSettings(null, formatDate(startDate.value), formatDate(endDate.value), null, 0, comment.value, 'block');
         if (response.success) {
             await fetchBlockedRooms(selectedHotelId.value);
             toast.add({ severity: 'success', summary: '成功', detail: '全ホテルに適用しました。', life: 3000 });
@@ -228,7 +228,7 @@ const applyToSelectedHotel = async () => {
     }
     try {
         const roomIds = selectedRooms.value ? selectedRooms.value : null;
-        const response = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds, comment.value, 'block');
+        const response = await applyCalendarSettings(selectedHotelId.value, formatDate(startDate.value), formatDate(endDate.value), roomIds, 0, comment.value, 'block');
         if (response.success) {
             await fetchBlockedRooms(selectedHotelId.value);
             toast.add({ severity: 'success', summary: '成功', detail: '選択ホテルに適用しました。', life: 3000 });

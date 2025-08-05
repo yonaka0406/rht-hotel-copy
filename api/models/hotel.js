@@ -158,7 +158,7 @@ const updateRoom = async (requestId, id, room_type_id, floor, room_number, capac
   }
 };
 
-const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDate, comment, updated_by, block_type) => {
+const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDate, number_of_people, comment, updated_by, block_type) => {
   console.log('=== updateHotelCalendar called ===');
   console.log('Input parameters:', {
     requestId,
@@ -166,6 +166,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
     roomIds,
     startDate,
     endDate,
+    number_of_people,
     comment,
     updated_by,
     block_type
@@ -243,7 +244,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
           console.log('Attempting to insert reservation...');
           await client.query(
             `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, comment, created_by, updated_by)
-            VALUES ($1, $2, $3, $4, $5, 1, 'block', $6, $7, $7)
+            VALUES ($1, $2, $3, $4, $5, $6, 'block', $7, $8, $8)
             ON CONFLICT (hotel_id, id) DO NOTHING`,
             [
                 mockReservationId,
@@ -251,6 +252,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
                 clientId,
                 checkInDate,
                 checkOutDate,
+                number_of_people || 1,
                 comment,
                 updated_by,
             ]
@@ -284,13 +286,14 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             console.log('Inserting reservation detail...');
             await client.query(
               `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
-               VALUES ($1, $2, $3, $4, 0, $5, $6)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
                ON CONFLICT (hotel_id, reservation_id, room_id, date, cancelled) DO UPDATE SET updated_by = $6`,
               [
                 currentHotelId,
                 mockReservationId,
                 date,
-                roomId,              
+                roomId,
+                number_of_people || 1,
                 updated_by,
                 updated_by,
               ]
@@ -319,11 +322,9 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
     }
     return { 
       success: false, 
-      message: 'Error updating calendar', 
-      error: error.message 
+      message: error.message || 'Failed to update calendar' 
     };
   } finally {
-    console.log('Releasing database connection');
     client.release();
   }
 };

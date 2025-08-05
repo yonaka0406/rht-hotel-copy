@@ -383,7 +383,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   };
   const editHotelCalendar = async (req, res) => {
     const { startDate: startDateParam, endDate: endDateParam } = req.params;
-    const { hotelId: hotelIdFromBody, roomIds, comment, block_type } = req.body;
+    const { hotelId: hotelIdFromBody, roomIds, number_of_people, comment, block_type } = req.body;
     const updated_by = req.user.id;
 
     console.log('=== editHotelCalendar Request ===');
@@ -396,6 +396,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       endDateParam,
       hotelIdFromBody,
       roomIds,
+      number_of_people,
       comment,
       block_type,
       updated_by
@@ -422,7 +423,8 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       console.log('Validated Values:', {
         numericHotelId,
         validatedStartDate,
-        validatedEndDate
+        validatedEndDate,
+        number_of_people
       });
 
     } catch (error) {
@@ -436,11 +438,22 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         validatedRoomIds,
         validatedStartDate,
         validatedEndDate,
+        number_of_people,
         comment,
         updated_by,
         block_type
       });
-      const updatedRoom = await updateHotelCalendar(req.requestId, numericHotelId, validatedRoomIds, validatedStartDate, validatedEndDate, comment, updated_by, block_type);
+      const updatedRoom = await updateHotelCalendar(
+        req.requestId, 
+        numericHotelId, 
+        validatedRoomIds, 
+        validatedStartDate, 
+        validatedEndDate, 
+        number_of_people,
+        comment, 
+        updated_by, 
+        block_type
+      );
       if (!updatedRoom.success) { 
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }
