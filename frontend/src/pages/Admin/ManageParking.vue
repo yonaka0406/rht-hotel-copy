@@ -110,7 +110,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import draggable from 'vuedraggable';
 import { useParkingStore } from '../../composables/useParkingStore';
 import { useHotelStore } from '../../composables/useHotelStore';
