@@ -5,8 +5,21 @@
             <!-- Name of the person making the reservation -->
             <div class="col-span-2 mb-6">
                 <FloatLabel>
-                    <AutoComplete v-model="localClient" :suggestions="filteredClients" optionLabel="display_name"
-                        @complete="filterClients" field="id" @option-select="onClientSelect" fluid required>
+                    <AutoComplete 
+                        v-model="localClient" 
+                        :suggestions="filteredClients" 
+                        optionLabel="display_name"
+                        @complete="filterClients" 
+                        field="id" 
+                        @option-select="onClientSelect" 
+                        :loading="clientsIsLoading"                                                                        
+                        :disabled="clientsIsLoading"
+                        fluid 
+                        required
+                    >
+                        <template #loading v-if="clientsIsLoading">
+                            <i class="pi pi-spin pi-spinner"></i>
+                        </template>
                         <template #option="slotProps">
                             <div>
                                 <p>
@@ -122,7 +135,7 @@ const deepWatch = (source, cb) => {
 
 // Store
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients } = useClientStore();
+const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
 
 // Toast
 import { useToast } from 'primevue/usetoast';
@@ -367,7 +380,12 @@ onMounted(async () => {
         localReservationDetails.value.gender = 'other';    
     }    
     try {
-        await fetchClients(1); // Fetch first page by default
+        setClientsIsLoading(true);
+        const clientsTotalPages = await fetchClients(1);
+        for (let page = 2; page <= clientsTotalPages; page++) {
+        await fetchClients(page);
+        }
+        setClientsIsLoading(false);
     } catch (error) {
         console.error('Error fetching clients:', error);
         // Optionally show an error message to the user
