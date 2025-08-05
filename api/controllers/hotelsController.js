@@ -403,35 +403,43 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     });
 
     let numericHotelId, validatedStartDate, validatedEndDate, validatedRoomIds = [];
+    const pool = getPool();
+    const client = await pool.connect();
+
     try {
       console.log('=== Starting Validation ===');
       numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
       validatedStartDate = validateDateStringParam(startDateParam, 'Start Date parameter');
-      validatedEndDate = validateDateStringParam(endDateParam, 'End Date parameter');      
+      validatedEndDate = validateDateStringParam(endDateParam, 'End Date parameter');
 
-      if (!Array.isArray(roomIds)) {
-        console.error('roomIds is not an array:', roomIds);
-        throw new Error('roomIds must be an array.');
+      // If roomIds is not provided, fetch all room IDs for the hotel
+      if (!roomIds) {
+        console.log('No room IDs provided, fetching all rooms for the hotel');
+        const result = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [numericHotelId]);
+        validatedRoomIds = result.rows.map(row => row.id);
+      } else {
+        // If roomIds is provided, validate each one
+        if (!Array.isArray(roomIds)) {
+          console.error('roomIds is not an array:', roomIds);
+          throw new Error('roomIds must be an array.');
+        }
+        for (const roomId of roomIds) {
+          validatedRoomIds.push(validateNumericParam(String(roomId), 'Room ID in roomIds array'));
+        }
       }
-      for (const roomId of roomIds) {
-        validatedRoomIds.push(validateNumericParam(String(roomId), 'Room ID in roomIds array'));
-      }
-      if (validatedRoomIds.length === 0 && !comment) { // Or based on specific logic if comment alone is not enough
-         throw new Error('Either roomIds must not be empty or a comment must be provided.');
+
+      if (validatedRoomIds.length === 0 && !comment) {
+        throw new Error('No valid rooms found for the specified hotel or no comment provided.');
       }
 
       console.log('Validated Values:', {
         numericHotelId,
         validatedStartDate,
         validatedEndDate,
+        validatedRoomIds,
         number_of_people
       });
 
-    } catch (error) {
-      return res.status(400).json({ error: error.message });
-    }
-
-    try {
       console.log('=== Calling updateHotelCalendar ===', {
         requestId: req.requestId,
         numericHotelId,
@@ -443,6 +451,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         updated_by,
         block_type
       });
+      
       const updatedRoom = await updateHotelCalendar(
         req.requestId, 
         numericHotelId, 
@@ -454,13 +463,20 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         updated_by, 
         block_type
       );
+      
       if (!updatedRoom.success) { 
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }
+      
       res.status(200).json({ success: true, message: 'Rooms updated successfully' });
     } catch (error) {
       console.error('Error updating hotel:', error);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || 'Internal server error' 
+      });
+    } finally {
+      client.release();
     }
   };
   const editBlockedRooms = async (req, res) => {
