@@ -908,7 +908,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
       )
       RETURNING *;
     `;
-    const result = await client.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId, reservationStatus === 'confirmed']);
+    const result = await client.query(copyRoomQuery, [roomId, numberOfPeople, userId, reservationId]);
 
     await client.query('COMMIT');
     return result.rows[0];
