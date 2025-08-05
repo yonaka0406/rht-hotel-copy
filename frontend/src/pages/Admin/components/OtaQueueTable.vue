@@ -1,24 +1,25 @@
 <template>
   <div>
+    <p class="text-sm text-gray-500 mb-2">※最新100件のキューエントリーのみ表示されます。</p>
     <DataTable
       :value="filteredOtaQueue"
       :paginator="true"
       :rows="15"
       :rowsPerPageOptions="[15, 25, 50]"
     >
-      <Column field="created_at" header="Date Created">
+      <Column field="created_at" header="作成日時">
         <template #body="slotProps">
           {{ formatDateTime(slotProps.data.created_at) }}
         </template>
       </Column>
-      <Column field="status" header="Status">
+      <Column field="status" header="ステータス">
         <template #body="slotProps">
           <Badge :severity="statusSeverity(slotProps.data.status)" :value="slotProps.data.status" />
         </template>
       </Column>
-      <Column field="ota_reservation_id" header="Reservation ID"></Column>
-      <Column field="booker_name" header="Booker Name"></Column>
-      <Column field="hotel_name" header="Hotel Name"></Column>
+      <Column field="ota_reservation_id" header="予約ID"></Column>
+      <Column field="booker_name" header="予約者名"></Column>
+      <Column field="hotel_name" header="ホテル名"></Column>
     </DataTable>
   </div>
 </template>
