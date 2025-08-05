@@ -710,6 +710,9 @@
         if (data.cancelled && !data.billable) {
             return { color: 'red' };
         }
+        if (!data.billable) {
+            return { 'text-decoration': 'line-through', color: 'red' };
+        }
         // Check if the day is a weekend
         if (day === 6) {
             return { backgroundColor: '#edf3f9' };
