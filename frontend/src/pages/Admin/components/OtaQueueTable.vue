@@ -14,7 +14,7 @@
       </Column>
       <Column field="status" header="ステータス">
         <template #body="slotProps">
-          <Badge :severity="statusSeverity(slotProps.data.status)" :value="slotProps.data.status" />
+          <Badge :severity="statusSeverity(slotProps.data.status)" :value="getStatusInJapanese(slotProps.data.status)" />
         </template>
       </Column>
       <Column field="ota_reservation_id" header="予約ID"></Column>
@@ -52,6 +52,12 @@ const formatDateTime = (dateString) => {
   return date.toLocaleString('ja-JP');
 };
 
+const statusMapping = {
+  pending: '保留中',
+  processed: '処理済み',
+  failed: '失敗',
+};
+
 const statusSeverity = (status) => {
   switch (status) {
     case 'pending':
@@ -63,6 +69,10 @@ const statusSeverity = (status) => {
     default:
       return 'info';
   }
+};
+
+const getStatusInJapanese = (status) => {
+  return statusMapping[status] || status;
 };
 
 onMounted(() => {
