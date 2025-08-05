@@ -977,7 +977,7 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
   }
 };
 
-const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {
+const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {  
   const pool = getPool(requestId);
   const query = `
     UPDATE reservations

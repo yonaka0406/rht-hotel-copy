@@ -272,7 +272,7 @@ import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, 
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel, removeCalendarSettings } = useHotelStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom } = useReservationStore();
+const { reservationDetails, reservedRooms, fetchReservedRooms, fetchReservation, reservationId, setReservationId, setCalendarChange, setCalendarFreeChange, setReservationRoom, convertBlockToReservation } = useReservationStore();
 import { useUserStore } from '@/composables/useUserStore';
 const { logged_user } = useUserStore();
 
@@ -1398,10 +1398,10 @@ const openClientDialog = () => {
 const handleClientSave = async (clientData) => {
     try {
         // Update the reservation with the client data
-        const reservationId = reservationDetails.value?.reservation?.[0]?.id;
+        const reservationId = reservationDetails.value?.reservation?.[0]?.reservation_id;
         if (reservationId) {
-            // Call the API to update the reservation with the client data
-            await updateBlockToReservation(reservationId, clientData);
+            // Call the API to convert block to reservation with the client data            
+            await convertBlockToReservation(reservationId, clientData);
             
             // Show success message
             toast.add({ severity: 'success', summary: '成功', detail: 'クライアント情報を保存しました', life: 3000 });
@@ -1423,7 +1423,6 @@ const handleClientSave = async (clientData) => {
             detail: error.response?.data?.error || 'クライアント情報の保存中にエラーが発生しました', 
             life: 3000 
         });
-    }
     }
 };
 

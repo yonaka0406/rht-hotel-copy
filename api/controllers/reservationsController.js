@@ -1236,7 +1236,7 @@ const convertBlockToReservation = async (req, res) => {
   }
 
   try {
-    let finalClientId = client.id;
+    let finalClientId = client.client_id;
     
     // If client doesn't have an ID, create a new client
     if (!finalClientId) {
