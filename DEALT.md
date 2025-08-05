@@ -2,21 +2,176 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
-## December 19, 2024
+## August 4, 2025
 
-### Bug #2: Calendar View Needs Visual Lines/Borders
+### Bug #4 / Feature Request
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: Calendar View needs visual lines/borders in room cells for better visibility
-- **Steps to Reproduce**: 
-  1. Open calendar view
-  2. Look at the room cells/rows
-  3. Observe that there are no clear visual separators between rooms
-- **Expected Behavior**: Room cells should have visible lines/borders to clearly separate and identify different rooms
-- **Actual Behavior**: Room cells lack visual boundaries, making it difficult to distinguish between different rooms
-- **Resolution**: Added visual lines/borders to room cells to improve visibility and distinguish between different rooms
-- **Date Fixed**: December 19, 2024
-- **Additional Notes**: Visual clarity of the calendar view has been improved as requested.
+- **Description**: Romaji auto-capitalization should preserve all-uppercase input (e.g., 'NTT' should not become 'Ntt').
+- **Steps to Reproduce**:
+  1. Create a new client and enter an all-uppercase company name (e.g., 'NTT') in the Romaji field.
+  2. Observe that it is auto-capitalized to 'Ntt'.
+- **Expected Behavior**: All-uppercase input should be preserved as entered by the user.
+- **Actual Behavior**: All-uppercase input is auto-capitalized to only the first letter being uppercase.
+- **Environment**: 
+- **Additional Notes**: This is important for company names and acronyms that are conventionally written in all caps.
+- **Date Fixed**: 2025-07-17
+
+### Bug #5
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: After creating a hold reservation and navigating to ReservationEdit, the client cannot be edited immediately without refreshing the page.
+- **Steps to Reproduce**:
+  1. Create a hold reservation.
+  2. When redirected to the ReservationEdit page, try to edit the client.
+  3. Observe that editing is not possible until the page is refreshed.
+- **Expected Behavior**: The client should be editable immediately after creating a hold reservation, without needing to refresh the page.
+- **Actual Behavior**: The client cannot be edited until the page is refreshed.
+- **Environment**: 
+- **Additional Notes**: This may be due to stale state or missing data reload after navigation.
+- **Date Fixed**: 2025-07-17
+
+### Bug #6
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Addon is not reflected in the reservation edit page when added from the プラン・機関編集 (Plan/Addon Edit) button, but appears when added from the day details.
+- **Steps to Reproduce**:
+  1. Open a reservation and use the プラン・機関編集 button to add an addon.
+  2. Observe that the addon does not appear in the reservation edit page.
+  3. Add an addon from the day details instead.
+  4. Observe that the addon appears correctly.
+- **Expected Behavior**: Addons added from either method should appear immediately in the reservation edit page.
+- **Actual Behavior**: Addons added from プラン・機関編集 do not appear, but those added from day details do.
+- **Environment**: 
+- **Additional Notes**: This may be due to a missing state update or data fetch after editing via the plan/addon dialog.
+- **Date Fixed**: 2025-07-17
+
+### Feature Request #7
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
+- **Description**: Implement a 'Copy Reservation' function that allows copying a reservation to a different booker, keeping all other reservation details the same.
+- **Steps to Reproduce**:
+  1. Select a reservation.
+  2. Use the 'Copy to a different booker' function.
+  3. Choose a new booker/client.
+  4. Confirm that a new reservation is created with the same details but a different booker.
+- **Expected Behavior**: The system should allow users to duplicate a reservation for a different booker, with all other details (dates, rooms, addons, etc.) copied.
+- **Actual Behavior**: Backend implementation completed. Frontend UI integration in progress.
+- **Environment**: 
+- **Additional Notes**: Backend functionality for copying reservations including all rates, addons, and details has been implemented and tested. Spec created at `.kiro/specs/reservation-copy-feature/`.
+- **Date Fixed**: 2025-07-17
+
+### Bug #8 / Feature Request
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Description**: When exporting the meals quantity report and there are no addons, the toast response should be more informative (e.g., 'No meal data to export') instead of a generic or silent response.
+- **Steps to Reproduce**:
+  1. Attempt to export the meals quantity report when there are no meal addons in the selected period.
+  2. Observe the toast or lack of feedback.
+- **Expected Behavior**: The user should see a clear message like 'No meal data to export' if there are no relevant addons.
+- **Actual Behavior**: The toast is generic or missing, which can be confusing.
+- **Environment**: 
+- **Additional Notes**: Improves user experience and reduces confusion when no data is available for export.
+- **Date Fixed**: 2025-07-17
+
+### Bug #9
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: The count of addons (especially meals) may not be correct in the all reservations export CSV. For the same period, reservation_details CSV showed meal addons that did not appear in the meals report, indicating a possible data extraction or filtering bug.
+- **Steps to Reproduce**:
+  1. Export the all reservations CSV and the reservation_details CSV for the same period.
+  2. Compare the count of meal addons in both files.
+  3. Observe that meal addons present in reservation_details may be missing or miscounted in the all reservations export and meals report.
+- **Expected Behavior**: All meal addons should be correctly counted and appear in both the all reservations export and the meals report for the same period.
+- **Actual Behavior**: Meal addons are missing or miscounted in the all reservations export and meals report.
+- **Environment**: 
+- **Additional Notes**: This may be due to a bug in the data extraction or filtering logic for exports and reports.
+- **Date Fixed**: 2025-07-17
+
+### Bug #10
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: After deleting a reservation, the confirmation prompt '保留中予約を削除してもよろしいですか?' remains on screen instead of closing automatically.
+- **Steps to Reproduce**:
+  1. Attempt to delete a hold reservation (保留中予約).
+  2. Confirm the deletion in the prompt.
+  3. Observe that the prompt does not close after the reservation is deleted.
+- **Expected Behavior**: The confirmation prompt should close automatically after the reservation is deleted.
+- **Actual Behavior**: The prompt remains visible even after deletion.
+- **Environment**: 
+- **Additional Notes**: This can confuse users, making them think the action was not completed.
+- **Date Fixed**: 2025-07-17
+
+### Feature Request #11
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Remove the requirement to have a reservation client in order to perform check-in.
+- **Steps to Reproduce**:
+  1. Attempt to check in a reservation without a client assigned.
+  2. Observe that the system currently requires a client to be set.
+- **Expected Behavior**: It should be possible to perform check-in even if no reservation client is assigned.
+- **Actual Behavior**: The system currently blocks check-in if there is no client assigned.
+- **Environment**: 
+- **Additional Notes**: This will make the check-in process more flexible for cases where a client is not yet registered or known at the time of check-in.
+- **Date Fixed**: 2025-07-17
+
+### Feature Request #13
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a legend to the Calendar view explaining the meaning of all icons used.
+- **Steps to Reproduce**:
+  1. Open the calendar view.
+  2. Observe the icons used for reservations, statuses, and indicators.
+  3. Look for a legend explaining their meaning.
+- **Expected Behavior**: There is a clear, accessible legend in the calendar view that explains all icons and their meanings.
+- **Actual Behavior**: No such legend currently exists.
+- **Environment**: 
+- **Additional Notes**: This will help users quickly understand the meaning of icons and improve usability.
+- **Date Fixed**: 2025-07-17
+
+### Bug #11
+- **Status**: [x] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: After a psql server DoS and restart, OTA reservations were added multiple times because confirmation was not sent to the OTA. This resulted in duplicate reservations and failures when attempting to edit the reservation.
+- **Steps to Reproduce**:
+  1. Experience a psql server outage (e.g., due to DoS).
+  2. Restart the psql server.
+  3. Observe that OTA reservations are added, but confirmation is not sent to the OTA.
+  4. Multiple copies of the same reservation are created.
+  5. Attempt to edit the reservation and observe that the edit fails.
+- **Expected Behavior**: OTA reservations should be confirmed and not duplicated after a server restart. Editing should work as expected.
+- **Actual Behavior**: Multiple copies of the same reservation are created, and editing fails.
+- **Environment**: psql server outage and restart, OTA integration
+- **Additional Notes**: This can cause significant data integrity issues and confusion for both staff and clients. Needs a mechanism to prevent duplicate OTA reservations after server recovery.
+- **Date Fixed**: 2025-08-04
+
+### Feature Request #15
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Add a FAQ page of the system with instructions for the use of the system.
+- **Steps to Reproduce**:
+  1. Access the system.
+  2. Navigate to the FAQ page.
+  3. View instructions and answers to common questions about system usage.
+- **Expected Behavior**: Users can easily find instructions and answers to common questions about system usage.
+- **Actual Behavior**: No FAQ page currently exists.
+- **Environment**: 
+- **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
+- **Date Fixed**: 2025-08-04
+
+### Feature Request #16: Improved OTA Import Logic
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Improve the OTA import logic: convert OTA XML reservation data to PMS format and save in a temp table, attempt to add to PMS reservations, and if any fail, cache the data and only clear the cache upon successful confirmation to the OTA. Notify users of unimported data in PMS, allowing them to change room types before the next OTA retry, which would use the updated mapping.
+- **Steps to Reproduce**:
+  1. OTA XML data is converted and saved in a temp table.
+  2. If PMS import fails, data is cached and not cleared until OTA confirmation is successful.
+  3. User is notified of unimported data and can adjust room types in PMS.
+  4. On next OTA retry, the updated mapping is used.
+- **Expected Behavior**: OTA import is robust, and users are notified of and can resolve import issues.
+- **Actual Behavior**: OTA keeps sending duplicate reservations if import fails, and users are not notified of unimported data.
+- **Environment**: OTA integration, PMS import logic
+- **Additional Notes**: This will prevent duplicate reservations, improve upgrade handling, and provide better user feedback and control over OTA import issues.
+- **Date Fixed**: 2025-08-04
 
 ## July 31, 2025
 
@@ -83,6 +238,21 @@ This document contains all fixed and closed issues that were previously tracked 
   - The scrollbar now remains visible when needed
   - Improved scrollbar styling for better user experience
 
+### Feature Request #22: Configurable Reservation Inquiry Button
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Added a button to open reservation inquiry in a Google Drive spreadsheet
+  - Made the Google Drive link configurable per hotel in the admin interface
+  - Added a new field in the hotel edit screen for the Google Drive URL
+  - **Button Locations**:
+    1. Reservation Edit page
+    2. Reservation Calendar page
+- **Implementation Notes**: 
+  - Each hotel can now have its own reservation inquiry spreadsheet without hardcoding the link in the application
+  - The button is clearly visible and consistently placed in both locations
+- **Date Implemented**: July 29, 2025
+
 ## July 27, 2025
 
 ### Bug #17: Employee Reservation Price Requirement
@@ -101,7 +271,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### Bug #14: Unresponsive 'Return to Confirmed' Button
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: The 'Return to Confirmed' (確定に戻す) button does not respond when clicked after check-in. This appears to be related to the PrimeVue ConfirmDialog implementation.
 - **Steps to Reproduce**:
   1. Check in a reservation
@@ -115,7 +285,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## July 23, 2025
 
-### Bug #X: OTA Reservation Transaction Issue
+### Bug #23: OTA Reservation Transaction Issue
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: OTA reservations were not wrapped inside a database transaction. As a result, when multiple OTA reservation requests were processed, reservations without errors could be registered multiple times in the system, leading to duplicate bookings.
@@ -128,9 +298,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Environment**: OTA integration
 - **Additional Notes**: Ensure all reservation creation logic is wrapped in a transaction to maintain data integrity.
 
-### Bug #Y: Addon Quantity Calculation Issue
+### Bug #24: Addon Quantity Calculation Issue
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: The quantity of addons for a reservation was calculated based on the total number of people in the reservation, instead of the number of people per room. This caused incorrect addon quantities when multiple rooms were booked under a single reservation.
 - **Steps to Reproduce**:
   1. Create a reservation with multiple rooms and different numbers of people per room.
@@ -140,6 +310,21 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Actual Behavior**: Addon quantity is based on the total reservation people, leading to over- or under-counts.
 - **Environment**: OTA and reservation system
 - **Additional Notes**: Calculation logic should be revised to use per-room people counts when determining addon quantities.
+
+### Bug #12: PrimeVue ConfirmDialog Not Closing After Actions
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
+- **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action.
+- **Steps to Reproduce**:
+  1. Attempt to add or delete a payment in the ReservationPayments component
+  2. Confirm the action in the dialog
+  3. Observe that the dialog remains open after the action is completed
+- **Expected Behavior**: The confirmation dialog should close automatically after the action is performed
+- **Actual Behavior**: The dialog remained visible after the action
+- **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
+- **Resolution**: Implemented programmatic closing of the dialog after successful action completion
+- **Date Fixed**: 2025-07-23
+- **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application
 
 ## December 19, 2024
 
@@ -153,36 +338,16 @@ This document contains all fixed and closed issues that were previously tracked 
   3. Change/update the date selection
   4. Observe that the date range updates but scroll position remains at the previous location
 
-## July 29, 2025
-
-### Feature Request #16: Configurable Reservation Inquiry Button
+### Bug #2: Calendar View Needs Visual Lines/Borders
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Added a button to open reservation inquiry in a Google Drive spreadsheet
-  - Made the Google Drive link configurable per hotel in the admin interface
-  - Added a new field in the hotel edit screen for the Google Drive URL
-  - **Button Locations**:
-    1. Reservation Edit page
-    2. Reservation Calendar page
-- **Implementation Notes**: 
-  - Each hotel can now have its own reservation inquiry spreadsheet without hardcoding the link in the application
-  - The button is clearly visible and consistently placed in both locations
-- **Date Implemented**: July 29, 2025
-
-## August 5, 2025
-
-### Bug #12: PrimeVue ConfirmDialog Not Closing After Actions
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action.
-- **Steps to Reproduce**:
-  1. Attempt to add or delete a payment in the ReservationPayments component
-  2. Confirm the action in the dialog
-  3. Observe that the dialog remains open after the action is completed
-- **Expected Behavior**: The confirmation dialog should close automatically after the action is performed
-- **Actual Behavior**: The dialog remained visible after the action
-- **Environment**: ReservationPayments.vue, PrimeVue ConfirmDialog
-- **Resolution**: Implemented programmatic closing of the dialog after successful action completion
-- **Date Fixed**: August 5, 2025
-- **Additional Notes**: This issue may affect other Confirm dialogs in the system and should be checked throughout the application
+- **Description**: Calendar View needs visual lines/borders in room cells for better visibility
+- **Steps to Reproduce**: 
+  1. Open calendar view
+  2. Look at the room cells/rows
+  3. Observe that there are no clear visual separators between rooms
+- **Expected Behavior**: Room cells should have visible lines/borders to clearly separate and identify different rooms
+- **Actual Behavior**: Room cells lack visual boundaries, making it difficult to distinguish between different rooms
+- **Resolution**: Added visual lines/borders to room cells to improve visibility and distinguish between different rooms
+- **Date Fixed**: December 19, 2024
+- **Additional Notes**: Visual clarity of the calendar view has been improved as requested.
