@@ -154,22 +154,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **High**: Significant issue, affects core functionality
 - **Critical**: Blocking issue, prevents system from working properly
 
-### August 4, 2025
-
-#### Feature Request #25: Show OTA Queue Table
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: Show in the Admin page, OTA exchange page, hotel page, a data table with the recent entries in the ota queue table for that hotel, with the date created, status, reservation id and booker name.
-- **Requirements**:
-  - Add a new data table to the Admin page, OTA exchange page, and hotel page.
-  - The table should show the recent entries from the ota_queue table for the selected hotel.
-  - The table should include the following columns:
-    - Date Created
-    - Status
-    - Reservation ID
-    - Booker Name
-- **Additional Notes**: This will help with monitoring the OTA queue and debugging any issues.
-
 ---
 
 *Last Updated: August 4, 2025*
