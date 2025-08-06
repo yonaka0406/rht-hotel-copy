@@ -1,3 +1,4 @@
+let getPool = require('../config/database').getPool;
 const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
@@ -4632,15 +4633,7 @@ const selectFailedOtaReservations = async (requestId) => {
   }
 };
 
-let getPool = require('../config/database').getPool;
-
-// Test hook to allow overriding getPool in tests
-const __setGetPool = (newGetPool) => {
-    getPool = newGetPool;
-};
-
-module.exports = {
-  __setGetPool, // Export for testing
+module.exports = {  
   selectAvailableRooms,
   selectReservedRooms,
   selectReservation,

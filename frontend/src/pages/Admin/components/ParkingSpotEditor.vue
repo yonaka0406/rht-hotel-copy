@@ -396,26 +396,39 @@ function logParkingSpotsState(action) {
 }
 
 async function deleteSpot(spotToDelete) {
-  // For existing spots, check if they are used in reservations
-  if (spotToDelete.id && !spotToDelete.tempId) {
-    try {
-      // TODO: This endpoint is an assumption. Verify the correct API endpoint for checking reservations.
-      const response = await get(`/api/v1/parking-spots/${spotToDelete.id}/reservations`);
-      if (response && response.length > 0) {
-        toast.add({ severity: 'error', summary: '削除エラー', detail: '予約のあるスポットは削除できません。', life: 3000 });
-        return;
-      }
-    } catch (error) {
-      console.error('Failed to check for reservations:', error);
-      toast.add({ severity: 'error', summary: 'エラー', detail: '予約の確認に失敗しました。削除を中止しました。', life: 3000 });
-      return;
+  if (spotToDelete.tempId) {
+    // For unsaved spots, just remove from the local state
+    parkingSpots.value = parkingSpots.value.filter(spot => spot.tempId !== spotToDelete.tempId);
+    return;
+  }
+  
+  try {
+    await api.delete(`/api/v1/parking-spots/${spotToDelete.id}`);
+    parkingSpots.value = parkingSpots.value.filter(spot => spot.id !== spotToDelete.id);
+    toast.add({ 
+      severity: 'success', 
+      summary: '削除完了', 
+      detail: '駐車スペースを削除しました', 
+      life: 3000 
+    });
+  } catch (error) {
+    if (error.response?.data?.code === 'HAS_RESERVATIONS') {
+      toast.add({ 
+        severity: 'error', 
+        summary: '削除エラー', 
+        detail: error.response.data.message || '予約のあるスポットは削除できません。', 
+        life: 5000 
+      });
+    } else {
+      toast.add({ 
+        severity: 'error', 
+        summary: 'エラー', 
+        detail: '駐車スペースの削除に失敗しました。', 
+        life: 5000 
+      });
+      console.error('Error deleting parking spot:', error);
     }
   }
-
-  parkingSpots.value = parkingSpots.value.filter(
-    spot => (spot.id || spot.tempId) !== (spotToDelete.id || spotToDelete.tempId)
-  );
-  logParkingSpotsState('Spot Deleted');
 }
 
 function openEditSpotDialog(spot) {

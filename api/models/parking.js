@@ -1,3 +1,4 @@
+let getPool = require('../config/database').getPool;
 const format = require('pg-format');
 
 // Vehicle Category
@@ -88,11 +89,64 @@ const updateParkingSpot = async (requestId, id, { spot_number, spot_type, capaci
     return result.rows[0];
 };
 
-const deleteParkingSpot = async (requestId, id) => {
-    const pool = getPool(requestId);
-    const query = 'DELETE FROM parking_spots WHERE id = $1';
-    const values = [id];
-    await pool.query(query, values);
+const checkParkingSpotReservations = async (requestId, spotId, client = null) => {
+    let shouldReleaseClient = false;
+    
+    try {
+        // If no client is provided, create a new one
+        if (!client) {
+            const pool = getPool(requestId);
+            client = await pool.connect();
+            shouldReleaseClient = true;
+        }
+        
+        const query = 'SELECT COUNT(*) as count FROM reservation_parking WHERE parking_spot_id = $1';
+        const values = [spotId];
+        const result = await client.query(query, values);
+        return parseInt(result.rows[0].count, 10) > 0;
+    } finally {
+        if (shouldReleaseClient && client) {
+            client.release();
+        }
+    }
+};
+
+const deleteParkingSpot = async (requestId, id, client = null) => {
+    let shouldReleaseClient = false;
+    
+    try {
+        // If no client is provided, create a new one
+        if (!client) {
+            const pool = getPool(requestId);
+            client = await pool.connect();
+            shouldReleaseClient = true;
+            await client.query('BEGIN');
+        }
+        
+        // First check if the spot has any reservations
+        const hasReservations = await checkParkingSpotReservations(requestId, id);
+        if (hasReservations) {
+            throw new Error('Cannot delete parking spot with existing reservations');
+        }
+        
+        // If no reservations, proceed with deletion
+        const query = 'DELETE FROM parking_spots WHERE id = $1';
+        const values = [id];
+        await client.query(query, values);
+        
+        if (shouldReleaseClient) {
+            await client.query('COMMIT');
+        }
+    } catch (error) {
+        if (shouldReleaseClient && client) {
+            await client.query('ROLLBACK');
+        }
+        throw error;
+    } finally {
+        if (shouldReleaseClient && client) {
+            client.release();
+        }
+    }
 };
 
 // Block Parking Spot
@@ -139,14 +193,6 @@ const blockParkingSpot = async (requestId, { hotel_id, parking_spot_id, start_da
     }
 };
 
-
-let getPool = require('../config/database').getPool;
-
-// Test hook to allow overriding getPool in tests
-const __setGetPool = (newGetPool) => {
-    getPool = newGetPool;
-};
-
 const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
@@ -163,8 +209,11 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
 
         // Delete spots that are no longer in the list
         const spotsToDelete = [...existingSpotIds].filter(id => !receivedSpotIds.has(id));
-        if (spotsToDelete.length > 0) {
-            await client.query('DELETE FROM parking_spots WHERE id = ANY($1::int[])', [spotsToDelete]);
+        
+        // Delete spots one by one to leverage the existing deleteParkingSpot function
+        // which handles reservation checks and is already transaction-aware
+        for (const spotId of spotsToDelete) {
+            await deleteParkingSpot(requestId, spotId, client);
         }
 
         // Update existing spots
@@ -209,8 +258,7 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
     }
 };
 
-module.exports = {
-    __setGetPool, // Export for testing
+module.exports = {    
     getVehicleCategories,
     createVehicleCategory,
     updateVehicleCategory,

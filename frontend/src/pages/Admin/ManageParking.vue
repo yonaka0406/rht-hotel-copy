@@ -198,10 +198,21 @@ onMounted(async () => {
         if (hotels.value.length === 0) {
             await fetchHotels();
         }
-        // Always load vehicle categories (they're global)
-        await fetchVehicleCategories();
+        
+        // Load vehicle categories and parking lots
+        await Promise.all([
+            fetchVehicleCategories(),
+            fetchParkingLots()
+        ]);
+        
+        // If we have a selected hotel, load its parking lots
+        if (selectedHotelId.value && parkingLots.value.length > 0) {
+            const firstLot = parkingLots.value[0];
+            selectedParkingLot.value = firstLot;
+            await fetchParkingSpots(firstLot.id);
+        }
     } catch (error) {
-        console.error('Error initializing data:', error);
+        console.error('Error loading initial data:', error);
         toast.add({
             severity: 'error',
             summary: 'エラー',
@@ -325,32 +336,38 @@ const saveParkingSpots = async (spots) => {
 
 // Save spot logic is now handled by the ParkingSpotEditor
 
-// Watch for parking lot selection changes
-watch(selectedParkingLot, async (newVal) => {
-    if (newVal) {
-        loading.value = true;
-        try {
-            await fetchParkingSpots(newVal.id);
-        } catch (error) {
-            console.error('Error loading parking spots:', error);
-            toast.add({
-                severity: 'error',
-                summary: 'エラー',
-                detail: '駐車スペースの読み込み中にエラーが発生しました',
-                life: 3000
-            });
-        } finally {
-            loading.value = false;
-        }
-    } else {
-        parkingSpots.value = [];
-    }
-});
 
 // Initial data load
-onMounted(() => {
-    if (selectedHotelId.value) {
-        loadData();
+onMounted(async () => {
+    try {
+        loading.value = true;
+        // Load hotels if not already loaded
+        if (hotels.value.length === 0) {
+            await fetchHotels();
+        }
+        
+        // Load vehicle categories and parking lots
+        await Promise.all([
+            fetchVehicleCategories(),
+            fetchParkingLots()
+        ]);
+        
+        // If we have a selected hotel, load its parking lots
+        if (selectedHotelId.value && parkingLots.value.length > 0) {
+            const firstLot = parkingLots.value[0];
+            selectedParkingLot.value = firstLot;
+            await fetchParkingSpots(firstLot.id);
+        }
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: 'データの読み込み中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
     }
 });
 

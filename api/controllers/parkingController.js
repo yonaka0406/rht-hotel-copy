@@ -115,7 +115,16 @@ const deleteParkingSpot = async (req, res) => {
         await parkingModel.deleteParkingSpot(req.requestId, req.params.id);
         res.status(204).send();
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        if (error.message.includes('Cannot delete parking spot with existing reservations')) {
+            return res.status(400).json({ 
+                message: 'この駐車スペースは予約で使用されているため削除できません。',
+                code: 'HAS_RESERVATIONS'
+            });
+        }
+        res.status(500).json({ 
+            message: error.message,
+            code: 'INTERNAL_SERVER_ERROR'
+        });
     }
 };
 
