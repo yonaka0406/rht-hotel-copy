@@ -10,12 +10,7 @@
                 class="dark:bg-gray-800 dark:text-gray-100 rounded" />
             </div>
             <div class="flex grid grid-cols-5 col-span-2">
-              <div v-for="(legendItem, index) in uniqueLegendItems" :key="index"
-                class="flex items-center text-sm rounded mr-1 font-bold justify-center"
-                style="overflow: hidden; text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }"
-                v-tooltip="legendItem.plan_name">
-                <span>{{ legendItem.plan_name }}</span>
-              </div>
+              <!-- Legend items removed -->
             </div>
             <div class="flex justify-end">
               <SelectButton optionLabel="label" optionValue="value" :options="tableModeOptions" v-model="isCompactView"
@@ -186,7 +181,7 @@
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
   import { useParkingStore } from '@/composables/useParkingStore';
-  const { parkingLots, parkingSpots, fetchParkingLots, fetchParkingSpots, fetchReservedParkingSpots, reservedParkingSpots } = useParkingStore();
+  const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
   import { useUserStore } from '@/composables/useUserStore';
   const { logged_user } = useUserStore();
   
@@ -222,28 +217,7 @@
   ]);
   const isCompactView = ref(true);
   const centerDate = ref(formatDate(new Date()));
-  const uniqueLegendItems = computed(() => {
-    const uniqueItems = new Set();
-    const legendItems = [];
-  
-    if (Array.isArray(reservedParkingSpots.value)) {
-      reservedParkingSpots.value.forEach(spot => {
-        if (spot.plan_name && spot.plan_color) {  // Check if properties exist
-          const key = `${spot.plan_name}-${spot.plan_color}`; // Create a unique key
-          if (!uniqueItems.has(key)) {
-            uniqueItems.add(key);
-            legendItems.push({ plan_name: spot.plan_name, plan_color: spot.plan_color });
-          }
-        }
-      });
-    }
-  
-    legendItems.push({ plan_name: '仮予約', plan_color: '#ead59f' });
-    legendItems.push({ plan_name: '社員', plan_color: '#f3e5f5' });
-    legendItems.push({ plan_name: 'OTA', plan_color: '#9fead5' });
-  
-    return legendItems;
-  });
+
   
   // Date range
   const dateRange = ref([]);
@@ -822,17 +796,8 @@
     await fetchHotels();
     await fetchHotel();
   
-    await fetchParkingLots();
-    let spots = [];
-    for (const lot of parkingLots.value) {
-      await fetchParkingSpots(lot.id);
-      const spotsWithLotName = parkingSpots.value.map(spot => ({
-          ...spot,
-          parking_lot_name: lot.name
-      }));
-      spots.push(...spotsWithLotName);
-    }
-    allParkingSpots.value = spots;
+    // Fetch all parking spots for the hotel
+    allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
   
   
     const today = new Date();
@@ -874,6 +839,8 @@
     isLoading.value = true;
     if (oldVal !== null && newVal !== null) {
       await fetchHotel();
+      // Refresh parking spots for the new hotel
+      allParkingSpots.value = await fetchAllParkingSpotsByHotel(newVal);
       if (dateRange.value && dateRange.value.length > 0) {
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
