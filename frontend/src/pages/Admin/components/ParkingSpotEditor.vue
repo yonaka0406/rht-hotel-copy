@@ -32,22 +32,24 @@
       }">
         <div v-for="spot in parkingSpots" :key="spot.id || spot.tempId" class="parking-spot"
           :class="{ 'selected': selectedSpotId === (spot.id || spot.tempId) }" :style="{
-            left: `${spot.x * cellSize}px`,
-            top: `${spot.y * cellSize}px`,
-            width: `${spot.width * cellSize}px`,
-            height: `${spot.height * cellSize}px`,
+            left: `${spot.layout_info.x * cellSize}px`,
+            top: `${spot.layout_info.y * cellSize}px`,
+            width: `${spot.layout_info.width * cellSize}px`,
+            height: `${spot.layout_info.height * cellSize}px`,
             backgroundColor: getSpotType(spot.spot_type)?.color || '#ccc',
             zIndex: selectedSpotId === (spot.id || spot.tempId) ? 10 : 1,
             cursor: 'move',
             position: 'absolute',
-            transform: 'translate(0, 0)'
+            transform: `rotate(${spot.layout_info.rotation}deg)`
           }" @click.stop="selectSpot(spot)" draggable="true" @dragstart="onSpotDragStart($event, spot)"
           @drag="onSpotDrag($event, spot)" @dragend="onSpotDragEnd">
           <div class="spot-label">
             <div class="spot-number">{{ spot.spot_number }}</div>
-            <div class="spot-dimensions">{{ spot.width }}×{{ spot.height }}</div>
+            <div class="spot-dimensions">{{ spot.layout_info.width }}×{{ spot.layout_info.height }}</div>
           </div>
           <div v-if="selectedSpotId === (spot.id || spot.tempId)" class="spot-controls">
+            <Button icon="pi pi-sync" class="p-button-rounded p-button-info p-button-sm" style="margin-right: 0.5rem;"
+              @click.stop="rotateSpot(spot)" />
             <Button icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-sm"
               @click.stop="deleteSpot(spot)" />
           </div>
@@ -146,7 +148,22 @@ const spotDialog = ref({
 });
 
 // Parking spots
-const parkingSpots = ref([...props.initialSpots]);
+const parkingSpots = ref([...props.initialSpots].map(spot => {
+  const layout = spot.layout_info || {
+    x: spot.x,
+    y: spot.y,
+    width: spot.width,
+    height: spot.height,
+    rotation: spot.rotation || 0
+  };
+  const newSpot = { ...spot, layout_info: layout };
+  delete newSpot.x;
+  delete newSpot.y;
+  delete newSpot.width;
+  delete newSpot.height;
+  delete newSpot.rotation;
+  return newSpot;
+}));
 
 // Computed
 const selectedSpot = computed(() => {
@@ -166,14 +183,39 @@ function deselectSpot() {
   selectedSpotId.value = null;
 }
 
+function logParkingSpotsState(action) {
+  console.log(`[${action}] Current parking spots:`, JSON.parse(JSON.stringify(parkingSpots.value)));
+}
+
+function deleteSpot(spotToDelete) {
+  parkingSpots.value = parkingSpots.value.filter(
+    spot => (spot.id || spot.tempId) !== (spotToDelete.id || spotToDelete.tempId)
+  );
+  logParkingSpotsState('Spot Deleted');
+}
+
+function rotateSpot(spotToRotate) {
+  const index = parkingSpots.value.findIndex(s => (s.id || s.tempId) === (spotToRotate.id || spotToRotate.tempId));
+  if (index !== -1) {
+    const newRotation = (parkingSpots.value[index].layout_info.rotation + 45) % 360;
+    parkingSpots.value[index].layout_info.rotation = newRotation;
+    logParkingSpotsState('Spot Rotated');
+  }
+}
+
 function onDragStart(event, spotType) {
   draggedSpot.value = {
     ...spotType,
     tempId: `temp-${Date.now()}`,
     spot_type: spotType.id,
     spot_number: `SPOT-${parkingSpots.value.length + 1}`,
-    x: 0,
-    y: 0
+    layout_info: {
+      x: 0,
+      y: 0,
+      width: spotType.width,
+      height: spotType.height,
+      rotation: 0
+    }
   };
 
   // Set drag image
@@ -193,13 +235,17 @@ function onDrop(event) {
   
   const newSpot = {
     ...draggedSpot.value,
-    x: x,
-    y: y
+    layout_info: {
+      ...draggedSpot.value.layout_info,
+      x: x,
+      y: y
+    }
   };
   
   // Check for collisions
   if (!checkCollision(newSpot)) {
     parkingSpots.value = [...parkingSpots.value, newSpot];
+    logParkingSpotsState('Spot Added');
   } else {
     toast.add({
       severity: 'warn',
@@ -222,8 +268,11 @@ function onSpotDrag(event, spot) {
   // Update the spot's position
   const updatedSpot = {
     ...spot,
-    x: x,
-    y: y
+    layout_info: {
+      ...spot.layout_info,
+      x: x,
+      y: y
+    }
   };
 
   // Check for collisions with other spots (excluding self)
@@ -234,13 +283,9 @@ function onSpotDrag(event, spot) {
       parkingSpots.value[index] = updatedSpot;
     }
   }
-
-  draggedSpot.value = null;
 }
 
 function onSpotDragStart(event, spot) {
-  if (!spot.id) return; // Don't drag new spots until they're saved
-
   const rect = event.currentTarget.getBoundingClientRect();
   dragOffset.value = {
     x: event.clientX - rect.left,
@@ -255,6 +300,7 @@ function onSpotDragStart(event, spot) {
 function onSpotDragEnd() {
   draggedSpot.value = null;
   dragOffset.value = { x: 0, y: 0 };
+  logParkingSpotsState('Spot Moved');
 }
 
 function checkCollision(spot, excludeId = null) {
@@ -263,11 +309,14 @@ function checkCollision(spot, excludeId = null) {
       return false;
     }
     
+    const spotLayout = spot.layout_info;
+    const existingLayout = existingSpot.layout_info;
+
     return !(
-      spot.x + spot.width <= existingSpot.x ||
-      spot.x >= existingSpot.x + existingSpot.width ||
-      spot.y + spot.height <= existingSpot.y ||
-      spot.y >= existingSpot.y + existingSpot.height
+      spotLayout.x + spotLayout.width <= existingLayout.x ||
+      spotLayout.x >= existingLayout.x + existingLayout.width ||
+      spotLayout.y + spotLayout.height <= existingLayout.y ||
+      spotLayout.y >= existingLayout.y + existingLayout.height
     );
   });
 }
