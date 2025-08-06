@@ -22,7 +22,7 @@
         <Button label="グリッド表示切替" icon="pi pi-th-large" class="p-button-sm p-button-text"
           @click="showGrid = !showGrid" />
         <Button label="変更を保存" icon="pi pi-save" class="p-button-sm p-button-success" @click="saveLayout"
-          :loading="saving" />
+          :loading="saving" :disabled="!isDirty" />
       </div>
     </div>
 
@@ -168,6 +168,8 @@ const cellSize = 20; // Base size in pixels (smaller for more precise placement)
 const showGrid = ref(true);
 const saving = ref(false);
 const selectedSpotId = ref(null);
+const isDirty = ref(false);
+let pristineSpotsState = '';
 const draggedNewSpotType = ref(null);
 const draggedExistingSpot = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
@@ -216,7 +218,18 @@ watch(() => props.initialSpots, (newSpots) => {
     delete newSpot.rotation;
     return newSpot;
   });
+  pristineSpotsState = JSON.stringify(parkingSpots.value);
+  isDirty.value = false;
+  logParkingSpotsState('Spots Loaded');
 }, { deep: true, immediate: true });
+
+watch(parkingSpots, (currentSpots) => {
+  if (JSON.stringify(currentSpots) !== pristineSpotsState) {
+    isDirty.value = true;
+  } else {
+    isDirty.value = false;
+  }
+}, { deep: true });
 
 // Computed
 const selectedSpot = computed(() => {
