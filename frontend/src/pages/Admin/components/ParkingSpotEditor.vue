@@ -194,25 +194,29 @@ const spotDialog = ref({
 });
 
 // Parking spots
-const parkingSpots = ref([...props.initialSpots].map(spot => {
-  const layout = spot.layout_info || {
-    x: spot.x,
-    y: spot.y,
-    width: spot.width,
-    height: spot.height,
-    rotation: spot.rotation || 0
-  };
-  const newSpot = { ...spot, layout_info: layout };
-  if (!newSpot.capacity_units && layout.width && layout.height) {
-    newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
-  }
-  delete newSpot.x;
-  delete newSpot.y;
-  delete newSpot.width;
-  delete newSpot.height;
-  delete newSpot.rotation;
-  return newSpot;
-}));
+const parkingSpots = ref([]);
+
+watch(() => props.initialSpots, (newSpots) => {
+  parkingSpots.value = newSpots.map(spot => {
+    const layout = spot.layout_info || {
+      x: spot.x,
+      y: spot.y,
+      width: spot.width,
+      height: spot.height,
+      rotation: spot.rotation || 0
+    };
+    const newSpot = { ...spot, layout_info: layout };
+    if (!newSpot.capacity_units && layout.width && layout.height) {
+        newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
+    }
+    delete newSpot.x;
+    delete newSpot.y;
+    delete newSpot.width;
+    delete newSpot.height;
+    delete newSpot.rotation;
+    return newSpot;
+  });
+}, { deep: true, immediate: true });
 
 // Computed
 const selectedSpot = computed(() => {
