@@ -86,7 +86,61 @@ export function useParkingStore() {
         }
     };
 
-    // ... similarly for create, update, delete parking lots
+    const createParkingLot = async (lot) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/parking-lots', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    hotel_id: selectedHotelId.value,
+                    name: lot.name,
+                    description: lot.description
+                }),
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to create parking lot', error);
+            throw error;
+        }
+    };
+
+    const updateParkingLot = async (id, lot) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking-lots/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    name: lot.name,
+                    description: lot.description
+                }),
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to update parking lot', error);
+            throw error;
+        }
+    };
+
+    const deleteParkingLot = async (id) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            await fetch(`/api/parking-lots/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+        } catch (error) {
+            console.error('Failed to delete parking lot', error);
+            throw error;
+        }
+    };
 
     // Parking Spots
     const fetchParkingSpots = async (parkingLotId) => {
@@ -112,6 +166,9 @@ export function useParkingStore() {
         updateVehicleCategory,
         deleteVehicleCategory,
         fetchParkingLots,
+        createParkingLot,
+        updateParkingLot,
+        deleteParkingLot,
         fetchParkingSpots,
     };
 }

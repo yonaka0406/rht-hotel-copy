@@ -98,4 +98,7 @@ CREATE TRIGGER reservation_parking_changes
 AFTER INSERT OR UPDATE OR DELETE ON reservation_parking
 FOR EACH ROW EXECUTE PROCEDURE log_parking_changes();
 
+-- Grant permissions on all sequences to application user
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE vehicle_categories_id_seq TO rhtsys_user;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE parking_lots_id_seq TO rhtsys_user;
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE parking_spots_id_seq TO rhtsys_user;

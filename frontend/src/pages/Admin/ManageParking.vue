@@ -23,8 +23,37 @@
             <AccordionPanel value="1">
                 <AccordionHeader>駐車場管理</AccordionHeader>
                 <AccordionContent>
-                    <div class="flex justify-end">
-                        <Button label="駐車場追加" icon="pi pi-plus" @click="openNewParkingLot" class="mb-4" />
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+                        <div class="w-full md:w-1/3">
+                            <label for="hotelSelect" class="block text-sm font-medium text-gray-700 mb-1">ホテルを選択</label>
+                            <Select 
+                                id="hotelSelect"
+                                v-model="selectedHotelId"
+                                :options="hotels"
+                                optionLabel="name"
+                                optionValue="id"
+                                placeholder="ホテルを選択してください"
+                                class="w-full"
+                                :loading="isLoadingHotelList"
+                                :disabled="isLoadingHotelList"
+                            >
+                                <template #option="slotProps">
+                                    <div class="flex align-items-center">
+                                        <div>{{ slotProps.option.name }}</div>
+                                    </div>
+                                </template>
+                            </Select>
+                        </div>
+                        <div>
+                            <Button 
+                                label="駐車場追加" 
+                                icon="pi pi-plus" 
+                                @click="openNewParkingLot" 
+                                :disabled="!selectedHotelId" 
+                                :loading="loading" 
+                                class="w-full md:w-auto"
+                            />
+                        </div>
                     </div>
                     <DataTable :value="parkingLots" :loading="loading" responsiveLayout="scroll">
                         <Column field="name" header="駐車場名"></Column>
@@ -72,6 +101,15 @@
         </div>
 
         <VehicleCategoryDialog v-model:visible="categoryDialog" :category="category" @save="saveCategory" />
+        <ParkingLotDialog 
+            v-if="selectedHotelId"
+            v-model:visible="parkingLotDialog" 
+            :parking-lot="parkingLot" 
+            :hotel-id="selectedHotelId"
+            :hotel-name="selectedHotelName"
+            @save="saveParkingLot" 
+            key="parking-lot-dialog"
+        />
         <ParkingSpotDialog v-model:visible="spotDialog" :spot="spot" @save="saveSpot" />
     </div>
 </template>
@@ -80,6 +118,8 @@
 import { ref, onMounted, watch, computed } from 'vue';
 import { Sortable } from 'sortablejs-vue3';
 import { useParkingStore } from '../../composables/useParkingStore';
+import FloatLabel from 'primevue/floatlabel';
+import Textarea from 'primevue/textarea';
 import { useHotelStore } from '../../composables/useHotelStore';
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
@@ -89,14 +129,45 @@ import Accordion from 'primevue/accordion';
 import AccordionPanel from 'primevue/accordionpanel';
 import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
+import Select from 'primevue/select';
 
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import VehicleCategoryDialog from './components/VehicleCategoryDialog.vue';
+import ParkingLotDialog from './components/ParkingLotDialog.vue';
 import ParkingSpotDialog from './components/ParkingSpotDialog.vue';
 
-const { vehicleCategories, parkingLots, parkingSpots, fetchVehicleCategories, fetchParkingLots, fetchParkingSpots, createVehicleCategory, updateVehicleCategory, deleteVehicleCategory } = useParkingStore();
-const { selectedHotelId } = useHotelStore();
+// Initialize the parking store
+const parkingStore = useParkingStore();
+const { 
+    vehicleCategories, 
+    parkingLots, 
+    parkingSpots, 
+    fetchVehicleCategories, 
+    fetchParkingLots, 
+    fetchParkingSpots, 
+    createVehicleCategory, 
+    updateVehicleCategory, 
+    deleteVehicleCategory,
+    createParkingLot,
+    updateParkingLot,
+    deleteParkingLot
+} = parkingStore;
+const { selectedHotelId, hotels, fetchHotels, isLoadingHotelList } = useHotelStore();
+
+// Get the selected hotel's name
+const selectedHotelName = computed(() => {
+    if (!selectedHotelId.value) return '';
+    const hotel = hotels.value.find(h => h.id === selectedHotelId.value);
+    return hotel ? hotel.name : '';
+});
+
+// Fetch hotels on component mount
+onMounted(async () => {
+    if (hotels.value.length === 0) {
+        await fetchHotels();
+    }
+});
 const toast = useToast();
 const confirm = useConfirm();
 
@@ -179,12 +250,26 @@ const openNewCategory = () => {
     categoryDialog.value = true;
 };
 
+const parkingLotDialog = ref(false);
+const parkingLot = ref({ name: '', description: '' });
+
 const openNewParkingLot = () => {
-    // Logic to open a dialog for creating a new parking lot
+    if (!selectedHotelId.value) {
+        toast.add({
+            severity: 'warn',
+            summary: 'ホテルを選択してください',
+            detail: '駐車場を追加するには、まずホテルを選択してください。',
+            life: 3000
+        });
+        return;
+    }
+    parkingLot.value = { name: '', description: '', hotel_id: selectedHotelId.value };
+    parkingLotDialog.value = true;
 };
 
-const editParkingLot = (lot) => {
-    // Logic to edit a parking lot
+const editParkingLot = (lotToEdit) => {
+    parkingLot.value = { ...lotToEdit };
+    parkingLotDialog.value = true;
 };
 
 const confirmDeleteParkingLot = (lot) => {
@@ -195,34 +280,68 @@ const confirmDeleteParkingLot = (lot) => {
         acceptLabel: 'はい',
         rejectLabel: 'いいえ',
         rejectClass: 'p-button-secondary',
-        accept: () => deleteParkingLot(lot)
+        accept: async () => {
+            try {
+                loading.value = true;
+                await deleteParkingLot(lot.id);
+                toast.add({
+                    severity: 'success',
+                    summary: '成功',
+                    detail: '駐車場が削除されました',
+                    life: 3000
+                });
+                await fetchParkingLots();
+            } catch (error) {
+                console.error('Error deleting parking lot:', error);
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: '駐車場の削除中にエラーが発生しました',
+                    life: 3000
+                });
+            } finally {
+                loading.value = false;
+            }
+        }
     });
 };
 
-const deleteParkingLot = async (lot) => {
+const saveParkingLot = async (savedParkingLot) => {
     try {
         loading.value = true;
-        // TODO: Implement deleteParkingLot in useParkingStore
-        // await deleteParkingLot(lot.id);
-        toast.add({
-            severity: 'success',
-            summary: '成功',
-            detail: '駐車場が削除されました',
-            life: 3000
-        });
+        if (savedParkingLot.id) {
+            await updateParkingLot(savedParkingLot.id, savedParkingLot);
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '駐車場が更新されました',
+                life: 3000
+            });
+        } else {
+            await createParkingLot(savedParkingLot);
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '駐車場が作成されました',
+                life: 3000
+            });
+        }
+        parkingLotDialog.value = false;
         await fetchParkingLots();
     } catch (error) {
-        console.error('Error deleting parking lot:', error);
+        console.error('Error saving parking lot:', error);
         toast.add({
             severity: 'error',
             summary: 'エラー',
-            detail: '駐車場の削除中にエラーが発生しました',
+            detail: '駐車場の保存中にエラーが発生しました',
             life: 3000
         });
     } finally {
         loading.value = false;
     }
 };
+
+
 
 const saveCategory = async (categoryToSave) => {
     try {
