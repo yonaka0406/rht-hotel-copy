@@ -131,6 +131,18 @@ const blockParkingSpot = async (req, res) => {
     }
 };
 
+const updateParkingSpotsForLot = async (req, res) => {
+    try {
+        const { parking_lot_id } = req.params;
+        const { spots } = req.body;
+        const result = await parkingModel.syncParkingSpots(req.requestId, parking_lot_id, spots);
+        res.json(result);
+    } catch (error) {
+        console.error('Error syncing parking spots:', error);
+        res.status(500).json({ message: 'Failed to sync parking spots' });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -144,5 +156,6 @@ module.exports = {
     createParkingSpot,
     updateParkingSpot,
     deleteParkingSpot,
-    blockParkingSpot
+    blockParkingSpot,
+    updateParkingSpotsForLot
 };

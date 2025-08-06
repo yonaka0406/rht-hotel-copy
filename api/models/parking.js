@@ -147,6 +147,68 @@ const __setGetPool = (newGetPool) => {
     getPool = newGetPool;
 };
 
+const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const existingSpots = await client.query('SELECT id FROM parking_spots WHERE parking_lot_id = $1', [parking_lot_id]);
+        const existingSpotIds = new Set(existingSpots.rows.map(s => s.id));
+
+        const spotsToUpdate = spots.filter(s => s.id && existingSpotIds.has(s.id));
+        const spotsToInsert = spots.filter(s => !s.id);
+        const receivedSpotIds = new Set(spots.map(s => s.id).filter(id => id));
+
+        // Delete spots that are no longer in the list
+        const spotsToDelete = [...existingSpotIds].filter(id => !receivedSpotIds.has(id));
+        if (spotsToDelete.length > 0) {
+            await client.query('DELETE FROM parking_spots WHERE id = ANY($1::int[])', [spotsToDelete]);
+        }
+
+        // Update existing spots
+        if (spotsToUpdate.length > 0) {
+            const updateQueries = spotsToUpdate.map(spot => {
+                return client.query(
+                    `UPDATE parking_spots SET spot_number = $1, spot_type = $2, capacity_units = $3, layout_info = $4, is_active = $5 WHERE id = $6`,
+                    [spot.spot_number, spot.spot_type, spot.capacity_units, spot.layout_info, spot.is_active !== false, spot.id]
+                );
+            });
+            await Promise.all(updateQueries);
+        }
+
+        // Insert new spots
+        if (spotsToInsert.length > 0) {
+            const insertValues = spotsToInsert.map(spot => [
+                parking_lot_id,
+                spot.spot_number,
+                spot.spot_type,
+                spot.capacity_units,
+                spot.layout_info,
+                spot.is_active !== false
+            ]);
+            const insertQuery = format(
+                'INSERT INTO parking_spots (parking_lot_id, spot_number, spot_type, capacity_units, layout_info, is_active) VALUES %L',
+                insertValues
+            );
+            await client.query(insertQuery);
+        }
+
+        await client.query('COMMIT');
+
+        // Return the updated list of spots for the lot
+        const result = await client.query('SELECT * FROM parking_spots WHERE parking_lot_id = $1 ORDER BY id', [parking_lot_id]);
+        return result.rows;
+
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     __setGetPool, // Export for testing
     getVehicleCategories,
@@ -161,5 +223,6 @@ module.exports = {
     createParkingSpot,
     updateParkingSpot,
     deleteParkingSpot,
-    blockParkingSpot
+    blockParkingSpot,
+    syncParkingSpots
 };

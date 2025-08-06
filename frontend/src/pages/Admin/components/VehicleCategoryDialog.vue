@@ -16,7 +16,7 @@
                 <label for="capacity" :class="{ 'p-error': unitsError }">必要ユニット</label>
             </FloatLabel>
             <small v-if="unitsError" class="p-error">{{ unitsError }}</small>
-            <small class="text-500 block mt-2">100 ユニット = 幅2.5m × 長さ5.0m</small>
+            <small class="text-500 block mt-2">ユニット = 幅 m × 長さ m × 8<br>(例: 100 ユニット = 幅2.5m × 長さ5.0m)</small>
         </div>
         <template #footer>
             <Button label="キャンセル" icon="pi pi-times" class="p-button-text p-button-sm p-button-danger"

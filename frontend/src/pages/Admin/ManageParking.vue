@@ -4,7 +4,7 @@
             <AccordionPanel value="0">
                 <AccordionHeader>車両カテゴリー管理</AccordionHeader>
                 <AccordionContent>
-                    <p class="text-sm text-gray-500 mb-4">100 ユニット = 幅2.5m × 長さ5.0m</p>
+                    <p class="text-sm text-gray-500 mb-4">ユニット = 幅 m × 長さ m × 8<br>(例: 100 ユニット = 幅2.5m × 長さ5.0m)</p>
                     <div class="flex justify-end">
                         <Button label="カテゴリー追加" icon="pi pi-plus" @click="openNewCategory" class="mb-4"/>
                     </div>

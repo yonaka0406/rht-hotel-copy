@@ -2,7 +2,10 @@
   <div class="parking-layout-editor">
     <div class="editor-toolbar">
       <div class="tool-section">
-        <h4>スポットタイプ</h4>
+        <div class="flex align-items-center mb-2">
+          <h4 class="m-0">スポットタイプ</h4>
+          <Button icon="pi pi-plus" label="カスタム追加" class="p-button-text p-button-sm ml-2" @click="customTypeDialogVisible = true" />
+        </div>
         <div class="spot-types-container">
           <div v-for="spotType in spotTypes" :key="spotType.id" class="spot-type-item" draggable="true"
             @dragstart="onDragStart($event, spotType)" @dragend="onDragEnd">
@@ -88,6 +91,28 @@
         <Button label="保存" icon="pi pi-check" class="p-button-text" @click="saveSpot" />
       </template>
     </Dialog>
+
+    <Dialog v-model:visible="customTypeDialogVisible" :style="{ width: '450px' }" header="カスタムスポットタイプ" :modal="true"
+      class="p-fluid">
+      <div class="field">
+        <label for="customName">名称</label>
+        <InputText id="customName" v-model="customType.name" required="true" autofocus />
+      </div>
+      <div class="formgrid grid">
+        <div class="field col">
+          <label for="customWidth">幅 (m)</label>
+          <InputNumber id="customWidth" v-model="customType.width" mode="decimal" :min="0" :maxFractionDigits="2" />
+        </div>
+        <div class="field col">
+          <label for="customHeight">高さ (m)</label>
+          <InputNumber id="customHeight" v-model="customType.height" mode="decimal" :min="0" :maxFractionDigits="2" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="customTypeDialogVisible = false" />
+        <Button label="追加" icon="pi pi-check" class="p-button-text" @click="addCustomSpotType" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -99,6 +124,28 @@ import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import Dropdown from 'primevue/dropdown';
 import InputNumber from 'primevue/inputnumber';
+
+const customTypeDialogVisible = ref(false);
+const customType = ref({
+  name: '',
+  width: 2.5,
+  height: 5.0
+});
+
+function addCustomSpotType() {
+  if (customType.value.name && customType.value.width > 0 && customType.value.height > 0) {
+    const newType = {
+      id: `custom-${Date.now()}`,
+      name: customType.value.name,
+      width: customType.value.width,
+      height: customType.value.height,
+      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+    };
+    spotTypes.value.push(newType);
+    customTypeDialogVisible.value = false;
+    customType.value = { name: '', width: 2.5, height: 5.0 };
+  }
+}
 
 const props = defineProps({
   parkingLotId: {
@@ -121,15 +168,14 @@ const cellSize = 20; // Base size in pixels (smaller for more precise placement)
 const showGrid = ref(true);
 const saving = ref(false);
 const selectedSpotId = ref(null);
-const draggedSpot = ref(null);
+const draggedNewSpotType = ref(null);
+const draggedExistingSpot = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 
 // Spot types with colors and dimensions
 const spotTypes = ref([
   { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
-  { id: 'compact', name: 'コンパクト', width: 2.2, height: 4.5, color: '#a5d6a7' },
   { id: 'large', name: '大型', width: 3.5, height: 6, color: '#ffcc80' },
-  { id: 'disabled', name: '障害者用', width: 3.5, height: 5, color: '#ef9a9a' },
   { id: 'motorcycle', name: 'バイク', width: 1.5, height: 2.5, color: '#b39ddb' }
 ]);
 
@@ -157,6 +203,9 @@ const parkingSpots = ref([...props.initialSpots].map(spot => {
     rotation: spot.rotation || 0
   };
   const newSpot = { ...spot, layout_info: layout };
+  if (!newSpot.capacity_units && layout.width && layout.height) {
+    newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
+  }
   delete newSpot.x;
   delete newSpot.y;
   delete newSpot.width;
@@ -204,43 +253,39 @@ function rotateSpot(spotToRotate) {
 }
 
 function onDragStart(event, spotType) {
-  draggedSpot.value = {
-    ...spotType,
-    tempId: `temp-${Date.now()}`,
-    spot_type: spotType.id,
-    spot_number: `SPOT-${parkingSpots.value.length + 1}`,
-    layout_info: {
-      x: 0,
-      y: 0,
-      width: spotType.width,
-      height: spotType.height,
-      rotation: 0
-    }
-  };
-
-  // Set drag image
-  const dragImg = new Image();
-  event.dataTransfer.setDragImage(dragImg, 0, 0);
+  draggedNewSpotType.value = spotType;
+  event.dataTransfer.setData('text/plain', 'new-spot');
   event.dataTransfer.effectAllowed = 'copy';
+}
+
+function onDragEnd() {
+  draggedNewSpotType.value = null;
 }
 
 function onDrop(event) {
   event.preventDefault();
   
-  if (!draggedSpot.value) return;
+  if (!draggedNewSpotType.value) return;
   
   const rect = event.currentTarget.getBoundingClientRect();
   const x = Math.round((event.clientX - rect.left) / cellSize);
   const y = Math.round((event.clientY - rect.top) / cellSize);
   
   const newSpot = {
-    ...draggedSpot.value,
+    ...draggedNewSpotType.value,
+    tempId: `temp-${Date.now()}`,
+    spot_type: draggedNewSpotType.value.id,
+    spot_number: (parkingSpots.value.length + 1).toString(),
+    capacity_units: Math.round(draggedNewSpotType.value.width * draggedNewSpotType.value.height * 8),
     layout_info: {
-      ...draggedSpot.value.layout_info,
       x: x,
-      y: y
+      y: y,
+      width: draggedNewSpotType.value.width,
+      height: draggedNewSpotType.value.height,
+      rotation: 0
     }
   };
+  delete newSpot.id;
   
   // Check for collisions
   if (!checkCollision(newSpot)) {
@@ -255,11 +300,11 @@ function onDrop(event) {
     });
   }
   
-  draggedSpot.value = null;
+  draggedNewSpotType.value = null;
 }
 
 function onSpotDrag(event, spot) {
-  if (!draggedSpot.value) return;
+  if (!draggedExistingSpot.value) return;
 
   const rect = event.currentTarget.parentElement.getBoundingClientRect();
   const x = Math.max(0, Math.round((event.clientX - rect.left - dragOffset.value.x) / cellSize));
@@ -292,15 +337,17 @@ function onSpotDragStart(event, spot) {
     y: event.clientY - rect.top
   };
 
-  draggedSpot.value = { ...spot };
+  draggedExistingSpot.value = { ...spot };
   event.dataTransfer.effectAllowed = 'move';
   event.dataTransfer.setData('text/plain', spot.id || spot.tempId);
 }
 
 function onSpotDragEnd() {
-  draggedSpot.value = null;
+  if (draggedExistingSpot.value) {
+    logParkingSpotsState('Spot Moved');
+  }
+  draggedExistingSpot.value = null;
   dragOffset.value = { x: 0, y: 0 };
-  logParkingSpotsState('Spot Moved');
 }
 
 function checkCollision(spot, excludeId = null) {

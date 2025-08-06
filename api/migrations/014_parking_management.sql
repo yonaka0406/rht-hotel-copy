@@ -89,10 +89,10 @@ FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 -- Default Vehicle Categories
 INSERT INTO vehicle_categories (name, capacity_units_required) VALUES
 ('普通乗用車', 100),
-('軽自動車', 58),
-('オートバイ', 20),
+('軽自動車', 60),
+('オートバイ', 30),
 ('バン・ピックアップ', 110),
-('2t　トラック', 120);
+('2t　トラック', 168);
 
 CREATE TRIGGER reservation_parking_changes
 AFTER INSERT OR UPDATE OR DELETE ON reservation_parking
