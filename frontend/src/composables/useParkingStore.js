@@ -6,6 +6,7 @@ const { selectedHotelId } = useHotelStore();
 const vehicleCategories = ref([]);
 const parkingLots = ref([]);
 const parkingSpots = ref([]);
+const reservedParkingSpots = ref([]);
 
 export function useParkingStore() {
 
@@ -157,10 +158,23 @@ export function useParkingStore() {
 
     // ... similarly for create, update, delete parking spots
 
+    const fetchReservedParkingSpots = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/reservations?hotel_id=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            reservedParkingSpots.value = await response.json();
+        } catch (error) {
+            console.error('Failed to fetch reserved parking spots', error);
+        }
+    };
+
     return {
         vehicleCategories,
         parkingLots,
         parkingSpots,
+        reservedParkingSpots,
         fetchVehicleCategories,
         createVehicleCategory,
         updateVehicleCategory,
@@ -170,5 +184,6 @@ export function useParkingStore() {
         updateParkingLot,
         deleteParkingLot,
         fetchParkingSpots,
+        fetchReservedParkingSpots,
     };
 }
