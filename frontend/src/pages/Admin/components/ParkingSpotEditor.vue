@@ -61,33 +61,34 @@
       </div>
     </div>
 
-    <Dialog v-model:visible="spotDialog.visible" :modal="true" :header="spotDialog.isEdit ? 'スポットを編集' : 'スポットを追加'"
-      :style="{ width: '50vw', 'max-width': '600px' }">
+    <Dialog v-model:visible="spotDialog.visible" modal header="スポット番号を編集"
+      :style="{ width: '400px' }">
       <div class="p-fluid">
-        <FloatLabel class="mt-6">
-          <InputText id="spotNumber" v-model="spotDialog.spot.spot_number" />
+        <FloatLabel>
+          <InputText 
+            id="spotNumber" 
+            v-model="spotDialog.spot.spot_number" 
+            :class="{ 'p-invalid': spotNumberError }"
+            @input="validateSpotNumber"
+          />
           <label for="spotNumber">スポット番号</label>
         </FloatLabel>
-        <FloatLabel class="mt-6">
-          <Select id="spotType" v-model="spotDialog.spot.spot_type" :options="spotTypes" optionLabel="name"
-            optionValue="id" />
-          <label for="spotType">タイプ</label>
-        </FloatLabel>
-        <div class="mt-6">
-          <label>サイズ (グリッド単位)</label>
-          <div class="formgrid grid">
-            <div class="field col">
-                <InputNumber id="spotWidth" v-model="spotDialog.spot.width" :min="1" :max="10" placeholder="幅" />
-            </div>
-            <div class="field col">
-                <InputNumber id="spotHeight" v-model="spotDialog.spot.height" :min="1" :max="10" placeholder="高さ" />
-            </div>
-          </div>
-        </div>
+        <small v-if="spotNumberError" class="p-error">{{ spotNumberError }}</small>
       </div>
       <template #footer>
-        <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="spotDialog.visible = false" />
-        <Button label="保存" icon="pi pi-check" class="p-button-text" @click="saveSpot" />
+        <Button 
+          label="キャンセル" 
+          icon="pi pi-times" 
+          class="p-button-text p-button-danger" 
+          @click="spotDialog.visible = false" 
+        />
+        <Button 
+          label="保存" 
+          icon="pi pi-check" 
+          class="p-button-text" 
+          @click="saveSpot" 
+          :disabled="!!spotNumberError"
+        />
       </template>
     </Dialog>
 
@@ -192,14 +193,39 @@ const spotDialog = ref({
   visible: false,
   isEdit: false,
   spot: {
+    id: null,
     spot_number: '',
-    spot_type: 'standard',
-    width: 2.5,
-    height: 5,
-    x: 0,
-    y: 0
+    spot_type: '',
+    width: 1,
+    height: 1
   }
 });
+
+const spotNumberError = ref('');
+
+function validateSpotNumber() {
+  const currentSpotNumber = spotDialog.value.spot.spot_number.trim();
+  
+  if (!currentSpotNumber) {
+    spotNumberError.value = 'スポット番号は必須です';
+    return false;
+  }
+  
+  // Check for duplicate spot numbers (excluding the current spot being edited)
+  const isDuplicate = parkingSpots.value.some(spot => 
+    spot.spot_number === currentSpotNumber && 
+    spot.id !== spotDialog.value.spot.id &&
+    (spot.id || spot.tempId) !== (spotDialog.value.spot.id || spotDialog.value.spot.tempId)
+  );
+  
+  if (isDuplicate) {
+    spotNumberError.value = 'この番号は既に使用されています';
+    return false;
+  }
+  
+  spotNumberError.value = '';
+  return true;
+}
 
 // Parking spots
 const parkingSpots = ref([]);
@@ -285,14 +311,21 @@ async function deleteSpot(spotToDelete) {
 function openEditSpotDialog(spot) {
   spotDialog.value.isEdit = true;
   spotDialog.value.spot = {
-    ...spot,
+    id: spot.id,
+    spot_number: spot.spot_number,
+    spot_type: spot.spot_type,
     width: spot.layout_info.width,
     height: spot.layout_info.height,
   };
+  spotNumberError.value = '';
   spotDialog.value.visible = true;
 }
 
 function saveSpot() {
+  if (!validateSpotNumber()) {
+    return;
+  }
+
   const { spot } = spotDialog.value;
   const index = parkingSpots.value.findIndex(s => (s.id || s.tempId) === (spot.id || spot.tempId));
   
@@ -300,19 +333,20 @@ function saveSpot() {
     const existingSpot = parkingSpots.value[index];
     const updatedSpot = {
       ...existingSpot,
-      spot_number: spot.spot_number,
-      spot_type: spot.spot_type,
-      layout_info: {
-        ...existingSpot.layout_info,
-        width: spot.width,
-        height: spot.height,
-      }
+      spot_number: spot.spot_number.trim()
     };
+    
     parkingSpots.value.splice(index, 1, updatedSpot);
+    spotDialog.value.visible = false;
     logParkingSpotsState('Spot Updated');
+    
+    toast.add({
+      severity: 'success',
+      summary: '更新完了',
+      detail: '駐車スペース番号を更新しました',
+      life: 3000
+    });
   }
-  
-  spotDialog.value.visible = false;
 }
 
 function rotateSpot(spotToRotate) {
