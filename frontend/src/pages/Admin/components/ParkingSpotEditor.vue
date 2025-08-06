@@ -51,6 +51,7 @@
             <div class="spot-dimensions">{{ spot.layout_info.width }}×{{ spot.layout_info.height }}</div>
           </div>
           <div v-if="selectedSpotId === (spot.id || spot.tempId)" class="spot-controls">
+            <Button icon="pi pi-pencil" class="p-button-rounded p-button-success p-button-sm" style="margin-right: 0.5rem;" @click.stop="openEditSpotDialog(spot)" />
             <Button icon="pi pi-sync" class="p-button-rounded p-button-info p-button-sm" style="margin-right: 0.5rem;"
               @click.stop="rotateSpot(spot)" />
             <Button icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-sm"
@@ -61,27 +62,25 @@
     </div>
 
     <Dialog v-model:visible="spotDialog.visible" :modal="true" :header="spotDialog.isEdit ? 'スポットを編集' : 'スポットを追加'"
-      :style="{ width: '400px' }">
+      :style="{ width: '50vw', 'max-width': '600px' }">
       <div class="p-fluid">
-        <div class="field">
-          <label for="spotNumber">スポット番号</label>
+        <FloatLabel class="mt-6">
           <InputText id="spotNumber" v-model="spotDialog.spot.spot_number" />
-        </div>
-        <div class="field">
-          <label for="spotType">タイプ</label>
-          <Dropdown id="spotType" v-model="spotDialog.spot.spot_type" :options="spotTypes" optionLabel="name"
+          <label for="spotNumber">スポット番号</label>
+        </FloatLabel>
+        <FloatLabel class="mt-6">
+          <Select id="spotType" v-model="spotDialog.spot.spot_type" :options="spotTypes" optionLabel="name"
             optionValue="id" />
-        </div>
-        <div class="field">
+          <label for="spotType">タイプ</label>
+        </FloatLabel>
+        <div class="mt-6">
           <label>サイズ (グリッド単位)</label>
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <label for="spotWidth" class="block text-sm mb-1">幅</label>
-              <InputNumber id="spotWidth" v-model="spotDialog.spot.width" :min="1" :max="10" />
+          <div class="formgrid grid">
+            <div class="field col">
+                <InputNumber id="spotWidth" v-model="spotDialog.spot.width" :min="1" :max="10" placeholder="幅" />
             </div>
-            <div class="flex-1">
-              <label for="spotHeight" class="block text-sm mb-1">高さ</label>
-              <InputNumber id="spotHeight" v-model="spotDialog.spot.height" :min="1" :max="10" />
+            <div class="field col">
+                <InputNumber id="spotHeight" v-model="spotDialog.spot.height" :min="1" :max="10" placeholder="高さ" />
             </div>
           </div>
         </div>
@@ -94,23 +93,27 @@
 
     <Dialog v-model:visible="customTypeDialogVisible" :style="{ width: '450px' }" header="カスタムスポットタイプ" :modal="true"
       class="p-fluid">
-      <div class="field">
-        <label for="customName">名称</label>
+      <FloatLabel class="mt-6">
         <InputText id="customName" v-model="customType.name" required="true" autofocus />
-      </div>
-      <div class="formgrid grid">
+        <label for="customName">名称</label>
+      </FloatLabel>
+      <div class="formgrid grid mt-6">
         <div class="field col">
-          <label for="customWidth">幅 (m)</label>
-          <InputNumber id="customWidth" v-model="customType.width" mode="decimal" :min="0" :maxFractionDigits="2" />
+          <FloatLabel>
+            <InputNumber id="customWidth" v-model="customType.width" mode="decimal" :min="0" :maxFractionDigits="2" />
+            <label for="customWidth">幅 (m)</label>
+          </FloatLabel>
         </div>
         <div class="field col">
-          <label for="customHeight">高さ (m)</label>
-          <InputNumber id="customHeight" v-model="customType.height" mode="decimal" :min="0" :maxFractionDigits="2" />
+          <FloatLabel>
+            <InputNumber id="customHeight" v-model="customType.height" mode="decimal" :min="0" :maxFractionDigits="2" />
+            <label for="customHeight">高さ (m)</label>
+          </FloatLabel>
         </div>
       </div>
       <template #footer>
-        <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="customTypeDialogVisible = false" />
-        <Button label="追加" icon="pi pi-check" class="p-button-text" @click="addCustomSpotType" />
+        <Button label="キャンセル" icon="pi pi-times" class="p-button-sm p-button-danger" @click="customTypeDialogVisible = false" />
+        <Button label="追加" icon="pi pi-check" class="p-button-sm" @click="addCustomSpotType" />
       </template>
     </Dialog>
   </div>
@@ -119,11 +122,13 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { useApi } from '@/composables/useApi';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 
 const customTypeDialogVisible = ref(false);
 const customType = ref({
@@ -135,7 +140,7 @@ const customType = ref({
 function addCustomSpotType() {
   if (customType.value.name && customType.value.width > 0 && customType.value.height > 0) {
     const newType = {
-      id: `custom-${Date.now()}`,
+      id: `custom-${customType.value.width}-${customType.value.height}`,
       name: customType.value.name,
       width: customType.value.width,
       height: customType.value.height,
@@ -160,6 +165,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:spots', 'save']);
 const toast = useToast();
+const { get } = useApi();
 
 // Constants
 const cellSize = 20; // Base size in pixels (smaller for more precise placement)
@@ -253,11 +259,60 @@ function logParkingSpotsState(action) {
   console.log(`[${action}] Current parking spots:`, JSON.parse(JSON.stringify(parkingSpots.value)));
 }
 
-function deleteSpot(spotToDelete) {
+async function deleteSpot(spotToDelete) {
+  // For existing spots, check if they are used in reservations
+  if (spotToDelete.id && !spotToDelete.tempId) {
+    try {
+      // TODO: This endpoint is an assumption. Verify the correct API endpoint for checking reservations.
+      const response = await get(`/api/v1/parking-spots/${spotToDelete.id}/reservations`);
+      if (response && response.length > 0) {
+        toast.add({ severity: 'error', summary: '削除エラー', detail: '予約のあるスポットは削除できません。', life: 3000 });
+        return;
+      }
+    } catch (error) {
+      console.error('Failed to check for reservations:', error);
+      toast.add({ severity: 'error', summary: 'エラー', detail: '予約の確認に失敗しました。削除を中止しました。', life: 3000 });
+      return;
+    }
+  }
+
   parkingSpots.value = parkingSpots.value.filter(
     spot => (spot.id || spot.tempId) !== (spotToDelete.id || spotToDelete.tempId)
   );
   logParkingSpotsState('Spot Deleted');
+}
+
+function openEditSpotDialog(spot) {
+  spotDialog.value.isEdit = true;
+  spotDialog.value.spot = {
+    ...spot,
+    width: spot.layout_info.width,
+    height: spot.layout_info.height,
+  };
+  spotDialog.value.visible = true;
+}
+
+function saveSpot() {
+  const { spot } = spotDialog.value;
+  const index = parkingSpots.value.findIndex(s => (s.id || s.tempId) === (spot.id || spot.tempId));
+  
+  if (index !== -1) {
+    const existingSpot = parkingSpots.value[index];
+    const updatedSpot = {
+      ...existingSpot,
+      spot_number: spot.spot_number,
+      spot_type: spot.spot_type,
+      layout_info: {
+        ...existingSpot.layout_info,
+        width: spot.width,
+        height: spot.height,
+      }
+    };
+    parkingSpots.value.splice(index, 1, updatedSpot);
+    logParkingSpotsState('Spot Updated');
+  }
+  
+  spotDialog.value.visible = false;
 }
 
 function rotateSpot(spotToRotate) {
@@ -367,26 +422,60 @@ function onSpotDragEnd() {
   dragOffset.value = { x: 0, y: 0 };
 }
 
+function getRotatedAABB(layout) {
+  const w = layout.width;
+  const h = layout.height;
+  const rad = layout.rotation * Math.PI / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  
+  const aabbWidth = w * cos + h * sin;
+  const aabbHeight = w * sin + h * cos;
+  
+  const centerX = layout.x + w / 2;
+  const centerY = layout.y + h / 2;
+  
+  return {
+    x1: centerX - aabbWidth / 2,
+    y1: centerY - aabbHeight / 2,
+    x2: centerX + aabbWidth / 2,
+    y2: centerY + aabbHeight / 2
+  };
+}
+
 function checkCollision(spot, excludeId = null) {
   return parkingSpots.value.some(existingSpot => {
     if (excludeId && (existingSpot.id === excludeId || existingSpot.tempId === excludeId)) {
       return false;
     }
     
-    const spotLayout = spot.layout_info;
-    const existingLayout = existingSpot.layout_info;
+    const spotRect = getRotatedAABB(spot.layout_info);
+    const existingRect = getRotatedAABB(existingSpot.layout_info);
 
-    return !(
-      spotLayout.x + spotLayout.width <= existingLayout.x ||
-      spotLayout.x >= existingLayout.x + existingLayout.width ||
-      spotLayout.y + spotLayout.height <= existingLayout.y ||
-      spotLayout.y >= existingLayout.y + existingLayout.height
+    // Standard AABB collision check
+    return (
+      spotRect.x1 < existingRect.x2 &&
+      spotRect.x2 > existingRect.x1 &&
+      spotRect.y1 < existingRect.y2 &&
+      spotRect.y2 > existingRect.y1
     );
   });
 }
 
 // Save the current layout
 async function saveLayout() {
+  const spotNumbers = parkingSpots.value.map(spot => spot.spot_number);
+  const uniqueSpotNumbers = new Set(spotNumbers);
+  if (spotNumbers.length !== uniqueSpotNumbers.size) {
+    toast.add({
+      severity: 'error',
+      summary: 'バリデーションエラー',
+      detail: '各駐車スペースの番号はユニークでなければなりません。',
+      life: 5000
+    });
+    return;
+  }
+
   saving.value = true;
   try {
     // Emit the save event with the current spots
