@@ -55,12 +55,35 @@
                             />
                         </div>
                     </div>
-                    <DataTable :value="parkingLots" :loading="loading" responsiveLayout="scroll">
+                    <DataTable 
+                        :value="parkingLots" 
+                        :loading="loading" 
+                        responsiveLayout="scroll"
+                        v-model:selection="selectedParkingLot"
+                        selectionMode="single"
+                        dataKey="id"
+                        :metaKeySelection="false"
+                    >
                         <Column field="name" header="駐車場名"></Column>
-                        <Column header="操作">
+                        <Column header="操作" style="width: 16rem">
                             <template #body="slotProps">
-                                <Button icon="pi pi-pencil" class="p-button-text p-button-sm p-button-success mr-2" @click="editParkingLot(slotProps.data)" />
-                                <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" @click="confirmDeleteParkingLot(slotProps.data)" />
+                                <Button 
+                                    icon="pi pi-check" 
+                                    :label="selectedParkingLot?.id === slotProps.data.id ? '選択中' : '選択'"
+                                    class="p-button-sm p-button-outlined mr-2" 
+                                    :class="{ 'p-button-success': selectedParkingLot?.id === slotProps.data.id }"
+                                    @click="selectParkingLot(slotProps.data)" 
+                                />
+                                <Button 
+                                    icon="pi pi-pencil" 
+                                    class="p-button-text p-button-sm p-button-success" 
+                                    @click="editParkingLot(slotProps.data)" 
+                                />
+                                <Button 
+                                    icon="pi pi-trash" 
+                                    class="p-button-text p-button-sm p-button-danger" 
+                                    @click="confirmDeleteParkingLot(slotProps.data)" 
+                                />
                             </template>
                         </Column>
                     </DataTable>
@@ -68,11 +91,27 @@
             </AccordionPanel>
         </Accordion>
 
-        <div class="mt-4">
+        <div v-if="selectedParkingLot" class="mt-4">
+    <!-- Debug info -->
+    <div v-if="false" class="p-2 bg-gray-100 rounded mb-4">
+        <h4 class="font-bold">Debug Info:</h4>
+        <pre>selectedParkingLot: {{ JSON.stringify(selectedParkingLot, null, 2) }}</pre>
+        <pre>parkingLots: {{ JSON.stringify(parkingLots, null, 2) }}</pre>
+    </div>
             <Card>
                 <template #title>
-                    レイアウトエディタ
-                    <p class="text-sm text-gray-500">100 ユニット = 幅2.5m × 長さ5.0m</p>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            レイアウトエディタ - {{ selectedParkingLot.name }}
+                            <p class="text-sm text-gray-500">100 ユニット = 幅2.5m × 長さ5.0m</p>
+                        </div>
+                        <Button 
+                            icon="pi pi-times" 
+                            label="閉じる" 
+                            class="p-button-text p-button-sm" 
+                            @click="selectedParkingLot = null" 
+                        />
+                    </div>
                 </template>
                 <template #content>
                     <div class="grid grid-cols-12 gap-4">
@@ -115,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue';
+import { ref, onMounted, watch, computed, watchEffect } from 'vue';
 import { Sortable } from 'sortablejs-vue3';
 import { useParkingStore } from '../../composables/useParkingStore';
 import FloatLabel from 'primevue/floatlabel';
@@ -171,11 +210,27 @@ onMounted(async () => {
 const toast = useToast();
 const confirm = useConfirm();
 
+// Initialize refs and reactive state
 const loading = ref(false);
 const categoryDialog = ref(false);
 const category = ref({ name: '', capacity_units_required: 100 });
+const parkingLotDialog = ref(false);
+const parkingLot = ref({ name: '', description: '' });
 const spotDialog = ref(false);
-const spot = ref({});
+const spot = ref({ spot_number: '', spot_type: 'standard', capacity_units: 100 });
+const selectedParkingLot = ref(null);
+
+// Watchers
+watch(selectedHotelId, () => {
+    console.log('Hotel changed, clearing selected parking lot');
+    selectedParkingLot.value = null;
+});
+
+// Watch for changes to selectedParkingLot
+watch(selectedParkingLot, (newVal) => {
+    console.log('selectedParkingLot changed to:', newVal);
+}, { deep: true });
+
 const spotTypes = ref([
     { id: 1, name: 'Standard' },
     { id: 2, name: 'Large' },
@@ -250,8 +305,13 @@ const openNewCategory = () => {
     categoryDialog.value = true;
 };
 
-const parkingLotDialog = ref(false);
-const parkingLot = ref({ name: '', description: '' });
+const selectParkingLot = (lot) => {
+    console.log('selectParkingLot called with:', lot);
+    const newSelection = selectedParkingLot.value?.id === lot.id ? null : lot;
+    console.log('New selection:', newSelection);
+    selectedParkingLot.value = newSelection;
+    console.log('selectedParkingLot after update:', selectedParkingLot.value);
+};
 
 const openNewParkingLot = () => {
     if (!selectedHotelId.value) {
