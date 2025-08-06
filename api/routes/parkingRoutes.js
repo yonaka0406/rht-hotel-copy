@@ -18,7 +18,7 @@ const {
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 // Vehicle Categories
-router.get('/vehicle-categories/:hotel_id', authMiddleware, getVehicleCategories);
+router.get('/vehicle-categories', authMiddleware, getVehicleCategories);
 router.post('/vehicle-categories', authMiddleware_manageDB, createVehicleCategory);
 router.put('/vehicle-categories/:id', authMiddleware_manageDB, updateVehicleCategory);
 router.delete('/vehicle-categories/:id', authMiddleware_manageDB, deleteVehicleCategory);

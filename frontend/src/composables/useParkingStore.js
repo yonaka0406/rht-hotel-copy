@@ -9,16 +9,17 @@ const parkingSpots = ref([]);
 
 export function useParkingStore() {
 
-    // Vehicle Categories
+    // Vehicle Categories (shared across all hotels)
     const fetchVehicleCategories = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/vehicle-categories`, {
+            const response = await fetch('/api/vehicle-categories', {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
             vehicleCategories.value = await response.json();
         } catch (error) {
             console.error('Failed to fetch vehicle categories', error);
+            throw error; // Re-throw to handle in the component
         }
     };
 
@@ -31,11 +32,15 @@ export function useParkingStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ name: category.name, capacity_units_required: category.capacity_units_required }),
+                body: JSON.stringify({ 
+                    name: category.name, 
+                    capacity_units_required: category.capacity_units_required
+                }),
             });
             return await response.json();
         } catch (error) {
             console.error('Failed to create vehicle category', error);
+            throw error; // Re-throw to handle in the component
         }
     };
 

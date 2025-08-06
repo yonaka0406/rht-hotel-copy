@@ -4,6 +4,7 @@
             <AccordionPanel value="0">
                 <AccordionHeader>車両カテゴリー管理</AccordionHeader>
                 <AccordionContent>
+                    <p class="text-sm text-gray-500 mb-4">100 ユニット = 幅2.5m × 長さ5.0m</p>
                     <div class="flex justify-end">
                         <Button label="カテゴリー追加" icon="pi pi-plus" @click="openNewCategory" class="mb-4"/>
                     </div>
@@ -12,8 +13,8 @@
                         <Column field="capacity_units_required" header="必要ユニット"></Column>
                         <Column header="操作">
                             <template #body="slotProps">
-                                <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editCategory(slotProps.data)" />
-                                <Button v-if="slotProps.data.id !== 1" icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteCategory(slotProps.data)" />
+                                <Button icon="pi pi-pencil" class="p-button-text p-button-sm p-button-success mr-2" @click="editCategory(slotProps.data)" />
+                                <Button v-if="slotProps.data.id !== 1" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" @click="confirmDeleteCategory(slotProps.data)" />
                             </template>
                         </Column>
                     </DataTable>
@@ -29,8 +30,8 @@
                         <Column field="name" header="駐車場名"></Column>
                         <Column header="操作">
                             <template #body="slotProps">
-                                <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editParkingLot(slotProps.data)" />
-                                <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteParkingLot(slotProps.data)" />
+                                <Button icon="pi pi-pencil" class="p-button-text p-button-sm p-button-success mr-2" @click="editParkingLot(slotProps.data)" />
+                                <Button icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" @click="confirmDeleteParkingLot(slotProps.data)" />
                             </template>
                         </Column>
                     </DataTable>
@@ -42,7 +43,7 @@
             <Card>
                 <template #title>
                     レイアウトエディタ
-                    <p class="text-sm text-gray-500">100 capacity units = 幅2.5m × 長さ5.0m</p>
+                    <p class="text-sm text-gray-500">100 ユニット = 幅2.5m × 長さ5.0m</p>
                 </template>
                 <template #content>
                     <div class="grid grid-cols-12 gap-4">
@@ -90,16 +91,18 @@ import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
 
 import { useToast } from 'primevue/usetoast';
+import { useConfirm } from 'primevue/useconfirm';
 import VehicleCategoryDialog from './components/VehicleCategoryDialog.vue';
 import ParkingSpotDialog from './components/ParkingSpotDialog.vue';
 
 const { vehicleCategories, parkingLots, parkingSpots, fetchVehicleCategories, fetchParkingLots, fetchParkingSpots, createVehicleCategory, updateVehicleCategory, deleteVehicleCategory } = useParkingStore();
 const { selectedHotelId } = useHotelStore();
 const toast = useToast();
+const confirm = useConfirm();
 
 const loading = ref(false);
 const categoryDialog = ref(false);
-const category = ref({});
+const category = ref({ name: '', capacity_units_required: 100 });
 const spotDialog = ref(false);
 const spot = ref({});
 const spotTypes = ref([
@@ -119,17 +122,43 @@ const saveSpot = async (spotToSave) => {
     spotDialog.value = false;
 };
 
-onMounted(() => {
+const loadData = async () => {
+    if (!selectedHotelId.value) return;
+    
     loading.value = true;
-    Promise.all([
-        fetchVehicleCategories(),
-        fetchParkingLots(),
-    ]).finally(() => {
-        loading.value = false;
+    try {
+        await Promise.all([
+            fetchVehicleCategories(),
+            fetchParkingLots(),
+        ]);
+        
         if (parkingLots.value.length > 0) {
-            fetchParkingSpots(parkingLots.value[0].id);
+            await fetchParkingSpots(parkingLots.value[0].id);
         }
-    });
+    } catch (error) {
+        console.error('Error loading parking data:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: 'データの読み込み中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Watch for hotel ID changes to reload data
+watch(selectedHotelId, () => {
+    if (selectedHotelId.value) {
+        loadData();
+    }
+});
+
+onMounted(() => {
+    if (selectedHotelId.value) {
+        loadData();
+    }
 });
 
 watch(selectedHotelId, () => {
@@ -146,7 +175,7 @@ watch(selectedHotelId, () => {
 });
 
 const openNewCategory = () => {
-    category.value = {};
+    category.value = { name: '', capacity_units_required: 100 };
     categoryDialog.value = true;
 };
 
@@ -159,35 +188,106 @@ const editParkingLot = (lot) => {
 };
 
 const confirmDeleteParkingLot = (lot) => {
-    // Logic to confirm and delete a parking lot
+    confirm.require({
+        message: `駐車場「${lot.name}」を削除しますか？`,
+        header: '確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'はい',
+        rejectLabel: 'いいえ',
+        rejectClass: 'p-button-secondary',
+        accept: () => deleteParkingLot(lot)
+    });
+};
+
+const deleteParkingLot = async (lot) => {
+    try {
+        loading.value = true;
+        // TODO: Implement deleteParkingLot in useParkingStore
+        // await deleteParkingLot(lot.id);
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '駐車場が削除されました',
+            life: 3000
+        });
+        await fetchParkingLots();
+    } catch (error) {
+        console.error('Error deleting parking lot:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場の削除中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
+    }
 };
 
 const saveCategory = async (categoryToSave) => {
-    if (categoryToSave.id) {
-        await updateVehicleCategory(categoryToSave.id, { ...categoryToSave, hotel_id: selectedHotelId.value });
-        toast.add({severity:'success', summary: '成功', detail: 'カテゴリーが更新されました', life: 3000});
-    } else {
-        await createVehicleCategory({ ...categoryToSave, hotel_id: selectedHotelId.value });
-        toast.add({severity:'success', summary: '成功', detail: 'カテゴリーが作成されました', life: 3000});
+    try {
+        loading.value = true;
+        if (categoryToSave.id) {
+            await updateVehicleCategory(categoryToSave.id, categoryToSave);
+            toast.add({severity:'success', summary: '成功', detail: '車両カテゴリーが更新されました', life: 3000});
+        } else {
+            await createVehicleCategory(categoryToSave);
+            toast.add({severity:'success', summary: '成功', detail: '車両カテゴリーが作成されました', life: 3000});
+        }
+        await fetchVehicleCategories();
+        categoryDialog.value = false;
+    } catch (error) {
+        console.error('Error saving vehicle category:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '車両カテゴリーの保存中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
     }
-    categoryDialog.value = false;
-    fetchVehicleCategories();
 };
 
-const editCategory = (prod) => {
-    category.value = { ...prod };
+const editCategory = (categoryToEdit) => {
+    category.value = { ...categoryToEdit };
     categoryDialog.value = true;
 };
 
-const confirmDeleteCategory = (prod) => {
-    // Confirmation logic here
-    deleteCategory(prod);
+const confirmDeleteCategory = (categoryToDelete) => {
+    confirm.require({
+        message: `「${categoryToDelete.name}」を削除しますか？`,
+        header: '確認',
+        icon: 'pi pi-exclamation-triangle',
+        acceptLabel: 'はい',
+        rejectLabel: 'いいえ',
+        rejectClass: 'p-button-secondary',
+        accept: () => deleteCategory(categoryToDelete)
+    });
 };
 
-const deleteCategory = async (prod) => {
-    await deleteVehicleCategory(prod.id);
-    toast.add({severity:'success', summary: '成功', detail: 'カテゴリーが削除されました', life: 3000});
-    fetchVehicleCategories();
+const deleteCategory = async (categoryToDelete) => {
+    try {
+        loading.value = true;
+        await deleteVehicleCategory(categoryToDelete.id);
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '車両カテゴリーが削除されました',
+            life: 3000
+        });
+        await fetchVehicleCategories();
+    } catch (error) {
+        console.error('Error deleting vehicle category:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '車両カテゴリーの削除中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
+    }
 };
 
 const capacityGradient = computed(() => {

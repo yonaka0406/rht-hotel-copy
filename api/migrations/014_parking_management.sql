@@ -93,3 +93,9 @@ INSERT INTO vehicle_categories (name, capacity_units_required) VALUES
 ('オートバイ', 20),
 ('バン・ピックアップ', 110),
 ('2t　トラック', 120);
+
+CREATE TRIGGER reservation_parking_changes
+AFTER INSERT OR UPDATE OR DELETE ON reservation_parking
+FOR EACH ROW EXECUTE PROCEDURE log_parking_changes();
+
+GRANT USAGE, SELECT, UPDATE ON SEQUENCE vehicle_categories_id_seq TO rhtsys_user;
