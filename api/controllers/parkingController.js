@@ -164,6 +164,18 @@ const getParkingReservations = async (req, res) => {
     }
 };
 
+// Get all parking spots for a hotel
+const getAllParkingSpotsByHotel = async (req, res) => {
+    try {
+        const { hotel_id } = req.params;
+        const spots = await parkingModel.getAllParkingSpotsByHotel(req.requestId, hotel_id);
+        res.json(spots);
+    } catch (error) {
+        console.error('Error fetching all parking spots for hotel:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -179,5 +191,6 @@ module.exports = {
     deleteParkingSpot,
     blockParkingSpot,
     updateParkingSpotsForLot,
-    getParkingReservations
+    getParkingReservations,
+    getAllParkingSpotsByHotel
 };

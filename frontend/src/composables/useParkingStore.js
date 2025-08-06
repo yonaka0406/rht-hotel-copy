@@ -164,9 +164,49 @@ export function useParkingStore() {
             const response = await fetch(`/api/parking/reservations?hotel_id=${hotelId}&startDate=${startDate}&endDate=${endDate}`, {
                 headers: { 'Authorization': `Bearer ${authToken}` },
             });
-            reservedParkingSpots.value = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Ensure we always set an array
+            if (Array.isArray(data)) {
+                reservedParkingSpots.value = data;
+            } else {
+                console.error('API returned non-array data:', data);
+                reservedParkingSpots.value = [];
+            }
         } catch (error) {
             console.error('Failed to fetch reserved parking spots', error);
+            reservedParkingSpots.value = []; // Ensure it's always an array
+        }
+    };
+
+    const fetchAllParkingSpotsByHotel = async (hotelId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/spots/hotel/${hotelId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Ensure we always return an array
+            if (Array.isArray(data)) {
+                return data;
+            } else {
+                console.error('API returned non-array data:', data);
+                return [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch all parking spots for hotel', error);
+            return []; // Ensure it's always an array
         }
     };
 
@@ -185,5 +225,6 @@ export function useParkingStore() {
         deleteParkingLot,
         fetchParkingSpots,
         fetchReservedParkingSpots,
+        fetchAllParkingSpotsByHotel,
     };
 }

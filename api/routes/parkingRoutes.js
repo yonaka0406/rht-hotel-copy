@@ -15,7 +15,8 @@ const {
     deleteParkingSpot,
     blockParkingSpot,
     updateParkingSpotsForLot,
-    getParkingReservations
+    getParkingReservations,
+    getAllParkingSpotsByHotel
 } = require('../controllers/parkingController');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
@@ -43,5 +44,8 @@ router.post('/parking/block', authMiddleware_manageDB, blockParkingSpot);
 
 // Parking Reservations
 router.get('/parking/reservations', authMiddleware, getParkingReservations);
+
+// All Parking Spots by Hotel
+router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsByHotel);
 
 module.exports = router;

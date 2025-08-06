@@ -305,7 +305,9 @@
         startDate,
         endDate
       );
-      tempParkingReservations.value = reservedParkingSpots.value;
+      tempParkingReservations.value = Array.isArray(reservedParkingSpots.value) 
+        ? reservedParkingSpots.value 
+        : [];
     } catch (error) {
       console.error('Error fetching parking reservations:', error);
     }
@@ -384,8 +386,12 @@
       style = { color: `${spotColor}`, fontWeight: 'bold' };
     }
   
-    const originalReservation = reservedParkingSpots.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
-    const tempReservation = tempParkingReservations.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
+    const originalReservation = Array.isArray(reservedParkingSpots.value) 
+      ? reservedParkingSpots.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date)
+      : null;
+    const tempReservation = Array.isArray(tempParkingReservations.value)
+      ? tempParkingReservations.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date)
+      : null;
   
     if (originalReservation?.id !== tempReservation?.id) {
       style.border = '2px solid red'; // Highlight modified cells
@@ -668,9 +674,11 @@
       currentDate.setDate(currentDate.getDate() + 1);
     }
     // Filter reservations that match the given reservation_id and spot_id
-    const spotReservations = reservedParkingSpots.value.filter(
-      spot => spot.reservation_id === from.reservation_id && spot.parking_spot_id === from.spot_id
-    );
+    const spotReservations = Array.isArray(reservedParkingSpots.value) 
+      ? reservedParkingSpots.value.filter(
+          spot => spot.reservation_id === from.reservation_id && spot.parking_spot_id === from.spot_id
+        )
+      : [];
     // Extract booked dates from filtered reservations
     const bookedDates = spotReservations.map(spot => formatDate(new Date(spot.date)));
     const isSpotFullyBooked = allDates.every(date => bookedDates.includes(date));

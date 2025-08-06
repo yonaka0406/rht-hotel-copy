@@ -91,7 +91,7 @@ const updateParkingSpot = async (requestId, id, { spot_number, spot_type, capaci
 
 const checkParkingSpotReservations = async (requestId, spotId, client = null) => {
     let shouldReleaseClient = false;
-    
+
     try {
         // If no client is provided, create a new one
         if (!client) {
@@ -99,7 +99,7 @@ const checkParkingSpotReservations = async (requestId, spotId, client = null) =>
             client = await pool.connect();
             shouldReleaseClient = true;
         }
-        
+
         const query = 'SELECT COUNT(*) as count FROM reservation_parking WHERE parking_spot_id = $1';
         const values = [spotId];
         const result = await client.query(query, values);
@@ -113,7 +113,7 @@ const checkParkingSpotReservations = async (requestId, spotId, client = null) =>
 
 const deleteParkingSpot = async (requestId, id, client = null) => {
     let shouldReleaseClient = false;
-    
+
     try {
         // If no client is provided, create a new one
         if (!client) {
@@ -122,18 +122,18 @@ const deleteParkingSpot = async (requestId, id, client = null) => {
             shouldReleaseClient = true;
             await client.query('BEGIN');
         }
-        
+
         // First check if the spot has any reservations
         const hasReservations = await checkParkingSpotReservations(requestId, id);
         if (hasReservations) {
             throw new Error('Cannot delete parking spot with existing reservations');
         }
-        
+
         // If no reservations, proceed with deletion
         const query = 'DELETE FROM parking_spots WHERE id = $1';
         const values = [id];
         await client.query(query, values);
-        
+
         if (shouldReleaseClient) {
             await client.query('COMMIT');
         }
@@ -209,7 +209,7 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
 
         // Delete spots that are no longer in the list
         const spotsToDelete = [...existingSpotIds].filter(id => !receivedSpotIds.has(id));
-        
+
         // Delete spots one by one to leverage the existing deleteParkingSpot function
         // which handles reservation checks and is already transaction-aware
         for (const spotId of spotsToDelete) {
@@ -267,17 +267,10 @@ const getParkingReservations = async (requestId, hotel_id, startDate, endDate) =
             rp.*,
             ps.spot_number,
             ps.spot_type,
-            pl.name as parking_lot_name,
-            r.check_in,
-            r.check_out,
-            r.status as reservation_status,
-            rd.plan_name,
-            rd.plan_color
+            pl.name as parking_lot_name
         FROM reservation_parking rp
         JOIN parking_spots ps ON rp.parking_spot_id = ps.id
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
-        JOIN reservations r ON rp.reservation_id = r.id
-        LEFT JOIN reservation_details rd ON r.id = rd.reservation_id
         WHERE rp.hotel_id = $1 
         AND rp.date >= $2 
         AND rp.date <= $3
@@ -288,7 +281,29 @@ const getParkingReservations = async (requestId, hotel_id, startDate, endDate) =
     return result.rows;
 };
 
-module.exports = {    
+// Get all parking spots for a hotel across all parking lots
+const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT 
+            ps.*,
+            pl.name as parking_lot_name,
+            pl.description as parking_lot_description,
+            h.id as hotel_id,
+            h.name as hotel_name
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        JOIN hotels h ON pl.hotel_id = h.id
+        WHERE pl.hotel_id = $1 
+        AND ps.is_active = true
+        ORDER BY pl.name, ps.spot_number
+    `;
+    const values = [hotel_id];
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
+module.exports = {
     getVehicleCategories,
     createVehicleCategory,
     updateVehicleCategory,
@@ -303,5 +318,6 @@ module.exports = {
     deleteParkingSpot,
     blockParkingSpot,
     syncParkingSpots,
-    getParkingReservations
+    getParkingReservations,
+    getAllParkingSpotsByHotel
 };
