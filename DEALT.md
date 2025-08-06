@@ -2,6 +2,21 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 6, 2025
+
+### Bug #21: Hotel Selection Not Persisting Across Navigation
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When changing the hotel in the TopMenu, the selected hotel was not being passed correctly to other components, causing the selection to reset when navigating between pages.
+- **Resolution**: 
+  - Implemented localStorage persistence for the selected hotel ID
+  - Added proper initialization logic in TopMenu and SideMenu components
+  - Ensured hotel selection state is maintained across component mounts
+  - Added proper error handling and fallback to first available hotel
+- **Date Fixed**: August 6, 2025
+- **Environment**: Frontend
+- **PR**: #(add PR number when available)
+
 ## August 5, 2025
 
 ### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations

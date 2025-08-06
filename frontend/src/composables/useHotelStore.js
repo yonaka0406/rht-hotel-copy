@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 
 const hotels = ref([]);
 const selectedHotel = ref(null);
@@ -7,10 +7,20 @@ const hotelRooms = ref([]);
 const hotelBlockedRooms = ref([]);
 const isLoadingHotelList = ref(false);
 
+// Load selected hotel ID from localStorage on module load
+const STORAGE_KEY = 'selectedHotelId';
+const savedHotelId = localStorage.getItem(STORAGE_KEY);
+if (savedHotelId && savedHotelId !== 'undefined' && savedHotelId !== 'null') {
+    selectedHotelId.value = parseInt(savedHotelId, 10);
+}
+
 export function useHotelStore() {
 
     const setHotelId = (id) => {
-        selectedHotelId.value = id;
+        if (id !== null && id !== undefined) {
+            selectedHotelId.value = id;
+            localStorage.setItem(STORAGE_KEY, id.toString());
+        }
     };
 
     // Hotel
@@ -27,9 +37,20 @@ export function useHotelStore() {
             });
             const data = await response.json();
             hotels.value = Array.isArray(data) ? data : [];
-            // Set the first hotel as selected if none is selected
-            if (hotels.value.length > 0 && !selectedHotelId.value) {
-                selectedHotelId.value = hotels.value[0].id;
+            
+            // If we have hotels but no selected hotel, select the first one
+            if (hotels.value.length > 0) {
+                const savedHotelId = localStorage.getItem(STORAGE_KEY);
+                const savedHotel = savedHotelId ? hotels.value.find(h => h.id === parseInt(savedHotelId, 10)) : null;
+                
+                if (savedHotel) {
+                    // If we have a saved hotel ID and it exists in the hotels list, use it
+                    selectedHotelId.value = savedHotel.id;
+                } else if (!selectedHotelId.value || !hotels.value.some(h => h.id === selectedHotelId.value)) {
+                    // If no valid selected hotel, use the first one
+                    selectedHotelId.value = hotels.value[0].id;
+                    localStorage.setItem(STORAGE_KEY, selectedHotelId.value.toString());
+                }
             }
         } catch (error) {
             console.error('Failed to fetch hotels', error);
