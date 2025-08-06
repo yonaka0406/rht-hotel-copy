@@ -1,35 +1,41 @@
 <template>
     <div class="p-4 max-w-7xl mx-auto">
         <Accordion :multiple="true" :activeIndex="[0, 1]">
-            <AccordionTab header="車両カテゴリー管理">
-                <div class="flex justify-end">
-                    <Button label="カテゴリー追加" icon="pi pi-plus" @click="openNewCategory" class="mb-4"/>
-                </div>
-                <DataTable :value="vehicleCategories" :loading="loading" responsiveLayout="scroll">
-                    <Column field="name" header="カテゴリー名"></Column>
-                    <Column field="capacity_units_required" header="必要ユニット"></Column>
-                    <Column header="操作">
-                        <template #body="slotProps">
-                            <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editCategory(slotProps.data)" />
-                        <Button v-if="slotProps.data.id !== 1" icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteCategory(slotProps.data)" />
-                        </template>
-                    </Column>
-                </DataTable>
-            </AccordionTab>
-            <AccordionTab header="駐車場管理">
-                <div class="flex justify-end">
-                    <Button label="駐車場追加" icon="pi pi-plus" @click="openNewParkingLot" class="mb-4" />
-                </div>
-                <DataTable :value="parkingLots" :loading="loading" responsiveLayout="scroll">
-                    <Column field="name" header="駐車場名"></Column>
-                    <Column header="操作">
-                        <template #body="slotProps">
-                            <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editParkingLot(slotProps.data)" />
-                            <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteParkingLot(slotProps.data)" />
-                        </template>
-                    </Column>
-                </DataTable>
-            </AccordionTab>
+            <AccordionPanel value="0">
+                <AccordionHeader>車両カテゴリー管理</AccordionHeader>
+                <AccordionContent>
+                    <div class="flex justify-end">
+                        <Button label="カテゴリー追加" icon="pi pi-plus" @click="openNewCategory" class="mb-4"/>
+                    </div>
+                    <DataTable :value="vehicleCategories" :loading="loading" responsiveLayout="scroll">
+                        <Column field="name" header="カテゴリー名"></Column>
+                        <Column field="capacity_units_required" header="必要ユニット"></Column>
+                        <Column header="操作">
+                            <template #body="slotProps">
+                                <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editCategory(slotProps.data)" />
+                                <Button v-if="slotProps.data.id !== 1" icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteCategory(slotProps.data)" />
+                            </template>
+                        </Column>
+                    </DataTable>
+                </AccordionContent>
+            </AccordionPanel>
+            <AccordionPanel value="1">
+                <AccordionHeader>駐車場管理</AccordionHeader>
+                <AccordionContent>
+                    <div class="flex justify-end">
+                        <Button label="駐車場追加" icon="pi pi-plus" @click="openNewParkingLot" class="mb-4" />
+                    </div>
+                    <DataTable :value="parkingLots" :loading="loading" responsiveLayout="scroll">
+                        <Column field="name" header="駐車場名"></Column>
+                        <Column header="操作">
+                            <template #body="slotProps">
+                                <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editParkingLot(slotProps.data)" />
+                                <Button icon="pi pi-trash" class="p-button-rounded p-button-warning" @click="confirmDeleteParkingLot(slotProps.data)" />
+                            </template>
+                        </Column>
+                    </DataTable>
+                </AccordionContent>
+            </AccordionPanel>
         </Accordion>
 
         <div class="mt-4">
@@ -79,7 +85,10 @@ import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Button from 'primevue/button';
 import Accordion from 'primevue/accordion';
-import AccordionTab from 'primevue/accordiontab';
+import AccordionPanel from 'primevue/accordionpanel';
+import AccordionHeader from 'primevue/accordionheader';
+import AccordionContent from 'primevue/accordioncontent';
+
 import { useToast } from 'primevue/usetoast';
 import VehicleCategoryDialog from './components/VehicleCategoryDialog.vue';
 import ParkingSpotDialog from './components/ParkingSpotDialog.vue';
