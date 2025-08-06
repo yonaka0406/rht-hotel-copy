@@ -23,7 +23,7 @@
       <Column field="booker_name" header="予約者名"></Column>
       <Column field="hotel_name" header="ホテル名" :showFilterMenu="false">
         <template #filter="{ filterModel, filterCallback }">
-          <Dropdown
+          <Select
             v-model="filterModel.value"
             :options="hotels"
             optionLabel="name"
@@ -32,8 +32,8 @@
             class="p-column-filter"
             :showClear="true"
             @change="filterCallback()"
-          >
-          </Dropdown>
+            fluid
+          />
         </template>
       </Column>
     </DataTable>
@@ -46,7 +46,7 @@ import { useXMLStore } from '@/composables/useXMLStore';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Badge from 'primevue/badge';
-import Dropdown from 'primevue/dropdown';
+import Select from 'primevue/select';
 import { FilterMatchMode } from '@primevue/core/api';
 
 const props = defineProps({
