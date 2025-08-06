@@ -353,14 +353,31 @@ function getSpotColor(spotType) {
   
   // Generate consistent color for custom spot types
   if (spotType.startsWith('custom-')) {
-    // Simple hash function to generate consistent color from spot type string
+    // Extract dimensions from spot type (e.g., "custom-3-5" -> ["3", "5"])
+    const dimensions = spotType.match(/\d+/g) || [];
+    
+    // Create a more unique hash using dimensions and spot type
     let hash = 0;
-    for (let i = 0; i < spotType.length; i++) {
-      hash = spotType.charCodeAt(i) + ((hash << 5) - hash);
+    const str = spotType + dimensions.join('');
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
     }
-    // Generate a pastel color using the hash
-    const hue = Math.abs(hash) % 360;
-    return `hsl(${hue}, 70%, 80%)`;
+    
+    // Use golden angle for better color distribution
+    const goldenRatio = 0.618033988749895;
+    let hue = (hash * goldenRatio) % 1;
+    
+    // Convert to degrees (0-360)
+    hue = Math.floor(hue * 360);
+    
+    // Use higher saturation and vary lightness for better distinction
+    const saturation = 70 + (hash % 15); // 70-85%
+    const lightness = 60 + (hash % 21);  // 60-80%
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   }
   
   return '#cccccc';
