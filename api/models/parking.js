@@ -220,8 +220,8 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
         if (spotsToUpdate.length > 0) {
             const updateQueries = spotsToUpdate.map(spot => {
                 return client.query(
-                    `UPDATE parking_spots SET spot_number = $1, spot_type = $2, capacity_units = $3, layout_info = $4, is_active = $5 WHERE id = $6`,
-                    [spot.spot_number, spot.spot_type, spot.capacity_units, spot.layout_info, spot.is_active !== false, spot.id]
+                    `UPDATE parking_spots SET spot_number = $1, spot_type = $2, capacity_units = $3, blocks_parking_spot_id = $4, layout_info = $5, is_active = $6 WHERE id = $7`,
+                    [spot.spot_number, spot.spot_type, spot.capacity_units, spot.blocks_parking_spot_id || null, spot.layout_info, spot.is_active !== false, spot.id]
                 );
             });
             await Promise.all(updateQueries);
@@ -234,11 +234,12 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
                 spot.spot_number,
                 spot.spot_type,
                 spot.capacity_units,
+                spot.blocks_parking_spot_id || null,
                 spot.layout_info,
                 spot.is_active !== false
             ]);
             const insertQuery = format(
-                'INSERT INTO parking_spots (parking_lot_id, spot_number, spot_type, capacity_units, layout_info, is_active) VALUES %L',
+                'INSERT INTO parking_spots (parking_lot_id, spot_number, spot_type, capacity_units, blocks_parking_spot_id, layout_info, is_active) VALUES %L',
                 insertValues
             );
             await client.query(insertQuery);
