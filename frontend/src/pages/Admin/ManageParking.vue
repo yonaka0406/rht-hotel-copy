@@ -92,49 +92,28 @@
         </Accordion>
 
         <div v-if="selectedParkingLot" class="mt-4">
-    <!-- Debug info -->
-    <div v-if="false" class="p-2 bg-gray-100 rounded mb-4">
-        <h4 class="font-bold">Debug Info:</h4>
-        <pre>selectedParkingLot: {{ JSON.stringify(selectedParkingLot, null, 2) }}</pre>
-        <pre>parkingLots: {{ JSON.stringify(parkingLots, null, 2) }}</pre>
-    </div>
             <Card>
                 <template #title>
                     <div class="flex justify-between items-center">
                         <div>
                             レイアウトエディタ - {{ selectedParkingLot.name }}
-                            <p class="text-sm text-gray-500">100 ユニット = 幅2.5m × 長さ5.0m</p>
+                            <p class="text-sm text-gray-500">グリッド1マス = 1m × 1m</p>
                         </div>
                         <Button 
                             icon="pi pi-times" 
                             label="閉じる" 
                             class="p-button-text p-button-sm" 
-                            @click="selectedParkingLot = null" 
+                            @click="closeLayoutEditor" 
                         />
                     </div>
                 </template>
                 <template #content>
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-2">
-                            <h3>Spot Types</h3>
-                            <Sortable :list="spotTypes" item-key="id" :group="{ name: 'spots', pull: 'clone', put: false }" class="space-y-2" @end="onEnd">
-                                <template #item="{element}">
-                                    <div class="p-2 border rounded cursor-move bg-gray-300">
-                                        {{ element.name }}
-                                    </div>
-                                </template>
-                            </Sortable>
-                        </div>
-                        <div class="col-span-10">
-                            <Sortable :list="parkingSpots" @update:list="parkingSpots = $event" item-key="id" group="spots" class="min-h-96 border-2 border-dashed border-gray-400 p-4 grid grid-cols-10 gap-2" @end="onEnd">
-                                <template #item="{element}">
-                                    <div class="p-2 border rounded cursor-move bg-gray-200">
-                                        {{ element.spot_number }}
-                                    </div>
-                                </template>
-                            </Sortable>
-                        </div>
-                    </div>
+                    <ParkingSpotEditor
+                        v-if="selectedParkingLot"
+                        :parking-lot-id="selectedParkingLot.id"
+                        :initial-spots="parkingSpots"
+                        @save="saveParkingSpots"
+                    />
                 </template>
             </Card>
         </div>
@@ -149,16 +128,13 @@
             @save="saveParkingLot" 
             key="parking-lot-dialog"
         />
-        <ParkingSpotDialog v-model:visible="spotDialog" :spot="spot" @save="saveSpot" />
+        <!-- ParkingSpotDialog removed as it's no longer needed -->
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, watchEffect } from 'vue';
-import { Sortable } from 'sortablejs-vue3';
+import { ref, onMounted, watch, computed } from 'vue';
 import { useParkingStore } from '../../composables/useParkingStore';
-import FloatLabel from 'primevue/floatlabel';
-import Textarea from 'primevue/textarea';
 import { useHotelStore } from '../../composables/useHotelStore';
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
@@ -169,15 +145,17 @@ import AccordionPanel from 'primevue/accordionpanel';
 import AccordionHeader from 'primevue/accordionheader';
 import AccordionContent from 'primevue/accordioncontent';
 import Select from 'primevue/select';
-
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import VehicleCategoryDialog from './components/VehicleCategoryDialog.vue';
 import ParkingLotDialog from './components/ParkingLotDialog.vue';
-import ParkingSpotDialog from './components/ParkingSpotDialog.vue';
+import ParkingSpotEditor from './components/ParkingSpotEditor.vue';
 
-// Initialize the parking store
+// Initialize stores
 const parkingStore = useParkingStore();
+const hotelStore = useHotelStore();
+
+// Destructure parking store methods and state
 const { 
     vehicleCategories, 
     parkingLots, 
@@ -192,7 +170,14 @@ const {
     updateParkingLot,
     deleteParkingLot
 } = parkingStore;
-const { selectedHotelId, hotels, fetchHotels, isLoadingHotelList } = useHotelStore();
+
+// Destructure hotel store methods and state
+const { 
+    selectedHotelId, 
+    hotels, 
+    fetchHotels, 
+    isLoadingHotelList 
+} = hotelStore;
 
 // Get the selected hotel's name
 const selectedHotelName = computed(() => {
@@ -201,68 +186,22 @@ const selectedHotelName = computed(() => {
     return hotel ? hotel.name : '';
 });
 
-// Fetch hotels on component mount
-onMounted(async () => {
-    if (hotels.value.length === 0) {
-        await fetchHotels();
-    }
-});
+// Initialize toast and confirm
 const toast = useToast();
 const confirm = useConfirm();
 
-// Initialize refs and reactive state
-const loading = ref(false);
-const categoryDialog = ref(false);
-const category = ref({ name: '', capacity_units_required: 100 });
-const parkingLotDialog = ref(false);
-const parkingLot = ref({ name: '', description: '' });
-const spotDialog = ref(false);
-const spot = ref({ spot_number: '', spot_type: 'standard', capacity_units: 100 });
-const selectedParkingLot = ref(null);
-
-// Watchers
-watch(selectedHotelId, () => {
-    console.log('Hotel changed, clearing selected parking lot');
-    selectedParkingLot.value = null;
-});
-
-// Watch for changes to selectedParkingLot
-watch(selectedParkingLot, (newVal) => {
-    console.log('selectedParkingLot changed to:', newVal);
-}, { deep: true });
-
-const spotTypes = ref([
-    { id: 1, name: 'Standard' },
-    { id: 2, name: 'Large' },
-    { id: 3, name: 'In-line' },
-]);
-
-const onEnd = (event) => {
-    console.log('Drag end:', event);
-    // Add any additional logic you need when dragging ends
-};
-
-const saveSpot = async (spotToSave) => {
-    // Save spot logic here
-    console.log('Saving spot:', spotToSave);
-    spotDialog.value = false;
-};
-
-const loadData = async () => {
-    if (!selectedHotelId.value) return;
-    
-    loading.value = true;
+// Fetch initial data on component mount
+onMounted(async () => {
     try {
-        await Promise.all([
-            fetchVehicleCategories(),
-            fetchParkingLots(),
-        ]);
-        
-        if (parkingLots.value.length > 0) {
-            await fetchParkingSpots(parkingLots.value[0].id);
+        loading.value = true;
+        // Load hotels if not already loaded
+        if (hotels.value.length === 0) {
+            await fetchHotels();
         }
+        // Always load vehicle categories (they're global)
+        await fetchVehicleCategories();
     } catch (error) {
-        console.error('Error loading parking data:', error);
+        console.error('Error initializing data:', error);
         toast.add({
             severity: 'error',
             summary: 'エラー',
@@ -272,32 +211,147 @@ const loadData = async () => {
     } finally {
         loading.value = false;
     }
+});
+
+// Initialize refs and reactive state
+const loading = ref(false);
+const categoryDialog = ref(false);
+const category = ref({ name: '', capacity_units_required: 100 });
+const parkingLotDialog = ref(false);
+const parkingLot = ref({ name: '', description: '' });
+const selectedParkingLot = ref(null);
+
+// Watchers
+watch(selectedHotelId, async (newVal, oldVal) => {
+    console.log('Hotel changed from', oldVal, 'to', newVal);
+    
+    // Clear the selected parking lot when hotel changes
+    selectedParkingLot.value = null;
+    
+    // If we have a new hotel, load its parking lots
+    if (newVal) {
+        try {
+            loading.value = true;
+            await fetchParkingLots();
+        } catch (error) {
+            console.error('Error loading parking lots:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車場データの読み込み中にエラーが発生しました',
+                life: 3000
+            });
+        } finally {
+            loading.value = false;
+        }
+    } else {
+        // Clear parking lots if no hotel is selected
+        parkingLots.value = [];
+    }
+}, { immediate: true });
+
+// Watch for changes to selectedParkingLot
+watch(selectedParkingLot, async (newVal) => {
+    console.log('selectedParkingLot changed to:', newVal);
+    
+    // If we have a selected parking lot, load its spots
+    if (newVal) {
+        try {
+            loading.value = true;
+            await fetchParkingSpots(newVal.id);
+        } catch (error) {
+            console.error('Error loading parking spots:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車スペースの読み込み中にエラーが発生しました',
+                life: 3000
+            });
+        } finally {
+            loading.value = false;
+        }
+    } else {
+        // Clear spots if no parking lot is selected
+        parkingSpots.value = [];
+    }
+}, { deep: true });
+
+// Methods
+const closeLayoutEditor = () => {
+    selectedParkingLot.value = null;
+    parkingSpots.value = [];
 };
 
-// Watch for hotel ID changes to reload data
-watch(selectedHotelId, () => {
-    if (selectedHotelId.value) {
-        loadData();
+const saveParkingSpots = async (spots) => {
+    try {
+        loading.value = true;
+        const authToken = localStorage.getItem('authToken');
+        
+        // Update parking spots
+        const response = await fetch(`/api/parking-lots/${selectedParkingLot.value.id}/spots`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ spots })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save parking spots');
+        }
+
+        // Refresh the spots
+        await fetchParkingSpots(selectedParkingLot.value.id);
+        
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '駐車スペースのレイアウトが保存されました',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Error saving parking spots:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車スペースの保存中にエラーが発生しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
+    }
+};
+
+// Save spot logic is now handled by the ParkingSpotEditor
+
+// Watch for parking lot selection changes
+watch(selectedParkingLot, async (newVal) => {
+    if (newVal) {
+        loading.value = true;
+        try {
+            await fetchParkingSpots(newVal.id);
+        } catch (error) {
+            console.error('Error loading parking spots:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車スペースの読み込み中にエラーが発生しました',
+                life: 3000
+            });
+        } finally {
+            loading.value = false;
+        }
+    } else {
+        parkingSpots.value = [];
     }
 });
 
+// Initial data load
 onMounted(() => {
     if (selectedHotelId.value) {
         loadData();
     }
-});
-
-watch(selectedHotelId, () => {
-    loading.value = true;
-    Promise.all([
-        fetchVehicleCategories(),
-        fetchParkingLots(),
-    ]).finally(() => {
-        loading.value = false;
-        if (parkingLots.value.length > 0) {
-            fetchParkingSpots(parkingLots.value[0].id);
-        }
-    });
 });
 
 const openNewCategory = () => {
@@ -306,11 +360,13 @@ const openNewCategory = () => {
 };
 
 const selectParkingLot = (lot) => {
-    console.log('selectParkingLot called with:', lot);
-    const newSelection = selectedParkingLot.value?.id === lot.id ? null : lot;
-    console.log('New selection:', newSelection);
-    selectedParkingLot.value = newSelection;
-    console.log('selectedParkingLot after update:', selectedParkingLot.value);
+    console.log('Selecting parking lot:', lot);
+    if (selectedParkingLot.value && selectedParkingLot.value.id === lot.id) {
+        selectedParkingLot.value = null;
+        parkingSpots.value = [];
+    } else {
+        selectedParkingLot.value = { ...lot };
+    }
 };
 
 const openNewParkingLot = () => {

@@ -1,0 +1,466 @@
+<template>
+  <div class="parking-layout-editor">
+    <div class="editor-toolbar">
+      <div class="tool-section">
+        <h4>スポットタイプ</h4>
+        <div class="spot-types-container">
+          <div v-for="spotType in spotTypes" :key="spotType.id" class="spot-type-item" draggable="true"
+            @dragstart="onDragStart($event, spotType)" @dragend="onDragEnd">
+            <div class="spot-preview" :style="{ backgroundColor: spotType.color }">
+              {{ spotType.name }}
+            </div>
+            <small>{{ spotType.width }}m × {{ spotType.height }}m</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <h4>レイアウト操作</h4>
+        <Button label="グリッド表示切替" icon="pi pi-th-large" class="p-button-sm p-button-text"
+          @click="showGrid = !showGrid" />
+        <Button label="変更を保存" icon="pi pi-save" class="p-button-sm p-button-success" @click="saveLayout"
+          :loading="saving" />
+      </div>
+    </div>
+
+    <div class="layout-container" @dragover.prevent @drop="onDrop" @click="deselectSpot">
+      <div class="layout-grid" :style="{
+        '--grid-size': `${cellSize}px`,
+        '--grid-color': 'rgba(0, 0, 0, 0.1)',
+        'background-image': showGrid ? 'linear-gradient(var(--grid-color) 1px, transparent 1px), linear-gradient(90deg, var(--grid-color) 1px, transparent 1px)' : 'none',
+        'background-size': 'var(--grid-size) var(--grid-size)'
+      }">
+        <div v-for="spot in parkingSpots" :key="spot.id || spot.tempId" class="parking-spot"
+          :class="{ 'selected': selectedSpotId === (spot.id || spot.tempId) }" :style="{
+            left: `${spot.x * cellSize}px`,
+            top: `${spot.y * cellSize}px`,
+            width: `${spot.width * cellSize}px`,
+            height: `${spot.height * cellSize}px`,
+            backgroundColor: getSpotType(spot.spot_type)?.color || '#ccc',
+            zIndex: selectedSpotId === (spot.id || spot.tempId) ? 10 : 1,
+            cursor: 'move',
+            position: 'absolute',
+            transform: 'translate(0, 0)'
+          }" @click.stop="selectSpot(spot)" draggable="true" @dragstart="onSpotDragStart($event, spot)"
+          @drag="onSpotDrag($event, spot)" @dragend="onSpotDragEnd">
+          <div class="spot-label">
+            <div class="spot-number">{{ spot.spot_number }}</div>
+            <div class="spot-dimensions">{{ spot.width }}×{{ spot.height }}</div>
+          </div>
+          <div v-if="selectedSpotId === (spot.id || spot.tempId)" class="spot-controls">
+            <Button icon="pi pi-trash" class="p-button-rounded p-button-danger p-button-sm"
+              @click.stop="deleteSpot(spot)" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <Dialog v-model:visible="spotDialog.visible" :modal="true" :header="spotDialog.isEdit ? 'スポットを編集' : 'スポットを追加'"
+      :style="{ width: '400px' }">
+      <div class="p-fluid">
+        <div class="field">
+          <label for="spotNumber">スポット番号</label>
+          <InputText id="spotNumber" v-model="spotDialog.spot.spot_number" />
+        </div>
+        <div class="field">
+          <label for="spotType">タイプ</label>
+          <Dropdown id="spotType" v-model="spotDialog.spot.spot_type" :options="spotTypes" optionLabel="name"
+            optionValue="id" />
+        </div>
+        <div class="field">
+          <label>サイズ (グリッド単位)</label>
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label for="spotWidth" class="block text-sm mb-1">幅</label>
+              <InputNumber id="spotWidth" v-model="spotDialog.spot.width" :min="1" :max="10" />
+            </div>
+            <div class="flex-1">
+              <label for="spotHeight" class="block text-sm mb-1">高さ</label>
+              <InputNumber id="spotHeight" v-model="spotDialog.spot.height" :min="1" :max="10" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="キャンセル" icon="pi pi-times" class="p-button-text" @click="spotDialog.visible = false" />
+        <Button label="保存" icon="pi pi-check" class="p-button-text" @click="saveSpot" />
+      </template>
+    </Dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, watch, onMounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
+import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
+import InputText from 'primevue/inputtext';
+import Dropdown from 'primevue/dropdown';
+import InputNumber from 'primevue/inputnumber';
+
+const props = defineProps({
+  parkingLotId: {
+    type: [Number, String],
+    required: true
+  },
+  initialSpots: {
+    type: Array,
+    default: () => []
+  }
+});
+
+const emit = defineEmits(['update:spots', 'save']);
+const toast = useToast();
+
+// Constants
+const cellSize = 20; // Base size in pixels (smaller for more precise placement)
+
+// Reactive state
+const showGrid = ref(true);
+const saving = ref(false);
+const selectedSpotId = ref(null);
+const draggedSpot = ref(null);
+const dragOffset = ref({ x: 0, y: 0 });
+
+// Spot types with colors and dimensions
+const spotTypes = ref([
+  { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
+  { id: 'compact', name: 'コンパクト', width: 2.2, height: 4.5, color: '#a5d6a7' },
+  { id: 'large', name: '大型', width: 3.5, height: 6, color: '#ffcc80' },
+  { id: 'disabled', name: '障害者用', width: 3.5, height: 5, color: '#ef9a9a' },
+  { id: 'motorcycle', name: 'バイク', width: 1.5, height: 2.5, color: '#b39ddb' }
+]);
+
+// Spot dialog
+const spotDialog = ref({
+  visible: false,
+  isEdit: false,
+  spot: {
+    spot_number: '',
+    spot_type: 'standard',
+    width: 2.5,
+    height: 5,
+    x: 0,
+    y: 0
+  }
+});
+
+// Parking spots
+const parkingSpots = ref([...props.initialSpots]);
+
+// Computed
+const selectedSpot = computed(() => {
+  return parkingSpots.value.find(spot => (spot.id || spot.tempId) === selectedSpotId.value);
+});
+
+// Methods
+function getSpotType(typeId) {
+  return spotTypes.value.find(t => t.id === typeId) || spotTypes.value[0];
+}
+
+function selectSpot(spot) {
+  selectedSpotId.value = spot.id || spot.tempId;
+}
+
+function deselectSpot() {
+  selectedSpotId.value = null;
+}
+
+function onDragStart(event, spotType) {
+  draggedSpot.value = {
+    ...spotType,
+    tempId: `temp-${Date.now()}`,
+    spot_type: spotType.id,
+    spot_number: `SPOT-${parkingSpots.value.length + 1}`,
+    x: 0,
+    y: 0
+  };
+
+  // Set drag image
+  const dragImg = new Image();
+  event.dataTransfer.setDragImage(dragImg, 0, 0);
+  event.dataTransfer.effectAllowed = 'copy';
+}
+
+function onDrop(event) {
+  event.preventDefault();
+  
+  if (!draggedSpot.value) return;
+  
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = Math.round((event.clientX - rect.left) / cellSize);
+  const y = Math.round((event.clientY - rect.top) / cellSize);
+  
+  const newSpot = {
+    ...draggedSpot.value,
+    x: x,
+    y: y
+  };
+  
+  // Check for collisions
+  if (!checkCollision(newSpot)) {
+    parkingSpots.value = [...parkingSpots.value, newSpot];
+  } else {
+    toast.add({
+      severity: 'warn',
+      summary: '配置エラー',
+      detail: 'この場所には配置できません。他のスポットと重なっています。',
+      life: 3000
+    });
+  }
+  
+  draggedSpot.value = null;
+}
+
+function onSpotDrag(event, spot) {
+  if (!draggedSpot.value) return;
+
+  const rect = event.currentTarget.parentElement.getBoundingClientRect();
+  const x = Math.max(0, Math.round((event.clientX - rect.left - dragOffset.value.x) / cellSize));
+  const y = Math.max(0, Math.round((event.clientY - rect.top - dragOffset.value.y) / cellSize));
+
+  // Update the spot's position
+  const updatedSpot = {
+    ...spot,
+    x: x,
+    y: y
+  };
+
+  // Check for collisions with other spots (excluding self)
+  if (!checkCollision(updatedSpot, spot.id || spot.tempId)) {
+    // Update the spot in the array
+    const index = parkingSpots.value.findIndex(s => (s.id || s.tempId) === (spot.id || spot.tempId));
+    if (index !== -1) {
+      parkingSpots.value[index] = updatedSpot;
+    }
+  }
+
+  draggedSpot.value = null;
+}
+
+function onSpotDragStart(event, spot) {
+  if (!spot.id) return; // Don't drag new spots until they're saved
+
+  const rect = event.currentTarget.getBoundingClientRect();
+  dragOffset.value = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top
+  };
+
+  draggedSpot.value = { ...spot };
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', spot.id || spot.tempId);
+}
+
+function onSpotDragEnd() {
+  draggedSpot.value = null;
+  dragOffset.value = { x: 0, y: 0 };
+}
+
+function checkCollision(spot, excludeId = null) {
+  return parkingSpots.value.some(existingSpot => {
+    if (excludeId && (existingSpot.id === excludeId || existingSpot.tempId === excludeId)) {
+      return false;
+    }
+    
+    return !(
+      spot.x + spot.width <= existingSpot.x ||
+      spot.x >= existingSpot.x + existingSpot.width ||
+      spot.y + spot.height <= existingSpot.y ||
+      spot.y >= existingSpot.y + existingSpot.height
+    );
+  });
+}
+
+// Save the current layout
+async function saveLayout() {
+  saving.value = true;
+  try {
+    // Emit the save event with the current spots
+    emit('save', parkingSpots.value);
+    
+    toast.add({
+      severity: 'success',
+      summary: '保存しました',
+      detail: '駐車スペースのレイアウトを保存しました',
+      life: 3000
+    });
+  } catch (error) {
+    console.error('Error saving layout:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'エラー',
+      detail: 'レイアウトの保存中にエラーが発生しました',
+      life: 5000
+    });
+  } finally {
+    saving.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.parking-layout-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 1rem;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tool-section {
+  flex: 1;
+}
+
+.tool-section:last-child {
+  flex: 0 0 16.666%;
+  max-width: 16.666%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tool-section:last-child .p-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.spot-types-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.spot-type-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: white;
+  cursor: grab;
+  transition: all 0.2s, transform 0.1s, box-shadow 0.1s;
+  min-width: 80px;
+}
+
+.spot-type-item:active {
+  cursor: grabbing;
+}
+
+.spot-type-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tool-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.spot-preview {
+  width: 60px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  color: white;
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.layout-container {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  border: 1px solid #ddd;
+  overflow: auto;
+  background-color: white;
+}
+
+.layout-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 500px;
+  min-height: 500px;
+}
+
+.parking-spot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  transition: all 0.1s ease;
+  user-select: none;
+  cursor: move;
+  
+  &:hover {
+    z-index: 5;
+    box-shadow: 0 0 0 1px #2196F3;
+  }
+  
+  &.selected {
+    z-index: 10;
+    box-shadow: 0 0 0 2px #2196F3;
+  }
+}
+
+.spot-label {
+  color: white;
+  text-align: center;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  width: 100%;
+  padding: 4px;
+  box-sizing: border-box;
+}
+
+.spot-number {
+  font-weight: bold;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.spot-dimensions {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.spot-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: none;
+  z-index: 15;
+}
+
+.parking-spot.selected .spot-controls {
+  display: block;
+}
+</style>
