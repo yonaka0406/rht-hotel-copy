@@ -152,6 +152,18 @@ const updateParkingSpotsForLot = async (req, res) => {
     }
 };
 
+// Get parking reservations
+const getParkingReservations = async (req, res) => {
+    try {
+        const { hotel_id, startDate, endDate } = req.query;
+        const reservations = await parkingModel.getParkingReservations(req.requestId, hotel_id, startDate, endDate);
+        res.json(reservations);
+    } catch (error) {
+        console.error('Error fetching parking reservations:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -166,5 +178,6 @@ module.exports = {
     updateParkingSpot,
     deleteParkingSpot,
     blockParkingSpot,
-    updateParkingSpotsForLot
+    updateParkingSpotsForLot,
+    getParkingReservations
 };

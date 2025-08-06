@@ -55,61 +55,59 @@
   
                 </td>
                 <td v-for="(spot, spotIndex) in allParkingSpots" :key="spotIndex"
-                  @dblclick="handleCellClick(spot, date)" @dragstart="handleDragStart($event, spot.id, date)"
+                  @dragstart="handleDragStart($event, spot.id, date)"
                   @dragend="endDrag()" @dragover.prevent @dragenter="highlightDropZone($event, spot.id, date)"
                   @dragleave="removeHighlight($event, spot.id, date)" @drop="handleDrop($event, spot.id, date)"
-                  @contextmenu.prevent="showContextMenu($event, spot, date)"
-                  draggable="true" :style="getCellStyle(spot.id, date, dragMode === 'reorganizeRooms')" :class="[
+                  draggable="true" :style="getCellStyle(spot.id, date)" :class="[
                     'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
-                    isCellFirst(spot.id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
-                    isCellLast(spot.id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
+                    isCellFirst(spot.id, date) ? 'cell-first' : '',
+                    isCellLast(spot.id, date) ? 'cell-last' : '',
                     'cursor-pointer',
                     isCompactView ? 'compact-cell' : '',
-                    isSelectedSpotByDay(spot.id, date) ? 'selected-spot-by-day' : '',
-                    !isSpotReserved(spot.id, date, dragMode === 'reorganizeRooms') ? 'dark:bg-gray-800 dark:text-gray-100' : ''
+                    !isSpotReserved(spot.id, date) ? 'dark:bg-gray-800 dark:text-gray-100' : ''
                   ]" @mouseover="applyHover(spotIndex, dateIndex)" @mouseleave="removeHover(spotIndex, dateIndex)">
-                  <div v-if="isLoading && !isSpotReserved(spot.id, date, dragMode === 'reorganizeRooms')">
+                  <div v-if="isLoading && !isSpotReserved(spot.id, date)">
                     <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
                   </div>
                   <div v-else>
-                    <div v-if="isSpotReserved(spot.id, date, dragMode === 'reorganizeRooms')"
+                    <div v-if="isSpotReserved(spot.id, date)"
                       class="flex items-center">
                       <div>
                         <template
-                          v-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').type === 'employee'">
+                          v-if="fillSpotInfo(spot.id, date).type === 'employee'">
                           <i class="pi pi-id-card bg-purple-200 p-1 rounded dark:bg-purple-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'hold'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'hold'">
                           <i class="pi pi-pause bg-yellow-100 p-1 rounded dark:bg-yellow-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'provisory'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'provisory'">
                           <i class="pi pi-clock bg-cyan-200 p-1 rounded dark:bg-cyan-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'confirmed'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'confirmed'">
                           <i class="pi pi-check-circle bg-sky-300 p-1 rounded dark:bg-sky-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'checked_in'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'checked_in'">
                           <i class="pi pi-user bg-green-400 p-1 rounded dark:bg-green-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'checked_out'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'checked_out'">
                           <i class="pi pi-sign-out bg-gray-300 p-1 rounded dark:bg-gray-700"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'block' && fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').client_id === '11111111-1111-1111-1111-111111111111'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === '11111111-1111-1111-1111-111111111111'">
                           <i class="pi pi-times bg-red-100 p-1 rounded dark:bg-red-800"></i>
                         </template>
                         <template
-                          v-else-if="fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').status === 'block' && fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').client_id === '22222222-2222-2222-2222-222222222222'">
+                          v-else-if="fillSpotInfo(spot.id, date).status === 'block' && fillSpotInfo(spot.id, date).client_id === '22222222-2222-2222-2222-222222222222'">
                           <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
                         </template>
                       </div>
                       <div class="ml-1 dark:text-gray-100">
-                        {{ fillSpotInfo(spot.id, date, dragMode === 'reorganizeRooms').client_name || '予約情報あり' }}
+                        {{ fillSpotInfo(spot.id, date).client_name || '予約情報あり' }}
                       </div>
                     </div>
                     <div v-else>
@@ -122,8 +120,7 @@
           </table>
         </div>
         <template #footer>
-          <span class="mr-4 dark:text-gray-100">編集モード：{{ dragModeLabel }}</span>
-          <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization"
+          <Button v-if="hasChanges" @click="applyChanges"
             class="dark:bg-gray-800 dark:text-gray-100">変更適用</Button>
           <!-- Legend Row -->
           <Fieldset legend="アイコン凡例" class="mt-2 text-xs dark:text-gray-100">
@@ -151,60 +148,10 @@
         </template>
       </Panel>
   
-      <div v-if="reservationCardData.length > 0 && !reservationCardVisible"
-        :style="{ position: 'absolute', right: '3rem', bottom: '5rem' }">
-        <OverlayBadge :value="reservationCardData.length" severity="danger">
-          <Button severity="info" @click="reservationCardVisible = true" rounded>
-            <i class="pi pi-calendar" />
-          </Button>
-        </OverlayBadge>
-      </div>
   
   
   
-      <Drawer v-model:visible="reservationCardVisible" :modal="false" :position="'right'"
-        :style="{ width: isDrawerExpanded ? '400px' : '100px' }" :closable="false" @mouseover="expandDrawer"
-        @mouseleave="collapseDrawer">
-        <div v-if="reservationCardData.length > 0" class="reservation-card">
-          <div v-for="reservationGroup in reservationCardData" :key="reservationGroup.reservation_id" draggable="true"
-            @dragstart="handleCardDragStart($event, reservationGroup)" :class="{ 'expanded': isDrawerExpanded }">
-            <template v-if="isDrawerExpanded">
-              <Card class="mb-2">
-                <template #content>
-                  <div class="flex justify-between mb-2">
-                    <span class="font-bold">お客様名:</span>
-                    <span>{{ reservationGroup.client_name || '予約情報あり' }}</span>
-                  </div>
-                  <div class="flex justify-between mb-2">
-                    <span class="font-bold">部屋番号:</span>
-                    <span>{{ reservationGroup.room_number }}</span>
-                  </div>
-                  <div class="flex justify-between mb-2">
-                    <span class="font-bold">チェックイン:</span>
-                    <span>{{ formatDate(new Date(reservationGroup.check_in)) }}</span>
-                  </div>
-                  <div class="flex justify-between mb-2">
-                    <span class="font-bold">チェックアウト:</span>
-                    <span>{{ formatDate(new Date(reservationGroup.check_out)) }}</span>
-                  </div>
-                  <div class="mt-4 text-center text-sm text-gray-500">
-                    <i class="pi pi-arrows-alt mr-2"></i>ドラッグしてカレンダーに移動
-                  </div>
-                </template>
-              </Card>
-            </template>
-            <template v-else>
-              <Badge severity="info" class="my-2 w-full text-center">
-                <span class="text-xl">{{ reservationGroup.room_number }}</span>
-              </Badge>
   
-            </template>
-          </div>
-        </div>
-      </Drawer>
-  
-      <ClientForReservationDialog v-model="showClientDialog" :client="currentClient" :reservation-details="reservationDetails"
-        @save="handleClientSave" @close="showClientDialog = false" />
     </div>
   
     <ConfirmDialog group="templating">
@@ -233,8 +180,7 @@
   const toast = useToast();
   import { useConfirm } from "primevue/useconfirm";
   const confirm = useConfirm();
-  const confirmRoomMode = useConfirm();
-  import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge, Fieldset } from 'primevue';
+  import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Fieldset } from 'primevue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -327,7 +273,7 @@
   
       const fetchStartDate = minDate.value;
       const fetchEndDate = formatDate(newMaxDate);
-      await fetchReservations(fetchStartDate, fetchEndDate);
+      await fetchParkingReservationsLocal(fetchStartDate, fetchEndDate);
   
     } else if (direction === "down") {
       const oldMaxDateValue = maxDate.value;
@@ -343,13 +289,13 @@
   
       const fetchStartDate = formatDate(newMinDate);
       const fetchEndDate = maxDate.value;
-      await fetchReservations(fetchStartDate, fetchEndDate);
+      await fetchParkingReservationsLocal(fetchStartDate, fetchEndDate);
     }
   };
   
   // Fetch reserved spots data
   const tempParkingReservations = ref(null);
-  const fetchParkingReservations = async (startDate, endDate) => {
+  const fetchParkingReservationsLocal = async (startDate, endDate) => {
     try {
       if (!startDate && !endDate) {
         return
@@ -403,16 +349,16 @@
   });
   
   // Fill & Format the table 
-  const isSpotReserved = (spotId, date, useTemp = false) => {
+  const isSpotReserved = (spotId, date) => {
     const key = `${spotId}_${date}`;
-    return useTemp ? !!tempSpotsMap.value[key] : !!reservedSpotsMap.value[key];
+    return !!tempSpotsMap.value[key];
   };
-  const fillSpotInfo = (spotId, date, useTemp = false) => {
+  const fillSpotInfo = (spotId, date) => {
     const key = `${spotId}_${date}`;
-    return useTemp ? tempSpotsMap.value[key] || { status: 'available', client_name: '', reservation_id: null } : reservedSpotsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
+    return tempSpotsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
   };
-  const getCellStyle = (spotId, date, useTemp = false) => {
-    const spotInfo = fillSpotInfo(spotId, date, dragMode.value === 'reorganizeRooms');
+  const getCellStyle = (spotId, date) => {
+    const spotInfo = fillSpotInfo(spotId, date);
     let spotColor = '#d3063d';
     let style = {};
   
@@ -438,13 +384,11 @@
       style = { color: `${spotColor}`, fontWeight: 'bold' };
     }
   
-    if (useTemp) {
-      const originalReservation = reservedParkingSpots.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
-      const tempReservation = tempParkingReservations.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
+    const originalReservation = reservedParkingSpots.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
+    const tempReservation = tempParkingReservations.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date);
   
-      if (originalReservation?.id !== tempReservation?.id) {
-        style.border = '2px solid red'; // Highlight modified cells
-      }
+    if (originalReservation?.id !== tempReservation?.id) {
+      style.border = '2px solid red'; // Highlight modified cells
     }
   
     return style;
@@ -489,13 +433,13 @@
     }
     return lastMap;
   });
-  const isCellFirst = (spotId, date, useTemp = false) => {
+  const isCellFirst = (spotId, date) => {
     const key = `${spotId}_${date}`;
-    return useTemp ? !!firstCellTempMap.value[key] : !!firstCellMap.value[key];
+    return !!firstCellTempMap.value[key];
   };
-  const isCellLast = (spotId, date, useTemp = false) => {
+  const isCellLast = (spotId, date) => {
     const key = `${spotId}_${date}`;
-    return useTemp ? !!lastCellTempMap.value[key] : !!lastCellMap.value[key];
+    return !!lastCellTempMap.value[key];
   };
   const applyHover = (roomIndex, dateIndex) => {
     // Highlight the entire row
@@ -539,62 +483,19 @@
     if (th) th.classList.remove('title-cell-highlight');
   };
   
-  // Reservation Drawer  
-  const reservationCardData = ref([]);
-  const selectedCellReservations = ref([]);
-  const reservationCardVisible = ref(false);
-  const isDrawerExpanded = ref(false);
-  const showReservationCard = () => {
-    isDrawerExpanded.value = false;
-    reservationCardVisible.value = true;
-  };
-  const expandDrawer = () => {
-    isDrawerExpanded.value = true;
-    reservationCardVisible.value = true;
-  };
-  
-  const collapseDrawer = () => {
-    isDrawerExpanded.value = false;
-  };
-  const handleCardDragStart = (event, reservation) => {
-    console.log('handleCardDragStart', reservation);
-    reservationCardVisible.value = false;
-    draggingReservation.value = true;
-    selectedCellReservations.value = reservation;
-  };
   
   // Drag & Drop
   const draggingReservation = ref(false);
   const draggingStyle = ref({});
   const draggingDates = ref([]);
-  const draggingRoomId = ref(null);
+  const draggingSpotId = ref(null);
   const draggingDate = ref(null);
   const draggingCheckIn = ref(null);
   const draggingCheckOut = ref(null);
-  const draggingRoomNumber = ref(null);
-  const selectedRoomByDay = ref([]);
-  const selectedRoomByDayDateRange = computed(() => {
-    if (!selectedRoomByDay.value || selectedRoomByDay.value.length === 0) {
-      return { minDate: null, maxDate: null };
-    }
-  
-    const dates = selectedRoomByDay.value.map(item => new Date(item.key.split('_')[1]));
-  
-    if (dates.length === 0) {
-      return { minDate: null, maxDate: null };
-    }
-  
-    const minDate = new Date(Math.min(...dates));
-    const maxDate = new Date(Math.max(...dates));
-  
-    return { minDate: minDate, maxDate: maxDate };
-  });
-  const tempRoomData = ref([]);
+  const draggingSpotNumber = ref(null);
+  const tempParkingData = ref([]);
   const hasChanges = ref(false);
   
-  const handleCellClick = async (spot, date) => {
-    // No action on click since edit mode is removed
-  };
   const handleDragStart = (event, spotId, date) => {
     onDragStart(event, spotId, date);
     startDrag(event, spotId, date);
@@ -603,68 +504,27 @@
     onDrop(event, spotId, date);
     removeHighlight();
   };
-  const applyReorganization = async () => {
+  const applyChanges = async () => {
   
-    // console.log("Updated Reservations:", tempRoomData.value);
-    await setCalendarFreeChange(tempRoomData.value);
+    // console.log("Updated Reservations:", tempParkingData.value);
+    // TODO: Implement setParkingCalendarFreeChange in useParkingStore
+    // await setParkingCalendarFreeChange(tempParkingData.value);
   
     // Reset
-    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-    dragMode.value = 'reservation'
-    tempRoomData.value = {};
+    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    tempParkingData.value = {};
     hasChanges.value = false;
-  };
-  const isSelectedRoomByDay = (roomId, date) => {
-    return selectedRoomByDay.value?.some(item => item.key === `${roomId}_${date}`);
-  };
-  const isContiguous = (selected, key) => {
-    // Check if the key is already in the array
-    if (selected.some(item => item.key === key)) {
-      return false;
-    }
-  
-    // Check day difference between items
-    const newRoomId = key.split('_')[0];
-    const newDate = new Date(key.split('_')[1]);
-  
-    for (const selectedItem of selected) {
-      const selectedKey = selectedItem.key;
-      const selectedRoomId = selectedKey.split('_')[0];
-      const selectedDate = new Date(selectedKey.split('_')[1]);
-      if (newRoomId === selectedRoomId && Math.abs(selectedDate - newDate) === 86400000) {
-        return true;
-      }
-    }
-  
-    return false;
-  };
-  const areSelectedDatesAvailableInRoom = (roomId) => {
-    if (!selectedRoomByDay.value || selectedRoomByDay.value.length === 0) {
-      return true;
-    }
-  
-    for (const item of selectedRoomByDay.value) {
-      const itemRoomId = item.key.split('_')[0];
-      const itemDate = item.key.split('_')[1];
-      const newKey = `${roomId}_${itemDate}`;
-  
-      if (reservedRoomsMap.value[newKey]) {
-        return false;
-      }
-    }
-  
-    return true;
   };
   const startDrag = (event, spotId, date) => {
     // console.log('startDrag')
     const reservation = fillSpotInfo(spotId, date);
     if (reservation.reservation_id) {
       draggingReservation.value = true;
-      draggingRoomId.value = spotId; // Keep for now, might need to rename to draggingSpotId
+      draggingSpotId.value = spotId;
       draggingDate.value = date;
       draggingCheckIn.value = new Date(reservation.check_in);
       draggingCheckOut.value = new Date(reservation.check_out);
-      draggingRoomNumber.value = reservation.spot_number; // Keep for now, might need to rename to draggingSpotNumber
+      draggingSpotNumber.value = reservation.spot_number;
   
       const rect = event.target.getBoundingClientRect();
       draggingStyle.value = {
@@ -693,11 +553,11 @@
   const endDrag = () => {
     draggingReservation.value = false;
     draggingDates.value = [];
-    draggingRoomId.value = null;
+    draggingSpotId.value = null;
     draggingDate.value = null;
     draggingCheckIn.value = null;
     draggingCheckOut.value = null;
-    draggingRoomNumber.value = null;
+    draggingSpotNumber.value = null;
   };
   const highlightDropZone = (event, roomId, date) => {
     const cell = event.target.closest('td');
@@ -754,8 +614,8 @@
   };
   
   // Reservation Mode
-  const dragFrom = ref({ reservation_id: null, room_id: null, room_number: null, room_type_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
-  const dragTo = ref({ room_id: null, room_number: null, room_type_name: null, capacity: null, check_in: null, check_out: null });
+  const dragFrom = ref({ reservation_id: null, spot_id: null, spot_number: null, parking_lot_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
+  const dragTo = ref({ spot_id: null, spot_number: null, parking_lot_name: null, capacity: null, check_in: null, check_out: null });
   const onDragStart = async (event, spotId, date) => {
     // console.log('onDragStart')
     dragFrom.value = null;
@@ -861,7 +721,7 @@
           // TODO: Implement setParkingCalendarChange in useParkingStore
           // await setParkingCalendarChange(from.reservation_id, from.check_in, from.check_out, to.check_in, to.check_out, from.spot_id, to.spot_id);
           isUpdating.value = false; // Re-enable WebSocket updates
-          await fetchParkingReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+          await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
         } else {
           toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
         }
@@ -929,15 +789,6 @@
       isLoading.value = false;
     }
   }, 10);
-  
-  const handleTempBlock = (data) => {
-    // console.log('Temp block created:', data);
-    // Close any open dialogs or drawers
-    drawerVisible.value = false;
-  };
-  
-  
-  
   
   // Mount
   onMounted(async () => {
@@ -1011,18 +862,12 @@
   });
   
   // Needed Watchers
-  watch(reservationId, async (newReservationId, oldReservationId) => {
-    if (newReservationId) {
-  
-      await fetchReservation(newReservationId);
-    }
-  }, { immediate: true });
   watch(selectedHotelId, async (newVal, oldVal) => {
     isLoading.value = true;
     if (oldVal !== null && newVal !== null) {
       await fetchHotel();
       if (dateRange.value && dateRange.value.length > 0) {
-        await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
       isLoading.value = false;
     }
@@ -1039,7 +884,7 @@
     minDate.value = initialMinDate;
     maxDate.value = initialMaxDate;
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
-    await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     isLoading.value = false;
     // Scroll to the row for the selected date after table is rendered
     nextTick(() => {

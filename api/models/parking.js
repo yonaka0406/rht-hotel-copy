@@ -259,6 +259,35 @@ const syncParkingSpots = async (requestId, parking_lot_id, spots) => {
     }
 };
 
+// Get parking reservations for a date range
+const getParkingReservations = async (requestId, hotel_id, startDate, endDate) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT 
+            rp.*,
+            ps.spot_number,
+            ps.spot_type,
+            pl.name as parking_lot_name,
+            r.check_in,
+            r.check_out,
+            r.status as reservation_status,
+            rd.plan_name,
+            rd.plan_color
+        FROM reservation_parking rp
+        JOIN parking_spots ps ON rp.parking_spot_id = ps.id
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        JOIN reservations r ON rp.reservation_id = r.id
+        LEFT JOIN reservation_details rd ON r.id = rd.reservation_id
+        WHERE rp.hotel_id = $1 
+        AND rp.date >= $2 
+        AND rp.date <= $3
+        ORDER BY rp.date, ps.spot_number
+    `;
+    const values = [hotel_id, startDate, endDate];
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
 module.exports = {    
     getVehicleCategories,
     createVehicleCategory,
@@ -273,5 +302,6 @@ module.exports = {
     updateParkingSpot,
     deleteParkingSpot,
     blockParkingSpot,
-    syncParkingSpots
+    syncParkingSpots,
+    getParkingReservations
 };
