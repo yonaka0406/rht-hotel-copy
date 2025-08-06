@@ -296,7 +296,7 @@ const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
         JOIN hotels h ON pl.hotel_id = h.id
         WHERE pl.hotel_id = $1 
         AND ps.is_active = true
-        ORDER BY pl.name, ps.spot_number
+        ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id];
     const result = await pool.query(query, values);

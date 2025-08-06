@@ -2,21 +2,18 @@
     <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
       <Panel header="" class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
         <template #header>
-          <div class="grid grid-cols-6 items-center">
+          
             <p class="text-lg font-bold dark:text-gray-100">駐車場カレンダー</p>
-            <div class="flex justify-start grid grid-cols-2 col-span-2 mr-4">
+            <div class="flex justify-start mr-4">
               <p class="mr-2 dark:text-gray-100">日付へ飛ぶ：</p>
               <InputText v-model="centerDate" type="date" fluid required
                 class="dark:bg-gray-800 dark:text-gray-100 rounded" />
-            </div>
-            <div class="flex grid grid-cols-5 col-span-2">
-              <!-- Legend items removed -->
-            </div>
+            </div>            
             <div class="flex justify-end">
               <SelectButton optionLabel="label" optionValue="value" :options="tableModeOptions" v-model="isCompactView"
                 class="dark:bg-gray-800 dark:text-gray-100" />
             </div>
-          </div>
+          
         </template>
   
         <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
