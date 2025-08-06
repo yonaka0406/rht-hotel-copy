@@ -27,6 +27,28 @@
     </div>
 
     <div class="layout-container" @dragover.prevent @drop="onDrop" @click="deselectSpot">
+      <!-- SVG Overlay for connection lines -->
+      <svg class="connection-lines" :width="layoutWidth * cellSize" :height="layoutHeight * cellSize">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#ff4d4f" />
+          </marker>
+        </defs>
+        <g v-for="(rel, index) in blockingRelationships" :key="index">
+          <line 
+            :x1="(rel.from.layout_info.x + rel.from.layout_info.width / 2) * cellSize"
+            :y1="(rel.from.layout_info.y + rel.from.layout_info.height / 2) * cellSize"
+            :x2="(rel.to.layout_info.x + rel.to.layout_info.width / 2) * cellSize"
+            :y2="(rel.to.layout_info.y + rel.to.layout_info.height / 2) * cellSize"
+            stroke="#ff4d4f"
+            stroke-width="2"
+            stroke-dasharray="5,3"
+            marker-end="url(#arrowhead)"
+            class="blocking-line"
+          />
+        </g>
+      </svg>
+      
       <div class="layout-grid" :style="{
         '--grid-size': `${cellSize}px`,
         '--grid-color': 'rgba(0, 0, 0, 0.1)',
@@ -34,7 +56,10 @@
         'background-size': 'var(--grid-size) var(--grid-size)'
       }">
         <div v-for="spot in parkingSpots" :key="spot.id || spot.tempId" class="parking-spot"
-          :class="{ 'selected': selectedSpotId === (spot.id || spot.tempId) }" :style="{
+          :class="{
+            'selected': selectedSpotId === (spot.id || spot.tempId),
+            'blocked': blockedSpots.has(spot.id || spot.tempId)
+          }" :style="{
             left: `${spot.layout_info.x * cellSize}px`,
             top: `${spot.layout_info.y * cellSize}px`,
             width: `${spot.layout_info.width * cellSize}px`,
@@ -43,11 +68,14 @@
             zIndex: selectedSpotId === (spot.id || spot.tempId) ? 10 : 1,
             cursor: 'move',
             position: 'absolute',
-            transform: `rotate(${spot.layout_info.rotation}deg)`
+            transform: `rotate(${spot.layout_info.rotation}deg)`,
+            opacity: blockedSpots.has(spot.id || spot.tempId) ? 0.6 : 1
           }" @click.stop="selectSpot(spot)" draggable="true" @dragstart="onSpotDragStart($event, spot)"
           @drag="onSpotDrag($event, spot)" @dragend="onSpotDragEnd">
           <div class="spot-label">
-            <div class="spot-number">{{ spot.spot_number }}</div>
+            <div class="spot-number">
+              {{ spot.spot_number }}
+            </div>
             <div class="spot-dimensions">{{ spot.layout_info.width }}×{{ spot.layout_info.height }}</div>
           </div>
           <div v-if="selectedSpotId === (spot.id || spot.tempId)" class="spot-controls">
@@ -64,7 +92,7 @@
     <Dialog v-model:visible="spotDialog.visible" modal header="スポット編集"
       :style="{ width: '450px' }">
       <div class="p-fluid">
-        <div class="mb-4">
+        <div class="mt-6 mb-2">
           <FloatLabel>
             <InputText 
               id="spotNumber" 
@@ -78,9 +106,9 @@
           <small v-if="spotNumberError" class="p-error">{{ spotNumberError }}</small>
         </div>
         
-        <div class="mb-4">
+        <div class="mt-6 mb-2">
           <FloatLabel>
-            <Dropdown 
+            <Select 
               v-model="spotDialog.spot.blocks_parking_spot_id"
               :options="availableParkingSpots"
               option-label="spot_number"
@@ -182,6 +210,10 @@ const { get } = useApi();
 // Constants
 const cellSize = 20; // Base size in pixels (smaller for more precise placement)
 
+// Layout dimensions
+const layoutWidth = ref(50); // Default width in cells
+const layoutHeight = ref(30); // Default height in cells
+
 // Reactive state
 const showGrid = ref(true);
 const saving = ref(false);
@@ -275,6 +307,43 @@ function validateSpotNumber() {
 
 // Parking spots
 const parkingSpots = ref([]);
+
+// Track blocking relationships with coordinates
+const blockingRelationships = computed(() => {
+  const relationships = [];
+  const spotMap = new Map();
+  
+  // Create a map of spot IDs to their data
+  parkingSpots.value.forEach(spot => {
+    spotMap.set(spot.id || spot.tempId, spot);
+  });
+  
+  // Find all blocking relationships
+  parkingSpots.value.forEach(spot => {
+    if (spot.blocks_parking_spot_id) {
+      const blockedSpot = spotMap.get(spot.blocks_parking_spot_id);
+      if (blockedSpot) {
+        relationships.push({
+          from: spot,
+          to: blockedSpot
+        });
+      }
+    }
+  });
+  
+  return relationships;
+});
+
+// Track which spots are blocked (for styling)
+const blockedSpots = computed(() => {
+  const blocked = new Set();
+  parkingSpots.value.forEach(spot => {
+    if (spot.blocks_parking_spot_id) {
+      blocked.add(spot.blocks_parking_spot_id);
+    }
+  });
+  return blocked;
+});
 
 watch(() => props.initialSpots, (newSpots) => {
   // Update parking spots with proper structure
@@ -752,7 +821,24 @@ async function saveLayout() {
   height: 600px;
   border: 1px solid #ddd;
   overflow: auto;
-  background-color: white;
+  background-color: #f9f9f9;
+}
+
+.connection-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.blocking-line {
+  transition: all 0.3s ease;
+}
+
+.blocking-line:hover {
+  stroke-width: 3px;
+  stroke-dasharray: none;
 }
 
 .layout-grid {
@@ -765,25 +851,49 @@ async function saveLayout() {
 
 .parking-spot {
   position: absolute;
+  border: 1px solid #333;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-  transition: all 0.1s ease;
-  user-select: none;
   cursor: move;
-  
-  &:hover {
-    z-index: 5;
-    box-shadow: 0 0 0 1px #2196F3;
-  }
-  
-  &.selected {
-    z-index: 10;
-    box-shadow: 0 0 0 2px #2196F3;
-  }
+  transition: all 0.2s;
+  box-sizing: border-box;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+  font-size: 12px;
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.parking-spot.blocked {
+  position: relative;
+  opacity: 0.7;
+}
+
+.parking-spot.blocked::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.1),
+    rgba(255, 0, 0, 0.1) 5px,
+    rgba(255, 255, 255, 0.1) 5px,
+    rgba(255, 255, 255, 0.1) 10px
+  );
+  pointer-events: none;
+}
+
+.parking-spot.selected {
+  z-index: 10;
+  box-shadow: 0 0 0 2px #2196F3;
 }
 
 .spot-label {
