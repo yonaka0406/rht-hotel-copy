@@ -61,19 +61,38 @@
       </div>
     </div>
 
-    <Dialog v-model:visible="spotDialog.visible" modal header="スポット番号を編集"
-      :style="{ width: '400px' }">
+    <Dialog v-model:visible="spotDialog.visible" modal header="スポット編集"
+      :style="{ width: '450px' }">
       <div class="p-fluid">
-        <FloatLabel>
-          <InputText 
-            id="spotNumber" 
-            v-model="spotDialog.spot.spot_number" 
-            :class="{ 'p-invalid': spotNumberError }"
-            @input="validateSpotNumber"
-          />
-          <label for="spotNumber">スポット番号</label>
-        </FloatLabel>
-        <small v-if="spotNumberError" class="p-error">{{ spotNumberError }}</small>
+        <div class="mb-4">
+          <FloatLabel>
+            <InputText 
+              id="spotNumber" 
+              v-model="spotDialog.spot.spot_number" 
+              :class="{ 'p-invalid': spotNumberError }"
+              @input="validateSpotNumber"
+              class="w-full"
+            />
+            <label for="spotNumber">スポット番号</label>
+          </FloatLabel>
+          <small v-if="spotNumberError" class="p-error">{{ spotNumberError }}</small>
+        </div>
+        
+        <div class="mb-4">
+          <FloatLabel>
+            <Dropdown 
+              v-model="spotDialog.spot.blocks_parking_spot_id"
+              :options="availableParkingSpots"
+              option-label="spot_number"
+              option-value="id"
+              placeholder="ブロックするスポットを選択"
+              :show-clear="true"
+              class="w-full"
+            />
+            <label>ブロックするスポット</label>
+          </FloatLabel>
+          <small class="text-500">このスポットがブロックする他のスポットを選択してください</small>
+        </div>
       </div>
       <template #footer>
         <Button 
@@ -92,24 +111,15 @@
       </template>
     </Dialog>
 
-    <Dialog v-model:visible="customTypeDialogVisible" :style="{ width: '450px' }" header="カスタムスポットタイプ" :modal="true"
-      class="p-fluid">
-      <FloatLabel class="mt-6">
-        <InputText id="customName" v-model="customType.name" required="true" autofocus />
-        <label for="customName">名称</label>
-      </FloatLabel>
-      <div class="formgrid grid mt-6">
-        <div class="field col">
-          <FloatLabel>
-            <InputNumber id="customWidth" v-model="customType.width" mode="decimal" :min="0" :maxFractionDigits="2" />
-            <label for="customWidth">幅 (m)</label>
-          </FloatLabel>
+    <Dialog v-model:visible="customTypeDialogVisible" :style="{ width: '450px' }" header="カスタムスポットタイプ" :modal="true" class="p-fluid">
+      <div class="grid grid-cols-2 gap-3">
+        <div>          
+          <label for="customWidth"><small>幅 (m)</small></label>
+          <InputNumber id="customWidth" v-model="customType.width" mode="decimal" :min="0" :maxFractionDigits="2" fluid autofocus />                    
         </div>
-        <div class="field col">
-          <FloatLabel>
-            <InputNumber id="customHeight" v-model="customType.height" mode="decimal" :min="0" :maxFractionDigits="2" />
-            <label for="customHeight">高さ (m)</label>
-          </FloatLabel>
+        <div>          
+          <label for="customHeight"><small>高さ (m)</small></label>
+          <InputNumber id="customHeight" v-model="customType.height" mode="decimal" :min="0" :maxFractionDigits="2" fluid />          
         </div>
       </div>
       <template #footer>
@@ -130,26 +140,27 @@ import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import InputNumber from 'primevue/inputnumber';
 import FloatLabel from 'primevue/floatlabel';
+import Dropdown from 'primevue/dropdown';
 
 const customTypeDialogVisible = ref(false);
 const customType = ref({
-  name: '',
   width: 2.5,
   height: 5.0
 });
 
 function addCustomSpotType() {
-  if (customType.value.name && customType.value.width > 0 && customType.value.height > 0) {
+  if (customType.value.width > 0 && customType.value.height > 0) {
+    const spotId = `custom-${customType.value.width}-${customType.value.height}`;
     const newType = {
-      id: `custom-${customType.value.width}-${customType.value.height}`,
-      name: customType.value.name,
+      id: spotId,
+      name: `${customType.value.width}m × ${customType.value.height}m`,
       width: customType.value.width,
       height: customType.value.height,
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+      color: getSpotColor(spotId) // Use the same color function for consistency
     };
     spotTypes.value.push(newType);
     customTypeDialogVisible.value = false;
-    customType.value = { name: '', width: 2.5, height: 5.0 };
+    customType.value = { width: 2.5, height: 5.0 };
   }
 }
 
@@ -181,12 +192,39 @@ const draggedNewSpotType = ref(null);
 const draggedExistingSpot = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 
-// Spot types with colors and dimensions
-const spotTypes = ref([
+// Extract custom spot types from spots
+function extractCustomSpotTypes(spots) {
+  const customTypes = [];
+  const seenTypes = new Set();
+  
+  spots.forEach(spot => {
+    if (spot.spot_type && spot.spot_type.startsWith('custom-') && !seenTypes.has(spot.spot_type)) {
+      seenTypes.add(spot.spot_type);
+      const [_, width, height] = spot.spot_type.match(/custom-([\d.]+)-([\d.]+)/) || [];
+      if (width && height) {
+        customTypes.push({
+          id: spot.spot_type,
+          name: `${width}m × ${height}m`,
+          width: parseFloat(width),
+          height: parseFloat(height),
+          color: getSpotColor(spot.spot_type)
+        });
+      }
+    }
+  });
+  
+  return customTypes;
+}
+
+// Base spot types
+const baseSpotTypes = [
   { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
   { id: 'large', name: '大型', width: 3.5, height: 6, color: '#ffcc80' },
   { id: 'motorcycle', name: 'バイク', width: 1.5, height: 2.5, color: '#b39ddb' }
-]);
+];
+
+// Combined spot types (base + custom)
+const spotTypes = ref([...baseSpotTypes]);
 
 // Spot dialog
 const spotDialog = ref({
@@ -197,8 +235,16 @@ const spotDialog = ref({
     spot_number: '',
     spot_type: '',
     width: 1,
-    height: 1
+    height: 1,
+    blocks_parking_spot_id: null,
+    tempId: null
   }
+});
+
+const availableParkingSpots = computed(() => {
+  return parkingSpots.value.filter(spot => 
+    (spot.id || spot.tempId) !== (spotDialog.value.spot.id || spotDialog.value.spot.tempId)
+  );
 });
 
 const spotNumberError = ref('');
@@ -231,6 +277,7 @@ function validateSpotNumber() {
 const parkingSpots = ref([]);
 
 watch(() => props.initialSpots, (newSpots) => {
+  // Update parking spots with proper structure
   parkingSpots.value = newSpots.map(spot => {
     const layout = spot.layout_info || {
       x: spot.x,
@@ -239,21 +286,45 @@ watch(() => props.initialSpots, (newSpots) => {
       height: spot.height,
       rotation: spot.rotation || 0
     };
-    const newSpot = { ...spot, layout_info: layout };
+    
+    const newSpot = { 
+      ...spot, 
+      layout_info: layout,
+      tempId: `temp-${Math.random().toString(36).substr(2, 9)}`
+    };
+    
+    // Calculate capacity if not provided
     if (!newSpot.capacity_units && layout.width && layout.height) {
-        newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
+      newSpot.capacity_units = Math.round(layout.width * layout.height * 8);
     }
+    
+    // Clean up old properties
     delete newSpot.x;
     delete newSpot.y;
     delete newSpot.width;
     delete newSpot.height;
     delete newSpot.rotation;
+    
     return newSpot;
   });
+  
+  // Extract and add custom spot types
+  const customTypes = extractCustomSpotTypes(newSpots);
+  const existingTypeIds = new Set(spotTypes.value.map(t => t.id));
+  
+  customTypes.forEach(type => {
+    if (!existingTypeIds.has(type.id)) {
+      spotTypes.value.push(type);
+      existingTypeIds.add(type.id);
+    }
+  });
+  
+  // Save initial state for dirty checking
   pristineSpotsState = JSON.stringify(parkingSpots.value);
-  isDirty.value = false;
-  logParkingSpotsState('Spots Loaded');
-}, { deep: true, immediate: true });
+  
+  console.log('[Spots Loaded] Current parking spots:', JSON.stringify(parkingSpots.value, null, 2));
+  console.log('[Spot Types] Updated spot types:', spotTypes.value);
+}, { immediate: true });
 
 watch(parkingSpots, (currentSpots) => {
   if (JSON.stringify(currentSpots) !== pristineSpotsState) {
@@ -271,6 +342,28 @@ const selectedSpot = computed(() => {
 // Methods
 function getSpotType(typeId) {
   return spotTypes.value.find(t => t.id === typeId) || spotTypes.value[0];
+}
+
+function getSpotColor(spotType) {
+  if (!spotType) return '#cccccc';
+  
+  // Check if we already have this type in our spot types
+  const type = spotTypes.value.find(t => t.id === spotType);
+  if (type) return type.color;
+  
+  // Generate consistent color for custom spot types
+  if (spotType.startsWith('custom-')) {
+    // Simple hash function to generate consistent color from spot type string
+    let hash = 0;
+    for (let i = 0; i < spotType.length; i++) {
+      hash = spotType.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    // Generate a pastel color using the hash
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue}, 70%, 80%)`;
+  }
+  
+  return '#cccccc';
 }
 
 function selectSpot(spot) {
@@ -316,6 +409,8 @@ function openEditSpotDialog(spot) {
     spot_type: spot.spot_type,
     width: spot.layout_info.width,
     height: spot.layout_info.height,
+    blocks_parking_spot_id: spot.blocks_parking_spot_id,
+    tempId: spot.tempId
   };
   spotNumberError.value = '';
   spotDialog.value.visible = true;
@@ -333,7 +428,8 @@ function saveSpot() {
     const existingSpot = parkingSpots.value[index];
     const updatedSpot = {
       ...existingSpot,
-      spot_number: spot.spot_number.trim()
+      spot_number: spot.spot_number.trim(),
+      blocks_parking_spot_id: spot.blocks_parking_spot_id
     };
     
     parkingSpots.value.splice(index, 1, updatedSpot);
