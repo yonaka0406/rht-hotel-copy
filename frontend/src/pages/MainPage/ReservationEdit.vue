@@ -84,8 +84,7 @@
     // Primevue
     import { Card } from 'primevue';
         
-    const reservationStatus = ref(null);
-    reservationStatus.value = reservation_details.value[0].status;
+    const reservationStatus = ref(null);    
     const reservation_details = ref(null);
     const reservation_payments = ref(null);
     
@@ -104,7 +103,6 @@
             reservation_payments.value = [];
             reservationStatus.value = null;
         }
-            // console.log(reservationStatus.value)
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
