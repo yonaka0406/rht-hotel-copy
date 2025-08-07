@@ -85,9 +85,9 @@
     import { Card } from 'primevue';
         
     const reservationStatus = ref(null);
+    reservationStatus.value = reservation_details.value[0].status;
     const reservation_details = ref(null);
-    const reservation_payments = ref(null);   
-
+    const reservation_payments = ref(null);
     
     // Fetch reservation details on mount
     onMounted(async () => {
