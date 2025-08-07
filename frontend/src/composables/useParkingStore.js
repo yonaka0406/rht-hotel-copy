@@ -210,6 +210,166 @@ export function useParkingStore() {
         }
     };
 
+    // Enhanced Parking Availability Methods with Vehicle Category Support
+    const checkParkingVacancies = async (hotelId, startDate, endDate, vehicleCategoryId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/vacancies/${hotelId}/${startDate}/${endDate}/${vehicleCategoryId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to check parking vacancies', error);
+            throw error;
+        }
+    };
+
+    const getCompatibleSpots = async (hotelId, vehicleCategoryId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/compatible-spots/${hotelId}/${vehicleCategoryId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to get compatible spots', error);
+            throw error;
+        }
+    };
+
+    const getAvailableSpotsForDates = async (hotelId, vehicleCategoryId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/available-spots/${hotelId}/${vehicleCategoryId}?startDate=${startDate}&endDate=${endDate}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to get available spots for dates', error);
+            throw error;
+        }
+    };
+
+    const checkRealTimeAvailability = async (hotelId, vehicleCategoryId, dates, excludeReservationId = null) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/real-time-availability/${hotelId}/${vehicleCategoryId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    dates,
+                    excludeReservationId
+                }),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to check real-time availability', error);
+            throw error;
+        }
+    };
+
+    // Parking Addon Assignment Methods
+    const addParkingAddonWithSpot = async (reservationDetailId, addonData, spotId, dates, vehicleCategoryId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/parking/addon-assignment', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    reservationDetailId,
+                    addonData,
+                    spotId,
+                    dates,
+                    vehicleCategoryId
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to add parking addon with spot', error);
+            throw error;
+        }
+    };
+
+    const updateParkingAddonSpot = async (assignmentId, newSpotId, dates, vehicleCategoryId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/addon-assignment/${assignmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    newSpotId,
+                    dates,
+                    vehicleCategoryId
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to update parking addon spot', error);
+            throw error;
+        }
+    };
+
+    const removeParkingAddonWithSpot = async (assignmentId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/parking/addon-assignment/${assignmentId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to remove parking addon with spot', error);
+            throw error;
+        }
+    };
+
     return {
         vehicleCategories,
         parkingLots,
@@ -226,5 +386,14 @@ export function useParkingStore() {
         fetchParkingSpots,
         fetchReservedParkingSpots,
         fetchAllParkingSpotsByHotel,
+        // Enhanced availability checking methods
+        checkParkingVacancies,
+        getCompatibleSpots,
+        getAvailableSpotsForDates,
+        checkRealTimeAvailability,
+        // Parking addon assignment methods
+        addParkingAddonWithSpot,
+        updateParkingAddonSpot,
+        removeParkingAddonWithSpot,
     };
 }
