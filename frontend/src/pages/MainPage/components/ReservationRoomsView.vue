@@ -519,15 +519,33 @@
                                         <div class="grid grid-cols-2 gap-4">
                                             <div>
                                                 <FloatLabel>
-                                                    <Select
-                                                        v-model="selectedVehicleCategory"
-                                                        :options="vehicleCategories"
-                                                        optionLabel="name"
-                                                        optionValue="id"
-                                                        placeholder="車種を選択"
-                                                        fluid
-                                                        @change="onVehicleCategoryChange"
-                                                    />
+                                                    <div class="relative">
+                                                        <Select
+                                                            v-model="selectedVehicleCategory"
+                                                            :options="vehicleCategories"
+                                                            optionLabel="name"
+                                                            optionValue="id"
+                                                            placeholder="車種を選択"
+                                                            :loading="isLoadingVehicleCategories"
+                                                            :disabled="isLoadingVehicleCategories || vehicleCategoriesError"
+                                                            :class="{ 'p-invalid': vehicleCategoriesError }"
+                                                            fluid
+                                                            @change="onVehicleCategoryChange"
+                                                        >
+                                                            <template #empty>
+                                                                <div v-if="isLoadingVehicleCategories" class="p-2 text-center">
+                                                                    <i class="pi pi-spin pi-spinner mr-2"></i> 読み込み中...
+                                                                </div>
+                                                                <div v-else-if="vehicleCategoriesError" class="p-2 text-red-500">
+                                                                    {{ vehicleCategoriesError }}
+                                                                </div>
+                                                                <div v-else class="p-2 text-gray-500">
+                                                                    車種がありません
+                                                                </div>
+                                                            </template>
+                                                        </Select>
+                                                        <small v-if="vehicleCategoriesError" class="p-error">{{ vehicleCategoriesError }}</small>
+                                                    </div>
                                                     <label>車種</label>
                                                 </FloatLabel>
                                             </div>
@@ -889,13 +907,15 @@
     const selectedGroup = ref(null);
     
     // Parking-related reactive variables
-    const vehicleCategories = ref([]);
+    const vehicleCategories = ref([]); // Initialize as empty array
     const selectedVehicleCategory = ref(null);
     const availableParkingSpots = ref([]);
     const selectedParkingSpot = ref(null);
     const parkingStartDate = ref(null);
     const parkingEndDate = ref(null);
     const roomParkingAssignments = ref([]);
+    const isLoadingVehicleCategories = ref(false);
+    const vehicleCategoriesError = ref(null);
     const roomDateRange = ref({ startDate: null, endDate: null });
         
         // Tab Apply Plan
@@ -1385,6 +1405,8 @@
             closeRoomEditDialog();
         };
 
+    // Parking-related reactive variables - already declared above
+
     // Parking-related methods
     const canAddParking = computed(() => {
         return selectedVehicleCategory.value && 
@@ -1527,12 +1549,35 @@
         closeRoomEditDialog();
     };
 
+
     const loadVehicleCategories = async () => {
         try {
+            isLoadingVehicleCategories.value = true;
+            vehicleCategoriesError.value = null;
+            
             const hotelId = editReservationDetails.value[0]?.hotel_id;
-            vehicleCategories.value = await fetchVehicleCategories(hotelId);
+            if (!hotelId) {
+                throw new Error('Hotel ID is required to load vehicle categories');
+            }
+            
+            const categories = await fetchVehicleCategories(hotelId);
+            vehicleCategories.value = Array.isArray(categories) ? categories : [];
+            
+            if (vehicleCategories.value.length === 0) {
+                console.warn('No vehicle categories found for hotel:', hotelId);
+            }
         } catch (error) {
             console.error('Error loading vehicle categories:', error);
+            vehicleCategoriesError.value = '車両カテゴリの読み込みに失敗しました';
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: vehicleCategoriesError.value,
+                life: 5000
+            });
+            vehicleCategories.value = [];
+        } finally {
+            isLoadingVehicleCategories.value = false;
         }
     };
 

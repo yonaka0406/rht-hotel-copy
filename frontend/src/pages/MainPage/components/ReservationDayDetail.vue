@@ -168,7 +168,7 @@
                                             </div>
                                             
                                             <!-- Parking-specific addon selection -->
-                                            <div v-if="isParkingAddon && showParkingSpotSelection" class="parking-addon-section">
+                                            <div v-if="isParkingAddon && dayDetailShowParkingSpotSelection" class="parking-addon-section">
                                                 <Divider />
                                                 <h6 class="parking-section-title">
                                                     <i class="pi pi-car"></i>
@@ -179,8 +179,8 @@
                                                 <div class="field mt-6">
                                                     <FloatLabel>
                                                         <Select
-                                                            v-model="selectedVehicleCategory"
-                                                            :options="vehicleCategories"
+                                                            v-model="dayDetailSelectedVehicleCategory"
+                                                            :options="dayDetailVehicleCategories"
                                                             optionLabel="name"
                                                             optionValue="id"
                                                             placeholder="車両カテゴリを選択"
@@ -201,11 +201,11 @@
                                                 </div>
 
                                                 <!-- Parking Spot Selection -->
-                                                <div class="field mt-6" v-if="selectedVehicleCategory">
+                                                <div class="field mt-6" v-if="dayDetailSelectedVehicleCategory">
                                                     <FloatLabel>
                                                         <Select
-                                                            v-model="selectedParkingSpot"
-                                                            :options="compatibleSpots"
+                                                            v-model="dayDetailSelectedParkingSpot"
+                                                            :options="dayDetailCompatibleSpots"
                                                             optionLabel="displayName"
                                                             optionValue="id"
                                                             placeholder="駐車スポットを選択"
@@ -497,11 +497,12 @@
     // Parking-specific addon functionality
     const isParkingAddon = ref(false);
     const parkingAvailability = ref(null);
-    const vehicleCategories = ref([]);
-    const selectedVehicleCategory = ref(null);
-    const selectedParkingSpot = ref(null);
-    const compatibleSpots = ref([]);
-    const showParkingSpotSelection = ref(false);  
+    // Parking-related variables with dayDetail prefix to avoid conflicts
+    const dayDetailVehicleCategories = ref([]);
+    const dayDetailSelectedVehicleCategory = ref(null);
+    const dayDetailSelectedParkingSpot = ref(null);
+    const dayDetailCompatibleSpots = ref([]);
+    const dayDetailShowParkingSpotSelection = ref(false);  
     const updatePlanAddOns = async (event) => { 
         // console.log('Selected Plan:', event.value);           
         const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);   
@@ -556,12 +557,12 @@
 
         // Special handling for parking addon
         if (isParkingAddon.value) {
-            if (!selectedVehicleCategory.value) {
+            if (!dayDetailSelectedVehicleCategory.value) {
                 toast.add({ severity: 'warn', summary: '注意', detail: '車両カテゴリを選択してください。', life: 3000 }); 
                 return;
             }
             
-            if (!selectedParkingSpot.value) {
+            if (!dayDetailSelectedParkingSpot.value) {
                 toast.add({ severity: 'warn', summary: '注意', detail: '駐車スポットを選択してください。', life: 3000 }); 
                 return;
             }
@@ -582,31 +583,27 @@
             hotel_id: foundAddon.hotel_id,            
             addon_name: foundAddon.addon_name,
             price: foundAddon.price,
-            quantity: isParkingAddon.value ? 1 : reservationDetail.value.number_of_people, // Parking is typically 1 unit
+            quantity: isParkingAddon.value ? 1 : reservationDetail.value.number_of_people,
             tax_type_id: foundAddon.tax_type_id,
             tax_rate: foundAddon.tax_rate
         };
         
         // Add parking-specific data if it's a parking addon
         if (isParkingAddon.value) {
-            addonData.vehicleCategoryId = selectedVehicleCategory.value;
-            addonData.parkingSpotId = selectedParkingSpot.value;
+            addonData.vehicleCategoryId = dayDetailSelectedVehicleCategory.value;
+            addonData.parkingSpotId = dayDetailSelectedParkingSpot.value;
             addonData.date = reservationDetail.value.date;
             
             // Find selected vehicle category and spot details for display
-            const vehicleCategory = vehicleCategories.value.find(cat => cat.id === selectedVehicleCategory.value);
-            const parkingSpot = compatibleSpots.value.find(spot => spot.id === selectedParkingSpot.value);
+            const vehicleCategory = dayDetailVehicleCategories.value.find(cat => cat.id === dayDetailSelectedVehicleCategory.value);
+            const parkingSpot = dayDetailCompatibleSpots.value.find(spot => spot.id === dayDetailSelectedParkingSpot.value);
             
             addonData.vehicleCategoryName = vehicleCategory?.name;
             addonData.parkingSpotDisplay = parkingSpot?.displayName;
-        }
-        
-        selectedAddon.value.push(addonData);
-        
-        // Reset parking selection after adding
-        if (isParkingAddon.value) {
+            
+            // Reset parking selection after adding
             resetParkingSelection();
-            showParkingSpotSelection.value = false;
+            dayDetailShowParkingSpotSelection.value = false;
             isParkingAddon.value = false;
             selectedAddonOption.value = null;
         }
@@ -633,10 +630,10 @@
                                selectedAddonOption.value.addon_name?.includes('駐車'));
         
         if (isParkingAddon.value) {
-            showParkingSpotSelection.value = true;
+            dayDetailShowParkingSpotSelection.value = true;
             await loadParkingData();
         } else {
-            showParkingSpotSelection.value = false;
+            dayDetailShowParkingSpotSelection.value = false;
             resetParkingSelection();
         }
     };
@@ -645,7 +642,7 @@
         try {
             // Load vehicle categories
             await parkingStore.fetchVehicleCategories();
-            vehicleCategories.value = parkingStore.vehicleCategories;
+            dayDetailVehicleCategories.value = parkingStore.vehicleCategories;
             
             // Check availability for the specific date
             if (reservationDetail.value?.date && props.reservation_details?.hotel_id) {
@@ -663,15 +660,15 @@
     };
 
     const onVehicleCategoryChange = async () => {
-        if (selectedVehicleCategory.value && props.reservation_details?.hotel_id) {
+        if (dayDetailSelectedVehicleCategory.value && props.reservation_details?.hotel_id) {
             try {
                 // Get compatible spots for the selected vehicle category
                 const response = await parkingStore.getCompatibleSpots(
                     props.reservation_details.hotel_id,
-                    selectedVehicleCategory.value
+                    dayDetailSelectedVehicleCategory.value
                 );
                 
-                compatibleSpots.value = response.compatibleSpots.map(spot => ({
+                dayDetailCompatibleSpots.value = response.compatibleSpots.map(spot => ({
                     id: spot.id,
                     spotNumber: spot.spotNumber,
                     parkingLotName: spot.parkingLotName,
@@ -680,7 +677,7 @@
                 }));
                 
                 // Reset spot selection
-                selectedParkingSpot.value = null;
+                dayDetailSelectedParkingSpot.value = null;
                 
                 // Check availability for this vehicle category
                 await checkSingleDayAvailability();
@@ -698,13 +695,13 @@
 
     const onParkingSpotChange = () => {
         // Additional validation or actions when parking spot is selected
-        if (selectedParkingSpot.value) {
-            console.log('Selected parking spot:', selectedParkingSpot.value);
+        if (dayDetailSelectedParkingSpot.value) {
+            console.log('Selected parking spot:', dayDetailSelectedParkingSpot.value);
         }
     };
 
     const checkSingleDayAvailability = async () => {
-        if (!selectedVehicleCategory.value || !reservationDetail.value?.date || !props.reservation_details?.hotel_id) {
+        if (!dayDetailSelectedVehicleCategory.value || !reservationDetail.value?.date || !props.reservation_details?.hotel_id) {
             return;
         }
         
@@ -714,7 +711,7 @@
                 props.reservation_details.hotel_id,
                 reservationDetail.value.date,
                 reservationDetail.value.date,
-                selectedVehicleCategory.value
+                dayDetailSelectedVehicleCategory.value
             );
             
             parkingAvailability.value = response;
@@ -725,9 +722,9 @@
     };
 
     const resetParkingSelection = () => {
-        selectedVehicleCategory.value = null;
-        selectedParkingSpot.value = null;
-        compatibleSpots.value = [];
+        dayDetailSelectedVehicleCategory.value = null;
+        dayDetailSelectedParkingSpot.value = null;
+        dayDetailCompatibleSpots.value = [];
         parkingAvailability.value = null;
     };
     const savePlan = async () => {
