@@ -303,6 +303,200 @@ const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
     return result.rows;
 };
 
+// Check parking vacancies for a specific vehicle category
+const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, vehicleCategoryId) => {
+    const pool = getPool(requestId);
+    
+    // First get the capacity units required for the vehicle category
+    const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
+    const categoryResult = await pool.query(categoryQuery, [vehicleCategoryId]);
+    
+    if (categoryResult.rows.length === 0) {
+        throw new Error('Vehicle category not found');
+    }
+    
+    const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
+    
+    // Find spots that can accommodate this vehicle category and check availability
+    const query = `
+        SELECT COUNT(DISTINCT ps.id) as available_spots
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE pl.hotel_id = $1 
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND ps.id NOT IN (
+            SELECT DISTINCT rp.parking_spot_id
+            FROM reservation_parking rp
+            WHERE rp.hotel_id = $1
+            AND rp.date >= $3
+            AND rp.date < $4
+            AND rp.cancelled IS NULL
+        )
+    `;
+    const values = [hotel_id, capacityUnitsRequired, startDate, endDate];
+    const result = await pool.query(query, values);
+    return parseInt(result.rows[0].available_spots, 10);
+};
+
+// Get compatible parking spots for a vehicle category
+const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
+    const pool = getPool(requestId);
+    
+    // First get the capacity units required for the vehicle category
+    const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
+    const categoryResult = await pool.query(categoryQuery, [vehicleCategoryId]);
+    
+    if (categoryResult.rows.length === 0) {
+        throw new Error('Vehicle category not found');
+    }
+    
+    const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
+    
+    // Find spots that can accommodate this vehicle category
+    const query = `
+        SELECT 
+            ps.*,
+            pl.name as parking_lot_name,
+            pl.description as parking_lot_description
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE pl.hotel_id = $1 
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        ORDER BY pl.name, ps.spot_number::integer
+    `;
+    const values = [hotel_id, capacityUnitsRequired];
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
+// Get available spots for specific dates with capacity validation
+const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate, capacityUnits) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT 
+            ps.*,
+            pl.name as parking_lot_name,
+            pl.description as parking_lot_description
+        FROM parking_spots ps
+        JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE pl.hotel_id = $1 
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND ps.id NOT IN (
+            SELECT DISTINCT rp.parking_spot_id
+            FROM reservation_parking rp
+            WHERE rp.hotel_id = $1
+            AND rp.date >= $3
+            AND rp.date < $4
+            AND rp.cancelled IS NULL
+        )
+        ORDER BY pl.name, ps.spot_number::integer
+    `;
+    const values = [hotel_id, capacityUnits, startDate, endDate];
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
+// Validate spot capacity for a vehicle category
+const validateSpotCapacity = async (requestId, spotId, vehicleCategoryId) => {
+    const pool = getPool(requestId);
+    const query = `
+        SELECT 
+            ps.capacity_units,
+            vc.capacity_units_required,
+            ps.capacity_units >= vc.capacity_units_required as is_compatible
+        FROM parking_spots ps
+        CROSS JOIN vehicle_categories vc
+        WHERE ps.id = $1 AND vc.id = $2
+    `;
+    const values = [spotId, vehicleCategoryId];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length === 0) {
+        throw new Error('Parking spot or vehicle category not found');
+    }
+    
+    return result.rows[0];
+};
+
+// Create parking assignment with addon relationship
+const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+    
+    try {
+        await client.query('BEGIN');
+        
+        const {
+            hotel_id,
+            reservation_id,
+            reservation_addon_id,
+            vehicle_category_id,
+            parking_spot_id,
+            dates,
+            status = 'reserved',
+            comment,
+            price = 0.00,
+            created_by,
+            updated_by
+        } = assignmentData;
+        
+        // Validate spot capacity for vehicle category
+        const capacityValidation = await validateSpotCapacity(requestId, parking_spot_id, vehicle_category_id);
+        if (!capacityValidation.is_compatible) {
+            throw new Error('Parking spot cannot accommodate the selected vehicle category');
+        }
+        
+        const insertedAssignments = [];
+        
+        // Create parking assignment for each date
+        for (const date of dates) {
+            const query = `
+                INSERT INTO reservation_parking (
+                    hotel_id, reservation_id, reservation_addon_id, vehicle_category_id, 
+                    parking_spot_id, date, status, comment, price, created_by, updated_by
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                RETURNING *
+            `;
+            const values = [
+                hotel_id, reservation_id, reservation_addon_id, vehicle_category_id,
+                parking_spot_id, date, status, comment, price, created_by, updated_by
+            ];
+            const result = await client.query(query, values);
+            insertedAssignments.push(result.rows[0]);
+        }
+        
+        await client.query('COMMIT');
+        return insertedAssignments;
+        
+    } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
+// Update parking assignment addon relationship
+const updateParkingAssignmentAddon = async (requestId, assignmentId, newAddonId) => {
+    const pool = getPool(requestId);
+    const query = 'UPDATE reservation_parking SET reservation_addon_id = $1 WHERE id = $2 RETURNING *';
+    const values = [newAddonId, assignmentId];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+};
+
+// Remove parking assignments by addon ID
+const removeParkingAssignmentsByAddon = async (requestId, addonId) => {
+    const pool = getPool(requestId);
+    const query = 'DELETE FROM reservation_parking WHERE reservation_addon_id = $1 RETURNING *';
+    const values = [addonId];
+    const result = await pool.query(query, values);
+    return result.rows;
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -319,5 +513,12 @@ module.exports = {
     blockParkingSpot,
     syncParkingSpots,
     getParkingReservations,
-    getAllParkingSpotsByHotel
+    getAllParkingSpotsByHotel,
+    checkParkingVacancies,
+    getCompatibleSpots,
+    getAvailableSpotsForDates,
+    validateSpotCapacity,
+    createParkingAssignmentWithAddon,
+    updateParkingAssignmentAddon,
+    removeParkingAssignmentsByAddon
 };
