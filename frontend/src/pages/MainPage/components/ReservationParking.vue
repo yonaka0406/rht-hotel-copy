@@ -220,11 +220,12 @@ const props = defineProps({
   reservationDetails: {
     type: Array,
     required: true
+  },
+  parkingReservations: {
+    type: Array,
+    default: () => []
   }
 });
-
-// Emits
-const emit = defineEmits(['parking-updated', 'parking-added', 'parking-removed']);
 
 // Stores
 import { useParkingStore } from '@/composables/useParkingStore';
@@ -254,6 +255,27 @@ const dialogAddonData = ref({});
 const dialogInitialDates = ref([]);
 const loading = ref(false);
 
+// Watch for changes in parkingReservations prop
+watch(() => props.parkingReservations, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    parkingAssignments.value = newVal.map(reservation => ({
+      id: reservation.id,
+      spotId: reservation.parking_spot_id,
+      spotNumber: reservation.spot_number,
+      parkingLotName: '', // Add if available in the response
+      vehicleCategoryId: reservation.vehicle_category_id,
+      vehicleCategoryName: reservation.vehicle_category_name,
+      dates: [reservation.date],
+      unitPrice: Number(reservation.price) || 0,
+      totalPrice: Number(reservation.price) || 0,
+      comment: reservation.comment || '',
+      status: reservation.status || 'active'
+    }));
+  } else {
+    parkingAssignments.value = [];
+  }
+}, { immediate: true });
+
 // Computed properties
 const reservationDetailId = computed(() => {
   return props.reservationDetails?.[0]?.id || null;
@@ -276,7 +298,7 @@ const reservationDates = computed(() => {
 });
 
 const canAddParking = computed(() => {
-  return props.hotelId && props.reservationId && reservationDates.value.length > 0;
+  return reservationDetailId.value && reservationDates.value.length > 0;
 });
 
 const fullyAssignedCount = computed(() => {
@@ -289,17 +311,15 @@ const fullyAssignedCount = computed(() => {
 const loadParkingAssignments = async () => {
   loading.value = true;
   try {
-    // This would typically load existing parking assignments for the reservation
-    // For now, we'll initialize with empty array
-    // In a real implementation, this would call an API to get existing assignments
-    parkingAssignments.value = [];
+    // Emit refresh event to parent to reload parking data
+    emit('refresh');
   } catch (error) {
     console.error('Error loading parking assignments:', error);
     toast.add({
       severity: 'error',
       summary: 'エラー',
-      detail: '駐車場予約の読み込みに失敗しました',
-      life: 3000
+      detail: '駐車場情報の読み込み中にエラーが発生しました',
+      life: 5000
     });
   } finally {
     loading.value = false;
@@ -437,7 +457,7 @@ const refreshAvailability = async (assignment) => {
   
   try {
     const availabilityData = await parkingStore.checkRealTimeAvailability(
-      props.hotelId,
+      props.reservationDetails[0].hotel_id,
       assignment.vehicleCategoryId,
       assignment.dates
     );
