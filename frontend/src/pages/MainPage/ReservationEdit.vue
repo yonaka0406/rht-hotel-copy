@@ -28,9 +28,8 @@
             <template #title>駐車場</template>
             <template #content>
                 <ParkingSection
-                    v-if="reservation_details && hotelId"
+                    v-if="reservation_details"
                     :reservation-details="reservation_details"
-                    :hotel-id="hotelId"
                     :reservation-id="reservationId"
                     @parking-updated="onParkingUpdated"
                     @parking-added="onParkingAdded"
@@ -85,7 +84,6 @@
     // Primevue
     import { Card } from 'primevue';
         
-    const hotelId = ref(null);
     const reservationStatus = ref(null);
     const reservation_details = ref(null);
     const reservation_payments = ref(null);   
@@ -98,7 +96,6 @@
         await fetchReservation(reservationId.value);
         if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
             reservation_details.value = reservationDetails.value.reservation;
-            hotelId.value = reservation_details.value[0].hotel_id;
             const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             reservation_payments.value = pmtData.payments;
             reservationStatus.value = reservation_details.value[0].status;
@@ -106,7 +103,6 @@
             reservation_details.value = [];
             reservation_payments.value = [];
             reservationStatus.value = null;
-            hotelId.value = null;
         }
             // console.log(reservationStatus.value)
 
@@ -128,7 +124,6 @@
             await fetchReservation(reservationId.value);
             if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-                hotelId.value = reservation_details.value[0].hotel_id;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
             }
@@ -156,13 +151,11 @@
             await fetchReservation(reservationId.value);
             if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-                hotelId.value = reservation_details.value[0].hotel_id;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
-                hotelId.value = null;
             }
         }
     });
@@ -172,13 +165,11 @@
             await fetchReservation(newVal);
             if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-                hotelId.value = reservation_details.value[0].hotel_id;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
-                hotelId.value = null;
             }
         }
         
