@@ -156,7 +156,8 @@
                                                             :options="addonOptions"
                                                             optionLabel="addon_name"       
                                                             showClear 
-                                                            fluid                             
+                                                            fluid
+                                                            @change="onAddonSelectionChange"                             
                                                         />
                                                         <label>アドオン選択</label>
                                                     </FloatLabel>
@@ -166,21 +167,114 @@
                                                 </div>
                                             </div>
                                             
+                                            <!-- Parking-specific addon selection -->
+                                            <div v-if="isParkingAddon && showParkingSpotSelection" class="parking-addon-section">
+                                                <Divider />
+                                                <h6 class="parking-section-title">
+                                                    <i class="pi pi-car"></i>
+                                                    駐車場詳細設定
+                                                </h6>
+                                                
+                                                <!-- Vehicle Category Selection -->
+                                                <div class="field mt-6">
+                                                    <FloatLabel>
+                                                        <Select
+                                                            v-model="selectedVehicleCategory"
+                                                            :options="vehicleCategories"
+                                                            optionLabel="name"
+                                                            optionValue="id"
+                                                            placeholder="車両カテゴリを選択"
+                                                            fluid
+                                                            @change="onVehicleCategoryChange"
+                                                        >
+                                                            <template #option="slotProps">
+                                                                <div class="vehicle-category-option">
+                                                                    <div>{{ slotProps.option.name }}</div>
+                                                                    <small class="text-500">
+                                                                        容量: {{ slotProps.option.capacity_units_required }} 単位
+                                                                    </small>
+                                                                </div>
+                                                            </template>
+                                                        </Select>
+                                                        <label>車両カテゴリ *</label>
+                                                    </FloatLabel>
+                                                </div>
+
+                                                <!-- Parking Spot Selection -->
+                                                <div class="field mt-6" v-if="selectedVehicleCategory">
+                                                    <FloatLabel>
+                                                        <Select
+                                                            v-model="selectedParkingSpot"
+                                                            :options="compatibleSpots"
+                                                            optionLabel="displayName"
+                                                            optionValue="id"
+                                                            placeholder="駐車スポットを選択"
+                                                            fluid
+                                                            @change="onParkingSpotChange"
+                                                        >
+                                                            <template #option="slotProps">
+                                                                <div class="parking-spot-option">
+                                                                    <div class="spot-header">
+                                                                        <span class="spot-number">{{ slotProps.option.spotNumber }}</span>
+                                                                        <span class="parking-lot-name">{{ slotProps.option.parkingLotName }}</span>
+                                                                    </div>
+                                                                    <small class="capacity-info">
+                                                                        容量: {{ slotProps.option.capacityUnits }} 単位
+                                                                    </small>
+                                                                </div>
+                                                            </template>
+                                                        </Select>
+                                                        <label>駐車スポット *</label>
+                                                    </FloatLabel>
+                                                </div>
+
+                                                <!-- Availability Status -->
+                                                <div class="availability-status mt-4" v-if="parkingAvailability">
+                                                    <div class="availability-info">
+                                                        <i class="pi pi-info-circle"></i>
+                                                        <span>{{ formatDate(reservationDetail?.date) }}の空き状況: </span>
+                                                        <Badge 
+                                                            :value="parkingAvailability.hasVacancies ? '利用可能' : '満車'"
+                                                            :severity="parkingAvailability.hasVacancies ? 'success' : 'danger'"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
                                             <Divider />
                                             <div class="field mt-6">
                                                 <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                                    <Column field="addon_name" header="アドオン名" style="width:40%" />                        
-                                                    <Column field="quantity" header="数量">
+                                                    <Column field="addon_name" header="アドオン名" style="width:30%">
+                                                        <template #body="slotProps">
+                                                            <div class="addon-name-cell">
+                                                                <div class="addon-name">{{ slotProps.data.addon_name }}</div>
+                                                                <div v-if="slotProps.data.vehicleCategoryName" class="parking-details">
+                                                                    <small class="text-500">
+                                                                        <i class="pi pi-car"></i>
+                                                                        {{ slotProps.data.vehicleCategoryName }}
+                                                                    </small>
+                                                                </div>
+                                                                <div v-if="slotProps.data.parkingSpotDisplay" class="parking-details">
+                                                                    <small class="text-500">
+                                                                        <i class="pi pi-map-marker"></i>
+                                                                        {{ slotProps.data.parkingSpotDisplay }}
+                                                                    </small>
+                                                                </div>
+                                                            </div>
+                                                        </template>
+                                                    </Column>                        
+                                                    <Column field="quantity" header="数量" style="width:20%">
                                                         <template #body="slotProps">
                                                             <InputNumber 
                                                                 v-model="slotProps.data.quantity" 
                                                                 :min="0" 
                                                                 placeholder="数量を記入" 
+                                                                :disabled="slotProps.data.vehicleCategoryId"
                                                                 fluid
                                                             />
                                                         </template>
                                                     </Column>
-                                                    <Column field="price" header="単価">
+                                                    <Column field="price" header="単価" style="width:20%">
                                                         <template #body="slotProps">
                                                             <InputNumber 
                                                                 v-model="slotProps.data.price" 
@@ -190,7 +284,7 @@
                                                             />
                                                         </template>
                                                     </Column>
-                                                    <Column header="操作">
+                                                    <Column header="操作" style="width:10%">
                                                         <template #body="slotProps">
                                                             <Button                                       
                                                             icon="pi pi-trash"
@@ -308,6 +402,10 @@
     const { taxTypes, fetchTaxTypes } = useSettingsStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients } = useClientStore();
+    import { useParkingStore } from '@/composables/useParkingStore';
+    const parkingStore = useParkingStore();
+    import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
+    const parkingAddonManager = useParkingAddonManager();
 
     // Helper
     const formatDate = (date) => {
@@ -394,7 +492,16 @@
     // Addons
     const selectedAddon = ref(null);
     const addonOptions = ref(null);
-    const selectedAddonOption = ref(null);  
+    const selectedAddonOption = ref(null);
+    
+    // Parking-specific addon functionality
+    const isParkingAddon = ref(false);
+    const parkingAvailability = ref(null);
+    const vehicleCategories = ref([]);
+    const selectedVehicleCategory = ref(null);
+    const selectedParkingSpot = ref(null);
+    const compatibleSpots = ref([]);
+    const showParkingSpotSelection = ref(false);  
     const updatePlanAddOns = async (event) => { 
         // console.log('Selected Plan:', event.value);           
         const selectedPlanObject = plans.value.find(plan => plan.plan_key === selectedPlan.value);   
@@ -440,36 +547,188 @@
             }
         }
     };
-    const generateAddonPreview = () => {
+    const generateAddonPreview = async () => {
         // Check
         if(!selectedAddonOption.value){
             toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 }); 
             return
         }
 
-        // console.log('selectedAddonOption in select:', selectedAddonOption.value);
+        // Special handling for parking addon
+        if (isParkingAddon.value) {
+            if (!selectedVehicleCategory.value) {
+                toast.add({ severity: 'warn', summary: '注意', detail: '車両カテゴリを選択してください。', life: 3000 }); 
+                return;
+            }
+            
+            if (!selectedParkingSpot.value) {
+                toast.add({ severity: 'warn', summary: '注意', detail: '駐車スポットを選択してください。', life: 3000 }); 
+                return;
+            }
+            
+            // Check availability before adding
+            if (!parkingAvailability.value?.hasVacancies) {
+                toast.add({ severity: 'error', summary: 'エラー', detail: '選択した日付で駐車場が利用できません。', life: 3000 }); 
+                return;
+            }
+        }
 
         const foundAddon = addonOptions.value.find(addon => addon.addons_global_id === selectedAddonOption.value.addons_global_id && addon.addons_hotel_id === selectedAddonOption.value.addons_hotel_id);        
         const isHotelAddon = foundAddon.id.startsWith('H');
-        // console.log('selectedAddon:',selectedAddon.value);
-        // console.log('selectedAddonOption:', selectedAddonOption.value);            
-        selectedAddon.value.push({
+        
+        const addonData = {
             addons_global_id: isHotelAddon ? null : foundAddon.id,
             addons_hotel_id: isHotelAddon ? foundAddon.id.replace('H', '') : null,
             hotel_id: foundAddon.hotel_id,            
             addon_name: foundAddon.addon_name,
             price: foundAddon.price,
-            quantity: reservationDetail.value.number_of_people,
+            quantity: isParkingAddon.value ? 1 : reservationDetail.value.number_of_people, // Parking is typically 1 unit
             tax_type_id: foundAddon.tax_type_id,
             tax_rate: foundAddon.tax_rate
-        });  
-        // console.log('generateAddonPreview', selectedAddon.value)          
+        };
+        
+        // Add parking-specific data if it's a parking addon
+        if (isParkingAddon.value) {
+            addonData.vehicleCategoryId = selectedVehicleCategory.value;
+            addonData.parkingSpotId = selectedParkingSpot.value;
+            addonData.date = reservationDetail.value.date;
+            
+            // Find selected vehicle category and spot details for display
+            const vehicleCategory = vehicleCategories.value.find(cat => cat.id === selectedVehicleCategory.value);
+            const parkingSpot = compatibleSpots.value.find(spot => spot.id === selectedParkingSpot.value);
+            
+            addonData.vehicleCategoryName = vehicleCategory?.name;
+            addonData.parkingSpotDisplay = parkingSpot?.displayName;
+        }
+        
+        selectedAddon.value.push(addonData);
+        
+        // Reset parking selection after adding
+        if (isParkingAddon.value) {
+            resetParkingSelection();
+            showParkingSpotSelection.value = false;
+            isParkingAddon.value = false;
+            selectedAddonOption.value = null;
+        }
+        
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: `${foundAddon.addon_name}を追加しました。`, 
+            life: 3000 
+        });
     };
     const deleteAddon = (addon) => {
         const index = selectedAddon.value.indexOf(addon);
         if (index !== -1) {
             selectedAddon.value.splice(index, 1);
         }
+    };
+
+    // Parking-specific methods
+    const onAddonSelectionChange = async () => {
+        // Check if selected addon is parking (global addon ID 3)
+        isParkingAddon.value = selectedAddonOption.value && 
+                              (selectedAddonOption.value.addons_global_id === 3 || 
+                               selectedAddonOption.value.addon_name?.includes('駐車'));
+        
+        if (isParkingAddon.value) {
+            showParkingSpotSelection.value = true;
+            await loadParkingData();
+        } else {
+            showParkingSpotSelection.value = false;
+            resetParkingSelection();
+        }
+    };
+
+    const loadParkingData = async () => {
+        try {
+            // Load vehicle categories
+            await parkingStore.fetchVehicleCategories();
+            vehicleCategories.value = parkingStore.vehicleCategories;
+            
+            // Check availability for the specific date
+            if (reservationDetail.value?.date && props.reservation_details?.hotel_id) {
+                await checkSingleDayAvailability();
+            }
+        } catch (error) {
+            console.error('Error loading parking data:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車場データの読み込みに失敗しました',
+                life: 3000
+            });
+        }
+    };
+
+    const onVehicleCategoryChange = async () => {
+        if (selectedVehicleCategory.value && props.reservation_details?.hotel_id) {
+            try {
+                // Get compatible spots for the selected vehicle category
+                const response = await parkingStore.getCompatibleSpots(
+                    props.reservation_details.hotel_id,
+                    selectedVehicleCategory.value
+                );
+                
+                compatibleSpots.value = response.compatibleSpots.map(spot => ({
+                    id: spot.id,
+                    spotNumber: spot.spotNumber,
+                    parkingLotName: spot.parkingLotName,
+                    capacityUnits: spot.capacityUnits,
+                    displayName: `${spot.spotNumber} - ${spot.parkingLotName}`
+                }));
+                
+                // Reset spot selection
+                selectedParkingSpot.value = null;
+                
+                // Check availability for this vehicle category
+                await checkSingleDayAvailability();
+            } catch (error) {
+                console.error('Error loading compatible spots:', error);
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: '対応駐車スポットの読み込みに失敗しました',
+                    life: 3000
+                });
+            }
+        }
+    };
+
+    const onParkingSpotChange = () => {
+        // Additional validation or actions when parking spot is selected
+        if (selectedParkingSpot.value) {
+            console.log('Selected parking spot:', selectedParkingSpot.value);
+        }
+    };
+
+    const checkSingleDayAvailability = async () => {
+        if (!selectedVehicleCategory.value || !reservationDetail.value?.date || !props.reservation_details?.hotel_id) {
+            return;
+        }
+        
+        try {
+            const dateArray = [reservationDetail.value.date];
+            const response = await parkingStore.checkParkingVacancies(
+                props.reservation_details.hotel_id,
+                reservationDetail.value.date,
+                reservationDetail.value.date,
+                selectedVehicleCategory.value
+            );
+            
+            parkingAvailability.value = response;
+        } catch (error) {
+            console.error('Error checking parking availability:', error);
+            parkingAvailability.value = null;
+        }
+    };
+
+    const resetParkingSelection = () => {
+        selectedVehicleCategory.value = null;
+        selectedParkingSpot.value = null;
+        compatibleSpots.value = [];
+        parkingAvailability.value = null;
     };
     const savePlan = async () => {
         //console.log('savePlan:', selectedRates.value);
@@ -615,5 +874,82 @@
 </script>
 
 <style scoped>
+.parking-addon-section {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-top: 1rem;
+}
 
+.parking-section-title {
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.vehicle-category-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.parking-spot-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.spot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.spot-number {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.parking-lot-name {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
+.capacity-info {
+  color: var(--text-color-secondary);
+}
+
+.availability-status {
+  background: var(--surface-ground);
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+}
+
+.availability-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.addon-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.addon-name {
+  font-weight: 500;
+}
+
+.parking-details {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
 </style>
