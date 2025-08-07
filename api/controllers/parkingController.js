@@ -176,6 +176,75 @@ const getAllParkingSpotsByHotel = async (req, res) => {
     }
 };
 
+// Check parking vacancies for specific vehicle category
+const checkParkingVacancies = async (req, res) => {
+    try {
+        const { hotelId, startDate, endDate, vehicleCategoryId } = req.params;
+        
+        // Validate parameters
+        if (!validateNumericParam(hotelId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
+        }
+        
+        if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+        
+        const availableSpots = await parkingModel.checkParkingVacancies(
+            req.requestId, 
+            parseInt(hotelId), 
+            startDate, 
+            endDate, 
+            parseInt(vehicleCategoryId)
+        );
+        
+        res.json({ 
+            hotelId: parseInt(hotelId),
+            vehicleCategoryId: parseInt(vehicleCategoryId),
+            startDate,
+            endDate,
+            availableSpots,
+            hasVacancies: availableSpots > 0
+        });
+    } catch (error) {
+        console.error('Error checking parking vacancies:', error);
+        if (error.message === 'Vehicle category not found') {
+            return res.status(404).json({ message: 'Vehicle category not found' });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get compatible parking spots for vehicle category
+const getCompatibleSpots = async (req, res) => {
+    try {
+        const { hotelId, vehicleCategoryId } = req.params;
+        
+        // Validate parameters
+        if (!validateNumericParam(hotelId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
+        }
+        
+        const compatibleSpots = await parkingModel.getCompatibleSpots(
+            req.requestId, 
+            parseInt(hotelId), 
+            parseInt(vehicleCategoryId)
+        );
+        
+        res.json({
+            hotelId: parseInt(hotelId),
+            vehicleCategoryId: parseInt(vehicleCategoryId),
+            compatibleSpots
+        });
+    } catch (error) {
+        console.error('Error fetching compatible spots:', error);
+        if (error.message === 'Vehicle category not found') {
+            return res.status(404).json({ message: 'Vehicle category not found' });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -192,5 +261,7 @@ module.exports = {
     blockParkingSpot,
     updateParkingSpotsForLot,
     getParkingReservations,
-    getAllParkingSpotsByHotel
+    getAllParkingSpotsByHotel,
+    checkParkingVacancies,
+    getCompatibleSpots
 };
