@@ -24,7 +24,7 @@
         </Card>
 
         <!-- Parking Data component-->
-        <Card class="m-2" v-if="hasParkingAddon">
+        <Card class="m-2">
             <template #title>駐車場</template>
             <template #content>
                 <ParkingSection
@@ -82,32 +82,14 @@
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
     
-    // Toast for user feedback
-    import { useToast } from 'primevue/usetoast';
-    const toast = useToast();
-    
     // Primevue
     import { Card } from 'primevue';
         
     const hotelId = ref(null);
     const reservationStatus = ref(null);
     const reservation_details = ref(null);
-    const reservation_payments = ref(null);
-    const parkingError = ref(null);
-    
-    // Computed property to detect parking addon by global addon ID 3
-    const hasParkingAddon = computed(() => {
-        if (!reservation_details.value || !Array.isArray(reservation_details.value)) {
-            return false;
-        }
-        
-        // Check if any reservation detail has parking addon (global addon ID 3)
-        return reservation_details.value.some(detail => {
-            // This would typically check for addon_id === 3 in the reservation addons
-            // For now, we'll show parking section for all non-block reservations
-            return reservationStatus.value !== 'block';
-        });
-    });
+    const reservation_payments = ref(null);   
+
     
     // Fetch reservation details on mount
     onMounted(async () => {
@@ -200,69 +182,7 @@
             }
         }
         
-    });
-
-    // Parking event handlers
-    const onParkingAdded = (parkingData) => {
-        console.log('Parking added:', parkingData);
-        toast.add({
-            severity: 'success',
-            summary: '駐車場追加',
-            detail: '駐車場予約が追加されました',
-            life: 3000
-        });
-        
-        // Refresh reservation data to reflect parking changes
-        refreshReservationData();
-    };
-
-    const onParkingUpdated = (parkingData) => {
-        console.log('Parking updated:', parkingData);
-        toast.add({
-            severity: 'success',
-            summary: '駐車場更新',
-            detail: '駐車場予約が更新されました',
-            life: 3000
-        });
-        
-        // Refresh reservation data to reflect parking changes
-        refreshReservationData();
-    };
-
-    const onParkingRemoved = (parkingData) => {
-        console.log('Parking removed:', parkingData);
-        toast.add({
-            severity: 'info',
-            summary: '駐車場削除',
-            detail: '駐車場予約が削除されました',
-            life: 3000
-        });
-        
-        // Refresh reservation data to reflect parking changes
-        refreshReservationData();
-    };
-
-    // Helper function to refresh reservation data
-    const refreshReservationData = async () => {
-        try {
-            await fetchReservation(reservationId.value);
-            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
-                reservation_details.value = reservationDetails.value.reservation;
-                hotelId.value = reservation_details.value[0].hotel_id;
-                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
-                reservation_payments.value = pmtData.payments;
-            }
-        } catch (error) {
-            console.error('Error refreshing reservation data:', error);
-            parkingError.value = '予約データの更新に失敗しました';
-            toast.add({
-                severity: 'error',
-                summary: 'エラー',
-                detail: '予約データの更新に失敗しました',
-                life: 5000
-            });
-        }
-    };
+    });    
 
 </script>
 
