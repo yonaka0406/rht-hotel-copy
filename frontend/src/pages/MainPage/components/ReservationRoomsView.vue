@@ -130,6 +130,7 @@
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="2">宿泊者</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="3">追加・削除</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="4">期間</Tab>
+                    <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'" value="5">駐車場</Tab>
                 </TabList>
                     
                 <TabPanels>
@@ -486,6 +487,111 @@
                             </div>
                         </div>
                     </TabPanel>
+                    <!-- Tab 6: Parking -->
+                    <TabPanel value="5">
+                        <Card class="mb-2">
+                            <template #title>駐車場予約</template>
+                            <template #content>
+                                <div class="grid grid-cols-1 gap-4">
+                                    <!-- Existing parking assignments for this room -->
+                                    <div v-if="roomParkingAssignments.length > 0">
+                                        <h5 class="font-semibold mb-3">現在の駐車場予約</h5>
+                                        <DataTable :value="roomParkingAssignments" class="p-datatable-sm">
+                                            <Column field="spot_number" header="駐車場番号" />
+                                            <Column field="vehicle_category_name" header="車種" />
+                                            <Column field="start_date" header="開始日" />
+                                            <Column field="end_date" header="終了日" />
+                                            <Column header="操作">
+                                                <template #body="slotProps">
+                                                    <Button
+                                                        icon="pi pi-trash"
+                                                        class="p-button-text p-button-danger p-button-sm"
+                                                        @click="removeParkingAssignment(slotProps.data)"
+                                                    />
+                                                </template>
+                                            </Column>
+                                        </DataTable>
+                                    </div>
+                                    
+                                    <!-- Add new parking assignment -->
+                                    <div>
+                                        <h5 class="font-semibold mb-3">駐車場追加</h5>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <FloatLabel>
+                                                    <Select
+                                                        v-model="selectedVehicleCategory"
+                                                        :options="vehicleCategories"
+                                                        optionLabel="name"
+                                                        optionValue="id"
+                                                        placeholder="車種を選択"
+                                                        fluid
+                                                        @change="onVehicleCategoryChange"
+                                                    />
+                                                    <label>車種</label>
+                                                </FloatLabel>
+                                            </div>
+                                            <div>
+                                                <FloatLabel>
+                                                    <Select
+                                                        v-model="selectedParkingSpot"
+                                                        :options="availableParkingSpots"
+                                                        optionLabel="display_name"
+                                                        optionValue="id"
+                                                        placeholder="駐車場を選択"
+                                                        fluid
+                                                        :disabled="!selectedVehicleCategory"
+                                                    />
+                                                    <label>駐車場</label>
+                                                </FloatLabel>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-2 gap-4 mt-4">
+                                            <div>
+                                                <FloatLabel>
+                                                    <DatePicker
+                                                        v-model="parkingStartDate"
+                                                        :showIcon="true"
+                                                        iconDisplay="input"
+                                                        dateFormat="yy-mm-dd"
+                                                        :minDate="roomDateRange.startDate"
+                                                        :maxDate="roomDateRange.endDate"
+                                                        fluid
+                                                    />
+                                                    <label>開始日</label>
+                                                </FloatLabel>
+                                            </div>
+                                            <div>
+                                                <FloatLabel>
+                                                    <DatePicker
+                                                        v-model="parkingEndDate"
+                                                        :showIcon="true"
+                                                        iconDisplay="input"
+                                                        dateFormat="yy-mm-dd"
+                                                        :minDate="parkingStartDate || roomDateRange.startDate"
+                                                        :maxDate="roomDateRange.endDate"
+                                                        fluid
+                                                    />
+                                                    <label>終了日</label>
+                                                </FloatLabel>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-4">
+                                            <Button
+                                                label="駐車場追加"
+                                                icon="pi pi-plus"
+                                                @click="addParkingAssignment"
+                                                :disabled="!canAddParking"
+                                                class="p-button-success"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </Card>
+                    </TabPanel>
                 </TabPanels>                     
             </Tabs>
         
@@ -497,6 +603,7 @@
             <Button v-if="tabsRoomEditDialog === 1" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
             <Button v-if="tabsRoomEditDialog === 2" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
             <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
+            <Button v-if="tabsRoomEditDialog === 5" label="適用" icon="pi pi-check" class="p-button-success p-button-text p-button-sm" @click="applyParkingChanges" />
             
             <Button label="キャンセル" icon="pi pi-times" class="p-button-danger p-button-text p-button-sm" text @click="closeRoomEditDialog" />                
         </template>            
@@ -544,6 +651,10 @@
     const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+    import { useParkingStore } from '@/composables/useParkingStore';
+    const { fetchVehicleCategories, checkParkingVacancies, getCompatibleSpots, addParkingAddonWithSpot, updateParkingAddonSpot, removeParkingAddonWithSpot } = useParkingStore();
+    import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
+    const { validateParkingAssignment, handleParkingConflicts } = useParkingAddonManager();
 
     // Helper
     const formatDate = (date) => {
@@ -776,6 +887,16 @@
     const visibleRoomEditDialog = ref(false);
     const tabsRoomEditDialog = ref(0);
     const selectedGroup = ref(null);
+    
+    // Parking-related reactive variables
+    const vehicleCategories = ref([]);
+    const selectedVehicleCategory = ref(null);
+    const availableParkingSpots = ref([]);
+    const selectedParkingSpot = ref(null);
+    const parkingStartDate = ref(null);
+    const parkingEndDate = ref(null);
+    const roomParkingAssignments = ref([]);
+    const roomDateRange = ref({ startDate: null, endDate: null });
         
         // Tab Apply Plan
         const isPatternInput = ref(false);
@@ -1262,6 +1383,211 @@
             await setCalendarChange (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'solo');
 
             closeRoomEditDialog();
+        };
+
+    // Parking-related methods
+    const canAddParking = computed(() => {
+        return selectedVehicleCategory.value && 
+               selectedParkingSpot.value && 
+               parkingStartDate.value && 
+               parkingEndDate.value;
+    });
+
+    const onVehicleCategoryChange = async () => {
+        if (!selectedVehicleCategory.value || !roomDateRange.value.startDate || !roomDateRange.value.endDate) {
+            availableParkingSpots.value = [];
+            return;
+        }
+
+        try {
+            const hotelId = editReservationDetails.value[0]?.hotel_id;
+            const spots = await getCompatibleSpots(
+                hotelId,
+                selectedVehicleCategory.value,
+                roomDateRange.value.startDate,
+                roomDateRange.value.endDate
+            );
+            
+            availableParkingSpots.value = spots.map(spot => ({
+                id: spot.id,
+                display_name: `${spot.spot_number} (${spot.capacity_units}台分)`
+            }));
+        } catch (error) {
+            console.error('Error fetching compatible parking spots:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車場の取得に失敗しました',
+                life: 3000
+            });
+        }
+    };
+
+    const addParkingAssignment = async () => {
+        if (!canAddParking.value) {
+            toast.add({
+                severity: 'warn',
+                summary: '警告',
+                detail: '必要な情報を入力してください',
+                life: 3000
+            });
+            return;
+        }
+
+        try {
+            const hotelId = editReservationDetails.value[0]?.hotel_id;
+            const reservationId = editReservationDetails.value[0]?.reservation_id;
+            
+            // Create parking addon assignment
+            const parkingData = {
+                hotel_id: hotelId,
+                reservation_id: reservationId,
+                room_id: selectedGroup.value.room_id,
+                vehicle_category_id: selectedVehicleCategory.value,
+                parking_spot_id: selectedParkingSpot.value,
+                start_date: formatDate(parkingStartDate.value),
+                end_date: formatDate(parkingEndDate.value),
+                addon_id: 3 // Parking addon global ID
+            };
+
+            await addParkingAddonWithSpot(parkingData);
+            
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '駐車場予約を追加しました',
+                life: 3000
+            });
+
+            // Reset form
+            selectedVehicleCategory.value = null;
+            selectedParkingSpot.value = null;
+            parkingStartDate.value = null;
+            parkingEndDate.value = null;
+            availableParkingSpots.value = [];
+
+            // Refresh parking assignments
+            await loadRoomParkingAssignments();
+
+        } catch (error) {
+            console.error('Error adding parking assignment:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車場予約の追加に失敗しました',
+                life: 5000
+            });
+        }
+    };
+
+    const removeParkingAssignment = async (parkingData) => {
+        try {
+            await removeParkingAddonWithSpot(parkingData.id);
+            
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '駐車場予約を削除しました',
+                life: 3000
+            });
+
+            // Refresh parking assignments
+            await loadRoomParkingAssignments();
+
+        } catch (error) {
+            console.error('Error removing parking assignment:', error);
+            toast.add({
+                severity: 'error',
+                summary: 'エラー',
+                detail: '駐車場予約の削除に失敗しました',
+                life: 5000
+            });
+        }
+    };
+
+    const loadRoomParkingAssignments = async () => {
+        if (!selectedGroup.value) return;
+
+        try {
+            const hotelId = editReservationDetails.value[0]?.hotel_id;
+            const roomId = selectedGroup.value.room_id;
+            
+            // This would need to be implemented in the parking store
+            // For now, we'll use a placeholder
+            roomParkingAssignments.value = [];
+            
+        } catch (error) {
+            console.error('Error loading room parking assignments:', error);
+        }
+    };
+
+    const applyParkingChanges = async () => {
+        // This method would handle bulk parking changes
+        // For now, we'll just close the dialog
+        closeRoomEditDialog();
+    };
+
+    const loadVehicleCategories = async () => {
+        try {
+            const hotelId = editReservationDetails.value[0]?.hotel_id;
+            vehicleCategories.value = await fetchVehicleCategories(hotelId);
+        } catch (error) {
+            console.error('Error loading vehicle categories:', error);
+        }
+    };
+
+    const setupRoomDateRange = () => {
+        if (!selectedGroup.value || !selectedGroup.value.details.length) return;
+
+        const dates = selectedGroup.value.details.map(detail => new Date(detail.date));
+        roomDateRange.value = {
+            startDate: new Date(Math.min(...dates)),
+            endDate: new Date(Math.max(...dates))
+        };
+    };
+
+    const openRoomEditDialog = async (group) => {
+        selectedGroup.value = group;
+        visibleRoomEditDialog.value = true;
+        tabsRoomEditDialog.value = 0;
+        
+        // Initialize parking data
+        await loadVehicleCategories();
+        setupRoomDateRange();
+        await loadRoomParkingAssignments();
+        
+        // Reset parking form
+        selectedVehicleCategory.value = null;
+        selectedParkingSpot.value = null;
+        parkingStartDate.value = null;
+        parkingEndDate.value = null;
+        availableParkingSpots.value = [];
+    };
+
+    const closeRoomEditDialog = () => {
+        visibleRoomEditDialog.value = false;
+        selectedGroup.value = null;
+        tabsRoomEditDialog.value = 0;
+        
+        // Reset parking data
+        selectedVehicleCategory.value = null;
+        selectedParkingSpot.value = null;
+        parkingStartDate.value = null;
+        parkingEndDate.value = null;
+        availableParkingSpots.value = [];
+        roomParkingAssignments.value = [];
+    };
+
+    const handleTabChange = (newTabIndex) => {
+        tabsRoomEditDialog.value = newTabIndex;
+        
+        // Load parking data when parking tab is selected
+        if (newTabIndex === 5) {
+            loadVehicleCategories();
+            setupRoomDateRange();
+            loadRoomParkingAssignments();
+        }
+    };
 
             toast.add({ severity: 'success', summary: '成功', detail: '部屋の宿泊期間が更新されました。', life: 3000 });
             
