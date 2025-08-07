@@ -222,8 +222,8 @@ const props = defineProps({
     required: true
   },
   parkingReservations: {
-    type: Array,
-    default: () => []
+    type: Object,
+    default: () => ({})
   }
 });
 
@@ -257,8 +257,9 @@ const loading = ref(false);
 
 // Watch for changes in parkingReservations prop
 watch(() => props.parkingReservations, (newVal) => {
-  if (newVal && newVal.length > 0) {
-    parkingAssignments.value = newVal.map(reservation => ({
+  const reservationsArray = newVal?.parking || [];
+  if (reservationsArray.length > 0) {
+    parkingAssignments.value = reservationsArray.map(reservation => ({
       id: reservation.id,
       spotId: reservation.parking_spot_id,
       spotNumber: reservation.spot_number,
@@ -274,7 +275,7 @@ watch(() => props.parkingReservations, (newVal) => {
   } else {
     parkingAssignments.value = [];
   }
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 // Computed properties
 const reservationDetailId = computed(() => {
@@ -306,25 +307,6 @@ const fullyAssignedCount = computed(() => {
     assignment.spotId && assignment.vehicleCategoryId
   ).length;
 });
-
-// Methods
-const loadParkingAssignments = async () => {
-  loading.value = true;
-  try {
-    // Emit refresh event to parent to reload parking data
-    emit('refresh');
-  } catch (error) {
-    console.error('Error loading parking assignments:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: '駐車場情報の読み込み中にエラーが発生しました',
-      life: 5000
-    });
-  } finally {
-    loading.value = false;
-  }
-};
 
 const openAddParkingDialog = () => {
   isEditMode.value = false;
@@ -367,7 +349,6 @@ const onParkingSave = async (saveData) => {
           totalPrice: saveData.addonData.unitPrice * saveData.dates.length
         };
       }
-      emit('parking-updated', saveData);
     } else {
       // Add new assignment
       const newAssignment = {
@@ -378,7 +359,6 @@ const onParkingSave = async (saveData) => {
         createdAt: new Date().toISOString()
       };
       parkingAssignments.value.push(newAssignment);
-      emit('parking-added', saveData);
     }
     
     toast.add({
@@ -430,8 +410,6 @@ const removeAssignment = async (assignment) => {
     if (index !== -1) {
       parkingAssignments.value.splice(index, 1);
     }
-    
-    emit('parking-removed', assignment);
     
     toast.add({
       severity: 'success',
@@ -513,17 +491,6 @@ const handleParkingUpdate = (event) => {
   });
 };
 
-// Lifecycle
-onMounted(async () => {
-  await loadParkingAssignments(); 
-});
-
-// Watchers
-watch(() => props.reservationDetails, async (newDetails) => {
-  if (newDetails && newDetails.length > 0) {
-    await loadParkingAssignments();
-  }
-}, { deep: true });
 </script>
 
 <style scoped>
