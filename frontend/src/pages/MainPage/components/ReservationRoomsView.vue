@@ -1280,7 +1280,7 @@
         await fetchPatternsForHotel(hotelId);
         // Addons
         const allAddons = await fetchAllAddons(hotelId);
-        addonOptions.value = allAddons.filter(addon => addon.id !== 3);
+        addonOptions.value = allAddons.filter(addon => addon.id !== '3');
         selectedGroup.value = group;
         tabsRoomEditDialog.value = 0;
         visibleRoomEditDialog.value = true;

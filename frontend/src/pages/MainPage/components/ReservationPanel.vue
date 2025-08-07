@@ -963,8 +963,10 @@ const openReservationBulkEditDialog = async () => {
     await fetchPlansForHotel(hotelId);
     await fetchPatternsForHotel(hotelId);
     // Addons
-    const allAddons = await fetchAllAddons(hotelId);
-    addonOptions.value = allAddons.filter(addon => addon.id !== 3);
+    const allAddons = await fetchAllAddons(hotelId); 
+    console.log('[ReservationPanel] fetchAllAddons', allAddons);
+    addonOptions.value = allAddons.filter(addon => addon.id !== '3');
+    console.log('[ReservationPanel] addonOptions', addonOptions.value);
     tabsReservationBulkEditDialog.value = 0;
     visibleReservationBulkEditDialog.value = true;
 };
