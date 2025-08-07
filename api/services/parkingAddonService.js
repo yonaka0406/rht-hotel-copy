@@ -30,11 +30,11 @@ class ParkingAddonService {
     }
 
     /**
-     * Check parking vacancies for a specific vehicle category
+     * Check parking vacancies for a specific vehicle category with enhanced filtering
      * @param {number} hotelId - Hotel ID
      * @param {Array<string>} dateRange - Array of date strings
      * @param {number} vehicleCategoryId - Vehicle category ID
-     * @returns {Promise<number>} Number of available spots
+     * @returns {Promise<Object>} Vacancy information with detailed breakdown
      */
     async checkParkingVacancies(hotelId, dateRange, vehicleCategoryId) {
         try {
@@ -46,34 +46,133 @@ class ParkingAddonService {
             const endDate = new Date(dateRange[dateRange.length - 1]);
             endDate.setDate(endDate.getDate() + 1); // Add one day for exclusive end date
             
-            return await parkingModel.checkParkingVacancies(
+            // Get vehicle category details for capacity requirements
+            const categories = await parkingModel.getVehicleCategories(this.requestId);
+            const vehicleCategory = categories.find(cat => cat.id === vehicleCategoryId);
+            
+            if (!vehicleCategory) {
+                throw new Error('Vehicle category not found');
+            }
+
+            // Check basic vacancy count
+            const availableSpots = await parkingModel.checkParkingVacancies(
                 this.requestId, 
                 hotelId, 
                 startDate, 
                 endDate.toISOString().split('T')[0], 
                 vehicleCategoryId
             );
+
+            // Get compatible spots for detailed information
+            const compatibleSpots = await parkingModel.getCompatibleSpots(
+                this.requestId,
+                hotelId,
+                vehicleCategoryId
+            );
+
+            // Get available spots for the specific date range
+            const availableSpotsForDates = await parkingModel.getAvailableSpotsForDates(
+                this.requestId,
+                hotelId,
+                startDate,
+                endDate.toISOString().split('T')[0],
+                vehicleCategory.capacity_units_required
+            );
+
+            return {
+                hotelId,
+                vehicleCategoryId,
+                vehicleCategoryName: vehicleCategory.name,
+                capacityUnitsRequired: vehicleCategory.capacity_units_required,
+                dateRange: {
+                    startDate,
+                    endDate: endDate.toISOString().split('T')[0]
+                },
+                availableSpots,
+                hasVacancies: availableSpots > 0,
+                totalCompatibleSpots: compatibleSpots.length,
+                availableSpotsForDates: availableSpotsForDates.length,
+                compatibleSpots: compatibleSpots.map(spot => ({
+                    id: spot.id,
+                    spotNumber: spot.spot_number,
+                    capacityUnits: spot.capacity_units,
+                    parkingLotName: spot.parking_lot_name,
+                    spotType: spot.spot_type
+                }))
+            };
         } catch (error) {
             throw new Error(`Failed to check parking vacancies: ${error.message}`);
         }
     }
 
     /**
-     * Get parking spots compatible with a vehicle category
+     * Get parking spots compatible with a vehicle category with enhanced capacity-based filtering
      * @param {number} hotelId - Hotel ID
-     * @param {number} capacityUnitsRequired - Required capacity units
-     * @returns {Promise<Array>} Array of compatible parking spots
+     * @param {number} vehicleCategoryId - Vehicle category ID
+     * @returns {Promise<Object>} Compatible spots with detailed capacity information
      */
-    async getCompatibleSpots(hotelId, capacityUnitsRequired) {
+    async getCompatibleSpots(hotelId, vehicleCategoryId) {
         try {
-            const allSpots = await parkingModel.getAllParkingSpotsByHotel(this.requestId, hotelId);
+            // Get vehicle category details
+            const categories = await parkingModel.getVehicleCategories(this.requestId);
+            const vehicleCategory = categories.find(cat => cat.id === vehicleCategoryId);
             
-            // Filter spots that can accommodate the required capacity
-            const compatibleSpots = allSpots.filter(spot => 
-                spot.capacity_units >= capacityUnitsRequired && spot.is_active
+            if (!vehicleCategory) {
+                throw new Error('Vehicle category not found');
+            }
+
+            const capacityUnitsRequired = vehicleCategory.capacity_units_required;
+
+            // Use the model method for getting compatible spots
+            const compatibleSpots = await parkingModel.getCompatibleSpots(
+                this.requestId,
+                hotelId,
+                vehicleCategoryId
             );
-            
-            return compatibleSpots;
+
+            // Enhance the response with additional capacity information
+            const enhancedSpots = compatibleSpots.map(spot => ({
+                id: spot.id,
+                spotNumber: spot.spot_number,
+                spotType: spot.spot_type,
+                capacityUnits: spot.capacity_units,
+                parkingLotId: spot.parking_lot_id,
+                parkingLotName: spot.parking_lot_name,
+                parkingLotDescription: spot.parking_lot_description,
+                isActive: spot.is_active,
+                layoutInfo: spot.layout_info,
+                blocksSpotId: spot.blocks_parking_spot_id,
+                capacityMatch: {
+                    required: capacityUnitsRequired,
+                    available: spot.capacity_units,
+                    excess: spot.capacity_units - capacityUnitsRequired,
+                    isExactMatch: spot.capacity_units === capacityUnitsRequired,
+                    canAccommodate: spot.capacity_units >= capacityUnitsRequired
+                }
+            }));
+
+            // Sort by capacity match (exact matches first, then by excess capacity)
+            enhancedSpots.sort((a, b) => {
+                if (a.capacityMatch.isExactMatch && !b.capacityMatch.isExactMatch) return -1;
+                if (!a.capacityMatch.isExactMatch && b.capacityMatch.isExactMatch) return 1;
+                return a.capacityMatch.excess - b.capacityMatch.excess;
+            });
+
+            return {
+                hotelId,
+                vehicleCategoryId,
+                vehicleCategoryName: vehicleCategory.name,
+                capacityUnitsRequired,
+                totalCompatibleSpots: enhancedSpots.length,
+                compatibleSpots: enhancedSpots,
+                capacityBreakdown: {
+                    exactMatches: enhancedSpots.filter(s => s.capacityMatch.isExactMatch).length,
+                    oversizedSpots: enhancedSpots.filter(s => !s.capacityMatch.isExactMatch).length,
+                    averageExcessCapacity: enhancedSpots.length > 0 
+                        ? enhancedSpots.reduce((sum, s) => sum + s.capacityMatch.excess, 0) / enhancedSpots.length 
+                        : 0
+                }
+            };
         } catch (error) {
             throw new Error(`Failed to get compatible spots: ${error.message}`);
         }
@@ -101,25 +200,122 @@ class ParkingAddonService {
     }
 
     /**
-     * Get available spots for specific dates with capacity validation
+     * Get available spots for specific dates with enhanced capacity validation
      * @param {number} hotelId - Hotel ID
      * @param {string} startDate - Start date (YYYY-MM-DD)
      * @param {string} endDate - End date (YYYY-MM-DD)
-     * @param {number} capacityUnits - Required capacity units
-     * @returns {Promise<Array>} Array of available parking spots
+     * @param {number} vehicleCategoryId - Vehicle category ID
+     * @returns {Promise<Object>} Available spots with detailed availability and capacity information
      */
-    async getAvailableSpotsForDates(hotelId, startDate, endDate, capacityUnits) {
+    async getAvailableSpotsForDates(hotelId, startDate, endDate, vehicleCategoryId) {
         try {
-            return await parkingModel.getAvailableSpotsForDates(
+            // Get vehicle category details
+            const categories = await parkingModel.getVehicleCategories(this.requestId);
+            const vehicleCategory = categories.find(cat => cat.id === vehicleCategoryId);
+            
+            if (!vehicleCategory) {
+                throw new Error('Vehicle category not found');
+            }
+
+            const capacityUnits = vehicleCategory.capacity_units_required;
+
+            // Get available spots from model
+            const availableSpots = await parkingModel.getAvailableSpotsForDates(
                 this.requestId, 
                 hotelId, 
                 startDate, 
                 endDate, 
                 capacityUnits
             );
+
+            // Get all compatible spots for comparison
+            const allCompatibleSpots = await parkingModel.getCompatibleSpots(
+                this.requestId,
+                hotelId,
+                vehicleCategoryId
+            );
+
+            // Calculate availability statistics
+            const totalCompatibleSpots = allCompatibleSpots.length;
+            const availableCount = availableSpots.length;
+            const occupiedCount = totalCompatibleSpots - availableCount;
+
+            // Enhance available spots with detailed information
+            const enhancedAvailableSpots = availableSpots.map(spot => ({
+                id: spot.id,
+                spotNumber: spot.spot_number,
+                spotType: spot.spot_type,
+                capacityUnits: spot.capacity_units,
+                parkingLotId: spot.parking_lot_id,
+                parkingLotName: spot.parking_lot_name,
+                parkingLotDescription: spot.parking_lot_description,
+                isActive: spot.is_active,
+                layoutInfo: spot.layout_info,
+                blocksSpotId: spot.blocks_parking_spot_id,
+                availabilityInfo: {
+                    isAvailable: true,
+                    dateRange: { startDate, endDate },
+                    capacityMatch: {
+                        required: capacityUnits,
+                        available: spot.capacity_units,
+                        excess: spot.capacity_units - capacityUnits,
+                        isExactMatch: spot.capacity_units === capacityUnits
+                    }
+                }
+            }));
+
+            // Sort by parking lot and spot number for better organization
+            enhancedAvailableSpots.sort((a, b) => {
+                if (a.parkingLotName !== b.parkingLotName) {
+                    return a.parkingLotName.localeCompare(b.parkingLotName);
+                }
+                return parseInt(a.spotNumber) - parseInt(b.spotNumber);
+            });
+
+            return {
+                hotelId,
+                vehicleCategoryId,
+                vehicleCategoryName: vehicleCategory.name,
+                capacityUnitsRequired: capacityUnits,
+                dateRange: { startDate, endDate },
+                availabilityStats: {
+                    totalCompatibleSpots,
+                    availableSpots: availableCount,
+                    occupiedSpots: occupiedCount,
+                    availabilityRate: totalCompatibleSpots > 0 ? (availableCount / totalCompatibleSpots * 100).toFixed(1) : 0
+                },
+                availableSpots: enhancedAvailableSpots,
+                parkingLotBreakdown: this._groupSpotsByParkingLot(enhancedAvailableSpots)
+            };
         } catch (error) {
             throw new Error(`Failed to get available spots for dates: ${error.message}`);
         }
+    }
+
+    /**
+     * Helper method to group spots by parking lot
+     * @private
+     * @param {Array} spots - Array of parking spots
+     * @returns {Array} Grouped spots by parking lot
+     */
+    _groupSpotsByParkingLot(spots) {
+        const grouped = spots.reduce((acc, spot) => {
+            const lotName = spot.parkingLotName;
+            if (!acc[lotName]) {
+                acc[lotName] = {
+                    parkingLotName: lotName,
+                    parkingLotId: spot.parkingLotId,
+                    description: spot.parkingLotDescription,
+                    availableSpots: [],
+                    totalAvailable: 0
+                };
+            }
+            acc[lotName].availableSpots.push(spot);
+            acc[lotName].totalAvailable++;
+            return acc;
+        }, {});
+
+        return Object.values(grouped).sort((a, b) => a.parkingLotName.localeCompare(b.parkingLotName));
     }
 
     /**
@@ -230,6 +426,191 @@ class ParkingAddonService {
         } catch (error) {
             throw new Error(`Failed to check vehicle category compatibility: ${error.message}`);
         }
+    }
+
+    /**
+     * Real-time availability checking with capacity unit consideration
+     * @param {number} hotelId - Hotel ID
+     * @param {Array<string>} dates - Array of specific dates to check
+     * @param {number} vehicleCategoryId - Vehicle category ID
+     * @param {number} excludeReservationId - Optional reservation ID to exclude from availability check
+     * @returns {Promise<Object>} Real-time availability information
+     */
+    async checkRealTimeAvailability(hotelId, dates, vehicleCategoryId, excludeReservationId = null) {
+        try {
+            if (!dates || dates.length === 0) {
+                throw new Error('Dates array is required');
+            }
+
+            // Get vehicle category details
+            const categories = await parkingModel.getVehicleCategories(this.requestId);
+            const vehicleCategory = categories.find(cat => cat.id === vehicleCategoryId);
+            
+            if (!vehicleCategory) {
+                throw new Error('Vehicle category not found');
+            }
+
+            // Get all compatible spots
+            const compatibleSpots = await parkingModel.getCompatibleSpots(
+                this.requestId,
+                hotelId,
+                vehicleCategoryId
+            );
+
+            // Check availability for each date
+            const dateAvailability = {};
+            const spotAvailability = {};
+
+            for (const date of dates) {
+                const startDate = date;
+                const endDate = new Date(date);
+                endDate.setDate(endDate.getDate() + 1);
+                
+                const availableSpots = await parkingModel.getAvailableSpotsForDates(
+                    this.requestId,
+                    hotelId,
+                    startDate,
+                    endDate.toISOString().split('T')[0],
+                    vehicleCategory.capacity_units_required
+                );
+
+                dateAvailability[date] = {
+                    date,
+                    availableSpots: availableSpots.length,
+                    totalCompatibleSpots: compatibleSpots.length,
+                    occupiedSpots: compatibleSpots.length - availableSpots.length,
+                    availabilityRate: compatibleSpots.length > 0 
+                        ? ((availableSpots.length / compatibleSpots.length) * 100).toFixed(1)
+                        : 0,
+                    availableSpotIds: availableSpots.map(spot => spot.id)
+                };
+
+                // Track individual spot availability across dates
+                availableSpots.forEach(spot => {
+                    if (!spotAvailability[spot.id]) {
+                        spotAvailability[spot.id] = {
+                            spotId: spot.id,
+                            spotNumber: spot.spot_number,
+                            parkingLotName: spot.parking_lot_name,
+                            capacityUnits: spot.capacity_units,
+                            availableDates: [],
+                            unavailableDates: []
+                        };
+                    }
+                    spotAvailability[spot.id].availableDates.push(date);
+                });
+            }
+
+            // Mark unavailable dates for each spot
+            compatibleSpots.forEach(spot => {
+                if (spotAvailability[spot.id]) {
+                    const availableDates = new Set(spotAvailability[spot.id].availableDates);
+                    spotAvailability[spot.id].unavailableDates = dates.filter(date => !availableDates.has(date));
+                } else {
+                    // Spot is not available for any of the requested dates
+                    spotAvailability[spot.id] = {
+                        spotId: spot.id,
+                        spotNumber: spot.spot_number,
+                        parkingLotName: spot.parking_lot_name,
+                        capacityUnits: spot.capacity_units,
+                        availableDates: [],
+                        unavailableDates: [...dates]
+                    };
+                }
+            });
+
+            // Find spots available for all requested dates
+            const fullyAvailableSpots = Object.values(spotAvailability).filter(
+                spot => spot.availableDates.length === dates.length
+            );
+
+            // Calculate overall availability statistics
+            const overallStats = {
+                totalDatesRequested: dates.length,
+                totalCompatibleSpots: compatibleSpots.length,
+                fullyAvailableSpots: fullyAvailableSpots.length,
+                partiallyAvailableSpots: Object.values(spotAvailability).filter(
+                    spot => spot.availableDates.length > 0 && spot.availableDates.length < dates.length
+                ).length,
+                unavailableSpots: Object.values(spotAvailability).filter(
+                    spot => spot.availableDates.length === 0
+                ).length,
+                averageAvailabilityRate: dates.length > 0 
+                    ? (Object.values(dateAvailability).reduce((sum, day) => sum + parseFloat(day.availabilityRate), 0) / dates.length).toFixed(1)
+                    : 0
+            };
+
+            return {
+                hotelId,
+                vehicleCategoryId,
+                vehicleCategoryName: vehicleCategory.name,
+                capacityUnitsRequired: vehicleCategory.capacity_units_required,
+                requestedDates: dates,
+                excludeReservationId,
+                timestamp: new Date().toISOString(),
+                overallStats,
+                dateAvailability,
+                spotAvailability: Object.values(spotAvailability),
+                fullyAvailableSpots,
+                recommendations: this._generateAvailabilityRecommendations(dateAvailability, spotAvailability, dates)
+            };
+        } catch (error) {
+            throw new Error(`Failed to check real-time availability: ${error.message}`);
+        }
+    }
+
+    /**
+     * Generate availability recommendations based on current availability data
+     * @private
+     * @param {Object} dateAvailability - Date-based availability data
+     * @param {Object} spotAvailability - Spot-based availability data
+     * @param {Array<string>} requestedDates - Requested dates
+     * @returns {Object} Availability recommendations
+     */
+    _generateAvailabilityRecommendations(dateAvailability, spotAvailability, requestedDates) {
+        const recommendations = {
+            bestAvailabilityDates: [],
+            alternativeSpots: [],
+            suggestedActions: []
+        };
+
+        // Find dates with best availability
+        const sortedDates = Object.values(dateAvailability).sort(
+            (a, b) => parseFloat(b.availabilityRate) - parseFloat(a.availabilityRate)
+        );
+        recommendations.bestAvailabilityDates = sortedDates.slice(0, 3).map(day => ({
+            date: day.date,
+            availabilityRate: day.availabilityRate,
+            availableSpots: day.availableSpots
+        }));
+
+        // Find spots with best availability across requested dates
+        const spotsByAvailability = Object.values(spotAvailability).sort(
+            (a, b) => b.availableDates.length - a.availableDates.length
+        );
+        recommendations.alternativeSpots = spotsByAvailability.slice(0, 5).map(spot => ({
+            spotId: spot.spotId,
+            spotNumber: spot.spotNumber,
+            parkingLotName: spot.parkingLotName,
+            availableDates: spot.availableDates.length,
+            totalDates: requestedDates.length,
+            availabilityRate: ((spot.availableDates.length / requestedDates.length) * 100).toFixed(1)
+        }));
+
+        // Generate suggested actions
+        const fullyAvailableCount = Object.values(spotAvailability).filter(
+            spot => spot.availableDates.length === requestedDates.length
+        ).length;
+
+        if (fullyAvailableCount === 0) {
+            recommendations.suggestedActions.push('No spots available for all requested dates. Consider splitting the reservation or choosing alternative dates.');
+        } else if (fullyAvailableCount < 3) {
+            recommendations.suggestedActions.push('Limited availability. Consider booking soon to secure a spot.');
+        } else {
+            recommendations.suggestedActions.push('Good availability. Multiple options available for your dates.');
+        }
+
+        return recommendations;
     }
 }
 

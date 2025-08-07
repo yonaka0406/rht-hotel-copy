@@ -189,26 +189,31 @@ const checkParkingVacancies = async (req, res) => {
         if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
             return res.status(400).json({ message: 'Invalid date format' });
         }
+
+        // Create date range array
+        const dateRange = [];
+        const currentDate = new Date(startDate);
+        const endDateObj = new Date(endDate);
         
-        const availableSpots = await parkingModel.checkParkingVacancies(
-            req.requestId, 
-            parseInt(hotelId), 
-            startDate, 
-            endDate, 
+        while (currentDate < endDateObj) {
+            dateRange.push(currentDate.toISOString().split('T')[0]);
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Use enhanced service method
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const vacancyInfo = await service.checkParkingVacancies(
+            parseInt(hotelId),
+            dateRange,
             parseInt(vehicleCategoryId)
         );
         
-        res.json({ 
-            hotelId: parseInt(hotelId),
-            vehicleCategoryId: parseInt(vehicleCategoryId),
-            startDate,
-            endDate,
-            availableSpots,
-            hasVacancies: availableSpots > 0
-        });
+        res.json(vacancyInfo);
     } catch (error) {
         console.error('Error checking parking vacancies:', error);
-        if (error.message === 'Vehicle category not found') {
+        if (error.message.includes('Vehicle category not found')) {
             return res.status(404).json({ message: 'Vehicle category not found' });
         }
         res.status(500).json({ message: error.message });
@@ -225,20 +230,98 @@ const getCompatibleSpots = async (req, res) => {
             return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
         }
         
-        const compatibleSpots = await parkingModel.getCompatibleSpots(
-            req.requestId, 
-            parseInt(hotelId), 
+        // Use enhanced service method
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const compatibleSpotsInfo = await service.getCompatibleSpots(
+            parseInt(hotelId),
             parseInt(vehicleCategoryId)
         );
         
-        res.json({
-            hotelId: parseInt(hotelId),
-            vehicleCategoryId: parseInt(vehicleCategoryId),
-            compatibleSpots
-        });
+        res.json(compatibleSpotsInfo);
     } catch (error) {
         console.error('Error fetching compatible spots:', error);
-        if (error.message === 'Vehicle category not found') {
+        if (error.message.includes('Vehicle category not found')) {
+            return res.status(404).json({ message: 'Vehicle category not found' });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get available spots for specific dates with capacity validation
+const getAvailableSpotsForDates = async (req, res) => {
+    try {
+        const { hotelId, vehicleCategoryId } = req.params;
+        const { startDate, endDate } = req.query;
+        
+        // Validate parameters
+        if (!validateNumericParam(hotelId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
+        }
+        
+        if (!validateDateStringParam(startDate) || !validateDateStringParam(endDate)) {
+            return res.status(400).json({ message: 'Invalid date format' });
+        }
+
+        // Use enhanced service method
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const availableSpotsInfo = await service.getAvailableSpotsForDates(
+            parseInt(hotelId),
+            startDate,
+            endDate,
+            parseInt(vehicleCategoryId)
+        );
+        
+        res.json(availableSpotsInfo);
+    } catch (error) {
+        console.error('Error fetching available spots for dates:', error);
+        if (error.message.includes('Vehicle category not found')) {
+            return res.status(404).json({ message: 'Vehicle category not found' });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Check real-time availability with capacity unit consideration
+const checkRealTimeAvailability = async (req, res) => {
+    try {
+        const { hotelId, vehicleCategoryId } = req.params;
+        const { dates, excludeReservationId } = req.body;
+        
+        // Validate parameters
+        if (!validateNumericParam(hotelId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid hotel ID or vehicle category ID' });
+        }
+        
+        if (!dates || !Array.isArray(dates) || dates.length === 0) {
+            return res.status(400).json({ message: 'Dates array is required' });
+        }
+
+        // Validate date format for each date
+        for (const date of dates) {
+            if (!validateDateStringParam(date)) {
+                return res.status(400).json({ message: `Invalid date format: ${date}` });
+            }
+        }
+
+        // Use enhanced service method
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const realTimeAvailability = await service.checkRealTimeAvailability(
+            parseInt(hotelId),
+            dates,
+            parseInt(vehicleCategoryId),
+            excludeReservationId ? parseInt(excludeReservationId) : null
+        );
+        
+        res.json(realTimeAvailability);
+    } catch (error) {
+        console.error('Error checking real-time availability:', error);
+        if (error.message.includes('Vehicle category not found')) {
             return res.status(404).json({ message: 'Vehicle category not found' });
         }
         res.status(500).json({ message: error.message });
@@ -263,5 +346,7 @@ module.exports = {
     getParkingReservations,
     getAllParkingSpotsByHotel,
     checkParkingVacancies,
-    getCompatibleSpots
+    getCompatibleSpots,
+    getAvailableSpotsForDates,
+    checkRealTimeAvailability
 };

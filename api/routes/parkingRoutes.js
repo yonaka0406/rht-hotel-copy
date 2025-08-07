@@ -18,7 +18,9 @@ const {
     getParkingReservations,
     getAllParkingSpotsByHotel,
     checkParkingVacancies,
-    getCompatibleSpots
+    getCompatibleSpots,
+    getAvailableSpotsForDates,
+    checkRealTimeAvailability
 } = require('../controllers/parkingController');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
@@ -50,8 +52,10 @@ router.get('/parking/reservations', authMiddleware, getParkingReservations);
 // All Parking Spots by Hotel
 router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsByHotel);
 
-// Vehicle Category and Capacity Management Endpoints
+// Enhanced Vehicle Category and Capacity Management Endpoints
 router.get('/parking/vacancies/:hotelId/:startDate/:endDate/:vehicleCategoryId', authMiddleware, checkParkingVacancies);
 router.get('/parking/compatible-spots/:hotelId/:vehicleCategoryId', authMiddleware, getCompatibleSpots);
+router.get('/parking/available-spots/:hotelId/:vehicleCategoryId', authMiddleware, getAvailableSpotsForDates);
+router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddleware, checkRealTimeAvailability);
 
 module.exports = router;
