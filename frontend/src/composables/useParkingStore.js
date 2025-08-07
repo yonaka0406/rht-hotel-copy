@@ -7,6 +7,7 @@ const vehicleCategories = ref([]);
 const parkingLots = ref([]);
 const parkingSpots = ref([]);
 const reservedParkingSpots = ref([]);
+const parkingReservations = ref({});
 
 export function useParkingStore() {
 
@@ -370,11 +371,33 @@ export function useParkingStore() {
         }
     };
 
+    // Fetch parking reservations for a specific reservation
+    const fetchParkingReservations = async (hotelId, reservationId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');            
+            const response = await fetch(`/api/reservation/parking/${hotelId}/${reservationId}`, {
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch parking reservations');
+            }
+            
+            const data = await response.json();
+            parkingReservations.value[reservationId] = data;
+            return data;
+        } catch (error) {
+            console.error('Error fetching parking reservations:', error);
+            throw error;
+        }
+    };
+
     return {
         vehicleCategories,
         parkingLots,
         parkingSpots,
         reservedParkingSpots,
+        parkingReservations,
         fetchVehicleCategories,
         createVehicleCategory,
         updateVehicleCategory,
@@ -386,6 +409,7 @@ export function useParkingStore() {
         fetchParkingSpots,
         fetchReservedParkingSpots,
         fetchAllParkingSpotsByHotel,
+        fetchParkingReservations,
         // Enhanced availability checking methods
         checkParkingVacancies,
         getCompatibleSpots,

@@ -29,7 +29,8 @@
             <template #content>
                 <ReservationParking
                     v-if="reservation_details"
-                    :reservation-details="reservation_details"                    
+                    :reservation-details="reservation_details"
+                    :parking-reservations="parking_reservations || []"                    
                 />            
             </template>
         </Card>
@@ -76,6 +77,8 @@
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
+    import { useParkingStore } from '@/composables/useParkingStore';    
+    const { fetchParkingReservations } = useParkingStore();
     
     // Primevue
     import { Card } from 'primevue';
@@ -83,6 +86,18 @@
     const reservationStatus = ref(null);    
     const reservation_details = ref(null);
     const reservation_payments = ref(null);
+    const parking_reservations = ref([]);
+    
+    // Helper function to fetch parking data
+    const fetchParkingData = async (hotelId, reservationId) => {
+        try {
+            const parkingData = await fetchParkingReservations(hotelId, reservationId);
+            parking_reservations.value = parkingData || [];
+        } catch (error) {
+            console.error('Error fetching parking reservations:', error);
+            parking_reservations.value = [];
+        }
+    };
     
     // Fetch reservation details on mount
     onMounted(async () => {
@@ -94,9 +109,15 @@
             const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             reservation_payments.value = pmtData.payments;
             reservationStatus.value = reservation_details.value[0].status;
+            
+            // Fetch parking data when reservation details are loaded
+            if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+            }
         } else {
             reservation_details.value = [];
             reservation_payments.value = [];
+            parking_reservations.value = [];
             reservationStatus.value = null;
         }
 
@@ -120,6 +141,14 @@
                 reservation_details.value = reservationDetails.value.reservation;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                
+                // Update parking data when reservation is updated
+                if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
+                    await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                }
+            } else {
+                reservation_details.value = [];
+                reservation_payments.value = [];
             }
         });
 

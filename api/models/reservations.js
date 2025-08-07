@@ -801,6 +801,28 @@ const selectReservationPayments = async (requestId, hotelId, reservationId) => {
   }
 };
 
+const selectReservationParking = async (requestId, hotel_id, reservation_id) => {
+  const pool = getPool(requestId);
+  const query = `
+      SELECT rp.*, 
+             ps.spot_number, 
+             ps.spot_type, 
+             ps.capacity_units,
+             vc.name as vehicle_category_name,
+             vc.capacity_units_required
+      FROM reservation_parking rp
+      LEFT JOIN parking_spots ps ON rp.parking_spot_id = ps.id
+      LEFT JOIN vehicle_categories vc ON rp.vehicle_category_id = vc.id
+      JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
+      WHERE rp.hotel_id = $1 
+      AND rd.reservation_id = $2
+      ORDER BY rp.date, ps.spot_number
+  `;
+  const values = [hotel_id, reservation_id];
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
 // Function to Add
 
 const addReservationHold = async (requestId, reservation) => {
@@ -4646,6 +4668,7 @@ module.exports = {
   selectAvailableDatesForChange,
   selectReservationClientIds,
   selectReservationPayments,
+  selectReservationParking,
   addReservationHold,
   addReservationDetail,
   addReservationAddon,

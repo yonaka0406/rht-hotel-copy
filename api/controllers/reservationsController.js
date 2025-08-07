@@ -4,7 +4,7 @@ const {
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
-  insertCopyReservation
+  insertCopyReservation, selectReservationParking,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -163,6 +163,32 @@ const getReservationPayments = async (req, res) => {
   } catch (error) {
     console.error('Error getting payments:', error);
     res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const getReservationParking = async (req, res) => {
+  const { hid: hotel_id, id: reservation_id } = req.params;
+
+  if (!hotel_id || !reservation_id) {
+    return res.status(400).json({ 
+      error: 'Missing required parameters: hotel_id and reservation_id are required' 
+    });
+  }
+
+  try {
+    const parkingReservations = await selectReservationParking(
+      req.requestId,
+      hotel_id,
+      reservation_id
+    );
+    
+    return res.status(200).json({ parking: parkingReservations });
+  } catch (error) {
+    console.error('Error fetching reservation parking:', error);
+    return res.status(500).json({ 
+      error: 'An error occurred while fetching reservation parking',
+      details: error.message 
+    });
   }
 };
 
@@ -1296,7 +1322,6 @@ const getFailedOtaReservations = async (req, res) => {
 };
 
 module.exports = {
-  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
+  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
   createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, convertBlockToReservation
 };
-
