@@ -25,176 +25,26 @@
       </div>
     </div>
 
-    <!-- Parking Assignments List -->
-    <div class="parking-assignments" v-if="parkingAssignments.length > 0">
-      <Accordion :activeIndex="0">
-        <AccordionPanel
-          v-for="(assignment, index) in parkingAssignments"
-          :key="assignment.id || `temp-${index}`"
-          :value="assignment.id || `temp-${index}`"
-        >
-          <AccordionHeader>
-            <div class="assignment-header">
-              <div class="assignment-info">
-                <div class="spot-info">
-                  <span class="spot-number">{{ assignment.spotNumber || 'スポット未割当' }}</span>
-                  <span class="parking-lot" v-if="assignment.parkingLotName">
-                    - {{ assignment.parkingLotName }}
-                  </span>
-                </div>
-                <div class="assignment-details">
-                  <span class="vehicle-category">{{ assignment.vehicleCategoryName || '車両未選択' }}</span>
-                  <span class="date-range">{{ formatDateRange(assignment.dates) }}</span>
-                </div>
+    <!-- Parking Usage Table -->
+    <div class="parking-usage" v-if="Object.keys(parkingUsageByRoom).length > 0">
+      <div class="card">
+        <DataTable :value="Object.entries(parkingUsageByRoom)" :scrollable="true" scrollDirection="both" class="parking-table">
+          <Column field="room" header="部屋" :style="{ 'min-width': '150px' }" frozen>
+            <template #body="{ data: [roomId, roomData] }">
+              {{ roomData.roomName }}
+            </template>
+          </Column>
+          <Column v-for="date in reservationDates" :key="date" :field="date" :header="formatDate(date)" :style="{ 'min-width': '100px' }">
+            <template #body="{ data: [roomId, roomData] }">
+              <div class="text-center">
+                <Tag v-if="roomData.dates[date] > 0" severity="info">
+                  {{ roomData.dates[date] }}
+                </Tag>
+                <span v-else>-</span>
               </div>
-              <div class="assignment-status">
-                <div class="status-indicators">
-                  <i
-                    class="pi"
-                    :class="assignment.spotId ? 'pi-check-circle' : 'pi-exclamation-triangle'"
-                    :style="{ color: assignment.spotId ? 'var(--green-500)' : 'var(--orange-500)' }"
-                    :title="assignment.spotId ? 'スポット割当済み' : 'スポット未割当'"
-                  ></i>
-                  <i
-                    class="pi"
-                    :class="assignment.vehicleCategoryId ? 'pi-check-circle' : 'pi-exclamation-triangle'"
-                    :style="{ color: assignment.vehicleCategoryId ? 'var(--green-500)' : 'var(--orange-500)' }"
-                    :title="assignment.vehicleCategoryId ? '車両カテゴリ設定済み' : '車両カテゴリ未設定'"
-                  ></i>
-                </div>
-                <div class="price-info">
-                  <span class="total-price">¥{{ (assignment.totalPrice || 0).toLocaleString('ja-JP') }}</span>
-                </div>
-              </div>
-            </div>
-          </AccordionHeader>
-          <AccordionContent>
-            <div class="assignment-details-panel">
-              <!-- Assignment Information -->
-              <div class="details-grid">
-                <div class="detail-section">
-                  <h6>基本情報</h6>
-                  <div class="detail-item">
-                    <span class="label">アドオン名:</span>
-                    <span class="value">{{ assignment.name || '駐車場' }}</span>
-                  </div>
-                  <div class="detail-item" v-if="assignment.comment">
-                    <span class="label">コメント:</span>
-                    <span class="value">{{ assignment.comment }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <span class="label">単価:</span>
-                    <span class="value">¥{{ (assignment.unitPrice || 0).toLocaleString('ja-JP') }}/日</span>
-                  </div>
-                  <div class="detail-item">
-                    <span class="label">日数:</span>
-                    <span class="value">{{ assignment.dates?.length || 0 }}日</span>
-                  </div>
-                </div>
-
-                <div class="detail-section" v-if="assignment.vehicleCategoryId">
-                  <h6>車両情報</h6>
-                  <div class="detail-item">
-                    <span class="label">車両カテゴリ:</span>
-                    <span class="value">{{ assignment.vehicleCategoryName }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <span class="label">必要容量:</span>
-                    <span class="value">{{ assignment.capacityUnitsRequired }} 単位</span>
-                  </div>
-                </div>
-
-                <div class="detail-section" v-if="assignment.spotId">
-                  <h6>駐車スポット</h6>
-                  <div class="detail-item">
-                    <span class="label">スポット番号:</span>
-                    <span class="value">{{ assignment.spotNumber }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <span class="label">駐車場:</span>
-                    <span class="value">{{ assignment.parkingLotName }}</span>
-                  </div>
-                  <div class="detail-item">
-                    <span class="label">スポット容量:</span>
-                    <span class="value">{{ assignment.spotCapacityUnits }} 単位</span>
-                  </div>
-                </div>
-
-                <div class="detail-section">
-                  <h6>利用期間</h6>
-                  <div class="date-list">
-                    <Tag
-                      v-for="date in assignment.dates?.slice(0, 7)"
-                      :key="date"
-                      :value="formatDate(date)"
-                      severity="info"
-                      class="date-tag"
-                    />
-                    <Tag
-                      v-if="assignment.dates?.length > 7"
-                      :value="`他 ${assignment.dates.length - 7}日`"
-                      severity="secondary"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Real-time Availability Status -->
-              <div class="availability-status" v-if="assignment.availabilityData">
-                <h6>リアルタイム空き状況</h6>
-                <div class="availability-summary">
-                  <div class="availability-stat">
-                    <span class="stat-label">利用可能率:</span>
-                    <span class="stat-value">{{ assignment.availabilityData.overallStats.averageAvailabilityRate }}%</span>
-                  </div>
-                  <div class="availability-stat">
-                    <span class="stat-label">完全利用可能:</span>
-                    <span class="stat-value">{{ assignment.availabilityData.overallStats.fullyAvailableSpots }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="assignment-actions">
-                <Button
-                  icon="pi pi-pencil"
-                  label="編集"
-                  class="p-button-sm p-button-info"
-                  @click="openEditParkingDialog(assignment)"
-                />
-                <Button
-                  icon="pi pi-refresh"
-                  label="空き状況更新"
-                  class="p-button-sm p-button-secondary"
-                  @click="refreshAvailability(assignment)"
-                  :loading="assignment.refreshing"
-                />
-                <Button
-                  icon="pi pi-trash"
-                  label="削除"
-                  class="p-button-sm p-button-danger"
-                  @click="confirmRemoveAssignment(assignment)"
-                />
-              </div>
-            </div>
-          </AccordionContent>
-        </AccordionPanel>
-      </Accordion>
-    </div>
-
-    <!-- Empty State -->
-    <div class="empty-state" v-else>
-      <div class="empty-content">
-        <i class="pi pi-car empty-icon"></i>
-        <h5>駐車場の予約がありません</h5>
-        <p>「駐車場追加」ボタンをクリックして駐車場を予約してください。</p>
-        <Button
-          icon="pi pi-plus"
-          label="駐車場追加"
-          class="p-button-lg"
-          @click="openAddParkingDialog"
-          :disabled="!canAddParking"
-        />
+            </template>
+          </Column>
+        </DataTable>
       </div>
     </div>
 
@@ -229,6 +79,7 @@ const props = defineProps({
 
 // Stores
 import { useParkingStore } from '@/composables/useParkingStore';
+const parkingStore = useParkingStore();
 
 // Primevue
 import { useConfirm } from 'primevue/useconfirm';
@@ -243,8 +94,13 @@ import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ConfirmDialog from 'primevue/confirmdialog';
 
-// Composables
-const parkingStore = useParkingStore();
+// Helper
+const formatDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
 
 // Reactive state
 const parkingAssignments = ref([]);
@@ -296,6 +152,39 @@ const reservationDates = computed(() => {
   }
   
   return dates;
+});
+
+// Group parking assignments by room and date
+const parkingUsageByRoom = computed(() => {
+  const usage = {};
+  
+  // Initialize with all rooms from reservation details
+  props.reservationDetails.forEach(room => {
+    if (!usage[room.room_id]) {
+      usage[room.room_id] = {
+        roomName: room.room_name || `Room ${room.room_number || room.room_id}`,
+        dates: {}
+      };
+      
+      // Initialize all dates with 0 spots
+      reservationDates.value.forEach(date => {
+        usage[room.room_id].dates[date] = 0;
+      });
+    }
+  });
+  
+  // Count parking spots per room per date
+  parkingAssignments.value.forEach(assignment => {
+    if (assignment.room_id && assignment.dates) {
+      assignment.dates.forEach(date => {
+        if (usage[assignment.room_id]?.dates[date] !== undefined) {
+          usage[assignment.room_id].dates[date]++;
+        }
+      });
+    }
+  });
+  
+  return usage;
 });
 
 const canAddParking = computed(() => {
@@ -461,20 +350,12 @@ const refreshAvailability = async (assignment) => {
   }
 };
 
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    month: 'short',
-    day: 'numeric'
-  });
-};
-
 const formatDateRange = (dates) => {
   if (!dates || dates.length === 0) return '期間未設定';
-  if (dates.length === 1) return formatDate(dates[0]);
+  if (dates.length === 1) return formatDate(new Date(dates[0]));
   
-  const startDate = formatDate(dates[0]);
-  const endDate = formatDate(dates[dates.length - 1]);
+  const startDate = formatDate(new Date(dates[0]));
+  const endDate = formatDate(new Date(dates[dates.length - 1]));
   return `${startDate} - ${endDate} (${dates.length}日)`;
 };
 
@@ -530,6 +411,34 @@ const handleParkingUpdate = (event) => {
 .header-actions {
   display: flex;
   gap: 0.5rem;
+}
+.parking-usage {
+  margin-bottom: 1.5rem;
+}
+
+.parking-table {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.parking-table :deep(.p-datatable-wrapper) {
+  overflow-x: auto;
+}
+
+.parking-table :deep(.p-datatable-thead > tr > th) {
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: var(--surface-card);
+  z-index: 1;
+}
+
+.parking-table :deep(.p-datatable-tbody > tr > td) {
+  white-space: nowrap;
+}
+
+.text-center {
+  text-align: center;
 }
 
 .parking-assignments {
