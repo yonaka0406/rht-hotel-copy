@@ -86,13 +86,12 @@ import { useConfirm } from 'primevue/useconfirm';
 const confirm = useConfirm();
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import Accordion from 'primevue/accordion';
-import AccordionPanel from 'primevue/accordionpanel';
-import AccordionHeader from 'primevue/accordionheader';
-import AccordionContent from 'primevue/accordioncontent';
+
 import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ConfirmDialog from 'primevue/confirmdialog';
+import DataTable from 'primevue/datatable';
+import Column from 'primevue/column';
 
 // Helper
 const formatDate = (date) => {
