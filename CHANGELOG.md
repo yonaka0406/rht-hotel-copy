@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Bugfix: Fixed issue where users couldn't add addons without selecting a plan first. The system now properly handles cases where no plan is selected. (Bug #22)
 - Feature: Show OTA Queue Table in Admin page.
 - Bugfix: Copy billable status as well when adding new rooms to existing reservations.
 - Bugfix: Fixed an issue where the Google Drive link in the side menu would navigate to a 'Not Found' page.
