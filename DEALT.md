@@ -2,6 +2,20 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 7, 2025
+
+### Bug #22: Unable to Add Addons Without a Selected Plan
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Users were unable to add addons to a reservation without first selecting a plan. The system would throw an error when trying to access properties of an undefined `selectedPlanObject`.
+- **Resolution**: 
+  - Modified the `savePlan` function to handle cases where no plan is selected
+  - Added null checks for `selectedPlanObject` before accessing its properties
+  - Made plan-related operations conditional on a plan being selected
+  - Ensured addons can be saved independently of plan selection
+- **Date Fixed**: August 7, 2025
+- **Environment**: Frontend - ReservationDayDetail.vue component
+
 ## August 6, 2025
 
 ### Bug #21: Hotel Selection Not Persisting Across Navigation
@@ -15,7 +29,6 @@ This document contains all fixed and closed issues that were previously tracked 
   - Added proper error handling and fallback to first available hotel
 - **Date Fixed**: August 6, 2025
 - **Environment**: Frontend
-- **PR**: #(add PR number when available)
 
 ## August 5, 2025
 

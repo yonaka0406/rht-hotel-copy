@@ -129,6 +129,20 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: OTA integration, PMS import logic
 - **Additional Notes**: This will prevent duplicate reservations and improve upgrade handling.
 
+#### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: 
+  - Currently, the calendar shows the booker's name for all reservations
+  - For OTA reservations, show the name of the actual guest(s) instead
+  - **Implementation Considerations**:
+    - Need to verify if OTA API provides guest names
+    - Handle cases with multiple guests (show primary guest or all names?)
+    - Consider adding a fallback to booker name if guest name is unavailable
+  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - **Additional Notes**:
+    - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
+    - Need to investigate what guest information is currently being captured from OTA bookings
+
 ---
 
 ## Bug Status Legend
@@ -145,8 +159,8 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 6, 2025*
-*Total Bugs: 3* (last one #21)
+*Last Updated: August 7, 2025*
+*Total Bugs: 22* (last one #22)
 *Total Feature Requests: 11* (last one #26)
 
 
@@ -178,17 +192,3 @@ The following bugs and feature requests are not yet completed (status: Open or I
   - Implement global plan categories and organize hotel plans by room type
   - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
   - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
-
-#### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
-  - Currently, the calendar shows the booker's name for all reservations
-  - For OTA reservations, show the name of the actual guest(s) instead
-  - **Implementation Considerations**:
-    - Need to verify if OTA API provides guest names
-    - Handle cases with multiple guests (show primary guest or all names?)
-    - Consider adding a fallback to booker name if guest name is unavailable
-  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-  - **Additional Notes**:
-    - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
-    - Need to investigate what guest information is currently being captured from OTA bookings

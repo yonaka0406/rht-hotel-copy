@@ -475,18 +475,28 @@
         //console.log('savePlan:', selectedRates.value);
         
         const plan_key = selectedPlan.value;
-        const [global, hotel] = plan_key.split('h').map(Number);
-        const plans_global_id = global || 0;
-        const plans_hotel_id = hotel || 0;         
+        let plans_global_id = 0;
+        let plans_hotel_id = 0;
+        let plan_name = '';
+        let plan_type = '';
+        let selectedPlanObject = null;
+
+        if (plan_key) {
+            const [global, hotel] = plan_key.split('h').map(Number);
+            plans_global_id = global || 0;
+            plans_hotel_id = hotel || 0;         
+            selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
+            if (selectedPlanObject) {
+                plan_name = selectedPlanObject.name;
+                plan_type = selectedPlanObject.plan_type;
+            }
+        }
+
         const price = planTotalRate.value || 0;
 
-        const selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
-        const plan_name = selectedPlanObject.name;
-        const plan_type = selectedPlanObject.plan_type;
-
-        // console.log('plans_global_id:',plans_global_id,'plans_hotel_id:',plans_hotel_id,'plan_name',plan_name,'plan_type',plan_type,'price:',price);
-
-        await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
+        if (selectedPlanObject) {
+            await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
+        }
 
         const addonDataArray = selectedAddon.value.map(addon => ({
             hotel_id: props.reservation_details.hotel_id,  
