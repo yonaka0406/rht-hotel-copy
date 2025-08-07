@@ -1105,14 +1105,8 @@ const generateAddonPreview = async () => {
     
     selectedAddon.value.push(addonData); 
     
-    selectedAddonOption.value = '';
+    selectedAddonOption.value = '';    
     
-    toast.add({ 
-        severity: 'success', 
-        summary: '成功', 
-        detail: `${foundAddon.addon_name}を追加しました。`, 
-        life: 3000 
-    });
 };
 const deleteAddon = (addon) => {
     const index = selectedAddon.value.indexOf(addon);
