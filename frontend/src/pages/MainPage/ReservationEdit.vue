@@ -27,13 +27,9 @@
         <Card class="m-2">
             <template #title>駐車場</template>
             <template #content>
-                <ParkingSection
+                <ReservationParking
                     v-if="reservation_details"
-                    :reservation-details="reservation_details"
-                    :reservation-id="reservationId"
-                    @parking-updated="onParkingUpdated"
-                    @parking-added="onParkingAdded"
-                    @parking-removed="onParkingRemoved"
+                    :reservation-details="reservation_details"                    
                 />            
             </template>
         </Card>
@@ -59,7 +55,7 @@
     import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
     import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
     import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
-    import ParkingSection from '@/pages/MainPage/components/ParkingSection.vue';    
+    import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
 
     const props = defineProps({
         reservation_id: {

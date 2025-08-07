@@ -180,7 +180,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useParkingStore } from '@/composables/useParkingStore';
-import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
 import Button from 'primevue/button';
@@ -224,7 +223,6 @@ const emit = defineEmits([
 
 // Composables
 const parkingStore = useParkingStore();
-const parkingAddonManager = useParkingAddonManager();
 
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
@@ -495,15 +493,6 @@ onMounted(async () => {
   
   validateSelection();
   emitSelectionChange();
-});
-
-// Initialize parking addon manager WebSocket connection
-onMounted(() => {
-  parkingAddonManager.initializeWebSocket();
-});
-
-onUnmounted(() => {
-  parkingAddonManager.disconnectWebSocket();
 });
 
 // Listen for real-time parking updates

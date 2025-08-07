@@ -201,16 +201,7 @@
     <!-- Parking Addon Dialog -->
     <ParkingAddonDialog
       v-model="showParkingDialog"
-      :hotel-id="hotelId"
-      :reservation-id="reservationId"
-      :reservation-detail-id="reservationDetailId"
-      :addon-data="dialogAddonData"
-      :initial-dates="dialogInitialDates"
-      :is-edit-mode="isEditMode"
-      :assignment-id="editingAssignmentId"
-      @save="onParkingSave"
-      @cancel="onParkingCancel"
-      @close="onParkingClose"
+      :reservation-detail-id="reservationDetailId"      
     />
 
     <!-- Confirmation Dialog -->
@@ -219,12 +210,30 @@
 </template>
 
 <script setup>
+// Vue
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+
+import ParkingAddonDialog from '@/pages/MainPage/components/Dialogs/ParkingAddonDialog.vue';
+
+// Props
+const props = defineProps({
+  reservationDetails: {
+    type: Array,
+    required: true
+  }
+});
+
+// Emits
+const emit = defineEmits(['parking-updated', 'parking-added', 'parking-removed']);
+
+// Stores
 import { useParkingStore } from '@/composables/useParkingStore';
-import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
+
+// Primevue
 import { useConfirm } from 'primevue/useconfirm';
+const confirm = useConfirm();
 import { useToast } from 'primevue/usetoast';
-import ParkingAddonDialog from '@/components/ParkingAddonDialog.vue';
+const toast = useToast();
 import Accordion from 'primevue/accordion';
 import AccordionPanel from 'primevue/accordionpanel';
 import AccordionHeader from 'primevue/accordionheader';
@@ -233,30 +242,8 @@ import Button from 'primevue/button';
 import Tag from 'primevue/tag';
 import ConfirmDialog from 'primevue/confirmdialog';
 
-// Props
-const props = defineProps({
-  reservationDetails: {
-    type: Array,
-    required: true
-  },
-  hotelId: {
-    type: [Number, String],
-    required: true
-  },
-  reservationId: {
-    type: [Number, String],
-    required: true
-  }
-});
-
-// Emits
-const emit = defineEmits(['parking-updated', 'parking-added', 'parking-removed']);
-
 // Composables
 const parkingStore = useParkingStore();
-const parkingAddonManager = useParkingAddonManager();
-const confirm = useConfirm();
-const toast = useToast();
 
 // Reactive state
 const parkingAssignments = ref([]);
@@ -417,11 +404,7 @@ const confirmRemoveAssignment = (assignment) => {
 
 const removeAssignment = async (assignment) => {
   try {
-    if (assignment.id && !assignment.id.toString().startsWith('temp-')) {
-      // Remove from server
-      await parkingAddonManager.removeParkingAddonWithSpot(assignment.id);
-    }
-    
+        
     // Remove from local state
     const index = parkingAssignments.value.findIndex(a => a.id === assignment.id);
     if (index !== -1) {
@@ -512,21 +495,7 @@ const handleParkingUpdate = (event) => {
 
 // Lifecycle
 onMounted(async () => {
-  await loadParkingAssignments();
-  
-  // Initialize WebSocket connection
-  parkingAddonManager.initializeWebSocket();
-  
-  // Listen for parking updates
-  window.addEventListener('parkingUpdate', handleParkingUpdate);
-});
-
-onUnmounted(() => {
-  // Clean up WebSocket connection
-  parkingAddonManager.disconnectWebSocket();
-  
-  // Remove event listeners
-  window.removeEventListener('parkingUpdate', handleParkingUpdate);
+  await loadParkingAssignments(); 
 });
 
 // Watchers

@@ -404,8 +404,6 @@
     const { clients, fetchClients } = useClientStore();
     import { useParkingStore } from '@/composables/useParkingStore';
     const parkingStore = useParkingStore();
-    import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
-    const parkingAddonManager = useParkingAddonManager();
 
     // Helper
     const formatDate = (date) => {

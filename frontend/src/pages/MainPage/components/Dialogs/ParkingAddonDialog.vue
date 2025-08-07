@@ -252,9 +252,9 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
+
 import { useToast } from 'primevue/usetoast';
-import ParkingSpotSelector from './ParkingSpotSelector.vue';
+import ParkingSpotSelector from '@/pages/MainPage/components/ParkingSpotSelector.vue';
 import Dialog from 'primevue/dialog';
 import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
@@ -269,14 +269,6 @@ import Tag from 'primevue/tag';
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    required: true
-  },
-  hotelId: {
-    type: [Number, String],
-    required: true
-  },
-  reservationId: {
-    type: [Number, String],
     required: true
   },
   reservationDetailId: {
@@ -316,7 +308,6 @@ const emit = defineEmits([
 ]);
 
 // Composables
-const parkingAddonManager = useParkingAddonManager();
 const toast = useToast();
 
 // Reactive state
@@ -493,29 +484,8 @@ const onSave = async () => {
       price: calculatedTotalPrice.value,
       created_by: 'current_user', // This should come from auth context
       updated_by: 'current_user'
-    };
-    
-    let result;
-    
-    if (props.isEditMode && props.assignmentId) {
-      // Update existing assignment
-      result = await parkingAddonManager.updateParkingAddonSpot(
-        props.assignmentId,
-        localAddonData.value.spotId,
-        dateRange.value,
-        localAddonData.value.vehicleCategoryId
-      );
-    } else {
-      // Create new assignment
-      result = await parkingAddonManager.addParkingAddonWithSpot(
-        props.reservationDetailId,
-        addonData,
-        localAddonData.value.spotId,
-        dateRange.value,
-        localAddonData.value.vehicleCategoryId
-      );
-    }
-    
+    };  
+        
     toast.add({
       severity: 'success',
       summary: '成功',
