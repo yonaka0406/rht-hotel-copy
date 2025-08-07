@@ -1555,12 +1555,8 @@
             isLoadingVehicleCategories.value = true;
             vehicleCategoriesError.value = null;
             
-            const hotelId = editReservationDetails.value[0]?.hotel_id;
-            if (!hotelId) {
-                throw new Error('Hotel ID is required to load vehicle categories');
-            }
-            
-            const categories = await fetchVehicleCategories(hotelId);
+            // Fetch global vehicle categories (not tied to a specific hotel)
+            const categories = await fetchVehicleCategories();
             vehicleCategories.value = Array.isArray(categories) ? categories : [];
             
             if (vehicleCategories.value.length === 0) {
