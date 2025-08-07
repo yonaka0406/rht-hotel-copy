@@ -328,6 +328,148 @@ const checkRealTimeAvailability = async (req, res) => {
     }
 };
 
+// Create parking addon assignment with capacity validation
+const createParkingAddonAssignment = async (req, res) => {
+    try {
+        const {
+            reservationDetailId,
+            addonData,
+            spotId,
+            dates,
+            vehicleCategoryId
+        } = req.body;
+
+        // Validate required parameters
+        if (!reservationDetailId || !addonData || !spotId || !dates || !vehicleCategoryId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameters: reservationDetailId, addonData, spotId, dates, vehicleCategoryId' 
+            });
+        }
+
+        if (!validateNumericParam(spotId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid spot ID or vehicle category ID' });
+        }
+
+        if (!Array.isArray(dates) || dates.length === 0) {
+            return res.status(400).json({ message: 'Dates array is required and cannot be empty' });
+        }
+
+        // Validate date format for each date
+        for (const date of dates) {
+            if (!validateDateStringParam(date)) {
+                return res.status(400).json({ message: `Invalid date format: ${date}` });
+            }
+        }
+
+        // Use ParkingAddonService to create assignment
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const assignment = await service.addParkingAddonWithSpot(
+            reservationDetailId,
+            addonData,
+            parseInt(spotId),
+            dates,
+            parseInt(vehicleCategoryId)
+        );
+        
+        res.status(201).json(assignment);
+    } catch (error) {
+        console.error('Error creating parking addon assignment:', error);
+        if (error.message.includes('cannot accommodate')) {
+            return res.status(400).json({ message: error.message });
+        }
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Update parking addon spot assignment
+const updateParkingAddonAssignment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            newSpotId,
+            dates,
+            vehicleCategoryId
+        } = req.body;
+
+        // Validate required parameters
+        if (!newSpotId || !dates || !vehicleCategoryId) {
+            return res.status(400).json({ 
+                message: 'Missing required parameters: newSpotId, dates, vehicleCategoryId' 
+            });
+        }
+
+        if (!validateNumericParam(newSpotId) || !validateNumericParam(vehicleCategoryId)) {
+            return res.status(400).json({ message: 'Invalid spot ID or vehicle category ID' });
+        }
+
+        if (!Array.isArray(dates) || dates.length === 0) {
+            return res.status(400).json({ message: 'Dates array is required and cannot be empty' });
+        }
+
+        // Validate date format for each date
+        for (const date of dates) {
+            if (!validateDateStringParam(date)) {
+                return res.status(400).json({ message: `Invalid date format: ${date}` });
+            }
+        }
+
+        // Use ParkingAddonService to update assignment
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const updatedAssignment = await service.updateParkingAddonSpot(
+            id,
+            parseInt(newSpotId),
+            dates,
+            parseInt(vehicleCategoryId)
+        );
+        
+        res.json(updatedAssignment);
+    } catch (error) {
+        console.error('Error updating parking addon assignment:', error);
+        if (error.message.includes('cannot accommodate')) {
+            return res.status(400).json({ message: error.message });
+        }
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Delete parking addon assignment with cleanup
+const deleteParkingAddonAssignment = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ message: 'Assignment ID is required' });
+        }
+
+        // Use ParkingAddonService to remove assignment
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const removedAssignments = await service.removeParkingAddonWithSpot(id);
+        
+        res.json({
+            message: 'Parking addon assignment deleted successfully',
+            removedAssignments: removedAssignments
+        });
+    } catch (error) {
+        console.error('Error deleting parking addon assignment:', error);
+        if (error.message.includes('not found')) {
+            return res.status(404).json({ message: error.message });
+        }
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -348,5 +490,8 @@ module.exports = {
     checkParkingVacancies,
     getCompatibleSpots,
     getAvailableSpotsForDates,
-    checkRealTimeAvailability
+    checkRealTimeAvailability,
+    createParkingAddonAssignment,
+    updateParkingAddonAssignment,
+    deleteParkingAddonAssignment
 };

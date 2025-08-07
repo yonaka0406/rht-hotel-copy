@@ -20,7 +20,10 @@ const {
     checkParkingVacancies,
     getCompatibleSpots,
     getAvailableSpotsForDates,
-    checkRealTimeAvailability
+    checkRealTimeAvailability,
+    createParkingAddonAssignment,
+    updateParkingAddonAssignment,
+    deleteParkingAddonAssignment
 } = require('../controllers/parkingController');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
@@ -57,5 +60,10 @@ router.get('/parking/vacancies/:hotelId/:startDate/:endDate/:vehicleCategoryId',
 router.get('/parking/compatible-spots/:hotelId/:vehicleCategoryId', authMiddleware, getCompatibleSpots);
 router.get('/parking/available-spots/:hotelId/:vehicleCategoryId', authMiddleware, getAvailableSpotsForDates);
 router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddleware, checkRealTimeAvailability);
+
+// Parking Addon Assignment Endpoints
+router.post('/parking/addon-assignment', authMiddleware_manageDB, createParkingAddonAssignment);
+router.put('/parking/addon-assignment/:id', authMiddleware_manageDB, updateParkingAddonAssignment);
+router.delete('/parking/addon-assignment/:id', authMiddleware_manageDB, deleteParkingAddonAssignment);
 
 module.exports = router;
