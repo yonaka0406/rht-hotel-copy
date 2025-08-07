@@ -37,7 +37,7 @@ CREATE TABLE parking_spots (
 CREATE TABLE reservation_parking (
     id UUID DEFAULT gen_random_uuid(),
     hotel_id INTEGER NOT NULL,
-    reservation_id UUID NOT NULL,
+    reservation_details_id UUID NOT NULL,
     reservation_addon_id UUID,
     vehicle_category_id INTEGER REFERENCES vehicle_categories(id) ON DELETE SET NULL,
     parking_spot_id INTEGER REFERENCES parking_spots(id) ON DELETE CASCADE,
@@ -50,7 +50,7 @@ CREATE TABLE reservation_parking (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
-    FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
+    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE,
     FOREIGN KEY (hotel_id, reservation_addon_id) REFERENCES reservation_addons(hotel_id, id) ON DELETE CASCADE,
     UNIQUE (hotel_id, parking_spot_id, date, cancelled)
 ) PARTITION BY LIST (hotel_id);
@@ -59,7 +59,7 @@ CREATE TABLE reservation_parking (
 CREATE INDEX idx_parking_lots_hotel_id ON parking_lots(hotel_id);
 CREATE INDEX idx_parking_spots_parking_lot_id ON parking_spots(parking_lot_id);
 CREATE INDEX idx_reservation_parking_hotel_id ON reservation_parking(hotel_id);
-CREATE INDEX idx_reservation_parking_reservation_id ON reservation_parking(reservation_id);
+CREATE INDEX idx_reservation_parking_reservation_id ON reservation_parking(reservation_details_id);
 CREATE INDEX idx_reservation_parking_parking_spot_id ON reservation_parking(parking_spot_id);
 CREATE INDEX idx_reservation_parking_date ON reservation_parking(date);
 CREATE INDEX idx_reservation_parking_addon_id ON reservation_parking(reservation_addon_id);
@@ -105,25 +105,3 @@ FOR EACH ROW EXECUTE PROCEDURE log_parking_changes();
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE vehicle_categories_id_seq TO rhtsys_user;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE parking_lots_id_seq TO rhtsys_user;
 GRANT USAGE, SELECT, UPDATE ON SEQUENCE parking_spots_id_seq TO rhtsys_user;
-
-
--- Migration to add reservation_addon_id column to reservation_parking table
--- This establishes the relationship between parking addons and parking spot assignments
-
--- Add reservation_addon_id column to reservation_parking table
--- Note: reservation_addons has a composite primary key (hotel_id, id)
--- Since reservation_parking already has hotel_id, we can create a proper foreign key
-ALTER TABLE reservation_parking 
-ADD COLUMN reservation_addon_id UUID;
-
--- Add foreign key constraint that references the composite primary key
-ALTER TABLE reservation_parking 
-ADD CONSTRAINT fk_reservation_parking_addon 
-FOREIGN KEY (hotel_id, reservation_addon_id) 
-REFERENCES reservation_addons(hotel_id, id) ON DELETE CASCADE;
-
--- Create index for performance on the new foreign key
-CREATE INDEX idx_reservation_parking_addon_id ON reservation_parking(reservation_addon_id);
-
--- Update the logging trigger to include the new column
--- The existing trigger should automatically handle the new column since it logs all changes
