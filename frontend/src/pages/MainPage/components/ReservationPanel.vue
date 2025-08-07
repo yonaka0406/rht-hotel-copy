@@ -323,127 +323,24 @@
                                     <div class="field col-span-3 mt-8">
                                         <FloatLabel>
                                             <Select v-model="selectedAddonOption" :options="addonOptions"
-                                                optionLabel="addon_name" optionValue="id" showClear fluid 
-                                                @change="onBulkAddonSelectionChange" />
+                                                optionLabel="addon_name" optionValue="id" showClear fluid />
                                             <label>アドオン選択</label>
                                         </FloatLabel>
                                     </div>
                                     <div class="field col mt-8 ml-2">
                                         <Button label="追加" @click="generateAddonPreview" />
                                     </div>
-                                </div>
-                                
-                                <!-- Parking-specific addon selection for bulk operations -->
-                                <div v-if="isParkingAddon && showParkingSpotSelection" class="parking-bulk-addon-section">
-                                    <Divider />
-                                    <h6 class="parking-section-title">
-                                        <i class="pi pi-car"></i>
-                                        一括駐車場設定
-                                    </h6>
-                                    
-                                    <!-- Vehicle Category Selection -->
-                                    <div class="field mt-6">
-                                        <FloatLabel>
-                                            <Select
-                                                v-model="selectedVehicleCategory"
-                                                :options="vehicleCategories"
-                                                optionLabel="name"
-                                                optionValue="id"
-                                                placeholder="車両カテゴリを選択"
-                                                fluid
-                                                @change="onBulkVehicleCategoryChange"
-                                            >
-                                                <template #option="slotProps">
-                                                    <div class="vehicle-category-option">
-                                                        <div>{{ slotProps.option.name }}</div>
-                                                        <small class="text-500">
-                                                            容量: {{ slotProps.option.capacity_units_required }} 単位
-                                                        </small>
-                                                    </div>
-                                                </template>
-                                            </Select>
-                                            <label>車両カテゴリ *</label>
-                                        </FloatLabel>
-                                    </div>
-
-                                    <!-- Parking Spot Selection -->
-                                    <div class="field mt-6" v-if="selectedVehicleCategory">
-                                        <FloatLabel>
-                                            <Select
-                                                v-model="selectedParkingSpot"
-                                                :options="compatibleSpots"
-                                                optionLabel="displayName"
-                                                optionValue="id"
-                                                placeholder="駐車スポットを選択"
-                                                fluid
-                                                @change="onBulkParkingSpotChange"
-                                            >
-                                                <template #option="slotProps">
-                                                    <div class="parking-spot-option">
-                                                        <div class="spot-header">
-                                                            <span class="spot-number">{{ slotProps.option.spotNumber }}</span>
-                                                            <span class="parking-lot-name">{{ slotProps.option.parkingLotName }}</span>
-                                                        </div>
-                                                        <small class="capacity-info">
-                                                            容量: {{ slotProps.option.capacityUnits }} 単位
-                                                        </small>
-                                                    </div>
-                                                </template>
-                                            </Select>
-                                            <label>駐車スポット *</label>
-                                        </FloatLabel>
-                                    </div>
-
-                                    <!-- Bulk Availability Status -->
-                                    <div class="availability-status mt-4" v-if="bulkParkingAvailability">
-                                        <div class="availability-info">
-                                            <i class="pi pi-info-circle"></i>
-                                            <span>期間中の空き状況: </span>
-                                            <Badge 
-                                                :value="`${bulkParkingAvailability.overallStats.averageAvailabilityRate}% 利用可能`"
-                                                :severity="bulkParkingAvailability.overallStats.averageAvailabilityRate > 70 ? 'success' : 
-                                                         bulkParkingAvailability.overallStats.averageAvailabilityRate > 30 ? 'warning' : 'danger'"
-                                            />
-                                        </div>
-                                        <div class="availability-details mt-2">
-                                            <small class="text-500">
-                                                完全利用可能: {{ bulkParkingAvailability.overallStats.fullyAvailableSpots }} スポット
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
+                                </div>                                                                
 
                                 <Divider />
 
                                 <div class="field mt-6">
-                                    <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                        <Column field="addon_name" header="アドオン名" style="width:30%">
-                                            <template #body="slotProps">
-                                                <div class="addon-name-cell">
-                                                    <div class="addon-name">{{ slotProps.data.addon_name }}</div>
-                                                    <div v-if="slotProps.data.vehicleCategoryName" class="parking-details">
-                                                        <small class="text-500">
-                                                            <i class="pi pi-car"></i>
-                                                            {{ slotProps.data.vehicleCategoryName }}
-                                                        </small>
-                                                    </div>
-                                                    <div v-if="slotProps.data.parkingSpotDisplay" class="parking-details">
-                                                        <small class="text-500">
-                                                            <i class="pi pi-map-marker"></i>
-                                                            {{ slotProps.data.parkingSpotDisplay }}
-                                                        </small>
-                                                    </div>
-                                                    <div v-if="slotProps.data.isBulkParking" class="parking-details">
-                                                        <Badge value="一括適用" severity="info" />
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </Column>
+                                    <DataTable :value="selectedAddon" class="p-datatable-sm">         
+                                        <Column field="addon_name" header="アドオン名" style="width:40%" />                               
                                         <Column field="quantity" header="数量" style="width:20%">
                                             <template #body="slotProps">
                                                 <InputNumber v-model="slotProps.data.quantity" :min="0"
-                                                    placeholder="数量を記入" 
-                                                    :disabled="slotProps.data.vehicleCategoryId"
+                                                    placeholder="数量を記入"
                                                     fluid />
                                             </template>
                                         </Column>
@@ -601,10 +498,6 @@ import { useReservationStore } from '@/composables/useReservationStore';
 const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
-import { useParkingStore } from '@/composables/useParkingStore';
-const parkingStore = useParkingStore();
-import { useParkingAddonManager } from '@/composables/useParkingAddonManager';
-const parkingAddonManager = useParkingAddonManager();
 
 const reservationTypeSelected = ref(null);
 const reservationTypeOptions = computed(() => {
@@ -1158,14 +1051,6 @@ const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
 
-// Parking-specific addon functionality for bulk operations
-const isParkingAddon = ref(false);
-const vehicleCategories = ref([]);
-const selectedVehicleCategory = ref(null);
-const selectedParkingSpot = ref(null);
-const compatibleSpots = ref([]);
-const showParkingSpotSelection = ref(false);
-const bulkParkingAvailability = ref(null);
 const updatePattern = async () => {
     if (selectedPattern.value !== null) {
         // Update the selectedPatternDetails with the corresponding data
@@ -1204,26 +1089,6 @@ const generateAddonPreview = async () => {
         return
     }
 
-    // Special handling for parking addon in bulk operations
-    if (isParkingAddon.value) {
-        if (!selectedVehicleCategory.value) {
-            toast.add({ severity: 'warn', summary: '注意', detail: '車両カテゴリを選択してください。', life: 3000 }); 
-            return;
-        }
-        
-        if (!selectedParkingSpot.value) {
-            toast.add({ severity: 'warn', summary: '注意', detail: '駐車スポットを選択してください。', life: 3000 }); 
-            return;
-        }
-        
-        // Check availability before adding for bulk operation
-        if (!bulkParkingAvailability.value?.overallStats?.fullyAvailableSpots || 
-            bulkParkingAvailability.value.overallStats.fullyAvailableSpots === 0) {
-            toast.add({ severity: 'error', summary: 'エラー', detail: '選択した期間で駐車場が利用できません。', life: 3000 }); 
-            return;
-        }
-    }
-
     const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
     const isHotelAddon = foundAddon.id.startsWith('H');
     
@@ -1233,33 +1098,12 @@ const generateAddonPreview = async () => {
         hotel_id: foundAddon.hotel_id,
         addon_name: foundAddon.addon_name,
         price: foundAddon.price,
-        quantity: isParkingAddon.value ? 1 : 1, // Parking is typically 1 unit
+        quantity: 1,
         tax_type_id: foundAddon.tax_type_id,
         tax_rate: foundAddon.tax_rate
-    };
+    };  
     
-    // Add parking-specific data if it's a parking addon for bulk operations
-    if (isParkingAddon.value) {
-        addonData.vehicleCategoryId = selectedVehicleCategory.value;
-        addonData.parkingSpotId = selectedParkingSpot.value;
-        addonData.isBulkParking = true;
-        
-        // Find selected vehicle category and spot details for display
-        const vehicleCategory = vehicleCategories.value.find(cat => cat.id === selectedVehicleCategory.value);
-        const parkingSpot = compatibleSpots.value.find(spot => spot.id === selectedParkingSpot.value);
-        
-        addonData.vehicleCategoryName = vehicleCategory?.name;
-        addonData.parkingSpotDisplay = parkingSpot?.displayName;
-    }
-    
-    selectedAddon.value.push(addonData);
-    
-    // Reset parking selection after adding
-    if (isParkingAddon.value) {
-        resetBulkParkingSelection();
-        showParkingSpotSelection.value = false;
-        isParkingAddon.value = false;
-    }
+    selectedAddon.value.push(addonData); 
     
     selectedAddonOption.value = '';
     
@@ -1277,122 +1121,6 @@ const deleteAddon = (addon) => {
     }
 };
 
-// Parking-specific methods for bulk operations
-const onBulkAddonSelectionChange = async () => {
-    // Check if selected addon is parking (global addon ID 3)
-    const foundAddon = addonOptions.value?.find(addon => addon.id === selectedAddonOption.value);
-    isParkingAddon.value = foundAddon && 
-                          (foundAddon.addons_global_id === 3 || 
-                           foundAddon.addon_name?.includes('駐車'));
-    
-    if (isParkingAddon.value) {
-        showParkingSpotSelection.value = true;
-        await loadBulkParkingData();
-    } else {
-        showParkingSpotSelection.value = false;
-        resetBulkParkingSelection();
-    }
-};
-
-const loadBulkParkingData = async () => {
-    try {
-        // Load vehicle categories
-        await parkingStore.fetchVehicleCategories();
-        vehicleCategories.value = parkingStore.vehicleCategories;
-        
-        // Check availability for the reservation date range
-        if (reservationInfo.value?.check_in && reservationInfo.value?.check_out && reservationInfo.value?.hotel_id) {
-            await checkBulkParkingAvailability();
-        }
-    } catch (error) {
-        console.error('Error loading bulk parking data:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '駐車場データの読み込みに失敗しました',
-            life: 3000
-        });
-    }
-};
-
-const onBulkVehicleCategoryChange = async () => {
-    if (selectedVehicleCategory.value && reservationInfo.value?.hotel_id) {
-        try {
-            // Get compatible spots for the selected vehicle category
-            const response = await parkingStore.getCompatibleSpots(
-                reservationInfo.value.hotel_id,
-                selectedVehicleCategory.value
-            );
-            
-            compatibleSpots.value = response.compatibleSpots.map(spot => ({
-                id: spot.id,
-                spotNumber: spot.spotNumber,
-                parkingLotName: spot.parkingLotName,
-                capacityUnits: spot.capacityUnits,
-                displayName: `${spot.spotNumber} - ${spot.parkingLotName}`
-            }));
-            
-            // Reset spot selection
-            selectedParkingSpot.value = null;
-            
-            // Check availability for this vehicle category
-            await checkBulkParkingAvailability();
-        } catch (error) {
-            console.error('Error loading compatible spots for bulk operation:', error);
-            toast.add({
-                severity: 'error',
-                summary: 'エラー',
-                detail: '対応駐車スポットの読み込みに失敗しました',
-                life: 3000
-            });
-        }
-    }
-};
-
-const onBulkParkingSpotChange = () => {
-    // Additional validation or actions when parking spot is selected for bulk operation
-    if (selectedParkingSpot.value) {
-        console.log('Selected parking spot for bulk operation:', selectedParkingSpot.value);
-    }
-};
-
-const checkBulkParkingAvailability = async () => {
-    if (!selectedVehicleCategory.value || !reservationInfo.value?.check_in || 
-        !reservationInfo.value?.check_out || !reservationInfo.value?.hotel_id) {
-        return;
-    }
-    
-    try {
-        // Create date range array for the entire reservation period
-        const startDate = new Date(reservationInfo.value.check_in);
-        const endDate = new Date(reservationInfo.value.check_out);
-        const dateArray = [];
-        
-        const current = new Date(startDate);
-        while (current < endDate) {
-            dateArray.push(current.toISOString().split('T')[0]);
-            current.setDate(current.getDate() + 1);
-        }
-        
-        const response = await parkingStore.checkRealTimeAvailability(
-            reservationInfo.value.hotel_id,
-            selectedVehicleCategory.value,
-            dateArray
-        );
-        
-        bulkParkingAvailability.value = response;
-    } catch (error) {
-        console.error('Error checking bulk parking availability:', error);
-        bulkParkingAvailability.value = null;
-    }
-};
-
-const resetBulkParkingSelection = () => {
-    selectedVehicleCategory.value = null;
-    selectedParkingSpot.value = null;
-    compatibleSpots.value = [];
-    bulkParkingAvailability.value = null;
-};
 const applyPlanChangesToAll = async () => {
     try {
         groupedRooms.value.every(async (room) => {
