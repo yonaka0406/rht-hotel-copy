@@ -46,6 +46,18 @@
           </a>
         </router-link>
 
+        <div v-else-if="!item.route && item.command && item.type === 'link'" @click="item.command" :class="[
+          'flex items-center py-3 text-gray-200 dark:text-gray-300 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:text-white rounded-lg transition-colors duration-200 group cursor-pointer',
+          isCollapsed ? 'px-0 justify-center' : 'px-6'
+        ]">
+          <i :class="[item.icon, 'text-lg', isCollapsed ? '' : 'mr-3']"></i>
+          <span v-if="!isCollapsed" class="truncate">{{ item.label }}</span>
+          <span v-if="isCollapsed"
+            class="absolute left-full rounded-md px-2 py-1 ml-6 bg-emerald-700 dark:bg-emerald-600 text-white text-sm invisible opacity-20 -translate-x-3 transition-all group-hover:visible group-hover:opacity-100 group-hover:translate-x-0">
+            {{ item.label }}
+          </span>
+        </div>
+
         <Divider v-if="item.separator" class="my-2 border-emerald-700 dark:border-emerald-600" />
       </template>
     </nav>
@@ -193,7 +205,6 @@ const updateMenuItems = () => {
       label: '予約紹介',
       icon: 'pi pi-fw pi-google',
       type: 'link',
-      route: '/google/dummy-route',
       command: () => {
         // console.log('予約紹介 clicked, opening URL:', selectedHotel.value.google_drive_url);
         window.open(selectedHotel.value.google_drive_url, '_blank');
@@ -283,37 +294,78 @@ const userGreeting = computed(() => {
 });
 
 const goToEditReservationPage = async (hotel_id, reservation_id) => {
+  // console.group('[SideMenu] Navigating to edit reservation');
+  // console.log('Setting hotel ID:', hotel_id);
+  // console.log('Setting reservation ID:', reservation_id);
+  
   await setHotelId(hotel_id);
   await setReservationId(reservation_id);
   showDrawer.value = false;
+  
+  // console.log('Navigating to ReservationEdit page');
+  // console.groupEnd();
+  
   router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
 };
 
 // Ensure goToNewReservation is defined
 const goToNewReservation = () => {
+  // console.log('[SideMenu] Navigating to new reservation');
   setReservationId(null);
   router.push({ name: 'ReservationsNew' });
 };
 
 onMounted(async () => {
-  await fetchHotels();
-  await fetchUser();
-  if (logged_user.value && logged_user.value[0] && logged_user.value[0].permissions) {
-    const permissions = logged_user.value[0].permissions;
-    isAdmin.value = !!(permissions.manage_db || permissions.manage_users);
-    isClientEditor.value = !!permissions.manage_clients;
-    isReporting.value = !!permissions.view_reports;
+  // console.group('[SideMenu] Component Mounted');
+  
+  try {
+    // console.log('Fetching hotels...');
+    await fetchHotels();
+    // console.log('Hotels fetched:', hotels.value?.length || 0);
+    
+    // console.log('Fetching user data...');
+    await fetchUser();
+    
+    if (logged_user.value?.[0]?.permissions) {
+      const permissions = logged_user.value[0].permissions;
+      isAdmin.value = !!(permissions.manage_db || permissions.manage_users);
+      isClientEditor.value = !!permissions.manage_clients;
+      isReporting.value = !!permissions.view_reports;
+      
+      // console.log('User permissions loaded:', {
+      //   isAdmin: isAdmin.value,
+      //   isClientEditor: isClientEditor.value,
+      //   isReporting: isReporting.value
+      // });
+    } else {
+      // console.warn('No user permissions found or user not loaded');
+    }
+    
+    // console.log('Fetching hold reservations...');
+    await fetchMyHoldReservations();
+    
+  } catch (error) {
+    console.error('[SideMenu] Error during initialization:', error);
   }
-  await fetchMyHoldReservations();
-  // Initial menu items update
+  
+  // console.groupEnd();
 });
 
 watch(
   selectedHotelId,
-  (newVal) => {
+  (newVal, oldVal) => {
+    // console.group('[SideMenu] Hotel Selection Changed');
+    // console.log('Previous Hotel ID:', oldVal);
+    // console.log('New Hotel ID:', newVal);
+    
     if (newVal) {
-      // console.log(`Hotel ID ${newVal} is being provided by SideMenu.`);
+      const hotel = hotels.value?.find(h => h.id === newVal);
+      // console.log('Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found');
+    } else {
+      // console.log('No hotel selected');
     }
+    
+    // console.groupEnd();
   },
   { immediate: true }
 );

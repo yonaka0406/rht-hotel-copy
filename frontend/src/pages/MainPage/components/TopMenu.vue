@@ -92,7 +92,7 @@
     import { useUserStore } from '@/composables/useUserStore';
     const { logged_user } = useUserStore();
     import { useHotelStore } from '@/composables/useHotelStore';
-    const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms } = useHotelStore(); // selectedHotelId is a ref
+    const { hotels, setHotelId, selectedHotelId, hotelBlockedRooms, fetchBlockedRooms, fetchHotels } = useHotelStore();
     import { useReservationStore } from '@/composables/useReservationStore';
     const { holdReservations, failedOtaReservations, fetchFailedOtaReservations, setReservationId, reservedRooms } = useReservationStore();
     import { useWaitlistStore } from '@/composables/useWaitlistStore'; // Import waitlist store
@@ -176,10 +176,13 @@
 
     const tempBlockedReservations = computed(() => {
         // console.log('[TopMenu] hotelBlockedRooms:', hotelBlockedRooms.value);
-        if (!hotelBlockedRooms.value) {
+        if (!hotelBlockedRooms.value || !logged_user.value || !logged_user.value[0] || !logged_user.value[0].id) {
             return [];
         }
-        const filtered = hotelBlockedRooms.value.filter(room => room.reservation_client_id === '22222222-2222-2222-2222-222222222222' && room.created_by === logged_user.value[0].id);
+        const filtered = hotelBlockedRooms.value.filter(room => 
+            room.reservation_client_id === '22222222-2222-2222-2222-222222222222' && 
+            room.created_by === logged_user.value[0].id
+        );
         // console.log('[TopMenu] filtered hotelBlockedRooms:', filtered);
         return filtered;
     });
@@ -222,10 +225,31 @@
 
     // --- Lifecycle Hooks ---
     onMounted(async () => {
-        // Already called in SideMenu 
-        // await fetchUser();
-        // await fetchMyHoldReservations();
-        fetchFailedOtaReservations();
+        // console.group('[TopMenu] Component Mounted');
+        
+        // Ensure hotels are loaded
+        if (hotels.value.length === 0) {
+            // console.log('Fetching hotels...');
+            await fetchHotels();
+        }
+        
+        // If no hotel is selected but we have hotels, select the first one
+        if (!selectedHotelId.value && hotels.value.length > 0) {
+            // console.log('No hotel selected, selecting first available hotel');
+            setHotelId(hotels.value[0].id);
+        }
+        
+        // console.log('Initial selectedHotelId:', selectedHotelId.value);
+        // console.log('Available hotels:', JSON.parse(JSON.stringify(hotels.value)));
+        // console.log('Current route:', router.currentRoute.value);
+        // console.groupEnd();
+        
+        try {
+            // console.log('[TopMenu] Fetching failed OTA reservations...');
+            await fetchFailedOtaReservations();
+        } catch (error) {
+            console.error('[TopMenu] Error in mounted hook:', error);
+        }
         
         // Register global keyboard shortcut for search
         document.addEventListener('keydown', handleGlobalKeydown);
@@ -247,20 +271,60 @@
 
     // --- Watchers ---
     watch(selectedHotelId,
-        (newHotelId, oldHotelId) => {
-            // console.debug('[TopMenu] selectedHotelId changed:', newHotelId, oldHotelId);
+        async (newHotelId, oldHotelId) => {
+            // console.group(`[TopMenu] Hotel Selection Change`);
+            // console.log('Previous Hotel ID:', oldHotelId);
+            // console.log('New Hotel ID:', newHotelId);
+            
+            // Always update the hotel ID in the store when it changes
+            if (newHotelId !== null && newHotelId !== undefined) {
+                // console.log('Updating selected hotel in store and localStorage');
+                setHotelId(newHotelId);
+            }
+            
             if (newHotelId && newHotelId !== oldHotelId) {
-                // Fetch waitlist entries for the new hotel to update the badge count.
-                // Only fetch entries with status 'waiting' and 'notified'.
-                waitlistStore.fetchWaitlistEntries(newHotelId, { filters: { status: ['waiting', 'notified'] } });
-                fetchBlockedRooms(selectedHotelId.value);
+                const hotel = hotels.value.find(h => h.id === newHotelId);
+                // console.log('Selected Hotel:', hotel ? `${hotel.name} (ID: ${hotel.id})` : 'Hotel not found in local list');
+                
+                try {
+                    // console.log('Fetching waitlist entries...');
+                    await waitlistStore.fetchWaitlistEntries(newHotelId, { 
+                        filters: { status: ['waiting', 'notified'] } 
+                    });
+                    // console.log('Waitlist entries fetched successfully');
+                    
+                    // console.log('Fetching blocked rooms...');
+                    await fetchBlockedRooms(newHotelId);
+                    // console.log('Blocked rooms fetched successfully');
+                } catch (error) {
+                    console.error('Error during hotel data fetch:', {
+                        message: error.message,
+                        endpoint: error.config?.url,
+                        status: error.response?.status,
+                        statusText: error.response?.statusText
+                    });
+                }
+            } else if (!newHotelId && hotels.value.length > 0) {
+                // console.log('No hotel selected - selecting first available hotel');
+                setHotelId(hotels.value[0].id);
             } else if (!newHotelId) {
-                // Clear entries if no hotel is selected
+                // console.log('No hotel selected - clearing waitlist entries');
                 waitlistStore.entries.value = [];
             }
+            
+            // console.groupEnd();
         },
         { immediate: true }
     );
+    
+    // Watch for changes to the hotels array
+    watch(() => hotels.value, (newHotels) => {
+        if (newHotels.length > 0 && !selectedHotelId.value) {
+            // If we have hotels but no selected hotel, select the first one
+            // console.log('Auto-selecting first hotel from list');
+            setHotelId(newHotels[0].id);
+        }
+    });
 
 </script>
 <style scoped>

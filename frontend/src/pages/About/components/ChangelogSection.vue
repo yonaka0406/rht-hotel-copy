@@ -125,7 +125,10 @@ const typeOptions = [
   { label: '新機能', value: 'feature' },
   { label: '改善', value: 'improvement' },
   { label: 'バグ修正', value: 'bugfix' },
-  { label: 'ユーザー要望', value: 'user-request' }
+  { label: 'ユーザー要望', value: 'user-request' },
+  { label: 'UI', value: 'ui' },
+  { label: 'デザイン', value: 'design' },
+  { label: 'リファクタリング', value: 'refactor' }
 ];
 
 const filteredEntries = computed(() => {
@@ -167,7 +170,10 @@ const getChangeTypeClass = (type) => {
     feature: 'bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500',
     improvement: 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500',
     bugfix: 'bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500',
-    'user-request': 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500'
+    'user-request': 'bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500',
+    ui: 'bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500',
+    design: 'bg-pink-50 dark:bg-pink-900/20 border-l-4 border-pink-500',
+    refactor: 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500'
   };
   return classes[type] || 'bg-gray-50 dark:bg-gray-700 border-l-4 border-gray-500';
 };
@@ -177,7 +183,10 @@ const getChangeTypeIcon = (type) => {
     feature: 'pi pi-plus-circle text-green-600 dark:text-green-400',
     improvement: 'pi pi-arrow-up text-blue-600 dark:text-blue-400',
     bugfix: 'pi pi-wrench text-red-600 dark:text-red-400',
-    'user-request': 'pi pi-user-edit text-yellow-600 dark:text-yellow-400'
+    'user-request': 'pi pi-user-edit text-yellow-600 dark:text-yellow-400',
+    ui: 'pi pi-desktop text-purple-600 dark:text-purple-400',
+    design: 'pi pi-palette text-pink-600 dark:text-pink-400',
+    refactor: 'pi pi-code text-indigo-600 dark:text-indigo-400'
   };
   return icons[type] || 'pi pi-info-circle text-gray-600 dark:text-gray-400';
 };
@@ -187,7 +196,10 @@ const getChangeTypeLabel = (type) => {
     feature: '新機能',
     improvement: '改善',
     bugfix: 'バグ修正',
-    'user-request': 'ユーザー要望'
+    'user-request': 'ユーザー要望',
+    ui: 'UI',
+    design: 'デザイン',
+    refactor: 'リファクタリング'
   };
   return labels[type] || 'その他';
 };

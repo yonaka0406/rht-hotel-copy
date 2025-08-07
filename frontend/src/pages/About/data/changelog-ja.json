@@ -225,9 +225,8 @@
     {
       "version": "1.1.0",
       "date": "2025-08-04",
-      "changes": [
-        { "type": "feature", "description": "OTA予約：重複予約を防ぐためのトランザクション処理を追加し、データの一貫性を確保しました。" },
-        { "type": "ui", "description": "OTA取引が失敗した際に、通知ドロワーへ表示されるようになりました。" },
+      "changes": [        
+        { "type": "feature", "description": "OTAキュー作成、OTA取引が失敗した際に、通知ドロワーへ表示されるようになりました。" },
         { "type": "feature", "description": "予約照会ボタン：Google スプレッドシートへのリンクをホテルごとに設定可能に" },
         { "type": "feature", "description": "ホテル表示順を設定可能にし、管理画面で順序を編集できるようになりました。" },
         { "type": "feature", "description": "カレンダー：一時的な部屋ブロック機能を追加し、部屋の確保を迅速化" },

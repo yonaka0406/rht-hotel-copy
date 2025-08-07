@@ -3,36 +3,25 @@
 ## Overview
 This document tracks all reported bugs and issues in the RHT Hotel system that are currently open or in progress.
 
-## Bug Reports
+## Bug and Requests
+
+### August 6, 2025
+
+#### Feature Request #26: Bulk Room Cancellation in 一括編集 (2025/08/06)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: 
+  - Currently, users can cancel individual days in a reservation
+  - Add functionality to cancel an entire room using the 一括編集 (Bulk Edit) button
+- **Implementation Requirements**:
+  - Add a "Cancel Entire Room" option in the bulk edit menu
+  - Show confirmation dialog before cancellation
+  - Update the reservation status and UI to reflect the cancellation
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - This will provide a more efficient workflow for staff when needing to cancel an entire room's reservation
+  - Should maintain consistency with the existing cancellation workflow for individual days
 
 ### July 31, 2025
-
-#### Bug #20: Billable Status Not Updated When Adding Rooms to Confirmed Reservations
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: When rooms are added to a reservation after it has been confirmed, the billable status of the new room details is not automatically set to true, even though the reservation is confirmed.
-- **Steps to Reproduce**:
-  1. Create a new reservation and confirm it (status changes to 'Confirmed' and billable becomes true)
-  2. Add a new room to the confirmed reservation
-  3. The new room's billable status remains false
-- **Expected Behavior**: 
-  - When a room is added to a confirmed reservation, its billable status should be set to true to match the reservation's confirmed status.
-  - The UI should clearly indicate when a room is not billable with a visual indicator (e.g., strikethrough text, different background color, or an icon).
-- **Actual Behavior**: 
-  - Newly added rooms maintain billable = false even in confirmed reservations.
-  - There is no visual indication in the UI that a room is not billable.
-- **Affected Component**: 
-  - Reservation update/room addition logic
-  - Room display components
-- **UI Requirements**:
-  - Add a visual indicator (e.g., strikethrough, different color, or icon) for non-billable rooms
-  - The indicator should be visible in all relevant views (reservation details, room assignments, billing, etc.)
-  - Consider adding a tooltip explaining why a room is not billable
-- **Environment**: Reservation management system
-- **Additional Notes**: 
-  - This can lead to rooms not being included in billing calculations
-  - The issue likely stems from the room addition logic not checking the reservation's confirmed status
-  - A workaround is to manually update the billable status in the database, but this is not a sustainable solution
 
 #### Feature Request #18: Parking Management Function
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -172,9 +161,10 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 4, 2025*
-*Total Bugs: 3*
-*Total Feature Requests: 10*
+*Last Updated: August 6, 2025*
+*Total Bugs: 3* (last one #21)
+*Total Feature Requests: 11* (last one #26)
+
 
 # Backlog
 
