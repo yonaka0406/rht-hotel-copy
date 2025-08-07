@@ -1279,7 +1279,8 @@
         await fetchPlansForHotel(hotelId);
         await fetchPatternsForHotel(hotelId);
         // Addons
-        addonOptions.value = await fetchAllAddons(hotelId);        
+        const allAddons = await fetchAllAddons(hotelId);
+        addonOptions.value = allAddons.filter(addon => addon.id !== 3);
         selectedGroup.value = group;
         tabsRoomEditDialog.value = 0;
         visibleRoomEditDialog.value = true;
@@ -1384,4 +1385,3 @@
 
 <style scoped>
 </style>
-

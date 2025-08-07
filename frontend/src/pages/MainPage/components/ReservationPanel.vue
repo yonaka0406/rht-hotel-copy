@@ -963,7 +963,8 @@ const openReservationBulkEditDialog = async () => {
     await fetchPlansForHotel(hotelId);
     await fetchPatternsForHotel(hotelId);
     // Addons
-    addonOptions.value = await fetchAllAddons(hotelId);
+    const allAddons = await fetchAllAddons(hotelId);
+    addonOptions.value = allAddons.filter(addon => addon.id !== 3);
     tabsReservationBulkEditDialog.value = 0;
     visibleReservationBulkEditDialog.value = true;
 };

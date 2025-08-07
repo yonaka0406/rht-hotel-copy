@@ -577,7 +577,8 @@
 
         // Fetch Options
         await fetchPlansForHotel(props.reservation_details.hotel_id);
-        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
+        const allAddons = await fetchAllAddons(props.reservation_details.hotel_id);
+        addonOptions.value = allAddons.filter(addon => addon.id !== 3);
         
         selectedClients.value = props.reservation_details.reservation_clients.map(client => ({
             ...client,
@@ -590,9 +591,6 @@
             ? '人数あたり' 
             : '部屋あたり';
         planTotalRate.value = props.reservation_details.plan_total_price;
-        
-        addonOptions.value = await fetchAllAddons(props.reservation_details.hotel_id);
-        // console.log('addonOptions:', addonOptions.value);
 
         // Room
         numberOfPeopleToMove.value = props.reservation_details.number_of_people;
