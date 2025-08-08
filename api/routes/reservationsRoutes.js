@@ -14,6 +14,7 @@ router.get('/reservation/query/:hid/:rid/:ci/:co', authMiddleware, reservationsC
 router.get('/reservation/list/clients/:hid/:id', authMiddleware, reservationsController.getReservationClientIds);
 router.get('/reservation/payment/list/:hid/:id', authMiddleware, reservationsController.getReservationPayments);
 router.get('/reservation/parking/:hid/:id', authMiddlewareCRUDAccess, reservationsController.getReservationParking);
+router.get('/reservation/parking/spot-availability', authMiddleware, reservationsController.getParkingSpotAvailability);
 router.post('/reservation/hold', authMiddlewareCRUDAccess, reservationsController.createReservationHold);
 router.post('/reservation/add/hold-combo', authMiddlewareCRUDAccess, reservationsController.createHoldReservationCombo);
 router.post('/reservation/addon', authMiddlewareCRUDAccess, reservationsController.createReservationAddons);

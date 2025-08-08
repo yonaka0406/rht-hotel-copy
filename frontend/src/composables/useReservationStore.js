@@ -10,6 +10,7 @@ const failedOtaReservations = ref([]);
 const reservationId = ref(null);
 const reservationDetails = ref({});
 const reservedRoomsDayView = ref([]);
+const parkingSpotAvailability = ref([]);
 
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId } = useHotelStore();    
@@ -1123,6 +1124,43 @@ export function useReservationStore() {
         }
     };
 
+    const fetchParkingSpotAvailability = async (hotelId, startDate, endDate) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/parking/spot-availability?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("fetchParkingSpotAvailability API Error:", response.status, response.statusText, errorText);
+                throw new Error(`API returned an error: ${response.status} ${response.statusText} ${errorText}`);
+            }
+
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                parkingSpotAvailability.value = data;
+            } else if (data && data.parkingSpotAvailability && Array.isArray(data.parkingSpotAvailability)) {
+                parkingSpotAvailability.value = data.parkingSpotAvailability;
+            }
+            else {
+                parkingSpotAvailability.value = [];
+            }
+            return data;
+
+        } catch (error) {
+            console.error('Failed to fetch parking spot availability', error);
+            parkingSpotAvailability.value = [];
+        }
+    };
+
     return {
         reservationIsUpdating,
         availableRooms,
@@ -1172,5 +1210,7 @@ export function useReservationStore() {
         fetchReservationForCopy,
         copyReservation,
         convertBlockToReservation,
+        parkingSpotAvailability,
+        fetchParkingSpotAvailability,
     };
 }

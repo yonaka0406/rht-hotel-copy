@@ -56,24 +56,27 @@
         >
           <template #option="slotProps">
             <div class="parking-spot-option">
-              <div class="spot-header">
-                <span class="spot-number">{{ slotProps.option.spotNumber }}</span>
-                <span class="parking-lot-name">{{ slotProps.option.parkingLotName }}</span>
-              </div>
-              <div class="spot-details">
-                <div class="capacity-match">
-                  <small :class="getCapacityMatchClass(slotProps.option)">
-                    容量: {{ slotProps.option.capacityUnits }} 単位
-                    <span v-if="slotProps.option.capacityMatch">
-                      ({{ slotProps.option.capacityMatch.isExactMatch ? '完全一致' : `+${slotProps.option.capacityMatch.excess}` }})
-                    </span>
-                  </small>
+              <div class="spot-color-indicator" :style="{ backgroundColor: getSpotColor(slotProps.option.spot_type) }"></div>
+              <div class="spot-info-container">
+                <div class="spot-header">
+                  <span class="spot-number">{{ slotProps.option.spotNumber }}</span>
+                  <span class="parking-lot-name">{{ slotProps.option.parkingLotName }}</span>
                 </div>
-                <div class="availability-info" v-if="slotProps.option.availabilityInfo">
-                  <small class="text-success">
-                    <i class="pi pi-check-circle"></i>
-                    利用可能
-                  </small>
+                <div class="spot-details">
+                  <div class="capacity-match">
+                    <small :class="getCapacityMatchClass(slotProps.option)">
+                      容量: {{ slotProps.option.capacityUnits }} 単位
+                      <span v-if="slotProps.option.capacityMatch">
+                        ({{ slotProps.option.capacityMatch.isExactMatch ? '完全一致' : `+${slotProps.option.capacityMatch.excess}` }})
+                      </span>
+                    </small>
+                  </div>
+                  <div class="availability-info" v-if="slotProps.option.availabilityInfo">
+                    <small class="text-success">
+                      <i class="pi pi-check-circle"></i>
+                      利用可能
+                    </small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -89,69 +92,6 @@
       <small v-if="spotError" class="p-error">{{ spotError }}</small>
     </div>
 
-    <!-- Real-time Availability Status -->
-    <div class="availability-status" v-if="selectedVehicleCategoryId && dates.length > 0">
-      <div class="status-header">
-        <h5 class="m-0">リアルタイム空き状況</h5>
-        <Button
-          icon="pi pi-refresh"
-          class="p-button-text p-button-sm"
-          @click="refreshAvailability"
-          :loading="checkingAvailability"
-          :disabled="disabled"
-        />
-      </div>
-      
-      <div v-if="availabilityData" class="availability-details">
-        <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-value">{{ availabilityData.overallStats.fullyAvailableSpots }}</div>
-            <div class="stat-label">完全利用可能</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ availabilityData.overallStats.totalCompatibleSpots }}</div>
-            <div class="stat-label">対応スポット総数</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-value">{{ availabilityData.overallStats.averageAvailabilityRate }}%</div>
-            <div class="stat-label">平均利用可能率</div>
-          </div>
-        </div>
-
-        <!-- Date-specific availability -->
-        <div class="date-availability" v-if="availabilityData.dateAvailability">
-          <h6>日別空き状況</h6>
-          <div class="date-list">
-            <div
-              v-for="(dayData, date) in availabilityData.dateAvailability"
-              :key="date"
-              class="date-item"
-              :class="{ 'low-availability': dayData.availabilityRate < 50 }"
-            >
-              <span class="date">{{ formatDate(date) }}</span>
-              <span class="availability-rate">{{ dayData.availabilityRate }}%</span>
-              <span class="available-count">({{ dayData.availableSpots }}/{{ dayData.totalCompatibleSpots }})</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recommendations -->
-        <div class="recommendations" v-if="availabilityData.recommendations">
-          <h6>おすすめ</h6>
-          <div class="recommendation-list">
-            <div
-              v-for="spot in availabilityData.recommendations.alternativeSpots.slice(0, 3)"
-              :key="spot.spotId"
-              class="recommendation-item"
-              @click="selectRecommendedSpot(spot)"
-            >
-              <span class="spot-info">{{ spot.spotNumber }} ({{ spot.parkingLotName }})</span>
-              <span class="availability-rate">{{ spot.availabilityRate }}%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Validation Messages -->
     <div class="validation-messages" v-if="validationErrors.length > 0">
@@ -227,11 +167,7 @@ const parkingStore = useParkingStore();
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
 const selectedSpotId = ref(props.preselectedSpotId);
-const vehicleCategories = computed(() => {
-  const categories = parkingStore.vehicleCategories;
-  // Ensure we always return an array, even if categories is null/undefined or not an array
-  return Array.isArray(categories) ? categories : [];
-});
+const vehicleCategories = computed(() => parkingStore.vehicleCategories.value || []);
 const compatibleSpots = ref([]);
 const availabilityData = ref(null);
 
@@ -276,6 +212,55 @@ const isValid = computed(() => {
          validationErrors.value.length === 0;
 });
 
+// Base spot types
+const baseSpotTypes = [
+  { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
+  { id: 'large', name: '大型', width: 3.5, height: 6, color: '#ffcc80' },
+  { id: 'motorcycle', name: 'バイク', width: 1.5, height: 2.5, color: '#b39ddb' }
+];
+
+// Combined spot types (base + custom)
+const spotTypes = ref([...baseSpotTypes]);
+
+function getSpotColor(spotType) {
+  if (!spotType) return '#cccccc';
+  
+  // Check if we already have this type in our spot types
+  const type = spotTypes.value.find(t => t.id === spotType);
+  if (type) return type.color;
+  
+  // Generate consistent color for custom spot types
+  if (spotType.startsWith('custom-')) {
+    // Extract dimensions from spot type (e.g., "custom-3-5" -> ["3", "5"])
+    const dimensions = spotType.match(/\d+/g) || [];
+    
+    // Create a more unique hash using dimensions and spot type
+    let hash = 0;
+    const str = spotType + dimensions.join('');
+    
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    // Use golden angle for better color distribution
+    const goldenRatio = 0.618033988749895;
+    let hue = (hash * goldenRatio) % 1;
+    
+    // Convert to degrees (0-360)
+    hue = Math.floor(hue * 360);
+    
+    // Use higher saturation and vary lightness for better distinction
+    const saturation = 70 + (hash % 15); // 70-85%
+    const lightness = 60 + (hash % 21);  // 60-80%
+    
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  }
+  
+  return '#cccccc';
+}
+
 // Methods
 const loadVehicleCategories = async () => {
   loadingCategories.value = true;
@@ -303,6 +288,7 @@ const loadCompatibleSpots = async () => {
     
     compatibleSpots.value = response.compatibleSpots.map(spot => ({
       id: spot.id,
+      spot_type: spot.spot_type,
       spotNumber: spot.spotNumber,
       parkingLotName: spot.parkingLotName,
       capacityUnits: spot.capacityUnits,
@@ -492,7 +478,7 @@ onMounted(async () => {
   window.addEventListener('parkingUpdate', handleParkingUpdate);
   
   // Only load categories if they're not already loaded
-  if (parkingStore.vehicleCategories.length === 0) {
+  if (parkingStore.vehicleCategories.value.length === 0) {
     await loadVehicleCategories();
   }
   
@@ -556,8 +542,22 @@ onUnmounted(() => {
 
 .parking-spot-option {
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.spot-color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spot-info-container {
+  display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex-grow: 1;
 }
 
 .spot-header {

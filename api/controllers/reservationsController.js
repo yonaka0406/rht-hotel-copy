@@ -1,6 +1,7 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectFailedOtaReservations,
+  selectParkingSpotAvailability,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
@@ -189,6 +190,27 @@ const getReservationParking = async (req, res) => {
       error: 'An error occurred while fetching reservation parking',
       details: error.message 
     });
+  }
+};
+
+const getParkingSpotAvailability = async (req, res) => {
+  const { hotelId, startDate, endDate } = req.query;
+
+  if (!hotelId || !startDate || !endDate) {
+    return res.status(400).json({ error: 'Missing required query parameters: hotelId, startDate, and endDate.' });
+  }
+
+  try {
+    const parkingSpotAvailability = await selectParkingSpotAvailability(req.requestId, hotelId, startDate, endDate);
+
+    if (parkingSpotAvailability.length === 0) {
+      return res.status(200).json({ message: 'No parking spot availability data for the specified period.', parkingSpotAvailability: [] });
+    }
+
+    return res.status(200).json({ parkingSpotAvailability });
+  } catch (error) {
+    console.error('Error fetching parking spot availability:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching parking spot availability.' });
   }
 };
 
@@ -1323,5 +1345,6 @@ const getFailedOtaReservations = async (req, res) => {
 
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
+  getParkingSpotAvailability,
   createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, convertBlockToReservation
 };
