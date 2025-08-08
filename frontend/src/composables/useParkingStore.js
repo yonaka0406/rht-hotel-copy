@@ -392,6 +392,30 @@ export function useParkingStore() {
         }
     };
 
+    const saveParkingAssignments = async (reservationDetailIds, assignments) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/parking/reservations', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ reservationDetailIds, assignments }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to save parking assignments', error);
+            throw error;
+        }
+    };
+
     return {
         vehicleCategories,
         parkingLots,
@@ -419,5 +443,6 @@ export function useParkingStore() {
         addParkingAddonWithSpot,
         updateParkingAddonSpot,
         removeParkingAddonWithSpot,
+        saveParkingAssignments,
     };
 }
