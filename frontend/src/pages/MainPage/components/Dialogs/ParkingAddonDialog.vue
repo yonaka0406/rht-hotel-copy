@@ -305,6 +305,22 @@ const hotelId = computed(() => {
   return props.reservationDetails?.[0]?.hotel_id;
 });
 
+const reservationDetailIdsForSelection = computed(() => {
+  if (!localAddonData.value.roomId || dateRange.value.length === 0) {
+    return [];
+  }
+
+  const selectedRoomId = localAddonData.value.roomId;
+  const selectedDates = new Set(dateRange.value);
+
+  return props.reservationDetails
+    .filter(detail => {
+      const detailDate = detail.date ? detail.date.split('T')[0] : null;
+      return detail.room_id === selectedRoomId && selectedDates.has(detailDate);
+    })
+    .map(detail => detail.id);
+});
+
 const rooms = computed(() => {
   const uniqueRooms = new Map();
   
@@ -368,6 +384,21 @@ const isFormValid = computed(() => {
          localAddonData.value.roomId &&
          selectedAddon.value;
 });
+
+const saveDataForEmit = computed(() => {
+  return {
+    ...localAddonData.value,
+    addon_id: selectedAddon.value,
+    reservation_detail_ids: reservationDetailIdsForSelection.value,
+    hotel_id: hotelId.value,
+    totalPrice: calculatedTotalPrice.value,
+    dates: dateRange.value,
+  };
+});
+
+watch(saveDataForEmit, (newValue) => {
+  console.log('[ParkingAddonDialog] Save data changed:', JSON.parse(JSON.stringify(newValue)));
+}, { deep: true });
 
 // Methods
 const validateForm = () => {
@@ -488,28 +519,20 @@ const onSave = async () => {
   processing.value = true;
   
   try {
-    const addonData = {
-      hotel_id: hotelId.value,
-      reservation_id: props.reservationId,
-      addon_id: 3, // Global parking addon ID
-      name: localAddonData.value.name,
-      price: calculatedTotalPrice.value,
-      created_by: 'current_user', // This should come from auth context
-      updated_by: 'current_user'
-    };  
+    // Note: The actual API call to save the addon is not implemented here.
+    // This component currently only emits the data to the parent.
+    // The parent component is responsible for making the API call.
+    
+    const saveData = saveDataForEmit.value;
         
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: props.isEditMode ? '駐車場アドオンを更新しました' : '駐車場アドオンを追加しました',
+      detail: props.isEditMode ? '駐車場情報を更新しました' : '駐車場情報を保存しました',
       life: 3000
     });
     
-    emit('save', {
-      addonData: localAddonData.value,
-      dates: dateRange.value,
-      result: result
-    });
+    emit('save', saveData); // Emit the prepared data object
     
     emit('update:modelValue', false);
     
