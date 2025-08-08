@@ -578,7 +578,7 @@
         // Fetch Options
         await fetchPlansForHotel(props.reservation_details.hotel_id);
         const allAddons = await fetchAllAddons(props.reservation_details.hotel_id);
-        addonOptions.value = allAddons.filter(addon => addon.id !== '3');
+        addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
         
         selectedClients.value = props.reservation_details.reservation_clients.map(client => ({
             ...client,

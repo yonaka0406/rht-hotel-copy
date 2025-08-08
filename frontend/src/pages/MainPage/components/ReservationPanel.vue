@@ -965,7 +965,7 @@ const openReservationBulkEditDialog = async () => {
     // Addons
     const allAddons = await fetchAllAddons(hotelId); 
     console.log('[ReservationPanel] fetchAllAddons', allAddons);
-    addonOptions.value = allAddons.filter(addon => addon.id !== '3');
+    addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
     console.log('[ReservationPanel] addonOptions', addonOptions.value);
     tabsReservationBulkEditDialog.value = 0;
     visibleReservationBulkEditDialog.value = true;

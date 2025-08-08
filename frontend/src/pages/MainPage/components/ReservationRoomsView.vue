@@ -840,7 +840,7 @@
 
             // console.log('selectedAddon before:',selectedAddon.value);
 
-            const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);            
+            const foundAddon = addonOptions.value.find(addon => addon.addon_type !== 'parking');            
             const isHotelAddon = foundAddon.id.startsWith('H');
             selectedAddon.value.push({
                 addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,                
@@ -1280,7 +1280,7 @@
         await fetchPatternsForHotel(hotelId);
         // Addons
         const allAddons = await fetchAllAddons(hotelId);
-        addonOptions.value = allAddons.filter(addon => addon.id !== '3');
+        addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
         selectedGroup.value = group;
         tabsRoomEditDialog.value = 0;
         visibleRoomEditDialog.value = true;

@@ -293,6 +293,10 @@ import Button from 'primevue/button';
 import Message from 'primevue/message';
 import Select from 'primevue/dropdown';
 
+// Stores
+import { usePlansStore } from '@/composables/usePlansStore';
+const { fetchAllAddons } = usePlansStore();
+
 // Reactive state
 const localAddonData = ref({
   name: '駐車場',
@@ -311,6 +315,7 @@ const processing = ref(false);
 const spotValidationValid = ref(false);
 const selectedVehicleCategory = ref(null);
 const selectedSpot = ref(null);
+const addonOptions = ref([]);
 
 // Computed properties
 const dialogTitle = computed(() => {
@@ -486,7 +491,7 @@ const onSave = async () => {
   
   try {
     const addonData = {
-      hotel_id: props.hotelId,
+      hotel_id: props.reservationDetails?.[0]?.hotel_id,
       reservation_id: props.reservationId,
       addon_id: 3, // Global parking addon ID
       name: localAddonData.value.name,
@@ -533,44 +538,29 @@ const onDialogHide = () => {
 };
 
 // Watchers
-watch(() => props.modelValue, (newValue) => {
+watch(() => props.modelValue, async (newValue) => {
   if (newValue) {
-    resetForm();
-    validateForm();
-  }
-});
-
-watch(() => props.addonData, (newValue) => {
-  if (newValue) {
-    localAddonData.value = {
-      name: '駐車場',
-      unitPrice: 1000,
-      vehicleCategoryId: null,
-      spotId: null,
-      roomId: null,
-      ...newValue
-    };
-  }
-}, { deep: true });
-
-watch(() => props.initialDates, (newDates) => {
-  if (newDates.length >= 2) {
-    startDate.value = new Date(newDates[0]);
-    endDate.value = new Date(newDates[newDates.length - 1]);
-  }
-}, { deep: true });
-
-watch(() => selectedRoom.value, (newRoom) => {
-  if (newRoom) {
-    // Reset dates when room changes
-    startDate.value = new Date(newRoom.checkIn);
-    endDate.value = new Date(newRoom.checkOut);
-    endDate.value.setDate(endDate.value.getDate() - 1); // Set to day before check-out
+    // Dialog is opening
+    try {
+      // Get hotelId from the first reservation detail if available
+      const hotelId = props.reservationDetails?.[0]?.hotel_id;
+      
+      if (hotelId && !addonOptions.value.length) {
+        const allAddons = await fetchAllAddons(hotelId); 
+        console.log('[ParkingAddonDialog] fetchAllAddons', allAddons);
+        if (allAddons && Array.isArray(allAddons)) {
+          addonOptions.value = allAddons.filter(addon => addon.addon_type === 'parking');
+          console.log('[ParkingAddonDialog] addonOptions', addonOptions.value);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading addons:', error);
+    }
   } else {
-    startDate.value = null;
-    endDate.value = null;
+    // Dialog is closing
+    resetForm();
   }
-});
+}, { immediate: true });
 
 // Lifecycle
 onMounted(() => {
