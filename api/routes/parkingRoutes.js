@@ -23,9 +23,12 @@ const {
     checkRealTimeAvailability,
     createParkingAddonAssignment,
     updateParkingAddonAssignment,
-    deleteParkingAddonAssignment
+    deleteParkingAddonAssignment,
+    saveParkingAssignments
 } = require('../controllers/parkingController');
 const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
+
+
 
 // Vehicle Categories
 router.get('/vehicle-categories', authMiddleware, getVehicleCategories);
@@ -51,6 +54,7 @@ router.post('/parking/block', authMiddleware_manageDB, blockParkingSpot);
 
 // Parking Reservations
 router.get('/parking/reservations', authMiddleware, getParkingReservations);
+router.post('/parking/reservations', authMiddleware, saveParkingAssignments);
 
 // All Parking Spots by Hotel
 router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsByHotel);

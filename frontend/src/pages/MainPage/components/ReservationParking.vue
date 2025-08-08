@@ -236,45 +236,55 @@ const openEditParkingDialog = (assignment) => {
 };
 
 const onParkingSave = async (saveData) => {
-  try {
-    if (isEditMode.value) {
-      // Update existing assignment
-      const index = parkingAssignments.value.findIndex(a => a.id === editingAssignmentId.value);
-      if (index !== -1) {
-        parkingAssignments.value[index] = {
-          ...parkingAssignments.value[index],
-          ...saveData.addonData,
-          dates: saveData.dates,
-          totalPrice: saveData.addonData.unitPrice * saveData.dates.length
-        };
-      }
-    } else {
-      // Add new assignment
-      const newAssignment = {
-        id: `temp-${Date.now()}`,
-        ...saveData.addonData,
-        dates: saveData.dates,
-        totalPrice: saveData.addonData.unitPrice * saveData.dates.length,
-        createdAt: new Date().toISOString()
-      };
-      parkingAssignments.value.push(newAssignment);
+    loading.value = true;
+    try {
+        const reservationDetailIds = props.reservationDetails.map(d => d.id);
+        if (!reservationDetailIds.length) {
+            throw new Error('Reservation details are not available.');
+        }
+
+        let assignmentsToSave = [];
+        if (isEditMode.value) {
+            assignmentsToSave = parkingAssignments.value.map(a => 
+                a.id === editingAssignmentId.value 
+                ? { ...a, ...saveData.addonData, dates: saveData.dates, totalPrice: saveData.addonData.unitPrice * saveData.dates.length }
+                : a
+            );
+        } else {
+            const newAssignment = {
+                id: `temp-${Date.now()}`,
+                ...saveData.addonData,
+                dates: saveData.dates,
+                totalPrice: saveData.addonData.unitPrice * saveData.dates.length,
+                createdAt: new Date().toISOString()
+            };
+            assignmentsToSave = [...parkingAssignments.value, newAssignment];
+        }
+
+        await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
+        
+        // Refresh data after saving
+        await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);
+
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '駐車場情報を保存しました',
+            life: 3000
+        });
+        showParkingDialog.value = false;
+
+    } catch (error) {
+        console.error('Error saving parking assignment:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場予約の保存に失敗しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
     }
-    
-    toast.add({
-      severity: 'success',
-      summary: '成功',
-      detail: isEditMode.value ? '駐車場予約を更新しました' : '駐車場予約を追加しました',
-      life: 3000
-    });
-  } catch (error) {
-    console.error('Error saving parking assignment:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: '駐車場予約の保存に失敗しました',
-      life: 3000
-    });
-  }
 };
 
 const onParkingCancel = () => {
@@ -302,29 +312,39 @@ const confirmRemoveAssignment = (assignment) => {
 };
 
 const removeAssignment = async (assignment) => {
-  try {
-        
-    // Remove from local state
-    const index = parkingAssignments.value.findIndex(a => a.id === assignment.id);
-    if (index !== -1) {
-      parkingAssignments.value.splice(index, 1);
+    loading.value = true;
+    try {
+        const reservationDetailIds = props.reservationDetails.map(d => d.id);
+        if (!reservationDetailIds.length) {
+            throw new Error('Reservation details are not available.');
+        }
+
+        const assignmentsToSave = parkingAssignments.value.map(a => 
+            a.id === assignment.id ? { ...a, toDelete: true } : a
+        );
+
+        await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
+
+        // Refresh data after saving
+        await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);
+
+        toast.add({
+            severity: 'success',
+            summary: '削除完了',
+            detail: '駐車場予約を削除しました',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Error removing parking assignment:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場予約の削除に失敗しました',
+            life: 3000
+        });
+    } finally {
+        loading.value = false;
     }
-    
-    toast.add({
-      severity: 'success',
-      summary: '削除完了',
-      detail: '駐車場予約を削除しました',
-      life: 3000
-    });
-  } catch (error) {
-    console.error('Error removing parking assignment:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: '駐車場予約の削除に失敗しました',
-      life: 3000
-    });
-  }
 };
 
 const refreshAvailability = async (assignment) => {

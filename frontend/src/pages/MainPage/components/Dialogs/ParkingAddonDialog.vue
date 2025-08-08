@@ -399,7 +399,7 @@ const saveDataForEmit = computed(() => {
 });
 
 watch(saveDataForEmit, (newValue) => {
-  console.log('[ParkingAddonDialog] Save data changed:', JSON.parse(JSON.stringify(newValue)));
+  // console.log('[ParkingAddonDialog] Save data changed:', JSON.parse(JSON.stringify(newValue)));
 }, { deep: true });
 
 // Methods
@@ -583,7 +583,7 @@ watch(() => rooms.value, (newRooms) => {
     selectedRoom.value = newRooms[0];
     // Also update the roomId in localAddonData
     localAddonData.value.roomId = newRooms[0].id;
-    console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
+    // console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
   }
 }, { immediate: true });
 
@@ -674,7 +674,7 @@ watch(() => props.modelValue, async (newValue) => {
       // Auto-select first room if available
       if (rooms.value.length > 0 && !selectedRoom.value) {
         selectedRoom.value = rooms.value[0];
-        console.log('[ParkingAddonDialog] Auto-selected first room on dialog open:', selectedRoom.value);
+        // console.log('[ParkingAddonDialog] Auto-selected first room on dialog open:', selectedRoom.value);
       }
     } catch (error) {
       console.error('Error on dialog open:', error);

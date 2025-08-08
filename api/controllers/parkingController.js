@@ -470,6 +470,17 @@ const deleteParkingAddonAssignment = async (req, res) => {
     }
 };
 
+const saveParkingAssignments = async (req, res) => {
+    const { reservationDetailIds, assignments } = req.body;
+    try {
+        const result = await parkingModel.saveParkingAssignments(req.requestId, reservationDetailIds, assignments);
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error saving parking assignments' });
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -493,5 +504,6 @@ module.exports = {
     checkRealTimeAvailability,
     createParkingAddonAssignment,
     updateParkingAddonAssignment,
-    deleteParkingAddonAssignment
+    deleteParkingAddonAssignment,
+    saveParkingAssignments,
 };

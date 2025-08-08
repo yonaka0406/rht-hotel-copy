@@ -497,6 +497,74 @@ const removeParkingAssignmentsByAddon = async (requestId, addonId) => {
     return result.rows;
 };
 
+const saveParkingAssignments = async (requestId, reservationDetailIds, assignments) => {
+    const pool = getPool(requestId);
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        const toCreate = assignments.filter(a => a.id.toString().startsWith('temp-'));
+        const toUpdate = assignments.filter(a => !a.id.toString().startsWith('temp-') && !a.toDelete);
+        const toDelete = assignments.filter(a => a.toDelete);
+
+        // Handle deletions
+        if (toDelete.length > 0) {
+            const deleteIds = toDelete.map(a => a.id);
+            await client.query('DELETE FROM reservation_parking WHERE id = ANY($1::int[])', [deleteIds]);
+            await client.query('DELETE FROM reservation_addons WHERE id = ANY($1::int[])', [deleteIds]);
+        }
+
+        // Handle creations
+        for (const assignment of toCreate) {
+            for (const detailId of reservationDetailIds) {
+                for (const date of assignment.dates) {
+                    const addonRes = await client.query(
+                        'INSERT INTO reservation_addons (reservation_detail_id, addon_id, price, quantity, note) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                        [detailId, 1, assignment.unitPrice, 1, assignment.comment] // Assuming addon_id 1 is for parking
+                    );
+                    const reservationAddonId = addonRes.rows[0].id;
+
+                    await client.query(
+                        'INSERT INTO reservation_parking (reservation_addon_id, parking_spot_id, vehicle_category_id, date) VALUES ($1, $2, $3, $4)',
+                        [reservationAddonId, assignment.spotId, assignment.vehicleCategoryId, date]
+                    );
+                }
+            }
+        }
+
+        // Handle updates
+        for (const assignment of toUpdate) {
+            // For simplicity, we'll delete and recreate. A more robust solution would be to update existing records.
+            await client.query('DELETE FROM reservation_parking WHERE reservation_addon_id = $1', [assignment.id]);
+            await client.query('DELETE FROM reservation_addons WHERE id = $1', [assignment.id]);
+
+            for (const detailId of reservationDetailIds) {
+                for (const date of assignment.dates) {
+                    const addonRes = await client.query(
+                        'INSERT INTO reservation_addons (reservation_detail_id, addon_id, price, quantity, note) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                        [detailId, 1, assignment.unitPrice, 1, assignment.comment] // Assuming addon_id 1 is for parking
+                    );
+                    const reservationAddonId = addonRes.rows[0].id;
+
+                    await client.query(
+                        'INSERT INTO reservation_parking (reservation_addon_id, parking_spot_id, vehicle_category_id, date) VALUES ($1, $2, $3, $4)',
+                        [reservationAddonId, assignment.spotId, assignment.vehicleCategoryId, date]
+                    );
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        return { success: true };
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Error in saveParkingAssignments:', error);
+        throw error;
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     getVehicleCategories,
     createVehicleCategory,
@@ -520,5 +588,6 @@ module.exports = {
     validateSpotCapacity,
     createParkingAssignmentWithAddon,
     updateParkingAssignmentAddon,
-    removeParkingAssignmentsByAddon
+    removeParkingAssignmentsByAddon,
+    saveParkingAssignments,
 };
