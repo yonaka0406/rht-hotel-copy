@@ -70,7 +70,7 @@ CREATE TABLE reservation_addons (
     addons_global_id INT REFERENCES addons_global(id),
     addons_hotel_id INT,
     addon_name TEXT,
-    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'parking', 'other')) DEFAULT 'other',
     quantity INT NOT NULL DEFAULT 1,
     price DECIMAL NOT NULL,
     tax_type_id INT REFERENCES tax_info(id),
@@ -141,3 +141,12 @@ CREATE TABLE reservation_rates (
    PRIMARY KEY (hotel_id, id),
    FOREIGN KEY (reservation_details_id, hotel_id) REFERENCES reservation_details(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
+
+-- Drop existing check constraint
+ALTER TABLE reservation_addons DROP CONSTRAINT reservation_addons_addon_type_check;
+
+-- Add new check constraint including 'parking'
+ALTER TABLE reservation_addons
+ADD CONSTRAINT reservation_addons_addon_type_check
+CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));

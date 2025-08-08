@@ -2500,7 +2500,7 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
     SET SESSION "my_app.user_id" = %L;
 
     DELETE FROM reservation_addons
-    WHERE reservation_detail_id = %L
+    WHERE reservation_detail_id = %L AND addon_type <> 'parking'
     RETURNING *;
   `, updated_by, reservation_detail_id);
 
