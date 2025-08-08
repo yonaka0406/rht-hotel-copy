@@ -305,7 +305,26 @@ const hotelId = computed(() => {
   return props.reservationDetails?.[0]?.hotel_id;
 });
 
-const reservationDetailIdsForSelection = computed(() => {
+const dateRange = computed(() => {
+  if (!startDate.value || !endDate.value) return [];
+  
+  const dates = [];
+  const start = new Date(startDate.value);
+  const end = new Date(endDate.value);
+  
+  // Use UTC to prevent timezone issues
+  let current = new Date(Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()));
+  const final = new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate()));
+
+  while (current < final) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  
+  return dates;
+});
+
+const selectedReservationDetails = computed(() => {
   if (!localAddonData.value.roomId || dateRange.value.length === 0) {
     return [];
   }
@@ -318,7 +337,10 @@ const reservationDetailIdsForSelection = computed(() => {
       const detailDate = detail.date ? detail.date.split('T')[0] : null;
       return detail.room_id === selectedRoomId && selectedDates.has(detailDate);
     })
-    .map(detail => detail.id);
+    .map(detail => ({
+        id: detail.id,
+        date: detail.date.split('T')[0]
+    }));
 });
 
 const rooms = computed(() => {
@@ -348,29 +370,8 @@ const maxDate = computed(() => {
   return date;
 });
 
-const dateRange = computed(() => {
-  if (!startDate.value || !endDate.value) return [];
-  
-  const dates = [];
-  const current = new Date(startDate.value);
-  const end = new Date(endDate.value);
-  
-  // Set to the start of the day for accurate comparison
-  current.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-  
-  // Only include dates up to the day before check-out
-  while (current < end) {
-    dates.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 1);
-  }
-  
-  return dates;
-});
-
 const calculatedTotalPrice = computed(() => {
   if (!localAddonData.value.unitPrice || dateRange.value.length === 0) return 0;
-  // No need to subtract 1 here as the date range already excludes the check-out day
   return localAddonData.value.unitPrice * dateRange.value.length;
 });
 
@@ -386,13 +387,14 @@ const isFormValid = computed(() => {
 });
 
 const saveDataForEmit = computed(() => {
+  const { startDate, endDate, ...restOfAddonData } = localAddonData.value;
+
   return {
-    ...localAddonData.value,
+    ...restOfAddonData,
     addon_id: selectedAddon.value,
-    reservation_detail_ids: reservationDetailIdsForSelection.value,
     hotel_id: hotelId.value,
     totalPrice: calculatedTotalPrice.value,
-    dates: dateRange.value,
+    details: selectedReservationDetails.value,
   };
 });
 
