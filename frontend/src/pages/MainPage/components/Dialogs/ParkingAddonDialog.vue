@@ -155,51 +155,6 @@
           />
         </div>
 
-        <!-- Pricing Information -->
-        <div class="form-section">
-          <h5 class="section-title">料金情報</h5>
-          
-          <div class="pricing-grid">
-            <div class="field">
-              <FloatLabel>
-                <InputNumber
-                  id="totalPrice"
-                  v-model="calculatedTotalPrice"
-                  :disabled="true"
-                  mode="currency"
-                  currency="JPY"
-                  locale="ja-JP"
-                  class="w-full"
-                />
-                <label for="totalPrice">合計金額</label>
-              </FloatLabel>
-            </div>
-          </div>
-        </div>
-
-        <!-- Vehicle Category Information -->
-        <div class="form-section" v-if="selectedVehicleCategory">
-          <h5 class="section-title">車両情報</h5>
-          
-          <div class="vehicle-info-card">
-            <div class="info-row">
-              <span class="label">車両カテゴリ:</span>
-              <span class="value">{{ selectedVehicleCategory.name }}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">必要容量:</span>
-              <span class="value">{{ selectedVehicleCategory.capacity_units_required }} 単位</span>
-            </div>
-            <div class="info-row" v-if="selectedSpot">
-              <span class="label">選択スポット:</span>
-              <span class="value">{{ selectedSpot.spotNumber }} - {{ selectedSpot.parkingLotName }}</span>
-            </div>
-            <div class="info-row" v-if="selectedSpot">
-              <span class="label">スポット容量:</span>
-              <span class="value">{{ selectedSpot.capacityUnits }} 単位</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- Validation Summary -->
@@ -406,7 +361,7 @@ const calculatedTotalPrice = computed(() => {
 const isFormValid = computed(() => {
   return Object.keys(errors.value).length === 0 && 
          spotValidationValid.value &&
-         localAddonData.value.unitPrice > 0 &&
+         localAddonData.value.unitPrice !== null && localAddonData.value.unitPrice >= 0 &&
          dateRange.value.length > 0 &&
          localAddonData.value.vehicleCategoryId &&
          localAddonData.value.spotId &&

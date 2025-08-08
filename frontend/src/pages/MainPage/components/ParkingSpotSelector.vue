@@ -94,11 +94,13 @@
 
 
     <div v-if="filteredParkingSpotAvailability.length > 0" class="availability-details">
-      <div class="stats-grid">
-        <div v-for="spot in filteredParkingSpotAvailability" :key="`${spot.width}-${spot.height}`" class="stat-item" :style="{ backgroundColor: getSpotColor(spot.spot_type) }">
-          <div class="stat-value">{{ spot.available_spots }}</div>
+      <div class="proportional-stats-grid">
+        <div v-for="spot in filteredParkingSpotAvailability" :key="`${spot.width}-${spot.height}`" class="stat-container">
+          <div class="stat-item" :style="{ width: `${spot.width * 20}px`, height: `${spot.height * 20}px`, backgroundColor: getSpotColor(spot.spot_type) }">
+            <div class="stat-value">{{ spot.available_spots }}</div>
+          </div>
           <div class="stat-label">
-            {{ spot.width }} x {{ spot.height }}
+            幅 {{ spot.width }} x 長さ {{ spot.height }}
           </div>
         </div>
       </div>
@@ -290,6 +292,29 @@ function getSpotColor(spotType) {
 }
 
 // Methods
+function extractCustomSpotTypes(spots) {
+  const customTypes = [];
+  const seenTypes = new Set();
+  
+  spots.forEach(spot => {
+    if (spot.spot_type && spot.spot_type.startsWith('custom-') && !seenTypes.has(spot.spot_type)) {
+      seenTypes.add(spot.spot_type);
+      const [_, width, height] = spot.spot_type.match(/custom-([\d.]+)-([\d.]+)/) || [];
+      if (width && height) {
+        customTypes.push({
+          id: spot.spot_type,
+          name: `${width}m × ${height}m`,
+          width: parseFloat(width),
+          height: parseFloat(height),
+          color: getSpotColor(spot.spot_type)
+        });
+      }
+    }
+  });
+  
+  return customTypes;
+}
+
 const loadVehicleCategories = async () => {
   loadingCategories.value = true;
   try {
@@ -327,6 +352,17 @@ const loadCompatibleSpots = async () => {
     if (compatibleSpots.value.length === 0) {
       spotError.value = '選択した車両カテゴリに対応する駐車スポットがありません';
     }
+
+    // Extract and add custom spot types
+    const customTypes = extractCustomSpotTypes(response.compatibleSpots);
+    const existingTypeIds = new Set(spotTypes.value.map(t => t.id));
+    
+    customTypes.forEach(type => {
+      if (!existingTypeIds.has(type.id)) {
+        spotTypes.value.push(type);
+        existingTypeIds.add(type.id);
+      }
+    });
   } catch (error) {
     console.error('Failed to load compatible spots:', error);
     spotError.value = '対応駐車スポットの読み込みに失敗しました';
@@ -643,29 +679,42 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+.proportional-stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.stat-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .stat-item {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 0.75rem;
-  background: var(--surface-ground);
   border-radius: var(--border-radius);
+  color: white;
 }
 
 .stat-value {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--primary-color);
 }
 
 .stat-label {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
-  margin-top: 0.25rem;
+  text-align: center;
 }
 
 .date-availability h6,
