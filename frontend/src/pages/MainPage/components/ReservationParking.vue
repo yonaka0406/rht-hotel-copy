@@ -95,9 +95,13 @@ import Column from 'primevue/column';
 
 // Helper
 const formatDate = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+        return date; // Return original if it's not a valid date
+    }
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 };
 
@@ -161,7 +165,7 @@ const parkingUsageByRoom = computed(() => {
   props.reservationDetails.forEach(room => {
     if (!usage[room.room_id]) {
       usage[room.room_id] = {
-        roomName: room.room_name || `Room ${room.room_number || room.room_id}`,
+        roomName: room.room_name || `部屋${room.room_number || room.room_id}`,
         dates: {}
       };
       
