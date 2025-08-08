@@ -374,7 +374,6 @@ const minDate = computed(() => {
 const maxDate = computed(() => {
   if (!selectedRoom.value?.checkOut) return null;
   const date = new Date(selectedRoom.value.checkOut);
-  date.setDate(date.getDate() - 1); // Exclude check-out date
   return date;
 });
 
@@ -449,7 +448,7 @@ const validateForm = () => {
     isValid = false;
   }
   
-  if (!localAddonData.value.unitPrice || isNaN(localAddonData.value.unitPrice) || localAddonData.value.unitPrice <= 0) {
+  if (localAddonData.value.unitPrice === null || isNaN(localAddonData.value.unitPrice) || localAddonData.value.unitPrice < 0) {
     errors.value.unitPrice = '有効な単価を入力してください';
     isValid = false;
   }
@@ -596,7 +595,7 @@ watch(selectedAddon, (newAddonId) => {
       }
     }
   }
-});
+}, { immediate: true });
 
 // Auto-select first room when rooms are available
 watch(() => rooms.value, (newRooms) => {
@@ -697,28 +696,27 @@ watch(() => props.modelValue, async (newValue) => {
         selectedRoom.value = rooms.value[0];
         console.log('[ParkingAddonDialog] Auto-selected first room on dialog open:', selectedRoom.value);
       }
-      
-      if (hotelId.value && !addonOptions.value.length) {
-        const allAddons = await fetchAllAddons(hotelId.value); 
-        console.log('[ParkingAddonDialog] fetchAllAddons', allAddons);
-        if (allAddons && Array.isArray(allAddons)) {
-          const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
-          addonOptions.value = parkingAddons;
-          
-          // Auto-select first addon if available
-          if (parkingAddons.length > 0 && !selectedAddon.value) {
-            selectedAddon.value = parkingAddons[0].id;
-          }
-          
-          console.log('[ParkingAddonDialog] addonOptions', addonOptions.value);
-        }
-      }
     } catch (error) {
-      console.error('Error loading addons:', error);
+      console.error('Error on dialog open:', error);
     }
   } else {
     // Dialog is closing
     resetForm();
+  }
+}, { immediate: true });
+
+watch(hotelId, async (newHotelId) => {
+  if (newHotelId && !addonOptions.value.length) {
+    const allAddons = await fetchAllAddons(newHotelId); 
+    if (allAddons && Array.isArray(allAddons)) {
+      const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
+      addonOptions.value = parkingAddons;
+      
+      // Auto-select first addon if available
+      if (parkingAddons.length > 0 && !selectedAddon.value) {
+        selectedAddon.value = parkingAddons[0].id;
+      }
+    }
   }
 }, { immediate: true });
 </script>

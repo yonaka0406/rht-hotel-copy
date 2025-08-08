@@ -93,6 +93,17 @@
     </div>
 
 
+    <div v-if="filteredParkingSpotAvailability.length > 0" class="availability-details">
+      <div class="stats-grid">
+        <div v-for="spot in filteredParkingSpotAvailability" :key="`${spot.width}-${spot.height}`" class="stat-item" :style="{ backgroundColor: getSpotColor(spot.spot_type) }">
+          <div class="stat-value">{{ spot.available_spots }}</div>
+          <div class="stat-label">
+            {{ spot.width }} x {{ spot.height }}
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Validation Messages -->
     <div class="validation-messages" v-if="validationErrors.length > 0">
       <Message
@@ -120,6 +131,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useParkingStore } from '@/composables/useParkingStore';
+import { useReservationStore } from '@/composables/useReservationStore';
 import Select from 'primevue/select';
 import FloatLabel from 'primevue/floatlabel';
 import Button from 'primevue/button';
@@ -163,6 +175,8 @@ const emit = defineEmits([
 
 // Composables
 const parkingStore = useParkingStore();
+const reservationStore = useReservationStore();
+const { parkingSpotAvailability, fetchParkingSpotAvailability } = reservationStore;
 
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
@@ -212,6 +226,20 @@ const isValid = computed(() => {
          validationErrors.value.length === 0;
 });
 
+const filteredParkingSpotAvailability = computed(() => {
+  if (!selectedVehicleCategoryId.value) {
+    return parkingSpotAvailability.value;
+  }
+
+  const selectedCategory = vehicleCategories.value.find(cat => cat.id === selectedVehicleCategoryId.value);
+  if (!selectedCategory) {
+    return parkingSpotAvailability.value;
+  }
+
+  const requiredCapacity = selectedCategory.capacity_units_required;
+  return parkingSpotAvailability.value.filter(spot => spot.capacity_units >= requiredCapacity);
+});
+
 // Base spot types
 const baseSpotTypes = [
   { id: 'standard', name: '標準', width: 2.5, height: 5, color: '#90caf9' },
@@ -236,7 +264,7 @@ function getSpotColor(spotType) {
     
     // Create a more unique hash using dimensions and spot type
     let hash = 0;
-    const str = spotType + dimensions.join('');
+    const str = spotType + (dimensions ? dimensions.join('') : '');
     
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
@@ -453,7 +481,10 @@ watch(() => props.dates, async (newDates) => {
     await checkRealTimeAvailability();
     validateSelection();
   }
-}, { deep: true });
+  if (newDates.length > 0 && props.hotelId) {
+    await fetchParkingSpotAvailability(props.hotelId, newDates[0], newDates[newDates.length - 1]);
+  }
+}, { deep: true, immediate: true });
 
 watch(() => props.preselectedVehicleCategoryId, (newValue) => {
   if (newValue !== selectedVehicleCategoryId.value) {

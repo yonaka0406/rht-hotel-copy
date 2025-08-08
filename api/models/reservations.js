@@ -836,6 +836,7 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
   const query = `
     WITH used_spots AS (
       SELECT 
+        ps.spot_type,
         ps.capacity_units,
         CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
         CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
@@ -855,10 +856,11 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
         AND rp.date BETWEEN $2 AND $3
         AND rd.cancelled IS NULL
       GROUP BY 
-        ps.capacity_units, width, height
+        ps.spot_type, ps.capacity_units, width, height
     ),
     total_spots AS (
       SELECT 
+        ps.spot_type,
         ps.capacity_units,
         CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
         CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
@@ -870,9 +872,10 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
         pl.hotel_id = $1
         AND ps.is_active = TRUE
       GROUP BY 
-        ps.capacity_units, width, height
+        ps.spot_type, ps.capacity_units, width, height
     )
     SELECT 
+      ts.spot_type,
       COALESCE(ts.capacity_units, 0) AS capacity_units,
       COALESCE(ts.width, 0) AS width,
       COALESCE(ts.height, 0) AS height,
@@ -882,7 +885,8 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
     FROM 
       total_spots ts
       LEFT JOIN used_spots us ON 
-        ts.capacity_units = us.capacity_units 
+        ts.spot_type = us.spot_type
+        AND ts.capacity_units = us.capacity_units 
         AND ts.width = us.width 
         AND ts.height = us.height
     ORDER BY 
