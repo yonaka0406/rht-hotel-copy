@@ -48,11 +48,10 @@
                     :max-date="maxDate"
                     :disabled="!localAddonData.roomId || processing"
                     :class="{ 'p-invalid': errors.startDate }"
-                    date-format="yy-mm-dd"
-                    placeholder="開始日"
+                    date-format="yy-mm-dd"                    
                     show-icon
                   />
-                  <label for="startDate">開始日 *</label>
+                  <label for="startDate">開始日 (IN) *</label>
                 </FloatLabel>
                 <small v-if="errors.startDate" class="p-error">{{ errors.startDate }}</small>
               </div>
@@ -66,11 +65,10 @@
                     :max-date="maxDate"
                     :disabled="!localAddonData.roomId || processing"
                     :class="{ 'p-invalid': errors.endDate }"
-                    date-format="yy-mm-dd"
-                    placeholder="終了日"
+                    date-format="yy-mm-dd"                    
                     show-icon
                   />
-                  <label for="endDate">終了日 *</label>
+                  <label for="endDate">終了日 (OUT) *</label>
                 </FloatLabel>
                 <small v-if="errors.endDate" class="p-error">{{ errors.endDate }}</small>
               </div>
@@ -121,6 +119,22 @@
                 <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
               </div>
             </div>
+            
+            <!-- Inline pricing breakdown -->
+            <div class="inline-pricing" v-if="dateRange.length > 0 && localAddonData.unitPrice">
+              <div class="pricing-item">
+                <span class="label">単価:</span>
+                <span class="value">¥{{ localAddonData.unitPrice?.toLocaleString('ja-JP') || 0 }}</span>
+              </div>
+              <div class="pricing-item">
+                <span class="label">日数:</span>
+                <span class="value">{{ dateRange.length }}日</span>
+              </div>
+              <div class="pricing-item total">
+                <span class="label">合計:</span>
+                <span class="value">¥{{ calculatedTotalPrice?.toLocaleString('ja-JP') || 0 }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -159,21 +173,6 @@
                 />
                 <label for="totalPrice">合計金額</label>
               </FloatLabel>
-            </div>
-          </div>
-
-          <div class="pricing-breakdown" v-if="dateRange.length > 0 && localAddonData.unitPrice">
-            <div class="breakdown-item">
-              <span>単価:</span>
-              <span>¥{{ localAddonData.unitPrice?.toLocaleString('ja-JP') || 0 }}</span>
-            </div>
-            <div class="breakdown-item">
-              <span>日数:</span>
-              <span>{{ dateRange.length }}日</span>
-            </div>
-            <div class="breakdown-item total">
-              <span>合計:</span>
-              <span>¥{{ calculatedTotalPrice?.toLocaleString('ja-JP') || 0 }}</span>
             </div>
           </div>
         </div>
@@ -313,7 +312,7 @@ import DatePicker from 'primevue/datepicker';
 import InputNumber from 'primevue/inputnumber';
 import Button from 'primevue/button';
 import Message from 'primevue/message';
-import Select from 'primevue/dropdown';
+import Select from 'primevue/select';
 
 // Stores
 import { usePlansStore } from '@/composables/usePlansStore';
@@ -344,6 +343,11 @@ const addonOptions = ref([]);
 // Computed properties
 const dialogTitle = computed(() => {
   return props.isEditMode ? '駐車場アドオン編集' : '駐車場アドオン追加';
+});
+
+const hotelId = computed(() => {
+  // Get hotelId from the first reservation detail if available
+  return props.reservationDetails?.[0]?.hotel_id;
 });
 
 const rooms = computed(() => {
@@ -381,7 +385,12 @@ const dateRange = computed(() => {
   const current = new Date(startDate.value);
   const end = new Date(endDate.value);
   
-  while (current <= end) {
+  // Set to the start of the day for accurate comparison
+  current.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  // Only include dates up to the day before check-out
+  while (current < end) {
     dates.push(current.toISOString().split('T')[0]);
     current.setDate(current.getDate() + 1);
   }
@@ -391,6 +400,7 @@ const dateRange = computed(() => {
 
 const calculatedTotalPrice = computed(() => {
   if (!localAddonData.value.unitPrice || dateRange.value.length === 0) return 0;
+  // No need to subtract 1 here as the date range already excludes the check-out day
   return localAddonData.value.unitPrice * dateRange.value.length;
 });
 
@@ -408,38 +418,43 @@ const isFormValid = computed(() => {
 // Methods
 const validateForm = () => {
   errors.value = {};
+  let isValid = true;
   
   if (!localAddonData.value.roomId) {
     errors.value.roomId = '部屋を選択してください';
+    isValid = false;
   }
   
   if (!startDate.value) {
     errors.value.startDate = '開始日を選択してください';
+    isValid = false;
+  } else if (minDate.value && new Date(startDate.value) < new Date(minDate.value)) {
+    errors.value.startDate = `開始日は${formatDate(minDate.value)}以降を選択してください`;
+    isValid = false;
   }
   
   if (!endDate.value) {
     errors.value.endDate = '終了日を選択してください';
-  } else if (startDate.value && endDate.value < startDate.value) {
-    errors.value.endDate = '終了日は開始日以降を選択してください';
-  }
-  
-  if (!localAddonData.value.unitPrice || localAddonData.value.unitPrice <= 0) {
-    errors.value.unitPrice = '有効な単価を入力してください';
-  }
-  
-  if (!localAddonData.value.vehicleCategoryId) {
-    errors.value.vehicleCategoryId = '車両カテゴリを選択してください';
-  }
-  
-  if (!localAddonData.value.spotId) {
-    errors.value.spotId = '駐車スペースを選択してください';
+    isValid = false;
+  } else if (maxDate.value && new Date(endDate.value) > new Date(maxDate.value)) {
+    errors.value.endDate = `終了日は${formatDate(maxDate.value)}以前を選択してください`;
+    isValid = false;
+  } else if (startDate.value && new Date(endDate.value) <= new Date(startDate.value)) {
+    errors.value.endDate = '終了日は開始日より後の日付を選択してください';
+    isValid = false;
   }
   
   if (!selectedAddon.value) {
-    errors.value.selectedAddon = 'アドオンを選択してください';
+    errors.value.addonId = 'アドオンを選択してください';
+    isValid = false;
   }
   
-  return Object.keys(errors.value).length === 0;
+  if (!localAddonData.value.unitPrice || isNaN(localAddonData.value.unitPrice) || localAddonData.value.unitPrice <= 0) {
+    errors.value.unitPrice = '有効な単価を入力してください';
+    isValid = false;
+  }
+  
+  return isValid && spotValidationValid.value;
 };
 
 const calculateTotalPrice = () => {
@@ -520,7 +535,7 @@ const onSave = async () => {
   
   try {
     const addonData = {
-      hotel_id: props.reservationDetails?.[0]?.hotel_id,
+      hotel_id: hotelId.value,
       reservation_id: props.reservationId,
       addon_id: 3, // Global parking addon ID
       name: localAddonData.value.name,
@@ -583,15 +598,108 @@ watch(selectedAddon, (newAddonId) => {
   }
 });
 
+// Auto-select first room when rooms are available
+watch(() => rooms.value, (newRooms) => {
+  if (newRooms.length > 0 && !selectedRoom.value) {
+    selectedRoom.value = newRooms[0];
+    // Also update the roomId in localAddonData
+    localAddonData.value.roomId = newRooms[0].id;
+    console.log('[ParkingAddonDialog] Auto-selected first room:', selectedRoom.value);
+  }
+}, { immediate: true });
+
+// Sync selectedRoom with localAddonData.roomId
+watch(selectedRoom, (newRoom) => {
+  if (newRoom) {
+    localAddonData.value.roomId = newRoom.id;
+    // Update date range based on the selected room
+    if (newRoom.checkIn) startDate.value = newRoom.checkIn;
+    if (newRoom.checkOut) endDate.value = newRoom.checkOut;
+  }
+}, { immediate: true });
+
+// Watchers for date changes
+watch(startDate, (newStartDate) => {
+  if (!newStartDate || !endDate.value) return;
+  
+  const start = new Date(newStartDate);
+  const end = new Date(endDate.value);
+  
+  // Ensure start date is not after end date
+  if (start >= end) {
+    const nextDay = new Date(start);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    // Ensure nextDay doesn't exceed the room's check-out date
+    if (maxDate.value && nextDay > new Date(maxDate.value)) {
+      // If we can't set next day, adjust start date instead
+      const prevDay = new Date(end);
+      prevDay.setDate(prevDay.getDate() - 1);
+      
+      // Ensure prevDay is not before room's check-in date
+      if (minDate.value && prevDay < new Date(minDate.value)) {
+        // If we can't adjust either way, reset to original values
+        startDate.value = minDate.value;
+        endDate.value = new Date(minDate.value);
+        endDate.value.setDate(endDate.value.getDate() + 1);
+      } else {
+        startDate.value = prevDay;
+      }
+    } else {
+      endDate.value = nextDay;
+    }
+  }
+  
+  onDateChange();
+});
+
+watch(endDate, (newEndDate) => {
+  if (!newEndDate || !startDate.value) return;
+  
+  const start = new Date(startDate.value);
+  const end = new Date(newEndDate);
+  
+  // Ensure end date is not before start date
+  if (end <= start) {
+    const prevDay = new Date(end);
+    prevDay.setDate(prevDay.getDate() - 1);
+    
+    // Ensure prevDay is not before room's check-in date
+    if (minDate.value && prevDay < new Date(minDate.value)) {
+      // If we can't set previous day, adjust end date instead
+      const nextDay = new Date(start);
+      nextDay.setDate(nextDay.getDate() + 1);
+      
+      // Ensure nextDay doesn't exceed the room's check-out date
+      if (maxDate.value && nextDay > new Date(maxDate.value)) {
+        // If we can't adjust either way, reset to original values
+        endDate.value = maxDate.value;
+        startDate.value = new Date(maxDate.value);
+        startDate.value.setDate(startDate.value.getDate() - 1);
+      } else {
+        endDate.value = nextDay;
+      }
+    } else {
+      startDate.value = prevDay;
+    }
+  }
+  
+  onDateChange();
+});
+
+// Update the date range validation
 watch(() => props.modelValue, async (newValue) => {
   if (newValue) {
     // Dialog is opening
     try {
-      // Get hotelId from the first reservation detail if available
-      const hotelId = props.reservationDetails?.[0]?.hotel_id;
+      // Auto-select first room if available
+      if (rooms.value.length > 0 && !selectedRoom.value) {
+        selectedRoom.value = rooms.value[0];
+        console.log('[ParkingAddonDialog] Auto-selected first room on dialog open:', selectedRoom.value);
+      }
       
-      if (hotelId && !addonOptions.value.length) {
-        const allAddons = await fetchAllAddons(hotelId); 
+      if (hotelId.value && !addonOptions.value.length) {
+        const allAddons = await fetchAllAddons(hotelId.value); 
         console.log('[ParkingAddonDialog] fetchAllAddons', allAddons);
         if (allAddons && Array.isArray(allAddons)) {
           const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
@@ -613,11 +721,6 @@ watch(() => props.modelValue, async (newValue) => {
     resetForm();
   }
 }, { immediate: true });
-
-// Lifecycle
-onMounted(() => {
-  resetForm();
-});
 </script>
 
 <style scoped>
@@ -706,6 +809,36 @@ onMounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.inline-pricing {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: var(--surface-50);
+  border-radius: 4px;
+}
+
+.pricing-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.pricing-item .label {
+  color: var(--text-color-secondary);
+}
+
+.pricing-item .value {
+  font-weight: 500;
+}
+
+.pricing-item.total {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--primary-color);
 }
 
 .pricing-breakdown {

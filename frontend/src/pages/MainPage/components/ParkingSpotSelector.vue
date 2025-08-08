@@ -227,7 +227,11 @@ const parkingStore = useParkingStore();
 // Reactive state
 const selectedVehicleCategoryId = ref(props.preselectedVehicleCategoryId);
 const selectedSpotId = ref(props.preselectedSpotId);
-const vehicleCategories = ref([]);
+const vehicleCategories = computed(() => {
+  const categories = parkingStore.vehicleCategories;
+  // Ensure we always return an array, even if categories is null/undefined or not an array
+  return Array.isArray(categories) ? categories : [];
+});
 const compatibleSpots = ref([]);
 const availabilityData = ref(null);
 
@@ -243,18 +247,22 @@ const validationErrors = ref([]);
 
 // Computed properties
 const availableSpots = computed(() => {
-  if (!availabilityData.value) return compatibleSpots.value;
+  if (!availabilityData.value) return compatibleSpots.value || [];
   
-  // Filter spots based on availability data
+  // Ensure fullyAvailableSpots exists and is an array
+  const fullyAvailableSpots = availabilityData.value?.fullyAvailableSpots || [];
   const fullyAvailableSpotIds = new Set(
-    availabilityData.value.fullyAvailableSpots.map(spot => spot.spotId)
+    fullyAvailableSpots.map(spot => spot.spotId)
   );
   
-  return compatibleSpots.value
+  // Ensure compatibleSpots is an array
+  const spots = Array.isArray(compatibleSpots.value) ? compatibleSpots.value : [];
+  
+  return spots
     .filter(spot => fullyAvailableSpotIds.has(spot.id))
     .map(spot => ({
       ...spot,
-      displayName: `${spot.spotNumber} - ${spot.parkingLotName}`,
+      displayName: `${spot.spotNumber || ''} - ${spot.parkingLotName || ''}`.trim(),
       availabilityInfo: {
         isAvailable: true,
         fullyAvailable: true
@@ -273,7 +281,6 @@ const loadVehicleCategories = async () => {
   loadingCategories.value = true;
   try {
     await parkingStore.fetchVehicleCategories();
-    vehicleCategories.value = parkingStore.vehicleCategories;
   } catch (error) {
     console.error('Failed to load vehicle categories:', error);
     vehicleCategoryError.value = '車両カテゴリの読み込みに失敗しました';
@@ -482,8 +489,14 @@ watch(isValid, (newValue) => {
 
 // Lifecycle
 onMounted(async () => {
-  await loadVehicleCategories();
+  window.addEventListener('parkingUpdate', handleParkingUpdate);
   
+  // Only load categories if they're not already loaded
+  if (parkingStore.vehicleCategories.length === 0) {
+    await loadVehicleCategories();
+  }
+  
+  // If there's a preselected vehicle category, load its spots
   if (selectedVehicleCategoryId.value) {
     await loadCompatibleSpots();
     if (props.dates.length > 0) {
@@ -501,10 +514,6 @@ const handleParkingUpdate = () => {
     checkRealTimeAvailability();
   }
 };
-
-onMounted(() => {
-  window.addEventListener('parkingUpdate', handleParkingUpdate);
-});
 
 onUnmounted(() => {
   window.removeEventListener('parkingUpdate', handleParkingUpdate);
