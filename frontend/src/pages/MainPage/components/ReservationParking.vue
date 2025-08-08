@@ -245,21 +245,37 @@ const onParkingSave = async (saveData) => {
             throw new Error('Reservation details are not available.');
         }
         console.log('[ReservationParking] onParkingSave Reservation Detail IDs:', reservationDetailIds);
-        
 
         let assignmentsToSave = [];
+        const dates = saveData.details ? saveData.details.map(d => d.date) : [];
+        const unitPrice = Number(saveData.unitPrice) || 0;
+        const comment = saveData.comment || '';
+
         if (isEditMode.value) {
+            // For updates, we need to include the existing assignment with updated fields
             assignmentsToSave = parkingAssignments.value.map(a => 
                 a.id === editingAssignmentId.value 
-                ? { ...a, ...saveData.addonData, dates: saveData.dates, totalPrice: saveData.addonData.unitPrice * saveData.dates.length }
+                ? { 
+                    ...a, 
+                    spotId: saveData.spotId,
+                    vehicleCategoryId: saveData.vehicleCategoryId,
+                    unitPrice: unitPrice,
+                    comment: comment,
+                    dates: dates,
+                    totalPrice: unitPrice * dates.length
+                  }
                 : a
             );
         } else {
+            // For new assignments
             const newAssignment = {
                 id: `temp-${Date.now()}`,
-                ...saveData.addonData,
-                dates: saveData.dates,
-                totalPrice: saveData.addonData.unitPrice * saveData.dates.length,
+                spotId: saveData.spotId,
+                vehicleCategoryId: saveData.vehicleCategoryId,
+                unitPrice: unitPrice,
+                comment: comment,
+                dates: dates,
+                totalPrice: unitPrice * dates.length,
                 createdAt: new Date().toISOString()
             };
             assignmentsToSave = [...parkingAssignments.value, newAssignment];
