@@ -388,10 +388,13 @@ const isFormValid = computed(() => {
 
 const saveDataForEmit = computed(() => {
   const { startDate, endDate, ...restOfAddonData } = localAddonData.value;
+  const selectedAddonObj = addonOptions.value.find(a => a.id === selectedAddon.value);
 
   return {
     ...restOfAddonData,
-    addon_id: selectedAddon.value,
+    addons_global_id: selectedAddonObj?.addons_global_id || null,
+    addons_hotel_id: selectedAddonObj?.addons_hotel_id || null,
+    addon_type: selectedAddonObj?.addon_type || 'parking',
     hotel_id: hotelId.value,
     totalPrice: calculatedTotalPrice.value,
     details: selectedReservationDetails.value,

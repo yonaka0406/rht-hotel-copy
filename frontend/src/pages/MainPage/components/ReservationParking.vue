@@ -256,7 +256,8 @@ const onParkingSave = async (saveData) => {
             assignmentsToSave = parkingAssignments.value.map(a => 
                 a.id === editingAssignmentId.value 
                 ? { 
-                    ...a, 
+                    ...a,
+                    ...saveData, // Spread all saveData to include addon info
                     spotId: saveData.spotId,
                     vehicleCategoryId: saveData.vehicleCategoryId,
                     unitPrice: unitPrice,
@@ -270,6 +271,7 @@ const onParkingSave = async (saveData) => {
             // For new assignments
             const newAssignment = {
                 id: `temp-${Date.now()}`,
+                ...saveData, // Spread all saveData to include addon info
                 spotId: saveData.spotId,
                 vehicleCategoryId: saveData.vehicleCategoryId,
                 unitPrice: unitPrice,
