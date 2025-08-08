@@ -823,6 +823,85 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
   return result.rows;
 };
 
+/**
+ * Get parking spot availability statistics for a hotel in a date range
+ * @param {string} requestId - The request ID for logging
+ * @param {number} hotelId - The hotel ID
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of parking spot statistics grouped by capacity, width, and height
+ */
+const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+    WITH used_spots AS (
+      SELECT 
+        ps.capacity_units,
+        CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
+        CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
+        COUNT(DISTINCT rp.parking_spot_id) AS used_count
+      FROM 
+        reservation_parking rp
+        JOIN reservation_details rd 
+          ON rp.reservation_details_id = rd.id 
+          AND rp.hotel_id = rd.hotel_id
+        JOIN parking_spots ps 
+          ON ps.id = rp.parking_spot_id
+        JOIN parking_lots pl 
+          ON pl.id = ps.parking_lot_id
+          AND pl.hotel_id = rp.hotel_id
+      WHERE 
+        rp.hotel_id = $1
+        AND rp.date BETWEEN $2 AND $3
+        AND rd.cancelled IS NULL
+      GROUP BY 
+        ps.capacity_units, width, height
+    ),
+    total_spots AS (
+      SELECT 
+        ps.capacity_units,
+        CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
+        CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
+        COUNT(*) AS total_count
+      FROM 
+        parking_spots ps
+        JOIN parking_lots pl ON pl.id = ps.parking_lot_id
+      WHERE 
+        pl.hotel_id = $1
+        AND ps.is_active = TRUE
+      GROUP BY 
+        ps.capacity_units, width, height
+    )
+    SELECT 
+      COALESCE(ts.capacity_units, 0) AS capacity_units,
+      COALESCE(ts.width, 0) AS width,
+      COALESCE(ts.height, 0) AS height,
+      COALESCE(ts.total_count, 0) AS total_spots,
+      COALESCE(us.used_count, 0) AS used_spots,
+      COALESCE(ts.total_count, 0) - COALESCE(us.used_count, 0) AS available_spots
+    FROM 
+      total_spots ts
+      LEFT JOIN used_spots us ON 
+        ts.capacity_units = us.capacity_units 
+        AND ts.width = us.width 
+        AND ts.height = us.height
+    ORDER BY 
+      ts.capacity_units DESC, 
+      ts.width DESC, 
+      ts.height DESC;
+
+  `;
+
+  try {
+    const values = [hotelId, startDate, endDate];
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching parking spot availability:', err);
+    throw new Error('Database error while fetching parking spot availability');
+  }
+};
+
 // Function to Add
 
 const addReservationHold = async (requestId, reservation) => {
@@ -4669,6 +4748,7 @@ module.exports = {
   selectReservationClientIds,
   selectReservationPayments,
   selectReservationParking,
+  selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
   addReservationAddon,
