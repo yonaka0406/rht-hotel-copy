@@ -107,7 +107,7 @@ CREATE TABLE plans_rates (
 CREATE TABLE addons_global (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'parking', 'other')) DEFAULT 'other',
     description TEXT,
     price DECIMAL NOT NULL,
     tax_type_id INT REFERENCES tax_info(id),
@@ -132,7 +132,7 @@ CREATE TABLE addons_hotel (
     hotel_id INT NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
     addons_global_id INT REFERENCES addons_global(id) ON DELETE SET NULL,
     name TEXT NOT NULL, -- Name of the add-on (e.g., Breakfast, Dinner, etc.)
-    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other')) DEFAULT 'other',
+    addon_type TEXT CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'parking', 'other')) DEFAULT 'other',
     description TEXT, -- Optional description
     price DECIMAL NOT NULL, -- Price of the add-on service
     tax_type_id INT REFERENCES tax_info(id),
@@ -174,3 +174,22 @@ CREATE TABLE plan_addons (
         (addons_global_id IS NULL AND addons_hotel_id IS NOT NULL)
     )
 );
+
+
+-- Drop existing check constraint
+ALTER TABLE addons_global DROP CONSTRAINT addons_global_addon_type_check;
+
+-- Add new check constraint including 'parking'
+ALTER TABLE addons_global
+ADD CONSTRAINT addons_global_addon_type_check
+CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
+
+
+-- Drop existing check constraint
+ALTER TABLE addons_hotel DROP CONSTRAINT addons_hotel_addon_type_check;
+
+-- Add new check constraint including 'parking'
+ALTER TABLE addons_hotel
+ADD CONSTRAINT addons_hotel_addon_type_check
+CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
+
