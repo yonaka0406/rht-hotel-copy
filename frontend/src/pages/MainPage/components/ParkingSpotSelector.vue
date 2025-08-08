@@ -1,7 +1,7 @@
 <template>
   <div class="parking-spot-selector">
     <!-- Vehicle Category Selection -->
-    <div class="field">
+    <div class="field mt-2">
       <FloatLabel>
         <Select
           id="vehicleCategory"
@@ -39,15 +39,14 @@
     </div>
 
     <!-- Parking Spot Selection -->
-    <div class="field" v-if="selectedVehicleCategoryId">
+    <div class="field mt-4" v-if="selectedVehicleCategoryId">
       <FloatLabel>
         <Select
           id="parkingSpot"
           v-model="selectedSpotId"
           :options="availableSpots"
           option-label="displayName"
-          option-value="id"
-          placeholder="駐車スポットを選択"
+          option-value="id"          
           :loading="loadingSpots"
           :disabled="disabled || !selectedVehicleCategoryId"
           class="w-full"

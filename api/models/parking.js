@@ -306,17 +306,17 @@ const getAllParkingSpotsByHotel = async (requestId, hotel_id) => {
 // Check parking vacancies for a specific vehicle category
 const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, vehicleCategoryId) => {
     const pool = getPool(requestId);
-    
+
     // First get the capacity units required for the vehicle category
     const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
     const categoryResult = await pool.query(categoryQuery, [vehicleCategoryId]);
-    
+
     if (categoryResult.rows.length === 0) {
         throw new Error('Vehicle category not found');
     }
-    
+
     const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
-    
+
     // Find spots that can accommodate this vehicle category and check availability
     const query = `
         SELECT COUNT(DISTINCT ps.id) as available_spots
@@ -342,17 +342,17 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
 // Get compatible parking spots for a vehicle category
 const getCompatibleSpots = async (requestId, hotel_id, vehicleCategoryId) => {
     const pool = getPool(requestId);
-    
+
     // First get the capacity units required for the vehicle category
     const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
     const categoryResult = await pool.query(categoryQuery, [vehicleCategoryId]);
-    
+
     if (categoryResult.rows.length === 0) {
         throw new Error('Vehicle category not found');
     }
-    
+
     const capacityUnitsRequired = categoryResult.rows[0].capacity_units_required;
-    
+
     // Find spots that can accommodate this vehicle category
     const query = `
         SELECT 
@@ -413,11 +413,11 @@ const validateSpotCapacity = async (requestId, spotId, vehicleCategoryId) => {
     `;
     const values = [spotId, vehicleCategoryId];
     const result = await pool.query(query, values);
-    
+
     if (result.rows.length === 0) {
         throw new Error('Parking spot or vehicle category not found');
     }
-    
+
     return result.rows[0];
 };
 
@@ -425,10 +425,10 @@ const validateSpotCapacity = async (requestId, spotId, vehicleCategoryId) => {
 const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
-    
+
     try {
         await client.query('BEGIN');
-        
+
         const {
             hotel_id,
             reservation_id,
@@ -442,35 +442,44 @@ const createParkingAssignmentWithAddon = async (requestId, assignmentData) => {
             created_by,
             updated_by
         } = assignmentData;
-        
+
         // Validate spot capacity for vehicle category
         const capacityValidation = await validateSpotCapacity(requestId, parking_spot_id, vehicle_category_id);
         if (!capacityValidation.is_compatible) {
             throw new Error('Parking spot cannot accommodate the selected vehicle category');
         }
-        
+
         const insertedAssignments = [];
-        
+
         // Create parking assignment for each date
         for (const date of dates) {
             const query = `
                 INSERT INTO reservation_parking (
-                    hotel_id, reservation_id, reservation_addon_id, vehicle_category_id, 
-                    parking_spot_id, date, status, comment, price, created_by, updated_by
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    hotel_id,
+                    reservation_details_id,
+                    reservation_addon_id,
+                    vehicle_category_id,
+                    parking_spot_id,
+                    date,
+                    status
+                ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')
                 RETURNING *
             `;
             const values = [
-                hotel_id, reservation_id, reservation_addon_id, vehicle_category_id,
-                parking_spot_id, date, status, comment, price, created_by, updated_by
+                hotel_id,
+                reservation_id,
+                reservation_addon_id,
+                vehicle_category_id,
+                parking_spot_id,
+                date
             ];
             const result = await client.query(query, values);
             insertedAssignments.push(result.rows[0]);
         }
-        
+
         await client.query('COMMIT');
         return insertedAssignments;
-        
+
     } catch (error) {
         await client.query('ROLLBACK');
         throw error;
@@ -516,19 +525,56 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
 
         // Handle creations
         for (const assignment of toCreate) {
-            for (const detailId of reservationDetailIds) {
-                for (const date of assignment.dates) {
-                    const addonRes = await client.query(
-                        'INSERT INTO reservation_addons (reservation_detail_id, addon_id, price, quantity, note) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                        [detailId, 1, assignment.unitPrice, 1, assignment.comment] // Assuming addon_id 1 is for parking
-                    );
-                    const reservationAddonId = addonRes.rows[0].id;
+            const hotel_id = assignment.hotel_id;
+            if (!hotel_id) {
+                throw new Error('hotel_id is required in the assignment object');
+            }
+            
+            // We should only have one detail ID per assignment
+            const detailId = reservationDetailIds[0];
+            
+            for (const date of assignment.dates) {
+                const addonRes = await client.query(
+                    `INSERT INTO reservation_addons (
+                        hotel_id,
+                        reservation_detail_id, 
+                        addons_global_id,
+                        addons_hotel_id,
+                        addon_type,
+                        price, 
+                        quantity
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                    [
+                        hotel_id,
+                        detailId, 
+                        assignment.addons_global_id || 3,
+                        assignment.addons_hotel_id || null,
+                        assignment.addon_type || 'parking',
+                        assignment.unitPrice || 0,
+                        1
+                    ]
+                );
+                const reservationAddonId = addonRes.rows[0].id;
 
-                    await client.query(
-                        'INSERT INTO reservation_parking (reservation_addon_id, parking_spot_id, vehicle_category_id, date) VALUES ($1, $2, $3, $4)',
-                        [reservationAddonId, assignment.spotId, assignment.vehicleCategoryId, date]
-                    );
-                }
+                await client.query(
+                    `INSERT INTO reservation_parking (
+                        hotel_id,
+                        reservation_details_id,
+                        reservation_addon_id,
+                        vehicle_category_id,
+                        parking_spot_id,
+                        date,
+                        status
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')`,
+                    [
+                        hotel_id,
+                        detailId,
+                        reservationAddonId,
+                        assignment.vehicleCategoryId,
+                        assignment.spotId,
+                        date
+                    ]
+                );
             }
         }
 
@@ -538,17 +584,53 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
             await client.query('DELETE FROM reservation_parking WHERE reservation_addon_id = $1', [assignment.id]);
             await client.query('DELETE FROM reservation_addons WHERE id = $1', [assignment.id]);
 
+            const hotel_id = assignment.hotel_id;
+            if (!hotel_id) {
+                throw new Error('hotel_id is required in the assignment object');
+            }
+
             for (const detailId of reservationDetailIds) {
                 for (const date of assignment.dates) {
                     const addonRes = await client.query(
-                        'INSERT INTO reservation_addons (reservation_detail_id, addon_id, price, quantity, note) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                        [detailId, 1, assignment.unitPrice, 1, assignment.comment] // Assuming addon_id 1 is for parking
+                        `INSERT INTO reservation_addons (
+                            hotel_id,
+                            reservation_detail_id, 
+                            addons_global_id,
+                            addons_hotel_id,
+                            addon_type,
+                            price, 
+                            quantity
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                        [
+                            hotel_id,
+                            detailId,
+                            assignment.addons_global_id || 3,
+                            assignment.addons_hotel_id || null,
+                            assignment.addon_type || 'parking',
+                            assignment.unitPrice || 0,
+                            1
+                        ]
                     );
                     const reservationAddonId = addonRes.rows[0].id;
 
                     await client.query(
-                        'INSERT INTO reservation_parking (reservation_addon_id, parking_spot_id, vehicle_category_id, date) VALUES ($1, $2, $3, $4)',
-                        [reservationAddonId, assignment.spotId, assignment.vehicleCategoryId, date]
+                        `INSERT INTO reservation_parking (
+                            hotel_id,
+                            reservation_details_id,
+                            reservation_addon_id,
+                            vehicle_category_id,
+                            parking_spot_id,
+                            date,
+                            status
+                        ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')`,
+                        [
+                            hotel_id,
+                            detailId,
+                            reservationAddonId,
+                            assignment.vehicleCategoryId,
+                            assignment.spotId,
+                            date
+                        ]
                     );
                 }
             }
