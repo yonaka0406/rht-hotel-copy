@@ -238,10 +238,14 @@ const openEditParkingDialog = (assignment) => {
 const onParkingSave = async (saveData) => {
     loading.value = true;
     try {
+        console.log('[ReservationParking] onParkingSave received saveData:', JSON.parse(JSON.stringify(saveData)));
+        
         const reservationDetailIds = props.reservationDetails.map(d => d.id);
         if (!reservationDetailIds.length) {
             throw new Error('Reservation details are not available.');
         }
+        console.log('[ReservationParking] onParkingSave Reservation Detail IDs:', reservationDetailIds);
+        
 
         let assignmentsToSave = [];
         if (isEditMode.value) {
@@ -260,6 +264,12 @@ const onParkingSave = async (saveData) => {
             };
             assignmentsToSave = [...parkingAssignments.value, newAssignment];
         }
+
+        console.log('[ReservationParking] Prepared assignmentsToSave:', JSON.parse(JSON.stringify(assignmentsToSave)));
+        console.log('[ReservationParking] Calling parkingStore.saveParkingAssignments with:', {
+            reservationDetailIds,
+            assignments: assignmentsToSave
+        });
 
         await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
         
