@@ -412,11 +412,11 @@ const emitSelectionChange = () => {
 
 // Utility methods
 const getSelectedCategory = () => {
-  return vehicleCategories.value.find(cat => cat.id === selectedVehicleCategoryId.value);
+  return (vehicleCategories.value || []).find(cat => cat && cat.id === selectedVehicleCategoryId.value);
 };
 
 const getSelectedSpot = () => {
-  return compatibleSpots.value.find(spot => spot.id === selectedSpotId.value);
+  return (compatibleSpots.value || []).find(spot => spot && spot.id === selectedSpotId.value);
 };
 
 const getSelectedCategoryName = () => {

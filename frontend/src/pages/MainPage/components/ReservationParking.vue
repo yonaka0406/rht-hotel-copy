@@ -51,7 +51,14 @@
     <!-- Parking Addon Dialog -->
     <ParkingAddonDialog
       v-model="showParkingDialog"
-      :reservation-detail-id="reservationDetailId"      
+      :reservation-details="reservationDetails"
+      :parking-reservations="parkingReservations"
+      :initial-dates="reservationDates"
+      :is-edit-mode="isEditMode"
+      :addon-data="dialogAddonData"
+      @save="onParkingSave"
+      @cancel="onParkingCancel"
+      @close="onParkingClose"
     />
 
     <!-- Confirmation Dialog -->
