@@ -82,22 +82,44 @@
         <div class="form-row">
           <div class="form-section full-width">
             <h5 class="section-title">基本情報</h5>
-            <div class="field">
-              <FloatLabel>
-                <InputNumber
-                  id="unitPrice"
-                  v-model="localAddonData.unitPrice"
-                  mode="currency"
-                  currency="JPY"
-                  locale="ja-JP"
-                  :class="{ 'p-invalid': errors.unitPrice }"
-                  :disabled="processing"
-                  :min="0"
-                  class="w-full"
-                />
-                <label for="unitPrice">単価 (税抜) *</label>
-              </FloatLabel>
-              <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
+            
+            <div class="inline-fields">
+              <!-- Addon Selector -->
+              <div class="field field-grow">
+                <FloatLabel>
+                  <Select
+                    v-model="selectedAddon"
+                    :options="addonOptions"
+                    optionLabel="addon_name"
+                    optionValue="id"
+                    placeholder="アドオンを選択"
+                    class="w-full"
+                    :class="{ 'p-invalid': errors.selectedAddon }"
+                    :disabled="processing"
+                  />
+                  <label>アドオン *</label>
+                </FloatLabel>
+                <small v-if="errors.selectedAddon" class="p-error">{{ errors.selectedAddon }}</small>
+              </div>
+
+              <!-- Unit Price -->
+              <div class="field field-shrink">
+                <FloatLabel>
+                  <InputNumber
+                    id="unitPrice"
+                    v-model="localAddonData.unitPrice"
+                    mode="currency"
+                    currency="JPY"
+                    locale="ja-JP"
+                    :class="{ 'p-invalid': errors.unitPrice }"
+                    :disabled="processing"
+                    :min="0"
+                    class="w-full"
+                  />
+                  <label for="unitPrice">単価 (税抜) *</label>
+                </FloatLabel>
+                <small v-if="errors.unitPrice" class="p-error">{{ errors.unitPrice }}</small>
+              </div>
             </div>
           </div>
         </div>
@@ -299,14 +321,16 @@ const { fetchAllAddons } = usePlansStore();
 
 // Reactive state
 const localAddonData = ref({
-  name: '駐車場',
+  roomId: null,
+  startDate: null,
+  endDate: null,
   unitPrice: 1000,
   vehicleCategoryId: null,
   spotId: null,
-  roomId: null,
-  ...props.addonData
+  name: ''
 });
 
+const selectedAddon = ref(null);
 const startDate = ref(null);
 const endDate = ref(null);
 const selectedRoom = ref(null);
@@ -377,7 +401,8 @@ const isFormValid = computed(() => {
          dateRange.value.length > 0 &&
          localAddonData.value.vehicleCategoryId &&
          localAddonData.value.spotId &&
-         localAddonData.value.roomId;
+         localAddonData.value.roomId &&
+         selectedAddon.value;
 });
 
 // Methods
@@ -395,19 +420,23 @@ const validateForm = () => {
   if (!endDate.value) {
     errors.value.endDate = '終了日を選択してください';
   } else if (startDate.value && endDate.value < startDate.value) {
-    errors.value.endDate = '終了日は開始日以降にしてください';
+    errors.value.endDate = '終了日は開始日以降を選択してください';
   }
   
   if (!localAddonData.value.unitPrice || localAddonData.value.unitPrice <= 0) {
-    errors.value.unitPrice = '単価は0より大きい値を入力してください';
+    errors.value.unitPrice = '有効な単価を入力してください';
   }
   
   if (!localAddonData.value.vehicleCategoryId) {
-    errors.value.vehicleCategoryId = '車両タイプを選択してください';
+    errors.value.vehicleCategoryId = '車両カテゴリを選択してください';
   }
   
   if (!localAddonData.value.spotId) {
     errors.value.spotId = '駐車スペースを選択してください';
+  }
+  
+  if (!selectedAddon.value) {
+    errors.value.selectedAddon = 'アドオンを選択してください';
   }
   
   return Object.keys(errors.value).length === 0;
@@ -453,14 +482,18 @@ const formatDate = (dateString) => {
 
 const resetForm = () => {
   localAddonData.value = {
-    name: '駐車場',
+    roomId: null,
+    startDate: null,
+    endDate: null,
     unitPrice: 1000,
     vehicleCategoryId: null,
     spotId: null,
-    roomId: null,
-    ...props.addonData
+    name: ''
   };
-  
+  selectedAddon.value = null;
+  selectedRoom.value = null;
+  selectedVehicleCategory.value = null;
+  selectedSpot.value = null;
   if (props.initialDates.length >= 2) {
     startDate.value = new Date(props.initialDates[0]);
     endDate.value = new Date(props.initialDates[props.initialDates.length - 1]);
@@ -468,12 +501,8 @@ const resetForm = () => {
     startDate.value = null;
     endDate.value = null;
   }
-  
   errors.value = {};
   spotValidationValid.value = false;
-  selectedVehicleCategory.value = null;
-  selectedSpot.value = null;
-  selectedRoom.value = null;
 };
 
 const onSave = async () => {
@@ -538,6 +567,22 @@ const onDialogHide = () => {
 };
 
 // Watchers
+watch(selectedAddon, (newAddonId) => {
+  if (newAddonId) {
+    const selected = addonOptions.value.find(a => a.id === newAddonId);
+    if (selected) {
+      // Only update the price if it hasn't been manually changed
+      if (localAddonData.value.unitPrice === 1000) { // Default price
+        localAddonData.value.unitPrice = selected.price || 1000;
+      }
+      // Update the addon name if needed
+      if (selected.addon_name) {
+        localAddonData.value.name = selected.addon_name;
+      }
+    }
+  }
+});
+
 watch(() => props.modelValue, async (newValue) => {
   if (newValue) {
     // Dialog is opening
@@ -549,7 +594,14 @@ watch(() => props.modelValue, async (newValue) => {
         const allAddons = await fetchAllAddons(hotelId); 
         console.log('[ParkingAddonDialog] fetchAllAddons', allAddons);
         if (allAddons && Array.isArray(allAddons)) {
-          addonOptions.value = allAddons.filter(addon => addon.addon_type === 'parking');
+          const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
+          addonOptions.value = parkingAddons;
+          
+          // Auto-select first addon if available
+          if (parkingAddons.length > 0 && !selectedAddon.value) {
+            selectedAddon.value = parkingAddons[0].id;
+          }
+          
           console.log('[ParkingAddonDialog] addonOptions', addonOptions.value);
         }
       }
@@ -754,6 +806,22 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.inline-fields {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.field-grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.field-shrink {
+  width: 200px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
