@@ -165,8 +165,8 @@
   // Helper function
   const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
+      console.warn("Invalid Date object:", date);
+      return "";
     }
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -245,20 +245,50 @@
   // Fetch reserved spots data
   const tempParkingReservations = ref(null);
   const fetchParkingReservationsLocal = async (startDate, endDate) => {
+    debugLog('fetchParkingReservationsLocal called with:', { startDate, endDate });
     try {
       if (!startDate && !endDate) {
-        return
+        debugWarn('No date range provided to fetchParkingReservationsLocal');
+        return;
       }
+      
+      debugLog('Fetching reserved parking spots from API...');
       await fetchReservedParkingSpots(
         selectedHotelId.value,
         startDate,
         endDate
       );
-      tempParkingReservations.value = Array.isArray(reservedParkingSpots.value) 
-        ? reservedParkingSpots.value 
-        : [];
+      
+      debugLog('Raw API response (reservedParkingSpots):', JSON.parse(JSON.stringify(reservedParkingSpots.value)));
+      
+      if (Array.isArray(reservedParkingSpots.value)) {
+        // Create a map of existing reservations for faster lookup
+        const existingReservationsMap = new Map();
+        if (tempParkingReservations.value) {
+          tempParkingReservations.value.forEach(res => {
+            const key = `${res.parking_spot_id}_${formatDate(new Date(res.date))}`;
+            existingReservationsMap.set(key, res);
+          });
+        }
+        
+        // Merge new reservations with existing ones
+        const mergedReservations = [...(tempParkingReservations.value || [])];
+        
+        reservedParkingSpots.value.forEach(newRes => {
+          const key = `${newRes.parking_spot_id}_${formatDate(new Date(newRes.date))}`;
+          if (!existingReservationsMap.has(key)) {
+            mergedReservations.push(newRes);
+          }
+        });
+        
+        tempParkingReservations.value = mergedReservations;
+      } else {
+        tempParkingReservations.value = [];
+      }
+      
+      debugLog('Merged tempParkingReservations:', JSON.parse(JSON.stringify(tempParkingReservations.value)));
     } catch (error) {
-      console.error('Error fetching parking reservations:', error);
+      debugError('Error in fetchParkingReservationsLocal:', error);
     }
   };
   
@@ -301,12 +331,43 @@
   
   // Fill & Format the table 
   const isSpotReserved = (spotId, date) => {
-    const key = `${spotId}_${date}`;
-    return !!tempSpotsMap.value[key];
+    if (!tempParkingReservations.value) {
+      debugLog('isSpotReserved: No tempParkingReservations available');
+      return false;
+    }
+    
+    const formattedDate = formatDate(new Date(date));
+    const isReserved = tempParkingReservations.value.some(res => {
+      const resDate = formatDate(new Date(res.date));
+      const matches = res.parking_spot_id === spotId && resDate === formattedDate;
+      if (matches) {
+        debugLog(`Found reservation for spot ${spotId} on ${formattedDate}:`, res);
+      }
+      return matches;
+    });
+    
+    debugLog(`isSpotReserved(${spotId}, ${formattedDate}):`, isReserved);
+    return isReserved;
   };
   const fillSpotInfo = (spotId, date) => {
-    const key = `${spotId}_${date}`;
-    return tempSpotsMap.value[key] || { status: 'available', client_name: '', reservation_id: null };
+    if (!tempParkingReservations.value) {
+      debugLog('fillSpotInfo: No tempParkingReservations available');
+      return { status: 'available', client_name: '', reservation_id: null };
+    }
+    
+    const formattedDate = formatDate(new Date(date));
+    const reservation = tempParkingReservations.value.find(res => {
+      const resDate = formatDate(new Date(res.date));
+      return res.parking_spot_id === spotId && resDate === formattedDate;
+    });
+    
+    if (reservation) {
+      debugLog(`fillSpotInfo found reservation for spot ${spotId} on ${formattedDate}:`, reservation);
+    } else {
+      debugLog(`No reservation found for spot ${spotId} on ${formattedDate}`);
+    }
+    
+    return reservation || { status: 'available', client_name: '', reservation_id: null };
   };
   const getCellStyle = (spotId, date) => {
     const spotInfo = fillSpotInfo(spotId, date);
@@ -352,8 +413,15 @@
     const firstMap = {};
     if (Array.isArray(reservedParkingSpots.value)) {
       reservedParkingSpots.value.forEach(spot => {
-        const checkInKey = `${spot.parking_spot_id}_${formatDate(new Date(spot.check_in))}`;
-        firstMap[checkInKey] = true;
+        try {
+          const date = new Date(spot.check_in);
+          if (!isNaN(date.getTime())) {
+            const checkInKey = `${spot.parking_spot_id}_${formatDate(date)}`;
+            firstMap[checkInKey] = true;
+          }
+        } catch (e) {
+          console.warn('Invalid check_in date:', spot.check_in, e);
+        }
       });
     }
     return firstMap;
@@ -362,8 +430,17 @@
     const lastMap = {};
     if (Array.isArray(reservedParkingSpots.value)) {
       reservedParkingSpots.value.forEach(spot => {
-        const checkOutKey = `${spot.parking_spot_id}_${formatDate(new Date(new Date(spot.check_out).setDate(new Date(spot.check_out).getDate() - 1)))}`;
-        lastMap[checkOutKey] = true;
+        try {
+          const date = new Date(spot.check_out);
+          if (!isNaN(date.getTime())) {
+            const checkOutDate = new Date(date);
+            checkOutDate.setDate(checkOutDate.getDate() - 1);
+            const checkOutKey = `${spot.parking_spot_id}_${formatDate(checkOutDate)}`;
+            lastMap[checkOutKey] = true;
+          }
+        } catch (e) {
+          console.warn('Invalid check_out date:', spot.check_out, e);
+        }
       });
     }
     return lastMap;
@@ -372,8 +449,15 @@
     const firstMap = {};
     if (Array.isArray(tempParkingReservations.value)) {
       tempParkingReservations.value.forEach(spot => {
-        const checkInKey = `${spot.parking_spot_id}_${formatDate(new Date(spot.check_in))}`;
-        firstMap[checkInKey] = true;
+        try {
+          const date = new Date(spot.check_in);
+          if (!isNaN(date.getTime())) {
+            const checkInKey = `${spot.parking_spot_id}_${formatDate(date)}`;
+            firstMap[checkInKey] = true;
+          }
+        } catch (e) {
+          console.warn('Invalid temp check_in date:', spot.check_in, e);
+        }
       });
     }
     return firstMap;
@@ -382,8 +466,17 @@
     const lastMap = {};
     if (Array.isArray(tempParkingReservations.value)) {
       tempParkingReservations.value.forEach(spot => {
-        const checkOutKey = `${spot.parking_spot_id}_${formatDate(new Date(new Date(spot.check_out).setDate(new Date(spot.check_out).getDate() - 1)))}`;
-        lastMap[checkOutKey] = true;
+        try {
+          const date = new Date(spot.check_out);
+          if (!isNaN(date.getTime())) {
+            const checkOutDate = new Date(date);
+            checkOutDate.setDate(checkOutDate.getDate() - 1);
+            const checkOutKey = `${spot.parking_spot_id}_${formatDate(checkOutDate)}`;
+            lastMap[checkOutKey] = true;
+          }
+        } catch (e) {
+          console.warn('Invalid temp check_out date:', spot.check_out, e);
+        }
       });
     }
     return lastMap;
@@ -749,32 +842,31 @@
   
   // Mount
   onMounted(async () => {
+    debugLog('Component mounted, initializing data...');
+    
+    // Initialize Socket.IO connection
     isLoading.value = true;
-    // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
-  
+
     socket.value.on('connect', () => {
-      // console.log('Connected to server');
+      debugLog('Connected to WebSocket server');
     });
-  
+
     socket.value.on('tableUpdate', async (data) => {
-      // Prevent fetching if bulk update is in progress
       if (isUpdating.value) {
-        // console.log('Skipping fetchReservation because update is still running');
+        debugLog('Skipping fetchReservation because update is still running');
         return;
       }
-      // Update the reservations data in your component
-      // console.log('Received updated data:', data);
+      debugLog('Received table update:', data);
       await fetchReservedParkingSpots(selectedHotelId.value, dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     });
-  
+
+    // Initialize data
     await fetchHotels();
     await fetchHotel();
-  
-    // Fetch all parking spots for the hotel
     allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
-  
-  
+
+    // Set up initial date range
     const today = new Date();
     const initialMinDate = new Date(today);
     initialMinDate.setDate(initialMinDate.getDate() - 10);
@@ -783,32 +875,49 @@
     minDate.value = initialMinDate;
     maxDate.value = initialMaxDate;
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
-  
-    nextTick(async () => {
-      await fetchReservedParkingSpots(selectedHotelId.value, dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-  
-      // Scroll to 1/5 of the total scroll height
-      const tableContainer = document.querySelector(".table-container");
-      if (tableContainer) {
-        const totalScrollHeight = tableContainer.scrollHeight;
-        const scrollPosition = totalScrollHeight / 5; // 1/5th of the scroll height
-        tableContainer.scrollTo({
-          top: scrollPosition,
-          behavior: "smooth",
-        });
-        tableContainer.addEventListener("scroll", handleScroll);
-      }
-  
-    });
+
+    // Load initial data
+    if (dateRange.value && dateRange.value.length > 0) {
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    }
+
+    // Log initial state
+    debugLog('Initial allParkingSpots:', JSON.parse(JSON.stringify(allParkingSpots.value)));
+    debugLog('Initial dateRange:', dateRange.value);
+    
+    // Log sample data for debugging
+    if (allParkingSpots.value.length > 0 && dateRange.value.length > 0) {
+      const sampleSpot = allParkingSpots.value[0];
+      const sampleDate = dateRange.value[0];
+      debugLog('Sample spot check - first spot:', sampleSpot);
+      debugLog(`Is spot ${sampleSpot.id} reserved on ${sampleDate}?`, isSpotReserved(sampleSpot.id, sampleDate));
+      debugLog('Spot info:', fillSpotInfo(sampleSpot.id, sampleDate));
+    }
+
+    // Set up scroll position
+    await nextTick();
+    const tableContainer = document.querySelector(".table-container");
+    if (tableContainer) {
+      const totalScrollHeight = tableContainer.scrollHeight;
+      const scrollPosition = totalScrollHeight / 5;
+      tableContainer.scrollTop = scrollPosition;
+      tableContainer.addEventListener("scroll", handleScroll);
+    }
+    
     isLoading.value = false;
   });
+
   onUnmounted(() => {
-    // Close the Socket.IO connection when the component is unmounted
     if (socket.value) {
       socket.value.disconnect();
     }
   });
   
+  const DEBUG = true;
+  const debugLog = (...args) => DEBUG && console.log('[ParkingCalendar]', ...args);
+  const debugWarn = (...args) => DEBUG && console.warn('[ParkingCalendar]', ...args);
+  const debugError = (...args) => DEBUG && console.error('[ParkingCalendar]', ...args);
+
   // Needed Watchers
   watch(selectedHotelId, async (newVal, oldVal) => {
     isLoading.value = true;
@@ -942,6 +1051,10 @@
     color: #111827;
     border-left: none;
     border-right: 1px solid #6b7280;
+  }
+  
+  .dark thead th:last-child {
+    border-right: none;
   }
   
   .cell-first {
