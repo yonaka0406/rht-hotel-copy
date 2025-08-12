@@ -129,15 +129,18 @@ watch(() => props.parkingReservations, (newVal) => {
       id: reservation.id,
       spotId: reservation.parking_spot_id,
       spotNumber: reservation.spot_number,
-      parkingLotName: '', // Add if available in the response
+      parkingLotName: '',
       vehicleCategoryId: reservation.vehicle_category_id,
       vehicleCategoryName: reservation.vehicle_category_name,
+      roomId: reservation.room_id,
       dates: [reservation.date],
       unitPrice: Number(reservation.price) || 0,
       totalPrice: Number(reservation.price) || 0,
       comment: reservation.comment || '',
-      status: reservation.status || 'active'
+      status: reservation.status || 'active',
+      reservationDetailsId: reservation.reservation_details_id
     }));
+    console.log('[ReservationParking] parkingAssignments', parkingAssignments.value);
   } else {
     parkingAssignments.value = [];
   }
@@ -166,6 +169,8 @@ const reservationDates = computed(() => {
 
 // Group parking assignments by room and date
 const parkingUsageByRoom = computed(() => {
+  console.log('parkingAssignments:', JSON.parse(JSON.stringify(parkingAssignments.value)));
+  
   const usage = {};
   
   // Initialize with all rooms from reservation details
@@ -185,14 +190,28 @@ const parkingUsageByRoom = computed(() => {
   
   // Count parking spots per room per date
   parkingAssignments.value.forEach(assignment => {
-    if (assignment.room_id && assignment.dates) {
+    console.log('Processing assignment:', JSON.parse(JSON.stringify(assignment)));
+    
+    // Use the room_id from reservation_details that we now get from the API
+    const roomId = assignment.roomId;
+    
+    if (roomId && assignment.dates) {
       assignment.dates.forEach(date => {
-        if (usage[assignment.room_id]?.dates[date] !== undefined) {
-          usage[assignment.room_id].dates[date]++;
+        // Format the date to match the reservation_date format if needed
+        const formattedDate = new Date(date).toISOString().split('T')[0];
+        
+        if (usage[roomId]?.dates[formattedDate] !== undefined) {
+          usage[roomId].dates[formattedDate]++;
+        } else {
+          console.warn(`Date ${formattedDate} not found in room ${roomId} dates`);
         }
       });
+    } else {
+      console.warn('Invalid assignment - missing roomId or dates:', assignment);
     }
   });
+
+  console.log('parkingUsageByRoom computed:', JSON.parse(JSON.stringify(usage)));
   
   return usage;
 });
