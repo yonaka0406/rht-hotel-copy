@@ -29,9 +29,18 @@
     <div class="parking-usage" v-if="Object.keys(parkingUsageByRoom).length > 0">
       <div class="card">
         <DataTable :value="Object.entries(parkingUsageByRoom)" :scrollable="true" scrollDirection="both" class="parking-table">
-          <Column field="room" header="部屋" :style="{ 'min-width': '150px' }" frozen>
+          <Column field="room" header="部屋" :style="{ 'min-width': '200px' }" frozen>
             <template #body="{ data: [roomId, roomData] }">
-              {{ roomData.roomName }}
+              <div class="flex align-items-center gap-2">
+                <span>{{ roomData.roomName }}</span>
+                <Button 
+                  icon="pi pi-arrow-up-right" 
+                  class="p-button-sm p-button-outlined p-button-secondary"
+                  style="width: 2rem; height: 2rem"
+                  @click="openParkingSpotsDialog(roomId, roomData.roomName)"
+                  v-tooltip.top="'駐車場を管理'"
+                />
+              </div>
             </template>
           </Column>
           <Column v-for="date in reservationDates" :key="date" :field="date" :header="formatDate(date)" :style="{ 'min-width': '100px' }">
@@ -58,7 +67,17 @@
       :addon-data="dialogAddonData"
       @save="onParkingSave"
       @cancel="onParkingCancel"
-      @close="onParkingClose"
+    />
+
+    <!-- Active Parking Spots Dialog -->
+    <ParkingActiveSpotsDialog
+      v-if="selectedRoomId"
+      v-model="showParkingSpotsDialog"
+      :room-id="selectedRoomId"
+      :room-name="selectedRoomName"
+      :parking-spots="selectedRoomParkingSpots"
+      :processing="processing"
+      @hide="cleanupDialog"
     />
 
     <!-- Confirmation Dialog -->
@@ -71,6 +90,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 
 import ParkingAddonDialog from '@/pages/MainPage/components/Dialogs/ParkingAddonDialog.vue';
+import ParkingActiveSpotsDialog from '@/pages/MainPage/components/Dialogs/ParkingActiveSpotsDialog.vue';
 
 // Props
 const props = defineProps({
@@ -119,6 +139,10 @@ const isEditMode = ref(false);
 const editingAssignmentId = ref(null);
 const dialogAddonData = ref({});
 const dialogInitialDates = ref([]);
+const showParkingSpotsDialog = ref(false);
+const selectedRoomId = ref(null);
+const selectedRoomName = ref('');
+const processing = ref(false);
 const loading = ref(false);
 
 // Watch for changes in parkingReservations prop
@@ -239,6 +263,23 @@ const fullyAssignedCount = computed(() => {
   ).length;
 });
 
+const selectedRoomParkingSpots = computed(() => {
+  if (!selectedRoomId.value) return [];
+  
+  return parkingAssignments.value.flatMap(assignment => {
+    if (assignment.roomId !== selectedRoomId.value) return [];
+    
+    return assignment.dates.map(date => ({
+      id: `${assignment.id}-${date}`,
+      spotNumber: assignment.spotNumber,
+      vehicleCategoryName: assignment.vehicleCategoryName,
+      date: date,
+      price: assignment.unitPrice,
+      ...assignment
+    }));
+  });
+});
+
 const openAddParkingDialog = () => {
   isEditMode.value = false;
   editingAssignmentId.value = null;
@@ -265,6 +306,12 @@ const openEditParkingDialog = (assignment) => {
   };
   dialogInitialDates.value = assignment.dates || reservationDates.value;
   showParkingDialog.value = true;
+};
+
+const openParkingSpotsDialog = (roomId, roomName) => {
+  selectedRoomId.value = roomId;
+  selectedRoomName.value = roomName;
+  showParkingSpotsDialog.value = true;
 };
 
 const onParkingSave = async (saveData) => {
@@ -351,115 +398,9 @@ const onParkingCancel = () => {
   showParkingDialog.value = false;
 };
 
-const onParkingClose = () => {
-  showParkingDialog.value = false;
-  isEditMode.value = false;
-  editingAssignmentId.value = null;
-  dialogAddonData.value = {};
-  dialogInitialDates.value = [];
-};
-
-const confirmRemoveAssignment = (assignment) => {
-  confirm.require({
-    message: `駐車場予約「${assignment.name || '駐車場'}」を削除しますか？`,
-    header: '削除確認',
-    icon: 'pi pi-exclamation-triangle',
-    acceptClass: 'p-button-danger',
-    acceptLabel: '削除',
-    rejectLabel: 'キャンセル',
-    accept: () => removeAssignment(assignment)
-  });
-};
-
-const removeAssignment = async (assignment) => {
-    loading.value = true;
-    try {
-        const reservationDetailIds = props.reservationDetails.map(d => d.id);
-        if (!reservationDetailIds.length) {
-            throw new Error('Reservation details are not available.');
-        }
-
-        const assignmentsToSave = parkingAssignments.value.map(a => 
-            a.id === assignment.id ? { ...a, toDelete: true } : a
-        );
-
-        await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
-
-        // Refresh data after saving
-        await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);
-
-        toast.add({
-            severity: 'success',
-            summary: '削除完了',
-            detail: '駐車場予約を削除しました',
-            life: 3000
-        });
-    } catch (error) {
-        console.error('Error removing parking assignment:', error);
-        toast.add({
-            severity: 'error',
-            summary: 'エラー',
-            detail: '駐車場予約の削除に失敗しました',
-            life: 3000
-        });
-    } finally {
-        loading.value = false;
-    }
-};
-
-const refreshAvailability = async (assignment) => {
-  if (!assignment.vehicleCategoryId || !assignment.dates?.length) return;
-  
-  assignment.refreshing = true;
-  
-  try {
-    const availabilityData = await parkingStore.checkRealTimeAvailability(
-      props.reservationDetails[0].hotel_id,
-      assignment.vehicleCategoryId,
-      assignment.dates
-    );
-    
-    assignment.availabilityData = availabilityData;
-    
-    toast.add({
-      severity: 'success',
-      summary: '更新完了',
-      detail: '空き状況を更新しました',
-      life: 2000
-    });
-  } catch (error) {
-    console.error('Error refreshing availability:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'エラー',
-      detail: '空き状況の更新に失敗しました',
-      life: 3000
-    });
-  } finally {
-    assignment.refreshing = false;
-  }
-};
-
-const formatDateRange = (dates) => {
-  if (!dates || dates.length === 0) return '期間未設定';
-  if (dates.length === 1) return formatDate(new Date(dates[0]));
-  
-  const startDate = formatDate(new Date(dates[0]));
-  const endDate = formatDate(new Date(dates[dates.length - 1]));
-  return `${startDate} - ${endDate} (${dates.length}日)`;
-};
-
-// WebSocket integration for real-time updates
-const handleParkingUpdate = (event) => {
-  const data = event.detail;
-  console.log('ParkingSection: Received parking update:', data);
-  
-  // Refresh availability for all assignments
-  parkingAssignments.value.forEach(assignment => {
-    if (assignment.vehicleCategoryId && assignment.dates?.length) {
-      refreshAvailability(assignment);
-    }
-  });
+const cleanupDialog = () => {
+  selectedRoomId.value = null;
+  selectedRoomName.value = '';
 };
 
 </script>
