@@ -403,134 +403,60 @@
   };
   const getCellStyle = (spotId, date) => {
     const spotInfo = fillSpotInfo(spotId, date);
-    let spotColor = '#d3063d';
     let style = {};
 
-    if (spotInfo && spotInfo.type === 'employee') {
-      spotColor = '#f3e5f5';
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && spotInfo.status === 'provisory') {
-      spotColor = '#ead59f';
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && spotInfo.status === 'block' && spotInfo.client_id === '22222222-2222-2222-2222-222222222222') {
-      spotColor = '#fed7aa';
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && spotInfo.status === 'block') {
-      spotColor = '#fca5a5';
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && (spotInfo.type === 'ota' || spotInfo.type === 'web')) {
-      spotColor = '#9fead5';
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && spotInfo.plan_color) {
-      spotColor = spotInfo.plan_color;
-      style = { backgroundColor: spotColor };
-    } else if (spotInfo && spotInfo.status !== 'available') {
-      style = { color: spotColor, fontWeight: 'bold' };
-    }
-
-    // Only add red border if there's a difference between original and temp reservations
-    if (spotInfo && spotInfo.reservation_id) {
-      const originalReservation = Array.isArray(reservedParkingSpots.value) 
-        ? reservedParkingSpots.value.find(r => r.id === spotInfo.reservation_id)
-        : null;
-      const tempReservation = Array.isArray(tempParkingReservations.value)
-        ? tempParkingReservations.value.find(r => r.id === spotInfo.reservation_id)
-        : null;
-
-      if (originalReservation && tempReservation) {
-        // Only show red border if there are actual changes
-        const hasChanges = Object.keys(originalReservation).some(key => {
-          return key !== 'updated_at' && 
-                 originalReservation[key] !== tempReservation[key];
-        });
-        
-        if (hasChanges) {
-          style.border = '2px solid red';
-        }
+    // Apply styles based on reservation type
+    if (spotInfo) {
+      switch(spotInfo.type) {
+        case 'employee':
+          style = { backgroundColor: '#f3e5f5' }; // Light purple for employee
+          break;
+        case 'ota':
+          style = { backgroundColor: '#dbeafe' }; // Light blue for OTA
+          break;
+        case 'web':
+          style = { backgroundColor: '#bfdbfe' }; // Slightly darker blue for web
+          break;
+        case 'default':
+        default:
+          // Default style for normal reservations
+          if (spotInfo.status !== 'available') {
+            style = { 
+              backgroundColor: '#f0fdf4', // Light green for normal reservations
+              color: 'inherit', 
+              fontWeight: 'normal' 
+            };
+          }
+          break;
       }
     }
-
+    
     return style;
   };
-  const firstCellMap = computed(() => {
-    const firstMap = {};
-    if (Array.isArray(reservedParkingSpots.value)) {
-      reservedParkingSpots.value.forEach(spot => {
-        try {
-          const date = new Date(spot.check_in);
-          if (!isNaN(date.getTime())) {
-            const checkInKey = `${spot.parking_spot_id}_${formatDate(date)}`;
-            firstMap[checkInKey] = true;
-          }
-        } catch (e) {
-          console.warn('Invalid check_in date:', spot.check_in, e);
-        }
-      });
-    }
-    return firstMap;
-  });
-  const lastCellMap = computed(() => {
-    const lastMap = {};
-    if (Array.isArray(reservedParkingSpots.value)) {
-      reservedParkingSpots.value.forEach(spot => {
-        try {
-          const date = new Date(spot.check_out);
-          if (!isNaN(date.getTime())) {
-            const checkOutDate = new Date(date);
-            checkOutDate.setDate(checkOutDate.getDate() - 1);
-            const checkOutKey = `${spot.parking_spot_id}_${formatDate(checkOutDate)}`;
-            lastMap[checkOutKey] = true;
-          }
-        } catch (e) {
-          console.warn('Invalid check_out date:', spot.check_out, e);
-        }
-      });
-    }
-    return lastMap;
-  });
-  const firstCellTempMap = computed(() => {
-    const firstMap = {};
-    if (Array.isArray(tempParkingReservations.value)) {
-      tempParkingReservations.value.forEach(spot => {
-        try {
-          const date = new Date(spot.check_in);
-          if (!isNaN(date.getTime())) {
-            const checkInKey = `${spot.parking_spot_id}_${formatDate(date)}`;
-            firstMap[checkInKey] = true;
-          }
-        } catch (e) {
-          console.warn('Invalid temp check_in date:', spot.check_in, e);
-        }
-      });
-    }
-    return firstMap;
-  });
-  const lastCellTempMap = computed(() => {
-    const lastMap = {};
-    if (Array.isArray(tempParkingReservations.value)) {
-      tempParkingReservations.value.forEach(spot => {
-        try {
-          const date = new Date(spot.check_out);
-          if (!isNaN(date.getTime())) {
-            const checkOutDate = new Date(date);
-            checkOutDate.setDate(checkOutDate.getDate() - 1);
-            const checkOutKey = `${spot.parking_spot_id}_${formatDate(checkOutDate)}`;
-            lastMap[checkOutKey] = true;
-          }
-        } catch (e) {
-          console.warn('Invalid temp check_out date:', spot.check_out, e);
-        }
-      });
-    }
-    return lastMap;
-  });
   const isCellFirst = (spotId, date) => {
-    const key = `${spotId}_${date}`;
-    return !!firstCellTempMap.value[key];
+    const currentDate = new Date(date);
+    const prevDate = new Date(currentDate);
+    prevDate.setDate(prevDate.getDate() - 1);
+    
+    const currentSpotInfo = fillSpotInfo(spotId, date);
+    if (!currentSpotInfo.reservation_id) return false;
+    
+    const prevSpotInfo = fillSpotInfo(spotId, prevDate);
+    return !prevSpotInfo.reservation_id || 
+           prevSpotInfo.reservation_id !== currentSpotInfo.reservation_id;
   };
+
   const isCellLast = (spotId, date) => {
-    const key = `${spotId}_${date}`;
-    return !!lastCellTempMap.value[key];
+    const currentDate = new Date(date);
+    const nextDate = new Date(currentDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    
+    const currentSpotInfo = fillSpotInfo(spotId, date);
+    if (!currentSpotInfo.reservation_id) return false;
+    
+    const nextSpotInfo = fillSpotInfo(spotId, nextDate);
+    return !nextSpotInfo.reservation_id || 
+           nextSpotInfo.reservation_id !== currentSpotInfo.reservation_id;
   };
   const applyHover = (roomIndex, dateIndex) => {
     // Highlight the entire row
