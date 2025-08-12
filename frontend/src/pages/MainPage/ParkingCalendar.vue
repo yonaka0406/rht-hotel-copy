@@ -47,6 +47,7 @@
   
                 </td>
                 <td v-for="(spot, spotIndex) in allParkingSpots" :key="spotIndex"
+                  @dblclick="handleCellDoubleClick(spot, date)"
                   @dragstart="handleDragStart($event, spot.id, date)"
                   @dragend="endDrag()" @dragover.prevent @dragenter="highlightDropZone($event, spot.id, date)"
                   @dragleave="removeHighlight($event, spot.id, date)" @drop="handleDrop($event, spot.id, date)"
@@ -98,8 +99,8 @@
                           <i class="pi pi-lock bg-orange-100 p-1 rounded dark:bg-orange-800"></i>
                         </template>
                       </div>
-                      <div class="ml-1 dark:text-gray-100">
-                        {{ fillSpotInfo(spot.id, date).client_name || '予約情報あり' }}
+                      <div class="ml-1 dark:text-gray-100 break-words whitespace-normal overflow-hidden text-ellipsis line-clamp-2 text-xs">
+                        {{ fillSpotInfo(spot.id, date).booker_name || '' }}
                       </div>
                     </div>
                     <div v-else>
@@ -120,7 +121,20 @@
       </Panel>  
   
     </div>
-  
+
+    <!-- Add Drawer for Reservation Edit -->
+    <Drawer v-model:visible="drawerVisible" :modal="true" :position="'bottom'" :style="{ height: '75vh' }"
+      :closable="true">
+      <div v-if="reservationId">
+        <div class="flex justify-end">
+          <Button @click="goToReservation" severity="info">
+            <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
+          </Button>
+        </div>
+        <ReservationEdit :reservation_id="reservationId" :spot_id="selectedSpot?.id" />
+      </div>
+    </Drawer>
+
     <ConfirmDialog group="templating">
       <template #message="slotProps">
         <div class="flex flex-col items-center w-full gap-4 border-b border-surface-200 dark:border-surface-700">
@@ -147,10 +161,11 @@
   const toast = useToast();
   import { useConfirm } from "primevue/useconfirm";
   const confirm = useConfirm();
-  import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button } from 'primevue';
+  import { Panel, Skeleton, SelectButton, InputText, ConfirmDialog, Button, Drawer } from 'primevue';
   
   // Components
   import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
+  import ReservationEdit from './ReservationEdit.vue';
   
   // Stores  
   import { useHotelStore } from '@/composables/useHotelStore';
@@ -159,6 +174,8 @@
   const { fetchReservedParkingSpots, reservedParkingSpots, fetchAllParkingSpotsByHotel } = useParkingStore();
   import { useUserStore } from '@/composables/useUserStore';
   const { logged_user } = useUserStore();
+  import { useReservationStore } from '@/composables/useReservationStore';
+  const { setReservationId } = useReservationStore();
   
   const allParkingSpots = ref([]);
   
@@ -354,7 +371,7 @@
   const fillSpotInfo = (spotId, date) => {
     if (!tempParkingReservations.value) {
       debugVerbose('fillSpotInfo: No tempParkingReservations available');
-      return { status: 'available', client_name: '', reservation_id: null };
+      return { status: 'available', client_name: '', reservation_id: null, booker_name: '' };
     }
     
     const formattedDate = formatDate(new Date(date));
@@ -365,11 +382,24 @@
     
     if (reservation) {
       debugVerbose(`fillSpotInfo found reservation for spot ${spotId} on ${formattedDate}:`, reservation);
+      // Return reservation data including booker name and use the reservation status
+      return {
+        status: reservation.status || 'reserved',  // Use the status from reservation, default to 'reserved'
+        client_name: reservation.client_name || '',
+        booker_name: reservation.booker_name || '',  // Add booker name if available
+        reservation_id: reservation.reservation_id,
+        ...reservation  // Spread all other reservation properties
+      };
     } else {
       debugVerbose(`No reservation found for spot ${spotId} on ${formattedDate}`);
     }
     
-    return reservation || { status: 'available', client_name: '', reservation_id: null };
+    return { 
+      status: 'available', 
+      client_name: '', 
+      booker_name: '',
+      reservation_id: null 
+    };
   };
   const getCellStyle = (spotId, date) => {
     const spotInfo = fillSpotInfo(spotId, date);
@@ -1000,6 +1030,30 @@
     });
   });
   
+  const drawerVisible = ref(false);
+  const reservationId = ref(null);
+  const selectedSpot = ref(null);
+
+  const goToReservation = () => {
+    if (reservationId.value) {
+      router.push(`/reservation/${reservationId.value}`);
+    }
+  };
+
+  const handleCellDoubleClick = (spot, date) => {
+    const spotInfo = fillSpotInfo(spot.id, date);
+    console.log('handleCellDoubleClick - spotInfo:', spotInfo); // Debug log
+    
+    if (spotInfo && spotInfo.reservation_id) {
+      console.log('Opening drawer for reservation:', spotInfo.reservation_id); // Debug log
+      reservationId.value = spotInfo.reservation_id;
+      selectedSpot.value = spot;
+      drawerVisible.value = true;
+      console.log('drawerVisible set to:', drawerVisible.value); // Debug log
+    } else {
+      console.log('No reservation found for spot', spot.id, 'on', date); // Debug log
+    }
+  };
   </script>
   
   <style scoped>
