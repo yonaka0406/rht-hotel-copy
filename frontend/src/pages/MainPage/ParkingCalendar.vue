@@ -131,7 +131,7 @@
             <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
           </Button>
         </div>
-        <ReservationEdit :reservation_id="reservationId" :spot_id="selectedSpot?.id" />
+        <ReservationEdit :reservation_id="reservationId" />
       </div>
     </Drawer>
 
@@ -1035,9 +1035,7 @@
   const selectedSpot = ref(null);
 
   const goToReservation = () => {
-    if (reservationId.value) {
-      router.push(`/reservation/${reservationId.value}`);
-    }
+    router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
   };
 
   const handleCellDoubleClick = (spot, date) => {
