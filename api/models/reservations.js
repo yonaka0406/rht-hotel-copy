@@ -808,12 +808,14 @@ const selectReservationParking = async (requestId, hotel_id, reservation_id) => 
              ps.spot_number, 
              ps.spot_type, 
              ps.capacity_units,
+             pl.name as parking_lot_name,
              vc.name as vehicle_category_name,
              vc.capacity_units_required,
              rd.room_id,
              rd.date as reservation_date
       FROM reservation_parking rp
       LEFT JOIN parking_spots ps ON rp.parking_spot_id = ps.id
+      LEFT JOIN parking_lots pl ON ps.parking_lot_id = pl.id
       LEFT JOIN vehicle_categories vc ON rp.vehicle_category_id = vc.id
       JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
       WHERE rp.hotel_id = $1 

@@ -157,7 +157,7 @@ watch(() => props.parkingReservations, (newVal) => {
           id: addonId,
           spotId: reservation.parking_spot_id,
           spotNumber: reservation.spot_number,
-          parkingLotName: '',
+          parkingLotName: reservation.parking_lot_name,
           vehicleCategoryId: reservation.vehicle_category_id,
           vehicleCategoryName: reservation.vehicle_category_name,
           roomId: reservation.room_id,
@@ -275,6 +275,7 @@ const selectedRoomParkingSpots = computed(() => {
         spots.push({
           id: `${assignment.id}-${date}`, // Unique ID for each spot-date combination
           spotNumber: assignment.spotNumber || '未設定',
+          parkingLotName: assignment.parkingLotName || '未設定',
           vehicleCategoryName: assignment.vehicleCategoryName || '未設定',
           date: date,
           price: assignment.unitPrice || 0,          
