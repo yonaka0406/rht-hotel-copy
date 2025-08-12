@@ -208,8 +208,7 @@ const reservationDates = computed(() => {
 });
 
 // Group parking assignments by room and date
-const parkingUsageByRoom = computed(() => {
-  console.log('parkingAssignments:', JSON.parse(JSON.stringify(parkingAssignments.value)));
+const parkingUsageByRoom = computed(() => {  
   
   const usage = {};
   
@@ -266,18 +265,27 @@ const fullyAssignedCount = computed(() => {
 const selectedRoomParkingSpots = computed(() => {
   if (!selectedRoomId.value) return [];
   
-  return parkingAssignments.value.flatMap(assignment => {
-    if (assignment.roomId !== selectedRoomId.value) return [];
+  const spots = [];
+  const targetRoomId = String(selectedRoomId.value);
+  console.log(`[DEBUG] Filtering spots for room ID: ${targetRoomId} (type: ${typeof targetRoomId})`);  
     
-    return assignment.dates.map(date => ({
-      id: `${assignment.id}-${date}`,
-      spotNumber: assignment.spotNumber,
-      vehicleCategoryName: assignment.vehicleCategoryName,
-      date: date,
-      price: assignment.unitPrice,
-      ...assignment
-    }));
+  parkingAssignments.value.forEach(assignment => {
+    if (String(assignment.roomId) === targetRoomId && assignment.dates) {
+      assignment.dates.forEach(date => {
+        spots.push({
+          id: `${assignment.id}-${date}`, // Unique ID for each spot-date combination
+          spotNumber: assignment.spotNumber || '未設定',
+          vehicleCategoryName: assignment.vehicleCategoryName || '未設定',
+          date: date,
+          price: assignment.unitPrice || 0,          
+          ...assignment
+        });
+      });
+    }
   });
+  
+  console.log('[ReservationParking] Selected room parking spots:', spots);
+  return spots;
 });
 
 const openAddParkingDialog = () => {
@@ -317,13 +325,13 @@ const openParkingSpotsDialog = (roomId, roomName) => {
 const onParkingSave = async (saveData) => {
     loading.value = true;
     try {
-        console.log('[ReservationParking] onParkingSave received saveData:', JSON.parse(JSON.stringify(saveData)));
+        // console.log('[ReservationParking] onParkingSave received saveData:', JSON.parse(JSON.stringify(saveData)));
         
         const reservationDetailIds = props.reservationDetails.map(d => d.id);
         if (!reservationDetailIds.length) {
             throw new Error('Reservation details are not available.');
         }
-        console.log('[ReservationParking] onParkingSave Reservation Detail IDs:', reservationDetailIds);
+        // console.log('[ReservationParking] onParkingSave Reservation Detail IDs:', reservationDetailIds);
 
         let assignmentsToSave = [];
         const dates = saveData.details ? saveData.details.map(d => d.date) : [];
@@ -362,11 +370,13 @@ const onParkingSave = async (saveData) => {
             assignmentsToSave = [...parkingAssignments.value, newAssignment];
         }
 
-        console.log('[ReservationParking] Prepared assignmentsToSave:', JSON.parse(JSON.stringify(assignmentsToSave)));
+        // console.log('[ReservationParking] Prepared assignmentsToSave:', JSON.parse(JSON.stringify(assignmentsToSave)));
+        /*
         console.log('[ReservationParking] Calling parkingStore.saveParkingAssignments with:', {
             reservationDetailIds,
             assignments: assignmentsToSave
         });
+        */
 
         await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
         
