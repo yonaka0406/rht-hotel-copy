@@ -264,16 +264,25 @@ const getParkingReservations = async (requestId, hotel_id, startDate, endDate) =
     const pool = getPool(requestId);
     const query = `
         SELECT 
-            rp.*,
+            rp.*,            
             ps.spot_number,
             ps.spot_type,
-            pl.name as parking_lot_name
+            pl.name as parking_lot_name,
+            COALESCE(c.name_kanji, c.name_kana, c.name) as booker_name,
+            r.id as reservation_id,
+            r.status as reservation_status,
+            r.type as reservation_type
         FROM reservation_parking rp
         JOIN parking_spots ps ON rp.parking_spot_id = ps.id
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+        JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
+        JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+        LEFT JOIN clients c ON r.reservation_client_id = c.id
         WHERE rp.hotel_id = $1 
         AND rp.date >= $2 
         AND rp.date <= $3
+        AND rp.cancelled IS NULL
+        AND rd.cancelled IS NULL
         ORDER BY rp.date, ps.spot_number
     `;
     const values = [hotel_id, startDate, endDate];
