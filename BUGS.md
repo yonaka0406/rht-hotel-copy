@@ -20,6 +20,20 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Room Indicator component, Reservation List view
 - **Additional Notes**: This can cause confusion for staff about which guests have actually arrived and which are still expected.
 
+#### Bug #33: Room deletion not working in production environment
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
+- **Steps to Reproduce**:
+  1. Navigate to a reservation in the production environment.
+  2. Attempt to delete a room from the reservation.
+  3. Save the changes.
+- **Expected Behavior**: The room should be deleted from the reservation.
+- **Actual Behavior**: The room is not deleted, though the number of people and stays are updated.
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Assigned To**: 
+- **Reported By**: 
+- **Date Reported**: 2025-08-12
+
 ### August 8, 2025
 
 #### Feature Request #27: Cash Payment Indicator in Room Indicator
@@ -241,5 +255,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 12, 2025*
-*Total Bugs: 23* (last one #32)
+*Total Bugs: 25* (last one #34)
 *Total Feature Requests: 17* (last one #31)
