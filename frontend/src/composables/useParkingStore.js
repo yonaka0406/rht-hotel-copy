@@ -416,6 +416,61 @@ export function useParkingStore() {
         }
     };
 
+    // Parking Reservation Management
+    const deleteParkingReservation = async (reservationId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/reservation/parking/${reservationId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete parking reservation');
+            }
+            
+            // Remove the deleted reservation from the local state
+            parkingReservations.value = {
+                ...parkingReservations.value,
+                parking: parkingReservations.value.parking.filter(r => r.id !== reservationId)
+            };
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to delete parking reservation', error);
+            throw error;
+        }
+    };
+
+    const deleteMultipleParkingReservations = async (reservationIds) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch('/api/reservation/parking/bulk-delete', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: reservationIds }),
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete parking reservations');
+            }
+            
+            // Remove the deleted reservations from the local state
+            parkingReservations.value = {
+                ...parkingReservations.value,
+                parking: parkingReservations.value.parking.filter(r => !reservationIds.includes(r.id))
+            };
+            
+            return true;
+        } catch (error) {
+            console.error('Failed to delete parking reservations', error);
+            throw error;
+        }
+    };
+
     return {
         vehicleCategories,
         parkingLots,
@@ -444,5 +499,7 @@ export function useParkingStore() {
         updateParkingAddonSpot,
         removeParkingAddonWithSpot,
         saveParkingAssignments,
+        deleteParkingReservation,
+        deleteMultipleParkingReservations,
     };
 }

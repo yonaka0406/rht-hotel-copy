@@ -15,6 +15,12 @@ router.get('/reservation/list/clients/:hid/:id', authMiddleware, reservationsCon
 router.get('/reservation/payment/list/:hid/:id', authMiddleware, reservationsController.getReservationPayments);
 router.get('/reservation/parking/:hid/:id', authMiddlewareCRUDAccess, reservationsController.getReservationParking);
 router.get('/reservation/parking/spot-availability', authMiddleware, reservationsController.getParkingSpotAvailability);
+
+// Parking reservation routes
+router.get('/reservation/parking/:hid/:id', authMiddlewareCRUDAccess, reservationsController.getReservationParking);
+router.delete('/reservation/parking/:id', authMiddlewareCRUDAccess, reservationsController.handleDeleteParkingReservation);
+router.post('/reservation/parking/bulk-delete', authMiddlewareCRUDAccess, reservationsController.handleBulkDeleteParkingReservations);
+
 router.post('/reservation/hold', authMiddlewareCRUDAccess, reservationsController.createReservationHold);
 router.post('/reservation/add/hold-combo', authMiddlewareCRUDAccess, reservationsController.createHoldReservationCombo);
 router.post('/reservation/addon', authMiddlewareCRUDAccess, reservationsController.createReservationAddons);

@@ -2644,6 +2644,54 @@ const deleteReservationPayment = async (requestId, id, userId) => {
   }
 };
 
+const deleteParkingReservation = async (requestId, id, userId) => {
+  const pool = getPool(requestId);
+  // Changed the query from UPDATE to a direct DELETE.
+  // The RETURNING * clause ensures the deleted row is returned, maintaining consistency with the front end's expectations.
+  const query = `
+    DELETE FROM reservation_parking
+    WHERE id = $1
+    RETURNING *;
+  `;
+  
+  // The userId is no longer needed for the query itself.
+  const values = [id];
+  
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting parking reservation:', error);
+    throw new Error('Database error while deleting parking reservation');
+  }
+};
+
+const deleteBulkParkingReservations = async (requestId, ids, userId) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error('No parking reservation IDs provided for deletion');
+  }
+  
+  const pool = getPool(requestId);
+  // Changed the query from UPDATE to a direct DELETE.
+  // The RETURNING * clause ensures the deleted rows are returned.
+  const query = `
+    DELETE FROM reservation_parking
+    WHERE id = ANY($1::uuid[])
+    RETURNING *;
+  `;
+  
+  // The userId is no longer needed for the query itself.
+  const values = [ids];
+  
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (error) {
+    console.error('Error bulk deleting parking reservations:', error);
+    throw new Error('Database error while bulk deleting parking reservations');
+  }
+};
+
 // OTA
 async function transformRoomData(roomAndGuestList) {
   const output = {};
@@ -3176,8 +3224,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
             console.log('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
-              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';              
-              const { name, nameKana, nameKanji } = await processNameString(sanitizeName(rawName));
+              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
+              const sanitizedName = sanitizeName(rawName);
+              const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
               
               guestData = {
                 name: name,                
@@ -3683,7 +3732,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     return match ? match.room_type_id : null;
   };
   const planMaster = await selectTLPlanMaster(requestId, hotel_id);
-  // console.log('selectTLPlanMaster:', planMaster);  
+
   const selectPlanId = async (code) => {
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
@@ -3734,6 +3783,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       const availableRoom = availableRooms.find(room =>
         room.room_type_id === room_type_id && !assignedRoomIds.has(room.room_id)
       );
+
       return availableRoom?.room_id || null;
     };
 
@@ -4376,7 +4426,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       internalClient.release();
     }
   }
-}
+};
 const cancelOTAReservation = async (requestId, hotel_id, data, client = null) => {
   let internalClient;
   let shouldRelease = false;
@@ -4795,4 +4845,6 @@ module.exports = {
   insertCopyReservation,
   sanitizeName,
   selectFailedOtaReservations,
+  deleteParkingReservation,
+  deleteBulkParkingReservations,
 };
