@@ -523,6 +523,12 @@ const handleParkingUpdate = (event) => {
   z-index: 1;
 }
 
+/* Style for the frozen column header (部屋) */
+.parking-table :deep(.p-datatable-thead > tr > th.p-datatable-frozen-column) {
+  background: white !important;
+  z-index: 2; /* Higher than other headers */
+}
+
 .parking-table :deep(.p-datatable-tbody > tr > td) {
   white-space: nowrap;
 }
