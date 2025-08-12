@@ -125,21 +125,37 @@ const loading = ref(false);
 watch(() => props.parkingReservations, (newVal) => {
   const reservationsArray = newVal?.parking || [];
   if (reservationsArray.length > 0) {
-    parkingAssignments.value = reservationsArray.map(reservation => ({
-      id: reservation.id,
-      spotId: reservation.parking_spot_id,
-      spotNumber: reservation.spot_number,
-      parkingLotName: '',
-      vehicleCategoryId: reservation.vehicle_category_id,
-      vehicleCategoryName: reservation.vehicle_category_name,
-      roomId: reservation.room_id,
-      dates: [reservation.date],
-      unitPrice: Number(reservation.price) || 0,
-      totalPrice: Number(reservation.price) || 0,
-      comment: reservation.comment || '',
-      status: reservation.status || 'active',
-      reservationDetailsId: reservation.reservation_details_id
-    }));
+    // Group by reservation_addon_id first to handle multi-date reservations
+    const groupedByAddon = reservationsArray.reduce((groups, reservation) => {
+      const addonId = reservation.reservation_addon_id;
+      if (!groups[addonId]) {
+        groups[addonId] = {
+          id: addonId,
+          spotId: reservation.parking_spot_id,
+          spotNumber: reservation.spot_number,
+          parkingLotName: '',
+          vehicleCategoryId: reservation.vehicle_category_id,
+          vehicleCategoryName: reservation.vehicle_category_name,
+          roomId: reservation.room_id,
+          dates: [],
+          unitPrice: Number(reservation.price) || 0,
+          totalPrice: 0,
+          comment: reservation.comment || '',
+          status: reservation.status || 'active',
+          reservationDetailsId: reservation.reservation_details_id
+        };
+      }
+      // Format the date to YYYY-MM-DD for consistency
+      const formattedDate = formatDate(reservation.date);
+      if (!groups[addonId].dates.includes(formattedDate)) {
+        groups[addonId].dates.push(formattedDate);
+      }
+      // Calculate total price based on number of dates
+      groups[addonId].totalPrice = groups[addonId].unitPrice * groups[addonId].dates.length;
+      return groups;
+    }, {});
+    
+    parkingAssignments.value = Object.values(groupedByAddon);
     console.log('[ReservationParking] parkingAssignments', parkingAssignments.value);
   } else {
     parkingAssignments.value = [];
@@ -190,15 +206,12 @@ const parkingUsageByRoom = computed(() => {
   
   // Count parking spots per room per date
   parkingAssignments.value.forEach(assignment => {
-    console.log('Processing assignment:', JSON.parse(JSON.stringify(assignment)));
-    
-    // Use the room_id from reservation_details that we now get from the API
     const roomId = assignment.roomId;
     
-    if (roomId && assignment.dates) {
+    if (roomId && assignment.dates && Array.isArray(assignment.dates)) {
       assignment.dates.forEach(date => {
-        // Format the date to match the reservation_date format if needed
-        const formattedDate = new Date(date).toISOString().split('T')[0];
+        // Ensure the date is in the correct format (YYYY-MM-DD)
+        const formattedDate = formatDate(date);
         
         if (usage[roomId]?.dates[formattedDate] !== undefined) {
           usage[roomId].dates[formattedDate]++;
