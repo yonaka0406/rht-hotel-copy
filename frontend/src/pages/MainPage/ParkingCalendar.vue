@@ -245,21 +245,24 @@
   // Fetch reserved spots data
   const tempParkingReservations = ref(null);
   const fetchParkingReservationsLocal = async (startDate, endDate) => {
-    debugLog('fetchParkingReservationsLocal called with:', { startDate, endDate });
+    debugData('🚀 fetchParkingReservationsLocal called with:', { startDate, endDate });
     try {
       if (!startDate && !endDate) {
         debugWarn('No date range provided to fetchParkingReservationsLocal');
         return;
       }
       
-      debugLog('Fetching reserved parking spots from API...');
+      debugData('📡 Fetching reserved parking spots from API...');
       await fetchReservedParkingSpots(
         selectedHotelId.value,
         startDate,
         endDate
       );
       
-      debugLog('Raw API response (reservedParkingSpots):', JSON.parse(JSON.stringify(reservedParkingSpots.value)));
+      debugData('📥 Raw API response (reservedParkingSpots):', {
+        count: reservedParkingSpots.value?.length || 0,
+        sample: reservedParkingSpots.value?.slice(0, 2)
+      });
       
       if (Array.isArray(reservedParkingSpots.value)) {
         // Create a map of existing reservations for faster lookup
@@ -273,22 +276,28 @@
         
         // Merge new reservations with existing ones
         const mergedReservations = [...(tempParkingReservations.value || [])];
+        let newReservationsCount = 0;
         
         reservedParkingSpots.value.forEach(newRes => {
           const key = `${newRes.parking_spot_id}_${formatDate(new Date(newRes.date))}`;
           if (!existingReservationsMap.has(key)) {
             mergedReservations.push(newRes);
+            newReservationsCount++;
           }
         });
         
         tempParkingReservations.value = mergedReservations;
+        
+        debugData('✅ Merge completed', {
+          totalReservations: mergedReservations.length,
+          newReservationsAdded: newReservationsCount
+        });
       } else {
+        debugWarn('No valid reservations data received');
         tempParkingReservations.value = [];
       }
-      
-      debugLog('Merged tempParkingReservations:', JSON.parse(JSON.stringify(tempParkingReservations.value)));
     } catch (error) {
-      debugError('Error in fetchParkingReservationsLocal:', error);
+      debugError('❌ Error in fetchParkingReservationsLocal:', error);
     }
   };
   
@@ -332,26 +341,19 @@
   // Fill & Format the table 
   const isSpotReserved = (spotId, date) => {
     if (!tempParkingReservations.value) {
-      debugLog('isSpotReserved: No tempParkingReservations available');
+      debugVerbose('isSpotReserved: No tempParkingReservations available');
       return false;
     }
     
     const formattedDate = formatDate(new Date(date));
-    const isReserved = tempParkingReservations.value.some(res => {
+    return tempParkingReservations.value.some(res => {
       const resDate = formatDate(new Date(res.date));
-      const matches = res.parking_spot_id === spotId && resDate === formattedDate;
-      if (matches) {
-        debugLog(`Found reservation for spot ${spotId} on ${formattedDate}:`, res);
-      }
-      return matches;
+      return res.parking_spot_id === spotId && resDate === formattedDate;
     });
-    
-    debugLog(`isSpotReserved(${spotId}, ${formattedDate}):`, isReserved);
-    return isReserved;
   };
   const fillSpotInfo = (spotId, date) => {
     if (!tempParkingReservations.value) {
-      debugLog('fillSpotInfo: No tempParkingReservations available');
+      debugVerbose('fillSpotInfo: No tempParkingReservations available');
       return { status: 'available', client_name: '', reservation_id: null };
     }
     
@@ -362,9 +364,9 @@
     });
     
     if (reservation) {
-      debugLog(`fillSpotInfo found reservation for spot ${spotId} on ${formattedDate}:`, reservation);
+      debugVerbose(`fillSpotInfo found reservation for spot ${spotId} on ${formattedDate}:`, reservation);
     } else {
-      debugLog(`No reservation found for spot ${spotId} on ${formattedDate}`);
+      debugVerbose(`No reservation found for spot ${spotId} on ${formattedDate}`);
     }
     
     return reservation || { status: 'available', client_name: '', reservation_id: null };
@@ -373,40 +375,51 @@
     const spotInfo = fillSpotInfo(spotId, date);
     let spotColor = '#d3063d';
     let style = {};
-  
+
     if (spotInfo && spotInfo.type === 'employee') {
       spotColor = '#f3e5f5';
       style = { backgroundColor: spotColor };
     } else if (spotInfo && spotInfo.status === 'provisory') {
       spotColor = '#ead59f';
-      style = { backgroundColor: `${spotColor}` };
+      style = { backgroundColor: spotColor };
     } else if (spotInfo && spotInfo.status === 'block' && spotInfo.client_id === '22222222-2222-2222-2222-222222222222') {
       spotColor = '#fed7aa';
-      style = { backgroundColor: `${spotColor}` };
+      style = { backgroundColor: spotColor };
     } else if (spotInfo && spotInfo.status === 'block') {
       spotColor = '#fca5a5';
-      style = { backgroundColor: `${spotColor}` };
+      style = { backgroundColor: spotColor };
     } else if (spotInfo && (spotInfo.type === 'ota' || spotInfo.type === 'web')) {
       spotColor = '#9fead5';
-      style = { backgroundColor: `${spotColor}` };
+      style = { backgroundColor: spotColor };
     } else if (spotInfo && spotInfo.plan_color) {
       spotColor = spotInfo.plan_color;
-      style = { backgroundColor: `${spotColor}` };
+      style = { backgroundColor: spotColor };
     } else if (spotInfo && spotInfo.status !== 'available') {
-      style = { color: `${spotColor}`, fontWeight: 'bold' };
+      style = { color: spotColor, fontWeight: 'bold' };
     }
-  
-    const originalReservation = Array.isArray(reservedParkingSpots.value) 
-      ? reservedParkingSpots.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date)
-      : null;
-    const tempReservation = Array.isArray(tempParkingReservations.value)
-      ? tempParkingReservations.value.find(r => r.parking_spot_id === spotId && formatDate(new Date(r.date)) === date)
-      : null;
-  
-    if (originalReservation?.id !== tempReservation?.id) {
-      style.border = '2px solid red'; // Highlight modified cells
+
+    // Only add red border if there's a difference between original and temp reservations
+    if (spotInfo && spotInfo.reservation_id) {
+      const originalReservation = Array.isArray(reservedParkingSpots.value) 
+        ? reservedParkingSpots.value.find(r => r.id === spotInfo.reservation_id)
+        : null;
+      const tempReservation = Array.isArray(tempParkingReservations.value)
+        ? tempParkingReservations.value.find(r => r.id === spotInfo.reservation_id)
+        : null;
+
+      if (originalReservation && tempReservation) {
+        // Only show red border if there are actual changes
+        const hasChanges = Object.keys(originalReservation).some(key => {
+          return key !== 'updated_at' && 
+                 originalReservation[key] !== tempReservation[key];
+        });
+        
+        if (hasChanges) {
+          style.border = '2px solid red';
+        }
+      }
     }
-  
+
     return style;
   };
   const firstCellMap = computed(() => {
@@ -842,22 +855,22 @@
   
   // Mount
   onMounted(async () => {
-    debugLog('Component mounted, initializing data...');
+    debugVerbose('Component mounted, initializing data...');
     
     // Initialize Socket.IO connection
     isLoading.value = true;
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
     socket.value.on('connect', () => {
-      debugLog('Connected to WebSocket server');
+      debugVerbose('Connected to WebSocket server');
     });
 
     socket.value.on('tableUpdate', async (data) => {
       if (isUpdating.value) {
-        debugLog('Skipping fetchReservation because update is still running');
+        debugVerbose('Skipping fetchReservation because update is still running');
         return;
       }
-      debugLog('Received table update:', data);
+      debugVerbose('Received table update:', data);
       await fetchReservedParkingSpots(selectedHotelId.value, dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     });
 
@@ -882,16 +895,16 @@
     }
 
     // Log initial state
-    debugLog('Initial allParkingSpots:', JSON.parse(JSON.stringify(allParkingSpots.value)));
-    debugLog('Initial dateRange:', dateRange.value);
+    debugVerbose('Initial allParkingSpots:', JSON.parse(JSON.stringify(allParkingSpots.value)));
+    debugVerbose('Initial dateRange:', dateRange.value);
     
     // Log sample data for debugging
     if (allParkingSpots.value.length > 0 && dateRange.value.length > 0) {
       const sampleSpot = allParkingSpots.value[0];
       const sampleDate = dateRange.value[0];
-      debugLog('Sample spot check - first spot:', sampleSpot);
-      debugLog(`Is spot ${sampleSpot.id} reserved on ${sampleDate}?`, isSpotReserved(sampleSpot.id, sampleDate));
-      debugLog('Spot info:', fillSpotInfo(sampleSpot.id, sampleDate));
+      debugVerbose('Sample spot check - first spot:', sampleSpot);
+      debugVerbose(`Is spot ${sampleSpot.id} reserved on ${sampleDate}?`, isSpotReserved(sampleSpot.id, sampleDate));
+      debugVerbose('Spot info:', fillSpotInfo(sampleSpot.id, sampleDate));
     }
 
     // Set up scroll position
@@ -914,9 +927,13 @@
   });
   
   const DEBUG = true;
+  const DEBUG_VERBOSE = true;
+  const DEBUG_DATA_LOADING = true;
   const debugLog = (...args) => DEBUG && console.log('[ParkingCalendar]', ...args);
   const debugWarn = (...args) => DEBUG && console.warn('[ParkingCalendar]', ...args);
   const debugError = (...args) => DEBUG && console.error('[ParkingCalendar]', ...args);
+  const debugVerbose = (...args) => DEBUG && DEBUG_VERBOSE && console.log('[ParkingCalendar]', ...args);
+  const debugData = (...args) => DEBUG && DEBUG_DATA_LOADING && console.log('[ParkingCalendar][DATA]', ...args);
 
   // Needed Watchers
   watch(selectedHotelId, async (newVal, oldVal) => {
