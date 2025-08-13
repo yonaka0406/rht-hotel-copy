@@ -287,7 +287,7 @@ const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fe
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 const waitlistStore = useWaitlistStore();
 import { useParkingStore } from '@/composables/useParkingStore';
-const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability } = useParkingStore();
+const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability, saveParkingAssignments } = useParkingStore();
 
 // Refs for props to pass to WaitlistDialog
 const waitlistDialogVisibleState = ref(false);
@@ -902,7 +902,6 @@ const submitReservation = async () => {
         )
     );
 
-    // Only proceed if there are stay combos
     if (Object.keys(stayCombos).length === 0) {
         toast.add({
             severity: 'warn',
@@ -913,12 +912,69 @@ const submitReservation = async () => {
         return;
     }
 
-    const reservation = await createHoldReservationCombo(reservationDetails.value, stayCombos);
-    toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
-    await fetchMyHoldReservations();
-    await goToEditReservationPage(reservation.reservation.id);
-    reservationCombos.value = [];
-    closeDialog();
+    try {
+        // 1. Create the main reservation with stay combos
+        const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
+        console.log('Reservation response:', response); // Debug log to check the response structure
+        
+        if (!response) {
+            throw new Error('No response received from server');
+        }
+        
+        // The backend returns { reservation, reservationDetails } directly
+        const { reservation, reservationDetails: createdReservationDetails } = response;
+        
+        if (!reservation || !createdReservationDetails) {
+            throw new Error('Invalid response format from server');
+        }
+        
+        // 2. Handle parking reservations if any
+        const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
+        if (parkingCombos.length > 0) {            
+            // Get the reservation detail IDs for the created reservation
+            const reservationDetailIds = createdReservationDetails.map(detail => detail.id);
+            
+            // Create parking assignments for each parking combo
+            const assignments = parkingCombos.flatMap(parkingCombo => {
+                const assignment = {
+                    vehicle_category_id: parkingCombo.vehicle_category_id,
+                    check_in: parkingCombo.check_in,
+                    check_out: parkingCombo.check_out,
+                    number_of_vehicles: parkingCombo.number_of_rooms,
+                    status: 'reserved',
+                    created_by: reservation.created_by,
+                    updated_by: reservation.updated_by
+                };
+                
+                // Create one assignment per reservation detail (one per room)
+                return reservationDetailIds.map(detailId => ({
+                    ...assignment,
+                    reservation_detail_id: detailId
+                }));
+            });
+            
+            // Save all parking assignments
+            if (assignments.length > 0) {
+                await saveParkingAssignments(reservationDetailIds, assignments);
+            }
+        }
+        
+        // Show success message and reset form
+        toast.add({ severity: 'success', summary: '成功', detail: '予約が作成されました。', life: 3000 });
+        await fetchMyHoldReservations();
+        await goToEditReservationPage(reservation.id);
+        reservationCombos.value = [];
+        closeDialog();
+        
+    } catch (error) {
+        console.error('Error creating reservation:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '予約の作成中にエラーが発生しました。',
+            life: 5000,
+        });
+    }
 };
 const goToEditReservationPage = async (reservation_id) => {
     await setReservationId(reservation_id);
