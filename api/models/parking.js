@@ -611,11 +611,13 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
 const saveParkingAssignments = async (requestId, reservationDetailIds, assignments) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
+
+    console.log('[saveParkingAssignments] start: reservationDetailIds', reservationDetailIds, 'assignments', assignments);
     try {
         await client.query('BEGIN');
 
-        const toCreate = assignments.filter(a => a.id.toString().startsWith('temp-'));
-        const toUpdate = assignments.filter(a => !a.id.toString().startsWith('temp-') && !a.toDelete);
+        const toCreate = assignments.filter(a => a.id && a.id.toString().startsWith('temp-'));
+        const toUpdate = assignments.filter(a => a.id && !a.id.toString().startsWith('temp-') && !a.toDelete);
         const toDelete = assignments.filter(a => a.toDelete);
 
         // Handle deletions
@@ -627,6 +629,7 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
 
         // Handle creations
         for (const assignment of toCreate) {
+            console.log('[saveParkingAssignments] assignment of toCreate', toCreate);
             const hotel_id = assignment.hotel_id;
             if (!hotel_id) {
                 throw new Error('hotel_id is required in the assignment object');
