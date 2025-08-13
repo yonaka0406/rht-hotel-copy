@@ -27,7 +27,7 @@
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
-                        
+
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
@@ -84,12 +84,12 @@
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
-                        
+
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <Select v-model="comboRow.vehicle_category_id" :options="vehicleCategories" optionLabel="name"
-                                optionValue="id" fluid />
+                            <Select v-model="comboRow.vehicle_category_id" :options="vehicleCategories"
+                                optionLabel="name" optionValue="id" fluid />
                             <label>車両タイプ</label>
                         </FloatLabel>
                     </div>
@@ -102,7 +102,11 @@
                         <p class="text-xs text-red-500" v-else>選択された日付と車両タイプで利用可能な駐車スペースがありません</p>
                     </div>
                     <div class="col-span-1 mt-6">
-                        
+                        <FloatLabel>
+                            <Select v-model="selectedAddon" :options="addonOptions" optionLabel="addon_name"
+                                optionValue="id" class="w-full" :disabled="!comboRow.vehicle_category_id" />
+                            <label>アドオン</label>
+                        </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
                         <Button label="追加" severity="success" type="submit" />
@@ -164,9 +168,9 @@
                                         <i v-if="slotProps.option.is_legal_person" class="pi pi-building"></i>
                                         <i v-else class="pi pi-user"></i>
                                         {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                        slotProps.option.name || '' }}
+                                            slotProps.option.name || '' }}
                                         <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
-                                            }})</span>
+                                        }})</span>
                                     </p>
                                     <div class="flex items-center gap-2">
                                         <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
@@ -204,8 +208,8 @@
                 <div class="col-span-1">
                     <FloatLabel>
                         <InputText v-model="reservationDetails.email" :pattern="emailPattern"
-                            :class="{ 'p-invalid': !isValidEmail }" @input="validateEmail(reservationDetails.email)" fluid
-                            :disabled="isClientSelected" />
+                            :class="{ 'p-invalid': !isValidEmail }" @input="validateEmail(reservationDetails.email)"
+                            fluid :disabled="isClientSelected" />
                         <label>メールアドレス</label>
                         <small v-if="!isValidEmail" class="p-error">有効なメールアドレスを入力してください。</small>
                     </FloatLabel>
@@ -215,8 +219,8 @@
                 <div class="col-span-1">
                     <FloatLabel>
                         <InputText v-model="reservationDetails.phone" :pattern="phonePattern"
-                            :class="{ 'p-invalid': !isValidPhone }" @input="validatePhone(reservationDetails.phone)" fluid
-                            :disabled="isClientSelected" />
+                            :class="{ 'p-invalid': !isValidPhone }" @input="validatePhone(reservationDetails.phone)"
+                            fluid :disabled="isClientSelected" />
                         <label>電話番号</label>
                         <small v-if="!isValidPhone" class="p-error">有効な電話番号を入力してください。</small>
                     </FloatLabel>
@@ -268,7 +272,7 @@
 </template>
 <script setup>
 // Vue
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, unref } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
@@ -281,13 +285,15 @@ import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.v
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore(); // Added createBasicClient
+const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 const waitlistStore = useWaitlistStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability, saveParkingAssignments } = useParkingStore();
+import { usePlansStore } from '@/composables/usePlansStore';
+const { fetchAllAddons } = usePlansStore();
 
 // Refs for props to pass to WaitlistDialog
 const waitlistDialogVisibleState = ref(false);
@@ -449,7 +455,10 @@ const comboRow = ref({
     number_of_rooms: numberOfRooms.value,
     number_of_people: numberOfPeople.value,
     reservation_type: 'stay',
-    vehicle_category_id: 1
+    vehicle_category_id: 1,
+    addon_id: null,
+    addon_name: '',
+    addon_price: 0
 });
 
 const checkDates = async () => {
@@ -458,28 +467,33 @@ const checkDates = async () => {
     const endDate = formatDate(comboRow.value.check_out);
     await fetchAvailableRooms(hotelId, startDate, endDate);
 };
+
 const onDateChange = async () => {
+    // Update minimum checkout date
     minCheckOutDate.value = new Date(comboRow.value.check_in);
     minCheckOutDate.value.setDate(comboRow.value.check_in.getDate() + 1);
+    
+    // Ensure check_out is not before the new min date
     if (new Date(comboRow.value.check_out) < minCheckOutDate.value) {
         comboRow.value.check_out = new Date(minCheckOutDate.value);
     }
 
+    // Reset vehicle category and addon selection when dates change
+    if (comboRow.value.check_in && comboRow.value.check_out) {
+        comboRow.value.vehicle_category_id = null;
+        selectedAddon.value = addonOptions.value[0]?.id || null;
+    }
+
+    // Update dates in all reservation combos
     reservationCombos.value.forEach(combo => {
         combo.check_in = comboRow.value.check_in;
         combo.check_out = comboRow.value.check_out;
     });
-    await checkDates(); // This will fetch available rooms
-    validateCombos();   // This will validate based on new availability (needs to be preference aware)
+    
+    // Fetch available rooms and validate combos
+    await checkDates();
+    validateCombos();
 };
-
-// const onSmokingPreferenceChange = async () => { // Removed
-//     // console.log("Combo smoking preference changed to:", selectedSmokingPreference.value);
-//     await checkDates();
-//     validateCombos();
-// };
-
-// All old waitlist dialog logic (onClientSelectForWaitlist, resetWaitlistClientSelection, watcher, old openWaitlistDialog, closeWaitlistDialog, submitWaitlistEntry) is removed.
 
 const openWaitlistDialogDirect = () => { // Opens waitlist dialog without requiring reservation combos
     // Set default values from the current form state
@@ -527,8 +541,8 @@ const handleWaitlistSubmitted = () => {
 
 const addReservationCombo = () => {
     comboRow.value.reservation_type = 'stay';
-    
-    console.log('addReservationCombo:',comboRow.value);
+
+    console.log('addReservationCombo:', comboRow.value);
     const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
     reservationCombos.value.push({
         ...comboRow.value,
@@ -545,20 +559,59 @@ const addParkingCombo = () => {
     comboRow.value.reservation_type = 'parking';
     comboRow.value.number_of_people = null;
 
-    console.log('addParkingCombo:',comboRow.value);
-    
+    console.log('addParkingCombo - initial comboRow:', JSON.parse(JSON.stringify(comboRow.value)));
+    console.log('addParkingCombo - selectedAddon:', selectedAddon.value);
+    console.log('addParkingCombo - addonOptions:', JSON.parse(JSON.stringify(addonOptions.value)));
+
     // Find the selected vehicle category
     const selectedVehicle = vehicleCategories.value.find(vc => vc.id === comboRow.value.vehicle_category_id);
     const vehicleName = selectedVehicle ? selectedVehicle.name : '駐車場';
 
-    reservationCombos.value.push({
+    // Get the selected addon data - ensure we're working with raw values
+    const currentAddonId = unref(selectedAddon);
+    const currentAddonOptions = unref(addonOptions);
+    const selectedAddonData = currentAddonId 
+        ? currentAddonOptions.find(a => a.id === currentAddonId)
+        : currentAddonOptions[0];
+    
+    if (!selectedAddonData) {
+        console.error('No addon selected and no default addon available');
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '有効なアドオンを選択してください。',
+            life: 3000
+        });
+        return;
+    }
+
+    // Create a new object with the updated values
+    const updatedCombo = {
         ...comboRow.value,
-        room_type_name: `駐車場 (${vehicleName})`,
-    });
+        addon_id: selectedAddonData.id,
+        addon_name: selectedAddonData.addon_name,
+        addon_price: selectedAddonData.price,
+        room_type_name: `駐車場 (${vehicleName})`
+    };
+
+    console.log('addParkingCombo - updated combo:', JSON.parse(JSON.stringify(updatedCombo)));
+
+    // Push the new object to the array
+    reservationCombos.value.push(updatedCombo);
 
     // Reset comboRow for the next addition
     comboRow.value.number_of_rooms = 1;
     comboRow.value.number_of_people = 1;
+    comboRow.value.addon_id = null;
+    comboRow.value.addon_name = '';
+    comboRow.value.addon_price = 0;
+    
+    // Reset the select input to the first available addon
+    if (addonOptions.value.length > 0) {
+        selectedAddon.value = addonOptions.value[0].id;
+    } else {
+        selectedAddon.value = null;
+    }
 
     validateCombos();
 }
@@ -600,7 +653,7 @@ const deleteCombo = (combo) => {
 };
 const validateCombos = () => {
     validationErrors.value = [];
-    
+
     // Separate parking and stay combos
     const parkingCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'parking');
     const stayCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'stay');
@@ -608,7 +661,7 @@ const validateCombos = () => {
     // Find min check-in and max check-out from stay reservations
     let minStayCheckIn = null;
     let maxStayCheckOut = null;
-    
+
     if (stayCombos.length > 0) {
         minStayCheckIn = new Date(Math.min(...stayCombos.map(combo => new Date(combo.check_in))));
         maxStayCheckOut = new Date(Math.max(...stayCombos.map(combo => new Date(combo.check_out))));
@@ -627,7 +680,7 @@ const validateCombos = () => {
         }
 
         const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
-        
+
         // Group by room type for consolidated validation
         const roomTypeGroups = stayCombos.reduce((acc, combo) => {
             if (!acc[combo.room_type_id]) {
@@ -687,7 +740,7 @@ const validateCombos = () => {
             parkingCombos.forEach((parkingCombo, index) => {
                 const parkingCheckIn = new Date(parkingCombo.check_in);
                 const parkingCheckOut = new Date(parkingCombo.check_out);
-                
+
                 // Check if parking dates are within stay dates
                 if (parkingCheckIn < minStayCheckIn) {
                     validationErrors.value.push(`駐車場予約 ${index + 1} のチェックイン日が宿泊期間より前です。`);
@@ -705,7 +758,7 @@ const validateCombos = () => {
             const roomsOfThisType = availableRooms.value?.filter(
                 room => room.room_type_id === combo.room_type_id && room.for_sale
             ) || [];
-            
+
             const availableRoomCount = roomsOfThisType.length;
             const availableCaps = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
 
@@ -718,15 +771,15 @@ const validateCombos = () => {
                 if (peopleRemaining <= 0) break;
             }
 
-            combo.rowStyle = (combo.number_of_rooms > availableRoomCount || peopleRemaining > 0) 
-                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' } 
+            combo.rowStyle = (combo.number_of_rooms > availableRoomCount || peopleRemaining > 0)
+                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
                 : {};
         } else if (combo.reservation_type === 'parking') {
             const parkingCheckIn = new Date(combo.check_in);
             const parkingCheckOut = new Date(combo.check_out);
-            const isOutsideStayDates = minStayCheckIn && maxStayCheckOut && 
+            const isOutsideStayDates = minStayCheckIn && maxStayCheckOut &&
                 (parkingCheckIn < minStayCheckIn || parkingCheckOut > maxStayCheckOut);
-                
+
             // Check if this combo would exceed max parking spots when added
             const otherParkingCombos = reservationCombos.value.filter(
                 c => c !== combo && c.reservation_type === 'parking'
@@ -735,7 +788,7 @@ const validateCombos = () => {
                 (sum, c) => sum + (parseInt(c.number_of_rooms) || 0), 0
             );
             const wouldExceedMax = (otherParkingSpots + (parseInt(combo.number_of_rooms) || 0)) > maxParkingSpots.value;
-                
+
             combo.rowStyle = (isOutsideStayDates || wouldExceedMax)
                 ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
                 : {};
@@ -894,7 +947,7 @@ const submitReservation = async () => {
         Object.entries(consolidatedCombos.value).filter(
             ([_, combo]) => {
                 // Find the first combo with this room_type_id to check its type
-                const firstCombo = reservationCombos.value.find(c => 
+                const firstCombo = reservationCombos.value.find(c =>
                     c.room_type_id === combo.room_type_id && c.reservation_type === 'stay'
                 );
                 return firstCombo !== undefined;
@@ -916,24 +969,24 @@ const submitReservation = async () => {
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
         console.log('Reservation response:', response); // Debug log to check the response structure
-        
+
         if (!response) {
             throw new Error('No response received from server');
         }
-        
+
         // The backend returns { reservation, reservationDetails } directly
         const { reservation, reservationDetails: createdReservationDetails } = response;
-        
+
         if (!reservation || !createdReservationDetails) {
             throw new Error('Invalid response format from server');
         }
-        
+
         // 2. Handle parking reservations if any
         const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
-        if (parkingCombos.length > 0) {            
+        if (parkingCombos.length > 0) {
             // Get the reservation detail IDs for the created reservation
             const reservationDetailIds = createdReservationDetails.map(detail => detail.id);
-            
+
             // Create parking assignments for each parking combo
             const assignments = parkingCombos.flatMap(parkingCombo => {
                 const assignment = {
@@ -945,27 +998,27 @@ const submitReservation = async () => {
                     created_by: reservation.created_by,
                     updated_by: reservation.updated_by
                 };
-                
+
                 // Create one assignment per reservation detail (one per room)
                 return reservationDetailIds.map(detailId => ({
                     ...assignment,
                     reservation_detail_id: detailId
                 }));
             });
-            
+
             // Save all parking assignments
             if (assignments.length > 0) {
                 await saveParkingAssignments(reservationDetailIds, assignments);
             }
         }
-        
+
         // Show success message and reset form
         toast.add({ severity: 'success', summary: '成功', detail: '予約が作成されました。', life: 3000 });
         await fetchMyHoldReservations();
         await goToEditReservationPage(reservation.id);
         reservationCombos.value = [];
         closeDialog();
-        
+
     } catch (error) {
         console.error('Error creating reservation:', error);
         toast.add({
@@ -985,40 +1038,89 @@ const goToEditReservationPage = async (reservation_id) => {
 const maxParkingSpots = ref(0);
 
 const updateParkingSpots = async () => {
-  if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) {
-    maxParkingSpots.value = 0;
-    return;
-  }
-  
-  try {
-    console.log('[ReservationsNewCombo] checkRealTimeAvailability')
-    const response = await checkRealTimeAvailability(
-      selectedHotelId.value,
-      comboRow.value.vehicle_category_id,
-      [formatDate(new Date(comboRow.value.check_in)), formatDate(new Date(comboRow.value.check_out))],
-      null // excludeReservationId
-    );
-    
-    // Update to use the correct response structure
-    const availableSpots = response.fullyAvailableSpots?.length || 0;
-    maxParkingSpots.value = availableSpots;
-    
-    console.log('[ReservationsNewCombo] Available spots:', availableSpots);
-    
-    // Ensure the current value doesn't exceed the new max
-    if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
-      comboRow.value.number_of_rooms = maxParkingSpots.value;
+    if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) {
+        maxParkingSpots.value = 0;
+        return;
     }
-  } catch (error) {
-    console.error('Failed to fetch parking spot availability:', error);
-    maxParkingSpots.value = 0;
-  }
+
+    try {
+        console.log('[ReservationsNewCombo] checkRealTimeAvailability')
+        const response = await checkRealTimeAvailability(
+            selectedHotelId.value,
+            comboRow.value.vehicle_category_id,
+            [formatDate(new Date(comboRow.value.check_in)), formatDate(new Date(comboRow.value.check_out))],
+            null // excludeReservationId
+        );
+
+        // Update to use the correct response structure
+        const availableSpots = response.fullyAvailableSpots?.length || 0;
+        maxParkingSpots.value = availableSpots;
+
+        console.log('[ReservationsNewCombo] Available spots:', availableSpots);
+
+        // Ensure the current value doesn't exceed the new max
+        if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
+            comboRow.value.number_of_rooms = maxParkingSpots.value;
+        }
+    } catch (error) {
+        console.error('Failed to fetch parking spot availability:', error);
+        maxParkingSpots.value = 0;
+    }
 };
 
 watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async () => {
-  if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
-    await updateParkingSpots();
-  }
+    if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
+        await updateParkingSpots();
+    }
+});
+
+const selectedAddon = ref(null);
+const addonOptions = ref([]);
+
+const fetchParkingAddons = async () => {
+    if (!selectedHotelId.value) return;
+
+    try {
+        const allAddons = await fetchAllAddons(selectedHotelId.value);
+        if (allAddons && Array.isArray(allAddons)) {
+            const parkingAddons = allAddons.filter(addon => addon.addon_type === 'parking');
+            addonOptions.value = parkingAddons;
+
+            // Auto-select first addon if available
+            if (parkingAddons.length > 0 && !selectedAddon.value) {
+                selectedAddon.value = parkingAddons[0].id;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to fetch parking addons:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場アドオンの取得に失敗しました',
+            life: 3000
+        });
+    }
+};
+
+watch(selectedHotelId, (newHotelId) => {
+    if (newHotelId) {
+        fetchParkingAddons();
+    } else {
+        addonOptions.value = [];
+        selectedAddon.value = null;
+    }
+}, { immediate: true });
+
+const onHotelChange = async (event) => {
+    await fetchHotel(event.value);
+    comboRow.value.room_type_id = null;
+    comboRow.value.vehicle_category_id = null;
+    selectedAddon.value = addonOptions.value[0]?.id || null;
+    await fetchAvailableRooms();
+};
+
+const hasStayReservation = computed(() => {
+    return reservationCombos.value.some(combo => combo.reservation_type === 'stay');
 });
 
 onMounted(async () => {
@@ -1063,8 +1165,4 @@ watch(() => selectedHotelId.value,
         reservationDetails.value.hotel_id = selectedHotelId.value;
     }
 );
-
-const hasStayReservation = computed(() => {
-  return reservationCombos.value.some(combo => combo.reservation_type === 'stay');
-});
 </script>
