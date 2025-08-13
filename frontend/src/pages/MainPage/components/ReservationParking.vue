@@ -6,13 +6,7 @@
         <h4 class="section-title">
           <i class="pi pi-car"></i>
           駐車場 ({{ parkingAssignments.length }})
-        </h4>
-        <div class="status-indicators" v-if="parkingAssignments.length > 0">
-          <Tag
-            :value="`${fullyAssignedCount}/${parkingAssignments.length} 完全割当`"
-            :severity="fullyAssignedCount === parkingAssignments.length ? 'success' : 'warning'"
-          />
-        </div>
+        </h4>        
       </div>
       <div class="header-actions">
         <Button
@@ -447,11 +441,6 @@ const cleanupDialog = () => {
   color: var(--text-color);
 }
 
-.status-indicators {
-  display: flex;
-  gap: 0.5rem;
-}
-
 .header-actions {
   display: flex;
   gap: 0.5rem;
@@ -537,11 +526,6 @@ const cleanupDialog = () => {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.status-indicators {
-  display: flex;
-  gap: 0.5rem;
 }
 
 .price-info {

@@ -131,13 +131,17 @@
     </Dialog>
 
     <ConfirmDialog group="parkingDialogConfirm" />
-    <Toast />
 </template>
 
 <script setup>
+// Vue
 import { ref, computed, watch, reactive } from 'vue';
+
+// Primvue
 import { useConfirm } from 'primevue/useconfirm';
+const confirm = useConfirm();
 import { useToast } from 'primevue/usetoast';
+const toast = useToast();
 import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import DataTable from 'primevue/datatable';
@@ -150,7 +154,10 @@ import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 import ConfirmDialog from 'primevue/confirmdialog';
-import Toast from 'primevue/toast';
+
+// Store
+import { useParkingStore } from '@/composables/useParkingStore';
+const parkingStore = useParkingStore();
 
 const props = defineProps({
     modelValue: {
@@ -185,8 +192,6 @@ const emit = defineEmits([
 
 const localSpots = ref([...props.parkingSpots]);
 const spotSelections = reactive({});
-const confirm = useConfirm();
-const toast = useToast();
 const activeTab = ref(null);
 
 // Watch for external changes to parkingSpots
@@ -322,26 +327,44 @@ const onDialogHide = () => {
     emit('hide');
 };
 
-const deleteSpots = (spotsToDelete) => {
-    const spotIds = new Set(spotsToDelete.map(spot => spot.id));
-    localSpots.value = localSpots.value.filter(spot => !spotIds.has(spot.id));
+const deleteSpots = async (spotsToDelete) => {
+    try {
+        // First delete from the backend
+        for (const spot of spotsToDelete) {
+            if (spot.id) {
+                await parkingStore.removeParkingAddonWithSpot(spot.id);
+            }
+        }
 
-    // Clear selections
-    Object.keys(spotSelections).forEach(key => {
-        spotSelections[key] = spotSelections[key].filter(spot => !spotIds.has(spot.id));
-    });
+        // Then update the local state
+        const spotIds = new Set(spotsToDelete.map(spot => spot.id));
+        localSpots.value = localSpots.value.filter(spot => !spotIds.has(spot.id));
 
-    // Emit the updated spots
-    emit('update:parkingSpots', [...localSpots.value]);
+        // Clear selections
+        Object.keys(spotSelections).forEach(key => {
+            spotSelections[key] = spotSelections[key].filter(spot => !spotIds.has(spot.id));
+        });
 
-    // Show success message
-    const count = spotsToDelete.length;
-    toast.add({
-        severity: 'success',
-        summary: '削除完了',
-        detail: count > 1 ? `${count}件の駐車場割り当てを削除しました` : '駐車場の割り当てを削除しました',
-        life: 3000
-    });
+        // Emit the updated spots
+        emit('update:parkingSpots', [...localSpots.value]);
+
+        // Show success message
+        const count = spotsToDelete.length;
+        toast.add({
+            severity: 'success',
+            summary: '削除完了',
+            detail: count > 1 ? `${count}件の駐車場割り当てを削除しました` : '駐車場の割り当てを削除しました',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Failed to delete parking spots:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場の削除中にエラーが発生しました',
+            life: 5000
+        });
+    }
 };
 
 const confirmDeleteSingle = (spot) => {
@@ -525,6 +548,8 @@ const confirmDeleteAll = () => {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    line-clamp: 2;  /* Standard property */
+    max-height: 2.5em; /* Fallback for non-webkit browsers */
 }
 
 .tab-content {
