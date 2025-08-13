@@ -2,6 +2,17 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 14, 2025
+
+### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: The room indicator was incorrectly showing clients as "滞在中" (currently staying) for the entire day of their check-in, even if they hadn't actually checked in yet.
+- **Root Cause**: The `occupiedRooms` filter was including rooms based on check-in/check-out dates without verifying the actual check-in status.
+- **Solution**: Modified the filter to only include rooms with status 'checked_in' in the "滞在中" section and updated the check-in/check-out logic to properly categorize rooms.
+- **Environment**: Room Indicator component
+- **Date Fixed**: 2025-08-14
+
 ## August 7, 2025
 
 ### Bug #22: Unable to Add Addons Without a Selected Plan

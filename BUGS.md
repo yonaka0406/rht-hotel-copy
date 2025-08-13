@@ -35,19 +35,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 12, 2025
 
-#### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: The room indicator incorrectly shows clients as "滞在中" (currently staying) for the entire day of their check-in, even if they haven't actually checked in yet.
-- **Steps to Reproduce**:
-  1. Have a reservation with a check-in date set for today
-  2. Before the client checks in, view the room indicator
-  3. Observe that the client is shown as "滞在中" even though they haven't checked in
-- **Expected Behavior**: Clients should only be marked as "滞在中" after they have actually checked in. Clients with a check-in date of today but who haven't checked in yet should not be shown in the "滞在中" section.
-- **Actual Behavior**: All clients with a check-in date of today are shown as "滞在中" regardless of their actual check-in status.
-- **Environment**: Room Indicator component, Reservation List view
-- **Additional Notes**: This can cause confusion for staff about which guests have actually arrived and which are still expected.
-
 #### Bug #33: Room deletion not working in production environment
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
