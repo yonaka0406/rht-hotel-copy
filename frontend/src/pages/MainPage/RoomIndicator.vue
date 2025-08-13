@@ -225,8 +225,10 @@
 
   // Computed
   const roomGroups = computed(() => {
-    // console.log('reservedRoomsDayView:', reservedRoomsDayView.value);
-    // console.log('selectedHotelRooms:', selectedHotelRooms.value);
+    console.log('[RoomIndicator] Calculating roomGroups');
+    console.log('[RoomIndicator] selectedDate:', selectedDate.value);
+    console.log('[RoomIndicator] reservedRoomsDayView:', reservedRoomsDayView.value);
+    console.log('[RoomIndicator] selectedHotelRooms:', selectedHotelRooms.value);
 
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
@@ -239,20 +241,29 @@
         ?.filter(room => room.cancelled === null)
         ?.map((res) => res.room_id) || []
     );
-    // console.log('reservedRoomIds:',reservedRoomIds)
+    console.log('[RoomIndicator] reservedRoomIds:', reservedRoomIds);
 
     const checkInToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
       const checkInDate = new Date(room.check_in);
       
       // Ensure checkInDate is a valid Date object
       if (isNaN(checkInDate.getTime())) {
-        console.warn(`Invalid check_in date: ${room.check_in}`);
+        console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
         return false;
       }
 
-      return formatDate(checkInDate) === formatDate(selectedDateObj) &&
-      room.status !== 'block' &&
-      room.cancelled === null;
+      const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj) &&
+        room.status !== 'block' &&
+        room.cancelled === null;
+      
+      console.log(`[RoomIndicator] Check-in today for room ${room.room_number}:`, isCheckInToday, {
+        checkInDate: formatDate(checkInDate),
+        selectedDate: formatDate(selectedDateObj),
+        status: room.status,
+        cancelled: room.cancelled
+      });
+      
+      return isCheckInToday;
     }) || [];
 
     const checkOutToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
@@ -260,7 +271,7 @@
       
       // Ensure checkOutDate is a valid Date object
       if (isNaN(checkOutDate.getTime())) {
-        console.warn(`Invalid check_out date: ${room.check_out}`);
+        console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
         return false;
       }
       
@@ -274,23 +285,35 @@
       // Ensure check_in date is valid
       const checkInDate = new Date(room.check_in);
       if (isNaN(checkInDate.getTime())) {
-        console.warn(`Invalid check_in date: ${room.check_in}`);
+        console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
         return false;
       }
 
-      // Ensure date is valid
+      // Ensure check_out date is valid
       const checkOutDate = new Date(room.check_out);
       if (isNaN(checkOutDate.getTime())) {
-        console.warn(`Invalid date: ${room.check_out}`);
+        console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
         return false;
       }          
 
-      return !isNaN(checkInDate.getTime())
+      const isOccupied = !isNaN(checkInDate.getTime())
         && !isNaN(checkOutDate.getTime()) 
         && checkInDate <= selectedDateObj 
         && checkOutDate > selectedDateObj
         && room.cancelled === null
+        && room.status === 'checked_in'  // Only include checked-in guests
         && room.status !== 'block';
+
+      console.log(`[RoomIndicator] Room ${room.room_number} occupied check:`, {
+        isOccupied,
+        checkInDate: formatDate(checkInDate),
+        checkOutDate: formatDate(checkOutDate),
+        selectedDate: formatDate(selectedDateObj),
+        status: room.status,
+        cancelled: room.cancelled
+      });
+
+      return isOccupied;
     }) || [];
 
     const blockedRooms = reservedRoomsDayView.value?.reservations?.filter((room) => {
@@ -303,34 +326,78 @@
 
 
     const result = [
-      { title: '本日チェックイン', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
-      { title: '本日チェックアウト', rooms: checkOutToday, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
+      { title: '本日チェックイン待ち', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
+      { title: '本日チェックアウト待ち', rooms: checkOutToday, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
       { title: '滞在', rooms: occupiedRooms, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },
       { title: '空室', rooms: freeRooms, color: 'bg-gray-100', darkColor: 'dark:bg-gray-800' },
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
 
-    // console.log('roomGroups:', result);
-    return result;
+    console.log('[RoomIndicator] Room groups result:', {
+      checkInToday: checkInToday.length,
+      checkOutToday: checkOutToday.length,
+      occupiedRooms: occupiedRooms.length,
+      freeRooms: freeRooms.length,
+      blockedRooms: blockedRooms.length
+    });
 
+    return result;
   });
 
   const summaryMetrics = computed(() => {
+    console.log('[RoomIndicator] Calculating summaryMetrics');
+    
+    // Get all check-ins for today (both checked in and not yet checked in)
+    const allCheckInsToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
+      const checkInDate = new Date(room.check_in);
+      const isCheckIn = !isNaN(checkInDate.getTime()) && 
+             formatDate(checkInDate) === formatDate(selectedDate.value) &&
+             room.status !== 'block' &&
+             room.cancelled === null;
+      
+      if (isCheckIn) {
+        console.log('[RoomIndicator] Found check-in for today:', {
+          room_id: room.room_id,
+          room_number: room.room_number,
+          check_in: room.check_in,
+          status: room.status,
+          client_name: room.client_name
+        });
+      }
+      
+      return isCheckIn;
+    }) || [];
+
+    console.log('[RoomIndicator] Total check-ins today:', allCheckInsToday.length);
+
     const metricsMap = {
-      '本日チェックイン': { title: '本日チェックイン', icon: 'pi pi-arrow-down-left', iconColor: 'text-blue-500' },
-      '本日チェックアウト': { title: '本日チェックアウト', icon: 'pi pi-arrow-up-right', iconColor: 'text-green-500' },
-      '滞在': { title: '滞在者数', icon: 'pi pi-users', iconColor: 'text-yellow-500' },
-      '空室': { title: '空室数', icon: 'pi pi-home', iconColor: 'text-gray-500' },
+      '本日チェックイン待ち': { 
+        title: '本日チェックイン', 
+        icon: 'pi pi-arrow-down-left', 
+        iconColor: 'text-blue-500',
+        count: allCheckInsToday.length // Show total expected check-ins
+      },
+      '本日チェックアウト': { 
+        title: '本日チェックアウト', 
+        icon: 'pi pi-arrow-up-right', 
+        iconColor: 'text-green-500',
+        count: roomGroups.value.find(g => g.title === '本日チェックアウト待ち')?.rooms.length || 0
+      },
+      '滞在': { 
+        title: '滞在者数', 
+        icon: 'pi pi-users', 
+        iconColor: 'text-yellow-500',
+        count: roomGroups.value.find(g => g.title === '滞在')?.rooms.length || 0
+      },
+      '空室': { 
+        title: '空室数', 
+        icon: 'pi pi-home', 
+        iconColor: 'text-gray-500',
+        count: roomGroups.value.find(g => g.title === '空室')?.rooms.length || 0
+      },
     };
-    return Object.entries(metricsMap).map(([groupKey, metricDetails]) => {
-      const group = roomGroups.value.find(g => g.title === groupKey);
-      return {
-        title: metricDetails.title,
-        icon: metricDetails.icon,
-        iconColor: metricDetails.iconColor,
-        count: group ? group.rooms.length : 0,
-      };
-    });
+    
+    return Object.values(metricsMap);
   });
   
   const openNewReservation = (room) => {
@@ -413,23 +480,24 @@
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
     try {
+      console.log('[RoomIndicator] selectedHotelId changed:', { oldValue, newValue });
       if (newValue !== oldValue) {
         selectedDate.value = today;
         await fetchHotel();
         await fetchReservationsToday(selectedHotelId.value, formatDate(today));
       }
     } catch (error) {
-      console.error('Error in selectedHotelId watcher:', error);
+      console.error('[RoomIndicator] Error in selectedHotelId watcher:', error);
     }
   });
+  
   watch(selectedDate, async (newValue, oldValue) => {
-    console.log('[selectedDate watcher] Date changed from', oldValue, 'to', newValue);
+    console.log('[RoomIndicator] selectedDate changed:', { oldValue, newValue });
     if (newValue !== oldValue) {
-      console.log('[selectedDate watcher] Fetching reservations for date:', newValue);
+      console.log('[RoomIndicator] Fetching reservations for date:', newValue);
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
     }
   }, { deep: true });
-
 </script>
 
 <style scoped> 
