@@ -20,6 +20,19 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Reservation creation/editing interface
 - **Additional Notes**: This issue only occurs for multi-night reservations. Single night reservations work correctly.
 
+#### Bug #35: Duplicate Reservation Details for Same Room and Date
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Reservation ID `f73f1c35-2ed6-4503-8950-9764b4f7fc31` has duplicate dates for the same room with different plans, which should not be possible due to the unique constraint on the `reservation_details` table.
+- **Steps to Reproduce**:
+  1. Create a new reservation using the plan pattern
+  2. Use the period change function to modify the reservation dates
+  3. Check the reservation details in the database
+- **Expected Behavior**: The system should prevent duplicate room assignments for the same date
+- **Actual Behavior**: Multiple reservation details exist for the same room and date with different plans
+- **Environment**: Reservation modification using period change function
+- **Root Cause**: Likely in the period change function where it's not properly handling the cleanup of existing reservation details before adding new ones, causing duplicate entries for the same room and date with different plans
+
 ### August 12, 2025
 
 #### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
@@ -270,5 +283,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 13, 2025*
-*Total Bugs: 26* (last one #34)
+*Total Bugs: 27* (last one #35)
 *Total Feature Requests: 17* (last one #31)
