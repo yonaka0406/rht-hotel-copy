@@ -88,17 +88,18 @@
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <Select v-model="comboRow.room_type_id" :options="roomTypes" optionLabel="room_type_name"
-                                optionValue="room_type_id" fluid />
+                            <Select v-model="comboRow.vehicle_category_id" :options="vehicleCategories" optionLabel="name"
+                                optionValue="id" fluid />
                             <label>車両タイプ</label>
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <InputNumber v-model="comboRow.number_of_rooms" :min="1" :max="maxRoomNumber" fluid />
+                            <InputNumber v-model="comboRow.number_of_rooms" :min="1" :max="maxParkingSpots" fluid />
                             <label>台数</label>
                         </FloatLabel>
-                        <p class="text-xs text-gray-500">最大: {{ maxRoomNumber }}</p>
+                        <p class="text-xs text-gray-500" v-if="maxParkingSpots > 0">最大: {{ maxParkingSpots }}</p>
+                        <p class="text-xs text-red-500" v-else>選択された日付と車両タイプで利用可能な駐車スペースがありません</p>
                     </div>
                     <div class="col-span-1 mt-6">
                         
@@ -135,8 +136,8 @@
                                 {{ formatDate(slotProps.data.check_out) }}
                             </template>
                         </Column>
-                        <Column field="room_type_name" header="部屋タイプ" />
-                        <Column field="number_of_rooms" header="部屋数" />
+                        <Column field="room_type_name" header="部屋・車両" />
+                        <Column field="number_of_rooms" header="数量" />
                         <Column field="number_of_people" header="人数" />
                         <Column header="操作">
                             <template #body="slotProps">
@@ -284,9 +285,9 @@ const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useCli
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
-
-// Stores
 const waitlistStore = useWaitlistStore();
+import { useParkingStore } from '@/composables/useParkingStore';
+const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability } = useParkingStore();
 
 // Refs for props to pass to WaitlistDialog
 const waitlistDialogVisibleState = ref(false);
@@ -295,7 +296,6 @@ const waitlistInitialCheckInDate = ref('');
 const waitlistInitialCheckOutDate = ref('');
 const waitlistInitialNumberOfGuests = ref(1);
 const waitlistInitialNotes = ref('');
-
 
 // Helper function
 const formatDate = (date) => {
@@ -448,7 +448,8 @@ const comboRow = ref({
     room_type_id: null,
     number_of_rooms: numberOfRooms.value,
     number_of_people: numberOfPeople.value,
-    reservation_type: 'stay'
+    reservation_type: 'stay',
+    vehicle_category_id: 1
 });
 
 const checkDates = async () => {
@@ -542,12 +543,17 @@ const addReservationCombo = () => {
 
 const addParkingCombo = () => {
     comboRow.value.reservation_type = 'parking';
+    comboRow.value.number_of_people = null;
 
     console.log('addParkingCombo:',comboRow.value);
+    
+    // Find the selected vehicle category
+    const selectedVehicle = vehicleCategories.value.find(vc => vc.id === comboRow.value.vehicle_category_id);
+    const vehicleName = selectedVehicle ? selectedVehicle.name : '駐車場';
 
     reservationCombos.value.push({
         ...comboRow.value,
-        room_type_name: '駐車場',
+        room_type_name: `駐車場 (${vehicleName})`,
     });
 
     // Reset comboRow for the next addition
@@ -818,10 +824,30 @@ const goToEditReservationPage = async (reservation_id) => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
 };
 
+const maxParkingSpots = computed(async () => {
+  if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) return 0;
+  
+  try {
+    const response = await checkRealTimeAvailability(
+      selectedHotelId.value,
+      comboRow.value.vehicle_category_id,
+      [formatDate(new Date(comboRow.value.check_in)), formatDate(new Date(comboRow.value.check_out))],
+      null // excludeReservationId
+    );
+    
+    // Assuming the response has an available_spots property with the count
+    return response.available_spots || 0;
+  } catch (error) {
+    console.error('Failed to fetch parking spot availability:', error);
+    return 0;
+  }
+});
+
 onMounted(async () => {
     await fetchHotels();
     await fetchHotel();
     await checkDates();
+    await fetchVehicleCategories(); // Add this line to fetch vehicle categories
 
     comboRow.value.room_type_id = roomTypes.value[0].room_type_id;
     reservationDetails.value.hotel_id = selectedHotelId.value;
@@ -835,6 +861,15 @@ onMounted(async () => {
         }
         setClientsIsLoading(false);
     }
+});
+
+watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async () => {
+  if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
+    const maxSpots = await maxParkingSpots.value;
+    if (comboRow.value.number_of_rooms > maxSpots) {
+      comboRow.value.number_of_rooms = maxSpots;
+    }
+  }
 });
 
 watch(() => comboRow.value.number_of_rooms,
