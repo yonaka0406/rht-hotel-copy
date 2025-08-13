@@ -4,7 +4,6 @@
             <!-- Select Dates and Number of People -->
             <form @submit.prevent="addReservationCombo">
                 <div class="grid grid-cols-4 mb-4 mr-4 gap-2">
-
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
                             <DatePicker v-model="comboRow.check_in" :showIcon="true" iconDisplay="input"
@@ -28,7 +27,7 @@
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
-                        <!-- Smoking Preference UI removed -->
+                        
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
@@ -51,6 +50,58 @@
                             <label>人数</label>
                         </FloatLabel>
                         <p class="text-xs text-gray-500">最大: {{ maxCapacity }}</p>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <Button label="追加" severity="success" type="submit" />
+                    </div>
+                </div>
+            </form>
+
+            <Divider />
+            <span class="flex justify font-bold">駐車場利用フォーム</span>
+            <form @submit.prevent="addParkingCombo">
+                <div class="grid grid-cols-4 mb-4 mr-4 gap-2">
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <DatePicker v-model="comboRow.check_in" :showIcon="true" iconDisplay="input"
+                                dateFormat="yy-mm-dd" :selectOtherMonths="true" fluid
+                                @update:model-value="onDateChange" />
+                            <label>チェックイン</label>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <DatePicker v-model="comboRow.check_out" :showIcon="true" iconDisplay="input"
+                                dateFormat="yy-mm-dd" :selectOtherMonths="true" :minDate="minCheckOutDate" fluid
+                                @update:model-value="onDateChange" />
+                            <label>チェックアウト</label>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <InputNumber v-model="numberOfNights" variant="filled" fluid disabled />
+                            <label>利用日数</label>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <Select v-model="comboRow.room_type_id" :options="roomTypes" optionLabel="room_type_name"
+                                optionValue="room_type_id" fluid />
+                            <label>車両タイプ</label>
+                        </FloatLabel>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        <FloatLabel>
+                            <InputNumber v-model="comboRow.number_of_rooms" :min="1" :max="maxRoomNumber" fluid />
+                            <label>台数</label>
+                        </FloatLabel>
+                        <p class="text-xs text-gray-500">最大: {{ maxRoomNumber }}</p>
+                    </div>
+                    <div class="col-span-1 mt-6">
+                        
                     </div>
                     <div class="col-span-1 mt-6">
                         <Button label="追加" severity="success" type="submit" />
@@ -223,7 +274,7 @@ const router = useRouter();
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column } from 'primevue';
+import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column, Divider } from 'primevue';
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -396,7 +447,8 @@ const comboRow = ref({
     check_out: outDate.value,
     room_type_id: null,
     number_of_rooms: numberOfRooms.value,
-    number_of_people: numberOfPeople.value
+    number_of_people: numberOfPeople.value,
+    reservation_type: 'stay'
 });
 
 const checkDates = async () => {
@@ -473,7 +525,9 @@ const handleWaitlistSubmitted = () => {
 };
 
 const addReservationCombo = () => {
-    // console.log('addReservationCombo:',comboRow.value);
+    comboRow.value.reservation_type = 'stay';
+    
+    console.log('addReservationCombo:',comboRow.value);
     const roomType = roomTypes.value.find(rt => rt.room_type_id === comboRow.value.room_type_id);
     reservationCombos.value.push({
         ...comboRow.value,
@@ -485,6 +539,23 @@ const addReservationCombo = () => {
 
     validateCombos();
 };
+
+const addParkingCombo = () => {
+    comboRow.value.reservation_type = 'parking';
+
+    console.log('addParkingCombo:',comboRow.value);
+
+    reservationCombos.value.push({
+        ...comboRow.value,
+        room_type_name: '駐車場',
+    });
+
+    // Reset comboRow for the next addition
+    comboRow.value.number_of_rooms = 1;
+    comboRow.value.number_of_people = 1;
+
+    validateCombos();
+}
 
 // Table
 const reservationCombos = ref([]);
