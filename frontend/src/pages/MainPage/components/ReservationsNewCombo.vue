@@ -614,6 +614,11 @@ const validateCombos = () => {
         maxStayCheckOut = new Date(Math.max(...stayCombos.map(combo => new Date(combo.check_out))));
     }
 
+    // Calculate total requested parking spots
+    const totalRequestedParkingSpots = parkingCombos.reduce((total, combo) => {
+        return total + (parseInt(combo.number_of_rooms) || 0);
+    }, 0);
+
     // Validate stay reservations
     if (stayCombos.length > 0) {
         if (!availableRooms.value) {
@@ -673,21 +678,22 @@ const validateCombos = () => {
         if (stayCombos.length === 0) {
             validationErrors.value.push("駐車場の予約には宿泊予約が必要です。");
         } else {
+            // Check total parking spots against maxParkingSpots
+            if (totalRequestedParkingSpots > maxParkingSpots.value) {
+                validationErrors.value.push(`駐車場の利用可能台数を超えています。利用可能数: ${maxParkingSpots.value}, 合計要求数: ${totalRequestedParkingSpots}`);
+            }
+
+            // Validate individual parking combo dates
             parkingCombos.forEach((parkingCombo, index) => {
                 const parkingCheckIn = new Date(parkingCombo.check_in);
                 const parkingCheckOut = new Date(parkingCombo.check_out);
                 
                 // Check if parking dates are within stay dates
                 if (parkingCheckIn < minStayCheckIn) {
-                    validationErrors.push(`駐車場予約 ${index + 1} のチェックイン日が宿泊期間より前です。`);
+                    validationErrors.value.push(`駐車場予約 ${index + 1} のチェックイン日が宿泊期間より前です。`);
                 }
                 if (parkingCheckOut > maxStayCheckOut) {
-                    validationErrors.push(`駐車場予約 ${index + 1} のチェックアウト日が宿泊期間より後です。`);
-                }
-                
-                // Existing parking spot availability check
-                if (parkingCombo.number_of_rooms > maxParkingSpots.value) {
-                    validationErrors.value.push(`駐車場の利用可能台数を超えています。利用可能数: ${maxParkingSpots.value}, 要求数: ${parkingCombo.number_of_rooms}`);
+                    validationErrors.value.push(`駐車場予約 ${index + 1} のチェックアウト日が宿泊期間より後です。`);
                 }
             });
         }
@@ -721,8 +727,17 @@ const validateCombos = () => {
             const isOutsideStayDates = minStayCheckIn && maxStayCheckOut && 
                 (parkingCheckIn < minStayCheckIn || parkingCheckOut > maxStayCheckOut);
                 
-            combo.rowStyle = (combo.number_of_rooms > maxParkingSpots.value || isOutsideStayDates)
-                ? { backgroundColor: 'rgpa(255, 0, 0, 0.2)' }
+            // Check if this combo would exceed max parking spots when added
+            const otherParkingCombos = reservationCombos.value.filter(
+                c => c !== combo && c.reservation_type === 'parking'
+            );
+            const otherParkingSpots = otherParkingCombos.reduce(
+                (sum, c) => sum + (parseInt(c.number_of_rooms) || 0), 0
+            );
+            const wouldExceedMax = (otherParkingSpots + (parseInt(combo.number_of_rooms) || 0)) > maxParkingSpots.value;
+                
+            combo.rowStyle = (isOutsideStayDates || wouldExceedMax)
+                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
                 : {};
         }
     });
