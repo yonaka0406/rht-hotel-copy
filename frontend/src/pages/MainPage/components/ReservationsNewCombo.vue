@@ -824,10 +824,16 @@ const goToEditReservationPage = async (reservation_id) => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: reservation_id } });
 };
 
-const maxParkingSpots = computed(async () => {
-  if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) return 0;
+const maxParkingSpots = ref(0);
+
+const updateParkingSpots = async () => {
+  if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) {
+    maxParkingSpots.value = 0;
+    return;
+  }
   
   try {
+    console.log('[ReservationsNewCombo] checkRealTimeAvailability')
     const response = await checkRealTimeAvailability(
       selectedHotelId.value,
       comboRow.value.vehicle_category_id,
@@ -835,11 +841,25 @@ const maxParkingSpots = computed(async () => {
       null // excludeReservationId
     );
     
-    // Assuming the response has an available_spots property with the count
-    return response.available_spots || 0;
+    // Update to use the correct response structure
+    const availableSpots = response.fullyAvailableSpots?.length || 0;
+    maxParkingSpots.value = availableSpots;
+    
+    console.log('[ReservationsNewCombo] Available spots:', availableSpots);
+    
+    // Ensure the current value doesn't exceed the new max
+    if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
+      comboRow.value.number_of_rooms = maxParkingSpots.value;
+    }
   } catch (error) {
     console.error('Failed to fetch parking spot availability:', error);
-    return 0;
+    maxParkingSpots.value = 0;
+  }
+};
+
+watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async () => {
+  if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
+    await updateParkingSpots();
   }
 });
 
@@ -848,6 +868,7 @@ onMounted(async () => {
     await fetchHotel();
     await checkDates();
     await fetchVehicleCategories(); // Add this line to fetch vehicle categories
+    await updateParkingSpots();
 
     comboRow.value.room_type_id = roomTypes.value[0].room_type_id;
     reservationDetails.value.hotel_id = selectedHotelId.value;
@@ -861,15 +882,6 @@ onMounted(async () => {
         }
         setClientsIsLoading(false);
     }
-});
-
-watch(() => [comboRow.value.vehicle_category_id, comboRow.value.check_in, comboRow.value.check_out], async () => {
-  if (comboRow.value.vehicle_category_id && comboRow.value.check_in && comboRow.value.check_out) {
-    const maxSpots = await maxParkingSpots.value;
-    if (comboRow.value.number_of_rooms > maxSpots) {
-      comboRow.value.number_of_rooms = maxSpots;
-    }
-  }
 });
 
 watch(() => comboRow.value.number_of_rooms,
