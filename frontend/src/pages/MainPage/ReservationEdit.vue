@@ -150,6 +150,7 @@
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
+                parking_reservations.value = [];
             }
         });
 
@@ -177,23 +178,29 @@
                 reservation_details.value = reservationDetails.value.reservation;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                // Add fetchParkingData here
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
+                parking_reservations.value = [];
             }
         }
     });
     watch(reservationId, async (newVal, oldVal) => {
-        if(oldVal && newVal !== oldVal){
+        if (oldVal && newVal !== oldVal) {
             // console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
             await fetchReservation(newVal);
             if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                // Add fetchParkingData here too
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
+                parking_reservations.value = [];
             }
         }
         
