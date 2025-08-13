@@ -418,6 +418,7 @@ const maxCapacity = computed(() => {
 const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
 });
+const availableParkingSpots = ref([]);
 
 // Check if check-in date is today or in the future
 const isCheckInDateValid = computed(() => {
@@ -738,8 +739,8 @@ const validateCombos = () => {
 
             // Validate individual parking combo dates
             parkingCombos.forEach((parkingCombo, index) => {
-                const parkingCheckIn = new Date(parkingCombo.check_in);
-                const parkingCheckOut = new Date(parkingCombo.check_out);
+                const parkingCheckIn = formatDate(new Date(parkingCombo.check_in));
+                const parkingCheckOut = formatDate(new Date(parkingCombo.check_out));
 
                 // Check if parking dates are within stay dates
                 if (parkingCheckIn < minStayCheckIn) {
@@ -981,6 +982,8 @@ const submitReservation = async () => {
             throw new Error('Invalid response format from server');
         }
 
+        const hotelId = createdReservationDetails[0]?.hotel_id;
+
         // 2. Handle parking reservations if any
         const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
         if (parkingCombos.length > 0) {
@@ -988,22 +991,65 @@ const submitReservation = async () => {
             const reservationDetailIds = createdReservationDetails.map(detail => detail.id);
 
             // Create parking assignments for each parking combo
-            const assignments = parkingCombos.flatMap(parkingCombo => {
-                const assignment = {
-                    vehicle_category_id: parkingCombo.vehicle_category_id,
-                    check_in: parkingCombo.check_in,
-                    check_out: parkingCombo.check_out,
-                    number_of_vehicles: parkingCombo.number_of_rooms,
-                    status: 'reserved',
-                    created_by: reservation.created_by,
-                    updated_by: reservation.updated_by
-                };
+            const assignments = parkingCombos.flatMap((parkingCombo, index) => {
+                // Generate dates array from check_in to check_out (excluding check_out date)
+                const startDate = new Date(parkingCombo.check_in);
+                const endDate = new Date(parkingCombo.check_out);
+                const dates = [];
+                
+                // Set to start of day to avoid timezone issues
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(0, 0, 0, 0);
+                
+                // Generate dates up to but not including check_out date
+                for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+                    dates.push(formatDate(new Date(d)));
+                }
 
-                // Create one assignment per reservation detail (one per room)
-                return reservationDetailIds.map(detailId => ({
-                    ...assignment,
-                    reservation_detail_id: detailId
-                }));
+                // Create one assignment per vehicle
+                return Array(parkingCombo.number_of_vehicles || 1).fill().map((_, i) => {
+                    // Check if we have available spots
+                    if (!availableParkingSpots.value || availableParkingSpots.value.length === 0) {
+                        console.error('No available parking spots for assignment');
+                        return null; // Skip creating this assignment
+                    }
+                    console.log('availableParkingSpots', availableParkingSpots.value);
+
+                    const spotIndex = i % availableParkingSpots.value.length;
+                    const spot = availableParkingSpots.value[spotIndex];
+                    const spotId = spot?.spotId || null;
+
+                    if (!spot || !spot.spotId) {
+                        console.error('Invalid spot data:', spot);
+                        return null; // Skip creating this assignment if spot is invalid
+                    }
+                    
+                    // Create details array with corresponding reservation detail IDs for each date
+                    const details = dates.map((date, dateIndex) => {
+                        // Find the reservation detail that matches this date
+                        const detail = createdReservationDetails.find(d => 
+                            new Date(d.date).toISOString().split('T')[0] === date
+                        );
+                        
+                        return {
+                            id: detail?.id || reservationDetailIds[0], // Fallback to first ID if not found
+                            date: date
+                        };
+                    });
+                    
+                    return {
+                        id: `temp-${index}-${i}`,
+                        hotel_id: hotelId, // Using the correct hotel_id
+                        vehicleCategoryId: parkingCombo.vehicle_category_id,
+                        spotId: spotId,
+                        dates: dates,
+                        unitPrice: parkingCombo.price || 0,
+                        details: details,
+                        created_by: reservation.created_by,
+                        updated_by: reservation.updated_by,
+                        status: 'reserved'
+                    };
+                });
             });
 
             // Save all parking assignments
@@ -1040,6 +1086,7 @@ const maxParkingSpots = ref(0);
 const updateParkingSpots = async () => {
     if (!comboRow.value.vehicle_category_id || !comboRow.value.check_in || !comboRow.value.check_out) {
         maxParkingSpots.value = 0;
+        availableParkingSpots.value = [];
         return;
     }
 
@@ -1052,11 +1099,11 @@ const updateParkingSpots = async () => {
             null // excludeReservationId
         );
 
-        // Update to use the correct response structure
-        const availableSpots = response.fullyAvailableSpots?.length || 0;
-        maxParkingSpots.value = availableSpots;
+        // Store the available spots
+        availableParkingSpots.value = response.fullyAvailableSpots || [];
+        maxParkingSpots.value = availableParkingSpots.value.length;
 
-        console.log('[ReservationsNewCombo] Available spots:', availableSpots);
+        console.log('[ReservationsNewCombo] Available spots:', availableParkingSpots.value);
 
         // Ensure the current value doesn't exceed the new max
         if (comboRow.value.number_of_rooms > maxParkingSpots.value) {
@@ -1065,6 +1112,7 @@ const updateParkingSpots = async () => {
     } catch (error) {
         console.error('Failed to fetch parking spot availability:', error);
         maxParkingSpots.value = 0;
+        availableParkingSpots.value = [];
     }
 };
 
