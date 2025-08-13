@@ -254,6 +254,7 @@
 
       const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj) &&
         room.status !== 'block' &&
+        room.status !== 'checked_in' &&  // Exclude already checked-in rooms
         room.cancelled === null;
       
       console.log(`[RoomIndicator] Check-in today for room ${room.room_number}:`, isCheckInToday, {
@@ -275,11 +276,19 @@
         return false;
       }
       
-      return formatDate(checkOutDate) === formatDate(selectedDateObj) &&
-      room.status !== 'block' &&
-      room.cancelled === null;
+      const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj) &&
+        room.status === 'checked_in' &&  // Only include checked-in rooms
+        room.cancelled === null;
+      
+      console.log(`[RoomIndicator] Check-out today for room ${room.room_number}:`, isCheckOutToday, {
+        checkOutDate: formatDate(checkOutDate),
+        selectedDate: formatDate(selectedDateObj),
+        status: room.status,
+        cancelled: room.cancelled
+      });
+      
+      return isCheckOutToday;
     }) || [];
-
 
     const occupiedRooms = reservedRoomsDayView.value?.reservations?.filter((room) => {
       // Ensure check_in date is valid
@@ -320,10 +329,17 @@
       return room.status === 'block';
     }) || [];
 
-    const freeRooms = selectedHotelRooms.value?.filter((room) => 
-      room.room_for_sale_idc === true && !reservedRoomIds.has(room.room_id)
-    ) || [];
+    // Get all room IDs that are currently occupied, checking out today, or blocked
+    const reservedRoomIdsSet = new Set([
+      ...occupiedRooms.map(room => room.room_id),
+      ...checkOutToday.map(room => room.room_id),
+      ...blockedRooms.map(room => room.room_id)
+    ]);
 
+    const freeRooms = selectedHotelRooms.value?.filter((room) => 
+      room.room_for_sale_idc === true && 
+      !reservedRoomIdsSet.has(room.room_id)
+    ) || [];
 
     const result = [
       { title: '本日チェックイン待ち', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
