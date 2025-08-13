@@ -1175,6 +1175,7 @@ export function useReservationStore() {
         getReservationHotelId,
         getAvailableDatesForChange,
         fetchReservationClientIds,
+        setReservationIsUpdating,
         setReservationId,
         setReservationStatus,
         setReservationDetailStatus,

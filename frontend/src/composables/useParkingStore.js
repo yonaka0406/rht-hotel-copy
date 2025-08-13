@@ -1,7 +1,9 @@
 import { ref } from 'vue';
 import { useHotelStore } from './useHotelStore';
+import { useReservationStore } from './useReservationStore';
 
 const { selectedHotelId } = useHotelStore();
+const { setReservationIsUpdating } = useReservationStore();
 
 const vehicleCategories = ref([]);
 const parkingLots = ref([]);
@@ -292,6 +294,7 @@ export function useParkingStore() {
 
     // Parking Addon Assignment Methods
     const addParkingAddonWithSpot = async (reservationDetailId, addonData, spotId, dates, vehicleCategoryId) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch('/api/parking/addon-assignment', {
@@ -318,10 +321,13 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to add parking addon with spot', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
     const updateParkingAddonSpot = async (assignmentId, newSpotId, dates, vehicleCategoryId) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/parking/addon-assignment/${assignmentId}`, {
@@ -346,10 +352,13 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to update parking addon spot', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
     const removeParkingAddonWithSpot = async (assignmentId) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/parking/addon-assignment/${assignmentId}`, {
@@ -366,6 +375,8 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to remove parking addon with spot', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
@@ -391,6 +402,7 @@ export function useParkingStore() {
     };
 
     const saveParkingAssignments = async (reservationDetailIds, assignments) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch('/api/parking/reservations', {
@@ -411,11 +423,14 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to save parking assignments', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
     // Parking Reservation Management
     const deleteParkingReservation = async (reservationId) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch(`/api/reservation/parking/${reservationId}`, {
@@ -437,10 +452,13 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to delete parking reservation', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
     const deleteMultipleParkingReservations = async (reservationIds) => {
+        setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
             const response = await fetch('/api/reservation/parking/bulk-delete', {
@@ -466,6 +484,8 @@ export function useParkingStore() {
         } catch (error) {
             console.error('Failed to delete parking reservations', error);
             throw error;
+        } finally {
+            setReservationIsUpdating(false);
         }
     };
 
