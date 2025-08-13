@@ -346,15 +346,16 @@ const createReservationHold = async (req, res) => {
     }
 
     // Add reservation details to the database
+    const createdReservationDetails = [];
     for (const detail of reservationDetails) {
-      logger.warn(`[RES_CREATE] Inserting reservation detail`, detail);
-      await addReservationDetail(req.requestId, detail);
+      const createdDetail = await addReservationDetail(req.requestId, detail);
+      createdReservationDetails.push(createdDetail);
     }
 
     logger.warn(`[RES_CREATE] Reservation creation complete`, { reservation_id: newReservation.id });
     res.status(201).json({
       reservation: newReservation,
-      reservationDetails,
+      reservationDetails: createdReservationDetails,
     });
 
   } catch (err) {
@@ -530,13 +531,15 @@ const createHoldReservationCombo = async (req, res) => {
     }
 
     // Add reservation details to the database
+    const createdReservationDetails = [];
     for (const detail of reservationDetails) {
-      await addReservationDetail(req.requestId, detail);
+      const createdDetail = await addReservationDetail(req.requestId, detail);
+      createdReservationDetails.push(createdDetail);
     }
 
     res.status(201).json({
       reservation: newReservation,
-      reservationDetails,
+      reservationDetails: createdReservationDetails,
     });
 
   } catch (err) {
