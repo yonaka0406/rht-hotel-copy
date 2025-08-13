@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-### Changed
 - **Permissions**: Updated access control for the 仮ブロック (temporary block) function, changing the required permission level from database managers to all users with CRUD access.
 - **Room Indicator**: Fixed incorrect "Currently Staying" status display in `RoomIndicator.vue`. The component now properly shows guests as "滞在中" only after they have actually checked in, rather than on their scheduled check-in date.
 - **OTA Room Master**: Fixed XML parsing error when handling single room type in `otaRoomMaster.vue`. The code now properly handles both single and multiple room type responses from the API.
