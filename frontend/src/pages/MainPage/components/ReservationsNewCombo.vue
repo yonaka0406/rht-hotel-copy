@@ -889,14 +889,36 @@ const submitReservation = async () => {
         return;
     }
 
-    // console.log(reservationDetails.value, consolidatedCombos.value);
-    const reservation = await createHoldReservationCombo(reservationDetails.value, consolidatedCombos.value);
+    // Filter for only 'stay' type combos
+    const stayCombos = Object.fromEntries(
+        Object.entries(consolidatedCombos.value).filter(
+            ([_, combo]) => {
+                // Find the first combo with this room_type_id to check its type
+                const firstCombo = reservationCombos.value.find(c => 
+                    c.room_type_id === combo.room_type_id && c.reservation_type === 'stay'
+                );
+                return firstCombo !== undefined;
+            }
+        )
+    );
+
+    // Only proceed if there are stay combos
+    if (Object.keys(stayCombos).length === 0) {
+        toast.add({
+            severity: 'warn',
+            summary: '注意',
+            detail: '宿泊予約がありません。宿泊予約を追加してください。',
+            life: 3000,
+        });
+        return;
+    }
+
+    const reservation = await createHoldReservationCombo(reservationDetails.value, stayCombos);
     toast.add({ severity: 'success', summary: '成功', detail: '保留中予約作成されました。', life: 3000 });
     await fetchMyHoldReservations();
     await goToEditReservationPage(reservation.reservation.id);
     reservationCombos.value = [];
     closeDialog();
-
 };
 const goToEditReservationPage = async (reservation_id) => {
     await setReservationId(reservation_id);
