@@ -152,7 +152,7 @@
   const router = useRouter();
   
   
-  //Websocket
+  // Websocket
   import io from 'socket.io-client';
   const socket = ref(null);
   
@@ -182,7 +182,6 @@
   // Helper function
   const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.warn("Invalid Date object:", date);
       return "";
     }
     const year = date.getFullYear();
@@ -223,7 +222,6 @@
     return dates;
   };
   const appendDaysToRange = async (direction) => {
-    // console.log('appendDaysToRange calls fetchReservations', oldMinDate, oldMaxDate);
   
     if (direction === "up") {
       const oldMinDateValue = minDate.value;
@@ -262,24 +260,16 @@
   // Fetch reserved spots data
   const tempParkingReservations = ref(null);
   const fetchParkingReservationsLocal = async (startDate, endDate) => {
-    debugData('🚀 fetchParkingReservationsLocal called with:', { startDate, endDate });
-    try {
+  
       if (!startDate && !endDate) {
-        debugWarn('No date range provided to fetchParkingReservationsLocal');
         return;
       }
       
-      debugData('📡 Fetching reserved parking spots from API...');
       await fetchReservedParkingSpots(
         selectedHotelId.value,
         startDate,
         endDate
       );
-      
-      debugData('📥 Raw API response (reservedParkingSpots):', {
-        count: reservedParkingSpots.value?.length || 0,
-        sample: reservedParkingSpots.value?.slice(0, 2)
-      });
       
       if (Array.isArray(reservedParkingSpots.value)) {
         // Create a map of existing reservations for faster lookup
@@ -305,17 +295,9 @@
         
         tempParkingReservations.value = mergedReservations;
         
-        debugData('✅ Merge completed', {
-          totalReservations: mergedReservations.length,
-          newReservationsAdded: newReservationsCount
-        });
       } else {
-        debugWarn('No valid reservations data received');
         tempParkingReservations.value = [];
       }
-    } catch (error) {
-      debugError('❌ Error in fetchParkingReservationsLocal:', error);
-    }
   };
   
   // Hash map for faster lookups
@@ -358,7 +340,6 @@
   // Fill & Format the table 
   const isSpotReserved = (spotId, date) => {
     if (!tempParkingReservations.value) {
-      debugVerbose('isSpotReserved: No tempParkingReservations available');
       return false;
     }
     
@@ -370,7 +351,6 @@
   };
   const fillSpotInfo = (spotId, date) => {
     if (!tempParkingReservations.value) {
-      debugVerbose('fillSpotInfo: No tempParkingReservations available');
       return { status: 'available', client_name: '', reservation_id: null, booker_name: '' };
     }
     
@@ -381,8 +361,6 @@
     });
     
     if (reservation) {
-      debugVerbose(`fillSpotInfo found reservation for spot ${spotId} on ${formattedDate}:`, reservation);
-      // Return reservation data including booker name and use the reservation status
       return {
         status: reservation.status || 'reserved',  // Use the status from reservation, default to 'reserved'
         client_name: reservation.client_name || '',
@@ -391,7 +369,6 @@
         ...reservation  // Spread all other reservation properties
       };
     } else {
-      debugVerbose(`No reservation found for spot ${spotId} on ${formattedDate}`);
     }
     
     return { 
@@ -523,7 +500,6 @@
   };
   const applyChanges = async () => {
   
-    // console.log("Updated Reservations:", tempParkingData.value);
     // TODO: Implement setParkingCalendarFreeChange in useParkingStore
     // await setParkingCalendarFreeChange(tempParkingData.value);
   
@@ -533,7 +509,6 @@
     hasChanges.value = false;
   };
   const startDrag = (event, spotId, date) => {
-    // console.log('startDrag')
     const reservation = fillSpotInfo(spotId, date);
     if (reservation.reservation_id) {
       draggingReservation.value = true;
@@ -634,7 +609,6 @@
   const dragFrom = ref({ reservation_id: null, spot_id: null, spot_number: null, parking_lot_name: null, number_of_people: null, check_in: null, check_out: null, days: null });
   const dragTo = ref({ spot_id: null, spot_number: null, parking_lot_name: null, capacity: null, check_in: null, check_out: null });
   const onDragStart = async (event, spotId, date) => {
-    // console.log('onDragStart')
     dragFrom.value = null;
   
     const reservation_id = fillSpotInfo(spotId, date).reservation_id;
@@ -648,15 +622,12 @@
       const number_of_people = fillSpotInfo(spotId, date).number_of_people;
       const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
       dragFrom.value = { reservation_id, spot_id, spot_number, parking_lot_name, number_of_people, check_in, check_out, days };
-  
-      // console.log('dragFrom',dragFrom.value)
     } else {
       return;
     }
   
   };
   const onDrop = (event, spotId, date) => {
-    // console.log('Drop');
     if (!dragFrom.value) {
       return;
     }
@@ -699,7 +670,6 @@
     } else if (!checkForConflicts(from, to)) {
       showConfirmationPrompt();
     } else {
-      // console.log('Conflict found');
       toast.add({ severity: 'error', summary: 'エラー', detail: '予約が重複しています。', life: 3000 });
     }
   };
@@ -757,7 +727,6 @@
     });
   };
   const checkForConflicts = (from, to) => {
-    //console.log('Checking for conflicts...');
     const fromDates = [];
     for (let dt = new Date(from.check_in); dt < new Date(from.check_out); dt.setDate(dt.getDate() + 1)) {
       fromDates.push(formatDate(dt));
@@ -811,69 +780,52 @@
   
   // Mount
   onMounted(async () => {
-    debugVerbose('Component mounted, initializing data...');
-    
-    // Initialize Socket.IO connection
-    isLoading.value = true;
-    socket.value = io(import.meta.env.VITE_BACKEND_URL);
+    console.log('[ParkingCalendar] onMounted start');
+    try {
+      isLoading.value = true;
 
-    socket.value.on('connect', () => {
-      debugVerbose('Connected to WebSocket server');
-    });
+      socket.value = io(import.meta.env.VITE_BACKEND_URL);
+      
+      socket.value.on('connect', () => {
+        // console.log('Connected to server');
+      });      
 
-    socket.value.on('tableUpdate', async (data) => {
-      if (isUpdating.value) {
-        debugVerbose('Skipping fetchReservation because update is still running');
-        return;
+      socket.value.on('tableUpdate', async (data) => {
+        // Prevent fetching if bulk update is in progress
+        if (isUpdating.value) {
+          console.log('Skipping fetchParkingReservationsLocal because update is still running');
+          return;
+        }
+        
+        console.log('[ParkingCalendar] Refreshing parking data...');
+        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      });
+            
+      
+      await fetchHotels();
+      await fetchHotel();
+      allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
+
+      // Set up initial date range
+      const today = new Date();
+      const initialMinDate = new Date(today);
+      initialMinDate.setDate(initialMinDate.getDate() - 10);
+      const initialMaxDate = new Date(today);
+      initialMaxDate.setDate(initialMaxDate.getDate() + 40);
+      minDate.value = initialMinDate;
+      maxDate.value = initialMaxDate;
+      dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
+
+      // Load initial data
+      if (dateRange.value && dateRange.value.length > 0) {
+        await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
-      debugVerbose('Received table update:', data);
-      await fetchReservedParkingSpots(selectedHotelId.value, dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-    });
 
-    // Initialize data
-    await fetchHotels();
-    await fetchHotel();
-    allParkingSpots.value = await fetchAllParkingSpotsByHotel(selectedHotelId.value);
-
-    // Set up initial date range
-    const today = new Date();
-    const initialMinDate = new Date(today);
-    initialMinDate.setDate(initialMinDate.getDate() - 10);
-    const initialMaxDate = new Date(today);
-    initialMaxDate.setDate(initialMaxDate.getDate() + 40);
-    minDate.value = initialMinDate;
-    maxDate.value = initialMaxDate;
-    dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
-
-    // Load initial data
-    if (dateRange.value && dateRange.value.length > 0) {
-      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-    }
-
-    // Log initial state
-    debugVerbose('Initial allParkingSpots:', JSON.parse(JSON.stringify(allParkingSpots.value)));
-    debugVerbose('Initial dateRange:', dateRange.value);
-    
-    // Log sample data for debugging
-    if (allParkingSpots.value.length > 0 && dateRange.value.length > 0) {
-      const sampleSpot = allParkingSpots.value[0];
-      const sampleDate = dateRange.value[0];
-      debugVerbose('Sample spot check - first spot:', sampleSpot);
-      debugVerbose(`Is spot ${sampleSpot.id} reserved on ${sampleDate}?`, isSpotReserved(sampleSpot.id, sampleDate));
-      debugVerbose('Spot info:', fillSpotInfo(sampleSpot.id, sampleDate));
-    }
-
-    // Set up scroll position
-    await nextTick();
-    const tableContainer = document.querySelector(".table-container");
-    if (tableContainer) {
-      const totalScrollHeight = tableContainer.scrollHeight;
-      const scrollPosition = totalScrollHeight / 5;
-      tableContainer.scrollTop = scrollPosition;
-      tableContainer.addEventListener("scroll", handleScroll);
-    }
-    
-    isLoading.value = false;
+      isLoading.value = false;
+      } catch (error) {
+        console.error('[ParkingCalendar] Error initializing data:', error);
+        isLoading.value = false;
+      }
   });
 
   onUnmounted(() => {
@@ -905,7 +857,7 @@
     }
   }, { immediate: true });
   watch(centerDate, async (newVal, oldVal) => {
-    // console.log("centerDate changed:",newVal);
+  
     isLoading.value = true;
   
     const today = newVal;
@@ -916,7 +868,12 @@
     minDate.value = initialMinDate;
     maxDate.value = initialMaxDate;
     dateRange.value = generateDateRange(initialMinDate, initialMaxDate);
-    await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+
+    // Load initial data
+    if (dateRange.value && dateRange.value.length > 0) {
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    }
+
     isLoading.value = false;
     // Scroll to the row for the selected date after table is rendered
     nextTick(() => {
@@ -926,11 +883,11 @@
         const rows = tableContainer.querySelectorAll('tbody tr');
         let targetRow = null;
         // Calculate the day before
-        const selectedDate = new Date(newVal);
+        const selectedDate = new Date(centerDate.value);
         const prevDate = new Date(selectedDate);
         prevDate.setDate(selectedDate.getDate() - 1);
         const prevDateStr = formatDateWithDay(prevDate);
-        const selectedDateStr = formatDateWithDay(newVal);
+        const selectedDateStr = formatDateWithDay(centerDate.value);
         rows.forEach(row => {
           const dateCell = row.querySelector('td');
           if (dateCell && dateCell.textContent && dateCell.textContent.includes(prevDateStr)) {
@@ -960,22 +917,25 @@
   const reservationId = ref(null);
   const selectedSpot = ref(null);
 
+  watch(drawerVisible, async (newVal, oldVal) => {
+    if (newVal === false) {
+      // Refresh data when drawer is closed
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+    }
+  });
+
   const goToReservation = () => {
     router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
   };
 
   const handleCellDoubleClick = (spot, date) => {
     const spotInfo = fillSpotInfo(spot.id, date);
-    console.log('handleCellDoubleClick - spotInfo:', spotInfo); // Debug log
     
     if (spotInfo && spotInfo.reservation_id) {
-      console.log('Opening drawer for reservation:', spotInfo.reservation_id); // Debug log
       reservationId.value = spotInfo.reservation_id;
       selectedSpot.value = spot;
       drawerVisible.value = true;
-      console.log('drawerVisible set to:', drawerVisible.value); // Debug log
     } else {
-      console.log('No reservation found for spot', spot.id, 'on', date); // Debug log
     }
   };
   </script>
