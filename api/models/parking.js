@@ -632,10 +632,16 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
                 throw new Error('hotel_id is required in the assignment object');
             }
             
-            // We should only have one detail ID per assignment
-            const detailId = reservationDetailIds[0];
-            
-            for (const date of assignment.dates) {
+            // For each date in the assignment, find the corresponding reservation detail ID
+            for (let i = 0; i < assignment.dates.length; i++) {
+                const date = assignment.dates[i];
+                // Get the corresponding detail ID for this date
+                const detailId = reservationDetailIds.find(id => {
+                    // Find the reservation detail that matches this date
+                    const detail = assignment.details?.find(d => d.date === date);
+                    return detail?.id === id || false;
+                }) || reservationDetailIds[0]; // Fallback to first ID if no match found
+                
                 const addonRes = await client.query(
                     `INSERT INTO reservation_addons (
                         hotel_id,
