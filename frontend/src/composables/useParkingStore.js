@@ -157,8 +157,6 @@ export function useParkingStore() {
         }
     };
 
-    // ... similarly for create, update, delete parking spots
-
     const fetchReservedParkingSpots = async (hotelId, startDate, endDate) => {
         try {
             const authToken = localStorage.getItem('authToken');

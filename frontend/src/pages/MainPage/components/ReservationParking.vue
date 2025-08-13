@@ -326,13 +326,19 @@ const openParkingSpotsDialog = (roomId, roomName) => {
 const onParkingSave = async (saveData) => {
     loading.value = true;
     try {
-        // console.log('[ReservationParking] onParkingSave received saveData:', JSON.parse(JSON.stringify(saveData)));
-        
-        const reservationDetailIds = props.reservationDetails.map(d => d.id);
-        if (!reservationDetailIds.length) {
+        if (!props.reservationDetails || props.reservationDetails.length === 0) {
             throw new Error('Reservation details are not available.');
         }
-        // console.log('[ReservationParking] onParkingSave Reservation Detail IDs:', reservationDetailIds);
+        
+        const hotelId = props.reservationDetails[0].hotel_id;
+        if (!hotelId) {
+            throw new Error('Hotel ID is not available in reservation details.');
+        }
+
+        const reservationDetailIds = props.reservationDetails.map(d => d.id);
+        if (!reservationDetailIds.length) {
+            throw new Error('No reservation detail IDs available.');
+        }
 
         let assignmentsToSave = [];
         const dates = saveData.details ? saveData.details.map(d => d.date) : [];
@@ -340,44 +346,40 @@ const onParkingSave = async (saveData) => {
         const comment = saveData.comment || '';
 
         if (isEditMode.value) {
-            // For updates, we need to include the existing assignment with updated fields
-            assignmentsToSave = parkingAssignments.value.map(a => 
-                a.id === editingAssignmentId.value 
-                ? { 
-                    ...a,
-                    ...saveData, // Spread all saveData to include addon info
+            // For updates, only include the assignment being edited
+            const existingAssignment = parkingAssignments.value.find(a => a.id === editingAssignmentId.value);
+            if (existingAssignment) {
+                assignmentsToSave = [{
+                    ...existingAssignment,
+                    ...saveData,
+                    hotel_id: hotelId,
                     spotId: saveData.spotId,
                     vehicleCategoryId: saveData.vehicleCategoryId,
                     unitPrice: unitPrice,
                     comment: comment,
                     dates: dates,
-                    totalPrice: unitPrice * dates.length
-                  }
-                : a
-            );
+                    totalPrice: unitPrice * dates.length,
+                    updated_at: new Date().toISOString()
+                }];
+            }
         } else {
-            // For new assignments
-            const newAssignment = {
+            // For new assignments, only create new ones without including existing ones
+            assignmentsToSave = [{
                 id: `temp-${Date.now()}`,
-                ...saveData, // Spread all saveData to include addon info
+                hotel_id: hotelId,
+                ...saveData,
                 spotId: saveData.spotId,
                 vehicleCategoryId: saveData.vehicleCategoryId,
                 unitPrice: unitPrice,
                 comment: comment,
                 dates: dates,
                 totalPrice: unitPrice * dates.length,
-                createdAt: new Date().toISOString()
-            };
-            assignmentsToSave = [...parkingAssignments.value, newAssignment];
+                created_by: 'system',
+                updated_by: 'system',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }];
         }
-
-        // console.log('[ReservationParking] Prepared assignmentsToSave:', JSON.parse(JSON.stringify(assignmentsToSave)));
-        /*
-        console.log('[ReservationParking] Calling parkingStore.saveParkingAssignments with:', {
-            reservationDetailIds,
-            assignments: assignmentsToSave
-        });
-        */
 
         await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
         
