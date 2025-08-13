@@ -157,13 +157,13 @@
     const parseXmlResponse = (data) => {
         const returnData = data['S:Envelope']['S:Body']['ns2:executeResponse']['return'];
 
-        const rmTypeList = returnData.rmTypeList;
-        const netRmTypeGroupList = returnData.netRmTypeGroupList;
-        const netAgtRmTypeList = returnData.netAgtRmTypeList;
-
-        // console.log('rmTypeList', rmTypeList);
-        // console.log('netRmTypeGroupList', netRmTypeGroupList);
-        // console.log('netAgtRmTypeList', netAgtRmTypeList);
+        // Ensure these are always arrays
+        const rmTypeList = Array.isArray(returnData.rmTypeList) ? returnData.rmTypeList : 
+                         returnData.rmTypeList ? [returnData.rmTypeList] : [];
+        const netRmTypeGroupList = Array.isArray(returnData.netRmTypeGroupList) ? returnData.netRmTypeGroupList :
+                                 returnData.netRmTypeGroupList ? [returnData.netRmTypeGroupList] : [];
+        const netAgtRmTypeList = Array.isArray(returnData.netAgtRmTypeList) ? returnData.netAgtRmTypeList :
+                               returnData.netAgtRmTypeList ? [returnData.netAgtRmTypeList] : [];
 
         const getGroupName = (groupCode) => {
             const group = netRmTypeGroupList?.find((g) => g.netRmTypeGroupCode == groupCode);
@@ -176,23 +176,20 @@
 
         const rooms = [];
         
-        if (Array.isArray(netAgtRmTypeList)) {
-            netAgtRmTypeList.forEach((item) => {
-                rooms.push({
-                    hotel_id: props.hotel_id,
-                    rmtypecode: item.rmTypeCode,
-                    rmtypename: getTypeName(item.rmTypeCode),
-                    netrmtypegroupcode: item.netRmTypeGroupCode,
-                    netrmtypegroupname: getGroupName(item.netRmTypeGroupCode),
-                    agtcode: item.agtCode,
-                    netagtrmtypecode: item.netAgtRmTypeCode,
-                    netagtrmtypename: item.netAgtRmTypeName,
-                    isstockadjustable: item.isStockAdjustable,
-                    lincolnuseflag: item.lincolnUseFlag,
-                    
-                });
+        netAgtRmTypeList.forEach((item) => {
+            rooms.push({
+                hotel_id: props.hotel_id,
+                rmtypecode: item.rmTypeCode,
+                rmtypename: getTypeName(item.rmTypeCode),
+                netrmtypegroupcode: item.netRmTypeGroupCode,
+                netrmtypegroupname: getGroupName(item.netRmTypeGroupCode),
+                agtcode: item.agtCode,
+                netagtrmtypecode: item.netAgtRmTypeCode,
+                netagtrmtypename: item.netAgtRmTypeName,
+                isstockadjustable: item.isStockAdjustable,
+                lincolnuseflag: item.lincolnUseFlag,
             });
-        }
+        });
 
         return rooms;
     };
@@ -207,4 +204,3 @@
     });
 
 </script>
-
