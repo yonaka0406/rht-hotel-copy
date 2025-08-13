@@ -120,7 +120,7 @@
                         <p v-for="(error, index) in validationErrors" :key="index">{{ error }}</p>
                     </div>
                     <div class="flex gap-2 mt-2">
-                        <Button v-if="reservationCombos.length > 0 && validationErrors.length === 0" label="新規予約"
+                        <Button v-if="hasStayReservation && validationErrors.length === 0" label="新規予約"
                             icon="pi pi-calendar" @click="openDialog" />
                     </div>
                 </template>
@@ -600,69 +600,104 @@ const deleteCombo = (combo) => {
 };
 const validateCombos = () => {
     validationErrors.value = [];
-    if (!availableRooms.value) {
-        validationErrors.value.push("利用可能な部屋のデータがありません。日付を確認してください。");
-        return;
-    }
+    
+    // Separate parking and stay combos
+    const parkingCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'parking');
+    const stayCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'stay');
 
-    // Reverted: Validation based on general for_sale rooms
-    const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
+    // Validate stay reservations
+    if (stayCombos.length > 0) {
+        if (!availableRooms.value) {
+            validationErrors.value.push("利用可能な部屋のデータがありません。日付を確認してください。");
+            return;
+        }
 
-    for (const roomTypeIdStr in consolidatedCombos.value) {
-        const roomTypeId = parseInt(roomTypeIdStr, 10);
-        const combo = consolidatedCombos.value[roomTypeId];
-
-        const roomsOfThisType = forSaleRooms.filter(
-            room => room.room_type_id === roomTypeId
-        );
-
-        const availableRoomCount = roomsOfThisType.length;
-        const availableRoomsForCapacity = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
-
-        if (combo.totalRooms > availableRoomCount) {
-            // Error message no longer mentions smoking preference
-            validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
-        } else {
-            let peopleToAssign = combo.totalPeople;
-            let roomsUsedCount = 0;
-            for (const capacity of availableRoomsForCapacity) {
-                if (roomsUsedCount >= combo.totalRooms) break;
-                if (peopleToAssign <= 0) break;
-                peopleToAssign -= capacity;
-                roomsUsedCount++;
+        const forSaleRooms = availableRooms.value.filter(room => room.for_sale);
+        
+        // Group by room type for consolidated validation
+        const roomTypeGroups = stayCombos.reduce((acc, combo) => {
+            if (!acc[combo.room_type_id]) {
+                acc[combo.room_type_id] = {
+                    room_type_id: combo.room_type_id,
+                    room_type_name: combo.room_type_name,
+                    totalRooms: 0,
+                    totalPeople: 0
+                };
             }
-            if (peopleToAssign > 0) {
-                // Error message no longer mentions smoking preference
-                validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の人数が部屋のキャパシティを超えています。`);
+            acc[combo.room_type_id].totalRooms += combo.number_of_rooms;
+            acc[combo.room_type_id].totalPeople += combo.number_of_people;
+            return acc;
+        }, {});
+
+        // Validate each room type group
+        for (const roomTypeIdStr in roomTypeGroups) {
+            const roomTypeId = parseInt(roomTypeIdStr, 10);
+            const combo = roomTypeGroups[roomTypeId];
+
+            const roomsOfThisType = forSaleRooms.filter(
+                room => room.room_type_id === roomTypeId
+            );
+
+            const availableRoomCount = roomsOfThisType.length;
+            const availableRoomsForCapacity = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
+
+            if (combo.totalRooms > availableRoomCount) {
+                validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の部屋数が不足しています。利用可能数: ${availableRoomCount}, 要求数: ${combo.totalRooms}`);
+            } else {
+                let peopleToAssign = combo.totalPeople;
+                let roomsUsedCount = 0;
+                for (const capacity of availableRoomsForCapacity) {
+                    if (roomsUsedCount >= combo.totalRooms) break;
+                    if (peopleToAssign <= 0) break;
+                    peopleToAssign -= capacity;
+                    roomsUsedCount++;
+                }
+                if (peopleToAssign > 0) {
+                    validationErrors.value.push(`部屋タイプ ${combo.room_type_name} の人数が部屋のキャパシティを超えています。`);
+                }
             }
         }
     }
 
-    reservationCombos.value.forEach(individualCombo => {
-        const roomsOfThisType = forSaleRooms.filter(
-            room => room.room_type_id === individualCombo.room_type_id
-        );
-        const availableRoomCount = roomsOfThisType.length;
-        const availableCaps = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
+    // Validate parking reservations
+    if (parkingCombos.length > 0) {
+        parkingCombos.forEach(parkingCombo => {
+            if (parkingCombo.number_of_rooms > maxParkingSpots.value) {
+                validationErrors.value.push(`駐車場の利用可能台数を超えています。利用可能数: ${maxParkingSpots.value}, 要求数: ${parkingCombo.number_of_rooms}`);
+            }
+        });
+    }
 
-        let peopleRemaining = individualCombo.number_of_people;
-        let roomsUsed = 0;
-        for (const cap of availableCaps) {
-            if (roomsUsed >= individualCombo.number_of_rooms) break;
-            peopleRemaining -= cap;
-            roomsUsed++;
-            if (peopleRemaining <= 0) break;
-        }
+    // Update row styles for visual feedback
+    reservationCombos.value.forEach(combo => {
+        if (combo.reservation_type === 'stay') {
+            const roomsOfThisType = availableRooms.value?.filter(
+                room => room.room_type_id === combo.room_type_id && room.for_sale
+            ) || [];
+            
+            const availableRoomCount = roomsOfThisType.length;
+            const availableCaps = roomsOfThisType.map(r => r.capacity).sort((a, b) => b - a);
 
-        if (individualCombo.number_of_rooms > availableRoomCount || peopleRemaining > 0) {
-            individualCombo.rowStyle = { backgroundColor: 'rgba(255, 0, 0, 0.2)' };
-        } else {
-            individualCombo.rowStyle = {};
+            let peopleRemaining = combo.number_of_people;
+            let roomsUsed = 0;
+            for (const cap of availableCaps) {
+                if (roomsUsed >= combo.number_of_rooms) break;
+                peopleRemaining -= cap;
+                roomsUsed++;
+                if (peopleRemaining <= 0) break;
+            }
+
+            combo.rowStyle = (combo.number_of_rooms > availableRoomCount || peopleRemaining > 0) 
+                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' } 
+                : {};
+        } else if (combo.reservation_type === 'parking') {
+            combo.rowStyle = combo.number_of_rooms > maxParkingSpots.value
+                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
+                : {};
         }
     });
 };
 
-// Dialog
 const dialogVisible = ref(false);
 
 const reservationDetails = ref({
@@ -905,4 +940,8 @@ watch(() => selectedHotelId.value,
         reservationDetails.value.hotel_id = selectedHotelId.value;
     }
 );
+
+const hasStayReservation = computed(() => {
+  return reservationCombos.value.some(combo => combo.reservation_type === 'stay');
+});
 </script>
