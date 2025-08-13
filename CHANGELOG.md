@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Fixed
-- **OTA Room Master**: Fixed XML parsing error when handling single room type in `otaRoomMaster.vue`. The code now properly handles both single and multiple room type responses from the API. (Bug #123)
+- **OTA Room Master**: Fixed XML parsing error when handling single room type in `otaRoomMaster.vue`. The code now properly handles both single and multiple room type responses from the API.
 
 ---
 ## Future Releases
