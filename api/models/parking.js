@@ -548,7 +548,7 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
         const getAddonsQuery = {
             text: `SELECT id, reservation_addon_id 
                    FROM reservation_parking 
-                   WHERE id = ANY($1::uuid[])`,
+                   WHERE reservation_addon_id = ANY($1::uuid[])`,
             values: [assignmentIds]
         };
         
@@ -571,7 +571,7 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
 
         // First delete the parking assignments
         const deleteParkingQuery = {
-            text: 'DELETE FROM reservation_parking WHERE id = ANY($1::uuid[]) RETURNING *',
+            text: 'DELETE FROM reservation_parking WHERE reservation_addon_id = ANY($1::uuid[]) RETURNING *',
             values: [assignmentIds]
         };
         console.log('Deleting parking assignments with query:', deleteParkingQuery);
