@@ -225,10 +225,10 @@
 
   // Computed
   const roomGroups = computed(() => {
-    console.log('[RoomIndicator] Calculating roomGroups');
-    console.log('[RoomIndicator] selectedDate:', selectedDate.value);
-    console.log('[RoomIndicator] reservedRoomsDayView:', reservedRoomsDayView.value);
-    console.log('[RoomIndicator] selectedHotelRooms:', selectedHotelRooms.value);
+    // console.log('[RoomIndicator] Calculating roomGroups');
+    // console.log('[RoomIndicator] selectedDate:', selectedDate.value);
+    // console.log('[RoomIndicator] reservedRoomsDayView:', reservedRoomsDayView.value);
+    // console.log('[RoomIndicator] selectedHotelRooms:', selectedHotelRooms.value);
 
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
@@ -241,14 +241,14 @@
         ?.filter(room => room.cancelled === null)
         ?.map((res) => res.room_id) || []
     );
-    console.log('[RoomIndicator] reservedRoomIds:', reservedRoomIds);
+    // console.log('[RoomIndicator] reservedRoomIds:', reservedRoomIds);
 
     const checkInToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
       const checkInDate = new Date(room.check_in);
       
       // Ensure checkInDate is a valid Date object
       if (isNaN(checkInDate.getTime())) {
-        console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
+        // console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
         return false;
       }
 
@@ -257,12 +257,12 @@
         room.status !== 'checked_in' &&  // Exclude already checked-in rooms
         room.cancelled === null;
       
-      console.log(`[RoomIndicator] Check-in today for room ${room.room_number}:`, isCheckInToday, {
-        checkInDate: formatDate(checkInDate),
-        selectedDate: formatDate(selectedDateObj),
-        status: room.status,
-        cancelled: room.cancelled
-      });
+      // console.log(`[RoomIndicator] Check-in today for room ${room.room_number}:`, isCheckInToday, {
+      //   checkInDate: formatDate(checkInDate),
+      //   selectedDate: formatDate(selectedDateObj),
+      //   status: room.status,
+      //   cancelled: room.cancelled
+      // });
       
       return isCheckInToday;
     }) || [];
@@ -272,7 +272,7 @@
       
       // Ensure checkOutDate is a valid Date object
       if (isNaN(checkOutDate.getTime())) {
-        console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
+        // console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
         return false;
       }
       
@@ -280,12 +280,12 @@
         room.status === 'checked_in' &&  // Only include checked-in rooms
         room.cancelled === null;
       
-      console.log(`[RoomIndicator] Check-out today for room ${room.room_number}:`, isCheckOutToday, {
-        checkOutDate: formatDate(checkOutDate),
-        selectedDate: formatDate(selectedDateObj),
-        status: room.status,
-        cancelled: room.cancelled
-      });
+      // console.log(`[RoomIndicator] Check-out today for room ${room.room_number}:`, isCheckOutToday, {
+      //   checkOutDate: formatDate(checkOutDate),
+      //   selectedDate: formatDate(selectedDateObj),
+      //   status: room.status,
+      //   cancelled: room.cancelled
+      // });
       
       return isCheckOutToday;
     }) || [];
@@ -294,14 +294,14 @@
       // Ensure check_in date is valid
       const checkInDate = new Date(room.check_in);
       if (isNaN(checkInDate.getTime())) {
-        console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
+        // console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
         return false;
       }
 
       // Ensure check_out date is valid
       const checkOutDate = new Date(room.check_out);
       if (isNaN(checkOutDate.getTime())) {
-        console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
+        // console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
         return false;
       }          
 
@@ -313,14 +313,14 @@
         && room.status === 'checked_in'  // Only include checked-in guests
         && room.status !== 'block';
 
-      console.log(`[RoomIndicator] Room ${room.room_number} occupied check:`, {
-        isOccupied,
-        checkInDate: formatDate(checkInDate),
-        checkOutDate: formatDate(checkOutDate),
-        selectedDate: formatDate(selectedDateObj),
-        status: room.status,
-        cancelled: room.cancelled
-      });
+      // console.log(`[RoomIndicator] Room ${room.room_number} occupied check:`, {
+      //   isOccupied,
+      //   checkInDate: formatDate(checkInDate),
+      //   checkOutDate: formatDate(checkOutDate),
+      //   selectedDate: formatDate(selectedDateObj),
+      //   status: room.status,
+      //   cancelled: room.cancelled
+      // });
 
       return isOccupied;
     }) || [];
@@ -341,6 +341,14 @@
       !reservedRoomIdsSet.has(room.room_id)
     ) || [];
 
+    // console.log('[RoomIndicator] Room groups result:', {
+    //   checkInToday: checkInToday.length,
+    //   checkOutToday: checkOutToday.length,
+    //   occupiedRooms: occupiedRooms.length,
+    //   freeRooms: freeRooms.length,
+    //   blockedRooms: blockedRooms.length
+    // });
+
     const result = [
       { title: '本日チェックイン待ち', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト待ち', rooms: checkOutToday, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
@@ -349,19 +357,11 @@
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
 
-    console.log('[RoomIndicator] Room groups result:', {
-      checkInToday: checkInToday.length,
-      checkOutToday: checkOutToday.length,
-      occupiedRooms: occupiedRooms.length,
-      freeRooms: freeRooms.length,
-      blockedRooms: blockedRooms.length
-    });
-
     return result;
   });
 
   const summaryMetrics = computed(() => {
-    console.log('[RoomIndicator] Calculating summaryMetrics');
+    // console.log('[RoomIndicator] Calculating summaryMetrics');
     
     // Get all check-ins for today (both checked in and not yet checked in)
     const allCheckInsToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
@@ -371,20 +371,20 @@
              room.status !== 'block' &&
              room.cancelled === null;
       
-      if (isCheckIn) {
-        console.log('[RoomIndicator] Found check-in for today:', {
-          room_id: room.room_id,
-          room_number: room.room_number,
-          check_in: room.check_in,
-          status: room.status,
-          client_name: room.client_name
-        });
-      }
+      // if (isCheckIn) {
+      //   console.log('[RoomIndicator] Found check-in for today:', {
+      //     room_id: room.room_id,
+      //     room_number: room.room_number,
+      //     check_in: room.check_in,
+      //     status: room.status,
+      //     client_name: room.client_name
+      //   });
+      // }
       
       return isCheckIn;
     }) || [];
 
-    console.log('[RoomIndicator] Total check-ins today:', allCheckInsToday.length);
+    // console.log('[RoomIndicator] Total check-ins today:', allCheckInsToday.length);
 
     const metricsMap = {
       '本日チェックイン待ち': { 
@@ -417,14 +417,14 @@
   });
   
   const openNewReservation = (room) => {
-    console.log('[openNewReservation] Using selected date:', selectedDate.value);
+    // console.log('[openNewReservation] Using selected date:', selectedDate.value);
     selectedRoomID.value = room.room_id;
     hasReservation.value = false;
     drawerVisible.value = true;
   };
   
   const openEditReservation = (room) => {        
-    console.log('[openEditReservation] Current selectedDate:', selectedDate.value);
+    // console.log('[openEditReservation] Current selectedDate:', selectedDate.value);
     selectedReservationID.value = room.id;
     selectedRoomID.value = room.room_id;        
     hasReservation.value = true;
@@ -496,7 +496,7 @@
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
     try {
-      console.log('[RoomIndicator] selectedHotelId changed:', { oldValue, newValue });
+      // console.log('[RoomIndicator] selectedHotelId changed:', { oldValue, newValue });
       if (newValue !== oldValue) {
         selectedDate.value = today;
         await fetchHotel();
@@ -508,9 +508,9 @@
   });
   
   watch(selectedDate, async (newValue, oldValue) => {
-    console.log('[RoomIndicator] selectedDate changed:', { oldValue, newValue });
+    // console.log('[RoomIndicator] selectedDate changed:', { oldValue, newValue });
     if (newValue !== oldValue) {
-      console.log('[RoomIndicator] Fetching reservations for date:', newValue);
+      // console.log('[RoomIndicator] Fetching reservations for date:', newValue);
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
     }
   }, { deep: true });
