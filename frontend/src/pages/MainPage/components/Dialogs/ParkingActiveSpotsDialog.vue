@@ -330,9 +330,14 @@ const onDialogHide = () => {
 const deleteSpots = async (spotsToDelete) => {
     try {
         // First delete from the backend
-        for (const spot of spotsToDelete) {
-            if (spot.id) {
-                await parkingStore.removeParkingAddonWithSpot(spot.id);
+        if (spotsToDelete.length === 1 && spotsToDelete[0].id) {
+            // Single spot deletion
+            await parkingStore.removeParkingAddonWithSpot(spotsToDelete[0].id);
+        } else if (spotsToDelete.length > 1) {
+            // Bulk deletion
+            const spotIds = spotsToDelete.map(spot => spot.id).filter(Boolean);
+            if (spotIds.length > 0) {
+                await parkingStore.removeBulkParkingAddonWithSpot(spotIds);
             }
         }
 
@@ -352,17 +357,17 @@ const deleteSpots = async (spotsToDelete) => {
         const count = spotsToDelete.length;
         toast.add({
             severity: 'success',
-            summary: '削除完了',
-            detail: count > 1 ? `${count}件の駐車場割り当てを削除しました` : '駐車場の割り当てを削除しました',
+            summary: 'Success',
+            detail: `Deleted ${count} spot${count > 1 ? 's' : ''}`,
             life: 3000
         });
     } catch (error) {
-        console.error('Failed to delete parking spots:', error);
+        console.error('Error deleting spots:', error);
         toast.add({
             severity: 'error',
-            summary: 'エラー',
-            detail: '駐車場の削除中にエラーが発生しました',
-            life: 5000
+            summary: 'Error',
+            detail: 'Failed to delete parking spots',
+            life: 3000
         });
     }
 };

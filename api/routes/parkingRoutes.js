@@ -24,9 +24,10 @@ const {
     createParkingAddonAssignment,
     updateParkingAddonAssignment,
     deleteParkingAddonAssignment,
+    bulkDeleteParkingAddonAssignments,
     saveParkingAssignments
 } = require('../controllers/parkingController');
-const { authMiddleware, authMiddleware_manageDB } = require('../middleware/authMiddleware');
+const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 
 
@@ -54,7 +55,7 @@ router.post('/parking/block', authMiddleware_manageDB, blockParkingSpot);
 
 // Parking Reservations
 router.get('/parking/reservations', authMiddleware, getParkingReservations);
-router.post('/parking/reservations', authMiddleware, saveParkingAssignments);
+router.post('/parking/reservations', authMiddlewareCRUDAccess, saveParkingAssignments);
 
 // All Parking Spots by Hotel
 router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsByHotel);
@@ -63,11 +64,12 @@ router.get('/parking/spots/hotel/:hotel_id', authMiddleware, getAllParkingSpotsB
 router.get('/parking/vacancies/:hotelId/:startDate/:endDate/:vehicleCategoryId', authMiddleware, checkParkingVacancies);
 router.get('/parking/compatible-spots/:hotelId/:vehicleCategoryId', authMiddleware, getCompatibleSpots);
 router.get('/parking/available-spots/:hotelId/:vehicleCategoryId', authMiddleware, getAvailableSpotsForDates);
-router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddleware, checkRealTimeAvailability);
+router.post('/parking/real-time-availability/:hotelId/:vehicleCategoryId', authMiddlewareCRUDAccess, checkRealTimeAvailability);
 
 // Parking Addon Assignment Endpoints
-router.post('/parking/addon-assignment', authMiddleware_manageDB, createParkingAddonAssignment);
-router.put('/parking/addon-assignment/:id', authMiddleware_manageDB, updateParkingAddonAssignment);
-router.delete('/parking/addon-assignment/:id', authMiddleware_manageDB, deleteParkingAddonAssignment);
+router.post('/parking/addon-assignment', authMiddlewareCRUDAccess, createParkingAddonAssignment);
+router.put('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, updateParkingAddonAssignment);
+router.delete('/parking/addon-assignment/bulk', authMiddlewareCRUDAccess, bulkDeleteParkingAddonAssignments);
+router.delete('/parking/addon-assignment/:id', authMiddlewareCRUDAccess, deleteParkingAddonAssignment);
 
 module.exports = router;

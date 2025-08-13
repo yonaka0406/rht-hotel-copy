@@ -470,6 +470,46 @@ const deleteParkingAddonAssignment = async (req, res) => {
     }
 };
 
+const bulkDeleteParkingAddonAssignments = async (req, res) => {
+    try {
+        const { ids } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ 
+                message: 'An array of assignment IDs is required' 
+            });
+        }
+
+        // Validate all IDs are valid UUIDs
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const invalidIds = ids.filter(id => !uuidRegex.test(id));
+        
+        if (invalidIds.length > 0) {
+            return res.status(400).json({
+                message: 'Invalid assignment ID(s) provided',
+                invalidIds
+            });
+        }
+
+        // Use ParkingAddonService to remove assignments
+        const ParkingAddonService = require('../services/parkingAddonService');
+        const service = new ParkingAddonService(req.requestId);
+        
+        const result = await service.removeBulkParkingAddonAssignments(ids);
+        
+        res.json({
+            message: 'Bulk parking addon assignments deleted successfully',
+            deletedCount: result.deletedCount,
+            removedAssignments: result.removedAssignments
+        });
+    } catch (error) {
+        console.error('Error bulk deleting parking addon assignments:', error);
+        res.status(500).json({ 
+            message: error.message || 'Failed to delete parking addon assignments' 
+        });
+    }
+};
+
 const saveParkingAssignments = async (req, res) => {
     const { reservationDetailIds, assignments } = req.body;
     try {
@@ -505,5 +545,6 @@ module.exports = {
     createParkingAddonAssignment,
     updateParkingAddonAssignment,
     deleteParkingAddonAssignment,
+    bulkDeleteParkingAddonAssignments,
     saveParkingAssignments,
 };

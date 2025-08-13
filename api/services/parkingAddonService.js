@@ -612,6 +612,28 @@ class ParkingAddonService {
 
         return recommendations;
     }
+
+    /**
+     * Remove multiple parking addon assignments with their associated addon records
+     * @param {Array<string>} assignmentIds - Array of assignment IDs to delete
+     * @returns {Promise<Object>} Result with deleted count and removed assignments
+     */
+    async removeBulkParkingAddonAssignments(assignmentIds) {
+        if (!Array.isArray(assignmentIds) || assignmentIds.length === 0) {
+            throw new Error('An array of assignment IDs is required');
+        }
+
+        // Validate all IDs are valid UUIDs
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const invalidIds = assignmentIds.filter(id => !uuidRegex.test(id));
+        
+        if (invalidIds.length > 0) {
+            throw new Error(`Invalid assignment ID(s) provided: ${invalidIds.join(', ')}`);
+        }
+
+        // Use the model to handle the database operations
+        return await parkingModel.bulkDeleteParkingAddonAssignments(this.requestId, assignmentIds);
+    }
 }
 
 module.exports = ParkingAddonService;
