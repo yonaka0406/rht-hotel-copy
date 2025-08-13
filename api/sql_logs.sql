@@ -349,3 +349,8 @@
     CREATE TRIGGER log_reservation_rates_trigger
     AFTER INSERT OR UPDATE OR DELETE ON reservation_rates
     FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
+
+    -- For the `reservation_parking` table
+    CREATE TRIGGER log_reservation_parking_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON reservation_parking
+    FOR EACH ROW EXECUTE FUNCTION log_reservations_changes();
