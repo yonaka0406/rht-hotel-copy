@@ -119,7 +119,7 @@
                     <div v-if="validationErrors.length > 0" class="text-red-500 mt-2">
                         <p v-for="(error, index) in validationErrors" :key="index">{{ error }}</p>
                     </div>
-                    <div class="flex gap-2 mt-2">
+                    <div class="flex gap-2 ml-2 mt-2">
                         <Button v-if="hasStayReservation && validationErrors.length === 0" label="新規予約"
                             icon="pi pi-calendar" @click="openDialog" />
                     </div>
@@ -605,6 +605,15 @@ const validateCombos = () => {
     const parkingCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'parking');
     const stayCombos = reservationCombos.value.filter(combo => combo.reservation_type === 'stay');
 
+    // Find min check-in and max check-out from stay reservations
+    let minStayCheckIn = null;
+    let maxStayCheckOut = null;
+    
+    if (stayCombos.length > 0) {
+        minStayCheckIn = new Date(Math.min(...stayCombos.map(combo => new Date(combo.check_in))));
+        maxStayCheckOut = new Date(Math.max(...stayCombos.map(combo => new Date(combo.check_out))));
+    }
+
     // Validate stay reservations
     if (stayCombos.length > 0) {
         if (!availableRooms.value) {
@@ -661,11 +670,27 @@ const validateCombos = () => {
 
     // Validate parking reservations
     if (parkingCombos.length > 0) {
-        parkingCombos.forEach(parkingCombo => {
-            if (parkingCombo.number_of_rooms > maxParkingSpots.value) {
-                validationErrors.value.push(`駐車場の利用可能台数を超えています。利用可能数: ${maxParkingSpots.value}, 要求数: ${parkingCombo.number_of_rooms}`);
-            }
-        });
+        if (stayCombos.length === 0) {
+            validationErrors.value.push("駐車場の予約には宿泊予約が必要です。");
+        } else {
+            parkingCombos.forEach((parkingCombo, index) => {
+                const parkingCheckIn = new Date(parkingCombo.check_in);
+                const parkingCheckOut = new Date(parkingCombo.check_out);
+                
+                // Check if parking dates are within stay dates
+                if (parkingCheckIn < minStayCheckIn) {
+                    validationErrors.push(`駐車場予約 ${index + 1} のチェックイン日が宿泊期間より前です。`);
+                }
+                if (parkingCheckOut > maxStayCheckOut) {
+                    validationErrors.push(`駐車場予約 ${index + 1} のチェックアウト日が宿泊期間より後です。`);
+                }
+                
+                // Existing parking spot availability check
+                if (parkingCombo.number_of_rooms > maxParkingSpots.value) {
+                    validationErrors.value.push(`駐車場の利用可能台数を超えています。利用可能数: ${maxParkingSpots.value}, 要求数: ${parkingCombo.number_of_rooms}`);
+                }
+            });
+        }
     }
 
     // Update row styles for visual feedback
@@ -691,8 +716,13 @@ const validateCombos = () => {
                 ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' } 
                 : {};
         } else if (combo.reservation_type === 'parking') {
-            combo.rowStyle = combo.number_of_rooms > maxParkingSpots.value
-                ? { backgroundColor: 'rgba(255, 0, 0, 0.2)' }
+            const parkingCheckIn = new Date(combo.check_in);
+            const parkingCheckOut = new Date(combo.check_out);
+            const isOutsideStayDates = minStayCheckIn && maxStayCheckOut && 
+                (parkingCheckIn < minStayCheckIn || parkingCheckOut > maxStayCheckOut);
+                
+            combo.rowStyle = (combo.number_of_rooms > maxParkingSpots.value || isOutsideStayDates)
+                ? { backgroundColor: 'rgpa(255, 0, 0, 0.2)' }
                 : {};
         }
     });
