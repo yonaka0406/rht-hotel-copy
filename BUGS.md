@@ -239,20 +239,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: OTA integration, PMS import logic
 - **Additional Notes**: This will prevent duplicate reservations and improve upgrade handling.
 
-#### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
-  - Currently, the calendar shows the booker's name for all reservations
-  - For OTA reservations, show the name of the actual guest(s) instead
-  - **Implementation Considerations**:
-    - Need to verify if OTA API provides guest names
-    - Handle cases with multiple guests (show primary guest or all names?)
-    - Consider adding a fallback to booker name if guest name is unavailable
-  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-  - **Additional Notes**:
-    - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
-    - Need to investigate what guest information is currently being captured from OTA bookings
-
 ---
 
 ## Bug Status Legend
@@ -271,4 +257,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 13, 2025*
 *Total Bugs: 27* (last one #35)
-*Total Feature Requests: 17* (last one #31)
+*Total Feature Requests: 16* (last one #31)

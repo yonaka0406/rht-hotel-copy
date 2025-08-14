@@ -4,6 +4,20 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 14, 2025
 
+### Feature Request #17: Show Guest Name for OTA Reservations in Calendar
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - Modified the calendar to show the actual guest name(s) for OTA reservations instead of the booker's name
+  - **Implementation Details**:
+    - Verified OTA API provides guest names
+    - Implemented logic to show primary guest name for OTA reservations
+    - Added fallback to booker name if guest name is unavailable
+  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - **Additional Notes**:
+    - Improves staff efficiency by showing actual guest names instead of OTA booking references
+    - Handles cases with multiple guests by showing the primary guest's name
+- **Date Fixed**: 2025-08-14
+
 ### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
