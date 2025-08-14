@@ -326,6 +326,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added comment column to the exported reservation data from Reservation List, providing more comprehensive data in exports.
 - Bugfix: Fixed issue with duplicate reservation details for the same room and date by removing the problematic unique constraint on `reservation_details` that included a nullable `cancelled` column. Implemented proper indexing and transaction handling in the period change function. (Bug #35)
 - Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
+- Bugfix: Fixed incorrect room distribution in multi-night reservations where the system was showing inconsistent guest counts across different nights. Implemented a "Calculate-Then-Create" pattern to ensure consistent distribution of guests across all nights. (Bug #34)
 - Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
 
 ---

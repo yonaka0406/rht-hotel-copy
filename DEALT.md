@@ -2,6 +2,21 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 15, 2025
+
+### Bug #34: Incorrect Room Distribution for Multi-night Reservations
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When adding 3 rooms for 6 people in a room that fits 2 people, the distribution was inconsistent across multiple nights. For 2-night reservations, the first day showed 3 people and the second day showed 1 person, which was incorrect.
+- **Root Cause**: The room assignment logic was recalculating the number of people per room for each day instead of using a consistent distribution across all nights.
+- **Solution**: 
+  - Implemented a "Calculate-Then-Create" pattern that first determines the final guest count for each room
+  - Used a Map to track room assignments before creating any database records
+  - Ensured consistent distribution of guests across all nights
+  - Removed complex room adjustment logic that was causing inconsistencies
+- **Files Modified**: `api/controllers/reservationsController.js`
+- **Date Fixed**: 2025-08-15
+
 ## August 14, 2025
 
 ### Bug #35: Duplicate Reservation Details for Same Room and Date

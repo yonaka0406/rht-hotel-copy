@@ -7,18 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 13, 2025
 
-#### Bug #34: Incorrect Room Distribution for Multi-night Reservations
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: When adding 3 rooms for 6 people in a room that fits 2 people, the distribution is correct for 1-night reservations. However, for 2-night reservations, the first day shows 3 people and the second day shows 1 person, which is incorrect.
-- **Steps to Reproduce**:
-  1. Create a new reservation for 2 nights
-  2. Add 3 rooms for 6 people (2 people per room)
-  3. Save the reservation and check the distribution
-- **Expected Behavior**: The distribution should be consistent across all nights, showing 2 people per room for each night
-- **Actual Behavior**: First night shows 3 people, second night shows 1 person
-- **Environment**: Reservation creation/editing interface
-- **Additional Notes**: This issue only occurs for multi-night reservations. Single night reservations work correctly.
 
 #### Feature Request #33: Editable Receipts with Version History
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -295,6 +283,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 13, 2025*
+*Last Updated: August 14, 2025*
 *Total Bugs: 26* (last one #34)
 *Total Feature Requests: 19* (last one #34)
