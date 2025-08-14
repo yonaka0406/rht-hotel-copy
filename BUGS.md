@@ -35,7 +35,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 12, 2025
 
-#### Bug #33: Room deletion not working in production environment
+#### Bug #33: Room Deletion Not Working in Production Environment
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
 - **Steps to Reproduce**:
@@ -200,7 +200,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### July 21, 2025
 
-#### Bug #13
+#### Bug #13: Inconsistent Room Reservation Behavior Between Calendar and Edit Views
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The user opened a 3 room reservation and tried to edit one room to a different check in check out period. In the calendar view, when that happens the different room is moved to a new reservation. In the ReservationEdit the same behaviour was expected, but nothing happens.
@@ -215,7 +215,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### July 15, 2025
 
-#### Feature Request #14
+#### Feature Request #14: Fax Sending Functionality via Reservation Panel
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.
 - **Steps to Reproduce**:
@@ -227,7 +227,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: 
 - **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
 
-#### Feature Request #16
+#### Feature Request #16: Room Type Hierarchy for Systematic Upgrades
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. 
