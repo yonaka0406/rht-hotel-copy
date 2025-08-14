@@ -1614,25 +1614,25 @@ const updateRoomByCalendar = async (requestId, roomData) => {
   const pool = getPool(requestId);
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
 
-  console.log('=== updateRoomByCalendar START ===');
-  console.log('roomData:', roomData);
+  //console.log('=== updateRoomByCalendar START ===');
+  //console.log('roomData:', roomData);
 
   // Calculate the shift direction in JavaScript
   const shiftDirection = new_check_in >= old_check_in ? 'DESC' : 'ASC';
-  console.log('shiftDirection:', shiftDirection);
+  //console.log('shiftDirection:', shiftDirection);
 
   const client = await pool.connect();
-  console.log("Before release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+  //console.log("Before release:", pool.totalCount, pool.idleCount, pool.waitingCount);
 
   try {
-    console.log('Starting transaction for room', old_room_id, 'check-in:', new_check_in, 'check out:', new_check_out);
+    //console.log('Starting transaction for room', old_room_id, 'check-in:', new_check_in, 'check out:', new_check_out);
 
     await client.query('BEGIN');
 
     // Set session
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
     await client.query(setSessionQuery);
-    console.log('Session set for user:', updated_by);
+    //console.log('Session set for user:', updated_by);
 
     // Check if the provided reservation_id has more than one distinct room_id
     const checkQuery = `
@@ -1643,14 +1643,14 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     const checkValues = [id, hotel_id];
     const checkResult = await client.query(checkQuery, checkValues);
     const roomCount = checkResult.rows[0].room_count;
-    console.log('Room count for reservation:', roomCount);
+    //console.log('Room count for reservation:', roomCount);
 
     let newReservationId = id;
 
     // If room_count > 1 and check_in/check_out dates change, create a new reservation_id
     if (roomCount > 1 && mode === 'solo' && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
 
-      console.log('Check-in or check-out dates changed, creating a new reservation_id...');
+      //console.log('Check-in or check-out dates changed, creating a new reservation_id...');
 
       const insertReservationQuery = `
         INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_at, created_by, updated_by)
@@ -1662,7 +1662,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       const insertReservationValues = [new_check_in, new_check_out, updated_by, id, hotel_id, number_of_people];
       const insertResult = await client.query(insertReservationQuery, insertReservationValues);
       newReservationId = insertResult.rows[0].id;
-      console.log('New reservation_id created:', newReservationId);
+      //console.log('New reservation_id created:', newReservationId);
 
       // Adjust number_of_people in the original reservation
       const updateQuery = `
@@ -1672,18 +1672,18 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       `;
       const updateValues = [number_of_people, id, hotel_id];
       await client.query(updateQuery, updateValues);
-      console.log('Updated number_of_people in original reservations table.');
+      //console.log('Updated number_of_people in original reservations table.');
     }
 
     // Calculate the difference in days
     const oldDuration = (new Date(old_check_out) - new Date(old_check_in)) / (1000 * 60 * 60 * 24);
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
     const extraDays = newDuration - oldDuration;
-    console.log(`Old duration: ${oldDuration}, New duration: ${newDuration}, Days difference: ${extraDays}`);
+    //console.log(`Old duration: ${oldDuration}, New duration: ${newDuration}, Days difference: ${extraDays}`);
 
     // If the duration is the same, update the dates. Else, add dates and delete the fat
     if (oldDuration === newDuration) {
-      console.log('Duration is the same, updating existing dates...');
+      //console.log('Duration is the same, updating existing dates...');
       const updateDatesQuery = `
         WITH date_diff AS (
           SELECT
@@ -1726,11 +1726,11 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         updated_by,
         old_room_id
       ];
-      console.log('Executing updateDatesQuery update query with values:', values);    
+      //console.log('Executing updateDatesQuery update query with values:', values);    
       const result = await client.query(updateDatesQuery, values);
-      console.log(`Updated ${result.rows.length} reservation_details records`);
+      //console.log(`Updated ${result.rows.length} reservation_details records`);
     } else {
-      console.log('Duration changed, inserting new dates and cleaning up old ones...');
+      //console.log('Duration changed, inserting new dates and cleaning up old ones...');
       
       // Get template record to copy from - get the FIRST record chronologically
       const templateQuery = `
@@ -1747,7 +1747,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       }
       
       const template = templateResult.rows[0];
-      console.log('Template record found:', template);
+      //console.log('Template record found:', template);
       
       // Create all required dates first, then clean up
       const insertDetailsQuery = `
@@ -1797,10 +1797,10 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         new_check_out                // $13
       ];
       
-      console.log('Executing insertDetailsQuery with values:', insertDetailsValues);
+      //console.log('Executing insertDetailsQuery with values:', insertDetailsValues);
       const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
       const newReservationDetails = insertedDetails.rows;
-      console.log(`Inserted ${newReservationDetails.length} new reservation_details records`);
+      //console.log(`Inserted ${newReservationDetails.length} new reservation_details records`);
 
       // Only proceed with clients/addons if we have new records
       if (newReservationDetails.length > 0) {
@@ -1844,7 +1844,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           const addonResult = await client.query(insertAddonsQuery, [hotel_id, detail.id, updated_by, id, hotel_id, old_room_id, detail.plans_global_id, detail.plans_hotel_id]);
           addonsInserted += addonResult.rowCount || 0;
         }
-        console.log(`Inserted ${clientsInserted} reservation_clients and ${addonsInserted} reservation_addons records`);
+        //console.log(`Inserted ${clientsInserted} reservation_clients and ${addonsInserted} reservation_addons records`);
       }
 
       // Now clean up: Delete records outside the new date range
@@ -1856,7 +1856,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           AND (date >= $4 OR date < $5);
       `;
       const deleteResult = await client.query(deleteOutdatedQuery, [newReservationId, hotel_id, new_room_id, new_check_out, new_check_in]);
-      console.log(`Deleted ${deleteResult.rowCount || 0} records outside date range [${new_check_in}, ${new_check_out})`);
+      //console.log(`Deleted ${deleteResult.rowCount || 0} records outside date range [${new_check_in}, ${new_check_out})`);
     }
 
     // Update reservations table with new check_in and check_out
@@ -1867,26 +1867,26 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     `;
     const updateReservationValues = [new_check_in, new_check_out, updated_by, newReservationId, hotel_id];
     const updateReservationResult = await client.query(updateReservationQuery, updateReservationValues);
-    console.log(`Updated ${updateReservationResult.rowCount || 0} reservations table records with new check_in and check_out`);
+    //console.log(`Updated ${updateReservationResult.rowCount || 0} reservations table records with new check_in and check_out`);
 
     // Call recalculatePlanPrice within the same transaction by passing the client
-    console.log('Calling recalculatePlanPrice...');
+    //console.log('Calling recalculatePlanPrice...');
     await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, client);
-    console.log('recalculatePlanPrice completed successfully');
+    //console.log('recalculatePlanPrice completed successfully');
 
     /* recalculate addons as well!? */
 
     await client.query('COMMIT');
-    console.log('Transaction updateRoomByCalendar committed successfully.');
-    console.log('=== updateRoomByCalendar END ===');    
+    //console.log('Transaction updateRoomByCalendar committed successfully.');
+    //console.log('=== updateRoomByCalendar END ===');    
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error updating reservation detail:', err);
-    console.log('Transaction rolled back');
+    //console.error('Error updating reservation detail:', err);
+    //console.log('Transaction rolled back');
     throw new Error('Database error');
   } finally {
     client.release();
-    console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
   }
 };
 const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
