@@ -80,6 +80,12 @@
           </AccordionContent>
         </AccordionPanel>
         <AccordionPanel value="2">
+          <AccordionHeader>OTA予約キュー</AccordionHeader>
+          <AccordionContent>
+            <OtaQueueTable :hotel-id="selectedHotelId" />
+          </AccordionContent>
+        </AccordionPanel>
+        <AccordionPanel value="3">
           <AccordionHeader>XML手動操作</AccordionHeader>
           <AccordionContent>
             <Card class="mt-4">
@@ -189,6 +195,9 @@
   // Primevue
   import { Panel, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Card, FloatLabel, InputText, Select, Button, DataTable, Column, Badge, Dialog } from 'primevue';
 
+  // Components
+  import OtaQueueTable from '@/pages/Admin/components/OtaQueueTable.vue';
+  
   // Helper
   const formatDateTime = (dateString) => {
       const date = new Date(dateString);
