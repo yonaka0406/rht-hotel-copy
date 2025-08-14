@@ -323,6 +323,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Improved JWT token verification to be more resilient to network errors, preventing accidental logouts during temporary network issues. The system now only clears tokens on authentication-specific errors (401/403).
 - Feature: Updated access control for the 仮ブロック (temporary block) function to be available to all users with CRUD access instead of just database managers.
 - Feature: Enhanced calendar to display actual guest names for OTA reservations instead of booker names, improving staff efficiency when identifying guests. (Feature #17)
+- Feature: Added comment column to the exported reservation data from Reservation List, providing more comprehensive data in exports.
+- Bugfix: Fixed issue with duplicate reservation details for the same room and date by removing the problematic unique constraint on `reservation_details` that included a nullable `cancelled` column. Implemented proper indexing and transaction handling in the period change function. (Bug #35)
 - Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
 - Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
 

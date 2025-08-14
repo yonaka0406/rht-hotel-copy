@@ -4,6 +4,17 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 14, 2025
 
+### Bug #35: Duplicate Reservation Details for Same Room and Date
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: Reservation ID `f73f1c35-2ed6-4503-8950-9764b4f7fc31` had duplicate dates for the same room with different plans, which was causing constraint violations in the `reservation_details` table.
+- **Root Cause**: The unique constraint on `reservation_details` included a `cancelled` column that could be NULL. In PostgreSQL, NULL values are not considered equal in unique constraints, allowing multiple rows with NULL values in the `cancelled` column to bypass the unique constraint.
+- **Solution**: 
+  1. Removed the problematic unique constraint from `reservation_details`
+  2. Implemented proper indexing to handle duplicates while allowing NULL values
+  3. Updated the period change function to use transactions for data consistency
+- **Date Fixed**: 2025-08-14
+
 ### Feature Request #17: Show Guest Name for OTA Reservations in Calendar
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 
