@@ -56,12 +56,16 @@ CREATE TABLE reservation_details (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
-    PRIMARY KEY (hotel_id, id),
-    UNIQUE (hotel_id, reservation_id, room_id, date, cancelled),
+    PRIMARY KEY (hotel_id, id),    
     FOREIGN KEY (reservation_id, hotel_id) REFERENCES reservations(id, hotel_id) ON DELETE CASCADE,
     FOREIGN KEY (room_id, hotel_id) REFERENCES rooms(id, hotel_id),
     FOREIGN KEY (plans_hotel_id, hotel_id) REFERENCES plans_hotel(id, hotel_id)
 ) PARTITION BY LIST (hotel_id);
+
+-- Create partial unique index for active reservations
+CREATE UNIQUE INDEX reservation_details_active_unique_idx 
+ON reservation_details (hotel_id, reservation_id, room_id, date)
+WHERE cancelled IS NULL;
 
 CREATE TABLE reservation_addons (
     id UUID DEFAULT gen_random_uuid(),
