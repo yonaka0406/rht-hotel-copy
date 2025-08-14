@@ -455,6 +455,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,COALESCE(details.payment, 0) AS payment
       ,details.clients_json
       ,details.payers_json
+      ,reservations.comment
     FROM
       reservations	
       ,hotels

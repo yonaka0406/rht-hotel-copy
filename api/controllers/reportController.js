@@ -244,6 +244,7 @@ const getExportReservationList = async (req, res) => {
         宿泊者: clientNames,
         支払者: payerNames,
         予約ID: reservation.id,
+        備考: reservation.comment || '',
       });
     });
     csvStream.end();
