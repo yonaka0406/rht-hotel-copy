@@ -1778,7 +1778,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
             AND rd.room_id = $3
             AND rd.date = date_series.date 
         )
-        RETURNING id, date, plans_global_id, plans_hotel_id;
+        RETURNING id, date, hotel_id, plans_global_id, plans_hotel_id;
       `;
       
       const insertDetailsValues = [
@@ -1838,10 +1838,10 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         let clientsInserted = 0;
         let addonsInserted = 0;
         for (const detail of newReservationDetails) {
-          const clientResult = await client.query(insertClientsQuery, [detail.hotel_id, detail.id, updated_by, id, hotel_id, old_room_id]);
+          const clientResult = await client.query(insertClientsQuery, [hotel_id, detail.id, updated_by, id, hotel_id, old_room_id]);
           clientsInserted += clientResult.rowCount || 0;
           
-          const addonResult = await client.query(insertAddonsQuery, [detail.hotel_id, detail.id, updated_by, id, hotel_id, old_room_id, detail.plans_global_id, detail.plans_hotel_id]);
+          const addonResult = await client.query(insertAddonsQuery, [hotel_id, detail.id, updated_by, id, hotel_id, old_room_id, detail.plans_global_id, detail.plans_hotel_id]);
           addonsInserted += addonResult.rowCount || 0;
         }
         console.log(`Inserted ${clientsInserted} reservation_clients and ${addonsInserted} reservation_addons records`);
