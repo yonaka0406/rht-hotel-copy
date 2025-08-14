@@ -24,13 +24,13 @@
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <InputNumber v-model="numberOfPeople" :min="1" :max="maxNumberOfPeople" />
+                            <InputNumber v-model="numberOfPeople" :min="1" :max="maxNumberOfPeople" fluid />
                             <label>人数</label>
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
-                            <InputNumber v-model="numberOfNights" variant="filled" disabled />
+                            <InputNumber v-model="numberOfNights" variant="filled" fluid disabled />
                             <label>宿泊数</label>
                         </FloatLabel>
                     </div>
@@ -286,10 +286,10 @@ onMounted(async () => {
     }
     const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
-    if (datesResult.earliestCheckIn) {
+    if (datesResult && datesResult.earliestCheckIn) {
         minDateRange.value = new Date(datesResult.earliestCheckIn);
     }
-    if (datesResult.latestCheckOut) {
+    if (datesResult && datesResult.latestCheckOut) {
         maxDateRange.value = new Date(datesResult.latestCheckOut);
     }
 

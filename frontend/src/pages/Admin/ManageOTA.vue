@@ -197,7 +197,7 @@
 
   // Components
   import OtaQueueTable from '@/pages/Admin/components/OtaQueueTable.vue';
-
+  
   // Helper
   const formatDateTime = (dateString) => {
       const date = new Date(dateString);

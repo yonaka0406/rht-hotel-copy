@@ -330,26 +330,27 @@
                                     <div class="field col mt-8 ml-2">
                                         <Button label="追加" @click="generateAddonPreview" />
                                     </div>
-                                </div>
+                                </div>                                                                
 
                                 <Divider />
 
                                 <div class="field mt-6">
-                                    <DataTable :value="selectedAddon" class="p-datatable-sm">
-                                        <Column field="addon_name" header="アドオン名" style="width:40%" />
-                                        <Column field="quantity" header="数量">
+                                    <DataTable :value="selectedAddon" class="p-datatable-sm">         
+                                        <Column field="addon_name" header="アドオン名" style="width:40%" />                               
+                                        <Column field="quantity" header="数量" style="width:20%">
                                             <template #body="slotProps">
                                                 <InputNumber v-model="slotProps.data.quantity" :min="0"
-                                                    placeholder="数量を記入" fluid />
+                                                    placeholder="数量を記入"
+                                                    fluid />
                                             </template>
                                         </Column>
-                                        <Column field="price" header="価格">
+                                        <Column field="price" header="価格" style="width:20%">
                                             <template #body="slotProps">
                                                 <InputNumber v-model="slotProps.data.price" :min="0" placeholder="価格を記入"
                                                     fluid />
                                             </template>
                                         </Column>
-                                        <Column header="操作">
+                                        <Column header="操作" style="width:10%">
                                             <template #body="slotProps">
                                                 <Button icon="pi pi-trash"
                                                     class="p-button-text p-button-danger p-button-sm"
@@ -962,7 +963,10 @@ const openReservationBulkEditDialog = async () => {
     await fetchPlansForHotel(hotelId);
     await fetchPatternsForHotel(hotelId);
     // Addons
-    addonOptions.value = await fetchAllAddons(hotelId);
+    const allAddons = await fetchAllAddons(hotelId); 
+    console.log('[ReservationPanel] fetchAllAddons', allAddons);
+    addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
+    console.log('[ReservationPanel] addonOptions', addonOptions.value);
     tabsReservationBulkEditDialog.value = 0;
     visibleReservationBulkEditDialog.value = true;
 };
@@ -1049,6 +1053,7 @@ const selectedPatternDetails = ref(null);
 const selectedAddon = ref([]);
 const addonOptions = ref(null);
 const selectedAddonOption = ref(null);
+
 const updatePattern = async () => {
     if (selectedPattern.value !== null) {
         // Update the selectedPatternDetails with the corresponding data
@@ -1080,7 +1085,7 @@ const updatePlanAddOns = async () => {
         }
     }
 };
-const generateAddonPreview = () => {
+const generateAddonPreview = async () => {
     // Check
     if (!selectedAddonOption.value) {
         toast.add({ severity: 'warn', summary: '注意', detail: 'アドオン選択されていません。', life: 3000 });
@@ -1089,7 +1094,8 @@ const generateAddonPreview = () => {
 
     const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
     const isHotelAddon = foundAddon.id.startsWith('H');
-    selectedAddon.value.push({
+    
+    const addonData = {
         addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,
         addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
         hotel_id: foundAddon.hotel_id,
@@ -1098,9 +1104,12 @@ const generateAddonPreview = () => {
         quantity: 1,
         tax_type_id: foundAddon.tax_type_id,
         tax_rate: foundAddon.tax_rate
-    });
-
-    selectedAddonOption.value = '';
+    };  
+    
+    selectedAddon.value.push(addonData); 
+    
+    selectedAddonOption.value = '';    
+    
 };
 const deleteAddon = (addon) => {
     const index = selectedAddon.value.indexOf(addon);
@@ -1108,6 +1117,7 @@ const deleteAddon = (addon) => {
         selectedAddon.value.splice(index, 1);
     }
 };
+
 const applyPlanChangesToAll = async () => {
     try {
         groupedRooms.value.every(async (room) => {

@@ -70,6 +70,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         await createPartition('receipts');
         await createPartition('xml_requests');
         await createPartition('xml_responses');
+        await createPartition('reservation_parking');
       };
 
       await createPartitionsSequentially();

@@ -1,10 +1,12 @@
 const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectFailedOtaReservations,
+  selectParkingSpotAvailability,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
-  insertCopyReservation
+  insertCopyReservation, selectReservationParking,
+  deleteParkingReservation, deleteBulkParkingReservations,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -166,6 +168,53 @@ const getReservationPayments = async (req, res) => {
   }
 };
 
+const getReservationParking = async (req, res) => {
+  const { hid: hotel_id, id: reservation_id } = req.params;
+
+  if (!hotel_id || !reservation_id) {
+    return res.status(400).json({ 
+      error: 'Missing required parameters: hotel_id and reservation_id are required' 
+    });
+  }
+
+  try {
+    const parkingReservations = await selectReservationParking(
+      req.requestId,
+      hotel_id,
+      reservation_id
+    );
+    
+    return res.status(200).json({ parking: parkingReservations });
+  } catch (error) {
+    console.error('Error fetching reservation parking:', error);
+    return res.status(500).json({ 
+      error: 'An error occurred while fetching reservation parking',
+      details: error.message 
+    });
+  }
+};
+
+const getParkingSpotAvailability = async (req, res) => {
+  const { hotelId, startDate, endDate } = req.query;
+
+  if (!hotelId || !startDate || !endDate) {
+    return res.status(400).json({ error: 'Missing required query parameters: hotelId, startDate, and endDate.' });
+  }
+
+  try {
+    const parkingSpotAvailability = await selectParkingSpotAvailability(req.requestId, hotelId, startDate, endDate);
+
+    if (parkingSpotAvailability.length === 0) {
+      return res.status(200).json({ message: 'No parking spot availability data for the specified period.', parkingSpotAvailability: [] });
+    }
+
+    return res.status(200).json({ parkingSpotAvailability });
+  } catch (error) {
+    console.error('Error fetching parking spot availability:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching parking spot availability.' });
+  }
+};
+
 // POST
 const createReservationHold = async (req, res) => {
   const {
@@ -181,6 +230,7 @@ const createReservationHold = async (req, res) => {
     gender,
     email,
     phone,
+    vehicle_category_id,
   } = req.body;
   const created_by = req.user.id;
   const updated_by = req.user.id;
@@ -223,6 +273,7 @@ const createReservationHold = async (req, res) => {
       check_in,
       check_out,
       number_of_people,
+      vehicle_category_id,
       created_by,
       updated_by
     };
@@ -295,15 +346,16 @@ const createReservationHold = async (req, res) => {
     }
 
     // Add reservation details to the database
+    const createdReservationDetails = [];
     for (const detail of reservationDetails) {
-      logger.warn(`[RES_CREATE] Inserting reservation detail`, detail);
-      await addReservationDetail(req.requestId, detail);
+      const createdDetail = await addReservationDetail(req.requestId, detail);
+      createdReservationDetails.push(createdDetail);
     }
 
     logger.warn(`[RES_CREATE] Reservation creation complete`, { reservation_id: newReservation.id });
     res.status(201).json({
       reservation: newReservation,
-      reservationDetails,
+      reservationDetails: createdReservationDetails,
     });
 
   } catch (err) {
@@ -479,13 +531,15 @@ const createHoldReservationCombo = async (req, res) => {
     }
 
     // Add reservation details to the database
+    const createdReservationDetails = [];
     for (const detail of reservationDetails) {
-      await addReservationDetail(req.requestId, detail);
+      const createdDetail = await addReservationDetail(req.requestId, detail);
+      createdReservationDetails.push(createdDetail);
     }
 
     res.status(201).json({
       reservation: newReservation,
-      reservationDetails,
+      reservationDetails: createdReservationDetails,
     });
 
   } catch (err) {
@@ -1227,6 +1281,55 @@ const copyReservation = async (req, res) => {
   }
 };
 
+const getFailedOtaReservations = async (req, res) => {
+  try {
+    const reservations = await selectFailedOtaReservations(req.requestId);
+
+    if (reservations.length === 0) {
+      return res.status(404).json({ message: 'No failed OTA reservations found.' });
+    }
+
+    return res.status(200).json({ reservations });
+  } catch (error) {
+    console.error('Error fetching failed OTA reservations:', error);
+    return res.status(500).json({ error: 'Database error occurred while fetching failed OTA reservations.' });
+  }
+};
+
+const handleDeleteParkingReservation = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  if (!id) {
+    return res.status(400).json({ error: 'Parking reservation ID is required' });
+  }
+
+  try {
+    await deleteParkingReservation(req.requestId, id, userId);
+    return res.status(200).json({ message: 'Parking reservation deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting parking reservation:', error);
+    return res.status(500).json({ error: 'Failed to delete parking reservation' });
+  }
+};
+
+const handleBulkDeleteParkingReservations = async (req, res) => {
+  const { ids } = req.body;
+  const userId = req.user.id;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'Array of parking reservation IDs is required' });
+  }
+
+  try {
+    await deleteBulkParkingReservations(req.requestId, ids, userId);
+    return res.status(200).json({ message: 'Parking reservations deleted successfully' });
+  } catch (error) {
+    console.error('Error bulk deleting parking reservations:', error);
+    return res.status(500).json({ error: 'Failed to delete parking reservations' });
+  }
+};
+
 const convertBlockToReservation = async (req, res) => {
   const { id } = req.params;
   const { client } = req.body;
@@ -1278,23 +1381,8 @@ const convertBlockToReservation = async (req, res) => {
   }
 };
 
-const getFailedOtaReservations = async (req, res) => {
-  try {
-    const reservations = await selectFailedOtaReservations(req.requestId);
-
-    if (reservations.length === 0) {
-      return res.status(404).json({ message: 'No failed OTA reservations found.' });
-    }
-
-    return res.status(200).json({ reservations });
-  } catch (error) {
-    console.error('Error fetching failed OTA reservations:', error);
-    return res.status(500).json({ error: 'Database error occurred while fetching failed OTA reservations.' });
-  }
-};
-
 module.exports = {
-  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, convertBlockToReservation
+  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
+  getParkingSpotAvailability,
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation
 };
-

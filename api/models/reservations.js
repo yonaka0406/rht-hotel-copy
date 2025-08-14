@@ -1,4 +1,4 @@
-const { getPool } = require('../config/database');
+let getPool = require('../config/database').getPool;
 const format = require('pg-format');
 const { toFullWidthKana, processNameString } = require('../models/clients');
 const { getPlanByKey } = require('../models/plan');
@@ -64,6 +64,47 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
     console.error('Error fetching available rooms:', err);
     throw new Error('Database error');
   }
+};
+
+const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client = null) => {
+    const pool = getPool(requestId);
+    const query = `
+        WITH occupied_spots AS (
+            SELECT
+                parking_spot_id
+            FROM
+                reservation_parking
+            WHERE
+                date >= $1 AND date < $2
+                AND parking_spot_id IS NOT NULL
+        )
+        SELECT
+            ps.id AS parking_spot_id,
+            ps.spot_number,
+            ps.spot_type,
+            ps.capacity_units
+        FROM
+            parking_spots ps
+        JOIN
+            parking_lots pl ON ps.parking_lot_id = pl.id
+        WHERE
+            pl.hotel_id = $3
+            AND ps.is_active = TRUE
+            AND ps.capacity_units >= $4
+            AND ps.id NOT IN (SELECT parking_spot_id FROM occupied_spots)
+        ORDER BY ps.capacity_units, ps.id;
+    `;
+
+    const values = [checkIn, checkOut, hotelId, capacity_units_required];
+
+    try {
+        const executor = client ? client : pool;
+        const result = await executor.query(query, values);
+        return result.rows;
+    } catch (err) {
+        console.error('Error fetching available parking spots:', err);
+        throw new Error('Database error');
+    }
 };
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
@@ -783,34 +824,189 @@ const selectReservationPayments = async (requestId, hotelId, reservationId) => {
   }
 };
 
+const selectReservationParking = async (requestId, hotel_id, reservation_id) => {
+  const pool = getPool(requestId);
+  const query = `
+      SELECT rp.*, 
+             ps.spot_number, 
+             ps.spot_type, 
+             ps.capacity_units,
+             pl.name as parking_lot_name,
+             vc.name as vehicle_category_name,
+             vc.capacity_units_required,
+             rd.room_id,
+             rd.date as reservation_date
+      FROM reservation_parking rp
+      LEFT JOIN parking_spots ps ON rp.parking_spot_id = ps.id
+      LEFT JOIN parking_lots pl ON ps.parking_lot_id = pl.id
+      LEFT JOIN vehicle_categories vc ON rp.vehicle_category_id = vc.id
+      JOIN reservation_details rd ON rp.reservation_details_id = rd.id AND rp.hotel_id = rd.hotel_id
+      WHERE rp.hotel_id = $1 
+      AND rd.reservation_id = $2
+      ORDER BY rp.date, ps.spot_number
+  `;
+  const values = [hotel_id, reservation_id];
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
+/**
+ * Get parking spot availability statistics for a hotel in a date range
+ * @param {string} requestId - The request ID for logging
+ * @param {number} hotelId - The hotel ID
+ * @param {string} startDate - Start date in YYYY-MM-DD format
+ * @param {string} endDate - End date in YYYY-MM-DD format
+ * @returns {Promise<Array>} Array of parking spot statistics grouped by capacity, width, and height
+ */
+const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+    WITH used_spots AS (
+      SELECT 
+        ps.spot_type,
+        ps.capacity_units,
+        CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
+        CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
+        COUNT(DISTINCT rp.parking_spot_id) AS used_count
+      FROM 
+        reservation_parking rp
+        JOIN reservation_details rd 
+          ON rp.reservation_details_id = rd.id 
+          AND rp.hotel_id = rd.hotel_id
+        JOIN parking_spots ps 
+          ON ps.id = rp.parking_spot_id
+        JOIN parking_lots pl 
+          ON pl.id = ps.parking_lot_id
+          AND pl.hotel_id = rp.hotel_id
+      WHERE 
+        rp.hotel_id = $1
+        AND rp.date BETWEEN $2 AND $3
+        AND rd.cancelled IS NULL
+      GROUP BY 
+        ps.spot_type, ps.capacity_units, width, height
+    ),
+    total_spots AS (
+      SELECT 
+        ps.spot_type,
+        ps.capacity_units,
+        CAST(ps.layout_info->>'width' AS NUMERIC) AS width,
+        CAST(ps.layout_info->>'height' AS NUMERIC) AS height,
+        COUNT(*) AS total_count
+      FROM 
+        parking_spots ps
+        JOIN parking_lots pl ON pl.id = ps.parking_lot_id
+      WHERE 
+        pl.hotel_id = $1
+        AND ps.is_active = TRUE
+      GROUP BY 
+        ps.spot_type, ps.capacity_units, width, height
+    )
+    SELECT 
+      ts.spot_type,
+      COALESCE(ts.capacity_units, 0) AS capacity_units,
+      COALESCE(ts.width, 0) AS width,
+      COALESCE(ts.height, 0) AS height,
+      COALESCE(ts.total_count, 0) AS total_spots,
+      COALESCE(us.used_count, 0) AS used_spots,
+      COALESCE(ts.total_count, 0) - COALESCE(us.used_count, 0) AS available_spots
+    FROM 
+      total_spots ts
+      LEFT JOIN used_spots us ON 
+        ts.spot_type = us.spot_type
+        AND ts.capacity_units = us.capacity_units 
+        AND ts.width = us.width 
+        AND ts.height = us.height
+    ORDER BY 
+      ts.capacity_units DESC, 
+      ts.width DESC, 
+      ts.height DESC;
+
+  `;
+
+  try {
+    const values = [hotelId, startDate, endDate];
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching parking spot availability:', err);
+    throw new Error('Database error while fetching parking spot availability');
+  }
+};
+
 // Function to Add
 
 const addReservationHold = async (requestId, reservation) => {
-  const pool = getPool(requestId);
-  const query = `
-    INSERT INTO reservations (
-      hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING *;
-  `;
+    const pool = getPool(requestId);
+    const client = await pool.connect();
 
-  const values = [
-    reservation.hotel_id,
-    reservation.reservation_client_id,
-    reservation.check_in,
-    reservation.check_out,
-    reservation.number_of_people,
-    reservation.created_by,
-    reservation.updated_by
-  ];
+    try {
+        await client.query('BEGIN');
 
-  try {
-    const result = await pool.query(query, values);
-    return result.rows[0]; // Return the inserted client
-  } catch (err) {
-    console.error('Error adding reservation hold:', err);
-    throw new Error('Database error');
-  }
+        const reservationQuery = `
+            INSERT INTO reservations (
+                hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *;
+        `;
+        const reservationValues = [
+            reservation.hotel_id,
+            reservation.reservation_client_id,
+            reservation.check_in,
+            reservation.check_out,
+            reservation.number_of_people,
+            reservation.created_by,
+            reservation.updated_by
+        ];
+        const reservationResult = await client.query(reservationQuery, reservationValues);
+        const newReservation = reservationResult.rows[0];
+
+        if (reservation.vehicle_category_id) {
+            const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
+            const categoryResult = await client.query(categoryQuery, [reservation.vehicle_category_id]);
+            if (categoryResult.rows.length === 0) {
+                throw new Error('Vehicle category not found');
+            }
+            const { capacity_units_required } = categoryResult.rows[0];
+
+            const availableSpots = await selectAvailableParkingSpots(requestId, reservation.hotel_id, reservation.check_in, reservation.check_out, capacity_units_required, client);
+            if (availableSpots.length === 0) {
+                throw new Error('No available parking spots for the selected vehicle category and dates');
+            }
+            const spotToReserve = availableSpots[0];
+
+            const dateArray = [];
+            for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
+                dateArray.push(new Date(dt));
+            }
+
+            for (const date of dateArray) {
+                const parkingQuery = `
+                    INSERT INTO reservation_parking (hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by)
+                    VALUES ($1, $2, $3, $4, $5, 'reserved', $6, $7)
+                `;
+                const parkingValues = [
+                    reservation.hotel_id,
+                    newReservation.id,
+                    reservation.vehicle_category_id,
+                    spotToReserve.parking_spot_id,
+                    date,
+                    reservation.created_by,
+                    reservation.updated_by
+                ];
+                await client.query(parkingQuery, parkingValues);
+            }
+        }
+
+        await client.query('COMMIT');
+        return newReservation;
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Error adding reservation hold:', err);
+        throw new Error('Database error: ' + err.message);
+    } finally {
+        client.release();
+    }
 };
 const addReservationDetail = async (requestId, detail) => {
   const pool = getPool(requestId);
@@ -1184,6 +1380,10 @@ const updateReservationStatus = async (requestId, reservationData) => {
         id,
         hotel_id,
       ];
+      await pool.query(query, values);
+
+      const updateParkingQuery = 'UPDATE reservation_parking SET cancelled = gen_random_uuid() WHERE reservation_id = $1';
+      await pool.query(updateParkingQuery, [id]);
     }
     if (resStatus === 'cancelled' && type === 'full-fee') {
       console.log('Cancelled with billable true');
@@ -2327,7 +2527,7 @@ const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_i
     SET SESSION "my_app.user_id" = %L;
 
     DELETE FROM reservation_addons
-    WHERE reservation_detail_id = %L
+    WHERE reservation_detail_id = %L AND addon_type <> 'parking'
     RETURNING *;
   `, updated_by, reservation_detail_id);
 
@@ -2464,6 +2664,54 @@ const deleteReservationPayment = async (requestId, id, userId) => {
     throw err;
   } finally {
     client.release();
+  }
+};
+
+const deleteParkingReservation = async (requestId, id, userId) => {
+  const pool = getPool(requestId);
+  // Changed the query from UPDATE to a direct DELETE.
+  // The RETURNING * clause ensures the deleted row is returned, maintaining consistency with the front end's expectations.
+  const query = `
+    DELETE FROM reservation_parking
+    WHERE id = $1
+    RETURNING *;
+  `;
+  
+  // The userId is no longer needed for the query itself.
+  const values = [id];
+  
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error deleting parking reservation:', error);
+    throw new Error('Database error while deleting parking reservation');
+  }
+};
+
+const deleteBulkParkingReservations = async (requestId, ids, userId) => {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error('No parking reservation IDs provided for deletion');
+  }
+  
+  const pool = getPool(requestId);
+  // Changed the query from UPDATE to a direct DELETE.
+  // The RETURNING * clause ensures the deleted rows are returned.
+  const query = `
+    DELETE FROM reservation_parking
+    WHERE id = ANY($1::uuid[])
+    RETURNING *;
+  `;
+  
+  // The userId is no longer needed for the query itself.
+  const values = [ids];
+  
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (error) {
+    console.error('Error bulk deleting parking reservations:', error);
+    throw new Error('Database error while bulk deleting parking reservations');
   }
 };
 
@@ -2999,8 +3247,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           if (guestList && Array.isArray(guestList) && guestList.length > 0) {
             console.log('Processing guest information from GuestInformationList');
             for (const guest of guestList) {
-              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';              
-              const { name, nameKana, nameKanji } = await processNameString(sanitizeName(rawName));
+              const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
+              const sanitizedName = sanitizeName(rawName);
+              const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
               
               guestData = {
                 name: name,                
@@ -3506,7 +3755,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
     return match ? match.room_type_id : null;
   };
   const planMaster = await selectTLPlanMaster(requestId, hotel_id);
-  // console.log('selectTLPlanMaster:', planMaster);  
+
   const selectPlanId = async (code) => {
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
@@ -4200,7 +4449,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       internalClient.release();
     }
   }
-}
+};
 const cancelOTAReservation = async (requestId, hotel_id, data, client = null) => {
   let internalClient;
   let shouldRelease = false;
@@ -4567,7 +4816,7 @@ const selectFailedOtaReservations = async (requestId) => {
   }
 };
 
-module.exports = {
+module.exports = {  
   selectAvailableRooms,
   selectReservedRooms,
   selectReservation,
@@ -4579,6 +4828,8 @@ module.exports = {
   selectAvailableDatesForChange,
   selectReservationClientIds,
   selectReservationPayments,
+  selectReservationParking,
+  selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
   addReservationAddon,
@@ -4617,4 +4868,6 @@ module.exports = {
   insertCopyReservation,
   sanitizeName,
   selectFailedOtaReservations,
+  deleteParkingReservation,
+  deleteBulkParkingReservations,
 };

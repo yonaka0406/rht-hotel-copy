@@ -23,6 +23,18 @@
             </template>            
         </Card>
 
+        <!-- Parking Data component-->
+        <Card class="m-2">
+            <template #title>駐車場</template>
+            <template #content>
+                <ReservationParking
+                    v-if="reservation_details"
+                    :reservation-details="reservation_details"
+                    :parking-reservations="parking_reservations || []"                    
+                />            
+            </template>
+        </Card>
+
         <!-- Payments Data component-->
         <Card class="m-2">
             <template #title>清算</template>
@@ -43,7 +55,8 @@
 
     import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
     import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
-    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';    
+    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
+    import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
 
     const props = defineProps({
         reservation_id: {
@@ -64,14 +77,28 @@
     // Stores
     import { useReservationStore } from '@/composables/useReservationStore';
     const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
+    import { useParkingStore } from '@/composables/useParkingStore';    
+    const { fetchParkingReservations } = useParkingStore();
     
     // Primevue
     import { Card } from 'primevue';
         
-    const hotelId = ref(null);
-    const reservationStatus = ref(null);
+    const reservationStatus = ref(null);    
     const reservation_details = ref(null);
     const reservation_payments = ref(null);
+    const parking_reservations = ref([]);
+    
+    // Helper function to fetch parking data
+    const fetchParkingData = async (hotelId, reservationId) => {
+        try {
+            const parkingData = await fetchParkingReservations(hotelId, reservationId);
+            parking_reservations.value = parkingData || [];
+            console.log('[Reservation Edit] parking_reservations', parking_reservations.value);
+        } catch (error) {
+            console.error('Error fetching parking reservations:', error);
+            parking_reservations.value = [];
+        }
+    };
     
     // Fetch reservation details on mount
     onMounted(async () => {
@@ -83,14 +110,17 @@
             const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             reservation_payments.value = pmtData.payments;
             reservationStatus.value = reservation_details.value[0].status;
+            
+            // Fetch parking data when reservation details are loaded
+            if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+            }
         } else {
             reservation_details.value = [];
             reservation_payments.value = [];
+            parking_reservations.value = [];
             reservationStatus.value = null;
         }
-
-            reservationStatus.value = reservation_details.value[0].status;
-            // console.log(reservationStatus.value)
 
         // Establish Socket.IO connection
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -108,9 +138,20 @@
             // console.log('Reservation updated detected in ReservationEdit');
             // Web Socket fetchReservation                
             await fetchReservation(reservationId.value);
+            if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
-            const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                
+                // Update parking data when reservation is updated
+                if (reservation_details.value[0].hotel_id && reservation_details.value[0].reservation_id) {
+                    await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
+                }
+            } else {
+                reservation_details.value = [];
+                reservation_payments.value = [];
+                parking_reservations.value = [];
+            }
         });
 
         
@@ -137,27 +178,33 @@
                 reservation_details.value = reservationDetails.value.reservation;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                // Add fetchParkingData here
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
+                parking_reservations.value = [];
             }
         }
     });
     watch(reservationId, async (newVal, oldVal) => {
-        if(oldVal && newVal !== oldVal){
+        if (oldVal && newVal !== oldVal) {
             // console.log('ReservationEdit reservationId', oldVal, 'to', newVal)            
             await fetchReservation(newVal);
             if (reservationDetails.value && reservationDetails.value.reservation && reservationDetails.value.reservation[0]) {
                 reservation_details.value = reservationDetails.value.reservation;
                 const pmtData = await fetchReservationPayments(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
                 reservation_payments.value = pmtData.payments;
+                // Add fetchParkingData here too
+                await fetchParkingData(reservation_details.value[0].hotel_id, reservation_details.value[0].reservation_id);
             } else {
                 reservation_details.value = [];
                 reservation_payments.value = [];
+                parking_reservations.value = [];
             }
         }
         
-    });
+    });    
 
 </script>
 
