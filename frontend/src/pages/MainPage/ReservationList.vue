@@ -309,9 +309,15 @@
     // Load
     const loadTableData = async () => {
         tableLoading.value = true;
-        await fetchReservationListView(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
-        tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
-        tableLoading.value = false;
+        try {
+            await fetchReservationListView(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
+            tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
+        } catch (error) {
+            console.error('Error loading table data:', error);
+            toast.add({ severity: 'error', summary: 'エラー', detail: 'データの読み込み中にエラーが発生しました', life: 3000 });
+        } finally {
+            tableLoading.value = false;
+        }
     }
 
     // Select

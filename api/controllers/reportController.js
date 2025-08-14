@@ -149,9 +149,10 @@ const getReservationListView = async (req, res) => {
   try {    
     const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate);    
     
+    // Return empty array with 200 status
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
-    }  
+      return res.json([]);
+    } 
 
     res.json(data);
   } catch (err) {
