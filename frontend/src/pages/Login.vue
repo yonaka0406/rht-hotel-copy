@@ -120,6 +120,30 @@
       showBrowserWarning.value = true;
     }
 
+    // Add localStorage monitoring
+    window.addEventListener('storage', (e) => {
+      //console.log('Storage event:', e.key, e.oldValue, e.newValue);
+    });
+
+    // Check private browsing mode and log initial state
+    const checkPrivateBrowsing = async () => {
+      const isPrivate = await new Promise((resolve) => {
+        try {
+          const db = indexedDB.open('test');
+          db.onerror = () => resolve(true);
+          db.onsuccess = () => resolve(false);
+        } catch (e) {
+          resolve(true);
+        }
+      });
+      
+      //console.log('Page loaded, token exists:', !!localStorage.getItem('authToken'));
+      //console.log('Private browsing:', isPrivate);
+      //console.log('User agent:', navigator.userAgent);
+    };
+
+    checkPrivateBrowsing();
+
     const errorParam = route.query.error;
     if (errorParam) {
       let message = '';
@@ -211,8 +235,10 @@
       const responseData = await response.json();
 
       if (responseData.token) {
-        // ✅ Successful login
+        // Successful login
         localStorage.setItem('authToken', responseData.token);
+        //console.log('Token stored after login:', localStorage.getItem('authToken'));
+        //console.log('Current URL after login:', window.location.href);
         toast.add({ severity: 'success', summary: 'ログイン成功', detail: responseData.message || 'ログインしました。', life: 3000 });
         router.push('/');
       } else if (responseData.error && responseData.error === "このアカウントはGoogleで登録されています。Googleログインをご利用ください。") {
@@ -220,7 +246,7 @@
       } else if(responseData.error){
         toast.add({ severity: 'warn', summary: 'ログイン失敗', detail: responseData.error || 'ログインできなかった。', life: 3000 });
       } else {
-        // ✅ Edge case: No token in response
+        // Edge case: No token in response
         throw new Error('サーバーエラーが発生しました。');
       }
 
