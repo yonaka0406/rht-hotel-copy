@@ -329,9 +329,10 @@
       return room.status === 'block';
     }) || [];
 
-    // Get all room IDs that are currently occupied, checking out today, or blocked
+    // Get all room IDs that are currently occupied, checking in today, checking out today, or blocked
     const reservedRoomIdsSet = new Set([
       ...occupiedRooms.map(room => room.room_id),
+      ...checkInToday.map(room => room.room_id),
       ...checkOutToday.map(room => room.room_id),
       ...blockedRooms.map(room => room.room_id)
     ]);
