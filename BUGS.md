@@ -33,6 +33,41 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Reservation modification using period change function
 - **Root Cause**: Likely in the period change function where it's not properly handling the cleanup of existing reservation details before adding new ones, causing duplicate entries for the same room and date with different plans
 
+#### Feature Request #33: Editable Receipts with Version History
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Allow editing of 領収書 (receipts) after they have been issued
+  - Implement a version control system to track all changes made to receipts
+  - Each edit should create a new version while preserving previous versions
+  - Version history should be accessible and show:
+    - Timestamp of each version
+    - User who made the changes
+    - Specific fields that were modified
+  - System should allow comparison between different versions
+  - Option to revert to a previous version if needed
+- **Additional Notes**:
+  - Important for audit trails and compliance
+  - Should include a clear indication of the current active version
+  - Consider adding a reason field for modifications
+  - Ensure all versions remain accessible in the system even if not visible in the main interface
+
+#### Feature Request #34: Receipt Date and Room Information
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Add the current date to all PDF receipts for better record-keeping
+  - In the receipt creation table/view, include the following information for each reservation:
+    - Room number
+    - Check-in date
+    - Check-out date
+  - Ensure the date format is consistent and follows Japanese standards (YYYY/MM/DD)
+  - Make the date field clearly visible on the receipt
+- **Additional Notes**:
+  - The date should reflect when the receipt was generated/printed
+  - Room and date information should be clearly visible and match the reservation details
+  - Consider adding a timestamp for more precise record-keeping
+
 ### August 12, 2025
 
 #### Bug #33: Room Deletion Not Working in Production Environment
@@ -99,6 +134,24 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should match the official 宿泊者名簿 format requirements
   - Consider adding a preview function before exporting
   - Ensure data privacy and protection of sensitive guest information
+
+#### Feature Request #32: Accounting Export Enhancement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Create an enhanced export feature specifically for the accounting department
+  - Include detailed transaction data, payment information, and client details
+  - Export format should be CSV for easy import into accounting software
+  - Should include filters by date range, payment type, and reservation status
+  - Required fields:
+    - Transaction date
+    - Reservation ID
+    - Client name and company
+    - Payment type and amount
+    - Room charges and additional fees
+    - Tax information
+    - Payment status
+- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting.
 
 ### August 6, 2025
 
@@ -257,4 +310,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 13, 2025*
 *Total Bugs: 27* (last one #35)
-*Total Feature Requests: 16* (last one #31)
+*Total Feature Requests: 19* (last one #34)
