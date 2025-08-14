@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-### Fixed
-- **OTA Room Master**: Fixed XML parsing error when handling single room type in `otaRoomMaster.vue`. The code now properly handles both single and multiple room type responses from the API.
 
 ---
 ## Future Releases
@@ -317,6 +315,16 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Copy billable status as well when adding new rooms to existing reservations.
 - Bugfix: Fixed an issue where the Google Drive link in the side menu would navigate to a 'Not Found' page.
 - Bugfix: Fixed hotel selection not persisting across navigation by implementing localStorage persistence and proper initialization in TopMenu and SideMenu components.
+
+---
+
+## [1.1.2] - 2025-08-14
+
+- Feature: Improved JWT token verification to be more resilient to network errors, preventing accidental logouts during temporary network issues. The system now only clears tokens on authentication-specific errors (401/403).
+- Feature: Updated access control for the 仮ブロック (temporary block) function to be available to all users with CRUD access instead of just database managers.
+- Feature: Enhanced calendar to display actual guest names for OTA reservations instead of booker names, improving staff efficiency when identifying guests. (Feature #17)
+- Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
+- Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
 
 ---
 

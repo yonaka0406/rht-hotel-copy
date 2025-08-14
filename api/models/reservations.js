@@ -109,16 +109,38 @@ const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
   const query = `
+    WITH reservation_guests AS (
+      SELECT DISTINCT ON (reservation_details_id, hotel_id)
+        hotel_id,
+        reservation_details_id,
+        c.id as client_id,
+        c.name_kanji,
+        c.name_kana,
+        c.name
+      FROM
+        reservation_clients rc
+        JOIN clients c ON rc.client_id = c.id
+      WHERE
+        rc.hotel_id = $1
+      ORDER BY
+        reservation_details_id, hotel_id, rc.created_at
+    )
     SELECT
       reservation_details.id
       ,reservation_details.hotel_id
       ,reservation_details.reservation_id
-      ,reservations.reservation_client_id as client_id
-      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
+      ,CASE 
+        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN rg.client_id
+        ELSE reservations.reservation_client_id
+       END as client_id
+      ,CASE 
+        WHEN reservations.type IN ('ota', 'web') AND rg.client_id IS NOT NULL THEN COALESCE(rg.name_kanji, rg.name_kana, rg.name)
+        ELSE COALESCE(clients.name_kanji, clients.name_kana, clients.name) 
+       END as client_name
       ,reservations.check_in
       ,reservations.check_out
       ,reservations.number_of_people
-      ,reservations.status
+      ,reservations.status      
       ,reservations.type
       ,reservations.created_at
       ,reservation_details.date
@@ -141,6 +163,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       LEFT JOIN clients ON clients.id = reservations.reservation_client_id
       LEFT JOIN plans_global ON reservation_details.plans_global_id = plans_global.id
       LEFT JOIN plans_hotel ON reservation_details.hotel_id = plans_hotel.hotel_id AND reservation_details.plans_hotel_id = plans_hotel.id
+      LEFT JOIN reservation_guests rg ON rg.reservation_details_id = reservation_details.id AND rg.hotel_id = reservation_details.hotel_id
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date >= $2 AND reservation_details.date <= $3

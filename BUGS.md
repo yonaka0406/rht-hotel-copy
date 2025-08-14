@@ -20,22 +20,75 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Reservation creation/editing interface
 - **Additional Notes**: This issue only occurs for multi-night reservations. Single night reservations work correctly.
 
-### August 12, 2025
-
-#### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
+#### Bug #35: Duplicate Reservation Details for Same Room and Date
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: The room indicator incorrectly shows clients as "滞在中" (currently staying) for the entire day of their check-in, even if they haven't actually checked in yet.
+- **Description**: Reservation ID `f73f1c35-2ed6-4503-8950-9764b4f7fc31` has duplicate dates for the same room with different plans, which should not be possible due to the unique constraint on the `reservation_details` table.
 - **Steps to Reproduce**:
-  1. Have a reservation with a check-in date set for today
-  2. Before the client checks in, view the room indicator
-  3. Observe that the client is shown as "滞在中" even though they haven't checked in
-- **Expected Behavior**: Clients should only be marked as "滞在中" after they have actually checked in. Clients with a check-in date of today but who haven't checked in yet should not be shown in the "滞在中" section.
-- **Actual Behavior**: All clients with a check-in date of today are shown as "滞在中" regardless of their actual check-in status.
-- **Environment**: Room Indicator component, Reservation List view
-- **Additional Notes**: This can cause confusion for staff about which guests have actually arrived and which are still expected.
+  1. Create a new reservation using the plan pattern
+  2. Use the period change function to modify the reservation dates
+  3. Check the reservation details in the database
+- **Expected Behavior**: The system should prevent duplicate room assignments for the same date
+- **Actual Behavior**: Multiple reservation details exist for the same room and date with different plans
+- **Environment**: Reservation modification using period change function
+- **Root Cause**: Likely in the period change function where it's not properly handling the cleanup of existing reservation details before adding new ones, causing duplicate entries for the same room and date with different plans
 
-#### Bug #33: Room deletion not working in production environment
+#### Feature Request #33: Editable Receipts with Version History
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Allow editing of 領収書 (receipts) after they have been issued
+  - Implement a version control system to track all changes made to receipts
+  - Each edit should create a new version while preserving previous versions
+  - Version history should be accessible and show:
+    - Timestamp of each version
+    - User who made the changes
+    - Specific fields that were modified
+  - System should allow comparison between different versions
+  - Option to revert to a previous version if needed
+- **Additional Notes**:
+  - Important for audit trails and compliance
+  - Should include a clear indication of the current active version
+  - Consider adding a reason field for modifications
+  - Ensure all versions remain accessible in the system even if not visible in the main interface
+
+#### Feature Request #34: Receipt Date and Room Information
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Add the current date to all PDF receipts for better record-keeping
+  - In the receipt creation table/view, include the following information for each reservation:
+    - Room number
+    - Check-in date
+    - Check-out date
+  - Ensure the date format is consistent and follows Japanese standards (YYYY/MM/DD)
+  - Make the date field clearly visible on the receipt
+- **Additional Notes**:
+  - The date should reflect when the receipt was generated/printed
+  - Room and date information should be clearly visible and match the reservation details
+  - Consider adding a timestamp for more precise record-keeping
+
+#### Feature Request #32: Accounting Export Enhancement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Create an enhanced export feature specifically for the accounting department
+  - Include detailed transaction data, payment information, and client details
+  - Export format should be CSV for easy import into accounting software
+  - Should include filters by date range, payment type, and reservation status
+  - Required fields:
+    - Transaction date
+    - Reservation ID
+    - Client name and company
+    - Payment type and amount
+    - Room charges and additional fees
+    - Tax information
+    - Payment status
+- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting. The 備考 field is particularly important for any special notes or remarks related to the reservation.
+
+### August 12, 2025
+
+#### Bug #33: Room Deletion Not Working in Production Environment
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
 - **Steps to Reproduce**:
@@ -200,7 +253,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### July 21, 2025
 
-#### Bug #13
+#### Bug #13: Inconsistent Room Reservation Behavior Between Calendar and Edit Views
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The user opened a 3 room reservation and tried to edit one room to a different check in check out period. In the calendar view, when that happens the different room is moved to a new reservation. In the ReservationEdit the same behaviour was expected, but nothing happens.
@@ -215,7 +268,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### July 15, 2025
 
-#### Feature Request #14
+#### Feature Request #14: Fax Sending Functionality via Reservation Panel
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Add a function to send fax (via email) to the client through the reservation Panel splitbutton.
 - **Steps to Reproduce**:
@@ -227,7 +280,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: 
 - **Additional Notes**: Useful for quickly sending reservation confirmations or details to clients who require fax communication.
 
-#### Feature Request #16
+#### Feature Request #16: Room Type Hierarchy for Systematic Upgrades
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Implement a room type hierarchy to systematically identify upgrades and support business logic for OTA reservations. When a requested room type is unavailable, the system should be able to upgrade the client based on the hierarchy. 
@@ -238,20 +291,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Actual Behavior**: No room type hierarchy.
 - **Environment**: OTA integration, PMS import logic
 - **Additional Notes**: This will prevent duplicate reservations and improve upgrade handling.
-
-#### Feature Request #17: Show Guest Name for OTA Reservations in Calendar (2025/07/29)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
-  - Currently, the calendar shows the booker's name for all reservations
-  - For OTA reservations, show the name of the actual guest(s) instead
-  - **Implementation Considerations**:
-    - Need to verify if OTA API provides guest names
-    - Handle cases with multiple guests (show primary guest or all names?)
-    - Consider adding a fallback to booker name if guest name is unavailable
-  - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-  - **Additional Notes**:
-    - This will help staff quickly identify actual guests rather than seeing the OTA's booking reference name
-    - Need to investigate what guest information is currently being captured from OTA bookings
 
 ---
 
@@ -270,5 +309,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 13, 2025*
-*Total Bugs: 26* (last one #34)
-*Total Feature Requests: 17* (last one #31)
+*Total Bugs: 27* (last one #35)
+*Total Feature Requests: 19* (last one #34)

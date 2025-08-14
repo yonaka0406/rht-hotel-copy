@@ -190,39 +190,50 @@ router.beforeEach((to, from, next) => {
         headers: {
           'Authorization': `Bearer ${authToken}`,
         },
-        credentials: 'include'
+        credentials: 'include',
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        try {
+          const data = await response.json();
 
-        // Specific handling for insufficient permissions
-        if (data.error && data.error.includes('Insufficient permissions')) {
-          next({ name: 'MainPage' });
-          return false;          
+          // Specific handling for insufficient permissions
+          if (data.error && data.error.includes('Insufficient permissions')) {
+            next({ name: 'MainPage' });
+            return false;          
+          }
+
+          // Only clear token on authentication errors (401, 403)
+          if (response.status === 401 || response.status === 403) {
+            console.log('Authentication error, clearing token');
+            localStorage.removeItem('authToken');        
+            next({ name: 'Login' });
+          } else {
+            // For other errors, log but don't log out the user
+            console.warn('API error during token verification, but keeping user logged in', data);
+            next();
+          }
+          return false;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          // Don't log out if we can't parse the error response
+          next();
+          return false;
         }
-
-        // Other errors
-        localStorage.removeItem('authToken');        
-        next({ name: 'Login' });
-        return false;
       }
 
       return true;
     } catch (error) {      
-      console.error('Authentication verification failed in verifyToken catch block:', {
+      console.error('Network/request error during token verification:', {
         name: error.name,
         message: error.message,
-        stack: error.stack,
-        fileName: error.fileName, // Often useful in Firefox
-        lineNumber: error.lineNumber,
-        columnNumber: error.columnNumber,
-        result: error.result, // For NS_ERROR_... codes
-        errorObjectToString: error.toString(),
-        properties: JSON.stringify(error, Object.getOwnPropertyNames(error))
+        ...(process.env.NODE_ENV === 'development' ? { stack: error.stack } : {})
       });
-      localStorage.removeItem('authToken');
-      next({ name: 'Login' });
+      
+      // Don't log out on network errors, just continue
+      // The user might be offline or the server might be temporarily unavailable
+      next();
       return false;
     }
   };
