@@ -1250,13 +1250,8 @@ const copyReservation = async (req, res) => {
 const getFailedOtaReservations = async (req, res) => {
   try {
     const reservations = await selectFailedOtaReservations(req.requestId);
-
-    if (reservations.length === 0) {
-      return res.status(404).json({ message: 'No failed OTA reservations found.' });
-    }
-
-    return res.status(200).json({ reservations });
-  } catch (error) {
+    return res.status(200).json({ reservations: reservations || [] });    
+  } catch (error) {    
     console.error('Error fetching failed OTA reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching failed OTA reservations.' });
   }
