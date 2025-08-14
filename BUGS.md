@@ -68,6 +68,24 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Room and date information should be clearly visible and match the reservation details
   - Consider adding a timestamp for more precise record-keeping
 
+#### Feature Request #32: Accounting Export Enhancement
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Create an enhanced export feature specifically for the accounting department
+  - Include detailed transaction data, payment information, and client details
+  - Export format should be CSV for easy import into accounting software
+  - Should include filters by date range, payment type, and reservation status
+  - Required fields:
+    - Transaction date
+    - Reservation ID
+    - Client name and company
+    - Payment type and amount
+    - Room charges and additional fees
+    - Tax information
+    - Payment status
+- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting.
+
 ### August 12, 2025
 
 #### Bug #33: Room Deletion Not Working in Production Environment
@@ -134,24 +152,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should match the official 宿泊者名簿 format requirements
   - Consider adding a preview function before exporting
   - Ensure data privacy and protection of sensitive guest information
-
-#### Feature Request #32: Accounting Export Enhancement
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Create an enhanced export feature specifically for the accounting department
-  - Include detailed transaction data, payment information, and client details
-  - Export format should be CSV for easy import into accounting software
-  - Should include filters by date range, payment type, and reservation status
-  - Required fields:
-    - Transaction date
-    - Reservation ID
-    - Client name and company
-    - Payment type and amount
-    - Room charges and additional fees
-    - Tax information
-    - Payment status
-- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting.
 
 ### August 6, 2025
 
