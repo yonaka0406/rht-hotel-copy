@@ -84,7 +84,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
     - Room charges and additional fees
     - Tax information
     - Payment status
-- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting.
+- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting. The 備考 field is particularly important for any special notes or remarks related to the reservation.
 
 ### August 12, 2025
 
