@@ -8,10 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- **Authentication**: Improved JWT token verification to be more resilient to network errors. The system now only clears tokens on authentication-specific errors (401/403) rather than on all network errors, preventing accidental logouts during temporary network issues. Added better error handling and logging for token verification failures.
-- **Permissions**: Updated access control for the 仮ブロック (temporary block) function, changing the required permission level from database managers to all users with CRUD access.
-- **Room Indicator**: Fixed incorrect "Currently Staying" status display in `RoomIndicator.vue`. The component now properly shows guests as "滞在中" only after they have actually checked in, rather than on their scheduled check-in date.
-- **OTA Room Master**: Fixed XML parsing error when handling single room type in `otaRoomMaster.vue`. The code now properly handles both single and multiple room type responses from the API.
 
 ---
 ## Future Releases
@@ -319,6 +315,15 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Copy billable status as well when adding new rooms to existing reservations.
 - Bugfix: Fixed an issue where the Google Drive link in the side menu would navigate to a 'Not Found' page.
 - Bugfix: Fixed hotel selection not persisting across navigation by implementing localStorage persistence and proper initialization in TopMenu and SideMenu components.
+
+---
+
+## [1.1.2] - 2025-08-14
+
+- Feature: Improved JWT token verification to be more resilient to network errors, preventing accidental logouts during temporary network issues. The system now only clears tokens on authentication-specific errors (401/403).
+- Feature: Updated access control for the 仮ブロック (temporary block) function to be available to all users with CRUD access instead of just database managers.
+- Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
+- Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
 
 ---
 
