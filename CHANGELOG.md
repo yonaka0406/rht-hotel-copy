@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dashboard: Fixed the plans and addons chart to properly display data from the API
 - Dashboard: Fixed occupancy rate chart to correctly show 0% when there are no available rooms
 - Bug Fix: Fixed an issue where addons would persist when changing a room plan from a plan with addons to a plan without addons
+- Bug Fix: Fixed parking assignment to correctly handle addon details and user tracking
 
 ---
 ## Future Releases

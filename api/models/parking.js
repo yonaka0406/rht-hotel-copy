@@ -608,7 +608,33 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
     }
 };
 
-const saveParkingAssignments = async (requestId, reservationDetailIds, assignments) => {
+// Helper function to get addon details
+async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_id) {
+    let addonDetails = null;
+    
+    if (addons_hotel_id) {
+        const result = await client.query(
+            'SELECT * FROM addons_hotel WHERE hotel_id = $1 AND id = $2',
+            [hotel_id, addons_hotel_id]
+        );
+        addonDetails = result.rows[0];
+    } else if (addons_global_id) {
+        const result = await client.query(
+            'SELECT * FROM addons_global WHERE id = $1',
+            [addons_global_id]
+        );
+        addonDetails = result.rows[0];
+    }
+    
+    return addonDetails || {
+        name: '駐車場',
+        tax_type_id: null,
+        tax_rate: 0.1, // Default 10% tax if not specified
+        price: 0
+    };
+}
+
+const saveParkingAssignments = async (requestId, reservationDetailIds, assignments, userId) => {
     const pool = getPool(requestId);
     const client = await pool.connect();
 
@@ -635,6 +661,14 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
                 throw new Error('hotel_id is required in the assignment object');
             }
             
+            // Get addon details
+            const addonDetails = await getAddonDetails(
+                client,
+                hotel_id,
+                assignment.addons_hotel_id,
+                assignment.addons_global_id
+            );
+            
             // For each date in the assignment, find the corresponding reservation detail ID
             for (let i = 0; i < assignment.dates.length; i++) {
                 const date = assignment.dates[i];
@@ -652,17 +686,25 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
                         addons_global_id,
                         addons_hotel_id,
                         addon_type,
+                        addon_name,
                         price, 
-                        quantity
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                        quantity,
+                        tax_type_id,
+                        tax_rate,
+                        created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
                     [
                         hotel_id,
                         detailId, 
                         assignment.addons_global_id || 3,
                         assignment.addons_hotel_id || null,
                         assignment.addon_type || 'parking',
-                        assignment.unitPrice || 0,
-                        1
+                        addonDetails.name,
+                        assignment.unitPrice || addonDetails.price || 0,
+                        1,
+                        addonDetails.tax_type_id,
+                        addonDetails.tax_rate,
+                        userId
                     ]
                 );
                 const reservationAddonId = addonRes.rows[0].id;
@@ -675,15 +717,17 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
                         vehicle_category_id,
                         parking_spot_id,
                         date,
-                        status
-                    ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')`,
+                        status,
+                        created_by
+                    ) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', $7)`,
                     [
                         hotel_id,
                         detailId,
                         reservationAddonId,
                         assignment.vehicleCategoryId,
                         assignment.spotId,
-                        date
+                        date,
+                        userId
                     ]
                 );
             }
@@ -699,6 +743,14 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
             if (!hotel_id) {
                 throw new Error('hotel_id is required in the assignment object');
             }
+            
+            // Get addon details
+            const addonDetails = await getAddonDetails(
+                client,
+                hotel_id,
+                assignment.addons_hotel_id,
+                assignment.addons_global_id
+            );
 
             for (const detailId of reservationDetailIds) {
                 for (const date of assignment.dates) {
@@ -709,17 +761,23 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
                             addons_global_id,
                             addons_hotel_id,
                             addon_type,
+                            addon_name,
                             price, 
-                            quantity
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+                            quantity,
+                            tax_type_id,
+                            tax_rate
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
                         [
                             hotel_id,
                             detailId,
                             assignment.addons_global_id || 3,
                             assignment.addons_hotel_id || null,
                             assignment.addon_type || 'parking',
-                            assignment.unitPrice || 0,
-                            1
+                            addonDetails.name,
+                            assignment.unitPrice || addonDetails.price || 0,
+                            1,
+                            addonDetails.tax_type_id,
+                            addonDetails.tax_rate
                         ]
                     );
                     const reservationAddonId = addonRes.rows[0].id;

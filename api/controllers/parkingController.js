@@ -512,8 +512,9 @@ const bulkDeleteParkingAddonAssignments = async (req, res) => {
 
 const saveParkingAssignments = async (req, res) => {
     const { reservationDetailIds, assignments } = req.body;
+    const user_id = req.user.id;
     try {
-        const result = await parkingModel.saveParkingAssignments(req.requestId, reservationDetailIds, assignments);
+        const result = await parkingModel.saveParkingAssignments(req.requestId, reservationDetailIds, assignments, user_id);
         res.json(result);
     } catch (error) {
         console.error(error);
