@@ -119,12 +119,7 @@ const getReservationsToday = async (req, res) => {
 
   try {
     const reservations = await selectReservationsToday(req.requestId, hid, date);
-
-    if (reservations.length === 0) {
-      return res.status(404).json({ message: 'No reservations found.' });
-    }
-
-    return res.status(200).json({ reservations });
+    return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
     console.error('Error fetching reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });

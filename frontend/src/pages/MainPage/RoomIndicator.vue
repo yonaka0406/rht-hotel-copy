@@ -25,7 +25,9 @@
     </div>
 
     <Panel class="dark:bg-gray-800 dark:border-gray-700">
-      <template #header>        
+      <template #header>
+        <div></div>        
+        <h2 class="text-xl font-semibold mb-3 text-gray-700 dark:text-gray-200">予定表</h2>
       </template>
       <div v-if="isLoading" class="grid gap-4">
         <div v-for="n in 4" :key="n" class="col-span-1 md:col-span-1">
@@ -100,7 +102,7 @@
                   </div>
                 </div>
                 <div v-else>
-                  <p class="dark:text-gray-400">部屋はありません。</p>
+                  <p class="dark:text-gray-400">予約予定はありません。</p>
                 </div>
               </template>
             
@@ -225,196 +227,132 @@
 
   // Computed
   const roomGroups = computed(() => {
-    // console.log('[RoomIndicator] Calculating roomGroups');
-    // console.log('[RoomIndicator] selectedDate:', selectedDate.value);
-    // console.log('[RoomIndicator] reservedRoomsDayView:', reservedRoomsDayView.value);
-    // console.log('[RoomIndicator] selectedHotelRooms:', selectedHotelRooms.value);
-
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
-        console.error("Invalid selectedDate.value:", selectedDate.value);
-        return [];
+      console.error("Invalid selectedDate.value:", selectedDate.value);
+      return [];
     }
 
-    const reservedRoomIds = new Set(
-      reservedRoomsDayView.value?.reservations
-        ?.filter(room => room.cancelled === null)
-        ?.map((res) => res.room_id) || []
-    );
-    // console.log('[RoomIndicator] reservedRoomIds:', reservedRoomIds);
-
-    const checkInToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
+    const allReservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null) || [];
+    
+    // 1. BLOCKED ROOMS - Always blocked regardless of dates
+    const blockedRooms = allReservations.filter(room => room.status === 'block');
+    
+    // Create categorization with priority (no duplicates)
+    // Priority: Check-out > Check-in > Occupied
+    const categorizedRooms = {
+      checkOut: [],
+      checkIn: [],
+      occupied: []
+    };
+    
+    allReservations.forEach(room => {
+      if (room.status === 'block') return; // Already handled
+      
       const checkInDate = new Date(room.check_in);
-      
-      // Ensure checkInDate is a valid Date object
-      if (isNaN(checkInDate.getTime())) {
-        // console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
-        return false;
-      }
-
-      const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj) &&
-        room.status !== 'block' &&
-        room.status !== 'checked_in' &&  // Exclude already checked-in rooms
-        room.cancelled === null;
-      
-      // console.log(`[RoomIndicator] Check-in today for room ${room.room_number}:`, isCheckInToday, {
-      //   checkInDate: formatDate(checkInDate),
-      //   selectedDate: formatDate(selectedDateObj),
-      //   status: room.status,
-      //   cancelled: room.cancelled
-      // });
-      
-      return isCheckInToday;
-    }) || [];
-
-    const checkOutToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
       const checkOutDate = new Date(room.check_out);
       
-      // Ensure checkOutDate is a valid Date object
-      if (isNaN(checkOutDate.getTime())) {
-        // console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
-        return false;
+      if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+        return;
       }
       
-      const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj) &&
-        room.status === 'checked_in' &&  // Only include checked-in rooms
-        room.cancelled === null;
+      const isCheckInToday = formatDate(checkInDate) === formatDate(selectedDateObj);
+      const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
       
-      // console.log(`[RoomIndicator] Check-out today for room ${room.room_number}:`, isCheckOutToday, {
-      //   checkOutDate: formatDate(checkOutDate),
-      //   selectedDate: formatDate(selectedDateObj),
-      //   status: room.status,
-      //   cancelled: room.cancelled
-      // });
-      
-      return isCheckOutToday;
-    }) || [];
-
-    const occupiedRooms = reservedRoomsDayView.value?.reservations?.filter((room) => {
-      // Ensure check_in date is valid
-      const checkInDate = new Date(room.check_in);
-      if (isNaN(checkInDate.getTime())) {
-        // console.warn(`[RoomIndicator] Invalid check_in date:`, room.check_in, 'for room:', room);
-        return false;
+      // Priority 1: Check-out today (highest priority)
+      if (isCheckOutToday) {
+        categorizedRooms.checkOut.push(room);
       }
+      // Priority 2: Check-in today (only if not checking out)
+      else if (isCheckInToday) {
+        categorizedRooms.checkIn.push(room);
+      }
+      // Priority 3: Currently allocated/reserved for this date (regardless of check-in status)
+      else if (checkInDate <= selectedDateObj && 
+              checkOutDate > selectedDateObj) {
+        // Room is allocated/reserved for this date period
+        categorizedRooms.occupied.push(room);
+      }
+    });
 
-      // Ensure check_out date is valid
-      const checkOutDate = new Date(room.check_out);
-      if (isNaN(checkOutDate.getTime())) {
-        // console.warn(`[RoomIndicator] Invalid check_out date:`, room.check_out, 'for room:', room);
-        return false;
-      }          
-
-      const isOccupied = !isNaN(checkInDate.getTime())
-        && !isNaN(checkOutDate.getTime()) 
-        && checkInDate <= selectedDateObj 
-        && checkOutDate > selectedDateObj
-        && room.cancelled === null
-        && room.status === 'checked_in'  // Only include checked-in guests
-        && room.status !== 'block';
-
-      // console.log(`[RoomIndicator] Room ${room.room_number} occupied check:`, {
-      //   isOccupied,
-      //   checkInDate: formatDate(checkInDate),
-      //   checkOutDate: formatDate(checkOutDate),
-      //   selectedDate: formatDate(selectedDateObj),
-      //   status: room.status,
-      //   cancelled: room.cancelled
-      // });
-
-      return isOccupied;
-    }) || [];
-
-    const blockedRooms = reservedRoomsDayView.value?.reservations?.filter((room) => {
-      return room.status === 'block';
-    }) || [];
-
-    // Get all room IDs that are currently occupied, checking in today, checking out today, or blocked
-    const reservedRoomIdsSet = new Set([
-      ...occupiedRooms.map(room => room.room_id),
-      ...checkInToday.map(room => room.room_id),
-      ...checkOutToday.map(room => room.room_id),
-      ...blockedRooms.map(room => room.room_id)
+    // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
+    const unavailableRoomIds = new Set([
+      ...blockedRooms.map(room => room.room_id),
+      ...categorizedRooms.checkIn.map(room => room.room_id),
+      ...categorizedRooms.occupied.map(room => room.room_id)
+      // NOTE: We DON'T exclude check-out rooms because they become free after checkout
     ]);
+    
+    // Also exclude rooms that have reservations overlapping this date (but not checking out today)
+    allReservations.forEach(room => {
+      if (room.status === 'block') return;
+      
+      const checkInDate = new Date(room.check_in);
+      const checkOutDate = new Date(room.check_out);
+      const isCheckOutToday = formatDate(checkOutDate) === formatDate(selectedDateObj);
+      
+      if (!isNaN(checkInDate.getTime()) && !isNaN(checkOutDate.getTime()) && 
+          checkInDate <= selectedDateObj && checkOutDate > selectedDateObj &&
+          !isCheckOutToday && // Don't exclude if checking out today (becomes free)
+          !unavailableRoomIds.has(room.room_id)) {
+        unavailableRoomIds.add(room.room_id);
+      }
+    });
 
     const freeRooms = selectedHotelRooms.value?.filter((room) => 
       room.room_for_sale_idc === true && 
-      !reservedRoomIdsSet.has(room.room_id)
+      !unavailableRoomIds.has(room.room_id)
     ) || [];
 
-    // console.log('[RoomIndicator] Room groups result:', {
-    //   checkInToday: checkInToday.length,
-    //   checkOutToday: checkOutToday.length,
-    //   occupiedRooms: occupiedRooms.length,
-    //   freeRooms: freeRooms.length,
-    //   blockedRooms: blockedRooms.length
-    // });
-
-    const result = [
-      { title: '本日チェックイン待ち', rooms: checkInToday, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
-      { title: '本日チェックアウト待ち', rooms: checkOutToday, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
-      { title: '滞在', rooms: occupiedRooms, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },
+    return [
+      { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
+      { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
+      { title: '滞在', rooms: categorizedRooms.occupied, color: 'bg-yellow-100', darkColor: 'dark:bg-yellow-900/30' },
       { title: '空室', rooms: freeRooms, color: 'bg-gray-100', darkColor: 'dark:bg-gray-800' },
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
-
-    return result;
   });
 
   const summaryMetrics = computed(() => {
-    // console.log('[RoomIndicator] Calculating summaryMetrics');
+    // For summary metrics, we want to show the operational status
+    // These represent the current allocation state, not historical verification
     
-    // Get all check-ins for today (both checked in and not yet checked in)
-    const allCheckInsToday = reservedRoomsDayView.value?.reservations?.filter((room) => {
-      const checkInDate = new Date(room.check_in);
-      const isCheckIn = !isNaN(checkInDate.getTime()) && 
-             formatDate(checkInDate) === formatDate(selectedDate.value) &&
-             room.status !== 'block' &&
-             room.cancelled === null;
-      
-      // if (isCheckIn) {
-      //   console.log('[RoomIndicator] Found check-in for today:', {
-      //     room_id: room.room_id,
-      //     room_number: room.room_number,
-      //     check_in: room.check_in,
-      //     status: room.status,
-      //     client_name: room.client_name
-      //   });
-      // }
-      
-      return isCheckIn;
-    }) || [];
+    const checkInCount = roomGroups.value.find(g => g.title === '本日チェックイン')?.rooms.length || 0;
+    const checkOutCount = roomGroups.value.find(g => g.title === '本日チェックアウト')?.rooms.length || 0;
+    const occupiedCount = roomGroups.value.find(g => g.title === '滞在')?.rooms.length || 0;
+    const freeRoomsCount = roomGroups.value.find(g => g.title === '空室')?.rooms.length || 0;
+    const blockedCount = roomGroups.value.find(g => g.title === '部屋ブロック')?.rooms.length || 0;
 
-    // console.log('[RoomIndicator] Total check-ins today:', allCheckInsToday.length);
-
-    const metricsMap = {
-      '本日チェックイン待ち': { 
+    // Note: For operational purposes, the summary shows expected activity
+    // Check-in and check-out lists show ALL reservations for verification
+    // But counts reflect actual room allocation status
+    
+    return [
+      { 
         title: '本日チェックイン', 
         icon: 'pi pi-arrow-down-left', 
         iconColor: 'text-blue-500',
-        count: allCheckInsToday.length // Show total expected check-ins
+        count: checkInCount
       },
-      '本日チェックアウト': { 
+      { 
         title: '本日チェックアウト', 
         icon: 'pi pi-arrow-up-right', 
         iconColor: 'text-green-500',
-        count: roomGroups.value.find(g => g.title === '本日チェックアウト待ち')?.rooms.length || 0
+        count: checkOutCount
       },
-      '滞在': { 
+      { 
         title: '滞在者数', 
         icon: 'pi pi-users', 
         iconColor: 'text-yellow-500',
-        count: roomGroups.value.find(g => g.title === '滞在')?.rooms.length || 0
+        count: occupiedCount
       },
-      '空室': { 
+      { 
         title: '空室数', 
         icon: 'pi pi-home', 
         iconColor: 'text-gray-500',
-        count: roomGroups.value.find(g => g.title === '空室')?.rooms.length || 0
+        count: freeRoomsCount
       },
-    };
-    
-    return Object.values(metricsMap);
+    ];
   });
   
   const openNewReservation = (room) => {
