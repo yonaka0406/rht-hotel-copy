@@ -200,18 +200,18 @@ const updateMenuItems = () => {
   ];
 
   if (selectedHotel.value?.google_drive_url) {
-    // console.log('Adding 予約紹介 menu with URL:', selectedHotel.value.google_drive_url);
+    // console.log('Adding 予約照会 menu with URL:', selectedHotel.value.google_drive_url);
     items.push({
-      label: '予約紹介',
+      label: '予約照会',
       icon: 'pi pi-fw pi-google',
       type: 'link',
       command: () => {
-        // console.log('予約紹介 clicked, opening URL:', selectedHotel.value.google_drive_url);
+        // console.log('予約照会 clicked, opening URL:', selectedHotel.value.google_drive_url);
         window.open(selectedHotel.value.google_drive_url, '_blank');
       }
     });
   } else {
-    // console.log('予約紹介 menu not added - missing google_drive_url');
+    // console.log('予約照会 menu not added - missing google_drive_url');
   }
 
   items.push(
