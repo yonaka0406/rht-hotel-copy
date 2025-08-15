@@ -1447,11 +1447,12 @@ const updateReservationStatus = async (requestId, reservationData) => {
   }
 };
 const updateReservationDetailStatus = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
+  // Get a client from the pool to run multiple queries in a single transaction
+  const client = await pool.connect();
+
   const { id, hotel_id, status, updated_by } = reservationData;
 
-  const pool = getPool(requestId);
-  const client = await pool.connect();
-  
   try {
     // Start the transaction
     await client.query('BEGIN');
@@ -1486,6 +1487,11 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     }
 
     const result = await client.query(detailQuery, detailValues);
+    const reservationId = result.rows[0]?.reservation_id;
+
+    if (!reservationId) {
+        throw new Error('Could not find reservation associated with the detail.');
+    }
 
     // 2. Update the associated reservation_parking records
     let parkingQuery = '';
@@ -1514,6 +1520,40 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // Only execute the parking query if it was set
     if (parkingQuery) {
         await client.query(parkingQuery, parkingValues);
+    }
+    
+    // 3. Check remaining details and update the main reservation accordingly
+    const remainingDetailsQuery = `
+      SELECT
+          MIN(date) as new_check_in,
+          MAX(date) + INTERVAL '1 day' as new_check_out
+      FROM reservation_details
+      WHERE reservation_id = $1 AND hotel_id = $2 AND cancelled IS NULL
+    `;
+    const remainingDetailsResult = await client.query(remainingDetailsQuery, [reservationId, hotel_id]);
+    const { new_check_in, new_check_out } = remainingDetailsResult.rows[0];
+
+    if (new_check_in === null) {
+      // If no active details remain, cancel the entire reservation
+      const cancelReservationQuery = `
+        UPDATE reservations
+        SET
+            status = 'cancelled',
+            updated_by = $1
+        WHERE id = $2 AND hotel_id = $3;
+      `;
+      await client.query(cancelReservationQuery, [updated_by, reservationId, hotel_id]);
+    } else {
+      // Otherwise, update the check-in and check-out dates
+      const updateReservationDatesQuery = `
+        UPDATE reservations
+        SET
+            check_in = $1,
+            check_out = $2,
+            updated_by = $3
+        WHERE id = $4 AND hotel_id = $5;
+      `;
+      await client.query(updateReservationDatesQuery, [new_check_in, new_check_out, updated_by, reservationId, hotel_id]);
     }
 
     // If all queries were successful, commit the transaction
@@ -1600,32 +1640,68 @@ const updateReservationTime = async (requestId, reservationData) => {
   }
 };
 const updateReservationType = async (requestId, reservationData) => {
-  const pool = getPool(requestId);
   const { id, hotel_id, type, updated_by } = reservationData;
 
-  try {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
 
-    const query = `
+  try {
+    // Start the transaction
+    await client.query('BEGIN');
+
+    let result;
+
+    // If the type is 'employee', update status to 'confirmed' and details to billable.
+    if (type === 'employee') {
+      const reservationQuery = `
         UPDATE reservations
         SET
-          type = $1,          
-          updated_by = $2          
+          type = $1,
+          status = 'confirmed',
+          updated_by = $2
         WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
-    `;
-    const values = [
-      type,
-      updated_by,
-      id,
-      hotel_id,
-    ];
+      `;
+      const reservationValues = [type, updated_by, id, hotel_id];
+      result = await client.query(reservationQuery, reservationValues);
 
-    const result = await pool.query(query, values);
+      // Also set billable to true for all associated reservation details.
+      const detailsQuery = `
+        UPDATE reservation_details
+        SET
+          billable = TRUE,
+          updated_by = $1
+        WHERE reservation_id = $2::UUID AND hotel_id = $3;
+      `;
+      const detailValues = [updated_by, id, hotel_id];
+      await client.query(detailsQuery, detailValues);
+
+    } else {
+      // Otherwise, just update the type.
+      const query = `
+        UPDATE reservations
+        SET
+          type = $1,
+          updated_by = $2
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+      `;
+      const values = [type, updated_by, id, hotel_id];
+      result = await client.query(query, values);
+    }
+
+    // If all queries were successful, commit the transaction
+    await client.query('COMMIT');
 
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
-    throw new Error('Database error');
+    // If the query fails, roll back the transaction
+    await client.query('ROLLBACK');
+    console.error('Error updating reservation type:', err);
+    throw new Error('Database transaction failed');
+  } finally {
+    // Always release the client back to the pool
+    client.release();
   }
 };
 const updateReservationResponsible = async (requestId, id, updatedFields, user_id) => {
@@ -2591,8 +2667,8 @@ const deleteHoldReservationById = async (requestId, reservation_id, updated_by) 
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
 
-    DELETE FROM reservations
-    WHERE id = %L AND status = 'hold'
+    DELETE FROM reservations    
+    WHERE id = %L AND (status = 'hold' OR type = 'employee')
     RETURNING *;
   `, updated_by, reservation_id);
 
