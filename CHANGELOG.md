@@ -8,15 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Billing: Fixed client name display order in billing page to show name_kanji, name_kana, then name
-- Receipts: Added room number and stay period (check-in to check-out) to receipt generation view
-- Room Indicator: Updated to fetch plan names directly from plans tables instead of reservation_details for consistency
-- Reports: Enhanced reservation details export
-- Dashboard: Fixed the plans and addons chart to properly display data from the API
-- Dashboard: Fixed occupancy rate chart to correctly show 0% when there are no available rooms
-- Bug Fix: Fixed an issue where addons would persist when changing a room plan from a plan with addons to a plan without addons
-- Bug Fix: Fixed parking assignment to correctly handle addon details and user tracking
-
 ---
 ## Future Releases
 
@@ -341,8 +332,22 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.3] - 2025-08-15
+
+- Feature: Billing: Fixed client name display order in billing page to show name_kanji, name_kana, then name
+- Feature: Receipts: Added room number and stay period (check-in to check-out) to receipt generation view
+- Feature: Room Indicator: Updated to fetch plan names directly from plans tables instead of reservation_details for consistency
+- Feature: Reports: Enhanced reservation details export
+- Bugfix: Dashboard: Fixed the plans and addons chart to properly display data from the API
+- Bugfix: Dashboard: Fixed occupancy rate chart to correctly show 0% when there are no available rooms
+- Bugfix: Fixed an issue where addons would persist when changing a room plan from a plan with addons to a plan without addons
+- Bugfix: Fixed parking assignment to correctly handle addon details and user tracking
+
+---
+
 ## Version History
 
+- **1.1.3** (2025-08-15) - Improved billing and receipt generation with better client name handling and stay period display. Enhanced room indicator and dashboard charts with accurate data representation. Fixed addon persistence and parking assignment issues.
 - **1.1.2** (2025-08-14) - Improved JWT token verification, enhanced calendar display for OTA reservations, and fixed critical issues with reservation details and room distribution. Added temporary block access for all users with CRUD permissions.
 - **1.1.1** (2025-08-12) - Fixed addon selection without plan, added OTA Queue Table, and resolved issues with billable status and Google Drive link navigation.
 - **1.1.0** (2025-08-04) - Refactored client reservation dialog for better maintainability. Enhanced OTA reservation handling with transaction support and Japanese UI improvements. Added hotel display ordering and calendar temp block functionality.
