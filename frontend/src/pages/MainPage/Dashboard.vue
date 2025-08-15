@@ -540,15 +540,15 @@
             const month_2 = await fetchOccupationByPeriod('month_2', selectedHotelId.value, startDate.value);
 
             if(month_0){
-                const gaugeValue_0 = Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;
+                const gaugeValue_0 = month_0[0].available_rooms === 0 ? 0 : Math.round(month_0[0].room_count / month_0[0].available_rooms * 10000) / 100;
                 gaugeData.value[2].value = gaugeValue_0;
             }else(gaugeData.value[2].value = 0)
             if(month_1){
-                const gaugeValue_1 = Math.round(month_1[0].room_count / month_1[0].available_rooms * 10000) / 100;
+                const gaugeValue_1 = month_1[0].available_rooms === 0 ? 0 : Math.round(month_1[0].room_count / month_1[0].available_rooms * 10000) / 100;
                 gaugeData.value[1].value = gaugeValue_1;
             }else(gaugeData.value[1].value = 0)
             if(month_2){
-                const gaugeValue_2 = Math.round(month_2[0].room_count / month_2[0].available_rooms * 10000) / 100;
+                const gaugeValue_2 = month_2[0].available_rooms === 0 ? 0 : Math.round(month_2[0].room_count / month_2[0].available_rooms * 10000) / 100;
                 gaugeData.value[0].value = gaugeValue_2;
             }else(gaugeData.value[0].value = 0)
             

@@ -131,9 +131,12 @@ const getOccupationByPeriod = async (req, res) => {
   try {    
     const data = await selectOccupationByPeriod(req.requestId, period, hotelId, refDate);
     
-    if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
-    }  
+    if (!data || data.length === 0) {      
+      return res.json([{
+        room_count: 0,
+        available_rooms: 0,        
+      }]);
+    } 
 
     res.json(data);
   } catch (err) {
