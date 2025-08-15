@@ -1333,8 +1333,10 @@ const updateReservationDetail = async (requestId, reservationData) => {
   }
 };
 const updateReservationStatus = async (requestId, reservationData) => {
-  const pool = getPool(requestId);
   const { id, hotel_id, status, updated_by } = reservationData;
+  
+  const pool = getPool(requestId);
+  const client = await pool.connect();  
 
   let resStatus = status;
   let type = '';
@@ -1344,104 +1346,91 @@ const updateReservationStatus = async (requestId, reservationData) => {
   }
 
   try {
-    let query = '';
-    let values = '';
-    // Update status
-    query = `
-        UPDATE reservations
-        SET
-          status = $1,          
-          updated_by = $2          
-        WHERE id = $3::UUID AND hotel_id = $4
-        RETURNING *;
+    // Start the transaction
+    await client.query('BEGIN');
+
+    // 1. Update the status of the main reservation record
+    const updateReservationQuery = `
+      UPDATE reservations
+      SET
+        status = $1,
+        updated_by = $2
+      WHERE id = $3::UUID AND hotel_id = $4
+      RETURNING *;
     `;
-    values = [
-      resStatus,
-      updated_by,
-      id,
-      hotel_id,
-    ];
-    const result = await pool.query(query, values);
+    const reservationValues = [resStatus, updated_by, id, hotel_id];
+    const result = await client.query(updateReservationQuery, reservationValues);
 
-    // Fill cancelled
-    if (resStatus === 'cancelled' && type !== 'full-fee') {
-      console.log('Cancelled with billable false');
-      query = `
-          UPDATE reservation_details
-          SET
-            cancelled = gen_random_uuid()
-            ,billable = FALSE
-            ,updated_by = $1          
-          WHERE reservation_id = $2::UUID AND hotel_id = $3
-          RETURNING *;
-      `;
-      values = [
-        updated_by,
-        id,
-        hotel_id,
-      ];
-      await pool.query(query, values);
+    // 2. Based on the status, update related tables (reservation_details, reservation_parking)
+    if (resStatus === 'cancelled') {
+      // Determine if the cancellation is billable based on the original status
+      const isBillable = type === 'full-fee';
+      console.log(`Processing cancellation with billable = ${isBillable}`);
 
-      const updateParkingQuery = 'UPDATE reservation_parking SET cancelled = gen_random_uuid() WHERE reservation_id = $1';
-      await pool.query(updateParkingQuery, [id]);
-    }
-    if (resStatus === 'cancelled' && type === 'full-fee') {
-      console.log('Cancelled with billable true');
-      query = `
-          UPDATE reservation_details
-          SET
-            cancelled = gen_random_uuid()
-            ,billable = TRUE
-            ,updated_by = $1          
-          WHERE reservation_id = $2::UUID AND hotel_id = $3
-          RETURNING *;
+      // Update reservation_details to mark as cancelled and set billable status
+      const updateDetailsQuery = `
+        UPDATE reservation_details
+        SET
+          cancelled = gen_random_uuid(),
+          billable = $1,
+          updated_by = $2
+        WHERE reservation_id = $3::UUID AND hotel_id = $4;
       `;
-      values = [
-        updated_by,
-        id,
-        hotel_id,
-      ];
-    }
-    // Set billable true
-    if (resStatus === 'confirmed') {
-      query = `
-          UPDATE reservation_details
-          SET
-            cancelled = NULL
-            ,billable = TRUE
-            ,updated_by = $1          
-          WHERE reservation_id = $2::UUID AND hotel_id = $3
-          RETURNING *;
+      const detailValues = [isBillable, updated_by, id, hotel_id];
+      await client.query(updateDetailsQuery, detailValues);
+
+      // Also cancel any associated parking reservations by finding them through reservation_details
+      const updateParkingQuery = `
+        UPDATE reservation_parking
+        SET
+          cancelled = gen_random_uuid(),
+          updated_by = $1
+        WHERE reservation_details_id IN (
+          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
+        );
       `;
-      values = [
-        updated_by,
-        id,
-        hotel_id,
-      ];
-    }
-    // Set billable false
-    if (resStatus === 'provisory') {
-      query = `
-          UPDATE reservation_details
-          SET            
-            billable = FALSE
-            ,updated_by = $1          
-          WHERE reservation_id = $2::UUID AND hotel_id = $3
-          RETURNING *;
+      const parkingValues = [updated_by, id, hotel_id];
+      await client.query(updateParkingQuery, parkingValues);
+
+    } else if (resStatus === 'confirmed') {
+      // For confirmed reservations, ensure details are not cancelled and are billable
+      const updateDetailsQuery = `
+        UPDATE reservation_details
+        SET
+          cancelled = NULL,
+          billable = TRUE,
+          updated_by = $1
+        WHERE reservation_id = $2::UUID AND hotel_id = $3;
       `;
-      values = [
-        updated_by,
-        id,
-        hotel_id,
-      ];
+      const detailValues = [updated_by, id, hotel_id];
+      await client.query(updateDetailsQuery, detailValues);
+
+    } else if (resStatus === 'provisory') {
+      // For provisory reservations, ensure details are not billable
+      const updateDetailsQuery = `
+        UPDATE reservation_details
+        SET
+          billable = FALSE,
+          updated_by = $1
+        WHERE reservation_id = $2::UUID AND hotel_id = $3;
+      `;
+      const detailValues = [updated_by, id, hotel_id];
+      await client.query(updateDetailsQuery, detailValues);
     }
 
-    await pool.query(query, values);
+    // If all queries were successful, commit the transaction
+    await client.query('COMMIT');
 
+    // Return the updated reservation from the first query
     return result.rows[0];
   } catch (err) {
-    console.error('Error updating reservation detail:', err);
-    throw new Error('Database error');
+    // If any query fails, roll back the entire transaction
+    await client.query('ROLLBACK');
+    console.error('Error in transaction, rolling back changes:', err);
+    throw new Error('Database transaction failed');
+  } finally {
+    // Always release the client back to the pool in the end
+    client.release();
   }
 };
 const updateReservationDetailStatus = async (requestId, reservationData) => {
