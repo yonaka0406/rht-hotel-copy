@@ -1120,19 +1120,45 @@ const deleteAddon = (addon) => {
 
 const applyPlanChangesToAll = async () => {
     try {
-        groupedRooms.value.every(async (room) => {
-            const roomId = room.room_id;
-            await setRoomPlan(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, selectedPlan.value, selectedAddon.value, selectedDays.value);
+        // 1. Create an array of promises
+        const updatePromises = groupedRooms.value.map(room => {
+            const params = {
+                hotelId: reservationInfo.value.hotel_id,
+                roomId: room.room_id,
+                reservationId: reservationInfo.value.reservation_id,
+                plan: selectedPlan.value,
+                addons: selectedAddon.value,
+                daysOfTheWeek: selectedDays.value
+            };
+            // Assuming setRoomPlan is refactored to take one object
+            return setRoomPlan(params); 
         });
 
-        closeReservationBulkEditDialog();
+        // 2. Wait for all promises to resolve
+        await Promise.all(updatePromises);
 
-        // Provide feedback to the user
-        toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+        // 3. This code now runs only after all updates succeed
+        closeReservationBulkEditDialog();
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: 'すべての部屋の予約明細が更新されました。', // "All rooms updated"
+            life: 3000 
+        });
 
     } catch (error) {
-        console.error('Failed to apply changes:', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
+        // If any of the updates fail, Promise.all will reject
+        // and the error will be caught here.
+        console.error('Failed to apply bulk changes:', error);
+        
+        const errorMessage = error.response?.data?.message || '変更の適用に失敗しました。';
+        
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: errorMessage, 
+            life: 5000 
+        });
     }
 };
 const applyPatternChangesToAll = async () => {

@@ -413,7 +413,8 @@ export function useReservationStore() {
     };
 
     // Bulk Update
-    const setRoomPlan = async (hotelId, roomId, reservationId, plan, addons, daysOfTheWeek) => {
+    const setRoomPlan = async (params) => {
+        const { hotelId, roomId, reservationId, plan, addons, daysOfTheWeek } = params;
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -428,7 +429,12 @@ export function useReservationStore() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update reservation');
+                // Get the error details from the server's response
+                const errorData = await response.json(); 
+                const error = new Error(errorData.message || 'Failed to update reservation');
+                // Attach the full response to the error object so the caller can use it
+                error.response = { data: errorData }; 
+                throw error;
             }
 
             setReservationIsUpdating(false);

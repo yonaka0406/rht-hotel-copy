@@ -888,14 +888,7 @@
                 // Make the API call
                 //console.log('3. Making API call to update room plan...');
                 const startTime = performance.now();
-                const result = await setRoomPlan(
-                    reservationInfo.value.hotel_id, 
-                    selectedGroup.value.room_id, 
-                    reservationInfo.value.reservation_id, 
-                    selectedPlan.value, 
-                    selectedAddon.value, 
-                    selectedDays.value
-                );
+                const result = await setRoomPlan(params);                
                 const endTime = performance.now();
                 
                 //console.log(`4. API call completed in ${(endTime - startTime).toFixed(2)}ms`);
