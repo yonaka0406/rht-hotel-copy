@@ -325,25 +325,33 @@ const updateInvoices = async (requestId, id, hotelId, date, clientId, clientName
 
 async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endDate) {
   const pool = getPool(requestId);
-  const query = `
+  const query = `    
     SELECT
-        p.id as payment_id,
-        TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date,
-        p.value as amount,
-        COALESCE(c.name_kanji, c.name_kana, c.name) as client_name,
-        r.receipt_number as existing_receipt_number
+      res.check_in
+      ,res.check_out		
+      ,p.id as payment_id		
+      ,rs.room_number
+      ,TO_CHAR(p.date, 'YYYY-MM-DD') as payment_date
+      ,p.value as amount
+      ,COALESCE(c.name_kanji, c.name_kana, c.name) as client_name
+      ,p.comment
+      ,r.receipt_number as existing_receipt_number
     FROM
-        reservation_payments p
-    JOIN
-        clients c ON p.client_id = c.id
-    LEFT JOIN
-        receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id -- Added p.hotel_id = r.hotel_id
+      reservation_payments p
+        JOIN
+      clients c ON p.client_id = c.id
+        JOIN
+      reservations res ON res.id = p.reservation_id
+        JOIN 
+      rooms rs ON rs.id = p.room_id
+        LEFT JOIN
+      receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
     WHERE
-        p.hotel_id = $1 AND
-        p.date >= $2 AND
-        p.date <= $3
+      p.hotel_id = $1 AND
+      p.date >= $2 AND
+      p.date <= $3
     ORDER BY
-        p.date DESC;
+      p.date DESC;
   `;
   try {
     const result = await pool.query(query, [hotelId, startDate, endDate]);

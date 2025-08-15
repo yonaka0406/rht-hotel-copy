@@ -57,6 +57,20 @@
                             <InputText v-model="clientFilter" type="text" placeholder="氏名・名称検索" />
                         </template>
                     </Column>
+                    <Column field="room_number" header="部屋番号" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <span v-if="slotProps.data.room_number">{{ slotProps.data.room_number }}号室</span>
+                            <span v-else>-</span>
+                        </template>
+                    </Column>
+                    <Column field="stay_period" header="予約期間" sortable style="width:1%">
+                        <template #body="slotProps">
+                            <span v-if="slotProps.data.check_in && slotProps.data.check_out">
+                                {{ formatDateWithDay(slotProps.data.check_in) }} ~ {{ formatDateWithDay(slotProps.data.check_out) }}
+                            </span>
+                            <span v-else>-</span>
+                        </template>
+                    </Column>
                     <Column field="payment_date" header="支払日" sortable style="width:1%">
                         <template #body="slotProps">
                             <span>{{ formatDateWithDay(slotProps.data.payment_date) }}</span>
