@@ -9,7 +9,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         ,reservations.id
         ,reservations.status
         ,reservations.reservation_client_id AS booker_id
-        ,COALESCE(booker.name_kanji, booker.name, booker.name_kana) AS booker_name
+        ,COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name
         ,booker.name_kana AS booker_name_kana
         ,booker.name_kanji AS booker_name_kanji
         ,reservations.check_in
