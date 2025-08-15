@@ -21,6 +21,24 @@ This document contains all fixed and closed issues that were previously tracked 
   - Added proper handling for missing or null values
 - **Date Fixed**: 2025-08-15
 
+### Feature Request #32: Accounting Export Enhancement
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Created an enhanced export feature for the accounting department
+  - Includes detailed transaction data, payment information, and client details
+  - Export format is CSV for easy import into accounting software
+  - Includes filters by date range, payment type, and reservation status
+  - Added fields:
+    - Transaction date
+    - Reservation ID
+    - Client name and company
+    - Payment type and amount
+    - Room charges and additional fees
+    - Tax information
+    - Payment status
+- **Additional Notes**: This streamlines the accounting department's monthly closing process and financial reporting. The 備考 field is included for special notes or remarks related to the reservation.
+
 ## August 14, 2025
 
 ### Bug #34: Incorrect Room Distribution for Multi-night Reservations

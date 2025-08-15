@@ -129,14 +129,17 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
     SELECT 
       reservation_details.date
       ,COALESCE(reservation_details.plans_global_id::TEXT, '') || 'h' || COALESCE(reservation_details.plans_hotel_id::TEXT, '') AS key
-      ,COALESCE(reservation_details.plan_name, '未設定') AS name
+      ,COALESCE(plans_global.name, plans_hotel.name, '未設定') AS name
       ,reservation_details.plan_type
       ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN 1
         ELSE reservation_details.number_of_people END) AS quantity
     FROM
       reservations
       ,reservation_details        
-      
+      LEFT JOIN plans_global
+        ON plans_global.id = reservation_details.plans_global_id
+      LEFT JOIN plans_hotel
+        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
     WHERE
       reservation_details.hotel_id = $1
       AND reservation_details.date BETWEEN $2 AND $3
@@ -149,7 +152,8 @@ const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart,
       reservation_details.date
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,reservation_details.plan_name
+      ,plans_global.name
+      ,plans_hotel.name
       ,reservation_details.plan_type
     ORDER BY 1, 2  
   `;
@@ -294,7 +298,7 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd)
           ,SUM(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.rates_price
             ELSE rr.rates_price * reservation_details.number_of_people END              
           ) AS plan_price
-          ,SUM(CASE WHEN reservation_details.billable = TRUE AND reservation_details.   cancelled IS NULL THEN COALESCE(ra.addon_sum,0) ELSE 0 END
+          ,SUM(CASE WHEN reservation_details.billable = TRUE AND reservation_details.cancelled IS NULL THEN COALESCE(ra.addon_sum,0) ELSE 0 END
           ) AS addon_price
         FROM
           reservation_details 
@@ -593,6 +597,8 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,reservations.number_of_people AS reservation_number_of_people
       ,reservations.status AS reservation_status
       ,reservations.type AS reservation_type
+      ,reservations.agent
+      ,reservations.ota_reservation_id
       ,reservation_details.id
       ,reservation_details.date
       ,rooms.floor
@@ -603,7 +609,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,room_types.name AS room_type_name
       ,reservation_details.number_of_people
       ,reservation_details.plan_type
-      ,reservation_details.plan_name
+      ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
       ,(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price
         ELSE rr.price * reservation_details.number_of_people END
       ) AS plan_price
@@ -626,6 +632,8 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.number_of_people
           ,reservations.status
           ,reservations.type
+          ,reservations.agent
+          ,reservations.ota_reservation_id
           ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS booker_name
           ,clients.name_kana AS booker_kana
 			    ,clients.name_kanji AS booker_kanji
@@ -647,6 +655,8 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.number_of_people
           ,reservations.status
           ,reservations.type
+          ,reservations.agent
+          ,reservations.ota_reservation_id
           ,clients.name_kanji, clients.name, clients.name_kana
       ) AS reservations
       ,reservation_details
@@ -665,6 +675,10 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
         LEFT JOIN
       reservation_addons
         ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+      LEFT JOIN plans_hotel 
+        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
+      LEFT JOIN plans_global 
+        ON plans_global.id = reservation_details.plans_global_id
         
     WHERE      
       reservations.hotel_id = $1
@@ -1007,7 +1021,7 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
   try {
       const result = await pool.query(query, values);           
       if (result.rows.length === 0) {
-        return []; // This line needs to change
+        return []; 
       }
       return result.rows;
   } catch (err) {

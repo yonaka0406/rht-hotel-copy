@@ -27,24 +27,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a reason field for modifications
   - Ensure all versions remain accessible in the system even if not visible in the main interface
 
-#### Feature Request #32: Accounting Export Enhancement
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: 
-  - Create an enhanced export feature specifically for the accounting department
-  - Include detailed transaction data, payment information, and client details
-  - Export format should be CSV for easy import into accounting software
-  - Should include filters by date range, payment type, and reservation status
-  - Required fields:
-    - Transaction date
-    - Reservation ID
-    - Client name and company
-    - Payment type and amount
-    - Room charges and additional fees
-    - Tax information
-    - Payment status
-- **Additional Notes**: This will help streamline the accounting department's monthly closing process and financial reporting. The 備考 field is particularly important for any special notes or remarks related to the reservation.
-
 ### August 12, 2025
 
 #### Bug #33: Room Deletion Not Working in Production Environment
@@ -269,4 +251,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 14, 2025*
 *Total Bugs: 26* (last one #34)
-*Total Feature Requests: 18* (last one #34)
+*Total Feature Requests: 17* (last one #34)

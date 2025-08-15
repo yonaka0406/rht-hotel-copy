@@ -315,6 +315,8 @@ const getExportReservationDetails = async (req, res) => {
         滞在期間:  `${startDate}～${endDate}`,
         ステータス: translateStatus(reservation.reservation_status),
         予約種類: translateType(reservation.reservation_type),
+        エージェント: reservation.agent,
+        OTA_ID: reservation.ota_reservation_id,
         予約者: reservation.booker_name,
         予約者カナ: reservation.booker_kana,
         チェックイン: formatDate(new Date(reservation.check_in)),
