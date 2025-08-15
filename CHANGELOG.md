@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Billing: Fixed client name display order in billing page to show name_kanji, name_kana, then name
 - Receipts: Added room number and stay period (check-in to check-out) to receipt generation view
 - Room Indicator: Updated to fetch plan names directly from plans tables instead of reservation_details for consistency
 - Reports: Enhanced reservation details export
