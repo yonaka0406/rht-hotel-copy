@@ -7,7 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 13, 2025
 
-
 #### Feature Request #33: Editable Receipts with Version History
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -138,7 +137,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should be exportable to common formats (CSV, Excel)
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-#### Bug #3 / Feature Request
+#### Bug #3 / Feature Request: Room Type Change Confirmation in Free Move Mode
 - **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
@@ -151,7 +150,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: 
 - **Additional Notes**: This is to prevent accidental room type changes during free move operations. Spec created at `.kiro/specs/room-change-confirmation/`.
 
-#### Feature Request #10
+#### Feature Request #10: Part-time Staff Dashboard
 - **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Description**: Create a page for part-time staff that displays only limited, essential information in a defined format, focusing on:
   - Number of guests checking in/out
@@ -169,7 +168,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Include visual indicators for special cases (e.g., VIP, special requests)
   - Ensure sensitive information is appropriately restricted
 
-#### Feature Request #12
+#### Feature Request #12: Calendar Visual Indicators for Room Flexibility
 - **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Add indicators in the calendar view for (1) clients who can have their room moved, and (2) clients who do not have a preference for room type. These indicators should be easily visible in the calendar.

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Room Indicator: Updated to fetch plan names directly from plans tables instead of reservation_details for consistency
 - Reports: Enhanced reservation details export
 - Dashboard: Fixed the plans and addons chart to properly display data from the API
+- Bug Fix: Fixed an issue where addons would persist when changing a room plan from a plan with addons to a plan without addons
 
 ---
 ## Future Releases
