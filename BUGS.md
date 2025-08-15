@@ -5,6 +5,52 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 15, 2025
+
+#### Bug #36: Employee Reservations Not Included in Meal Count Report
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Meal counts for employee reservations are not being included in the meal count report.
+  - This happens because the report currently filters out reservations with type 'employee'.
+- **Steps to Reproduce**:
+  1. Create a reservation with type 'employee' that includes meals
+  2. Generate a meal count report for the relevant date range
+  3. Observe that the employee's meals are not included in the report
+- **Expected Behavior**: 
+  - Employee reservations should be included in the meal count report
+  - All meals from all reservation types should be counted by default
+- **Actual Behavior**: 
+  - Meals from employee reservations are excluded from the report
+- **Environment**: All environments
+- **Additional Notes**: 
+  - Two potential solutions:
+    1. Modify the report query to include employee reservations
+    2. Change the status of employee reservations to 'confirmed' to match other reservation types
+  - The first approach (modifying the report) is recommended to maintain the distinction between employee and regular reservations
+
+#### Bug #35: Checkin/Checkout Dates Not Updating After Partial Cancellation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - When the first day(s) or last day(s) of a reservation are cancelled, the checkin and checkout dates in the reservations table are not being updated to reflect the new date range.
+  - The system should automatically adjust the checkin date if the first day(s) are cancelled, and the checkout date if the last day(s) are cancelled.
+- **Steps to Reproduce**:
+  1. Create a multi-day reservation (e.g., Jan 1 - Jan 5)
+  2. Cancel the first day (Jan 1) of the reservation
+  3. Observe that the checkin date in the reservations table still shows Jan 1
+  4. Similarly, cancel the last day (Jan 5)
+  5. Observe that the checkout date in the reservations table still shows Jan 5
+- **Expected Behavior**: 
+  - When first day(s) are cancelled, the checkin date should update to the new first day
+  - When last day(s) are cancelled, the checkout date should update to the new last day
+- **Actual Behavior**: 
+  - The checkin/checkout dates in the reservations table remain unchanged after partial cancellation
+- **Environment**: All environments
+- **Additional Notes**: 
+  - The system should calculate the min/max dates from the remaining reservation_details records after cancellation
+  - This affects the accuracy of reservation date reporting and filtering
+
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History
@@ -248,6 +294,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 14, 2025*
-*Total Bugs: 26* (last one #34)
+*Last Updated: August 15, 2025*
+*Total Bugs: 28* (last one #36)
 *Total Feature Requests: 17* (last one #34)
