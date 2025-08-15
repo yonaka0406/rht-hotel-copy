@@ -661,7 +661,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,reservation_details.price
       ,reservation_details.plans_global_id
       ,reservation_details.plans_hotel_id
-      ,reservation_details.plan_name
+      ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
       ,reservation_details.plan_type
       ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
       ,rc.clients_json::TEXT
