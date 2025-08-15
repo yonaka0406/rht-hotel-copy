@@ -44,15 +44,44 @@
               <template #content>
                 <div v-if="group.rooms.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
                   <div v-for="room in group.rooms" :key="room.room_id" 
-                    class="p-2 rounded outline-zinc-500/50 dark:outline-gray-400/50 outline-dashed dark:bg-gray-600"
+                    :class="[
+                      'p-2 rounded outline-zinc-500/50 dark:outline-gray-400/50 outline-dashed',
+                      // Default background
+                      'dark:bg-gray-600',
+                      // Conditional background colors based on group and status
+                      {
+                        // 本日チェックアウト - Already checked out (completed)
+                        'bg-green-200 dark:bg-green-800': group.title === '本日チェックアウト' && room.status === 'checked_out',
+                        
+                        // 本日チェックイン - Already checked in or checked out (completed)
+                        'bg-blue-200 dark:bg-blue-800': group.title === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out'),
+                        
+                        // Default background for pending/incomplete statuses
+                        'bg-white dark:bg-gray-600': !(
+                          (group.title === '本日チェックアウト' && room.status === 'checked_out') ||
+                          (group.title === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out'))
+                        )
+                      }
+                    ]"
                   >
+                    <!-- Status completion indicator -->
+                    <div v-if="group.title === '本日チェックアウト' && room.status === 'checked_out'" 
+                        class="absolute top-1 right-1 text-xs bg-green-500 text-white px-2 py-1 rounded">
+                      完了
+                    </div>
+                    <div v-else-if="group.title === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out')" 
+                        class="absolute top-1 right-1 text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                      完了
+                    </div>
+                    
+                    <!-- Rest of your existing room card content -->
                     <div class="flex items-center justify-between">
                       <span class="font-semibold dark:text-white">{{ room.room_number + '：' + room.room_type_name }}</span>
                       <div class="flex items-center">
-                        <div v-if="room.number_of_people"class="flex items-center mr-2">
+                        <div v-if="room.number_of_people" class="flex items-center mr-2">
                           <div class="flex items-center dark:text-gray-200">
-                          <i class="pi pi-users mr-1"></i>
-                          <span>{{ room.number_of_people }}</span>
+                            <i class="pi pi-users mr-1"></i>
+                            <span>{{ room.number_of_people }}</span>
                           </div>
                         </div>
                         <div class="flex items-center justify-end">                    
@@ -61,12 +90,13 @@
                           <span v-else-if="room.status === 'confirmed'" class="bg-sky-600 rounded-full w-3 h-3 mr-1"></span>
                           <span v-else-if="room.status === 'checked_in'" class="bg-green-500 rounded-full w-3 h-3 mr-1"></span>
                           <span v-else-if="room.status === 'checked_out'" class="bg-purple-500 rounded-full w-3 h-3 mr-1"></span>
-                          <span v-else-if="room.status === 'cancelled'" class="bg-black-500 rounded-full w-3 h-3 mr-1"></span>
+                          <span v-else-if="room.status === 'cancelled'" class="bg-red-500 rounded-full w-3 h-3 mr-1"></span>
                           <span v-else class="bg-gray-500 rounded-full w-3 h-3 mr-1"></span>
                         </div>
                       </div>
                     </div>
                     
+                    <!-- Client info section -->
                     <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
                       <Avatar icon="pi pi-user" size="small" class="mr-2"/>
                       <span class="mb-4">{{ room.client_name }}</span> 
@@ -75,6 +105,8 @@
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
                       <span>予約を追加</span> 
                     </div>
+                    
+                    <!-- Time and plan info -->
                     <div v-if="group.title === '本日チェックイン'" class="flex items-center gap-2">
                       <div>
                         <span class="dark:text-gray-200">
@@ -354,6 +386,44 @@
       },
     ];
   });
+
+  const getRoomCardClasses = (room, groupTitle) => {
+    const baseClasses = [
+      'p-2', 'rounded', 'outline-zinc-500/50', 'dark:outline-gray-400/50', 
+      'outline-dashed', 'relative' // Added relative for absolute positioned indicators
+    ];
+
+    // Determine background color based on group and status
+    if (groupTitle === '本日チェックアウト' && room.status === 'checked_out') {
+      // Already checked out - completed status
+      baseClasses.push('bg-green-200', 'dark:bg-green-800');
+    } else if (groupTitle === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out')) {
+      // Already checked in or completed - completed status
+      baseClasses.push('bg-blue-200', 'dark:bg-blue-800');
+    } else {
+      // Default background for pending/incomplete statuses
+      baseClasses.push('bg-white', 'dark:bg-gray-600');
+    }
+
+    return baseClasses.join(' ');
+  };
+
+  const getStatusIndicator = (room, groupTitle) => {
+    if (groupTitle === '本日チェックアウト' && room.status === 'checked_out') {
+      return {
+        show: true,
+        text: '完了',
+        classes: 'absolute top-1 right-1 text-xs bg-green-500 text-white px-2 py-1 rounded'
+      };
+    } else if (groupTitle === '本日チェックイン' && (room.status === 'checked_in' || room.status === 'checked_out')) {
+      return {
+        show: true,
+        text: '完了',
+        classes: 'absolute top-1 right-1 text-xs bg-blue-500 text-white px-2 py-1 rounded'
+      };
+    }
+    return { show: false };
+  };
   
   const openNewReservation = (room) => {
     // console.log('[openNewReservation] Using selected date:', selectedDate.value);
