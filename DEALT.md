@@ -4,6 +4,25 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 15, 2025
 
+### Feature Request #34: Receipt Date and Room Information
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: 
+  - Added the current date to all PDF receipts for better record-keeping
+  - In the receipt creation table/view, included the following information for each reservation:
+    - Room number
+    - Check-in date
+    - Check-out date
+  - Ensured the date format is consistent and follows Japanese standards (YYYY/MM/DD)
+  - Made the date field clearly visible on the receipt
+- **Implementation Details**:
+  - Added new columns to the receipts view for room number and stay period
+  - Formatted dates to show in Japanese standard format (YYYY/MM/DD) with day of week
+  - Added proper handling for missing or null values
+- **Date Fixed**: 2025-08-15
+
+## August 14, 2025
+
 ### Bug #34: Incorrect Room Distribution for Multi-night Reservations
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -16,8 +35,6 @@ This document contains all fixed and closed issues that were previously tracked 
   - Removed complex room adjustment logic that was causing inconsistencies
 - **Files Modified**: `api/controllers/reservationsController.js`
 - **Date Fixed**: 2025-08-15
-
-## August 14, 2025
 
 ### Bug #35: Duplicate Reservation Details for Same Room and Date
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed

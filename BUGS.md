@@ -27,22 +27,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a reason field for modifications
   - Ensure all versions remain accessible in the system even if not visible in the main interface
 
-#### Feature Request #34: Receipt Date and Room Information
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: 
-  - Add the current date to all PDF receipts for better record-keeping
-  - In the receipt creation table/view, include the following information for each reservation:
-    - Room number
-    - Check-in date
-    - Check-out date
-  - Ensure the date format is consistent and follows Japanese standards (YYYY/MM/DD)
-  - Make the date field clearly visible on the receipt
-- **Additional Notes**:
-  - The date should reflect when the receipt was generated/printed
-  - Room and date information should be clearly visible and match the reservation details
-  - Consider adding a timestamp for more precise record-keeping
-
 #### Feature Request #32: Accounting Export Enhancement
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
@@ -285,4 +269,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 14, 2025*
 *Total Bugs: 26* (last one #34)
-*Total Feature Requests: 19* (last one #34)
+*Total Feature Requests: 18* (last one #34)

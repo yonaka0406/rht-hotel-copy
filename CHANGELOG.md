@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Receipts: Added room number and stay period (check-in to check-out) to receipt generation view
 
 ---
 ## Future Releases
@@ -291,6 +292,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## [1.1.0] - 2025-08-04
+
 - Feature: Fixed transaction handling for OTA reservations to prevent duplicate bookings and ensure data consistency. Added proper error handling and transaction rollback on failures.
 - UI/UX: Added Japanese labels for OTA transaction types (NewBookReport → 新規予約, ModificationReport → 予約変更, CancellationReport → 予約キャンセル) in the notifications drawer.
 - Bugfix: Resolved issue where hotelId was not being properly passed through the OTA reservation processing pipeline.
@@ -310,6 +312,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ---
 
 ## [1.1.1] - 2025-08-12
+
 - Bugfix: Fixed issue where users couldn't add addons without selecting a plan first. The system now properly handles cases where no plan is selected. (Bug #22)
 - Feature: Show OTA Queue Table in Admin page.
 - Bugfix: Copy billable status as well when adding new rooms to existing reservations.
@@ -333,6 +336,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ## Version History
 
+- **1.1.2** (2025-08-14) - Improved JWT token verification, enhanced calendar display for OTA reservations, and fixed critical issues with reservation details and room distribution. Added temporary block access for all users with CRUD permissions.
+- **1.1.1** (2025-08-12) - Fixed addon selection without plan, added OTA Queue Table, and resolved issues with billable status and Google Drive link navigation.
 - **1.1.0** (2025-08-04) - Refactored client reservation dialog for better maintainability. Enhanced OTA reservation handling with transaction support and Japanese UI improvements. Added hotel display ordering and calendar temp block functionality.
 - **1.0.7** (2025-07-29) - Fixed issues with reservation management UI and calendar navigation. Improved employee reservation handling and room indicator filtering. Added Japanese error notifications for better user feedback.
 - **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target.
