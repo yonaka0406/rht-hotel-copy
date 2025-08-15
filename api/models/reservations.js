@@ -1405,6 +1405,19 @@ const updateReservationStatus = async (requestId, reservationData) => {
       const detailValues = [updated_by, id, hotel_id];
       await client.query(updateDetailsQuery, detailValues);
 
+      // Also "recover" any associated parking reservations by removing the cancelled flag
+      const updateParkingQuery = `
+        UPDATE reservation_parking
+        SET
+          cancelled = NULL,
+          updated_by = $1
+        WHERE reservation_details_id IN (
+          SELECT id FROM reservation_details WHERE reservation_id = $2::UUID AND hotel_id = $3
+        );
+      `;
+      const parkingValues = [updated_by, id, hotel_id];
+      await client.query(updateParkingQuery, parkingValues);
+
     } else if (resStatus === 'provisory') {
       // For provisory reservations, ensure details are not billable
       const updateDetailsQuery = `
