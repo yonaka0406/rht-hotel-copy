@@ -979,12 +979,29 @@ const editReservationRoomPlan = async (req, res) => {
   const { hid, rid, id } = req.params;
   const { plan, addons, daysOfTheWeek } = req.body;
   const user_id = req.user.id;
-
+  
   try {
-    const updatedReservation = await updateReservationRoomPlan(req.requestId, id, hid, rid, plan, addons, daysOfTheWeek, user_id);
+    const updateData = {      
+      reservationId: id,
+      hotelId: hid,
+      roomId: rid,
+      plan,
+      addons,
+      daysOfTheWeek,
+      userId: user_id
+    };
+    console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
+    
+    const updatedReservation = await updateReservationRoomPlan(req.requestId, updateData);  
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);
+    if (err.name === 'NotFoundError') {
+        return res.status(404).json({ error: 'Reservation not found' });
+    }
+    if (err.name === 'ValidationError') {
+        return res.status(400).json({ error: err.message });
+    }
     res.status(500).json({ error: 'Failed to update reservation detail' });
   }
 };

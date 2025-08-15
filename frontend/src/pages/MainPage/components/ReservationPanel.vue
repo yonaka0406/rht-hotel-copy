@@ -964,9 +964,9 @@ const openReservationBulkEditDialog = async () => {
     await fetchPatternsForHotel(hotelId);
     // Addons
     const allAddons = await fetchAllAddons(hotelId); 
-    console.log('[ReservationPanel] fetchAllAddons', allAddons);
+    //console.log('[ReservationPanel] fetchAllAddons', allAddons);
     addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
-    console.log('[ReservationPanel] addonOptions', addonOptions.value);
+    //console.log('[ReservationPanel] addonOptions', addonOptions.value);
     tabsReservationBulkEditDialog.value = 0;
     visibleReservationBulkEditDialog.value = true;
 };
@@ -1123,9 +1123,9 @@ const applyPlanChangesToAll = async () => {
         // 1. Create an array of promises
         const updatePromises = groupedRooms.value.map(room => {
             const params = {
-                hotelId: reservationInfo.value.hotel_id,
-                roomId: room.room_id,
-                reservationId: reservationInfo.value.reservation_id,
+                hotel_id: reservationInfo.value.hotel_id,
+                room_id: room.room_id,
+                reservation_id: reservationInfo.value.reservation_id,
                 plan: selectedPlan.value,
                 addons: selectedAddon.value,
                 daysOfTheWeek: selectedDays.value

@@ -413,8 +413,16 @@ export function useReservationStore() {
     };
 
     // Bulk Update
-    const setRoomPlan = async (params) => {
-        const { hotelId, roomId, reservationId, plan, addons, daysOfTheWeek } = params;
+    const setRoomPlan = async (params) => {        
+        const { 
+            hotel_id: hotelId, 
+            room_id: roomId, 
+            reservation_id: reservationId, 
+            plan, 
+            addons, 
+            daysOfTheWeek 
+        } = params;
+        console.log('DEBUGGING setRoomPlan ARGS:', params);
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');

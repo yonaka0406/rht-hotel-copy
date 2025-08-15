@@ -2316,69 +2316,53 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
     client.release();
   }
 };
-const updateReservationRoomPlan = async (requestId, reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, user_id) => {
+const updateReservationRoomPlan = async (requestId, data) => {
+  console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
+  const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId } = data;
+
   const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // Set session
-    const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
-    await client.query(setSessionQuery);
-
+    // Set session context for auditing/triggers
+    await client.query(format(`SET SESSION "my_app.user_id" = %L;`, userId));
+    
     let detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
     const validDays = daysOfTheWeek.map(d => d.value);
     // Filter detailsArray to keep only dates that match daysOfTheWeek
     detailsArray = detailsArray.filter(detail => {
       const dayOfWeek = detail.date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-      const isIncluded = validDays.includes(dayOfWeek);
-      //console.log(`Detail ID ${detail.id} for date ${detail.date} (${dayOfWeek}): ${isIncluded ? 'INCLUDED' : 'EXCLUDED'}`);
+      const isIncluded = validDays.includes(dayOfWeek);      
       return isIncluded;
     });
-
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Will update ${detailsArray.length} reservation details`);
-
+    
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {
       const { id, date } = detail;
-      //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Processing detail ID ${id} for date ${date}`);
-
+      
       try {
         // 1. Update Plan      
-        if (plan) {
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Updating plan for detail ${id}`);
-          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, user_id);
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Successfully updated plan for detail ${id}`);
-        } else {
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Skipping plan update for detail ${id} - no plan provided`);
-        }
+        if (plan) {          
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId);          
+        } 
+        
+        // 2. Update Addons        
+        await updateReservationDetailAddon(requestId, id, addons || [], userId);
 
-        // 2. Update Addons
-        if (addons && addons.length > 0) {
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Updating ${addons.length} addons for detail ${id}`);
-          await updateReservationDetailAddon(requestId, id, addons, user_id);
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Successfully updated addons for detail ${id}`);
-        } else {
-          //console.log(`[${new Date().toISOString()}] [Request ${requestId}] No addons to update for detail ${id}`);
-        }
-      } catch (error) {
-        console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error updating detail ${id}:`, error);
-        throw error; // Re-throw to trigger transaction rollback
+      } catch (error) {        
+        throw error;
       }
     });
-
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Starting parallel updates for ${updatePromises.length} details`);
+    
     await Promise.all(updatePromises);
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] All detail updates completed`);
+    
+    // 3. Recalculate Price after updating plans and addons    
+    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId);
+    
 
-    // 3. Recalculate Price after updating plans and addons
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Starting price recalculation`);
-    await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, user_id);
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Price recalculation completed`);
-
-    await client.query('COMMIT');
-    //console.log(`[${new Date().toISOString()}] [Request ${requestId}] Transaction committed successfully`);
+    await client.query('COMMIT');    
 
   } catch (error) {
     console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in transaction:`, error);

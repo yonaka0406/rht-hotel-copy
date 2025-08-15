@@ -864,17 +864,7 @@
             }
         };
         const applyPlanChanges = async () => {
-            try {                      
-                //console.group('applyPlanChanges - Debug Info');
-                //console.log('1. Starting plan changes with data:');
-                //console.log('   - Hotel ID:', reservationInfo.value.hotel_id);
-                //console.log('   - Room ID:', selectedGroup.value.room_id);
-                //console.log('   - Reservation ID:', reservationInfo.value.reservation_id);
-                //console.log('   - Selected Plan:', selectedPlan.value);
-                //console.log('   - Selected Addons:', selectedAddon.value);
-                //console.log('   - Selected Days:', selectedDays.value);
-                
-                //console.log('2. Calling setRoomPlan with parameters:');
+            try {                                      
                 const params = {
                     hotel_id: reservationInfo.value.hotel_id,
                     room_id: selectedGroup.value.room_id,
@@ -883,22 +873,13 @@
                     addons: selectedAddon.value,
                     daysOfTheWeek: selectedDays.value
                 };
-                //console.log('   Parameters:', JSON.parse(JSON.stringify(params)));
+                                
+                const result = await setRoomPlan(params);
                 
-                // Make the API call
-                //console.log('3. Making API call to update room plan...');
-                const startTime = performance.now();
-                const result = await setRoomPlan(params);                
-                const endTime = performance.now();
+                closeRoomEditDialog();    
                 
-                //console.log(`4. API call completed in ${(endTime - startTime).toFixed(2)}ms`);
-                //console.log('   API Response:', result);
-                
-                closeRoomEditDialog();
-    
-                // Provide feedback to the user
                 toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
-                //console.groupEnd();
+                
                 
             } catch (error) {
                 console.error('Failed to apply changes:', error);
@@ -908,8 +889,7 @@
                     stack: error.stack,
                     response: error.response?.data
                 });
-                //console.groupEnd();
-                
+                                
                 let errorMessage = '変更の適用に失敗しました。';
                 if (error.response?.data?.message) {
                     errorMessage = error.response.data.message;

@@ -174,7 +174,7 @@ watch(() => props.parkingReservations, (newVal) => {
     }, {});
     
     parkingAssignments.value = Object.values(groupedByAddon);
-    console.log('[ReservationParking] parkingAssignments', parkingAssignments.value);
+    // console.log('[ReservationParking] parkingAssignments', parkingAssignments.value);
   } else {
     parkingAssignments.value = [];
   }
