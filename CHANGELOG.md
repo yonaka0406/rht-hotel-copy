@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Receipts: Added room number and stay period (check-in to check-out) to receipt generation view
 - Room Indicator: Updated to fetch plan names directly from plans tables instead of reservation_details for consistency
 - Reports: Enhanced reservation details export
+- Dashboard: Fixed the plans and addons chart to properly display data from the API
 
 ---
 ## Future Releases
