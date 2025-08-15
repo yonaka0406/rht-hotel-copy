@@ -1544,16 +1544,28 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       `;
       await client.query(cancelReservationQuery, [updated_by, reservationId, hotel_id]);
     } else {
-      // Otherwise, update the check-in and check-out dates
-      const updateReservationDatesQuery = `
+      // Otherwise, update the check-in/out dates and potentially the status
+      let updateQuery = `
         UPDATE reservations
         SET
             check_in = $1,
             check_out = $2,
             updated_by = $3
-        WHERE id = $4 AND hotel_id = $5;
       `;
-      await client.query(updateReservationDatesQuery, [new_check_in, new_check_out, updated_by, reservationId, hotel_id]);
+      const updateParams = [new_check_in, new_check_out, updated_by, reservationId, hotel_id];
+
+      if (status === 'recovered') {
+          const reservationStatusQuery = 'SELECT status FROM reservations WHERE id = $1 AND hotel_id = $2';
+          const reservationStatusResult = await client.query(reservationStatusQuery, [reservationId, hotel_id]);
+          const currentReservationStatus = reservationStatusResult.rows[0]?.status;
+
+          if (currentReservationStatus === 'cancelled') {
+              updateQuery += ", status = 'confirmed'";
+          }
+      }
+
+      updateQuery += ` WHERE id = $4 AND hotel_id = $5;`;
+      await client.query(updateQuery, updateParams);
     }
 
     // If all queries were successful, commit the transaction
