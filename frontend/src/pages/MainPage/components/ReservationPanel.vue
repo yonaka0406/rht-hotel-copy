@@ -123,7 +123,7 @@
             <ConfirmDialog group="recovery"></ConfirmDialog>
 
             <!-- Delete button for employee reservations (always shown when status is 保留中) -->
-            <div v-if="reservationType === '社員' && reservationStatus === '保留中'" class="grid grid-cols-4 gap-x-6">
+            <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
                 <div class="field flex flex-col">
                     <Button label="社員予約を削除" severity="danger" fluid @click="deleteReservation" />
                 </div>
@@ -158,7 +158,7 @@
                     <Button label="キャンセル復活" severity="secondary" raised @click="updateReservationStatus('confirmed')" />
                 </div>
                 <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
-                    <Button :label="reservationType === '社員' ? '社員予約を削除' : '保留中予約を削除'" severity="danger" fluid
+                    <Button :label="'保留中予約を削除'" severity="danger" fluid
                         @click="deleteReservation" />
                 </div>
             </div>
@@ -462,7 +462,7 @@
 
 <script setup>
 // Vue
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
@@ -501,16 +501,11 @@ const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAd
 
 const reservationTypeSelected = ref(null);
 const reservationTypeOptions = computed(() => {
-    // Only show employee option when status is 'hold' (保留中)
-    if (reservationStatus.value === '保留中') {
-        return [
-            { label: '通常予約', value: 'default' },
-            { label: '社員', value: 'employee' },
-        ];
-    }
     return [
         { label: '通常予約', value: 'default' },
+        { label: '社員', value: 'employee' },
     ];
+        
 });
 
 // Helper
@@ -606,23 +601,57 @@ const allPeopleCountMatch = (group) => {
 const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
 // Reservation Type
-const updateReservationType = async () => {
-    // Add your logic here to update the reservation type in the database
+const updateReservationType = async (event) => {
     try {
-        // Access the computed property value with .value
-        const selectedOption = reservationTypeOptions.value.find(option => option.value === reservationTypeSelected.value);
-        if (!selectedOption) {
-            throw new Error('Invalid reservation type selected');
+        const selectedOption = event.value;
+        const currentType = reservationType.value;
+        
+        // Store the current value to revert if needed
+        const previousValue = reservationTypeSelected.value;
+        
+        // If changing from employee to default, validate that all rooms have plans
+        if (currentType === '社員' && selectedOption === 'default') {
+            if (!allRoomsHavePlan.value) {
+                // Use $nextTick to ensure the DOM updates after the current tick
+                await nextTick();
+                // Force update the selected value
+                reservationTypeSelected.value = 'employee';
+                
+                toast.add({ 
+                    severity: 'error', 
+                    summary: 'エラー', 
+                    detail: '通常予約に変更するには、すべての部屋にプランを設定してください。', 
+                    life: 5000 
+                });
+                return;
+            }
         }
 
-        await setReservationType(selectedOption.value);
-
-        // Handle success, e.g., show a success message
-        toast.add({ severity: 'success', summary: '成功', detail: '予約種類が更新されました。', life: 3000 });
+        try {
+            await setReservationType(selectedOption);
+            // Update the local state on success
+            reservationType.value = selectedOption === 'employee' ? '社員' : '通常予約';
+            
+            toast.add({ 
+                severity: 'success', 
+                summary: '成功', 
+                detail: '予約種類が更新されました。', 
+                life: 3000 
+            });
+        } catch (error) {
+            // Revert to previous value on error
+            reservationTypeSelected.value = previousValue;
+            throw error;
+        }
 
     } catch (error) {
         console.error('Error updating reservation type:', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: '予約タイプの更新に失敗しました。', life: 3000 });
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: '予約タイプの更新に失敗しました。', 
+            life: 3000 
+        });
     }
 };
 

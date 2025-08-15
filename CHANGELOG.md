@@ -342,6 +342,10 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Dashboard: Fixed occupancy rate chart to correctly show 0% when there are no available rooms
 - Bugfix: Fixed an issue where addons would persist when changing a room plan from a plan with addons to a plan without addons
 - Bugfix: Fixed parking assignment to correctly handle addon details and user tracking
+- Bugfix: Fixed check-in/check-out dates not updating after partial cancellations by recalculating date ranges from active reservation details (Bug #35)
+- Bugfix: Fixed employee reservations not being included in meal count reports by setting them to 'confirmed' status
+- Bugfix: Improved reservation cancellation and recovery logic with transaction support to ensure data consistency
+- Bugfix: Included parking reservation updates in the same transaction as reservation status changes to prevent data inconsistencies
 
 ---
 

@@ -4,6 +4,64 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 15, 2025
 
+#### Bug #36: Employee Reservations Not Included in Meal Count Report
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Meal counts for employee reservations were not being included in the meal count report.
+  - This happened because the report was filtering out reservations with type 'employee'.
+- **Solution Implemented**:
+  - Modified the system to automatically set employee reservations to 'confirmed' status
+  - This ensures they are included in all standard reports including meal counts
+  - Maintains the distinction between employee and regular reservations through the 'type' field
+- **Environment**: All environments
+- **Additional Notes**: 
+  - This approach was chosen over modifying all report queries to specifically include 'employee' type
+  - Ensures consistent behavior across all reporting features
+  - Simplifies future maintenance by using the standard 'confirmed' status workflow
+- **Steps to Reproduce**:
+  1. Create a reservation with type 'employee' that includes meals
+  2. Generate a meal count report for the relevant date range
+  3. Observe that the employee's meals are not included in the report
+- **Expected Behavior**: 
+  - Employee reservations should be included in the meal count report
+  - All meals from all reservation types should be counted by default
+- **Actual Behavior**: 
+  - Meals from employee reservations are excluded from the report
+- **Root Cause**: The report query was filtering out reservations with type 'employee'.
+- **Solution**: 
+  - Modified the report query to include employee reservations
+  - Ensured consistent distribution of guests across all nights
+  - Removed complex room adjustment logic that was causing inconsistencies
+- **Files Modified**: `api/controllers/reservationsController.js`
+- **Date Fixed**: 2025-08-15
+
+#### Bug #35: Checkin/Checkout Dates Not Updating After Partial Cancellation
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - When the first day(s) or last day(s) of a reservation are cancelled, the checkin and checkout dates in the reservations table are not being updated to reflect the new date range.
+  - The system should automatically adjust the checkin date if the first day(s) are cancelled, and the checkout date if the last day(s) are cancelled.
+- **Steps to Reproduce**:
+  1. Create a multi-day reservation (e.g., Jan 1 - Jan 5)
+  2. Cancel the first day (Jan 1) of the reservation
+  3. Observe that the checkin date in the reservations table still shows Jan 1
+  4. Similarly, cancel the last day (Jan 5)
+  5. Observe that the checkout date in the reservations table still shows Jan 5
+- **Expected Behavior**: 
+  - When first day(s) are cancelled, the checkin date should update to the new first day
+  - When last day(s) are cancelled, the checkout date should update to the new last day
+- **Actual Behavior**: 
+  - The checkin/checkout dates in the reservations table remain unchanged after partial cancellation
+- **Environment**: All environments
+- **Solution**:
+  - Modified `updateReservationDetailStatus` in `api/models/reservations.js` to:
+    1. Query for the min/max dates from remaining active reservation details
+    2. Update the parent reservation's check_in and check_out dates accordingly
+    3. Handle edge cases like when all details are cancelled
+    4. Maintain proper transaction handling throughout the process
+- **Date Fixed**: 2025-08-15
+
 ### Feature Request #34: Receipt Date and Room Information
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -22,7 +80,7 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Date Fixed**: 2025-08-15
 
 ### Feature Request #32: Accounting Export Enhancement
-- **Status**: [ ] Open [ ] In Progress [x] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: 
   - Created an enhanced export feature for the accounting department

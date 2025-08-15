@@ -1457,8 +1457,22 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     // Start the transaction
     await client.query('BEGIN');
 
+    // First, get the parent reservation_id from the detail being updated
+    const getReservationIdQuery = 'SELECT reservation_id FROM reservation_details WHERE id = $1::UUID AND hotel_id = $2';
+    const reservationIdResult = await client.query(getReservationIdQuery, [id, hotel_id]);
+    const reservationId = reservationIdResult.rows[0]?.reservation_id;
+
+    if (!reservationId) {
+        throw new Error('Could not find reservation associated with the detail.');
+    }
+
+    // Get the current status of the main reservation to determine billable status on recovery
+    const getReservationStatusQuery = 'SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2';
+    const reservationStatusResult = await client.query(getReservationStatusQuery, [reservationId, hotel_id]);
+    const currentReservationStatus = reservationStatusResult.rows[0]?.status;
+
     let detailQuery = '';
-    const detailValues = [updated_by, id, hotel_id];
+    let detailValues = [];
 
     // 1. Update the reservation_details table based on the status
     if (status === 'cancelled') {
@@ -1471,27 +1485,28 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
         WHERE id = $2::UUID AND hotel_id = $3
         RETURNING *;
       `;
+      detailValues = [updated_by, id, hotel_id];
+
     } else if (status === 'recovered') {
+      // If the reservation is on hold or provisory, recovering a detail should not make it billable.
+      const isBillable = !(currentReservationStatus === 'provisory' || currentReservationStatus === 'hold');
       detailQuery = `
         UPDATE reservation_details
         SET
           cancelled = NULL,
-          billable = TRUE,
-          updated_by = $1
-        WHERE id = $2::UUID AND hotel_id = $3
+          billable = $1,
+          updated_by = $2
+        WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
       `;
+      detailValues = [isBillable, updated_by, id, hotel_id];
+
     } else {
       // If the status is not recognized, abort the transaction.
       throw new Error('Invalid status for reservation detail update.');
     }
 
     const result = await client.query(detailQuery, detailValues);
-    const reservationId = result.rows[0]?.reservation_id;
-
-    if (!reservationId) {
-        throw new Error('Could not find reservation associated with the detail.');
-    }
 
     // 2. Update the associated reservation_parking records
     let parkingQuery = '';
@@ -1554,14 +1569,8 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       `;
       const updateParams = [new_check_in, new_check_out, updated_by, reservationId, hotel_id];
 
-      if (status === 'recovered') {
-          const reservationStatusQuery = 'SELECT status FROM reservations WHERE id = $1 AND hotel_id = $2';
-          const reservationStatusResult = await client.query(reservationStatusQuery, [reservationId, hotel_id]);
-          const currentReservationStatus = reservationStatusResult.rows[0]?.status;
-
-          if (currentReservationStatus === 'cancelled') {
-              updateQuery += ", status = 'confirmed'";
-          }
+      if (status === 'recovered' && currentReservationStatus === 'cancelled') {
+          updateQuery += ", status = 'confirmed'";
       }
 
       updateQuery += ` WHERE id = $4 AND hotel_id = $5;`;
