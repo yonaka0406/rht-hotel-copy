@@ -241,7 +241,7 @@ const parkingUsageByRoom = computed(() => {
     }
   });
 
-  console.log('parkingUsageByRoom computed:', JSON.parse(JSON.stringify(usage)));
+  // console.log('parkingUsageByRoom computed:', JSON.parse(JSON.stringify(usage)));
   
   return usage;
 });

@@ -93,7 +93,7 @@
         try {
             const parkingData = await fetchParkingReservations(hotelId, reservationId);
             parking_reservations.value = parkingData || [];
-            console.log('[Reservation Edit] parking_reservations', parking_reservations.value);
+            //console.log('[Reservation Edit] parking_reservations', parking_reservations.value);
         } catch (error) {
             console.error('Error fetching parking reservations:', error);
             parking_reservations.value = [];
