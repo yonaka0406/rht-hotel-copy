@@ -112,14 +112,13 @@ export function useReportStore() {
 
             const data = await api.get(`/report/res/count/dtl/${hotelId}/${startDate}/${endDate}`);
 
-            // Ensure we return an array even if the API returns something else
-            if (!data) return [];
-            return Array.isArray(data) ? data : [];
+            // Return the data as-is if it's an object, otherwise return an empty object
+            return data && typeof data === 'object' ? data : {};
 
         } catch (error) {
             console.error('Failed to fetch reservation details count data:', error);
-            // Return empty array on error to avoid breaking UI components
-            return [];
+            // Return empty object on error to avoid breaking UI components
+            return {};
         }
     };
 

@@ -148,7 +148,10 @@
         const barChartOption = ref(null);
 
         const barStackChart = ref(null);
-        const barStackChartData = ref(null);
+        const barStackChartData = ref({
+            series: [],
+            xAxis: []
+        });
         const barStackChartOption = ref(null);
 
         const gaugeChart = ref(null);
@@ -392,8 +395,13 @@
             ]
         });
         const fetchBarStackChartData = async () => {  
-            barStackChartData.value = null;            
+            barStackChartData.value = {
+                series: [],
+                xAxis: []
+            };            
             const countData = await fetchCountReservationDetails(selectedHotelId.value, startDate.value, endDate.value);
+
+            console.log('[Dashboard] fetchCountReservationDetails', countData);
 
             // Generate an array of dates from startDate to endDate
             const dateArray = [];
@@ -402,14 +410,13 @@
 
             while (currentDate <= endDateObj) {
                 dateArray.push(formatDate(currentDate));
+                currentDate = new Date(currentDate); // Create a new date object to avoid reference issues
                 currentDate.setDate(currentDate.getDate() + 1);
             }
 
-            barStackChartData.value = {
-                series: [],
-            };
-
-            // console.log('fetchBarStackChartData countData:',countData);
+            // Format dates for display on x-axis
+            const displayDateArray = dateArray.map(date => formatDateWithDay(new Date(date)));
+            barStackChartData.value.xAxis = displayDateArray;
 
             const createSeriesItem = (keyField, stack, countData, dateArray) => {
                 const data = [];                    
@@ -422,8 +429,8 @@
                         const items = stack === 'Plan' ? countData[dateStr].plans || [] : countData[dateStr].addons || [];
                         const foundItem = items.find(item => item.key === keyField);
                         if (foundItem) {
-                            name = foundItem.name || name; // Assign name if found
-                            value = foundItem.quantity || 0;
+                            name = foundItem.name || foundItem.addon_name || name; // Use addon_name for addons
+                            value = parseInt(foundItem.quantity) || 0;
                         }
                     }
                     data.push(value);
@@ -438,46 +445,56 @@
                 };
             };
 
-            if(!countData){
+            if (!countData || Object.keys(countData).length === 0) {
                 console.log('No data was found for fetchBarStackChartData');
                 chartKey.value++;
-                barStackChartOption.value = generateBarStackChartOptions();                
+                // Initialize with empty chart
+                nextTick(() => {
+                    const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value);
+                    barStackChartOption.value.series = [];
+                    barStackChartOption.value.xAxis[0].data = displayDateArray;
+                    myBarStackChart.setOption(barStackChartOption.value, true);
+                    myBarStackChart.resize();
+                });
                 return;
             }
 
-            if(countData){
-                const series = [];
+            const series = [];
+            const uniquePlanKeys = new Set();
+            const uniqueAddonKeys = new Set();
 
-                // Extract unique plan_keys and addon_keys:
-                const uniquePlanKeys = new Set();
-                const uniqueAddonKeys = new Set();
-
-                for (const date in countData) {
-                    if (countData.hasOwnProperty(date)) {
-                        const item = countData[date];
-                        if (item.plans) {
-                            item.plans.forEach(plan => uniquePlanKeys.add(plan.key));
-                        }
-                        if (item.addons) {
-                            item.addons.forEach(addon => uniqueAddonKeys.add(addon.key));
-                        }
+            // First pass: collect all unique keys
+            for (const date in countData) {
+                if (countData.hasOwnProperty(date)) {
+                    const item = countData[date];
+                    if (item.plans) {
+                        item.plans.forEach(plan => uniquePlanKeys.add(plan.key));
+                    }
+                    if (item.addons) {
+                        item.addons.forEach(addon => uniqueAddonKeys.add(addon.key));
                     }
                 }
-                uniquePlanKeys.forEach(key => {                    
-                    series.push(createSeriesItem(key, 'Plan', countData, dateArray));
-                });
-
-                uniqueAddonKeys.forEach(key => {
-                    series.push(createSeriesItem(key, 'Addon', countData, dateArray));
-                });
-
-                // console.log('series:',series);
-                                
-                barStackChartData.value.series = series;
             }
+
+            // Create series for plans and addons
+            uniquePlanKeys.forEach(key => {                    
+                series.push(createSeriesItem(key, 'Plan', countData, dateArray));
+            });
+
+            uniqueAddonKeys.forEach(key => {
+                series.push(createSeriesItem(key, 'Addon', countData, dateArray));
+            });
+
+            barStackChartData.value.series = series;
             
             nextTick(() => {                    
-                barStackChartOption.value = generateBarStackChartOptions();                    
+                barStackChartOption.value = generateBarStackChartOptions();
+                barStackChartOption.value.series = barStackChartData.value.series;
+                barStackChartOption.value.xAxis[0].data = barStackChartData.value.xAxis;
+                
+                const myBarStackChart = echarts.getInstanceByDom(barStackChart.value) || echarts.init(barStackChart.value);
+                myBarStackChart.setOption(barStackChartOption.value, true);
+                myBarStackChart.resize();
             });                
         };
         const generateBarStackChartOptions = () => ({
