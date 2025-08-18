@@ -439,7 +439,7 @@ export function useReservationStore() {
             addons, 
             daysOfTheWeek 
         } = params;
-        console.log('DEBUGGING setRoomPlan ARGS:', params);
+        //console.log('DEBUGGING setRoomPlan ARGS:', params);
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
