@@ -33,21 +33,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Actual Behavior**: The billable field remains true, causing the reservation to be included in sales calculations
 - **Environment**: Reservation management system, financial reporting
 - **Additional Notes**: This affects financial reporting accuracy and needs to be fixed before month-end closing.
-
-#### Bug #39: Plan Price Rounding Discrepancy
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Description**: Plan prices are being rounded correctly in the Admin panel but not in the actual reservations calculation, leading to potential price discrepancies.
-- **Steps to Reproduce**:
-  1. Create or edit a plan with a price that requires rounding (e.g., 12,345円)
-  2. Check the displayed price in the Admin panel (correctly rounded)
-  3. Create a reservation using this plan
-  4. Observe the calculated price in the reservation details
-- **Expected Behavior**: Prices should be rounded consistently between Admin panel and reservation calculations
-- **Actual Behavior**: Different rounding behavior between Admin panel display and reservation calculations
-- **Environment**: All environments
-- **Additional Notes**: This affects financial accuracy and customer billing. Need to ensure consistent rounding logic is applied throughout the application.
-
 #### Bug #40: Rate Deletion and Zero-Value Update Issue
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
@@ -258,5 +243,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 18, 2025*
-*Total Bugs: 2* (last one #38)
+*Total Bugs: 2* (last one #40)
 *Total Feature Requests: 12* (last one #35)

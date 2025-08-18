@@ -2,6 +2,26 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 19, 2025
+
+#### Bug #39: Plan Price Rounding Discrepancy
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Plan prices were being rounded correctly in the Admin panel but not in the actual reservations calculation, leading to potential price discrepancies.
+- **Solution**: 
+  - Modified the system to avoid recalculating prices from rates and add-ons
+  - Now using the pre-calculated price stored in reservation_details for consistency
+  - This ensures the same price is used throughout the application
+- **Technical Details**:
+  - Updated `totalPrice` and `pricePerRoom` computed properties to use the price field directly
+  - Removed complex rate and add-on calculations that were causing rounding inconsistencies
+  - Simplified the codebase by removing redundant calculations
+- **Environment**: All environments
+- **Verification**: 
+  - Prices now remain consistent between Admin panel and reservation calculations
+  - No more rounding discrepancies in financial reports
+  - Improved performance by eliminating redundant calculations
+
 ## August 18, 2025
 
 #### Bug #33: Room Deletion Not Working in Production Environment
