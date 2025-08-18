@@ -330,6 +330,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
 - Bugfix: Fixed incorrect room distribution in multi-night reservations where the system was showing inconsistent guest counts across different nights. Implemented a "Calculate-Then-Create" pattern to ensure consistent distribution of guests across all nights. (Bug #34)
 - Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
+- Feature: Added comprehensive parking management system with real-time availability tracking and assignment. (Feature #18)  
 
 ---
 

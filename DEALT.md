@@ -174,6 +174,26 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Environment**: Room Indicator component
 - **Date Fixed**: 2025-08-14
 
+#### Feature Request #18: Parking Management Function
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: Add functionality to manage parking spaces and assignments for guests.
+- **Requirements**:
+  - Track available parking spaces
+  - Assign parking spots to reservations
+  - Generate parking reports
+- **Solution Implemented**:
+  - Added parking space management system with real-time availability tracking
+  - Integrated parking assignment with reservation system
+  - Created parking reports with filtering by date range and status
+  - Added parking spot management interface
+- **Files Modified**:
+  - `frontend/src/views/ParkingManagement.vue`
+  - `api/controllers/parkingController.js`
+  - `api/models/parking.js`
+  - `frontend/src/router/index.js`
+- **Date Fixed**: 2025-08-18
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ## August 7, 2025
 
 ### Bug #22: Unable to Add Addons Without a Selected Plan
