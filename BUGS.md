@@ -34,6 +34,20 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Reservation management system, financial reporting
 - **Additional Notes**: This affects financial reporting accuracy and needs to be fixed before month-end closing.
 
+#### Bug #39: Plan Price Rounding Discrepancy
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: Plan prices are being rounded correctly in the Admin panel but not in the actual reservations calculation, leading to potential price discrepancies.
+- **Steps to Reproduce**:
+  1. Create or edit a plan with a price that requires rounding (e.g., 12,345円)
+  2. Check the displayed price in the Admin panel (correctly rounded)
+  3. Create a reservation using this plan
+  4. Observe the calculated price in the reservation details
+- **Expected Behavior**: Prices should be rounded consistently between Admin panel and reservation calculations
+- **Actual Behavior**: Different rounding behavior between Admin panel display and reservation calculations
+- **Environment**: All environments
+- **Additional Notes**: This affects financial accuracy and customer billing. Need to ensure consistent rounding logic is applied throughout the application.
+
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History
