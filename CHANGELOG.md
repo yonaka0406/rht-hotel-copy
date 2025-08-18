@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 - Meal Count Page: New dedicated sheet for viewing meal counts by client and room. (Feature #28)
+- Google Drive Integration: Updated view to properly handle client names for OTA and web reservations, showing guest names from reservation_clients when available.
 
 ---
 ## Future Releases
