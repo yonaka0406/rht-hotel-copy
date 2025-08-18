@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Meal Count Page: New dedicated sheet for viewing meal counts by client and room. (Feature #28)
 
 ---
 ## Future Releases

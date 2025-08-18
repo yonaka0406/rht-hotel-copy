@@ -2,6 +2,34 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 18, 2025
+
+#### Feature Request #28: Dedicated Meal Count Page
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - Currently, meal count data is only available through export functionality
+  - Add a dedicated page to view meal counts directly in the application
+  - This will provide better accessibility for local staff who need to check meal counts regularly
+- **Implementation Requirements**:
+  - Create a new Meal Count page in the application
+  - Display meal counts in a clean, filterable table format
+  - Include date range filters similar to the export functionality
+  - Option to still export the data if needed
+- **Solution Implemented**:
+  - Created a new Meal Count page with a clean, responsive design
+  - Implemented date range filters with quick select options (today, this week, etc.)
+  - Added a data table showing meal counts by date with separate columns for each meal type
+  - Included export functionality matching the existing export feature
+  - Ensured mobile responsiveness for on-the-go access
+  - Maintained data consistency with the export functionality
+- **Files Modified**:
+  - `frontend/src/views/MealCount.vue` - New meal count page
+  - `frontend/src/router/index.js` - Added route for the new page
+  - `frontend/src/composables/useReportStore.js` - Added meal count data fetching
+  - `api/controllers/reportController.js` - Updated export functionality
+- **Date Fixed**: 2025-08-18
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ## August 15, 2025
 
 #### Bug #36: Employee Reservations Not Included in Meal Count Report

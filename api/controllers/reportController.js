@@ -333,7 +333,7 @@ const getExportReservationDetails = async (req, res) => {
         喫煙部屋: reservation.smoking ? 'はい' : 'いいえ',
         部屋容量: reservation.capacity,
         滞在人数: reservation.number_of_people,
-        日付: formatDate(new Date(reservation.date)),
+        日付: reservation.meal_date,
         プラン名: reservation.plan_name,
         プランタイプ: translatePlanType(reservation.plan_type),
         プラン料金: reservation.plan_price,
@@ -361,105 +361,224 @@ const getExportMealCount = async (req, res) => {
   const endDate = req.params.edate;
 
   try {
-    const result = await selectExportMealCount(req.requestId, hotelId, startDate, endDate); 
+    const { summary, details } = await selectExportMealCount(req.requestId, hotelId, startDate, endDate); 
     
-    if (!result || result.length === 0) {
+    if ((!summary || summary.length === 0) && (!details || details.length === 0)) {
       return res.status(404).send("No data available for the given dates.");
     }
 
-    // Create a new Excel workbook and worksheet
+    // Create a new Excel workbook
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("食事件数");
-
-    // Configure print settings
-    worksheet.pageSetup = {
-      fitToWidth: 1, // Fit to one page width
-      fitToHeight: 0, // Allow multiple pages in height if needed
-      paperSize: 9, // A4 paper size (ExcelJS uses numeric codes)
-      orientation: "landscape", // Optional: Set to "portrait" if needed
-      margins: {
-        left: 0.3, right: 0.3,
-        top: 0.5, bottom: 0.5,
-        header: 0.2, footer: 0.2
-      }
-    };    
-    worksheet.views = [{ showGridLines: false }];
-
-    const hotelName = result[0].hotel_name || "ホテル";
-    worksheet.mergeCells("A1:D1");
-    const titleCell = worksheet.getCell("A1");
-    titleCell.value = `${hotelName} の食事件数`;
-    titleCell.font = { bold: true, size: 14 };
-    titleCell.alignment = { horizontal: "center", vertical: "middle" };
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D3D3D3" } };
-
-    // Add timestamp in cell A2
-    const timeStamp = new Date().toLocaleString("ja-JP", { // Format date for Japan
+    const timestamp = new Date().toLocaleString("ja-JP", {
       year: "numeric", month: "2-digit", day: "2-digit",
       hour: "2-digit", minute: "2-digit", second: "2-digit"
     });
-    const timeCell = worksheet.getCell("A2");
-    timeCell.value = `リスト作成日時：${timeStamp}`;
-    timeCell.font = { color: { argb: "BABABA" }, bold: true, size: 9 };
-    timeCell.alignment = { horizontal: "left", vertical: "middle" };
 
-    // Headers in Row 3
-    const headerRow = worksheet.getRow(3);
-    headerRow.values = ["提供日", "朝食", "昼食", "夕食"];
-    headerRow.font = { bold: true };
-    headerRow.alignment = { horizontal: "center", vertical: "middle" };
-    
-    // Add bottom border to headers
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        bottom: { style: "thin", color: { argb: "000000" } }, // Thick black bottom border
+    // Helper function to configure worksheet styles
+    const configureWorksheet = (worksheet, title) => {
+      // Configure print settings
+      worksheet.pageSetup = {
+        fitToWidth: 1,
+        fitToHeight: 0,
+        paperSize: 9,
+        orientation: "landscape",
+        margins: {
+          left: 0.3, right: 0.3,
+          top: 0.5, bottom: 0.5,
+          header: 0.2, footer: 0.2
+        }
       };
-    });
+      
+      worksheet.views = [{ showGridLines: false }];
+      
+      // Add title
+      const titleCell = worksheet.getRow(1);
+      titleCell.values = [title];
+      titleCell.font = { bold: true, size: 14 };
+      titleCell.alignment = { horizontal: "center", vertical: "middle" };
+      
+      // Add timestamp
+      const timeCell = worksheet.getRow(2);
+      timeCell.values = [`リスト作成日時：${timestamp}`];
+      timeCell.font = { color: { argb: "BABABA" }, bold: true, size: 9 };
+      
+      return {
+        headerRow: 3,
+        dataStartRow: 4
+      };
+    };
 
-    // Set column widths and formats
-    worksheet.columns = [      
-      { key: "meal_date", width: 15 },
-      { key: "breakfast", width: 15, style: { numFmt: "0" } },
-      { key: "lunch", width: 15, style: { numFmt: "0" } },
-      { key: "dinner", width: 15, style: { numFmt: "0" } },
-    ];
-
-    // Add data rows starting from row 4
-    result.forEach((reservation, index) => {
-      const row = worksheet.addRow({
-        meal_date: new Date(formatDate(reservation.meal_date)), // Ensure date format        
-        breakfast: reservation.breakfast * 1,
-        lunch: reservation.lunch * 1,
-        dinner: reservation.dinner * 1,
+    // 1. Create Summary Sheet
+    if (summary && summary.length > 0) {
+      const summarySheet = workbook.addWorksheet("食事件数サマリー");
+      const { headerRow } = configureWorksheet(summarySheet, `${summary[0].hotel_name || "ホテル"} の食事件数サマリー`);
+      
+      // Set headers
+      const headerCells = summarySheet.getRow(headerRow);
+      headerCells.values = ["提供日", "朝食", "昼食", "夕食"];
+      headerCells.font = { bold: true };
+      headerCells.alignment = { horizontal: "center", vertical: "middle" };
+      
+      // Style headers
+      headerCells.eachCell((cell) => {
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "000000" } },
+        };
       });
-      row.alignment = { horizontal: "center", vertical: "middle" };
-      // Apply alternating row colors (striped effect)
-      if (index % 2 === 0) {
-        row.eachCell((cell) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "F2F2F2" }, // Light gray for even rows
+
+      // Set column widths and formats
+      summarySheet.columns = [      
+        { key: "meal_date", width: 15 },
+        { key: "breakfast", width: 15, style: { numFmt: "0" } },
+        { key: "lunch", width: 15, style: { numFmt: "0" } },
+        { key: "dinner", width: 15, style: { numFmt: "0" } },
+      ];
+
+      // Add data rows
+      summary.forEach((row, index) => {
+        const dataRow = summarySheet.addRow({
+          meal_date: new Date(formatDate(row.meal_date)),
+          breakfast: row.breakfast * 1,
+          lunch: row.lunch * 1,
+          dinner: row.dinner * 1,
+        });
+        
+        dataRow.alignment = { horizontal: "center", vertical: "middle" };
+        
+        // Apply alternating row colors
+        if (index % 2 === 0) {
+          dataRow.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "F2F2F2" },
+            };
+          });
+        }
+      });
+    }
+
+    // 2. Create Detailed Sheet
+    if (details && details.length > 0) {
+      const detailSheet = workbook.addWorksheet("食事詳細");
+      const { headerRow } = configureWorksheet(detailSheet, `${summary?.[0]?.hotel_name || "ホテル"} の食事詳細`);
+      
+      // Set headers
+      const headerCells = detailSheet.getRow(headerRow);
+      headerCells.values = ["予約者名", "部屋番号", "提供日", "朝食", "昼食", "夕食"];
+      headerCells.font = { bold: true };
+      headerCells.alignment = { horizontal: "center", vertical: "middle" };
+      
+      // Style headers
+      headerCells.eachCell((cell) => {
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "000000" } },
+        };
+      });
+
+      // Group details by booker, room, and date
+      const groupedDetails = details.reduce((acc, row) => {
+        const key = `${row.booker_name}|${row.room_number}|${row.meal_date}`;
+        if (!acc[key]) {
+          acc[key] = {
+            booker_name: row.booker_name,
+            room_number: row.room_number || 'N/A',
+            meal_date: new Date(row.meal_date),
+            breakfast: 0,
+            lunch: 0,
+            dinner: 0
+          };
+        }
+        // Add quantity to the corresponding meal type
+        acc[key][row.meal_type] = row.quantity * 1;
+        return acc;
+      }, {});
+
+      // Convert to array and sort by date, booker name, and room number
+      const sortedDetails = Object.values(groupedDetails).sort((a, b) => {
+        if (a.meal_date.getTime() !== b.meal_date.getTime()) {
+          return a.meal_date - b.meal_date;
+        }
+        if (a.booker_name !== b.booker_name) {
+          return a.booker_name.localeCompare(b.booker_name);
+        }
+        return (a.room_number || '').localeCompare(b.room_number || '');
+      });
+
+      // Set column widths and formats
+      detailSheet.columns = [
+        { key: "booker_name", width: 30 },
+        { key: "room_number", width: 15 },
+        { key: "meal_date", width: 15 },
+        { key: "breakfast", width: 15, style: { numFmt: "0" } },
+        { key: "lunch", width: 15, style: { numFmt: "0" } },
+        { key: "dinner", width: 15, style: { numFmt: "0" } },
+      ];
+
+      // Add data rows
+      sortedDetails.forEach((row, index) => {
+        const dataRow = detailSheet.addRow({
+          booker_name: row.booker_name,
+          room_number: row.room_number,
+          meal_date: row.meal_date,
+          breakfast: row.breakfast || 0,
+          lunch: row.lunch || 0,
+          dinner: row.dinner || 0,
+        });
+        
+        // Apply alignment
+        dataRow.alignment = { 
+          horizontal: "left", 
+          vertical: "middle",
+          wrapText: true
+        };
+        
+        // Center align room number and meal count columns
+        [2, 4, 5, 6].forEach(colNum => {  // Columns B, D, E, F (1-based index)
+          const cell = dataRow.getCell(colNum);
+          cell.alignment = { 
+            horizontal: "center",
+            vertical: "middle"
           };
         });
-      }
-
-      // Center align and add right border to column A (meal_date)
-      const mealDateCell = row.getCell(1);
-      mealDateCell.alignment = { horizontal: "center" };
-      mealDateCell.border = {
-        right: { style: "thin", color: { argb: "000000" } }, // Thin right border
-      };
-    });
-
-    // Auto-fit columns
-    worksheet.columns.forEach((column) => {
-      let maxLength = 0;
-      column.eachCell({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value ? cell.value.toString() : "";
-        maxLength = Math.max(maxLength, cellValue.length);
+        
+        // Apply alternating row colors
+        if (index % 2 === 0) {
+          dataRow.eachCell((cell) => {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: "F2F2F2" },
+            };
+          });
+        }
       });
-      column.width = maxLength + 2; // Add some padding
+      
+      // Auto-fit all columns with proper width constraints
+      detailSheet.columns.forEach((column, index) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const cellValue = cell.value ? cell.value.toString() : "";
+          maxLength = Math.max(maxLength, cellValue.length);
+        });
+        
+        // Set minimum width for date column (C) to 11, others to 10
+        const minWidth = index === 2 ? 11 : 10; // Column C (0-based index 2) gets 11 width
+        const maxWidth = 50;
+        column.width = Math.min(Math.max(maxLength + 2, minWidth), maxWidth);
+      });
+    }
+
+    // Auto-fit all columns in all worksheets
+    workbook.eachSheet((worksheet) => {
+      worksheet.columns.forEach((column) => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const cellValue = cell.value ? cell.value.toString() : "";
+          maxLength = Math.max(maxLength, cellValue.length);
+        });
+        column.width = Math.min(Math.max(maxLength + 2, 10), 50); // Min width 10, max 50
+      });
     });
 
     // Set headers for download
@@ -474,6 +593,16 @@ const getExportMealCount = async (req, res) => {
     res.status(500).send("Error generating Excel");
   }
 };
+
+// Helper function to translate meal type
+function translateMealType(type) {
+  const translations = {
+    'breakfast': '朝食',
+    'lunch': '昼食',
+    'dinner': '夕食'
+  };
+  return translations[type] || type;
+}
 
 const getReservationsInventory = async (req, res) => {
   const hotelId = req.params.hid;

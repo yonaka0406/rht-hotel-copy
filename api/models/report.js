@@ -479,7 +479,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
           ,SUM(CASE WHEN reservation_details.billable = TRUE THEN reservation_addons.price ELSE 0 END) AS addon_price
 
         FROM
-          reservation_details
+          reservation_details 
             LEFT JOIN
           (
             SELECT 
@@ -706,7 +706,9 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
 };
 const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
-  const query = `
+  
+  // First query for the summary data (existing functionality)
+  const summaryQuery = `
     SELECT 
       hotels.name as hotel_name
       ,CASE 
@@ -744,17 +746,71 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
       ,meal_date
     ORDER BY meal_date;
   `;
-  const values = [hotelId, dateStart, dateEnd]
+
+  // New query for detailed meal count data
+  const detailQuery = `
+    SELECT 
+      COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name,
+      rooms.room_number,
+      CASE 
+        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' 
+        THEN reservation_details.date + INTERVAL '1 day'
+        ELSE reservation_details.date
+      END AS meal_date,
+      COALESCE(addons_hotel.addon_type, addons_global.addon_type) AS meal_type,
+      reservation_addons.quantity      
+    FROM 
+      hotels
+        JOIN
+      reservations
+        ON hotels.id = reservations.hotel_id
+        JOIN
+      clients booker
+        ON reservations.reservation_client_id = booker.id
+        JOIN
+      reservation_details
+        ON reservations.hotel_id = reservation_details.hotel_id 
+        AND reservations.id = reservation_details.reservation_id
+        LEFT JOIN rooms
+        ON reservation_details.room_id = rooms.id
+        JOIN reservation_addons
+        ON reservation_details.hotel_id = reservation_addons.hotel_id 
+        AND reservation_details.id = reservation_addons.reservation_detail_id	
+        LEFT JOIN addons_global
+        ON reservation_addons.addons_global_id = addons_global.id
+        LEFT JOIN addons_hotel
+        ON reservation_addons.hotel_id = addons_hotel.hotel_id 
+        AND reservation_addons.addons_hotel_id = addons_hotel.id
+    WHERE
+      COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN ('breakfast', 'lunch', 'dinner')
+      AND reservations.status NOT IN ('hold', 'provisory', 'cancelled', 'block')
+      AND reservation_details.cancelled IS NULL
+      AND reservation_details.hotel_id = $1
+      AND reservation_details.date BETWEEN $2 AND $3
+    ORDER BY 
+      meal_date,
+      booker_name,
+      rooms.room_number;
+  `;
+
+  const values = [hotelId, dateStart, dateEnd];
 
   try {
-    const result = await pool.query(query, values);    
-    return result.rows;
+    // Execute both queries in parallel
+    const [summaryResult, detailResult] = await Promise.all([
+      pool.query(summaryQuery, values),
+      pool.query(detailQuery, values)
+    ]);
+    
+    return {
+      summary: summaryResult.rows,
+      details: detailResult.rows
+    };
   } catch (err) {
     console.error('Error retrieving data:', err);
     throw new Error('Database error');
   }
 };
-
 const selectReservationsInventory = async (requestId, hotelId, startDate, endDate) => {
   const pool = getPool(requestId);
   const query = `
