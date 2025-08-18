@@ -439,6 +439,8 @@
     <ReservationGuestListDialog
         v-model:visible="visibleGuestListDialog"
         :reservation="selectedReservationForGuestList"
+        :parkingLots="parkingLots"
+        :allPlans="plans"
     />
 </template>
 <script setup>
@@ -467,6 +469,8 @@ import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+import { useParkingStore } from '@/composables/useParkingStore';
+const { parkingLots, fetchParkingLots, fetchParkingReservations } = useParkingStore();
 
 // Helper
 const formatDate = (date) => {
@@ -1343,11 +1347,16 @@ watch(addons, (newValue, oldValue) => {
 const visibleGuestListDialog = ref(false);
 const selectedReservationForGuestList = ref(null);
 
-const openGuestListDialog = (group) => {
-    // This is a simplified mapping. You might need to fetch more details
-    // or structure the object differently based on what ReservationGuestListDialog expects.
+const openGuestListDialog = async (group) => {
     const reservationDetails = props.reservation_details.find(detail => detail.room_id === group.room_id);
     
+    await fetchParkingLots();
+    const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
+    const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
+
+    await fetchPlansForHotel(reservationDetails.hotel_id);
+    const assignedPlanNames = [...new Set(props.reservation_details.map(d => d.plan_name).filter(Boolean))];
+
     selectedReservationForGuestList.value = {
         id: reservationDetails.reservation_id,
         hotel_id: reservationDetails.hotel_id,
@@ -1355,9 +1364,7 @@ const openGuestListDialog = (group) => {
         alternative_name: '', // Placeholder for now
         check_in: reservationInfo.value.check_in,
         check_out: reservationInfo.value.check_out,
-        parking_lot_names: [], // This needs to be fetched or passed in
         room_numbers: groupedRooms.value.map(g => g.details[0].room_number),
-        plan_names: [...new Set(props.reservation_details.map(d => d.plan_name).filter(Boolean))],
         guests: reservationDetails.reservation_clients.map(c => ({
             name: c.name_kanji || c.name,
             address: c.address1,
@@ -1365,6 +1372,10 @@ const openGuestListDialog = (group) => {
             car_number_plate: c.car_number_plate
         })),
         comment: reservationInfo.value.comment,
+        smoking: group.details[0]?.smoking,
+        assigned_plan_names: assignedPlanNames,
+        assigned_parking_lot_names: assignedParkingLotNames,
+        hotel_name: reservationInfo.value.hotel_name,
     };
     visibleGuestListDialog.value = true;
 };

@@ -1,22 +1,50 @@
-const { getGuestListDetails } = require('../models/guest');
 const puppeteer = require('puppeteer');
-const fs =require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const generateGuestList = async (req, res) => {
-    const { hotelId, reservationId } = req.params;
+    const { reservationId } = req.params;
     const guestData = req.body;
 
     try {
-        const details = await getGuestListDetails(req.requestId, hotelId, reservationId);
-
-        if (!details) {
-            return res.status(404).json({ error: 'Guest list details not found' });
-        }
-
         const guestListHTML = fs.readFileSync(path.join(__dirname, '../components/guest-list.html'), 'utf-8');
         
-        const htmlContent = generateGuestListHTML(guestListHTML, details, guestData);
+        let htmlContent = guestListHTML;
+
+        let smokingHtml = '禁煙 ・ 喫煙';
+        if (guestData.smoking_preference === '禁煙') {
+            smokingHtml = '<b>禁煙</b> ・ 喫煙';
+        } else if (guestData.smoking_preference === '喫煙') {
+            smokingHtml = '禁煙 ・ <b>喫煙</b>';
+        }
+        guestData.smoking_preference_html = smokingHtml;
+
+        let guestsHtml = '';
+        if (guestData.guests && Array.isArray(guestData.guests)) {
+            guestData.guests.forEach(guest => {
+                guestsHtml += `
+                    <div class="grid-item label"><span class="highlight">※</span>お名前</div>
+                    <div class="grid-item col-span-2">${guest.client_name || ''}</div>
+                    <div class="grid-item label"><span class="highlight">※</span>車両ナンバー</div>
+                    <div class="grid-item col-span-3">${guest.number_plate || ''}</div>
+
+                    <div class="grid-item label"><span class="highlight">※</span>ご住所</div>
+                    <div class="grid-item col-span-6">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) ${guest.address || ''}</div>
+
+                    <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
+                    <div class="grid-item col-span-6">${guest.phone_number || ''}</div>
+                `;
+            });
+        }
+        guestData.guests_html = guestsHtml;
+
+        for (const key in guestData) {
+            if (key !== 'guests' && key !== 'guests_html' && key !== 'smoking_preference_html') {
+                htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
+            }
+        }
+        htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', guestData.smoking_preference_html);
+        htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
 
         const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();
@@ -48,44 +76,6 @@ const generateGuestList = async (req, res) => {
         res.status(500).send('Error generating guest list PDF');
     }
 };
-
-function generateGuestListHTML(html, details, guestData) {
-    let modifiedHTML = html;
-
-    const formatJapaneseDate = (dateString) => {
-        const date = new Date(dateString);
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-        return `${month}月${day}日(${dayOfWeek})`;
-    };
-    
-    const fields = {
-        booker_name: details.booker_name,
-        alternative_name: details.alternative_name,
-        check_in: formatJapaneseDate(details.check_in),
-        check_out: formatJapaneseDate(details.check_out),
-        parking_lot_names: details.parking_lot_names ? details.parking_lot_names.join(', ') : '',
-        payment_total: details.payment_total ? new Intl.NumberFormat('ja-JP').format(details.payment_total) : '0',
-        room_numbers: details.room_numbers ? details.room_numbers.join(', ') : '',
-        plan_names: details.plan_names ? details.plan_names.join(', ') : '',
-        client_name: details.guests && details.guests[0] ? details.guests[0].name : '',
-        number_plate: details.guests && details.guests[0] ? details.guests[0].car_number_plate : '',
-        address: details.guests && details.guests[0] ? details.guests[0].address : '',
-        phone_number: details.guests && details.guests[0] ? details.guests[0].phone : '',
-        comment: details.comment
-    };
-
-    for (const key in fields) {
-        let value = fields[key];
-        if (guestData[key] === false) { // Assuming checkbox value is sent as boolean
-            value = '';
-        }
-        modifiedHTML = modifiedHTML.replace(new RegExp(`{{${key}}}`, 'g'), value || '');
-    }
-
-    return modifiedHTML;
-}
 
 module.exports = {
   generateGuestList,
