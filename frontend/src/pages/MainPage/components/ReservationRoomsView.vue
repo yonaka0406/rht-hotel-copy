@@ -1075,18 +1075,65 @@ const applyGuestChanges = async () => {
 
 // Tab Modify Room
 const deleteRoom = async (group) => {
-    const room = {
-        hotelId: group.details[0].hotel_id,
-        roomId: group.details[0].room_id,
-        reservationId: group.details[0].reservation_id,
-        numberOfPeople: group.details[0].number_of_people,
+    try {
+        // Input validation - this is crucial for production
+        if (!group || !group.details || group.details.length === 0) {
+            throw new Error('Invalid group data provided');
+        }
+
+        const roomDetails = group.details[0];
+        
+        // Validate required fields
+        const requiredFields = ['hotel_id', 'room_id', 'reservation_id', 'number_of_people'];
+        const missingFields = requiredFields.filter(field => !roomDetails[field]);
+        
+        if (missingFields.length > 0) {
+            throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+        }
+
+        const room = {
+            hotelId: roomDetails.hotel_id,
+            roomId: roomDetails.room_id,
+            reservationId: roomDetails.reservation_id,
+            numberOfPeople: roomDetails.number_of_people,
+        };
+
+        //console.log('Attempting to delete room:', room);
+
+        // Call the API with proper error handling
+        const response = await deleteReservationRoom(roomDetails.reservation_id, room);
+
+        // Validate response
+        if (!response || response.error) {
+            throw new Error(response?.message || 'Failed to delete reservation room');
+        }
+
+        // Only close dialog and show success if operation was successful
+        closeRoomEditDialog();
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: '予約明細が更新されました。', 
+            life: 3000 
+        });
+
+        return response;
+
+    } catch (error) {
+        console.error('Error deleting room:', error);
+        
+        // Show error toast to user
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: error.message || '予約明細の更新に失敗しました。', 
+            life: 5000 
+        });
+        
+        // Don't close the dialog on error so user can retry
+        // Re-throw if calling code needs to handle it
+        throw error;
     }
-
-    const response = await deleteReservationRoom(group.details[0].reservation_id, room);
-    closeRoomEditDialog();
-
-    // Provide feedback to the user
-    toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
 };
 const changeGuestNumber = async (group, mode) => {
     // Add operation_mode to each detail in the group

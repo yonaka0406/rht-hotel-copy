@@ -947,11 +947,33 @@ export function useReservationStore() {
         }
     };
     const deleteReservationRoom = async (id, room) => {
-        // console.log('From Reservation Store => deleteReservationRoom');
         try {
+            //console.log('deleteReservationRoom called with:', { id, room }); // Debug log
+            
             setReservationIsUpdating(true);
+            
+            // Validate inputs
+            if (!id) {
+                throw new Error('Reservation ID is required');
+            }
+            if (!room) {
+                throw new Error('Room data is required');
+            }
+    
+            // Check auth token
             const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                throw new Error('No authentication token found');
+            }
+    
             const url = `/api/reservation/delete/room/${id}`;
+                
+            // Add timeout and better error handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {                
+                controller.abort();
+            }, 30000); // 30 second timeout
+    
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
@@ -959,16 +981,90 @@ export function useReservationStore() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(room),
+                signal: controller.signal
             });
     
+            clearTimeout(timeoutId);
+                    
             if (!response.ok) {
-                throw new Error('Failed to delete room from reservation.');
+                // Try to get error details from response
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                let errorData = {};
+                
+                try {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } else {
+                        const textError = await response.text();
+                        if (textError) errorMessage = textError;
+                    }
+                } catch (parseError) {
+                    console.error('Error parsing response:', parseError);
+                }
+    
+                console.error('API Error Details:', { 
+                    status: response.status, 
+                    statusText: response.statusText,
+                    errorData,
+                    url 
+                });
+    
+                // Handle specific HTTP status codes
+                if (response.status === 401) {
+                    throw new Error('認証が無効です。再ログインしてください。');
+                } else if (response.status === 403) {
+                    throw new Error('この操作を実行する権限がありません。');
+                } else if (response.status === 404) {
+                    throw new Error('指定された予約またはルームが見つかりません。');
+                } else if (response.status === 409) {
+                    throw new Error('データの競合が発生しました。ページを更新してから再試行してください。');
+                } else if (response.status >= 500) {
+                    throw new Error('サーバーエラーが発生しました。しばらく時間をおいてからお試しください。');
+                }
+                
+                throw new Error(errorMessage);
             }
-            setReservationIsUpdating(false);
-            return await response.json();                
+    
+            // Parse response
+            let result;
+            try {
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await response.json();                    
+                } else {
+                    result = { success: true }; // Some APIs return empty responses on successful deletes
+                }
+            } catch (parseError) {
+                console.error('Error parsing success response:', parseError);
+                result = { success: true }; // Assume success if we can't parse response
+            }
+    
+            return result;
+    
         } catch (error) {
-            console.error('Error deleting room from reservation:', error);
+            console.error('deleteReservationRoom error:', {
+                message: error.message,
+                name: error.name,
+                stack: error.stack,
+                id,
+                room
+            });
+    
+            // Handle specific error types
+            if (error.name === 'AbortError') {
+                throw new Error('リクエストがタイムアウトしました。ネットワーク接続を確認してから再試行してください。');
+            }
+            
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('ネットワークエラーが発生しました。接続を確認してください。');
+            }
+    
             throw error;
+        } finally {
+            // Always reset updating state
+            setReservationIsUpdating(false);
         }
     };
     const deleteReservationPayment = async (id) => {

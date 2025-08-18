@@ -2734,7 +2734,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
       WHERE id = $2 and hotel_id = $3
       RETURNING number_of_people;
     `;
-    const updateResult = await pool.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
+    const updateResult = await client.query(updateQuery, [numberOfPeople, reservationId, hotelId]);
 
     // Check if the number_of_people is now <= 0
     if (updateResult.rows.length === 0 || updateResult.rows[0].number_of_people <= 0) {
@@ -2750,7 +2750,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
       WHERE reservation_id = $1 and room_id = $2
       RETURNING *;
     `;
-    const deleteResults = await pool.query(deleteQuery, [reservationId, roomId]);
+    const deleteResults = await client.query(deleteQuery, [reservationId, roomId]);
 
     // Commit the transaction
     await client.query('COMMIT');
@@ -2762,8 +2762,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
     console.error('Error deleting room:', err);
     throw new Error('Database error');
   } finally {
-    client.release();
-    //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+    client.release();    
   }
 };
 const deleteReservationPayment = async (requestId, id, userId) => {

@@ -1249,9 +1249,15 @@ const deleteHoldReservation = async (req, res) => {
 const deleteRoomFromReservation = async (req, res) => {
   const { hotelId, roomId, reservationId, numberOfPeople } = req.body;
   const user_id = req.user.id;
-
+  
   try {
-    await deleteReservationRoom(req.requestId, hotelId, roomId, reservationId, numberOfPeople, user_id);
+    const result = await deleteReservationRoom(req.requestId, hotelId, roomId, reservationId, numberOfPeople, user_id);
+    if (!result.success) {
+      return res.status(400).json({ 
+          error: result.message,
+          message: "操作を完了できませんでした"
+      });
+    }
     res.status(200).json({ message: "Room deleted successfully" });
   } catch (err) {
     console.error("Error deleting room:", err);

@@ -4,6 +4,38 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 18, 2025
 
+#### Bug #33: Room Deletion Not Working in Production Environment
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
+- **Steps to Reproduce**:
+  1. Navigate to a reservation in the production environment.
+  2. Attempt to delete a room from the reservation.
+  3. Save the changes.
+- **Expected Behavior**: The room should be deleted from the reservation.
+- **Actual Behavior**: The room is not deleted, though the number of people and stays are updated.
+- **Solution**:
+  - Fixed critical bug where transactions were using mixed pool/client connections
+  - Added proper transaction handling with consistent client usage
+  - Enhanced controller logic to properly handle model responses
+  - Improved input validation and error handling
+  - Added comprehensive logging for production debugging
+  - Fixed variable scoping issues in the transaction flow
+- **Technical Details**:
+  - Changed `pool.query` calls to use the transaction client
+  - Added proper error handling and response formatting
+  - Improved transaction rollback on errors
+  - Enhanced logging for production debugging
+- **Files Modified**:
+  - `api/models/reservations.js`
+  - `api/controllers/reservationsController.js`
+  - `frontend/src/composables/useReservationStore.js`
+  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Assigned To**: 
+- **Reported By**: 
+- **Date Reported**: 2025-08-12
+- **Date Fixed**: 2025-08-18
+
 #### Bug #13: Inconsistent Room Reservation Behavior Between Calendar and Edit Views
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
