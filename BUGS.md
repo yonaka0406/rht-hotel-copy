@@ -26,22 +26,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a reason field for modifications
   - Ensure all versions remain accessible in the system even if not visible in the main interface
 
-### August 12, 2025
-
-#### Bug #33: Room Deletion Not Working in Production Environment
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: In test and local environments, room deletion works as expected. However, in the production environment, room deletion is not occurring. Note that the number of people and number of stays are being updated correctly.
-- **Steps to Reproduce**:
-  1. Navigate to a reservation in the production environment.
-  2. Attempt to delete a room from the reservation.
-  3. Save the changes.
-- **Expected Behavior**: The room should be deleted from the reservation.
-- **Actual Behavior**: The room is not deleted, though the number of people and stays are updated.
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Assigned To**: 
-- **Reported By**: 
-- **Date Reported**: 2025-08-12
-
 ### August 8, 2025
 
 #### Feature Request #27: Cash Payment Indicator in Room Indicator
@@ -111,15 +95,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### July 31, 2025
 
-#### Feature Request #18: Parking Management Function
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Add functionality to manage parking spaces and assignments for guests.
-- **Requirements**:
-  - Track available parking spaces
-  - Assign parking spots to reservations
-  - Generate parking reports
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
 #### Feature Request #19: Enhanced Log Viewing
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: Improve log viewing to include:
@@ -129,15 +104,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Priority**: [ ] Low [x] Medium [ ] Critical
 - **Additional Notes**: This will help with auditing and tracking changes in the system.
 
-#### Feature Request #20: Client-based Meal Count Report
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Create a new report that shows meal counts grouped by client instead of by date.
-- **Requirements**:
-  - User will provide the specific format
-  - Should be exportable to common formats (CSV, Excel)
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
-#### Bug #3 / Feature Request: Room Type Change Confirmation in Free Move Mode
+#### Feature Request #35: Room Type Change Confirmation in Free Move Mode
 - **Status**: [ ] Open [x] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: When a room change is made in フリー移動 (Free Move) mode and the room type changes, show a confirmation prompt summarizing the change before applying it.
@@ -191,21 +158,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
   - **Additional Notes**: This is part of the plan management system revamp to improve plan organization and selection.
 
-### July 21, 2025
-
-#### Bug #13: Inconsistent Room Reservation Behavior Between Calendar and Edit Views
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: The user opened a 3 room reservation and tried to edit one room to a different check in check out period. In the calendar view, when that happens the different room is moved to a new reservation. In the ReservationEdit the same behaviour was expected, but nothing happens.
-- **Steps to Reproduce**: 
-  1. Open a reservation with multiple rooms.
-  2. Edit one room to have a different check-in/check-out period.
-  3. Observe that the room is not moved to a new reservation.
-- **Expected Behavior**: When a room's check-in/check-out period is changed to be different from the other rooms in the reservation, it should be moved to a new reservation.
-- **Actual Behavior**: The room's dates are changed, but it is not moved to a new reservation.
-- **Environment**: ReservationEdit
-- **Additional Notes**: This behavior is inconsistent with the calendar view, where a new reservation is created in this scenario.
-
 ### July 15, 2025
 
 #### Feature Request #14: Fax Sending Functionality via Reservation Panel
@@ -248,6 +200,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 15, 2025*
-*Total Bugs: 28* (last one #36)
-*Total Feature Requests: 17* (last one #34)
+*Last Updated: August 18, 2025*
+*Total Bugs: 0* (last one #36)
+*Total Feature Requests: 12* (last one #35)
