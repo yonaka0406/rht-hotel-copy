@@ -276,22 +276,10 @@
             if (!day.billable) {
                 return sum;
             }
-            const ratesToSum = day.reservation_rates?.filter(rate => 
-                day.cancelled === null || rate.adjustment_type === "base_rate"
-            ) || [];
-            const totalRoomRate = ratesToSum.reduce((roomSum, rate) => {
-                const price = parseFloat(rate.price);
-                return !isNaN(price) ? roomSum + parseFloat(price.toFixed(2)) : roomSum;
-            }, 0);
-
-            // Sum reservation_addons only if cancelled is null
-            const addonsToSum = day.cancelled === null ? day.reservation_addons || [] : [];
-            const totalAddons = addonsToSum.reduce((addonSum, addon) => {
-                const price = parseFloat(addon.price);
-                return !isNaN(price) ? addonSum + parseFloat(price.toFixed(2)) : addonSum;
-            }, 0);
-
-            return sum + totalRoomRate + totalAddons;           
+            
+            // Simply use the price field from reservation_details
+            const price = parseFloat(day.price) || 0;
+            return sum + price;
         }, 0);
     });
     const pricePerRoom = computed(() => {
@@ -304,23 +292,9 @@
                 acc[room.room_id] = 0;
             }
 
-            // Sum reservation_rates
-            const ratesToSum = room.reservation_rates?.filter(rate => 
-                room.cancelled === null || rate.adjustment_type === "base_rate"
-            ) || [];
-            const totalRoomRate = ratesToSum.reduce((roomSum, rate) => {
-                const price = parseFloat(rate.price);
-                return !isNaN(price) ? roomSum + parseFloat(price.toFixed(2)) : roomSum;
-            }, 0);
-
-            // Sum reservation_addons only if cancelled is null
-            const addonsToSum = room.cancelled === null ? room.reservation_addons || [] : [];
-            const totalAddons = addonsToSum.reduce((addonSum, addon) => {
-                const price = parseFloat(addon.price);
-                return !isNaN(price) ? addonSum + parseFloat(price.toFixed(2)) : addonSum;
-            }, 0);
-
-            acc[room.room_id] += totalRoomRate + totalAddons;
+            // Simply use the price field from reservation_details
+            const price = parseFloat(room.price) || 0;
+            acc[room.room_id] += price;
             return acc;
         }, {});
     });
