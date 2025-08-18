@@ -21,6 +21,8 @@
                     <div class="col-span-2 text-right mr-4">
                         <Button icon="pi pi-pencil" label="一括編集" class="p-button-sm"
                             @click="openRoomEditDialog(group)" />
+                        <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm ml-2"
+                            @click="openGuestListDialog(group)" />
                     </div>
                 </div>
             </AccordionHeader>
@@ -432,12 +434,19 @@
                 @click="closeDayDetailDialog" />
         </template>
     </Dialog>
+
+    <!-- Guest List Dialog -->
+    <ReservationGuestListDialog
+        v-model:visible="visibleGuestListDialog"
+        :reservation="selectedReservationForGuestList"
+    />
 </template>
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch } from 'vue';
 
 import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
+import ReservationGuestListDialog from '@/pages/MainPage/components/Dialogs/ReservationGuestListDialog.vue';
 
 const props = defineProps({
     reservation_details: {
@@ -1330,6 +1339,35 @@ watch(addons, (newValue, oldValue) => {
     }
 }, { deep: true });
 
+// Dialog: Guest List
+const visibleGuestListDialog = ref(false);
+const selectedReservationForGuestList = ref(null);
+
+const openGuestListDialog = (group) => {
+    // This is a simplified mapping. You might need to fetch more details
+    // or structure the object differently based on what ReservationGuestListDialog expects.
+    const reservationDetails = props.reservation_details.find(detail => detail.room_id === group.room_id);
+    
+    selectedReservationForGuestList.value = {
+        id: reservationDetails.reservation_id,
+        hotel_id: reservationDetails.hotel_id,
+        booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
+        alternative_name: '', // Placeholder for now
+        check_in: reservationInfo.value.check_in,
+        check_out: reservationInfo.value.check_out,
+        parking_lot_names: [], // This needs to be fetched or passed in
+        room_numbers: groupedRooms.value.map(g => g.details[0].room_number),
+        plan_names: [...new Set(props.reservation_details.map(d => d.plan_name).filter(Boolean))],
+        guests: reservationDetails.reservation_clients.map(c => ({
+            name: c.name_kanji || c.name,
+            address: c.address1,
+            phone: c.phone,
+            car_number_plate: c.car_number_plate
+        })),
+        comment: reservationInfo.value.comment,
+    };
+    visibleGuestListDialog.value = true;
+};
 </script>
 
 <style scoped></style>
