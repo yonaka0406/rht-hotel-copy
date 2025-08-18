@@ -1144,18 +1144,55 @@ const editRoomFromCalendar = async (req, res) => {
   const updated_by = req.user.id;
 
   try {
-    // Call the function to update reservation status in the database
+    // Input validation
+    const requiredFields = { hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode };
+    const missingFields = Object.keys(requiredFields).filter(key => !requiredFields[key]);
+    
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        message: `Missing required fields: ${missingFields.join(', ')}`,
+        success: false
+      });
+    }
+
     const updatedReservation = await updateRoomByCalendar(req.requestId, {
-      id,
-      hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode,
-      updated_by
+      id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, 
+      old_room_id, new_room_id, number_of_people, mode, updated_by
     });
 
-    // Respond with the updated reservation details
-    res.json({ success: 'Edit made with success.' });
+    res.json({ 
+      success: true,
+      message: 'Room reservation updated successfully.',
+      data: updatedReservation 
+    });
+
   } catch (err) {
-    console.error('Error updating room:', err);
-    res.status(500).json({ error: 'Failed to update room' });
+    console.error(`Error updating room reservation ${id}:`, err);
+    
+    // Handle different types of errors
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        message: err.message,
+        success: false
+      });
+    }
+    
+    if (err.name === 'NotFoundError') {
+      return res.status(404).json({ 
+        error: 'Reservation not found',
+        message: 'The specified reservation could not be found.',
+        success: false
+      });
+    }
+
+    // Generic server error
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'An unexpected error occurred while updating the reservation.',
+      success: false
+    });
   }
 };
 

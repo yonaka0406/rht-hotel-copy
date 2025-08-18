@@ -314,10 +314,10 @@ export function useReservationStore() {
         }
     };
     const setCalendarChange = async (id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode) => {   
-        // console.log('From Reservation Store => setCalendarChange');         
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
+            
             // Get the hotel_id for the current reservation
             const hotel_id = await getReservationHotelId(id);
             
@@ -327,17 +327,34 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode })
+                body: JSON.stringify({ 
+                    hotel_id, 
+                    old_check_in, 
+                    old_check_out, 
+                    new_check_in, 
+                    new_check_out, 
+                    old_room_id, 
+                    new_room_id, 
+                    number_of_people, 
+                    mode 
+                })
             });
-
+    
             if (!response.ok) {
-                throw new Error('Failed to update reservation');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}: Failed to update reservation`);
             }
-
-            setReservationIsUpdating(false);
+    
+            const result = await response.json();
+            return result;
             
         } catch (error) {
             console.error('Error updating reservation:', error);
+            // Re-throw the error so the frontend can handle it
+            throw error;
+        } finally {
+            // Always reset loading state, whether success or failure
+            setReservationIsUpdating(false);
         }
     };
 

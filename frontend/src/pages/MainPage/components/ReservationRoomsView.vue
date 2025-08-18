@@ -1111,8 +1111,7 @@ const newCheckOut = ref(null);
 const minCheckIn = ref(null);
 const maxCheckOut = ref(null);
 const applyDateChanges = async () => {
-    // console.log(newCheckIn.value, newCheckOut.value);
-    // Checks            
+    // Validation checks (your existing code is good)
     if (!newCheckIn.value) {
         toast.add({
             severity: 'warn',
@@ -1141,21 +1140,36 @@ const applyDateChanges = async () => {
         return;
     }
 
-    const id = editReservationDetails.value[0].reservation_id;
-    const old_check_in = editReservationDetails.value[0].check_in;
-    const old_check_out = editReservationDetails.value[0].check_out;
-    const new_check_in = formatDate(new Date(newCheckIn.value));
-    const new_check_out = formatDate(new Date(newCheckOut.value));
-    const old_room_id = selectedGroup.value.room_id;
-    const new_room_id = selectedGroup.value.room_id;
-    const number_of_people = editReservationDetails.value[0].number_of_people;
+    try {
+        const id = editReservationDetails.value[0].reservation_id;
+        const old_check_in = editReservationDetails.value[0].check_in;
+        const old_check_out = editReservationDetails.value[0].check_out;
+        const new_check_in = formatDate(new Date(newCheckIn.value));
+        const new_check_out = formatDate(new Date(newCheckOut.value));
+        const room_id = selectedGroup.value.room_id; // Simplified since old and new are same
+        const number_of_people = editReservationDetails.value[0].number_of_people;
 
-    await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, 'solo');
+        // Wait for the operation to complete
+        await setCalendarChange(id, old_check_in, old_check_out, new_check_in, new_check_out, room_id, room_id, number_of_people, 'solo');
 
-    closeRoomEditDialog();
+        // Only close dialog and show success if operation succeeded
+        closeRoomEditDialog();
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: '部屋の宿泊期間が更新されました。', 
+            life: 3000 
+        });
 
-    toast.add({ severity: 'success', summary: '成功', detail: '部屋の宿泊期間が更新されました。', life: 3000 });
-
+    } catch (error) {
+        console.error('Error updating reservation:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '宿泊期間の更新に失敗しました。もう一度お試しください。',
+            life: 5000
+        });
+    }
 };
 
 const openRoomEditDialog = async (group) => {

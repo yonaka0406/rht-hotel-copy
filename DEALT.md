@@ -4,6 +4,19 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 18, 2025
 
+#### Bug #13: Inconsistent Room Reservation Behavior Between Calendar and Edit Views
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: The user opened a 3 room reservation and tried to edit one room to a different check in check out period. In the calendar view, when that happens the different room is moved to a new reservation. In the ReservationEdit the same behaviour was expected, but nothing happens.
+- **Steps to Reproduce**: 
+  1. Open a reservation with multiple rooms.
+  2. Edit one room to have a different check-in/check-out period.
+  3. Observe that the room is not moved to a new reservation.
+- **Expected Behavior**: When a room's check-in/check-out period is changed to be different from the other rooms in the reservation, it should be moved to a new reservation.
+- **Actual Behavior**: The room's dates are changed, but it is not moved to a new reservation.
+- **Environment**: ReservationEdit
+- **Additional Notes**: This behavior is inconsistent with the calendar view, where a new reservation is created in this scenario.
+
 #### Feature Request #20: Client-based Meal Count Report
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: Create a new report that shows meal counts grouped by client instead of by date.
