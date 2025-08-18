@@ -21,15 +21,18 @@ const generateGuestList = async (req, res) => {
 
         let guestsHtml = '';
         if (guestData.guests && Array.isArray(guestData.guests)) {
-            guestData.guests.forEach(guest => {
+            guestData.guests.forEach((guest, index) => {
+                if (index > 0) {
+                    guestsHtml += '<div class="separator"></div>';
+                }
                 guestsHtml += `
                     <div class="grid-item label"><span class="highlight">※</span>お名前</div>
                     <div class="grid-item col-span-2">${guest.client_name || ''}</div>
                     <div class="grid-item label"><span class="highlight">※</span>車両ナンバー</div>
                     <div class="grid-item col-span-3">${guest.number_plate || ''}</div>
 
-                    <div class="grid-item label"><span class="highlight">※</span>ご住所</div>
-                    <div class="grid-item col-span-6">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) ${guest.address || ''}</div>
+                    <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
+                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) ${guest.address || ''}</div>
 
                     <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
                     <div class="grid-item col-span-6">${guest.phone_number || ''}</div>

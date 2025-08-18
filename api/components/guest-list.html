@@ -11,8 +11,8 @@
         /* Using a common Japanese font for better rendering */
         body {
             font-family: 'Noto Sans JP', 'Inter', sans-serif;
-            -webkit-print-color-adjust: exact; /* For WebKit/Blink browsers */
-            print-color-adjust: exact; /* Standard property */
+            -webkit-print-color-adjust: exact; /* Ensures colors are printed correctly */
+            print-color-adjust: exact;            
         }
         .grid-container {
             display: grid;
@@ -33,13 +33,20 @@
         .highlight {
             color: #ff0000; /* Red color for asterisks */
         }
+        .separator {
+            grid-column: 1 / -1; /* Span all columns */
+            height: 1px;
+            background-color: #a9a9a9;
+            padding: 0;
+            border: 0;
+        }
     </style>
 </head>
 <body class="bg-white">
     <div class="container mx-auto p-4 max-w-4xl">
         <!-- Header Section -->
         <div class="text-center text-2xl font-bold mb-4">
-            <h1>ワークマンハウス 宿泊者名簿</h1>
+            <h1>{{hotel_name}} 宿泊者名簿</h1>
         </div>
 
         <!-- Main Grid for Guest Information -->
@@ -56,36 +63,24 @@
 
             <!-- Check-in/Check-out Dates -->
             <div class="grid-item label">チェックイン日</div>
-            <div class="grid-item col-span-3">{{check_in_month}} 月 {{check_in_day}} 日 （ {{check_in_weekday}} ）</div>
+            <div class="grid-item col-span-2">{{check_in_month}} 月 {{check_in_day}} 日 （ {{check_in_weekday}} ）</div>
             <div class="grid-item label">アウト日</div>
-            <div class="grid-item col-span-2">{{check_out_month}} 月 {{check_out_day}} 日 （ {{check_out_weekday}} ）</div>
+            <div class="grid-item col-span-3">{{check_out_month}} 月 {{check_out_day}} 日 （ {{check_out_weekday}} ）</div>
 
             <!-- Parking and Payment -->
             <div class="grid-item label">駐車場</div>
-            <div class="grid-item col-span-2">第1 ・ 第2</div>
+            <div class="grid-item col-span-2">{{parking_lot_names_list}}</div>
             <div class="grid-item label">現地決済</div>
             <div class="grid-item col-span-3">あり ・ なし （ {{payment_total}} 円）</div>
 
             <!-- Room Details -->
             <div class="grid-item label">部屋番号</div>
             <div class="grid-item">{{room_numbers}}</div>
-            <div class="grid-item justify-center">禁煙 ・ 喫煙</div>
+            <div class="grid-item justify-center">{{{smoking_preference_html}}}</div>
             <div class="grid-item label">プラン</div>
-            <div class="grid-item col-span-3">素泊り ・ 2食付き</div>
+            <div class="grid-item col-span-3">{{plan_names_list}}</div>
 
-            <!-- Guest Name and Car Number -->
-            <div class="grid-item label"><span class="highlight">※</span>お名前</div>
-            <div class="grid-item col-span-2">{{client_name}}</div>
-            <div class="grid-item label"><span class="highlight">※</span>車両ナンバー</div>
-            <div class="grid-item col-span-3">{{number_plate}}</div>
-
-            <!-- Address -->
-            <div class="grid-item label"><span class="highlight">※</span>ご住所</div>
-            <div class="grid-item col-span-6">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) {{address}}</div>
-
-            <!-- Contact Number -->
-            <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
-            <div class="grid-item col-span-6">{{phone_number}}</div>
+            {{{guests_html}}}
 
             <!-- Comments -->
             <div class="grid-item label">備考</div>

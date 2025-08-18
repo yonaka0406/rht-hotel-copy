@@ -42,8 +42,8 @@
                 <div class="grid-item label">駐車場</div>
                 <div class="grid-item col-span-2 flex-wrap">
                     <div v-for="lot in parkingLots" :key="lot.id" class="flex items-center mr-4">
-                        <Checkbox v-model="selectedParkingLots" :inputId="lot.id" :value="lot.name"></Checkbox>
-                        <label :for="lot.id" class="ml-2"> {{ lot.name }} </label>
+                        <Checkbox v-model="selectedParkingLots" :inputId="'lot_' + lot.id" :value="lot.name"></Checkbox>
+                        <label :for="'lot_' + lot.id" class="ml-2"> {{ lot.name }} </label>
                     </div>
                 </div>
                 <div class="grid-item label">
@@ -66,8 +66,8 @@
                 <div class="grid-item label">プラン</div>
                 <div class="grid-item col-span-3 flex-wrap">
                     <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
-                        <Checkbox v-model="selectedPlans" :inputId="plan.id" :value="plan.name"></Checkbox>
-                        <label :for="plan.id" class="ml-2"> {{ plan.name }} </label>
+                        <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.name"></Checkbox>
+                        <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.name }} </label>
                     </div>
                 </div>
             </div>
@@ -199,12 +199,29 @@ const initializeFields = (reservation) => {
         comment: { label: '備考', value: reservation.comment, include: true },
     };
 
-    guests.value = (reservation.guests || []).map(guest => ({
-        client_name: { label: 'お名前', value: guest.name, include: true },
-        number_plate: { label: '車両ナンバー', value: guest.car_number_plate, include: true },
-        address: { label: 'ご住所', value: guest.address, include: true },
-        phone_number: { label: 'ご連絡先', value: guest.phone, include: true },
-    }));
+    const numberOfPeople = reservation.number_of_people || 0;
+    const existingGuests = reservation.guests || [];
+    const newGuests = [];
+
+    for (let i = 0; i < numberOfPeople; i++) {
+        const existingGuest = existingGuests[i];
+        if (existingGuest) {
+            newGuests.push({
+                client_name: { label: 'お名前', value: existingGuest.name, include: true },
+                number_plate: { label: '車両ナンバー', value: existingGuest.car_number_plate, include: true },
+                address: { label: 'ご住所', value: existingGuest.address, include: true },
+                phone_number: { label: 'ご連絡先', value: existingGuest.phone, include: true },
+            });
+        } else {
+            newGuests.push({
+                client_name: { label: 'お名前', value: '', include: true },
+                number_plate: { label: '車両ナンバー', value: '', include: true },
+                address: { label: 'ご住所', value: '', include: true },
+                phone_number: { label: 'ご連絡先', value: '', include: true },
+            });
+        }
+    }
+    guests.value = newGuests;
 };
 
 watch(() => props.visible, (newValue) => {

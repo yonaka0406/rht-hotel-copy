@@ -1376,6 +1376,7 @@ const openGuestListDialog = async (group) => {
         assigned_plan_names: assignedPlanNames,
         assigned_parking_lot_names: assignedParkingLotNames,
         hotel_name: reservationInfo.value.hotel_name,
+        number_of_people: group.details[0]?.number_of_people,
     };
     visibleGuestListDialog.value = true;
 };
