@@ -5,6 +5,35 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 18, 2025
+
+#### Bug #37: Incorrect Addon Selection in Bulk Add
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When adding addons in bulk for a room, the system always adds the first option from the addons list regardless of the user's selection.
+- **Steps to Reproduce**:
+  1. Go to a reservation with multiple rooms
+  2. Select multiple rooms to add addons in bulk
+  3. Choose different addons for the rooms
+  4. Save the changes
+- **Expected Behavior**: Each room should have the specific addon that was selected for it
+- **Actual Behavior**: All selected rooms receive the first addon from the list
+- **Environment**: Bulk addon management interface
+- **Additional Notes**: This affects the accuracy of addon assignments and billing.
+
+#### Bug #38: Employee Type Reservations Should Have billable=false
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When a reservation's employee type is changed to 'confirmed', the billable field should be set to false to exclude it from sales calculations, but it's currently being included.
+- **Steps to Reproduce**:
+  1. Create or find a reservation with employee type 'hold'
+  2. Change the reservation status to 'confirmed'
+  3. Check the reservation's billable field and sales calculations
+- **Expected Behavior**: The reservation's billable field should be set to false when employee type is 'confirmed', excluding it from sales calculations
+- **Actual Behavior**: The billable field remains true, causing the reservation to be included in sales calculations
+- **Environment**: Reservation management system, financial reporting
+- **Additional Notes**: This affects financial reporting accuracy and needs to be fixed before month-end closing.
+
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History
@@ -201,5 +230,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 18, 2025*
-*Total Bugs: 0* (last one #36)
+*Total Bugs: 2* (last one #38)
 *Total Feature Requests: 12* (last one #35)
