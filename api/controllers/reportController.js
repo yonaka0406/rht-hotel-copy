@@ -172,8 +172,9 @@ const getForecastData = async (req, res) => {
   try {    
     const data = await selectForecastData(req.requestId, hotelId, startDate, endDate);    
     
+    // Return empty array with 200 status if no data found
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
@@ -190,8 +191,9 @@ const getAccountingData = async (req, res) => {
   try {    
     const data = await selectAccountingData(req.requestId, hotelId, startDate, endDate);    
     
+    // Return empty array with 200 status if no data found
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }  
 
     res.json(data);
