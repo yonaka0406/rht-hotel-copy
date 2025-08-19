@@ -1474,6 +1474,25 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     let detailQuery = '';
     let detailValues = [];
 
+    // Get the current rates for this reservation detail
+    const ratesQuery = `
+      SELECT * FROM reservation_rates 
+      WHERE reservation_details_id = $1 AND hotel_id = $2
+    `;
+    const ratesResult = await client.query(ratesQuery, [id, hotel_id]);
+    
+    let ratesToUse = [];
+    let calculatedPrice;
+    
+    if (status === 'cancelled') {
+      // When cancelling, exclude flat_fee rates for price calculation only
+      ratesToUse = ratesResult.rows.filter(rate => rate.adjustment_type !== 'flat_fee');
+      calculatedPrice = calculatePriceFromRates(ratesToUse);
+    } else {
+      // When recovering, use all rates for price calculation
+      calculatedPrice = calculatePriceFromRates(ratesResult.rows);
+    }
+
     // 1. Update the reservation_details table based on the status
     if (status === 'cancelled') {
       detailQuery = `
@@ -1481,11 +1500,12 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
         SET
           cancelled = gen_random_uuid(),
           billable = TRUE,
-          updated_by = $1
+          updated_by = $1,
+          price = $4
         WHERE id = $2::UUID AND hotel_id = $3
         RETURNING *;
       `;
-      detailValues = [updated_by, id, hotel_id];
+      detailValues = [updated_by, id, hotel_id, calculatedPrice];
 
     } else if (status === 'recovered') {
       // If the reservation is on hold or provisory, recovering a detail should not make it billable.
@@ -1495,11 +1515,12 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
         SET
           cancelled = NULL,
           billable = $1,
-          updated_by = $2
+          updated_by = $2,
+          price = $5
         WHERE id = $3::UUID AND hotel_id = $4
         RETURNING *;
       `;
-      detailValues = [isBillable, updated_by, id, hotel_id];
+      detailValues = [isBillable, updated_by, id, hotel_id, calculatedPrice];
 
     } else {
       // If the status is not recognized, abort the transaction.
