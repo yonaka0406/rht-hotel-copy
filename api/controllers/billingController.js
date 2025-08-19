@@ -44,8 +44,9 @@ const getBilledListView = async (req, res) => {
   try {    
     const data = await selectBilledListView(req.requestId, hotelId, month);    
     
+    // Return empty array instead of 404 when no data found
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.json([]);
     }  
 
     res.json(data);
