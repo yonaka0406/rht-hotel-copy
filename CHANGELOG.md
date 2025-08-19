@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Price Calculation: Added price recalculation to reservation status updates (Bug #39)
 - Price Calculation: Optimized price calculation to use pre-calculated values from reservation_details, improving consistency and performance. (Bug #39)
 - Price Calculation: Unified price calculation logic with consistent 100 yen rounding (Bug #39)  
 - Meal Count Page: New dedicated sheet for viewing meal counts by client and room. (Feature #28)
