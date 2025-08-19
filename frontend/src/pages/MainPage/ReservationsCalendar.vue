@@ -1324,8 +1324,7 @@ const handleTempBlock = (data) => {
 
 const isTempBlock = computed(() => {
     if(reservationDetails.value.reservation){
-        console.log ('isTempBlock reservationDetails', reservationDetails.value.reservation, reservationDetails.value?.reservation[0].client_id === '22222222-2222-2222-2222-222222222222' && 
-        reservationDetails.value?.reservation[0].status === 'block');
+        //console.log ('isTempBlock reservationDetails', reservationDetails.value.reservation, reservationDetails.value?.reservation[0].client_id === '22222222-2222-2222-2222-222222222222' && reservationDetails.value?.reservation[0].status === 'block');
     }else {
       return;
     }
