@@ -58,49 +58,21 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       CROSS JOIN room_inventory ri
       LEFT JOIN blocked_rooms br
         ON br.date = d.date AND br.hotel_id = ri.hotel_id
-    ),
-
-    -- 4. Rates
-    rate_totals AS (
-      SELECT 
-        reservation_details_id,
-        SUM(price) AS price
-      FROM reservation_rates
-      GROUP BY reservation_details_id
-    ),
-
-    -- 5. Add-ons
-    addon_totals AS (
-      SELECT 
-        reservation_detail_id,
-        SUM(price * quantity) AS total_price
-      FROM reservation_addons
-      GROUP BY reservation_detail_id
     )
 
-    -- 6. Main Query
+    -- 4. Main Query (using reservation_details.price directly)
     SELECT 
       rt.date,
       rt.total_rooms,
       rt.total_rooms_real,
       COUNT(CASE WHEN rd.cancelled IS NULL THEN rd.room_id ELSE NULL END) AS room_count,
       SUM(CASE WHEN rd.cancelled IS NULL THEN rd.number_of_people ELSE 0 END) AS people_sum,
-      SUM(
-        CASE 
-          WHEN rd.plan_type = 'per_room' THEN COALESCE(r.price, 0)
-          ELSE COALESCE(r.price, 0) * rd.number_of_people
-        END
-        + COALESCE(a.total_price, 0)
-      ) AS price
+      SUM(CASE WHEN rd.cancelled IS NULL THEN rd.price ELSE 0 END) AS price
     FROM room_total rt
     LEFT JOIN reservation_details rd 
       ON rd.hotel_id = rt.hotel_id AND rd.date = rt.date
     LEFT JOIN reservations rsv 
       ON rd.reservation_id = rsv.id AND rd.hotel_id = rsv.hotel_id
-    LEFT JOIN rate_totals r 
-      ON rd.id = r.reservation_details_id
-    LEFT JOIN addon_totals a 
-      ON rd.id = a.reservation_detail_id
     WHERE 
       rt.hotel_id = $1
       AND (rd.id IS NULL OR (
@@ -123,6 +95,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
     throw new Error('Database error');
   }
 };
+
 const selectCountReservationDetailsPlans = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   const query = `
