@@ -99,7 +99,7 @@
                                                         <template #body="slotProps">
                                                             <div class="grid grid-cols-3">
                                                                 <div class="flex items-center">                        
-                                                                    <Badge :severity="slotProps.data.adjustment_type === 'percentage' ? 'info' : slotProps.data.adjustment_type === 'flat_rate' ? 'secondary' : ''">
+                                                                    <Badge :severity="slotProps.data.adjustment_type === 'percentage' ? 'info' : slotProps.data.adjustment_type === 'flat_fee' ? 'secondary' : ''">
                                                                         {{ defineRateType(slotProps.data.adjustment_type) }}
                                                                     </Badge>
                                                                 </div>
