@@ -471,28 +471,26 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
           ,rc.clients_json::TEXT
           ,rpc.clients_json::TEXT AS payers_json
           ,COALESCE(rp.payment,0) as payment
-          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN 
-              CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price
-              ELSE rr.price * reservation_details.number_of_people END
-              ELSE 0 END
+          ,SUM(
+              CASE 
+                WHEN reservation_details.billable = TRUE THEN 
+                  CASE 
+                    WHEN reservation_details.plan_type = 'per_room' 
+                    THEN reservation_details.price
+                    ELSE reservation_details.price * reservation_details.number_of_people 
+                  END
+                ELSE 0 
+              END
           ) AS plan_price
-          ,SUM(CASE WHEN reservation_details.billable = TRUE THEN reservation_addons.price ELSE 0 END) AS addon_price
-
+          ,SUM(
+              CASE 
+                WHEN reservation_details.billable = TRUE 
+                THEN reservation_addons.price 
+                ELSE 0 
+              END
+          ) AS addon_price
         FROM
           reservation_details 
-            LEFT JOIN
-          (
-            SELECT 
-              rr.reservation_details_id
-              ,SUM(rr.price) as price
-            FROM
-              reservation_rates rr, reservation_details rd
-            WHERE rd.id = rr.reservation_details_id AND rd.billable = TRUE
-            AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
-            GROUP BY 
-              rr.reservation_details_id
-          ) rr
-            ON reservation_details.id = rr.reservation_details_id
             LEFT JOIN
           (
             SELECT
@@ -504,7 +502,8 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
               reservation_addons.hotel_id
               ,reservation_addons.reservation_detail_id
           ) reservation_addons
-            ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+            ON reservation_details.hotel_id = reservation_addons.hotel_id 
+           AND reservation_details.id = reservation_addons.reservation_detail_id
             LEFT JOIN 
           (
             SELECT 
@@ -520,7 +519,9 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
                 )
               ) AS clients_json
             FROM 
-              (SELECT DISTINCT reservation_id, client_id FROM reservation_clients rc JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
+              (SELECT DISTINCT reservation_id, client_id 
+                 FROM reservation_clients rc 
+                 JOIN reservation_details rd ON rc.reservation_details_id = rd.id) rc
               JOIN clients c ON rc.client_id = c.id
             GROUP BY rc.reservation_id
           ) rc ON rc.reservation_id = reservation_details.reservation_id
@@ -547,7 +548,9 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
                 )
               ) AS clients_json
             FROM 
-              (SELECT DISTINCT reservation_id, client_id FROM reservation_payments rp JOIN reservations r ON rp.reservation_id = r.id) rpc
+              (SELECT DISTINCT reservation_id, client_id 
+                 FROM reservation_payments rp 
+                 JOIN reservations r ON rp.reservation_id = r.id) rpc
               JOIN clients c ON rpc.client_id = c.id
             GROUP BY rpc.reservation_id
           ) rpc ON rpc.reservation_id = reservation_details.reservation_id
@@ -571,6 +574,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       AND reservations.hotel_id = hotels.id
     ORDER BY 5, 7;
   `;
+
   const values = [hotelId, dateStart, dateEnd]
 
   try {
@@ -610,9 +614,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,reservation_details.number_of_people
       ,reservation_details.plan_type
       ,COALESCE(plans_hotel.name, plans_global.name) AS plan_name
-      ,(CASE WHEN reservation_details.plan_type = 'per_room' THEN rr.price
-        ELSE rr.price * reservation_details.number_of_people END
-      ) AS plan_price
+      ,(CASE 
+          WHEN reservation_details.plan_type = 'per_room' 
+          THEN reservation_details.price
+          ELSE reservation_details.price * reservation_details.number_of_people 
+        END
+       ) AS plan_price
       ,reservation_addons.addon_name
       ,COALESCE(reservation_addons.quantity,0) AS addon_quantity
       ,COALESCE(reservation_addons.price,0) AS addon_price
@@ -636,16 +643,16 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.ota_reservation_id
           ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS booker_name
           ,clients.name_kana AS booker_kana
-			    ,clients.name_kanji AS booker_kanji
+          ,clients.name_kanji AS booker_kanji
           ,SUM(reservation_payments.value) as payments
         FROM
           clients
           ,reservations
-            LEFT JOIN
-          reservation_payments
-            ON reservations.hotel_id = reservation_payments.hotel_id AND reservations.id = reservation_payments.reservation_id
+            LEFT JOIN reservation_payments
+              ON reservations.hotel_id = reservation_payments.hotel_id 
+             AND reservations.id = reservation_payments.reservation_id
         WHERE
-			    reservations.reservation_client_id = clients.id
+          reservations.reservation_client_id = clients.id
           AND reservations.status <> 'block'
         GROUP BY
           reservations.hotel_id
@@ -660,23 +667,12 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,clients.name_kanji, clients.name, clients.name_kana
       ) AS reservations
       ,reservation_details
-        LEFT JOIN
-      (
-        SELECT 
-          rr.reservation_details_id
-          ,SUM(rr.price) as price
-        FROM
-          reservation_rates rr, reservation_details rd
-        WHERE rd.id = rr.reservation_details_id AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
-        GROUP BY 
-          rr.reservation_details_id
-      ) rr
-        ON reservation_details.id = rr.reservation_details_id
-        LEFT JOIN
-      reservation_addons
-        ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+        LEFT JOIN reservation_addons
+          ON reservation_details.hotel_id = reservation_addons.hotel_id 
+         AND reservation_details.id = reservation_addons.reservation_detail_id
       LEFT JOIN plans_hotel 
-        ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
+        ON plans_hotel.hotel_id = reservation_details.hotel_id 
+       AND plans_hotel.id = reservation_details.plans_hotel_id
       LEFT JOIN plans_global 
         ON plans_global.id = reservation_details.plans_global_id
         
@@ -694,6 +690,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       reservations.check_in, reservation_details.reservation_id, rooms.room_number, 
       reservation_details.date, reservation_addons.addon_name, reservation_addons.price DESC
   `;
+
   const values = [hotelId, dateStart, dateEnd]
 
   try {
