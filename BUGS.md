@@ -7,20 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 18, 2025
 
-#### Bug #37: Incorrect Addon Selection in Bulk Add
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: When adding addons in bulk for a room, the system always adds the first option from the addons list regardless of the user's selection.
-- **Steps to Reproduce**:
-  1. Go to a reservation with multiple rooms
-  2. Select multiple rooms to add addons in bulk
-  3. Choose different addons for the rooms
-  4. Save the changes
-- **Expected Behavior**: Each room should have the specific addon that was selected for it
-- **Actual Behavior**: All selected rooms receive the first addon from the list
-- **Environment**: Bulk addon management interface
-- **Additional Notes**: This affects the accuracy of addon assignments and billing.
-
 #### Bug #38: Employee Type Reservations Should Have billable=false
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical

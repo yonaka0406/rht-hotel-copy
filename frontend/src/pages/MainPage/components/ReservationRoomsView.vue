@@ -754,8 +754,12 @@ const generateAddonPreview = () => {
     }
 
     // console.log('selectedAddon before:',selectedAddon.value);
+    
+    const foundAddon = addonOptions.value.find(addon => 
+        addon.id === selectedAddonOption.value && addon.addon_type !== 'parking'
+    );
+    if (!foundAddon) return;
 
-    const foundAddon = addonOptions.value.find(addon => addon.addon_type !== 'parking');
     const isHotelAddon = foundAddon.id.startsWith('H');
     selectedAddon.value.push({
         addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,
