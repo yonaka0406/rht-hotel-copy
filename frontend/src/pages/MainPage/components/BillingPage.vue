@@ -364,7 +364,7 @@
             client_id: data.client_id,
             customer_code: data.customer_code || '',
             client_name: data.display_name,
-            invoice_total_stays: data.total_stays,
+            invoice_total_stays: data.stays_count,
             invoice_total_value: data.total_value,
             items: Object.values(groupedRates),
             comment: data.comment,
