@@ -73,6 +73,26 @@ This document contains all fixed and closed issues that were previously tracked 
   - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
 - **Additional Notes**: This fix ensures accurate addon assignments and proper billing by correctly associating the selected addon with each room.
 
+#### Bug #38: Employee Type Reservations Should Have billable=false
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: When a reservation's type is changed to 'employee', the billable field should be set to false to exclude it from sales calculations.
+- **Solution Implemented**:
+  - Modified the `updateReservationType` function to automatically set `billable = false` for employee reservations
+  - Added logic to handle status updates when changing to employee type (sets status to 'confirmed')
+  - Implemented proper transaction handling to ensure data consistency
+  - Added validation to prevent type changes for cancelled reservations in the frontend
+- **Files Modified**:
+  - `api/models/reservations.js` - Core logic for updating reservation types and billable status
+  - `frontend/src/pages/MainPage/components/ReservationPanel.vue` - Added UI validation
+- **Verification Steps**:
+  1. Create or find a reservation with type 'hold'
+  2. Change the reservation type to 'employee'
+  3. Verify the status is automatically set to 'confirmed'
+  4. Check the reservation's billable field is set to false
+  5. Verify the reservation is excluded from sales calculations
+- **Additional Notes**: This change ensures accurate financial reporting by properly categorizing employee reservations as non-billable.
+
 ## August 18, 2025
 
 #### Bug #33: Room Deletion Not Working in Production Environment
@@ -337,10 +357,10 @@ This document contains all fixed and closed issues that were previously tracked 
   1. Create a new reservation and confirm it (status changes to 'Confirmed' and billable becomes true)
   2. Add a new room to the confirmed reservation
   3. The new room's billable status remains false
-- **Expected Behavior**:
+- **Expected Behavior**: 
   - When a room is added to a confirmed reservation, its billable status should be set to true to match the reservation's confirmed status.
   - The UI should clearly indicate when a room is not billable with a visual indicator (e.g., strikethrough text, different background color, or an icon).
-- **Actual Behavior**:
+- **Actual Behavior**: 
   - Newly added rooms maintain billable = false even in confirmed reservations.
   - There is no visual indication in the UI that a room is not billable.
 - **Affected Component**:

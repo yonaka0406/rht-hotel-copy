@@ -5,21 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### August 18, 2025
-
-#### Bug #38: Employee Type Reservations Should Have billable=false
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: When a reservation's employee type is changed to 'confirmed', the billable field should be set to false to exclude it from sales calculations, but it's currently being included.
-- **Steps to Reproduce**:
-  1. Create or find a reservation with employee type 'hold'
-  2. Change the reservation status to 'confirmed'
-  3. Check the reservation's billable field and sales calculations
-- **Expected Behavior**: The reservation's billable field should be set to false when employee type is 'confirmed', excluding it from sales calculations
-- **Actual Behavior**: The billable field remains true, causing the reservation to be included in sales calculations
-- **Environment**: Reservation management system, financial reporting
-- **Additional Notes**: This affects financial reporting accuracy and needs to be fixed before month-end closing.
-
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History

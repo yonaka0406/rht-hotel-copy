@@ -7,7 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- UI: Enhanced visual indicators for non-billable stays across all reservation views, making it easier to identify employee and complimentary stays. (Improvement #38)
+- Fixed: Employee reservations now correctly set billable=false when type is changed to employee
+- UI: Enhanced visual indicators for non-billable stays across all reservation views, making it easier to identify employee and complimentary stays.
 - Addons: Fixed incorrect addon selection in bulk add functionality, ensuring the correct addon is assigned to each room. (Bug #37)
 - Sales Calculation: Updated all sales-related pages and exports to display prices directly from reservation_details, ensuring consistency with pre-calculated values. (Bug #41)
 - Price Calculation: Added price recalculation to reservation status updates (Bug #39)
