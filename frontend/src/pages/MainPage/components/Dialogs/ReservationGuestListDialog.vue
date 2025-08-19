@@ -142,11 +142,12 @@ const props = defineProps({
     reservation: Object,
     parkingLots: Array,
     allPlans: Array,
+    isGroup: Boolean,
 });
 
 const emit = defineEmits(['update:visible']);
 
-const { isGenerating, generateGuestListPDF } = useGuestStore();
+const { isGenerating, generateGuestListPDF, generateGroupGuestListPDF } = useGuestStore();
 const toast = useToast();
 
 const dialogVisible = ref(false);
@@ -267,7 +268,12 @@ const generatePDF = async () => {
         return guest;
     });
 
-    const result = await generateGuestListPDF(props.reservation.hotel_id, props.reservation.id, guestData);
+    let result;
+    if (props.isGroup) {
+        result = await generateGroupGuestListPDF(props.reservation.hotel_id, props.reservation.id, guestData);
+    } else {
+        result = await generateGuestListPDF(props.reservation.hotel_id, props.reservation.id, guestData);
+    }
 
     if (result.success) {
         toast.add({ severity: 'success', summary: '成功', detail: `PDFが生成されました: ${result.filename}`, life: 3000 });
@@ -276,7 +282,6 @@ const generatePDF = async () => {
         toast.add({ severity: 'error', summary: 'エラー', detail: 'PDFの生成に失敗しました。', life: 3000 });
     }
 };
-
 </script>
 
 <style scoped>

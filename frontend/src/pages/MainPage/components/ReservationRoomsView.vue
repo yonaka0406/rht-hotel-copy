@@ -1,5 +1,9 @@
 <template>
 
+    <div class="flex justify-end mb-4">
+        <Button v-if="groupedRooms.length > 1" icon="pi pi-file-pdf" label="団体PDF" class="p-button-sm ml-2"
+            @click="openGuestListDialog(groupedRooms[0], true)" />
+    </div>
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
@@ -441,6 +445,7 @@
         :reservation="selectedReservationForGuestList"
         :parkingLots="parkingLots"
         :allPlans="plans"
+        :isGroup="isGroupPDF"
     />
 </template>
 <script setup>
@@ -465,6 +470,8 @@ import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Dat
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();
+import { useGuestStore } from '@/composables/useGuestStore';
+const { generateGroupGuestListPDF } = useGuestStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
@@ -1346,8 +1353,10 @@ watch(addons, (newValue, oldValue) => {
 // Dialog: Guest List
 const visibleGuestListDialog = ref(false);
 const selectedReservationForGuestList = ref(null);
+const isGroupPDF = ref(false);
 
-const openGuestListDialog = async (group) => {
+const openGuestListDialog = async (group, isGroup = false) => {
+    isGroupPDF.value = isGroup;
     const reservationDetails = props.reservation_details.find(detail => detail.room_id === group.room_id);
     
     await fetchParkingLots();
@@ -1357,6 +1366,13 @@ const openGuestListDialog = async (group) => {
     await fetchPlansForHotel(reservationDetails.hotel_id);
     const assignedPlanNames = [...new Set(props.reservation_details.map(d => d.plan_name).filter(Boolean))];
 
+    let room_numbers;
+    if (isGroup) {
+        room_numbers = groupedRooms.value.map(g => g.details[0].room_number);
+    } else {
+        room_numbers = [group.details[0].room_number];
+    }
+
     selectedReservationForGuestList.value = {
         id: reservationDetails.reservation_id,
         hotel_id: reservationDetails.hotel_id,
@@ -1364,7 +1380,7 @@ const openGuestListDialog = async (group) => {
         alternative_name: '', // Placeholder for now
         check_in: reservationInfo.value.check_in,
         check_out: reservationInfo.value.check_out,
-        room_numbers: groupedRooms.value.map(g => g.details[0].room_number),
+        room_numbers: room_numbers,
         guests: reservationDetails.reservation_clients.map(c => ({
             name: c.name_kanji || c.name,
             address: c.address1,
