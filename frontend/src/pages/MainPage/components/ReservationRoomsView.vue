@@ -52,7 +52,13 @@
                         </template>
                     </Column>
                     <Column field="number_of_people" header="人数" class="text-xs" />
-                    <Column field="price" header="料金" class="text-xs" />
+                    <Column field="price" header="料金" class="text-xs">
+                        <template #body="slotProps">
+                            <span :style="!slotProps.data.billable && { 'text-decoration': 'line-through' }">
+                                {{ slotProps.data.price }}
+                            </span>
+                        </template>
+                    </Column>
                     <Column header="詳細">
                         <template #body="slotProps">
                             <Button icon="pi pi-eye" @click="openDayDetailDialog(slotProps.data)" size="small"
@@ -626,7 +632,7 @@ const rowStyle = (data) => {
         return { color: 'red' };
     }
     if (!data.billable) {
-        return { 'text-decoration': 'line-through', color: 'red' };
+        return { color: 'red' };
     }
     // Check if the day is a weekend
     if (day === 6) {
