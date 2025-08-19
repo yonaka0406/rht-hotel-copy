@@ -22,6 +22,20 @@ This document contains all fixed and closed issues that were previously tracked 
   - No more rounding discrepancies in financial reports
   - Improved performance by eliminating redundant calculations
 
+#### Bug #40: Rate Deletion and Zero-Value Update Issue
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Description**: When editing room rates in ReservationDayDetail, deleting one rate and setting another to 0 causes display and editing issues in ReservationRoomsView. The deleted rate's value persists and becomes uneditable.
+- **Steps to Reproduce**:
+  1. Open a reservation with multiple room rates
+  2. In ReservationDayDetail, delete one rate entry
+  3. Set the remaining rate's value to 0
+  4. Check ReservationRoomsView
+- **Expected Behavior**: The deleted rate should be completely removed, and the zero-value rate should be properly displayed and remain editable
+- **Actual Behavior**: The deleted rate's value persists in the UI, and the rate becomes uneditable
+- **Environment**: Reservation management interface, specifically when editing room rates
+- **Additional Notes**: This affects the accuracy of rate management and could lead to incorrect billing if not addressed.
+
 #### Bug #41: Review Sales Calculations After Price Calculation Changes
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical

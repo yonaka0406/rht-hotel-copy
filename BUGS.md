@@ -34,20 +34,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 - **Environment**: Reservation management system, financial reporting
 - **Additional Notes**: This affects financial reporting accuracy and needs to be fixed before month-end closing.
 
-#### Bug #40: Rate Deletion and Zero-Value Update Issue
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: When editing room rates in ReservationDayDetail, deleting one rate and setting another to 0 causes display and editing issues in ReservationRoomsView. The deleted rate's value persists and becomes uneditable.
-- **Steps to Reproduce**:
-  1. Open a reservation with multiple room rates
-  2. In ReservationDayDetail, delete one rate entry
-  3. Set the remaining rate's value to 0
-  4. Check ReservationRoomsView
-- **Expected Behavior**: The deleted rate should be completely removed, and the zero-value rate should be properly displayed and remain editable
-- **Actual Behavior**: The deleted rate's value persists in the UI, and the rate becomes uneditable
-- **Environment**: Reservation management interface, specifically when editing room rates
-- **Additional Notes**: This affects the accuracy of rate management and could lead to incorrect billing if not addressed.
-
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History
