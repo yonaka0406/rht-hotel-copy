@@ -5,25 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### August 19, 2025
-
-#### Bug #41: Review Sales Calculations After Price Calculation Changes
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Description**: After the changes in Bug #39 to use pre-calculated prices from reservation_details, we need to review and update the sales calculation logic throughout the application to ensure consistency. Additionally, the price field in reservation_details needs to properly handle cases where a day is cancelled but still billable.
-- **Areas to Review**:
-  1. Sales reports and dashboards
-  2. Financial calculations and statements
-  3. Billing and invoicing modules
-  4. Any other components that display or calculate prices
-- **Required Changes**:
-  1. Update the price calculation in reservation_details to handle cancelled but billable days
-  2. Ensure all sales calculations use the same price source consistently
-  3. Add validation to prevent price discrepancies
-  4. Update relevant documentation
-- **Environment**: All environments
-- **Additional Notes**: This is a follow-up to Bug #39 and is critical for financial accuracy.
-
 ### August 18, 2025
 
 #### Bug #37: Incorrect Addon Selection in Bulk Add
