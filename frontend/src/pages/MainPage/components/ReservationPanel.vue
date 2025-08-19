@@ -119,9 +119,11 @@
             <div class="absolute top-0 right-0">
                 <Button icon="pi pi-history" class="p-button-rounded p-button-text" @click="showHistoryDialog" />
             </div>
+            
             <ConfirmDialog group="delete"></ConfirmDialog>
+            <ConfirmDialog group="revert"></ConfirmDialog>
             <ConfirmDialog group="cancel"></ConfirmDialog>
-            <ConfirmDialog group="recovery"></ConfirmDialog>
+            <ConfirmDialog group="recovery"></ConfirmDialog>            
 
             <!-- Delete button for employee reservations (always shown when status is 保留中) -->
             <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
@@ -476,9 +478,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 // Assign unique group names to each confirm instance
-const confirmDelete = useConfirm('delete');
-const confirmCancel = useConfirm('cancel');
-const confirmRecovery = useConfirm('recovery');
+const confirm = useConfirm();
 import {
     Card, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, InputNumber, InputText, Textarea, Select, MultiSelect, DatePicker, FloatLabel, SelectButton, Button, ToggleButton, Badge, Divider, ConfirmDialog, SplitButton
 } from 'primevue';
@@ -690,8 +690,8 @@ const updateReservationStatus = async (status, type = null) => {
 
     // Specific confirmation for Checked In -> Confirmed
     if (reservationStatus.value === 'チェックイン' && status === 'confirmed') {
-        confirmRecovery.require({
-            group: 'recovery',
+        confirm.require({
+            group: 'revert',
             message: 'チェックイン済みの予約を確定済みに戻しますか？',
             header: 'ステータス変更確認',
             icon: 'pi pi-exclamation-triangle',
@@ -707,11 +707,11 @@ const updateReservationStatus = async (status, type = null) => {
                     console.error('Error updating reservation status:', error);
                     toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
                 }
-                confirmRecovery.close('recovery');
+                
             },
             reject: () => {
                 toast.add({ severity: 'info', summary: 'キャンセル', detail: 'ステータス変更はキャンセルされました。', life: 3000 });
-                confirmRecovery.close('recovery');
+                
             }
         });
         return; // Stop further execution for this specific case
@@ -778,13 +778,20 @@ const updateReservationStatus = async (status, type = null) => {
             return; // Don't proceed with recovery
         }
 
-        confirmRecovery.require({
+        confirm.require({
+            group: 'recovery',
             message: `キャンセルされた予約を復活してもよろしいですか?`,
             header: '復活確認',
             icon: 'pi pi-info-circle',
             acceptClass: 'p-button-warn',
             acceptProps: {
                 label: '復活'
+            },
+            rejectProps: {
+                label: 'キャンセル',
+                severity: 'secondary',
+                outlined: true,
+                icon: 'pi pi-times'
             },
             accept: () => {
                 setReservationStatus(status);
@@ -794,10 +801,10 @@ const updateReservationStatus = async (status, type = null) => {
                     detail: `復活されました。`,
                     life: 3000
                 });
-                confirmRecovery.close('recovery');
+                
             },
             reject: () => {
-                confirmRecovery.close('recovery');
+                
             }
         });
     } else {
@@ -822,7 +829,8 @@ const updateReservationStatus = async (status, type = null) => {
 const deleteReservation = () => {
     const reservation_id = reservationInfo.value.reservation_id;
 
-    confirmDelete.require({
+    confirm.require({
+        group: 'delete',
         message: `保留中予約を削除してもよろしいですか?`,
         header: '削除確認',
         icon: 'pi pi-info-circle',
@@ -835,8 +843,7 @@ const deleteReservation = () => {
             severity: 'secondary',
             outlined: true,
             icon: 'pi pi-times'
-        },
-        group: 'delete',
+        },        
         accept: async () => {
             try {
                 await deleteHoldReservation(reservation_id);
@@ -856,20 +863,21 @@ const deleteReservation = () => {
                 });
             }
             await goToNewReservation();
-            confirmDelete.close('delete');
+            
         },
         reject: () => {
-            confirmDelete.close('delete');
+            
         }
     });
 };
 const handleCancel = () => {
-    confirmCancel.require({
+    confirm.require({
+        group: 'cancel',
         message: 'キャンセルの種類を選択してください。',
         header: 'キャンセル確認',
         icon: 'pi pi-exclamation-triangle',
         accept: () => updateReservationStatus('cancelled'),
-        reject: () => { showDateDialog.value = true; confirmCancel.close('cancel'); },
+        reject: () => { showDateDialog.value = true; },
         acceptLabel: 'キャンセル料無し',
         acceptClass: 'p-button-success',
         acceptIcon: 'pi pi-check',
