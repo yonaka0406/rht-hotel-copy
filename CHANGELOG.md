@@ -7,17 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Fixed: Employee reservations now correctly set billable=false when type is changed to employee
-- UI: Enhanced visual indicators for non-billable stays across all reservation views, making it easier to identify employee and complimentary stays.
-- Addons: Fixed incorrect addon selection in bulk add functionality, ensuring the correct addon is assigned to each room. (Bug #37)
-- Sales Calculation: Updated all sales-related pages and exports to display prices directly from reservation_details, ensuring consistency with pre-calculated values. (Bug #41)
-- Price Calculation: Added price recalculation to reservation status updates (Bug #39)
-- Price Calculation: Optimized price calculation to use pre-calculated values from reservation_details, improving consistency and performance. (Bug #39)
-- Price Calculation: Unified price calculation logic with consistent 100 yen rounding (Bug #39)  
-- Meal Count Page: New dedicated sheet for viewing meal counts by client and room. (Feature #28)
-- Google Drive Integration: Updated view to properly handle client names for OTA and web reservations, showing guest names from reservation_clients when available.
-- Reservation Edit: Fixed inconsistent behavior when editing room dates in multi-room reservations, ensuring rooms with different dates are properly moved to a new reservation. (Bug #13)
-- Room Management: Fixed critical production issue where room deletion was failing due to transaction handling errors. (Bug #33)
 
 ---
 ## Future Releases
@@ -361,8 +350,23 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.4] - 2025-08-20
+
+- Feature: Added new dedicated sheet for viewing meal counts by client and room, improving reporting capabilities. (Feature #28)
+- Bugfix: Fixed employee reservations to correctly set billable=false when type is changed to employee, ensuring proper financial reporting.
+- Bugfix: Fixed incorrect addon selection in bulk add functionality, ensuring the correct addon is assigned to each room. (Bug #37)
+- Bugfix: Updated all sales-related pages and exports to display prices directly from reservation_details, ensuring consistency with pre-calculated values. (Bug #41)
+- Bugfix: Fixed price calculation issues by implementing consistent 100 yen rounding and using pre-calculated values from reservation_details. (Bug #39)
+- Bugfix: Fixed inconsistent behavior when editing room dates in multi-room reservations, ensuring rooms with different dates are properly moved to a new reservation. (Bug #13)
+- Bugfix: Resolved critical production issue where room deletion was failing due to transaction handling errors. (Bug #33)
+- UI: Enhanced visual indicators for non-billable stays across all reservation views, making it easier to identify employee and complimentary stays.
+- UI: Updated Google Drive integration to properly handle client names for OTA and web reservations, showing guest names from reservation_clients when available.
+
+---
+
 ## Version History
 
+- **1.1.4** (2025-08-20) - Added meal count reporting and fixed critical financial calculation issues. Improved reservation management with better handling of non-billable stays and room date changes. Enhanced UI for better visibility of employee and complimentary stays.
 - **1.1.3** (2025-08-15) - Improved billing and receipt generation with better client name handling and stay period display. Enhanced room indicator and dashboard charts with accurate data representation. Fixed addon persistence and parking assignment issues.
 - **1.1.2** (2025-08-14) - Improved JWT token verification, enhanced calendar display for OTA reservations, and fixed critical issues with reservation details and room distribution. Added temporary block access for all users with CRUD permissions.
 - **1.1.1** (2025-08-12) - Fixed addon selection without plan, added OTA Queue Table, and resolved issues with billable status and Google Drive link navigation.
