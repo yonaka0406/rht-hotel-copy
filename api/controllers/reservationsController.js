@@ -102,12 +102,9 @@ const getMyHoldReservations = async (req, res) => {
 
   try {
     const reservations = await selectMyHoldReservations(req.requestId, user_id);
-
-    if (reservations.length === 0) {
-      return res.status(404).json({ message: 'No hold reservations found for the specified user.' });
-    }
-
-    return res.status(200).json({ reservations });
+    
+    // Return empty array with 200 status if no reservations found
+    return res.status(200).json({ reservations: reservations || [] });
   } catch (error) {
     console.error('Error fetching reservations:', error);
     return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
