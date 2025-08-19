@@ -1683,7 +1683,6 @@ const updateReservationTime = async (requestId, reservationData) => {
 };
 const updateReservationType = async (requestId, reservationData) => {
   const { id, hotel_id, type, updated_by } = reservationData;
-
   const pool = getPool(requestId);
   const client = await pool.connect();
 
@@ -1691,58 +1690,48 @@ const updateReservationType = async (requestId, reservationData) => {
     // Start the transaction
     await client.query('BEGIN');
 
-    let result;
+    // 1. Get the current status from the database to use in our logic.
+    const currentReservation = await client.query(
+      `SELECT status FROM reservations WHERE id = $1::UUID AND hotel_id = $2`,
+      [id, hotel_id]
+    );
 
-    // If the type is 'employee', update status to 'confirmed' and details to billable.
-    if (type === 'employee') {
-      const reservationQuery = `
-        UPDATE reservations
-        SET
-          type = $1,
-          status = 'confirmed',
-          updated_by = $2
-        WHERE id = $3::UUID AND hotel_id = $4
-        RETURNING *;
-      `;
-      const reservationValues = [type, updated_by, id, hotel_id];
-      result = await client.query(reservationQuery, reservationValues);
-
-      // Also set billable to true for all associated reservation details.
-      const detailsQuery = `
-        UPDATE reservation_details
-        SET
-          billable = TRUE,
-          updated_by = $1
-        WHERE reservation_id = $2::UUID AND hotel_id = $3;
-      `;
-      const detailValues = [updated_by, id, hotel_id];
-      await client.query(detailsQuery, detailValues);
-
-    } else {
-      // Otherwise, just update the type.
-      const query = `
-        UPDATE reservations
-        SET
-          type = $1,
-          updated_by = $2
-        WHERE id = $3::UUID AND hotel_id = $4
-        RETURNING *;
-      `;
-      const values = [type, updated_by, id, hotel_id];
-      result = await client.query(query, values);
+    if (currentReservation.rows.length === 0) {
+      throw new Error('Reservation not found');
     }
 
-    // If all queries were successful, commit the transaction
-    await client.query('COMMIT');
+    const { status } = currentReservation.rows[0];
 
+    // 2. Update the reservation type and status (if applicable) in one query.
+    const result = await client.query(
+      `UPDATE reservations
+       SET type = $1,
+           updated_by = $2,
+           status = CASE WHEN $1 = 'employee' THEN 'confirmed' ELSE status END
+       WHERE id = $3::UUID AND hotel_id = $4
+       RETURNING *`,
+      [type, updated_by, id, hotel_id]
+    );
+
+    // 3. Calculate the billable status based on the new type and the original status.
+    const billable = type !== 'employee' && !['hold', 'provisory'].includes(status);
+
+    // 4. Update the billable status in reservation_details.
+    await client.query(
+      `UPDATE reservation_details
+       SET billable = $1,
+           updated_by = $2
+       WHERE reservation_id = $3::UUID AND hotel_id = $4`,
+      [billable, updated_by, id, hotel_id]
+    );
+
+    await client.query('COMMIT');
     return result.rows[0];
   } catch (err) {
-    // If the query fails, roll back the transaction
     await client.query('ROLLBACK');
     console.error('Error updating reservation type:', err);
     throw new Error('Database transaction failed');
   } finally {
-    // Always release the client back to the pool
     client.release();
   }
 };

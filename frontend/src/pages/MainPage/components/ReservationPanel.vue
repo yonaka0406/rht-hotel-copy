@@ -100,7 +100,8 @@
                 <span class="font-bold">種類：</span>
                 <template v-if="reservationType === '通常予約' || reservationType === '社員'">
                     <SelectButton v-model="reservationTypeSelected" :options="reservationTypeOptions"
-                        optionLabel="label" optionValue="value" @change="updateReservationType" />
+                        optionLabel="label" optionValue="value" @change="updateReservationType" 
+                        :disabled="reservationStatus === 'キャンセル'" />
                 </template>
                 <template v-else-if="reservationType === 'OTA' || reservationType === '自社WEB'">
                     <div class="text-left">
@@ -602,6 +603,14 @@ const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
 // Reservation Type
 const updateReservationType = async (event) => {
+
+    if (reservationStatus.value === 'キャンセル') {
+        toast.add({ severity: 'error', summary: 'エラー', detail: 'キャンセル済みの予約の種類は変更できません', life: 3000 });
+        // Reset to original value
+        reservationTypeSelected.value = reservationInfo.value.type;
+        return;
+    }
+    
     try {
         const selectedOption = event.value;
         const currentType = reservationType.value;
@@ -623,15 +632,15 @@ const updateReservationType = async (event) => {
                     detail: '通常予約に変更するには、すべての部屋にプランを設定してください。', 
                     life: 5000 
                 });
-                return;
-            }
+        return;
+    }
         }
-
-        try {
+    
+    try {
             await setReservationType(selectedOption);
             // Update the local state on success
             reservationType.value = selectedOption === 'employee' ? '社員' : '通常予約';
-            
+        
             toast.add({ 
                 severity: 'success', 
                 summary: '成功', 
