@@ -2222,6 +2222,20 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   const plans_hotel_id = plan?.plans_hotel_id === 0 ? null : plan?.plans_hotel_id ?? null;
   const plan_name = plan?.name ?? null;
   const plan_type = plan?.plan_type ?? null;
+  
+  // Use unified price calculation
+  let calculatedPrice = 0;
+  if (rates && rates.length > 0) {
+    calculatedPrice = calculatePriceFromRates(rates);
+    
+    // Log if there's a significant difference between provided and calculated price
+    if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
+      console.warn(`[updateReservationDetailPlan] Price mismatch: provided=${price}, calculated=${calculatedPrice}`);
+    }
+    
+    // Use the calculated price instead of the provided one
+    price = calculatedPrice;
+  }
 
   const updateReservationDetailsQuery = `
     UPDATE reservation_details
@@ -2242,8 +2256,8 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, user_id);
     await client.query(setSessionQuery);
 
-    // Update reservation_details
-    console.log('[updateReservationDetailPlan] Executing update with:', {
+    // Update reservation_details with the recalculated price
+    console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {
       plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id
     });
     await client.query(updateReservationDetailsQuery, [
@@ -2264,53 +2278,8 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
       `;
       await client.query(deleteRatesQuery, [id]);
 
-      const aggregatedRates = {};
-      let baseRate = 0;
-
-      // Aggregate rates by adjustment_type and tax_type_id
-      rates.forEach((rate) => {
-        const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
-        if (!aggregatedRates[key]) {
-          aggregatedRates[key] = {
-            adjustment_type: rate.adjustment_type,
-            tax_type_id: rate.tax_type_id,
-            tax_rate: rate.tax_rate,
-            adjustment_value: 0,
-          };
-        }
-        aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value);
-        if (rate.adjustment_type === 'base_rate') {
-          baseRate += parseFloat(rate.adjustment_value);
-        }
-      });
-
-      // Insert aggregated rates
-      for (const key in aggregatedRates) {
-        const rate = aggregatedRates[key];
-        let price = 0;
-
-        if (rate.adjustment_type === 'base_rate') {
-          price = rate.adjustment_value;
-        } else if (rate.adjustment_type === 'percentage') {
-          price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
-        } else if (rate.adjustment_type === 'flat_fee') {
-          price = rate.adjustment_value;
-        }
-
-        const insertRateQuery = `
-          INSERT INTO reservation_rates (
-            hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
-            tax_type_id, tax_rate, price, created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING *;
-        `;
-
-        await client.query(
-          insertRateQuery,
-          [hotel_id, id, rate.adjustment_type, rate.adjustment_value,
-            rate.tax_type_id, rate.tax_rate, price, user_id]
-        );
-      }
+      // Insert rates using the shared utility function
+      await insertAggregatedRates(client, rates, hotel_id, id, user_id);
     }
 
     await client.query('COMMIT');
@@ -2602,34 +2571,18 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 
       // Fetch new rates
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
-
-      // Insert new rates into reservation_rates
-      let baseRate = 0;
-      const rateInsertPromises = newrates.map(async (rate) => {
-        let price = 0;
-        if (rate.adjustment_type === 'base_rate') {
-          price = rate.adjustment_value;
-          baseRate += parseFloat(rate.adjustment_value);
-        }
-        if (rate.adjustment_type === 'percentage') {
-          price = Math.round((baseRate * (rate.adjustment_value / 100)) * 100) / 100;
-        }
-        if (rate.adjustment_type === 'flat_fee') {
-          price = rate.adjustment_value;
-        }
-        const rateInsertQuery = `
-          INSERT INTO reservation_rates (
-            hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
-            tax_type_id, tax_rate, price, created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          RETURNING *;
-        `;
-        return dbClient.query(rateInsertQuery, [
-          hotel_id, id, rate.adjustment_type, rate.adjustment_value,
-          rate.tax_type_id, rate.tax_rate, price, user_id
-        ]);
-      });
-      await Promise.all(rateInsertPromises);
+      
+      // Insert rates using the shared utility function
+      await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
+      
+      // Update the price in reservation_details using the calculated price from rates
+      const calculatedPrice = calculatePriceFromRates(newrates);
+      const updatePriceQuery = `
+        UPDATE reservation_details
+        SET price = $1
+        WHERE id = $2;
+      `;
+      await dbClient.query(updatePriceQuery, [calculatedPrice, id]);
     });
 
     // Wait for all updates to complete
@@ -4972,6 +4925,120 @@ const selectFailedOtaReservations = async (requestId) => {
   }
 };
 
+// Shared utility function for consistent price calculation
+const calculatePriceFromRates = (rates) => {
+  if (!rates || rates.length === 0) {
+    return 0;
+  }
+
+  // Step 1: Aggregate rates by adjustment_type and tax_type_id
+  const aggregatedRates = {};
+  rates.forEach((rate) => {
+    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
+    if (!aggregatedRates[key]) {
+      aggregatedRates[key] = {
+        adjustment_type: rate.adjustment_type,
+        tax_type_id: rate.tax_type_id,
+        tax_rate: rate.tax_rate,
+        adjustment_value: 0,
+      };
+    }
+    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
+  });
+
+  // Step 2: Calculate total base rate first
+  let totalBaseRate = 0;
+  Object.values(aggregatedRates).forEach((rate) => {
+    if (rate.adjustment_type === 'base_rate') {
+      totalBaseRate += rate.adjustment_value;
+    }
+  });
+
+  // Step 3: Calculate total price by summing individual rate prices (matching original logic)
+  let totalPrice = 0;
+
+  Object.values(aggregatedRates).forEach((rate) => {
+    let ratePrice = 0;
+    
+    if (rate.adjustment_type === 'base_rate') {
+      ratePrice = rate.adjustment_value;
+    } else if (rate.adjustment_type === 'percentage') {
+      ratePrice = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
+    } else if (rate.adjustment_type === 'flat_fee') {
+      ratePrice = rate.adjustment_value;
+    }
+    
+    totalPrice += ratePrice;
+  });
+
+  // Round down to nearest 100 yen (Japanese pricing convention)
+  return Math.floor(totalPrice / 100) * 100;
+};
+
+// Shared utility function for inserting rates with consistent price calculation
+const insertAggregatedRates = async (client, rates, hotel_id, reservation_details_id, user_id) => {
+  if (!rates || rates.length === 0) {
+    return;
+  }
+
+  // Aggregate rates by adjustment_type and tax_type_id
+  const aggregatedRates = {};
+  rates.forEach((rate) => {
+    const key = `${rate.adjustment_type}-${rate.tax_type_id}`;
+    if (!aggregatedRates[key]) {
+      aggregatedRates[key] = {
+        adjustment_type: rate.adjustment_type,
+        tax_type_id: rate.tax_type_id,
+        tax_rate: rate.tax_rate,
+        adjustment_value: 0,
+      };
+    }
+    aggregatedRates[key].adjustment_value += parseFloat(rate.adjustment_value || 0);
+  });
+
+  // Calculate total base rate first
+  let totalBaseRate = 0;
+  Object.values(aggregatedRates).forEach((rate) => {
+    if (rate.adjustment_type === 'base_rate') {
+      totalBaseRate += rate.adjustment_value;
+    }
+  });
+
+  // Insert aggregated rates with consistent price calculation
+  const insertPromises = Object.values(aggregatedRates).map(async (rate) => {
+    let price = 0;
+
+    if (rate.adjustment_type === 'base_rate') {
+      price = rate.adjustment_value;
+    } else if (rate.adjustment_type === 'percentage') {
+      price = Math.round((totalBaseRate * (rate.adjustment_value / 100)) * 100) / 100;
+    } else if (rate.adjustment_type === 'flat_fee') {
+      price = rate.adjustment_value;
+    }
+
+    const insertRateQuery = `
+      INSERT INTO reservation_rates (
+        hotel_id, reservation_details_id, adjustment_type, adjustment_value, 
+        tax_type_id, tax_rate, price, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *;
+    `;
+
+    return client.query(insertRateQuery, [
+      hotel_id, 
+      reservation_details_id, 
+      rate.adjustment_type, 
+      rate.adjustment_value,
+      rate.tax_type_id, 
+      rate.tax_rate, 
+      price, 
+      user_id
+    ]);
+  });
+
+  await Promise.all(insertPromises);
+};
+
 module.exports = {  
   selectAvailableRooms,
   selectReservedRooms,
@@ -5026,4 +5093,6 @@ module.exports = {
   selectFailedOtaReservations,
   deleteParkingReservation,
   deleteBulkParkingReservations,
+  calculatePriceFromRates,
+  insertAggregatedRates,
 };
