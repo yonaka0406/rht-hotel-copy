@@ -318,31 +318,35 @@
         console.log('openInvoiceDialog', data)
         let allRoomComments = '';
         const groupedRates = {};        
+        
+        // Process each detail item to group by tax rate
         data.details.forEach(block => {
-            
             const roomNumber = block.room_number;
             const comment = block.payment_comment ? block.payment_comment.replace(/\n/g, '<br/>') : '';
+            
             if (roomNumber) {
                 allRoomComments += `「${roomNumber}号室 IN：${block.check_in} OUT：${block.check_out}」 ${comment}\n`;
             }
             
-            block.rates.forEach(item => {
-                const rate = item.tax_rate;
-                if (!groupedRates[rate]) {
-                    groupedRates[rate] = {
-                        tax_rate: rate,
-                        total_net_price: 0,
-                        total_price: 0
-                    };
-                }                
-                groupedRates[rate].total_price += item.total_price;
-            });
+            // Use the block's value and assume a default tax rate if not provided
+            const rate = block.tax_rate || 0.1; // Default to 10% if not specified
             
+            if (!groupedRates[rate]) {
+                groupedRates[rate] = {
+                    tax_rate: rate,
+                    total_net_price: 0,
+                    total_price: 0
+                };
+            }                
+            
+            // Add to the totals for this rate
+            groupedRates[rate].total_price += block.value;
         });
+        
         // Calculate total net price based on total gross price for each rate
         for (const rate in groupedRates) {
             const grossTotal = groupedRates[rate].total_price;
-            groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));            
+            groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));
         }
         
         invoiceData.value = {
@@ -365,26 +369,15 @@
             items: Object.values(groupedRates),
             comment: data.comment,
         };
+        
         invoiceDBData.value = {
-            id: data.id,
-            hotel_id: data.hotel_id,
-            facility_name: data.facility_name,
-            bank_name: data.bank_name,
-            bank_branch_name: data.bank_branch_name,
-            bank_account_type: data.bank_account_type,
-            bank_account_number: data.bank_account_number,
-            bank_account_name: data.bank_account_name,
-            invoice_number: data.invoice_number,
-            date: data.date,
+            ...invoiceData.value,
             due_date: getAdjustedDueDate(data.date),
-            client_id: data.client_id,
-            customer_code: data.customer_code || '',
             client_name: data.client_kanji || data.client_name,
             invoice_total_stays: data.stays_count,
-            invoice_total_value: data.total_value,
-            items: Object.values(groupedRates),
             comment: allRoomComments,
         };
+        
         console.log('openInvoiceDialog invoiceData', invoiceData.value);
         console.log('openInvoiceDialog invoiceDBData', invoiceDBData.value);
 
