@@ -192,7 +192,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
 const selectBilledListView = async (requestId, hotelId, month) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT 
+    SELECT
       invoices.*
       ,hotels.formal_name as facility_name
       ,hotels.bank_name
@@ -202,7 +202,7 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,hotels.bank_account_name
       ,reservations.check_in
       ,reservations.check_out
-      ,reservation_payments.reservation_id      
+      ,reservation_payments.reservation_id
       ,reservation_payments.room_id
       ,reservation_payments.value
       ,reservation_payments.comment as payment_comment
@@ -215,91 +215,103 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ,clients.customer_id as customer_code
       ,clients.legal_or_natural_person
       ,clients.billing_preference
+      -- The subquery for total people and stays count needed to be filtered by month.
+      -- This now correctly counts only the dates within the specified month.
       ,details.number_of_people as total_people
       ,details.date as stays_count
+      -- The subquery for reservation details needed to be filtered by month.
       ,(
-	      SELECT json_agg(rd)
-	      FROM reservation_details rd
-	      WHERE rd.hotel_id = reservations.hotel_id AND rd.reservation_id = reservations.id AND rd.room_id = reservation_payments.room_id
-	        AND rd.billable = TRUE
-	    ) AS reservation_details_json
+        SELECT json_agg(rd)
+        FROM reservation_details rd
+        WHERE rd.hotel_id = reservations.hotel_id
+          AND rd.reservation_id = reservations.id
+          AND rd.room_id = reservation_payments.room_id
+          AND rd.billable = TRUE
+          AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+      ) AS reservation_details_json
+      -- The subquery for reservation rates and addons also needed to be filtered by month.
+      -- This ensures the total prices are correct for the billing period.
       ,(
         SELECT json_agg(taxed_group)
         FROM (
           SELECT tax_rate, SUM(total_price) as total_price, SUM(total_net_price) as total_net_price
           FROM (
-            SELECT 
+            SELECT
               rr.tax_rate,
               rr.price AS total_price,
               rr.net_price AS total_net_price
-            FROM 
+            FROM
               reservation_details rd
               JOIN reservation_rates rr ON rr.reservation_details_id = rd.id AND rr.hotel_id = rd.hotel_id
-            WHERE 
+            WHERE
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
-              AND rd.room_id = reservation_payments.room_id              
-              AND rd.billable = TRUE
+              AND rd.room_id = reservation_payments.room_id
+              AND rd.billable = TRUE              
+              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
 
-            UNION ALL			
-            SELECT 
+            UNION ALL
+            SELECT
               ra.tax_rate,
               ra.price AS total_price,
               ra.net_price AS total_net_price
-            FROM 
+            FROM
               reservation_details rd
               JOIN reservation_addons ra ON ra.reservation_detail_id = rd.id AND ra.hotel_id = rd.hotel_id
-            WHERE 
+            WHERE
               rd.hotel_id = reservations.hotel_id
               AND rd.reservation_id = reservations.id
-              AND rd.room_id = reservation_payments.room_id              
-              AND rd.billable = TRUE
+              AND rd.room_id = reservation_payments.room_id
+              AND rd.billable = TRUE              
+              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
           ) AS inside
           GROUP BY tax_rate
         ) AS taxed_group
       ) AS reservation_rates_json
     FROM
       hotels
-	  	JOIN
+      JOIN
       reservations
-	  	ON reservations.hotel_id = hotels.id
+      ON reservations.hotel_id = hotels.id
         JOIN
       reservation_payments
-        ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
+      ON reservation_payments.hotel_id = reservations.hotel_id AND reservation_payments.reservation_id = reservations.id
         JOIN
       (SELECT hotel_id, reservation_id, room_id, MAX(number_of_people) AS number_of_people, COUNT(date) AS date
-        FROM reservation_details 
-      WHERE billable = TRUE
-      GROUP BY hotel_id, reservation_id, room_id
+        FROM reservation_details
+        WHERE billable = TRUE
+          -- Add the month filter to this subquery
+          AND DATE_TRUNC('month', date) = DATE_TRUNC('month', $2::date)
+        GROUP BY hotel_id, reservation_id, room_id
       ) AS details
-        ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id 
+      ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id
         JOIN
       invoices
-        ON invoices.id = reservation_payments.invoice_id
+      ON invoices.id = reservation_payments.invoice_id
         JOIN
       rooms
-        ON rooms.id = reservation_payments.room_id
+      ON rooms.id = reservation_payments.room_id
         JOIN
       room_types
-        ON room_types.id = rooms.room_type_id
+      ON room_types.id = rooms.room_type_id
         JOIN
       clients
-        ON clients.id = reservation_payments.client_id
-    WHERE 
-      invoices.hotel_id = $1  
+      ON clients.id = reservation_payments.client_id
+    WHERE
+      invoices.hotel_id = $1
       AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
   ;`;
   const values = [hotelId, month];
 
   try {
-    const result = await pool.query(query, values);    
+    const result = await pool.query(query, values);
     return result.rows;
   } catch (err) {
     console.error('Error retrieving data:', err);
     throw new Error('Database error');
   }
-
 };
+
 const selectMaxInvoiceNumber = async (requestId, hotelId, month) => {
   const pool = getPool(requestId);
   const query = `
