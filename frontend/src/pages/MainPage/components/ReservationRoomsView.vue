@@ -943,10 +943,7 @@ const initializeGuests = () => {
                     id: client.client_id || null,
                     guest_no: '宿泊者 ' + (i + 1),
                     name: client.name_kanji || client.name || '',
-                    legal_or_natural_person: 'natural',
-                    gender: client.gender || 'male',
-                    email: client.email || '',
-                    phone: client.phone || '',
+                    ...client, // Keep all other client properties
                     isClientSelected: true
                 };
             }
@@ -1373,6 +1370,8 @@ const openGuestListDialog = async (group, isGroup = false) => {
     await fetchPlansForHotel(reservationDetails.hotel_id);
     const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
 
+    const totalPrice = group.details.filter(detail => detail.billable).reduce((acc, detail) => acc + parseFloat(detail.price), 0);
+
     let room_numbers;
     if (isGroup) {
         room_numbers = groupedRooms.value.map(g => g.details[0].room_number);
@@ -1384,7 +1383,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
         id: reservationDetails.reservation_id,
         hotel_id: reservationDetails.hotel_id,
         booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
-        alternative_name: '', // Placeholder for now
+        alternative_name: '', 
         check_in: reservationInfo.value.check_in,
         check_out: reservationInfo.value.check_out,
         room_numbers: room_numbers,
@@ -1399,7 +1398,8 @@ const openGuestListDialog = async (group, isGroup = false) => {
         assigned_plan_names: assignedPlanNames,
         assigned_parking_lot_names: assignedParkingLotNames,
         hotel_name: reservationInfo.value.hotel_name,
-        number_of_people: group.details[0]?.number_of_people,
+        number_of_people: group.details[0]?.number_of_people,        
+        payment_total: totalPrice
     };
     visibleGuestListDialog.value = true;
 };
