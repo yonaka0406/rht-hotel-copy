@@ -59,6 +59,15 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         } else {
             paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
         }
+        
+        // Format the plan names based on whether a plan was selected
+        let planNames = '';
+        const plansList = (guestData.plan_names_list && guestData.plan_names_list.trim() !== '') ? guestData.plan_names_list.split(',') : (guestData.all_plan_names_list ? guestData.all_plan_names_list.split(',') : []);
+        if (plansList.length > 0) {
+            planNames = plansList.map(plan => `<small>${plan.trim()}</small>`).join(' ・<br>');
+        } else {
+            planNames = '指定なし';
+        }
 
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
         htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
@@ -72,7 +81,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
         htmlContent = htmlContent.replace(new RegExp(`{{room_numbers}}`, 'g'), room.room_number);
-        htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), room.details.map(detail => detail.plan_name).join(', ') || '指定なし');
+        htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), planNames);
         htmlContent = htmlContent.replace(new RegExp(`{{comment}}`, 'g'), guestData.comment || '');
         
         // This is where you insert the generated smokingHtml
@@ -224,8 +233,17 @@ const generateGuestList = async (req, res) => {
             paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
         }
 
+        // Format the plan names based on whether a plan was selected
+        let planNames = '';
+        const plansList = (guestData.plan_names_list && guestData.plan_names_list.trim() !== '') ? guestData.plan_names_list.split(',') : (guestData.all_plan_names_list ? guestData.all_plan_names_list.split(',') : []);
+        if (plansList.length > 0) {
+            planNames = plansList.map(plan => `<small>${plan.trim()}</small>`).join(' ・<br>');
+        } else {
+            planNames = '指定なし';
+        }
+        
         for (const key in guestData) {
-            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list' && key !== 'payment_option') {
+            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list' && key !== 'payment_option' && key !== 'plan_names_list') {
                 htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
             }
         }
@@ -235,6 +253,7 @@ const generateGuestList = async (req, res) => {
         htmlContent = htmlContent.replace('{{{guests_html}}}', guestsHtml);
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
         htmlContent = htmlContent.replace('{{{payment_option_html}}}', paymentOptionHtml);
+        htmlContent = htmlContent.replace('{{plan_names_list}}', planNames);
 
 
         const { pdfBuffer, filename } = await generatePdf(htmlContent, reservationId, false);

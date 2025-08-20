@@ -285,6 +285,7 @@ const generatePDF = async () => {
     guestData.smoking_preference = smokingOption.value;
     guestData.payment_option = paymentOption.value; // ADDED LINE: Pass the selected payment option
     guestData.plan_names_list = selectedPlans.value.join(', ');
+    guestData.all_plan_names_list = props.allPlans.map(p => p.name).join(',');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
     guestData.hotel_name = props.reservation.hotel_name;
     

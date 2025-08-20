@@ -1335,7 +1335,7 @@ const closeDayDetailDialog = async () => {
 };
 
 onMounted(async () => {
-    // console.log('onMounted RoomView:', props.reservation_details);
+    console.log('onMounted RoomView:', props.reservation_details);
     const hotelId = reservationInfo.value.hotel_id;
     await fetchPlansForHotel(hotelId);
     // console.log('fetchPlansForHotel', plans.value);
