@@ -1335,7 +1335,7 @@ const closeDayDetailDialog = async () => {
 };
 
 onMounted(async () => {
-    console.log('onMounted RoomView:', props.reservation_details);
+    // console.log('onMounted RoomView:', props.reservation_details);
     const hotelId = reservationInfo.value.hotel_id;
     await fetchPlansForHotel(hotelId);
     // console.log('fetchPlansForHotel', plans.value);
@@ -1383,7 +1383,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
         id: reservationDetails.reservation_id,
         hotel_id: reservationDetails.hotel_id,
         booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
-        alternative_name: '', 
+        alternative_name: '',
         check_in: reservationInfo.value.check_in,
         check_out: reservationInfo.value.check_out,
         room_numbers: room_numbers,
@@ -1399,7 +1399,8 @@ const openGuestListDialog = async (group, isGroup = false) => {
         assigned_parking_lot_names: assignedParkingLotNames,
         hotel_name: reservationInfo.value.hotel_name,
         number_of_people: group.details[0]?.number_of_people,        
-        payment_total: totalPrice
+        payment_total: totalPrice,        
+        all_plan_names_list: plans.value.map(p => p.name).join(','),
     };
     visibleGuestListDialog.value = true;
 };

@@ -81,6 +81,10 @@
             </div>
 
             <div v-for="(guestFields, index) in guests" :key="index" class="guest-list-grid-container mt-4">
+                <!-- Guest Block Header -->
+                <div class="grid-item label" style="grid-column: 1 / -1;">
+                    宿泊者{{ index + 1 }}人目
+                </div>
                 <!-- Guest Name and Car Number -->
                 <div class="grid-item label">
                     <Checkbox v-model="guestFields.client_name.include" :binary="true" class="mr-2"/>

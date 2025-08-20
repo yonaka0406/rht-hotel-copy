@@ -59,7 +59,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         } else {
             paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
         }
-        
+
         // Format the plan names based on whether a plan was selected
         let planNames = '';
         const plansList = (guestData.plan_names_list && guestData.plan_names_list.trim() !== '') ? guestData.plan_names_list.split(',') : (guestData.all_plan_names_list ? guestData.all_plan_names_list.split(',') : []);
@@ -68,7 +68,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         } else {
             planNames = '指定なし';
         }
-
+        
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
         htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
         htmlContent = htmlContent.replace(new RegExp(`{{alternative_name}}`, 'g'), guestData.alternative_name || '');
@@ -107,6 +107,13 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
                 }
                 formattedAddress += `${guest.address}`;
             }
+
+            // ADDED: Guest number header
+            guestsHtml += `
+                <div class="grid-item label" style="grid-column: 1 / -1;">
+                    宿泊者${index + 1}人目
+                </div>
+            `;
 
             guestsHtml += `
                 <div class="grid-item label"><span class="highlight">※</span>お名前</div>
@@ -189,6 +196,13 @@ const generateGuestList = async (req, res) => {
                     formattedAddress += `${guest.address}`;
                 }
                 
+                // ADDED: Guest number header
+                guestsHtml += `
+                    <div class="grid-item label" style="grid-column: 1 / -1;">
+                        宿泊者${index + 1}人目
+                    </div>
+                `;
+
                 guestsHtml += `
                     <div class="grid-item label"><span class="highlight">※</span>お名前</div>
                     <div class="grid-item col-span-2">${guest.client_name || ''}</div>
