@@ -2258,7 +2258,7 @@ const updateClientInReservation = async (requestId, oldValue, newValue) => {
 
 };
 const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates, price, user_id) => {
-  console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
+  //console.log('[updateReservationDetailPlan] called with:', { id, hotel_id, plan, rates, price, user_id });
   if (!plan) {
     console.warn('[updateReservationDetailPlan] plan is null or undefined');
   }
@@ -2304,9 +2304,7 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     await client.query(setSessionQuery);
 
     // Update reservation_details with the recalculated price
-    console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {
-      plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id
-    });
+    //console.log('[updateReservationDetailPlan] Executing update with recalculated price:', {plans_global_id, plans_hotel_id, plan_name, plan_type, price, user_id, hotel_id, id});
     await client.query(updateReservationDetailsQuery, [
       plans_global_id,
       plans_hotel_id,

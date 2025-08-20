@@ -638,7 +638,7 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
     const pool = getPool(requestId);
     const client = await pool.connect();
 
-    console.log('[saveParkingAssignments] start: reservationDetailIds', reservationDetailIds, 'assignments', assignments);
+    //console.log('[saveParkingAssignments] start: reservationDetailIds', reservationDetailIds, 'assignments', assignments);
     try {
         await client.query('BEGIN');
 
@@ -655,7 +655,7 @@ const saveParkingAssignments = async (requestId, reservationDetailIds, assignmen
 
         // Handle creations
         for (const assignment of toCreate) {
-            console.log('[saveParkingAssignments] assignment of toCreate', toCreate);
+            //console.log('[saveParkingAssignments] assignment of toCreate', toCreate);
             const hotel_id = assignment.hotel_id;
             if (!hotel_id) {
                 throw new Error('hotel_id is required in the assignment object');
