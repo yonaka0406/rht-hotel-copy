@@ -4,7 +4,7 @@
             <div class="guest-list-grid-container">
                 <!-- Booker Name -->
                 <div class="grid-item label" style="grid-column: 1 / -1;">
-                    <Checkbox v-model="fields.booker_name.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="fields.booker_name.include" :binary="true" class="mr-2" />
                     ご予約会社様/個人様名
                 </div>
                 <div class="grid-item" style="grid-column: 1 / -1;">
@@ -13,7 +13,7 @@
 
                 <!-- Alternative Company Name -->
                 <div class="grid-item label" style="grid-column: 1 / -1;">
-                    <Checkbox v-model="fields.alternative_name.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="fields.alternative_name.include" :binary="true" class="mr-2" />
                     <span class="highlight">※</span>ご宿泊会社様名（ご予約の会社様と異なる場合のみ）
                 </div>
                 <div class="grid-item" style="grid-column: 1 / -1;">
@@ -25,16 +25,16 @@
                     チェックイン日
                 </div>
                 <div class="grid-item col-span-3">
-                    <InputText v-model="fields.check_in_month.value" class="w-1/4" /> 月 
-                    <InputText v-model="fields.check_in_day.value" class="w-1/4" /> 日 （ 
+                    <InputText v-model="fields.check_in_month.value" class="w-1/4" /> 月
+                    <InputText v-model="fields.check_in_day.value" class="w-1/4" /> 日 （
                     <InputText v-model="fields.check_in_weekday.value" class="w-1/4" /> ）
                 </div>
                 <div class="grid-item label">
                     アウト日
                 </div>
                 <div class="grid-item col-span-2">
-                    <InputText v-model="fields.check_out_month.value" class="w-1/4" /> 月 
-                    <InputText v-model="fields.check_out_day.value" class="w-1/4" /> 日 （ 
+                    <InputText v-model="fields.check_out_month.value" class="w-1/4" /> 月
+                    <InputText v-model="fields.check_out_day.value" class="w-1/4" /> 日 （
                     <InputText v-model="fields.check_out_weekday.value" class="w-1/4" /> ）
                 </div>
 
@@ -47,14 +47,16 @@
                     </div>
                 </div>
                 <div class="grid-item label">
-                    <Checkbox v-model="fields.payment_total.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="fields.payment_total.include" :binary="true" class="mr-2" />
                     現地決済
                 </div>
-                <div class="grid-item col-span-3">あり ・ なし （ <InputText v-model="fields.payment_total.value" class="w-1/2" /> 円）</div>
+                <div class="grid-item col-span-3">あり ・ なし （
+                    <InputText v-model="fields.payment_total.value" class="w-1/2" /> 円）
+                </div>
 
                 <!-- Room Details -->
                 <div class="grid-item label">
-                    <Checkbox v-model="fields.room_numbers.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="fields.room_numbers.include" :binary="true" class="mr-2" />
                     部屋番号
                 </div>
                 <div class="grid-item">
@@ -73,16 +75,16 @@
             </div>
 
             <div v-for="(guestFields, index) in guests" :key="index" class="guest-list-grid-container mt-4">
-                    <!-- Guest Name and Car Number -->
+                <!-- Guest Name and Car Number -->
                 <div class="grid-item label">
-                    <Checkbox v-model="guestFields.client_name.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="guestFields.client_name.include" :binary="true" class="mr-2" />
                     <span class="highlight">※</span>お名前
                 </div>
                 <div class="grid-item col-span-2">
                     <InputText v-model="guestFields.client_name.value" fluid />
                 </div>
                 <div class="grid-item label">
-                    <Checkbox v-model="guestFields.number_plate.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="guestFields.number_plate.include" :binary="true" class="mr-2" />
                     <span class="highlight">※</span>車両ナンバー
                 </div>
                 <div class="grid-item col-span-3">
@@ -91,17 +93,17 @@
 
                 <!-- Address -->
                 <div class="grid-item label">
-                    <Checkbox v-model="guestFields.address.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="guestFields.address.include" :binary="true" class="mr-2" />
                     <span class="highlight">※</span>ご住所
                 </div>
                 <div class="grid-item col-span-6">
-                    (〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) 
+                    (〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                     <InputText v-model="guestFields.address.value" class="w-full" fluid />
                 </div>
 
                 <!-- Contact Number -->
                 <div class="grid-item label">
-                    <Checkbox v-model="guestFields.phone_number.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="guestFields.phone_number.include" :binary="true" class="mr-2" />
                     <span class="highlight">※</span>ご連絡先
                 </div>
                 <div class="grid-item col-span-6">
@@ -109,10 +111,10 @@
                 </div>
             </div>
 
-                <!-- Comments -->
+            <!-- Comments -->
             <div class="guest-list-grid-container mt-4">
                 <div class="grid-item label">
-                    <Checkbox v-model="fields.comment.include" :binary="true" class="mr-2"/>
+                    <Checkbox v-model="fields.comment.include" :binary="true" class="mr-2" />
                     備考
                 </div>
                 <div class="grid-item col-span-6" style="min-height: 60px;">
@@ -121,8 +123,8 @@
             </div>
         </div>
         <template #footer>
-            <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text p-button-danger"/>
-            <Button label="PDF生成" icon="pi pi-file-pdf" @click="generatePDF" :loading="isGenerating"/>
+            <Button label="キャンセル" icon="pi pi-times" @click="closeDialog" class="p-button-text p-button-danger" />
+            <Button label="PDF生成" icon="pi pi-file-pdf" @click="generatePDF" :loading="isGenerating" />
         </template>
     </Dialog>
 </template>
@@ -162,13 +164,13 @@ const initializeFields = (reservation) => {
     // --- START: Added console log for the props received by the component ---
     console.log('Component received reservation prop:', reservation);
     // --- END: Added console log for the props received by the component ---
-    
+
     if (!reservation) {
         fields.value = {};
         guests.value = [];
         return;
     }
-    
+
     if (reservation.smoking) {
         smokingOption.value = '喫煙';
     } else {
@@ -264,7 +266,10 @@ const generatePDF = async () => {
     guestData.plan_names_list = selectedPlans.value.join(', ');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
     guestData.hotel_name = props.reservation.hotel_name;
-    
+
+    // ADDED LINE: Collect all parking lot names and add them to the data object
+    guestData.all_parking_lots_list = props.parkingLots.map(lot => lot.name).join(', ');
+
     // Explicitly check for hotel_name and log it
     console.log('Hotel name:', guestData.hotel_name);
 
@@ -305,17 +310,20 @@ const generatePDF = async () => {
     display: grid;
     grid-template-columns: 150px 1fr 1fr 1fr 100px 1fr 1fr;
 }
+
 .grid-item {
     border: 1px solid #a9a9a9;
     padding: 8px;
     display: flex;
     align-items: center;
 }
+
 .label {
     background-color: #f2f2f2;
     font-weight: bold;
     justify-content: center;
 }
+
 .highlight {
     color: #ff0000;
 }

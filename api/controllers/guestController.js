@@ -33,6 +33,21 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         const totalPrice = room.details.reduce((acc, detail) => acc + parseFloat(detail.price), 0);
         const hotelName = guestData.hotel_name || 'My Hotel';
 
+        // Split all parking lots and the selected one for comparison
+        const allParkingLots = guestData.all_parking_lots_list ? guestData.all_parking_lots_list.split(',') : [];
+        const selectedParkingLot = guestData.parking_lot_names_list || null;
+
+        // Format the parking lot string with bolding
+        const parkingLotNames = allParkingLots.map(lot => {
+            const trimmedLot = lot.trim();
+            // Trim the selectedParkingLot for a more robust comparison
+            const trimmedSelected = selectedParkingLot ? selectedParkingLot.trim() : null;
+            if (trimmedLot === trimmedSelected) {
+                return `<span style="font-weight: bold;">${trimmedLot}</span>`;
+            }
+            return trimmedLot;
+        }).join(' ・ ');
+
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
         htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
         htmlContent = htmlContent.replace(new RegExp(`{{alternative_name}}`, 'g'), guestData.alternative_name || '');
@@ -42,7 +57,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         htmlContent = htmlContent.replace(new RegExp(`{{check_out_month}}`, 'g'), guestData.check_out_month);
         htmlContent = htmlContent.replace(new RegExp(`{{check_out_day}}`, 'g'), guestData.check_out_day);
         htmlContent = htmlContent.replace(new RegExp(`{{check_out_weekday}}`, 'g'), guestData.check_out_weekday);
-        htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), guestData.parking_lot_names_list || '');
+        htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
         htmlContent = htmlContent.replace(new RegExp(`{{room_numbers}}`, 'g'), room.room_number);
         htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), guestData.plan_names_list || '');
@@ -143,15 +158,30 @@ const generateGuestList = async (req, res) => {
         guestData.guests_html = guestsHtml;
 
         let htmlContent = guestListHTML;
+        
+        // Correct the parking lot variable assignment and add bolding
+        const allParkingLots = guestData.all_parking_lots_list ? guestData.all_parking_lots_list.split(',') : [];
+        const selectedParkingLot = guestData.parking_lot_names_list;
 
+        const parkingLotNames = allParkingLots.map(lot => {
+            const trimmedLot = lot.trim();
+            const trimmedSelected = selectedParkingLot ? selectedParkingLot.trim() : null;
+            if (trimmedLot === trimmedSelected) {
+                return `<span style="font-weight: bold;">${trimmedLot}</span>`;
+            }
+            return trimmedLot;
+        }).join(' ・ ');
+        
         for (const key in guestData) {
-            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html') {
+            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list') {
                 htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
             }
         }
         htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', guestData.non_smoking_preference_html);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', guestData.smoking_preference_html);
         htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
+        htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
+
 
         const { pdfBuffer, filename } = await generatePdf(htmlContent, reservationId, false);
 
