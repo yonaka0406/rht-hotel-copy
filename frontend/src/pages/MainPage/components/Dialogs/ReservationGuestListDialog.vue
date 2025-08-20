@@ -73,7 +73,7 @@
             </div>
 
             <div v-for="(guestFields, index) in guests" :key="index" class="guest-list-grid-container mt-4">
-                 <!-- Guest Name and Car Number -->
+                    <!-- Guest Name and Car Number -->
                 <div class="grid-item label">
                     <Checkbox v-model="guestFields.client_name.include" :binary="true" class="mr-2"/>
                     <span class="highlight">※</span>お名前
@@ -109,7 +109,7 @@
                 </div>
             </div>
 
-             <!-- Comments -->
+                <!-- Comments -->
             <div class="guest-list-grid-container mt-4">
                 <div class="grid-item label">
                     <Checkbox v-model="fields.comment.include" :binary="true" class="mr-2"/>
@@ -159,6 +159,10 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
+    // --- START: Added console log for the props received by the component ---
+    console.log('Component received reservation prop:', reservation);
+    // --- END: Added console log for the props received by the component ---
+    
     if (!reservation) {
         fields.value = {};
         guests.value = [];
@@ -243,6 +247,11 @@ const closeDialog = () => {
 };
 
 const generatePDF = async () => {
+    // --- START: Added console logs for debugging ---
+    console.log('--- generatePDF function called ---');
+    console.log('Props reservation object:', props.reservation);
+    // --- END: Added console logs for debugging ---
+
     const guestData = {};
     for (const key in fields.value) {
         if (fields.value[key].include) {
@@ -255,6 +264,9 @@ const generatePDF = async () => {
     guestData.plan_names_list = selectedPlans.value.join(', ');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
     guestData.hotel_name = props.reservation.hotel_name;
+    
+    // Explicitly check for hotel_name and log it
+    console.log('Hotel name:', guestData.hotel_name);
 
     guestData.guests = guests.value.map(guestFields => {
         const guest = {};
@@ -267,6 +279,10 @@ const generatePDF = async () => {
         }
         return guest;
     });
+
+    // --- START: Added console log for the final data object ---
+    console.log('Data to be sent to PDF function:', guestData);
+    // --- END: Added console log for the final data object ---
 
     let result;
     if (props.isGroup) {
