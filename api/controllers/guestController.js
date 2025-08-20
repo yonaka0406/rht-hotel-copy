@@ -273,51 +273,6 @@ const generateGuestList = async (req, res) => {
     }
 };
 
-const generateGroupGuestList = async (req, res) => {
-    const { reservationId } = req.params;
-    const guestData = req.body;
-
-    try {
-        const reservationData = await selectReservation(req.requestId, reservationId);
-        if (!reservationData || reservationData.length === 0) {
-            return res.status(404).send('Reservation not found');
-        }
-
-        const guestListHTML = fs.readFileSync(path.join(__dirname, '../components/guest-list.html'), 'utf-8');
-        
-        const rooms = {};
-        reservationData.forEach(detail => {
-            if (!rooms[detail.room_id]) {
-                rooms[detail.room_id] = {
-                    details: [],
-                    room_number: detail.room_number,
-                    smoking: detail.smoking,
-                    guests: new Map()
-                };
-            }
-            rooms[detail.room_id].details.push(detail);
-            detail.reservation_clients.forEach(guest => {
-                rooms[detail.room_id].guests.set(guest.client_id, guest);
-            });
-        });
-
-        const allRoomsHtml = generateGuestListHTMLForRooms(rooms, guestListHTML, guestData);
-        const { pdfBuffer, filename } = await generatePdf(allRoomsHtml, reservationId, true);
-
-        res.set({
-            'Content-Type': 'application/pdf',
-            'Content-Length': pdfBuffer.length,
-            'Content-Disposition': `attachment; filename="${filename}"`,
-        });
-        res.send(pdfBuffer);
-
-    } catch (error) {
-        console.error('Error generating group guest list PDF:', error);
-        res.status(500).send('Error generating group guest list PDF');
-    }
-};
-
 module.exports = {
-  generateGuestList,
-  generateGroupGuestList,
+  generateGuestList,  
 };

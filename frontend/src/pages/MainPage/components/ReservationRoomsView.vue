@@ -1,8 +1,4 @@
-<template>
-    <div class="flex justify-end mb-4">
-        <Button v-if="groupedRooms.length > 1" icon="pi pi-file-pdf" label="団体名簿" class="p-button-sm ml-2"
-            @click="openGuestListDialog(null, true)" />
-    </div>
+<template>    
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
@@ -475,8 +471,6 @@ import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Dat
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();
-import { useGuestStore } from '@/composables/useGuestStore';
-const { generateGroupGuestListPDF } = useGuestStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';

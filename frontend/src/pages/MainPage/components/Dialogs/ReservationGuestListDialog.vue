@@ -214,7 +214,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible']);
 
-const { isGenerating, generateGuestListPDF, generateGroupGuestListPDF } = useGuestStore();
+const { isGenerating, generateGuestListPDF } = useGuestStore();
 const toast = useToast();
 
 const dialogVisible = ref(false);
@@ -433,7 +433,7 @@ const generatePDF = async () => {
     const hotelId = Array.isArray(props.reservation) ? props.reservation[0].hotel_id : props.reservation.hotel_id;
     
     if (props.isGroup) {
-        result = await generateGroupGuestListPDF(hotelId, reservationId, guestData);
+
     } else {
         result = await generateGuestListPDF(hotelId, reservationId, guestData);
     }
