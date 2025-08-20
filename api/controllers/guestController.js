@@ -86,6 +86,19 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
             if (index > 0) {
                 guestsHtml += '<div class="separator"></div>';
             }
+            
+            // Format the address with the postal code from the guestData object
+            let formattedAddress = '';
+            if (guest.postal_code) {
+                formattedAddress += `〒 ${guest.postal_code}`;
+            }
+            if (guest.address) {
+                if (formattedAddress) {
+                    formattedAddress += `<br>`;
+                }
+                formattedAddress += `${guest.address}`;
+            }
+
             guestsHtml += `
                 <div class="grid-item label"><span class="highlight">※</span>お名前</div>
                 <div class="grid-item col-span-2">${guest.name_kanji || guest.name || ''}</div>
@@ -93,7 +106,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
                 <div class="grid-item col-span-3"></div>
 
                 <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ${guest.address || ''}</div>
+                <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">${formattedAddress}</div>
 
                 <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
                 <div class="grid-item col-span-6">${guest.phone || ''}</div>
@@ -154,6 +167,19 @@ const generateGuestList = async (req, res) => {
                 if (index > 0) {
                     guestsHtml += '<div class="separator"></div>';
                 }
+
+                // Correctly format the postal code and address here
+                let formattedAddress = '';
+                if (guest.postal_code) {
+                    formattedAddress += `〒 ${guest.postal_code}`;
+                }
+                if (guest.address) {
+                    if (formattedAddress) {
+                        formattedAddress += `<br>`;
+                    }
+                    formattedAddress += `${guest.address}`;
+                }
+                
                 guestsHtml += `
                     <div class="grid-item label"><span class="highlight">※</span>お名前</div>
                     <div class="grid-item col-span-2">${guest.client_name || ''}</div>
@@ -161,7 +187,7 @@ const generateGuestList = async (req, res) => {
                     <div class="grid-item col-span-3">${guest.number_plate || ''}</div>
 
                     <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${guest.address || ''}</div>
+                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">${formattedAddress}</div>
 
                     <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
                     <div class="grid-item col-span-6">${guest.phone_number || ''}</div>
@@ -206,7 +232,7 @@ const generateGuestList = async (req, res) => {
         htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', guestData.non_smoking_preference_html);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', guestData.smoking_preference_html);
         htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
-        htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
+        htmlContent = htmlContent.replace('{{{guests_html}}}', guestsHtml);
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
         htmlContent = htmlContent.replace('{{{payment_option_html}}}', paymentOptionHtml);
 

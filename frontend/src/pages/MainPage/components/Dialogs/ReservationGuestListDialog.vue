@@ -102,9 +102,12 @@
                     <Checkbox v-model="guestFields.address.include" :binary="true" class="mr-2"/>
                     <span class="highlight">※</span>ご住所
                 </div>
-                <div class="grid-item col-span-6">
-                    (〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) 
-                    <InputText v-model="guestFields.address.value" class="w-full" fluid />
+                <div class="grid-item col-span-6 flex flex-col items-start p-2">
+                    <div class="flex items-center w-full">
+                        <span>〒</span>
+                        <InputMask v-model="guestFields.postal_code.value" mask="999-9999" placeholder="999-9999" class="w-1/4 ml-2 mr-2" />
+                    </div>
+                    <InputText v-model="guestFields.address.value" class="w-full mt-2" />
                 </div>
 
                 <!-- Contact Number -->
@@ -141,6 +144,7 @@ import Dialog from 'primevue/dialog';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import InputText from 'primevue/inputtext';
+import InputMask from 'primevue/inputmask';
 import SelectButton from 'primevue/selectbutton';
 import { useGuestStore } from '@/composables/useGuestStore';
 import { useToast } from 'primevue/usetoast';
@@ -230,6 +234,7 @@ const initializeFields = (reservation) => {
             newGuests.push({
                 client_name: { label: 'お名前', value: existingGuest.name, include: true },
                 number_plate: { label: '車両ナンバー', value: existingGuest.car_number_plate, include: true },
+                postal_code: { label: '郵便番号', value: existingGuest.postal_code || '', include: true },
                 address: { label: 'ご住所', value: existingGuest.address, include: true },
                 phone_number: { label: 'ご連絡先', value: existingGuest.phone, include: true },
             });
@@ -237,6 +242,7 @@ const initializeFields = (reservation) => {
             newGuests.push({
                 client_name: { label: 'お名前', value: '', include: true },
                 number_plate: { label: '車両ナンバー', value: '', include: true },
+                postal_code: { label: '郵便番号', value: '', include: true },
                 address: { label: 'ご住所', value: '', include: true },
                 phone_number: { label: 'ご連絡先', value: '', include: true },
             });
@@ -292,7 +298,12 @@ const generatePDF = async () => {
         const guest = {};
         for (const key in guestFields) {
             if (guestFields[key].include) {
-                guest[key] = guestFields[key].value;
+                 if (key === 'postal_code') {
+                    // Pass postal code as is
+                    guest[key] = guestFields[key].value;
+                } else {
+                    guest[key] = guestFields[key].value;
+                }
             } else {
                 guest[key] = '';
             }
