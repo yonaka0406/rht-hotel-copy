@@ -1761,16 +1761,20 @@ const updateReservationResponsible = async (requestId, id, updatedFields, user_i
   }
 };
 const updateRoomByCalendar = async (requestId, roomData) => {
+  //console.log('--- Starting updateRoomByCalendar ---');
+  //console.log('Received roomData:', roomData);
   const pool = getPool(requestId);
   const { id, hotel_id, old_check_in, old_check_out, new_check_in, new_check_out, old_room_id, new_room_id, number_of_people, mode, updated_by } = roomData;
 
   // Calculate the shift direction in JavaScript
   const shiftDirection = new_check_in >= old_check_in ? 'DESC' : 'ASC';
+  //console.log(`Shift direction calculated as: ${shiftDirection}`);
 
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
+    //console.log('Transaction started.');
 
     // Set session
     const setSessionQuery = format(`SET SESSION "my_app.user_id" = %L;`, updated_by);
@@ -1785,12 +1789,13 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     const checkValues = [id, hotel_id];
     const checkResult = await client.query(checkQuery, checkValues);
     const roomCount = checkResult.rows[0].room_count;
+    //console.log(`Initial room count for reservation ${id}: ${roomCount}`);
 
     let newReservationId = id;
 
     // If room_count > 1 and check_in/check_out dates change, create a new reservation_id
     if (roomCount > 1 && mode === 'solo' && (new_check_in !== old_check_in || new_check_out !== old_check_out)) {
-
+      //console.log('Condition met to split reservation. Creating a new reservation record.');
       const insertReservationQuery = `
         INSERT INTO reservations (hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, created_at, created_by, updated_by)
         SELECT hotel_id, reservation_client_id, $1, $2, $6, status, created_at, created_by, $3
@@ -1801,6 +1806,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       const insertReservationValues = [new_check_in, new_check_out, updated_by, id, hotel_id, number_of_people];
       const insertResult = await client.query(insertReservationQuery, insertReservationValues);
       newReservationId = insertResult.rows[0].id;
+      //console.log(`New reservation created with ID: ${newReservationId}`);
 
       // Adjust number_of_people in the original reservation
       const updateQuery = `
@@ -1810,15 +1816,17 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       `;
       const updateValues = [number_of_people, id, hotel_id];
       await client.query(updateQuery, updateValues);
+      //console.log(`Adjusted number_of_people on original reservation ${id}.`);
     }
 
     // Calculate the difference in days
     const oldDuration = (new Date(old_check_out) - new Date(old_check_in)) / (1000 * 60 * 60 * 24);
     const newDuration = (new Date(new_check_out) - new Date(new_check_in)) / (1000 * 60 * 60 * 24);
-    const extraDays = newDuration - oldDuration;
+    //console.log(`Duration calculated - Old: ${oldDuration} days, New: ${newDuration} days.`);
 
     // If the duration is the same, update the dates. Else, add dates and delete the old ones
     if (oldDuration === newDuration) {
+      //console.log('Duration is the same. Updating existing reservation_details dates.');
       const updateDatesQuery = `
         WITH date_diff AS (
           SELECT
@@ -1862,9 +1870,11 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         old_room_id
       ];
       const result = await client.query(updateDatesQuery, values);
+      //console.log(`${result.rowCount} reservation_details records updated.`);
     } else {
+      //console.log('Duration has changed. Recreating reservation_details records.');
       
-      // Get template record to copy from - get the FIRST record chronologically
+      // Get template record to copy from
       const templateQuery = `
         SELECT plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
         FROM reservation_details
@@ -1877,10 +1887,48 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       if (templateResult.rows.length === 0) {
         throw new Error('No template record found to copy from');
       }
-      
+      //console.log('Found template record to copy details from.');
       const template = templateResult.rows[0];
+
+      // --- NEW LOGIC: START ---
+      // 1. Fetch client and addon data BEFORE deleting old records
+      let clientsToCopy = [];
+      let addonsToCopy = [];
+
+      const sourceDetailQuery = `
+        SELECT id FROM reservation_details
+        WHERE reservation_id = $1 AND hotel_id = $2 AND room_id = $3
+        ORDER BY date ASC LIMIT 1
+      `;
+      const sourceResult = await client.query(sourceDetailQuery, [id, hotel_id, old_room_id]);
+
+      if (sourceResult.rows.length > 0) {
+        const sourceDetailId = sourceResult.rows[0].id;
+        //console.log(`Found source detail ID ${sourceDetailId} to copy clients/addons from.`);
+
+        const clientsResult = await client.query('SELECT client_id FROM reservation_clients WHERE reservation_details_id = $1', [sourceDetailId]);
+        clientsToCopy = clientsResult.rows;
+        //console.log(`Found ${clientsToCopy.length} clients to copy.`);
+
+        const addonsResult = await client.query('SELECT addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate FROM reservation_addons WHERE reservation_detail_id = $1', [sourceDetailId]);
+        addonsToCopy = addonsResult.rows;
+        //console.log(`Found ${addonsToCopy.length} addons to copy.`);
+      }
+      // --- NEW LOGIC: END ---
+
+      // 2. Delete old records
+      const deleteOldQuery = `
+        DELETE FROM reservation_details 
+        WHERE reservation_id = $1 
+          AND hotel_id = $2 
+          AND room_id = $3
+          AND date >= $4 AND date < $5
+        RETURNING id, date;
+      `;
+      const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id, old_check_in, old_check_out]);
+      //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
       
-      // Create all required dates first, then clean up
+      // 3. Create all required new dates
       const insertDetailsQuery = `
         INSERT INTO reservation_details (
           hotel_id, reservation_id, date, room_id, 
@@ -1902,119 +1950,104 @@ const updateRoomByCalendar = async (requestId, roomData) => {
           $11 as created_by,
           $11 as updated_by
         FROM generate_series($12::DATE, ($13::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL) as date_series(date)
-        WHERE NOT EXISTS (
-          SELECT 1 FROM reservation_details rd 
-          WHERE rd.hotel_id = $1 
-            AND rd.reservation_id = $2::uuid 
-            AND rd.room_id = $3
-            AND rd.date = date_series.date 
-        )
-        RETURNING id, date, hotel_id, plans_global_id, plans_hotel_id;
+        RETURNING id;
       `;
       
       const insertDetailsValues = [
-        hotel_id,                    // $1
-        newReservationId,            // $2
-        new_room_id,                 // $3
-        template.plans_global_id,    // $4
-        template.plans_hotel_id,     // $5
-        template.plan_name,          // $6
-        template.plan_type,          // $7
-        template.number_of_people,   // $8
-        template.price,              // $9
-        template.billable,           // $10
-        updated_by,                  // $11
-        new_check_in,                // $12
-        new_check_out                // $13
+        hotel_id,                   // $1
+        newReservationId,           // $2
+        new_room_id,                // $3
+        template.plans_global_id,   // $4
+        template.plans_hotel_id,    // $5
+        template.plan_name,         // $6
+        template.plan_type,         // $7
+        template.number_of_people,  // $8
+        template.price,             // $9
+        template.billable,          // $10
+        updated_by,                 // $11
+        new_check_in,               // $12
+        new_check_out               // $13
       ];
       
       const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
       const newReservationDetails = insertedDetails.rows;
+      //console.log(`Inserted ${newReservationDetails.length} new reservation_details records.`);
 
-      // Only proceed with clients/addons if we have new records
+      // --- MODIFIED LOGIC: START ---
+      // 4. Copy clients/addons to new records using the data fetched earlier
       if (newReservationDetails.length > 0) {
-        // Insert into reservation_clients using the returned details
-        const insertClientsQuery = `
-          INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
-          SELECT $1, $2, client_id, $3, $3
-          FROM reservation_clients 
-          WHERE reservation_details_id = (
-              SELECT id FROM reservation_details 
-              WHERE reservation_id = $4 
-                AND hotel_id = $5 
-                AND room_id = $6 
-              ORDER BY date ASC
-              LIMIT 1
-        );`;
-        
-        const insertAddonsQuery = `
-          INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
-          SELECT $1, $2, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, $3, $3
-          FROM reservation_addons 
-          WHERE reservation_detail_id = (
-              SELECT id FROM reservation_details 
-              WHERE reservation_id = $4 
-                AND hotel_id = $5 
-                AND room_id = $6               
-                AND (plans_global_id IS NOT DISTINCT FROM $7)
-                AND (plans_hotel_id IS NOT DISTINCT FROM $8)
-              ORDER BY date ASC
-              LIMIT 1
-            )        
-        ;`;
-        
-        // Execute all insertions sequentially within the transaction
         let clientsInserted = 0;
         let addonsInserted = 0;
-        for (const detail of newReservationDetails) {
-          const clientResult = await client.query(insertClientsQuery, [hotel_id, detail.id, updated_by, id, hotel_id, old_room_id]);
-          clientsInserted += clientResult.rowCount || 0;
-          
-          const addonResult = await client.query(insertAddonsQuery, [hotel_id, detail.id, updated_by, id, hotel_id, old_room_id, detail.plans_global_id, detail.plans_hotel_id]);
-          addonsInserted += addonResult.rowCount || 0;
-        }
-      }
 
-      // Clean up: Delete old records for this specific room from the original reservation
-      const deleteOldQuery = `
-        DELETE FROM reservation_details 
-        WHERE reservation_id = $1 
-          AND hotel_id = $2 
-          AND room_id = $3
-        RETURNING id, date;
-      `;
-      const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id]);
+        for (const detail of newReservationDetails) {
+          // Insert clients
+          if (clientsToCopy.length > 0) {
+            for (const clientRow of clientsToCopy) {
+              const insertClientQuery = `
+                INSERT INTO reservation_clients (hotel_id, reservation_details_id, client_id, created_by, updated_by)
+                VALUES ($1, $2, $3, $4, $4)
+              `;
+              const clientResult = await client.query(insertClientQuery, [hotel_id, detail.id, clientRow.client_id, updated_by]);
+              clientsInserted += clientResult.rowCount || 0;
+            }
+          }
+          
+          // Insert addons
+          if (addonsToCopy.length > 0) {
+            for (const addonRow of addonsToCopy) {
+              const insertAddonQuery = `
+                INSERT INTO reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name, addon_type, quantity, price, tax_type_id, tax_rate, created_by, updated_by)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+              `;
+              const addonResult = await client.query(insertAddonQuery, [
+                hotel_id, detail.id, addonRow.addons_global_id, addonRow.addons_hotel_id, addonRow.addon_name,
+                addonRow.addon_type, addonRow.quantity, addonRow.price, addonRow.tax_type_id, addonRow.tax_rate, updated_by
+              ]);
+              addonsInserted += addonResult.rowCount || 0;
+            }
+          }
+        }
+        //console.log(`Total clients inserted: ${clientsInserted}, Total addons inserted: ${addonsInserted}`);
+      }
+      // --- MODIFIED LOGIC: END ---
     }
 
     // Update reservations table with new check_in and check_out
+    //console.log(`Updating main reservation record ${newReservationId} with new dates.`);
     const updateReservationQuery = `
       UPDATE reservations
       SET check_in = $1, check_out = $2, updated_by = $3
       WHERE id = $4 AND hotel_id = $5
     `;
     const updateReservationValues = [new_check_in, new_check_out, updated_by, newReservationId, hotel_id];
-    const updateReservationResult = await client.query(updateReservationQuery, updateReservationValues);
+    await client.query(updateReservationQuery, updateReservationValues);
 
-    // Call recalculatePlanPrice within the same transaction by passing the client
+    // Recalculate plan price
+    //console.log('Recalculating plan price.');
     await recalculatePlanPrice(requestId, newReservationId, hotel_id, new_room_id, updated_by, client);
 
     await client.query('COMMIT');
+    //console.log('Transaction committed successfully.');
     
-    return {
+    const returnPayload = {
       success: true,
       reservation_id: newReservationId,
       original_reservation_id: id,
       message: 'Room calendar updated successfully'
     };
+    //console.log('--- Finished updateRoomByCalendar ---', returnPayload);
+    return returnPayload;
     
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Error in updateRoomByCalendar:', err);
+    console.error('Error in updateRoomByCalendar, transaction rolled back:', err);
     throw new Error(`Failed to update reservation: ${err.message}`);
   } finally {
     client.release();
+    //console.log('Database client released.');
   }
 };
+
 const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
