@@ -241,6 +241,7 @@ const waitlistRoutes = require('./routes/waitlistRoutes'); // Import waitlist ro
 const bookingEngineRoutes = require('./routes/bookingEngineRoutes'); // Import booking engine routes
 const searchRoutes = require('./routes/searchRoutes'); // Import search routes
 const parkingRoutes = require('./routes/parkingRoutes');
+const guestRoutes = require('./routes/guestRoutes');
 
 app.use('/api', protectedRoutes);
 app.use('/api/auth', authRoutes); // '/api/auth/register or login' path
@@ -264,6 +265,7 @@ app.use('/api', waitlistRoutes);
 app.use('/api/search', searchRoutes); // Search functionality routes
 app.use('/api/booking-engine', bookingEngineRoutes);
 app.use('/api', parkingRoutes);
+app.use('/api', guestRoutes);
 
 // API Error Handler
 app.use('/api', (err, req, res, next) => {

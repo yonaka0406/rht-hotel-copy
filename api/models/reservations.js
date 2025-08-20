@@ -195,6 +195,7 @@ const selectReservation = async (requestId, id) => {
     SELECT
       reservation_details.id
       ,reservation_details.hotel_id
+      ,hotels.formal_name AS hotel_name
       ,reservation_details.reservation_id
       ,reservation_details.cancelled
       ,reservation_details.billable
@@ -242,6 +243,9 @@ const selectReservation = async (requestId, id) => {
         JOIN 
       reservation_details 
         ON reservation_details.room_id = rooms.id AND reservation_details.hotel_id = rooms.hotel_id
+        JOIN 
+      hotels
+        ON hotels.id = reservation_details.hotel_id
 		JOIN 
       reservations 
         ON reservations.id = reservation_details.reservation_id AND reservations.hotel_id = reservation_details.hotel_id

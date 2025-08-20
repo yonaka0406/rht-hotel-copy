@@ -1,5 +1,4 @@
-<template>
-
+<template>    
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
@@ -19,8 +18,10 @@
                             :title="allPeopleCountMatch(group) ? '宿泊者設定済み' : '宿泊者未設定'"></i>
                     </div>
                     <div class="col-span-2 text-right mr-4">
+                        <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm mr-2"
+                            @click="openGuestListDialog(group)" severity="info" />
                         <Button icon="pi pi-pencil" label="一括編集" class="p-button-sm"
-                            @click="openRoomEditDialog(group)" />
+                            @click="openRoomEditDialog(group)" />                        
                     </div>
                 </div>
             </AccordionHeader>
@@ -28,9 +29,8 @@
                 <DataTable :value="matchingGroupDetails(group.details)" :rowStyle="rowStyle" :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]" dataKey="id" sortField="display_date"
                     :sortOrder=1>
-                    <Column header="詳細" style="width: 1%;"> <!-- Changed header, removed expander prop -->
+                    <Column header="詳細" style="width: 1%;">
                         <template #body="slotProps">
-                            <!-- Pass group.room_id to the methods -->
                             <button @click="toggleRowExpansion(group.room_id, slotProps.data)"
                                 class="p-button p-button-text p-button-rounded" type="button">
                                 <i :class="isRowExpanded(group.room_id, slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'"
@@ -83,6 +83,13 @@
                                     <Column header="単価" sortable>
                                         <template #body="addonSlotProps">
                                             {{ formatCurrency(addonSlotProps.data.price) || 0 }}
+                                        </template>
+                                    </Column>
+                                    <Column header="操作">
+                                        <template #body="addonSlotProps">
+                                            <Button icon="pi pi-trash"
+                                                class="p-button-text p-button-danger p-button-sm"
+                                                @click="deleteAddon(addonSlotProps.data)" />
                                         </template>
                                     </Column>
                                 </DataTable>
@@ -438,12 +445,22 @@
                 @click="closeDayDetailDialog" />
         </template>
     </Dialog>
+
+    <!-- Guest List Dialog -->
+    <ReservationGuestListDialog
+        v-model:visible="visibleGuestListDialog"
+        :reservation="selectedReservationForGuestList"
+        :parkingLots="parkingLots"
+        :allPlans="plans"
+        :isGroup="isGroupPDF"
+    />
 </template>
 <script setup>
 // Vue
 import { ref, computed, onMounted, watch } from 'vue';
 
 import ReservationDayDetail from '@/pages/MainPage/components/ReservationDayDetail.vue';
+import ReservationGuestListDialog from '@/pages/MainPage/components/Dialogs/ReservationGuestListDialog.vue';
 
 const props = defineProps({
     reservation_details: {
@@ -464,6 +481,8 @@ import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+import { useParkingStore } from '@/composables/useParkingStore';
+const { parkingLots, fetchParkingLots, fetchParkingReservations } = useParkingStore();
 
 // Helper
 const formatDate = (date) => {
@@ -883,11 +902,11 @@ const applyRoomChanges = async () => {
         roomIdOld: selectedGroup.value.room_id,
         roomIdNew: targetRoom.value.value,
     }
-    // console.log(data);            
+    // console.log(data);
     await moveReservationRoom(data);
     closeRoomEditDialog();
 
-    // Provide feedback to the user (optional)                
+    // Provide feedback to the user (optional)
     toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
 };
 
@@ -926,10 +945,7 @@ const initializeGuests = () => {
                     id: client.client_id || null,
                     guest_no: '宿泊者 ' + (i + 1),
                     name: client.name_kanji || client.name || '',
-                    legal_or_natural_person: 'natural',
-                    gender: client.gender || 'male',
-                    email: client.email || '',
-                    phone: client.phone || '',
+                    ...client, // Keep all other client properties
                     isClientSelected: true
                 };
             }
@@ -1340,6 +1356,117 @@ watch(addons, (newValue, oldValue) => {
     }
 }, { deep: true });
 
+// Dialog: Guest List
+const visibleGuestListDialog = ref(false);
+const selectedReservationForGuestList = ref(null);
+const isGroupPDF = ref(false);
+
+const openGuestListDialog = async (group, isGroup = false) => {
+    isGroupPDF.value = isGroup;
+
+    const reservationDetails = isGroup ? groupedRooms.value[0]?.details[0] : group.details[0];
+
+    if (!reservationDetails) {
+        console.error('Reservation details are not available.');
+        return;
+    }
+
+    if (isGroup) {
+        // --- Send array of room data for group reservation ---
+        const roomDataArray = [];
+        
+        for (const roomGroup of groupedRooms.value) {
+            const roomDetail = roomGroup.details[0];
+            const roomGuests = roomDetail.reservation_clients.map(client => ({
+                name: client.name_kanji || client.name,
+                address: client.address1,
+                phone: client.phone,
+                car_number_plate: client.car_number_plate,
+                postal_code: client.postal_code
+            }));
+
+            const roomPaymentTotal = roomGroup.details
+                .filter(detail => detail.billable)
+                .reduce((acc, detail) => acc + parseFloat(detail.price), 0);
+
+            const roomAssignedPlanNames = [...new Set(roomGroup.details.map(d => d.plan_name).filter(Boolean))];
+
+            // Fetch parking data for this room
+            await fetchParkingLots();
+            const assignedParkingData = await fetchParkingReservations(roomDetail.hotel_id, roomDetail.reservation_id);
+            const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
+
+            // Create individual room object
+            const roomData = {
+                id: roomDetail.reservation_id,
+                hotel_id: roomDetail.hotel_id,
+                booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
+                alternative_name: '',
+                check_in: reservationInfo.value.check_in,
+                check_out: reservationInfo.value.check_out,
+                room_numbers: [roomDetail.room_number],
+                room_number: roomDetail.room_number, // Individual room number
+                guests: roomGuests,
+                comment: reservationInfo.value.comment,
+                smoking: roomDetail.smoking,
+                assigned_plan_names: roomAssignedPlanNames,
+                assigned_parking_lot_names: assignedParkingLotNames,
+                hotel_name: reservationInfo.value.hotel_name,
+                number_of_people: roomDetail.number_of_people,
+                payment_total: roomPaymentTotal,
+                all_plan_names_list: plans.value.map(p => p.name).join(','),
+                // Additional room-specific data
+                room_type: roomGroup.room_type,
+                capacity: roomDetail.capacity,
+            };
+
+            roomDataArray.push(roomData);
+        }
+
+        // Send the array of room data
+        selectedReservationForGuestList.value = roomDataArray;
+
+    } else {
+        // --- Individual room data processing (unchanged) ---
+        const guests = reservationDetails.reservation_clients.map(c => ({
+            name: c.name_kanji || c.name,
+            address: c.address1,
+            phone: c.phone,
+            car_number_plate: c.car_number_plate,
+            postal_code: c.postal_code
+        }));
+        const room_numbers = [group.details[0].room_number];
+        const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
+        const payment_total = group.details.filter(detail => detail.billable).reduce((acc, detail) => acc + parseFloat(detail.price), 0);
+
+        await fetchParkingLots();
+        const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
+        const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
+
+        await fetchPlansForHotel(reservationDetails.hotel_id);
+
+        selectedReservationForGuestList.value = {
+            id: reservationDetails.reservation_id,
+            hotel_id: reservationDetails.hotel_id,
+            booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
+            alternative_name: '',
+            check_in: reservationInfo.value.check_in,
+            check_out: reservationInfo.value.check_out,
+            room_numbers: room_numbers,
+            guests: guests,
+            comment: reservationInfo.value.comment,
+            smoking: group?.details[0]?.smoking,
+            assigned_plan_names: assignedPlanNames,
+            assigned_parking_lot_names: assignedParkingLotNames,
+            hotel_name: reservationInfo.value.hotel_name,
+            number_of_people: group.details[0]?.number_of_people,
+            payment_total: payment_total,
+            all_plan_names_list: plans.value.map(p => p.name).join(','),
+        };
+    }
+    
+    visibleGuestListDialog.value = true;
+};
 </script>
 
 <style scoped></style>
