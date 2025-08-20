@@ -4,6 +4,29 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 20, 2025
 
+#### Bug #41: Pattern-Based Plan Application Issues
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: Pattern-based plan application is not working as expected in the production environment. Some patterns completely remove all plans from the reservation, while others only apply one of the selected plans from the pattern instead of all of them.
+- **Environment**: Production
+- **Root Cause**: 
+  - The [getPlanByKey] function in [api/models/plan.js] had logical issues in handling plan keys
+  - The function wasn't properly extracting and validating both global and hotel plan IDs from the pattern key
+- **Solution**:
+  - Fixed the logic in [getPlanByKey] to correctly parse and validate plan keys
+  - Added proper error handling and debug logging
+  - Ensured all code paths properly define and use variables
+  - Fixed plan key parsing and validation logic
+- **Steps to Reproduce**:
+  1. Create or edit a reservation
+  2. Apply a pattern with multiple plans
+  3. Save the reservation
+- **Expected Behavior**: All plans specified in the pattern should be correctly applied to the reservation.
+- **Actual Behavior**: 
+  - Some patterns remove all plans from the reservation
+  - Other patterns only apply one of the selected plans instead of all
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**: The fix ensures that pattern-based plan application works correctly for both single and multiple plan patterns.
+
 #### Feature Request #31: Export 宿泊者名簿 (Guest List) by Check-in Date
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 

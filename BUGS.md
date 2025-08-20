@@ -5,23 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### August 20, 2025
-
-#### Bug #41: Pattern-Based Plan Application Issues
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Pattern-based plan application is not working as expected in the production environment. Some patterns completely remove all plans from the reservation, while others only apply one of the selected plans from the pattern instead of all of them.
-- **Environment**: Production
-- **Steps to Reproduce**:
-  1. Create or edit a reservation
-  2. Apply a pattern with multiple plans
-  3. Save the reservation
-- **Expected Behavior**: All plans specified in the pattern should be correctly applied to the reservation.
-- **Actual Behavior**: 
-  - Some patterns remove all plans from the reservation
-  - Other patterns only apply one of the selected plans instead of all
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Additional Notes**: This issue is affecting production users and requires investigation into the pattern application logic.
-
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History

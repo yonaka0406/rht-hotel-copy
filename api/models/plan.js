@@ -98,65 +98,63 @@ const getAllPatternsByHotel = async (requestId, hotel_id) => {
 
 // Return one
 const getPlanByKey = async (requestId, hotel_id, plan_key) => {
-    if (!plan_key) {
-        return {
-            plans_global_id: null,
-            plans_hotel_id: null,
-            name: '',
-            plan_type: 'per_room'
-        };
-    }
-
-    const parts = plan_key.split('h');
-    console.log('plan_key:', plan_key, 'parts:', parts , 'part 0:', parts[0], 'part 1:', parts[1]);
-
-    if (!parts[0] && parts[1]) {                
-        const hotelPlanId = parseInt(parts[1]);
-
-        try {            
-            const hotelPlan = await getHotelPlanById(requestId, hotel_id, hotelPlanId);
-
-            if (hotelPlan) {
-                console.log('getPlanByKey hotelPlan:', hotelPlan);
-                return {
-                    plans_global_id: hotelPlan.plans_global_id,
-                    plans_hotel_id: hotelPlanId,
-                    name: hotelPlan.name,
-                    plan_type: hotelPlan.plan_type
-                };
-            }
-        } catch (err) {
-            console.error('Error in getPlanByKey:', err);
-            throw err; // Re-throw the error to be handled upstream
-        }
-    } else if (parts[0] && !parts[1]) {        
-        const globalId = parseInt(parts[0]);
-
-        try {
-            const globalPlan = await getGlobalPlanById(requestId, globalId);
-            if (globalPlan) {
-                console.log('getPlanByKey globalPlan:', globalPlan);
-                return {
-                    plans_global_id: globalId,
-                    plans_hotel_id: null,
-                    name: globalPlan.name,
-                    plan_type: globalPlan.plan_type
-                };
-            }
-        } catch (err) {
-            console.error('Error in getPlanByKey:', err);
-            throw err;
-        }
-    }
-
-    // If none of the formats match, return the default null values.
-    return {
+    const defaultResult = {
         plans_global_id: null,
         plans_hotel_id: null,
         name: '',
         plan_type: 'per_room'
     };
-}
+    
+    if (!plan_key) {
+        console.debug('getPlanByKey: No plan_key provided, returning default result');
+        return defaultResult;
+    }
+
+    const parts = plan_key.split('h');
+    console.log('plan_key:', plan_key, 'parts:', parts);
+
+    try {
+        // Extract IDs from parts
+        const globalId = parts[0] ? parseInt(parts[0]) : null;
+        const hotelId = parts[1] ? parseInt(parts[1]) : null;
+
+        // Case 1: Hotel plan exists (parts[1] has value)
+        if (parts.length > 1 && parts[1] && !isNaN(parseInt(parts[1]))) {
+            const hotelPlanId = parseInt(parts[1]);
+            const hotelPlan = await getHotelPlanById(requestId, hotel_id, hotelPlanId);
+            
+            if (hotelPlan) {
+                return {
+                    plans_global_id: globalId && !isNaN(globalId) ? globalId : null,
+                    plans_hotel_id: hotelPlanId,
+                    name: hotelPlan.name,
+                    plan_type: hotelPlan.plan_type
+                };
+            }
+        }
+
+        // Case 2: Global plan exists (parts[0] has value)
+        if (parts[0] && !isNaN(parseInt(parts[0]))) {
+            const globalPlanId = parseInt(parts[0]);
+            const globalPlan = await getGlobalPlanById(requestId, globalPlanId);
+            
+            if (globalPlan) {
+                return {
+                    plans_global_id: globalPlanId,
+                    plans_hotel_id: hotelId && !isNaN(hotelId) ? hotelId : null,
+                    name: globalPlan.name,
+                    plan_type: globalPlan.plan_type
+                };
+            }
+        }
+
+    } catch (err) {
+        console.error('Error in getPlanByKey:', err);
+        throw err;
+    }
+
+    return defaultResult;
+};
 const getGlobalPlanById = async (requestId, id) => {
     const pool = getPool(requestId);
     const query = 'SELECT * FROM plans_global WHERE id = $1';

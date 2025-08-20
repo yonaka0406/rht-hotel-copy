@@ -1209,19 +1209,55 @@ const applyPlanChangesToAll = async () => {
 };
 const applyPatternChangesToAll = async () => {
     try {
-        groupedRooms.value.every(async (room) => {
-            const roomId = room.room_id;
-            await setRoomPattern(reservationInfo.value.hotel_id, roomId, reservationInfo.value.reservation_id, dayPlanSelections.value);
+        console.log('Starting to apply pattern to all rooms:', {
+            hotelId: reservationInfo.value.hotel_id,
+            reservationId: reservationInfo.value.reservation_id,
+            pattern: dayPlanSelections.value
         });
 
-        closeReservationBulkEditDialog();
+        // Use Promise.all to wait for all room updates to complete
+        const updatePromises = groupedRooms.value.map(async (room) => {
+            const roomId = room.room_id;
+            console.log('Applying pattern to room:', roomId);
+            try {
+                const result = await setRoomPattern(
+                    reservationInfo.value.hotel_id, 
+                    roomId, 
+                    reservationInfo.value.reservation_id, 
+                    dayPlanSelections.value
+                );
+                console.log('Pattern applied to room:', roomId, result);
+                return result;
+            } catch (error) {
+                console.error(`Failed to apply pattern to room ${roomId}:`, error);
+                throw error; // Re-throw to be caught by the outer try-catch
+            }
+        });
 
-        // Provide feedback to the user
-        toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
+        await Promise.all(updatePromises);
+
+        closeReservationBulkEditDialog();
+        console.log('Successfully applied pattern to all rooms');
+
+        toast.add({ 
+            severity: 'success', 
+            summary: '成功', 
+            detail: '予約明細が更新されました。', 
+            life: 3000 
+        });
 
     } catch (error) {
-        console.error('Failed to apply changes:', error);
-        toast.add({ severity: 'error', summary: 'エラー', detail: '変更の適用に失敗しました。', life: 3000 });
+        console.error('Failed to apply pattern changes:', {
+            error,
+            message: error.message,
+            stack: error.stack
+        });
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー', 
+            detail: '変更の適用に失敗しました。詳細はコンソールを確認してください。', 
+            life: 5000 
+        });
     }
 };
 

@@ -367,6 +367,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 ## [1.1.5] - 2025-08-20
 
 - Feature: Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. (Feature #31)
+- Bugfix: Fixed pattern-based plan application issues by correcting the [getPlanByKey] function in plan.js to properly handle plan keys and validate both global and hotel plan IDs. (Bug #41)
 
 ---
 
