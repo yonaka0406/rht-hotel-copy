@@ -38,15 +38,29 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         const selectedParkingLot = guestData.parking_lot_names_list || null;
 
         // Format the parking lot string with bolding
-        const parkingLotNames = allParkingLots.map(lot => {
-            const trimmedLot = lot.trim();
-            // Trim the selectedParkingLot for a more robust comparison
-            const trimmedSelected = selectedParkingLot ? selectedParkingLot.trim() : null;
-            if (trimmedLot === trimmedSelected) {
-                return `<span style="font-weight: bold;">${trimmedLot}</span>`;
-            }
-            return trimmedLot;
-        }).join(' ・ ');
+        let parkingLotNames;
+        if (selectedParkingLot && selectedParkingLot.trim() !== '') {
+            parkingLotNames = allParkingLots.map(lot => {
+                const trimmedLot = lot.trim();
+                // Trim the selectedParkingLot for a more robust comparison
+                const trimmedSelected = selectedParkingLot.trim();
+                if (trimmedLot === trimmedSelected) {
+                    return `<span style="font-weight: bold;">${trimmedLot}</span>`;
+                }
+                return trimmedLot;
+            }).join(' ・ ');
+        } else {
+            // If no parking lot is selected, just join the list without bolding
+            parkingLotNames = allParkingLots.join(' ・ ');
+        }
+        
+        // Dynamically create the payment option string based on the value from the Vue component
+        let paymentOptionHtml = '';
+        if (guestData.payment_option === 'あり') {
+            paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
+        } else {
+            paymentOptionHtml = `<span style="font-weight: bold;">あり</span> ・ なし`;
+        }
 
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
         htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
@@ -66,6 +80,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         // This is where you insert the generated smokingHtml
         htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', nonSmokingHtml);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', smokingHtml);
+        htmlContent = htmlContent.replace('{{{payment_option_html}}}', paymentOptionHtml);
 
         let guestsHtml = '';
         const uniqueGuests = Array.from(room.guests.values());
@@ -163,24 +178,39 @@ const generateGuestList = async (req, res) => {
         const allParkingLots = guestData.all_parking_lots_list ? guestData.all_parking_lots_list.split(',') : [];
         const selectedParkingLot = guestData.parking_lot_names_list;
 
-        const parkingLotNames = allParkingLots.map(lot => {
-            const trimmedLot = lot.trim();
-            const trimmedSelected = selectedParkingLot ? selectedParkingLot.trim() : null;
-            if (trimmedLot === trimmedSelected) {
-                return `<span style="font-weight: bold;">${trimmedLot}</span>`;
-            }
-            return trimmedLot;
-        }).join(' ・ ');
+        let parkingLotNames;
+        if (selectedParkingLot && selectedParkingLot.trim() !== '') {
+            parkingLotNames = allParkingLots.map(lot => {
+                const trimmedLot = lot.trim();
+                const trimmedSelected = selectedParkingLot.trim();
+                if (trimmedLot === trimmedSelected) {
+                    return `<span style="font-weight: bold;">${trimmedLot}</span>`;
+                }
+                return trimmedLot;
+            }).join(' ・ ');
+        } else {
+            parkingLotNames = allParkingLots.join(' ・ ');
+        }
         
+        // Dynamically create the payment option string based on the value from the Vue component
+        let paymentOptionHtml = '';
+        if (guestData.payment_option === 'あり') {
+            paymentOptionHtml = `<span style="font-weight: bold;">あり</span> ・ なし`;
+        } else {
+            paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
+        }
+
         for (const key in guestData) {
-            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list') {
+            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html' && key !== 'parking_lot_names_list' && key !== 'all_parking_lots_list' && key !== 'payment_option') {
                 htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
             }
         }
         htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', guestData.non_smoking_preference_html);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', guestData.smoking_preference_html);
-        htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
         htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
+        htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
+        htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
+        htmlContent = htmlContent.replace('{{{payment_option_html}}}', paymentOptionHtml);
 
 
         const { pdfBuffer, filename } = await generatePdf(htmlContent, reservationId, false);

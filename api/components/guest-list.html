@@ -71,17 +71,15 @@
             <div class="grid-item label">駐車場</div>
             <div class="grid-item col-span-2">{{parking_lot_names_list}}</div>
             <div class="grid-item label">現地決済</div>
-            <div class="grid-item col-span-3">あり ・ なし （ {{payment_total}} 円）</div>
+            <div class="grid-item col-span-3">{{{payment_option_html}}} （ {{payment_total}} 円）</div>
 
             <!-- Room Details -->
             <div class="grid-item label">部屋番号</div>
             <div class="grid-item">{{room_numbers}}</div>
             <div class="grid-item justify-center">
-                <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
-                    {{{non_smoking_preference_html}}}
-                    <div style="margin: 0 10px;">・</div>
-                    {{{smoking_preference_html}}}
-                </div>
+                {{{non_smoking_preference_html}}}
+                <div style="margin: 0 10px;">・</div>
+                {{{smoking_preference_html}}}
             </div>
             <div class="grid-item label">プラン</div>
             <div class="grid-item col-span-3">{{plan_names_list}}</div>
