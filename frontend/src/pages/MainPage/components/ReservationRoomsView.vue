@@ -1,8 +1,7 @@
 <template>
-
     <div class="flex justify-end mb-4">
-        <Button v-if="groupedRooms.length > 1" icon="pi pi-file-pdf" label="団体PDF" class="p-button-sm ml-2"
-            @click="openGuestListDialog(groupedRooms[0], true)" />
+        <Button v-if="groupedRooms.length > 1" icon="pi pi-file-pdf" label="団体名簿" class="p-button-sm ml-2"
+            @click="openGuestListDialog(null, true)" />
     </div>
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
@@ -34,9 +33,8 @@
                 <DataTable :value="matchingGroupDetails(group.details)" :rowStyle="rowStyle" :rowExpansion="true"
                     v-model:expandedRows="expandedRows[group.room_id]" dataKey="id" sortField="display_date"
                     :sortOrder=1>
-                    <Column header="詳細" style="width: 1%;"> <!-- Changed header, removed expander prop -->
+                    <Column header="詳細" style="width: 1%;">
                         <template #body="slotProps">
-                            <!-- Pass group.room_id to the methods -->
                             <button @click="toggleRowExpansion(group.room_id, slotProps.data)"
                                 class="p-button p-button-text p-button-rounded" type="button">
                                 <i :class="isRowExpanded(group.room_id, slotProps.data) ? 'pi pi-chevron-down text-blue-500' : 'pi pi-chevron-right text-blue-500'"
@@ -537,11 +535,11 @@ const normalizeKana = (str) => {
 
     // Convert Hiragana to Katakana
     normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
     );
     // Convert half-width Katakana to full-width Katakana
     normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
     );
 
     return normalizedStr;
@@ -900,11 +898,11 @@ const applyRoomChanges = async () => {
         roomIdOld: selectedGroup.value.room_id,
         roomIdNew: targetRoom.value.value,
     }
-    // console.log(data);            
+    // console.log(data);
     await moveReservationRoom(data);
     closeRoomEditDialog();
 
-    // Provide feedback to the user (optional)                
+    // Provide feedback to the user (optional)
     toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
 };
 
@@ -1361,47 +1359,108 @@ const isGroupPDF = ref(false);
 
 const openGuestListDialog = async (group, isGroup = false) => {
     isGroupPDF.value = isGroup;
-    const reservationDetails = props.reservation_details.find(detail => detail.room_id === group.room_id);
-    
-    await fetchParkingLots();
-    const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
-    const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
 
-    await fetchPlansForHotel(reservationDetails.hotel_id);
-    const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
+    const reservationDetails = isGroup ? groupedRooms.value[0]?.details[0] : group.details[0];
 
-    const totalPrice = group.details.filter(detail => detail.billable).reduce((acc, detail) => acc + parseFloat(detail.price), 0);
-
-    let room_numbers;
-    if (isGroup) {
-        room_numbers = groupedRooms.value.map(g => g.details[0].room_number);
-    } else {
-        room_numbers = [group.details[0].room_number];
+    if (!reservationDetails) {
+        console.error('Reservation details are not available.');
+        return;
     }
 
-    selectedReservationForGuestList.value = {
-        id: reservationDetails.reservation_id,
-        hotel_id: reservationDetails.hotel_id,
-        booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
-        alternative_name: '',
-        check_in: reservationInfo.value.check_in,
-        check_out: reservationInfo.value.check_out,
-        room_numbers: room_numbers,
-        guests: reservationDetails.reservation_clients.map(c => ({
+    if (isGroup) {
+        // --- Send array of room data for group reservation ---
+        const roomDataArray = [];
+        
+        for (const roomGroup of groupedRooms.value) {
+            const roomDetail = roomGroup.details[0];
+            const roomGuests = roomDetail.reservation_clients.map(client => ({
+                name: client.name_kanji || client.name,
+                address: client.address1,
+                phone: client.phone,
+                car_number_plate: client.car_number_plate,
+                postal_code: client.postal_code
+            }));
+
+            const roomPaymentTotal = roomGroup.details
+                .filter(detail => detail.billable)
+                .reduce((acc, detail) => acc + parseFloat(detail.price), 0);
+
+            const roomAssignedPlanNames = [...new Set(roomGroup.details.map(d => d.plan_name).filter(Boolean))];
+
+            // Fetch parking data for this room
+            await fetchParkingLots();
+            const assignedParkingData = await fetchParkingReservations(roomDetail.hotel_id, roomDetail.reservation_id);
+            const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
+
+            // Create individual room object
+            const roomData = {
+                id: roomDetail.reservation_id,
+                hotel_id: roomDetail.hotel_id,
+                booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
+                alternative_name: '',
+                check_in: reservationInfo.value.check_in,
+                check_out: reservationInfo.value.check_out,
+                room_numbers: [roomDetail.room_number],
+                room_number: roomDetail.room_number, // Individual room number
+                guests: roomGuests,
+                comment: reservationInfo.value.comment,
+                smoking: roomDetail.smoking,
+                assigned_plan_names: roomAssignedPlanNames,
+                assigned_parking_lot_names: assignedParkingLotNames,
+                hotel_name: reservationInfo.value.hotel_name,
+                number_of_people: roomDetail.number_of_people,
+                payment_total: roomPaymentTotal,
+                all_plan_names_list: plans.value.map(p => p.name).join(','),
+                // Additional room-specific data
+                room_type: roomGroup.room_type,
+                capacity: roomDetail.capacity,
+            };
+
+            roomDataArray.push(roomData);
+        }
+
+        // Send the array of room data
+        selectedReservationForGuestList.value = roomDataArray;
+
+    } else {
+        // --- Individual room data processing (unchanged) ---
+        const guests = reservationDetails.reservation_clients.map(c => ({
             name: c.name_kanji || c.name,
             address: c.address1,
             phone: c.phone,
-            car_number_plate: c.car_number_plate
-        })),
-        comment: reservationInfo.value.comment,
-        smoking: group.details[0]?.smoking,
-        assigned_plan_names: assignedPlanNames,
-        assigned_parking_lot_names: assignedParkingLotNames,
-        hotel_name: reservationInfo.value.hotel_name,
-        number_of_people: group.details[0]?.number_of_people,        
-        payment_total: totalPrice,        
-        all_plan_names_list: plans.value.map(p => p.name).join(','),
-    };
+            car_number_plate: c.car_number_plate,
+            postal_code: c.postal_code
+        }));
+        const room_numbers = [group.details[0].room_number];
+        const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
+        const payment_total = group.details.filter(detail => detail.billable).reduce((acc, detail) => acc + parseFloat(detail.price), 0);
+
+        await fetchParkingLots();
+        const assignedParkingData = await fetchParkingReservations(reservationDetails.hotel_id, reservationDetails.reservation_id);
+        const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
+
+        await fetchPlansForHotel(reservationDetails.hotel_id);
+
+        selectedReservationForGuestList.value = {
+            id: reservationDetails.reservation_id,
+            hotel_id: reservationDetails.hotel_id,
+            booker_name: reservationInfo.value.agent_name || reservationInfo.value.client_name,
+            alternative_name: '',
+            check_in: reservationInfo.value.check_in,
+            check_out: reservationInfo.value.check_out,
+            room_numbers: room_numbers,
+            guests: guests,
+            comment: reservationInfo.value.comment,
+            smoking: group?.details[0]?.smoking,
+            assigned_plan_names: assignedPlanNames,
+            assigned_parking_lot_names: assignedParkingLotNames,
+            hotel_name: reservationInfo.value.hotel_name,
+            number_of_people: group.details[0]?.number_of_people,
+            payment_total: payment_total,
+            all_plan_names_list: plans.value.map(p => p.name).join(','),
+        };
+    }
+    
     visibleGuestListDialog.value = true;
 };
 </script>

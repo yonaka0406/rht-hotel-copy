@@ -3,7 +3,7 @@
         <div class="p-fluid">
             <!-- Explanation for checkboxes -->
             <div class="mb-4 p-4 rounded-lg text-sm" style="background-color: #f0f8ff; border: 1px solid #b0c4de;">
-                <p>💡 各項目の横にあるチェックボックスをオンにすると、PDFにその情報が反映されます。</p>
+                <p> 各項目の横にあるチェックボックスをオンにすると、PDFにその情報が反映されます。</p>
             </div>
             
             <div class="guest-list-grid-container">
@@ -43,63 +43,114 @@
                     <InputText v-model="fields.check_out_weekday.value" class="w-1/4" /> ）
                 </div>
 
-                <!-- Parking and Payment -->
-                <div class="grid-item label">駐車場</div>
-                <div class="grid-item col-span-2 flex-wrap">
+                <!-- Parking and Vehicle Count (for group) / Payment -->
+                <div v-if="!isGroup" class="grid-item label">駐車場</div>
+                <div v-if="!isGroup" class="grid-item col-span-2 flex-wrap">
                     <div v-for="lot in parkingLots" :key="lot.id" class="flex items-center mr-4">
                         <Checkbox v-model="selectedParkingLots" :inputId="'lot_' + lot.id" :value="lot.name"></Checkbox>
                         <label :for="'lot_' + lot.id" class="ml-2"> {{ lot.name }} </label>
                     </div>
                 </div>
+                
+                <!-- Vehicle Count (only for group reservations) -->
+                <div v-if="isGroup" class="grid-item label">
+                    <Checkbox v-model="fields.vehicle_count.include" :binary="true" class="mr-2"/>
+                    <span class="highlight">※</span>車両台数
+                </div>
+                <div v-if="isGroup" class="grid-item col-span-2 flex-wrap">
+                    <InputText v-model="fields.vehicle_count.value" fluid />
+                </div>
+                
+                <!-- Payment -->
                 <div class="grid-item label">
                     <Checkbox v-model="fields.payment_total.include" :binary="true" class="mr-2"/>
                     現地決済
                 </div>
-                <div class="grid-item col-span-3 flex items-center">
+                <div class="grid-item col-span-3" style="display: flex; align-items: center;">
                     <SelectButton v-model="paymentOption" :options="['あり', 'なし']" class="mr-2" />
                      （ <InputText v-model="fields.payment_total.value" class="w-1/2" /> 円）
                 </div>
 
-                <!-- Room Details -->
-                <div class="grid-item label">
-                    <Checkbox v-model="fields.room_numbers.include" :binary="true" class="mr-2"/>
-                    部屋番号
-                </div>
-                <div class="grid-item">
-                    <InputText v-model="fields.room_numbers.value" fluid />
-                </div>
-                <div class="grid-item justify-center">
-                    <SelectButton v-model="smokingOption" :options="['禁煙', '喫煙']" />
-                </div>
-                <div class="grid-item label">プラン</div>
-                <div class="grid-item col-span-3 flex-wrap">
-                    <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
-                        <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.name"></Checkbox>
-                        <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.name }} </label>
+                <!-- Room Details (only for non-group reservations) -->
+                <template v-if="!isGroup">
+                    <div class="grid-item label">
+                        <Checkbox v-model="fields.room_numbers.include" :binary="true" class="mr-2"/>
+                        部屋番号
                     </div>
-                </div>
+                    <div class="grid-item">
+                        <InputText v-model="fields.room_numbers.value" fluid />
+                    </div>
+                    <div class="grid-item justify-center">
+                        <SelectButton v-model="smokingOption" :options="['禁煙', '喫煙']" />
+                    </div>
+                    <div class="grid-item label">プラン</div>
+                    <div class="grid-item col-span-3 flex-wrap">
+                        <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
+                            <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.name"></Checkbox>
+                            <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.name }} </label>
+                        </div>
+                    </div>
+                </template>
             </div>
 
+            <!-- Guest sections -->
             <div v-for="(guestFields, index) in guests" :key="index" class="guest-list-grid-container mt-4">
                 <!-- Guest Block Header -->
                 <div class="grid-item label" style="grid-column: 1 / -1;">
                     宿泊者{{ index + 1 }}人目
+                    <span v-if="isGroup && guestFields.room_info" class="ml-4 text-sm text-gray-600">
+                        (部屋: {{ guestFields.room_info.room_number }})
+                    </span>
                 </div>
+                
+                <!-- Room-specific fields for group reservations -->
+                <template v-if="isGroup">
+                    <!-- First row: Room Number and Plan only -->
+                    <div class="grid-item label">
+                        <Checkbox v-model="guestFields.room_number.include" :binary="true" class="mr-2"/>
+                        部屋番号
+                    </div>
+                    <div class="grid-item">
+                        <InputText v-model="guestFields.room_number.value" fluid />
+                    </div>
+                    <div class="grid-item justify-center">
+                        <SelectButton v-model="guestFields.smoking_option.value" :options="['禁煙', '喫煙']" />
+                    </div>
+                    <div class="grid-item label">プラン</div>
+                    <div class="grid-item col-span-3 flex-wrap">
+                        <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
+                            <Checkbox v-model="guestFields.selected_plans.value" :inputId="'guest_plan_' + index + '_' + plan.id" :value="plan.name"></Checkbox>
+                            <label :for="'guest_plan_' + index + '_' + plan.id" class="ml-2"> {{ plan.name }} </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Second row: Parking -->                    
+                    <div class="grid-item label">駐車場</div>
+                    <div class="grid-item col-span-2 flex-wrap">
+                        <div v-for="lot in parkingLots" :key="lot.id" class="flex items-center mr-4">
+                            <Checkbox v-model="guestFields.selected_parking.value" :inputId="'guest_parking_' + index + '_' + lot.id" :value="lot.name"></Checkbox>
+                            <label :for="'guest_parking_' + index + '_' + lot.id" class="ml-2"> {{ lot.name }} </label>
+                        </div>
+                    </div>
+                    <div class="grid-item label">
+                        <Checkbox v-model="guestFields.number_plate.include" :binary="true" class="mr-2"/>
+                        <span class="highlight">※</span>車両ナンバー
+                    </div>
+                    <div class="grid-item col-span-3">
+                        <InputText v-model="guestFields.number_plate.value" fluid />
+                    </div>
+                </template>
+                
                 <!-- Guest Name and Car Number -->
                 <div class="grid-item label">
                     <Checkbox v-model="guestFields.client_name.include" :binary="true" class="mr-2"/>
                     <span class="highlight">※</span>お名前
                 </div>
-                <div class="grid-item col-span-2">
+                <div class="grid-item col-span-6">
                     <InputText v-model="guestFields.client_name.value" fluid />
                 </div>
-                <div class="grid-item label">
-                    <Checkbox v-model="guestFields.number_plate.include" :binary="true" class="mr-2"/>
-                    <span class="highlight">※</span>車両ナンバー
-                </div>
-                <div class="grid-item col-span-3">
-                    <InputText v-model="guestFields.number_plate.value" fluid />
-                </div>
+                
+                
 
                 <!-- Address -->
                 <div class="grid-item label">
@@ -124,7 +175,7 @@
                 </div>
             </div>
 
-                <!-- Comments -->
+            <!-- Comments -->
             <div class="guest-list-grid-container mt-4">
                 <div class="grid-item label">
                     <Checkbox v-model="fields.comment.include" :binary="true" class="mr-2"/>
@@ -155,7 +206,7 @@ import { useToast } from 'primevue/usetoast';
 
 const props = defineProps({
     visible: Boolean,
-    reservation: Object,
+    reservation: [Object, Array],
     parkingLots: Array,
     allPlans: Array,
     isGroup: Boolean,
@@ -168,7 +219,7 @@ const toast = useToast();
 
 const dialogVisible = ref(false);
 const smokingOption = ref('禁煙');
-const paymentOption = ref('なし'); // New ref for the payment select button
+const paymentOption = ref('なし');
 const selectedPlans = ref([]);
 const selectedParkingLots = ref([]);
 
@@ -176,9 +227,10 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    // --- START: Added console log for the props received by the component ---
-    console.log('Component received reservation prop:', reservation);
-    // --- END: Added console log for the props received by the component ---
+    console.log('Component received props:', { 
+      reservation,
+      isGroup: props.isGroup 
+    });    
     
     if (!reservation) {
         fields.value = {};
@@ -186,20 +238,30 @@ const initializeFields = (reservation) => {
         return;
     }
     
-    if (reservation.smoking) {
+    // Handle array of reservations (group) vs single reservation
+    const firstReservation = Array.isArray(reservation) ? reservation[0] : reservation;
+    
+    if (firstReservation.smoking) {
         smokingOption.value = '喫煙';
     } else {
         smokingOption.value = '禁煙';
     }
 
-    selectedPlans.value = reservation.assigned_plan_names || [];
-    selectedParkingLots.value = reservation.assigned_parking_lot_names || [];
-    
-    // Set payment option based on payment total
-    if (reservation.payment_total > 0) {
-        paymentOption.value = 'あり';
+    // For group reservations, collect all plans from all rooms
+    if (props.isGroup && Array.isArray(reservation)) {
+        const allAssignedPlans = [...new Set(reservation.flatMap(r => r.assigned_plan_names || []))];
+        selectedPlans.value = allAssignedPlans;
+        
+        const allAssignedParking = [...new Set(reservation.flatMap(r => r.assigned_parking_lot_names || []))];
+        selectedParkingLots.value = allAssignedParking;
+        
+        // Calculate total payment for all rooms
+        const totalPayment = reservation.reduce((sum, r) => sum + (r.payment_total || 0), 0);
+        paymentOption.value = totalPayment > 0 ? 'あり' : 'なし';
     } else {
-        paymentOption.value = 'なし';
+        selectedPlans.value = firstReservation.assigned_plan_names || [];
+        selectedParkingLots.value = firstReservation.assigned_parking_lot_names || [];
+        paymentOption.value = (firstReservation.payment_total > 0) ? 'あり' : 'なし';
     }
 
     const formatJapaneseDate = (dateString) => {
@@ -211,23 +273,73 @@ const initializeFields = (reservation) => {
         return { month, day, weekday };
     };
 
-    const checkInDate = formatJapaneseDate(reservation.check_in);
-    const checkOutDate = formatJapaneseDate(reservation.check_out);
+    const checkInDate = formatJapaneseDate(firstReservation.check_in);
+    const checkOutDate = formatJapaneseDate(firstReservation.check_out);
+
+    // Calculate total payment for group
+    const totalPayment = props.isGroup && Array.isArray(reservation) 
+        ? reservation.reduce((sum, r) => sum + (r.payment_total || 0), 0)
+        : firstReservation.payment_total || 0;
 
     fields.value = {
-        booker_name: { label: 'ご予約会社様/個人様名', value: reservation.booker_name, include: true },
-        alternative_name: { label: 'ご宿泊会社様名', value: reservation.alternative_name, include: true },
+        booker_name: { label: 'ご予約会社様/個人様名', value: firstReservation.booker_name, include: true },
+        alternative_name: { label: 'ご宿泊会社様名', value: firstReservation.alternative_name, include: true },
         check_in_month: { label: 'チェックイン月', value: checkInDate.month, include: true },
         check_in_day: { label: 'チェックイン日', value: checkInDate.day, include: true },
         check_in_weekday: { label: 'チェックイン曜日', value: checkInDate.weekday, include: true },
         check_out_month: { label: 'チェックアウト月', value: checkOutDate.month, include: true },
         check_out_day: { label: 'チェックアウト日', value: checkOutDate.day, include: true },
         check_out_weekday: { label: 'チェックアウト曜日', value: checkOutDate.weekday, include: true },
-        payment_total: { label: '現地決済', value: reservation.payment_total ? new Intl.NumberFormat('ja-JP').format(reservation.payment_total) : '0', include: true },
-        room_numbers: { label: '部屋番号', value: reservation.room_numbers ? reservation.room_numbers.join(', ') : '', include: true },
-        comment: { label: '備考', value: reservation.comment, include: true },
+        payment_total: { label: '現地決済', value: totalPayment ? new Intl.NumberFormat('ja-JP').format(totalPayment) : '0', include: true },
+        room_numbers: { label: '部屋番号', value: firstReservation.room_numbers ? firstReservation.room_numbers.join(', ') : '', include: true },
+        comment: { label: '備考', value: firstReservation.comment, include: true },
     };
 
+    // Add vehicle count field for group reservations
+    if (props.isGroup) {
+        fields.value.vehicle_count = { label: '車両台数', value: '', include: true };
+    }
+
+    // Initialize guests based on reservation type
+    if (props.isGroup && Array.isArray(reservation)) {
+        initializeGroupGuests(reservation);
+    } else {
+        initializeSingleGuests(firstReservation);
+    }
+};
+
+const initializeGroupGuests = (reservationArray) => {
+    const newGuests = [];
+    
+    reservationArray.forEach((roomReservation, roomIndex) => {
+        const existingGuests = roomReservation.guests || [];
+        const numberOfPeople = roomReservation.number_of_people || 0;
+        
+        for (let i = 0; i < numberOfPeople; i++) {
+            const existingGuest = existingGuests[i];
+            const guestData = {
+                room_info: {
+                    room_number: roomReservation.room_number,
+                    room_type: roomReservation.room_type,
+                },
+                room_number: { label: '部屋番号', value: roomReservation.room_number, include: true },
+                smoking_option: { label: '喫煙', value: roomReservation.smoking ? '喫煙' : '禁煙', include: true },
+                selected_plans: { label: 'プラン', value: roomReservation.assigned_plan_names || [], include: true },
+                selected_parking: { label: '駐車場', value: roomReservation.assigned_parking_lot_names || [], include: true },
+                client_name: { label: 'お名前', value: existingGuest?.name || '', include: true },
+                number_plate: { label: '車両ナンバー', value: existingGuest?.car_number_plate || '', include: true },
+                postal_code: { label: '郵便番号', value: existingGuest?.postal_code || '', include: true },
+                address: { label: 'ご住所', value: existingGuest?.address || '', include: true },
+                phone_number: { label: 'ご連絡先', value: existingGuest?.phone || '', include: true },
+            };
+            newGuests.push(guestData);
+        }
+    });
+    
+    guests.value = newGuests;
+};
+
+const initializeSingleGuests = (reservation) => {
     const numberOfPeople = reservation.number_of_people || 0;
     const existingGuests = reservation.guests || [];
     const newGuests = [];
@@ -273,10 +385,8 @@ const closeDialog = () => {
 };
 
 const generatePDF = async () => {
-    // --- START: Added console logs for debugging ---
     console.log('--- generatePDF function called ---');
     console.log('Props reservation object:', props.reservation);
-    // --- END: Added console logs for debugging ---
 
     const guestData = {};
     for (const key in fields.value) {
@@ -287,24 +397,24 @@ const generatePDF = async () => {
         }
     }
     guestData.smoking_preference = smokingOption.value;
-    guestData.payment_option = paymentOption.value; // ADDED LINE: Pass the selected payment option
+    guestData.payment_option = paymentOption.value;
     guestData.plan_names_list = selectedPlans.value.join(', ');
     guestData.all_plan_names_list = props.allPlans.map(p => p.name).join(',');
     guestData.parking_lot_names_list = selectedParkingLots.value.join(', ');
-    guestData.hotel_name = props.reservation.hotel_name;
     
-    // ADDED LINE: Collect all parking lot names and add them to the data object
+    // Handle hotel_name for both single and group reservations
+    const firstReservation = Array.isArray(props.reservation) ? props.reservation[0] : props.reservation;
+    guestData.hotel_name = firstReservation.hotel_name;
+    
     guestData.all_parking_lots_list = props.parkingLots.map(lot => lot.name).join(', ');
 
-    // Explicitly check for hotel_name and log it
     console.log('Hotel name:', guestData.hotel_name);
 
     guestData.guests = guests.value.map(guestFields => {
         const guest = {};
         for (const key in guestFields) {
             if (guestFields[key].include) {
-                 if (key === 'postal_code') {
-                    // Pass postal code as is
+                if (key === 'postal_code') {
                     guest[key] = guestFields[key].value;
                 } else {
                     guest[key] = guestFields[key].value;
@@ -316,15 +426,16 @@ const generatePDF = async () => {
         return guest;
     });
 
-    // --- START: Added console log for the final data object ---
     console.log('Data to be sent to PDF function:', guestData);
-    // --- END: Added console log for the final data object ---
 
     let result;
+    const reservationId = Array.isArray(props.reservation) ? props.reservation[0].id : props.reservation.id;
+    const hotelId = Array.isArray(props.reservation) ? props.reservation[0].hotel_id : props.reservation.hotel_id;
+    
     if (props.isGroup) {
-        result = await generateGroupGuestListPDF(props.reservation.hotel_id, props.reservation.id, guestData);
+        result = await generateGroupGuestListPDF(hotelId, reservationId, guestData);
     } else {
-        result = await generateGuestListPDF(props.reservation.hotel_id, props.reservation.id, guestData);
+        result = await generateGuestListPDF(hotelId, reservationId, guestData);
     }
 
     if (result.success) {
