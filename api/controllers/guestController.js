@@ -16,10 +16,20 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
 
         let htmlContent = guestListHTML;
 
+        // Generate smoking and non-smoking HTML parts based on the data
+        let nonSmokingHtml = `<div style="text-align: center;">禁<br>煙</div>`;
+        let smokingHtml = `<div style="text-align: center;">喫<br>煙</div>`;
+        
+        if (room.smoking === '禁煙') {
+            nonSmokingHtml = `<div style="text-align: center; font-weight: bold;">禁<br>煙</div>`;
+        } else if (room.smoking === '喫煙') {
+            smokingHtml = `<div style="text-align: center; font-weight: bold;">喫<br>煙</div>`;
+        }
+
         const checkInDate = new Date(firstDetail.check_in);
         const checkOutDate = new Date(firstDetail.check_out);
         const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-        
+
         const totalPrice = room.details.reduce((acc, detail) => acc + parseFloat(detail.price), 0);
         const hotelName = guestData.hotel_name || 'My Hotel';
 
@@ -37,13 +47,9 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         htmlContent = htmlContent.replace(new RegExp(`{{room_numbers}}`, 'g'), room.room_number);
         htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), guestData.plan_names_list || '');
         htmlContent = htmlContent.replace(new RegExp(`{{comment}}`, 'g'), guestData.comment || '');
-
-        let smokingHtml = '禁煙 ・ 喫煙';
-        if (guestData.smoking_preference === '禁煙') {
-            smokingHtml = '<b>禁煙</b> ・ 喫煙';
-        } else if (guestData.smoking_preference === '喫煙') {
-            smokingHtml = '禁煙 ・ <b>喫煙</b>';
-        }
+        
+        // This is where you insert the generated smokingHtml
+        htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', nonSmokingHtml);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', smokingHtml);
 
         let guestsHtml = '';
@@ -59,7 +65,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
                 <div class="grid-item col-span-3"></div>
 
                 <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) ${guest.address || ''}</div>
+                <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- ${guest.address || ''}</div>
 
                 <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
                 <div class="grid-item col-span-6">${guest.phone || ''}</div>
@@ -102,14 +108,16 @@ const generateGuestList = async (req, res) => {
     try {
         const guestListHTML = fs.readFileSync(path.join(__dirname, '../components/guest-list.html'), 'utf-8');
         
-        let htmlContent = guestListHTML;
+        let nonSmokingHtml = `<div style="text-align: center;">禁<br>煙</div>`;
+        let smokingHtml = `<div style="text-align: center;">喫<br>煙</div>`;
 
-        let smokingHtml = '禁煙 ・ 喫煙';
         if (guestData.smoking_preference === '禁煙') {
-            smokingHtml = '<b>禁煙</b> ・ 喫煙';
+            nonSmokingHtml = `<div style="text-align: center; font-weight: bold;">禁<br>煙</div>`;
         } else if (guestData.smoking_preference === '喫煙') {
-            smokingHtml = '禁煙 ・ <b>喫煙</b>';
+            smokingHtml = `<div style="text-align: center; font-weight: bold;">喫<br>煙</div>`;
         }
+
+        guestData.non_smoking_preference_html = nonSmokingHtml;
         guestData.smoking_preference_html = smokingHtml;
 
         let guestsHtml = '';
@@ -125,7 +133,7 @@ const generateGuestList = async (req, res) => {
                     <div class="grid-item col-span-3">${guest.number_plate || ''}</div>
 
                     <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">(〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;) ${guest.address || ''}</div>
+                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">〒&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${guest.address || ''}</div>
 
                     <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
                     <div class="grid-item col-span-6">${guest.phone_number || ''}</div>
@@ -134,11 +142,14 @@ const generateGuestList = async (req, res) => {
         }
         guestData.guests_html = guestsHtml;
 
+        let htmlContent = guestListHTML;
+
         for (const key in guestData) {
-            if (key !== 'guests' && key !== 'guests_html' && key !== 'smoking_preference_html') {
+            if (key !== 'guests' && key !== 'guests_html' && key !== 'non_smoking_preference_html' && key !== 'smoking_preference_html') {
                 htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), guestData[key] || '');
             }
         }
+        htmlContent = htmlContent.replace('{{{non_smoking_preference_html}}}', guestData.non_smoking_preference_html);
         htmlContent = htmlContent.replace('{{{smoking_preference_html}}}', guestData.smoking_preference_html);
         htmlContent = htmlContent.replace('{{{guests_html}}}', guestData.guests_html);
 
