@@ -364,8 +364,15 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.5] - 2025-08-20
+
+- Feature: Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. (Feature #31)
+
+---
+
 ## Version History
 
+- **1.1.5** (2025-08-20) - Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. Enhanced data privacy and protection for guest information.
 - **1.1.4** (2025-08-20) - Added meal count reporting and fixed critical financial calculation issues. Improved reservation management with better handling of non-billable stays and room date changes. Enhanced UI for better visibility of employee and complimentary stays.
 - **1.1.3** (2025-08-15) - Improved billing and receipt generation with better client name handling and stay period display. Enhanced room indicator and dashboard charts with accurate data representation. Fixed addon persistence and parking assignment issues.
 - **1.1.2** (2025-08-14) - Improved JWT token verification, enhanced calendar display for OTA reservations, and fixed critical issues with reservation details and room distribution. Added temporary block access for all users with CRUD permissions.

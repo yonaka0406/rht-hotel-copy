@@ -2,6 +2,24 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 20, 2025
+
+#### Feature Request #31: Export 宿泊者名簿 (Guest List) by Check-in Date
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - Added functionality to export the 宿泊者名簿 (Guest List/Register) for individual rooms
+  - Export includes all available pre-filled guest information
+- **Implementation**:
+  - Added an export button for each room in the reservation
+  - Implemented PDF export with pre-filled guest information
+  - Maintains data privacy and protection of sensitive guest information
+- **Note**: Group guest list export was not implemented as part of this feature
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Should match the official 宿泊者名簿 format requirements
+  - Consider adding a preview function before exporting
+  - Ensure data privacy and protection of sensitive guest information
+
 ## August 19, 2025
 
 #### Bug #39: Plan Price Rounding Discrepancy
