@@ -2447,7 +2447,7 @@ const updateReservationRoomWithCreate = async (requestId, reservation_id, room_i
   }
 };
 const updateReservationRoomPlan = async (requestId, data) => {
-  console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
+  //console.log('DEBUGGING updateReservationRoomPlan ARGS:', { requestId, data });
   const { reservationId, hotelId, roomId, plan, addons, daysOfTheWeek, userId } = data;
 
   const pool = getPool(requestId);
