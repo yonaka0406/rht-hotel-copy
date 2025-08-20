@@ -85,6 +85,13 @@
                                             {{ formatCurrency(addonSlotProps.data.price) || 0 }}
                                         </template>
                                     </Column>
+                                    <Column header="操作">
+                                        <template #body="addonSlotProps">
+                                            <Button icon="pi pi-trash"
+                                                class="p-button-text p-button-danger p-button-sm"
+                                                @click="deleteAddon(addonSlotProps.data)" />
+                                        </template>
+                                    </Column>
                                 </DataTable>
                             </div>
                             <div v-else>
@@ -530,11 +537,11 @@ const normalizeKana = (str) => {
 
     // Convert Hiragana to Katakana
     normalizedStr = normalizedStr.replace(/[\u3041-\u3096]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
+        String.fromCharCode(char.charCodeAt(0) + 0x60)  // Convert Hiragana to Katakana
     );
     // Convert half-width Katakana to full-width Katakana
     normalizedStr = normalizedStr.replace(/[\uFF66-\uFF9F]/g, (char) =>
-        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
+        String.fromCharCode(char.charCodeAt(0) - 0xFEC0)  // Convert half-width to full-width Katakana
     );
 
     return normalizedStr;
@@ -893,11 +900,11 @@ const applyRoomChanges = async () => {
         roomIdOld: selectedGroup.value.room_id,
         roomIdNew: targetRoom.value.value,
     }
-    // console.log(data);            
+    // console.log(data);            
     await moveReservationRoom(data);
     closeRoomEditDialog();
 
-    // Provide feedback to the user (optional)                
+    // Provide feedback to the user (optional)                
     toast.add({ severity: 'success', summary: '成功', detail: '予約明細が更新されました。', life: 3000 });
 };
 
@@ -1364,7 +1371,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
     const assignedParkingLotNames = assignedParkingData.parking.map(p => p.parking_lot_name);
 
     await fetchPlansForHotel(reservationDetails.hotel_id);
-    const assignedPlanNames = [...new Set(props.reservation_details.map(d => d.plan_name).filter(Boolean))];
+    const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
 
     let room_numbers;
     if (isGroup) {

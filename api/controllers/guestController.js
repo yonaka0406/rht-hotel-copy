@@ -42,7 +42,6 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         if (selectedParkingLot && selectedParkingLot.trim() !== '') {
             parkingLotNames = allParkingLots.map(lot => {
                 const trimmedLot = lot.trim();
-                // Trim the selectedParkingLot for a more robust comparison
                 const trimmedSelected = selectedParkingLot.trim();
                 if (trimmedLot === trimmedSelected) {
                     return `<span style="font-weight: bold;">${trimmedLot}</span>`;
@@ -50,16 +49,15 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
                 return trimmedLot;
             }).join(' ・ ');
         } else {
-            // If no parking lot is selected, just join the list without bolding
             parkingLotNames = allParkingLots.join(' ・ ');
         }
         
         // Dynamically create the payment option string based on the value from the Vue component
         let paymentOptionHtml = '';
         if (guestData.payment_option === 'あり') {
-            paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
-        } else {
             paymentOptionHtml = `<span style="font-weight: bold;">あり</span> ・ なし`;
+        } else {
+            paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
         }
 
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
@@ -74,7 +72,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         htmlContent = htmlContent.replace(new RegExp(`{{parking_lot_names_list}}`, 'g'), parkingLotNames || '指定なし');
         htmlContent = htmlContent.replace(new RegExp(`{{payment_total}}`, 'g'), guestData.payment_total);
         htmlContent = htmlContent.replace(new RegExp(`{{room_numbers}}`, 'g'), room.room_number);
-        htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), guestData.plan_names_list || '');
+        htmlContent = htmlContent.replace(new RegExp(`{{plan_names_list}}`, 'g'), room.details.map(detail => detail.plan_name).join(', ') || '指定なし');
         htmlContent = htmlContent.replace(new RegExp(`{{comment}}`, 'g'), guestData.comment || '');
         
         // This is where you insert the generated smokingHtml
