@@ -59,7 +59,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         } else {
             paymentOptionHtml = `あり ・ <span style="font-weight: bold;">なし</span>`;
         }
-
+        
         // Format the plan names based on whether a plan was selected
         let planNames = '';
         const plansList = (guestData.plan_names_list && guestData.plan_names_list.trim() !== '') ? guestData.plan_names_list.split(',') : (guestData.all_plan_names_list ? guestData.all_plan_names_list.split(',') : []);
@@ -68,7 +68,7 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
         } else {
             planNames = '指定なし';
         }
-        
+
         htmlContent = htmlContent.replace(new RegExp(`{{hotel_name}}`, 'g'), hotelName);
         htmlContent = htmlContent.replace(new RegExp(`{{booker_name}}`, 'g'), guestData.booker_name || '');
         htmlContent = htmlContent.replace(new RegExp(`{{alternative_name}}`, 'g'), guestData.alternative_name || '');
@@ -97,16 +97,9 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
             }
             
             // Format the address with the postal code from the guestData object
-            let formattedAddress = '';
-            if (guest.postal_code) {
-                formattedAddress += `〒 ${guest.postal_code}`;
-            }
-            if (guest.address) {
-                if (formattedAddress) {
-                    formattedAddress += `<br>`;
-                }
-                formattedAddress += `${guest.address}`;
-            }
+            const postalCodeLine = guest.postal_code ? `〒 ${guest.postal_code}` : '〒';
+            const addressLine = guest.address || '';
+            const formattedAddress = `${postalCodeLine}<br>　${addressLine}`;
 
             // ADDED: Guest number header
             guestsHtml += `
@@ -115,16 +108,17 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
                 </div>
             `;
 
+            // Adjusting column spans for name and vehicle number
             guestsHtml += `
-                <div class="grid-item label"><span class="highlight">※</span>お名前</div>
-                <div class="grid-item col-span-2">${guest.name_kanji || guest.name || ''}</div>
-                <div class="grid-item label"><span class="highlight">※</span>車両ナンバー</div>
-                <div class="grid-item col-span-3"></div>
+                <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>お名前</div>
+                <div class="grid-item col-span-3">${guest.name_kanji || guest.name || ''}</div>
+                <div class="grid-item label" style="grid-column: 5 / span 1;"><span class="highlight">※</span>車両ナンバー</div>
+                <div class="grid-item col-span-2">${guest.car_number_plate || ''}</div>
 
-                <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">${formattedAddress}</div>
+                <div class="grid-item label" style="grid-column: 1 / span 1; align-items: flex-start;"><span class="highlight">※</span>ご住所</div>
+                <div class="grid-item col-span-6" style="align-items: flex-start;">${formattedAddress}</div>
 
-                <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
+                <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>ご連絡先</div>
                 <div class="grid-item col-span-6">${guest.phone || ''}</div>
             `;
         });
@@ -185,17 +179,10 @@ const generateGuestList = async (req, res) => {
                 }
 
                 // Correctly format the postal code and address here
-                let formattedAddress = '';
-                if (guest.postal_code) {
-                    formattedAddress += `〒 ${guest.postal_code}`;
-                }
-                if (guest.address) {
-                    if (formattedAddress) {
-                        formattedAddress += `<br>`;
-                    }
-                    formattedAddress += `${guest.address}`;
-                }
-                
+                const postalCodeLine = guest.postal_code ? `〒 ${guest.postal_code}` : '〒';
+                const addressLine = guest.address || '';
+                const formattedAddress = `${postalCodeLine}<br>　${addressLine}`;
+
                 // ADDED: Guest number header
                 guestsHtml += `
                     <div class="grid-item label" style="grid-column: 1 / -1;">
@@ -203,17 +190,18 @@ const generateGuestList = async (req, res) => {
                     </div>
                 `;
 
+                // Adjusting column spans for name and vehicle number
                 guestsHtml += `
-                    <div class="grid-item label"><span class="highlight">※</span>お名前</div>
-                    <div class="grid-item col-span-2">${guest.client_name || ''}</div>
-                    <div class="grid-item label"><span class="highlight">※</span>車両ナンバー</div>
-                    <div class="grid-item col-span-3">${guest.number_plate || ''}</div>
+                    <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>お名前</div>
+                    <div class="grid-item col-span-3">${guest.client_name || ''}</div>
+                    <div class="grid-item label" style="grid-column: 5 / span 1;"><span class="highlight">※</span>車両ナンバー</div>
+                    <div class="grid-item col-span-2">${guest.number_plate || ''}</div>
 
-                    <div class="grid-item label" style="height: 80px;"><span class="highlight">※</span>ご住所</div>
-                    <div class="grid-item col-span-6" style="height: 80px; align-items: flex-start;">${formattedAddress}</div>
+                    <div class="grid-item label" style="grid-column: 1 / span 1; align-items: flex-start;"><span class="highlight">※</span>ご住所</div>
+                    <div class="grid-item col-span-6" style="align-items: flex-start;">${formattedAddress}</div>
 
-                    <div class="grid-item label"><span class="highlight">※</span>ご連絡先</div>
-                    <div class="grid-item col-span-6">${guest.phone_number || ''}</div>
+                    <div class="grid-item label" style="grid-column: 1 / span 1;"><span class="highlight">※</span>ご連絡先</div>
+                    <div class="grid-item col-span-6">${guest.phone || ''}</div>
                 `;
             });
         }
