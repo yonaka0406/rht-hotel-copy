@@ -18,10 +18,10 @@
                             :title="allPeopleCountMatch(group) ? '宿泊者設定済み' : '宿泊者未設定'"></i>
                     </div>
                     <div class="col-span-2 text-right mr-4">
+                        <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm mr-2"
+                            @click="openGuestListDialog(group)" severity="info" />
                         <Button icon="pi pi-pencil" label="一括編集" class="p-button-sm"
-                            @click="openRoomEditDialog(group)" />
-                        <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm ml-2"
-                            @click="openGuestListDialog(group)" />
+                            @click="openRoomEditDialog(group)" />                        
                     </div>
                 </div>
             </AccordionHeader>
