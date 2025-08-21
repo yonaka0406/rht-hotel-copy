@@ -507,6 +507,43 @@ httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
 });
 
+// Graceful shutdown handling
+const { closeBrowser } = require('./utils/browserManager');
+
+const cleanup = async () => {
+  logger.info('Shutting down server gracefully...');
+  
+  try {
+    // Close the browser instance if it exists
+    await closeBrowser();
+    logger.info('Browser instance closed successfully');
+    
+    // Close database connections
+    await db.end();
+    logger.info('Database connections closed');
+    
+    // Close HTTP server
+    httpServer.close(() => {
+      logger.info('HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force close server after 5 seconds
+    setTimeout(() => {
+      logger.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 5000);
+    
+  } catch (error) {
+    logger.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
+
+// Listen for shutdown signals
+process.on('SIGINT', cleanup);  // Ctrl+C
+process.on('SIGTERM', cleanup); // kill command
+
 /*
 // Apache is handling HTTPS termination
 if (httpsServer) {
