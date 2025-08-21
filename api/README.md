@@ -22,7 +22,8 @@ This directory contains the backend API for the Hotel Management System. It is a
 *   **multer:** Middleware for handling `multipart/form-data`, used for file uploads.
 *   **nodemailer:** For sending emails (e.g., notifications, password resets).
 *   **pg-format:** Used to safely create dynamic SQL queries for PostgreSQL.
-*   **Puppeteer:** Headless Chrome Node.js API, used for generating PDF invoices or reports.
+*   **Puppeteer (v21.11.0):** Headless Chrome Node.js API, used for generating PDF invoices or reports. 
+    * **Note:** This specific version is required due to memory constraints on the production VPS (4GB RAM). Newer versions may cause stability issues.
 *   **sharp:** High performance Node.js image processing library.
 *   **Socket.io:** For enabling real-time, bidirectional communication.
 *   **Kuroshiro & wanakana:** Japanese language libraries for converting Kanji/Hiragana to Romaji and other Japanese text utilities.
