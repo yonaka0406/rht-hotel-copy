@@ -259,7 +259,7 @@
                             <!-- Tab 4: Cancel -->
                              <TabPanel value="3">
                                 <div class="mb-3">
-                                    <p>当日をキャンセルすると、キャンセル料としてプランの<span class="font-bold">基本料金</span>が請求されます。</p>
+                                    <p>キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span class="font-bold">基本料金</span>のみが請求されます。</p>
                                 </div>
                                 <div v-if="!reservationCancelled" class="flex justify-center items-center">                                    
                                     <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="dayCancel" />

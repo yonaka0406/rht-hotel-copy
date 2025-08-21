@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Reservation: Added a confirmation dialog with a billable option when cancelling a single day of a reservation.
 ---
 ## Future Releases
 
