@@ -3254,8 +3254,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       
       const newClient = await internalClient.query(query, values);
       reservationClientId = newClient.rows[0].id;
-      console.log('Created new client with ID:', reservationClientId);
-      console.log('addOTAReservation client:', newClient.rows[0]);
+      //console.log('Created new client with ID:', reservationClientId);
+      //console.log('addOTAReservation client:', newClient.rows[0]);
 
       // Only insert address for new clients
       if (Basic.PostalCode || Member.UserZip || Basic.Address || Member.UserAddr) {
@@ -3283,7 +3283,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           1
         ];
         const newAddress = await internalClient.query(query, values);
-        console.log('addOTAReservation addresses:', newAddress.rows[0]);
+        //console.log('addOTAReservation addresses:', newAddress.rows[0]);
       }
     } 
 
@@ -3311,7 +3311,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
     // const reservation = {id: 0};    
     const reservation = await internalClient.query(query, values);
     const reservationId = reservation.rows[0].id;
-    console.log('addOTAReservation reservations:', reservation.rows[0]);
+    //console.log('addOTAReservation reservations:', reservation.rows[0]);
 
     // Get available rooms for the reservation period
     const roomsArray = await transformRoomData(RoomAndGuestList);
@@ -3515,7 +3515,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           console.error("Error: Failed to create reservation detail.");
           throw new Error("Transaction Error: Failed to create reservation detail.");
         }
-        console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
+        //console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
 
          
         if(!insertedClients || insertedClients.length === 0) {
@@ -3645,7 +3645,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         ];
         // console.log('editOTAReservation reservation_rates:', values);
         const reservationRates = await internalClient.query(query, values);
-        console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
+        //console.log('addOTAReservation reservation_rates:', reservationRates.rows[0]);
 
         // Insert addon information if addons exist
         if (addons && Array.isArray(addons) && addons.length > 0) {
@@ -3671,7 +3671,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             ];
 
             const reservationAddon = await internalClient.query(query, values);
-            console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+            //console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
       }
@@ -3735,7 +3735,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
           ];
 
           const reservationPayments = await internalClient.query(query, values);
-          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+          //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
           remainingDiscount -= discountForThisRoom;
@@ -3784,7 +3784,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               ];
 
               const reservationPayments = await internalClient.query(query, values);
-              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+              //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
               remainingPayment -= paymentForThisRoom;

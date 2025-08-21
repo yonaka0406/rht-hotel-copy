@@ -1,5 +1,5 @@
 async function fetchAndProcessReservations() {
-    console.log('fetchAndProcessReservations');
+    
     try {
         
         response = await fetch(`http://localhost:5000/api/sc/tl/reservations/fetch/`, {
@@ -9,7 +9,7 @@ async function fetchAndProcessReservations() {
             },            
         });        
 
-        console.log('Reservations processed successfully.');
+        //console.log('Reservations processed successfully.');
 /*
         response = await fetch(`http://localhost:5000/api/sc/tl/reservations/success/`, {
             method: 'GET',

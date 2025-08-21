@@ -32,7 +32,7 @@ const getHotelByID = async (requestId, id) => {
   }
 };
 const getAllHotelSiteController = async (requestId) => {
-  console.log(`[${requestId}] [getAllHotelSiteController] Starting`);
+  //console.log(`[${requestId}] [getAllHotelSiteController] Starting`);
   const pool = getPool(requestId);
   const query = `
     SELECT sc_user_info.* 
@@ -40,28 +40,28 @@ const getAllHotelSiteController = async (requestId) => {
     ORDER BY hotel_id
   `;
   
-  console.log(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
+  //console.log(`[${requestId}] [getAllHotelSiteController] Executing query: ${query}`);
   
   try {
-    console.log(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
+    //console.log(`[${requestId}] [getAllHotelSiteController] Getting client from pool`);
     const client = await pool.connect();
     
     try {
-      console.log(`[${requestId}] [getAllHotelSiteController] Executing query`);
+      //console.log(`[${requestId}] [getAllHotelSiteController] Executing query`);
       const startTime = Date.now();
       const result = await client.query(query);
       const duration = Date.now() - startTime;
       
-      console.log(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
-      console.log(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
+      //console.log(`[${requestId}] [getAllHotelSiteController] Query executed successfully in ${duration}ms`);
+      //console.log(`[${requestId}] [getAllHotelSiteController] Found ${result.rows.length} hotels`);
       
       if (result.rows.length > 0) {
-        console.log(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
+        //console.log(`[${requestId}] [getAllHotelSiteController] First hotel ID: ${result.rows[0].hotel_id}`);
       }
       
       return result.rows;
     } finally {
-      console.log(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
+      //console.log(`[${requestId}] [getAllHotelSiteController] Releasing client back to pool`);
       client.release();
     }
   } catch (err) {
