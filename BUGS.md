@@ -5,6 +5,25 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 21, 2025
+
+#### Bug #34: Inconsistent Client Name Display for OTA/Web Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Client names for OTA and web reservations are not consistently displayed across all UI components
+  - Currently, the Google Drive integration shows guest names from reservation_clients when available
+  - This behavior should be consistent across all pages including:
+    - Room Indicator
+    - Reservation List
+    - Any other pages showing reservation information
+- **Implementation Requirements**:
+  - Update all relevant UI components to use the same logic for displaying client names specifically for OTA and web reservations
+  - For OTA and web reservations, prioritize showing guest names from reservation_clients when available
+  - Maintain fallback to existing name fields if reservation_clients data is not available
+  - Ensure this change only affects OTA and web reservations, not direct bookings
+  - Test all affected pages to ensure consistent behavior
+
 ### August 13, 2025
 
 #### Feature Request #33: Editable Receipts with Version History
