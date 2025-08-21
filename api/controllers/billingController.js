@@ -11,7 +11,6 @@ const {
     linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const browserManager = require('../utils/browserManager');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
@@ -64,12 +63,9 @@ const generateInvoice = async (req, res) => {
   const userId = req.user.id;
   const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');  
 
-  let page = null;
   let browser;
 
   try {    
-    // Get the shared browser instance
-    browser = await getBrowser();    
     // Save the invoice data to the database
     let max_invoice_number = await selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
     console.log('invoice_number', max_invoice_number.last_invoice_number);
@@ -92,8 +88,9 @@ const generateInvoice = async (req, res) => {
     
     const userInfo = await getUsersByID(req.requestId, userId);    
     
-    // Create a new page instance
-    page = await browser.newPage();
+    // Create a browser instance
+    browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
+    const page = await browser.newPage();
     page.on('console', msg => {
       console.log('PAGE LOG:', msg.type(), msg.text());
     });
@@ -136,22 +133,18 @@ const generateInvoice = async (req, res) => {
         format: 'A4',
     });
     
-    // Close the page instance
-    await page.close();
+    // Close the browser instance
+    await browser.close();
 
     //  3. Send PDF as a download
     res.contentType("application/pdf");    
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
     console.error("Error generating PDF with Puppeteer:", error);
-    if (page) {
-      await page.close().catch(err => console.error("Error closing page:", err));
-    }
     res.status(500).send('Error generating blank PDF');
   } finally {
     if (browser) {
-      // Do not close the browser instance
-      // await browser.close().catch(err => console.error("Error closing browser:", err));
+      await browser.close().catch(err => console.error("Error closing browser:", err));
     }
   }
 };
@@ -234,7 +227,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
     const taxBreakdownData = req.body.taxBreakdownData;
     const forceRegenerate = req.body.forceRegenerate;
 
-    let page = null;
     let browser;
 
     console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
@@ -468,117 +460,69 @@ const handleGenerateReceiptRequest = async (req, res) => {
             generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
             generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
-        // Get the shared browser instance
-        browser = await browserManager.getBrowser();
-        if (!browser) {
-            throw new Error('Failed to get browser instance');
-        }
-        
-        page = await browser.newPage();
-        if (!page) {
-            throw new Error('Failed to create new page');
-        }
+        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
+        const imageSelector = 'img[alt="Company Stamp"]';
         try {
-            // Use 'domcontentloaded' for better reliability with PDF generation
-            await page.setContent(htmlContent, { 
-                waitUntil: 'domcontentloaded',
-                timeout: 30000 // 30 second timeout
-            });
-            
-            // Add a small delay to ensure all resources are loaded
-            await page.evaluate(() => {
-                return new Promise(resolve => {
-                    if (document.readyState === 'complete') {
-                        resolve();
-                    } else {
-                        window.addEventListener('load', () => resolve(), { once: true });
-                    }
-                });
-            });
-
-            const imageSelector = 'img[alt="Company Stamp"]';
-            try {
-                await page.waitForSelector(imageSelector, { 
-                    timeout: 5000,
-                    visible: true
-                });
-                
-                await page.evaluate(async selector => {
-                    const img = document.querySelector(selector);
-                    if (img && !img.complete) {
-                        await new Promise((resolve, reject) => { 
-                            img.onload = resolve; 
-                            img.onerror = reject; 
-                        });
-                    }
-                }, imageSelector);
-            } catch (e) {
-                console.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
-            }
-
-            const pdfBuffer = await page.pdf({
-                margin: { 
-                    top: '20px', 
-                    right: '20px', 
-                    bottom: '20px', 
-                    left: '20px' 
-                },
-                printBackground: true, 
-                format: 'A4',
-                timeout: 60000 // 60 second timeout
-            });
-            
-            if (!pdfBuffer || pdfBuffer.length === 0) {
-                throw new Error('Failed to generate PDF: Empty buffer');
-            }
-            
-            const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient')
-                .replace(/[<>:"/\\|?*]/g, '_')
-                .trim()
-                .substring(0, 50);
-            
-            const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
-            const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
-
-            // Debug: Log what we're working with
-            console.log('Original client name:', paymentDataForPdf.client_name);
-            console.log('Sanitized client name:', clientNameForFile);
-            console.log('PDF filename before encoding:', pdfFilename);
-            console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
-
-            // The UTF-8 encoded filename for modern browsers
-            const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);
-
-            // The ASCII-safe filename for older browsers or as a robust fallback
-            let asciiSafeFallbackFilename;
-            if (/^[\x00-\x7F]*$/.test(pdfFilename)) {
-                asciiSafeFallbackFilename = pdfFilename;
-            } else {
-                asciiSafeFallbackFilename = fallbackFilename;
-            }
-
-            // Set the Content-Disposition header
-            res.set('Content-Disposition', `attachment; filename="${asciiSafeFallbackFilename}"; filename*=UTF-8''${encodedPdfFilenameForStar}`);
-            res.contentType("application/pdf");
-            res.send(Buffer.from(pdfBuffer));
-
-        } catch (pdfError) {
-            console.error(`Error during PDF generation:`, pdfError);
-            throw pdfError;
-        } finally {
-            if (page && !page.isClosed()) {
-                try {
-                    await page.close();
-                    console.log('Page closed successfully');
-                } catch (closeError) {
-                    console.error('Error closing page:', closeError);
+            await page.waitForSelector(imageSelector, { timeout: 5000 });
+            await page.evaluate(async selector => {
+                const img = document.querySelector(selector);
+                if (img && !img.complete) {
+                    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
                 }
-            }
+            }, imageSelector);
+        } catch (e) {
+            console.warn(`Stamp image selector not found or timed out in ${isConsolidated ? 'consolidated' : 'single'} receipt:`, e.message);
         }
+
+        const pdfBuffer = await page.pdf({
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
+            printBackground: true, format: 'A4'
+        });
+        await browser.close();
+        
+        const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient')
+            .replace(/[<>:"/\|?*]/g, '_')
+            .trim()
+            .substring(0, 50);
+        
+        const pdfFilename = `${finalReceiptNumber}_${clientNameForFile}.pdf`;
+        const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
+
+        // Debug: Log what we're working with
+        console.log('Original client name:', paymentDataForPdf.client_name);
+        console.log('Sanitized client name:', clientNameForFile);
+        console.log('PDF filename before encoding:', pdfFilename);
+        console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
+
+        // The UTF-8 encoded filename for modern browsers
+        const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);
+
+        // The ASCII-safe filename for older browsers or as a robust fallback
+        // This should always be ASCII. If pdfFilename contains non-ASCII, use a generic fallback.
+        let asciiSafeFallbackFilename;
+        if (/^[\x00-\x7F]*$/.test(pdfFilename)) {
+            // If the original pdfFilename is already ASCII, use it for the fallback
+            asciiSafeFallbackFilename = pdfFilename;
+        } else {
+            // If not ASCII, use the predefined ASCII-only fallback
+            asciiSafeFallbackFilename = fallbackFilename;
+        }
+
+        // Set the Content-Disposition header
+        // Ensure correct concatenation and quoting.
+        res.set('Content-Disposition', `attachment; filename="${asciiSafeFallbackFilename}"; filename*=UTF-8''${encodedPdfFilenameForStar}`);
+
+        res.contentType("application/pdf");
+        res.send(Buffer.from(pdfBuffer));
 
     } catch (error) {
         console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
+        if (browser) {
+            await browser.close().catch(err => console.error("Error closing browser:", err));
+        }
         res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
     }
 };

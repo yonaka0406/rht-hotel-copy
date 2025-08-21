@@ -2,23 +2,11 @@
 # Use the official Node.js 22 image based on Debian 12 (Bookworm)
 FROM node:22 AS builder
 
-# Install build tools and system fonts
+# Install build tools for native modules
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    # Install fonts for PDF generation
-    fonts-liberation \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    fonts-ipafont \
-    fonts-ipafont-gothic \
-    fonts-ipafont-mincho \
-    fonts-roboto \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
@@ -69,42 +57,10 @@ RUN npm prune --production
 # Use the lighter -slim version of the same Debian release for the final image
 FROM node:22 AS production
 
-# Install runtime dependencies, system fonts, and Chromium
+# Install runtime dependencies required by sharp
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips \
-    # Install Chromium and its dependencies
-    chromium \
-    # Install fonts for PDF generation
-    fonts-liberation \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    fonts-ipafont \
-    fonts-ipafont-gothic \
-    fonts-ipafont-mincho \
-    fonts-roboto \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    fonts-dejavu \
-    fonts-dejavu-core \
-    fonts-dejavu-extra \
-    fonts-droid-fallback \
-    fonts-symbola \
-    fonts-opensymbol \
-    # Required for fontconfig
-    fontconfig \
-    # Additional font tools
-    fontconfig-config \
-    fonts-dejavu-core \
-    fonts-dejavu-extra \
-    # Clean up
-    && fc-cache -f -v \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /usr/share/fonts/truetype/dejavu \
-    && ln -s /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /usr/share/fonts/ \
-    && ln -s /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc /usr/share/fonts/ \
-    && ln -s /usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc /usr/share/fonts/
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 WORKDIR /usr/src/app

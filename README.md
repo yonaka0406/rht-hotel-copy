@@ -13,88 +13,9 @@ A comprehensive hotel property management system designed to streamline hotel op
 
 ## Getting Started
 
-### System Requirements
-
-#### Backend Server Requirements
-- **Operating System**: Linux/Ubuntu (recommended) or Windows Server
-- **Node.js**: v16.x or higher
-- **PostgreSQL**: v12 or higher
-- **Redis**: v6 or higher (for caching and sessions)
-- **Chromium**: Required for PDF generation
-- **System Dependencies**:
-  ```bash
-  # Install system entropy generator (prevents random number generation issues)
-  sudo apt-get update && sudo apt-get install -y haveged
-  sudo systemctl enable haveged
-  sudo systemctl start haveged
-
-  # Install all required system dependencies for Puppeteer/Chromium
-  sudo apt-get update && sudo apt-get install -y \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libgconf-2-4 \
-    libgdk-pixbuf2.0-0 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    lsb-release \
-    wget \
-    xdg-utils \
-    # Additional fonts for international support
-    fonts-noto-cjk \
-    fonts-ipafont \
-    fonts-ipafont-gothic \
-    fonts-ipafont-mincho \
-    fonts-wqy-zenhei \
-    fonts-thai-tlwg \
-    fonts-kacst \
-    fonts-freefont-ttf \
-    fonts-dejavu \
-    fonts-droid-fallback \
-    fonts-symbola \
-    fonts-opensymbol \
-    fontconfig \
-    fontconfig-config
-  
-  # Verify Chromium installation
-  which chromium-browser || which chromium || (echo "Chromium installation failed" && exit 1)
-  ```
-
 ### Quick Setup
 
-1. **Prerequisites**: 
-   - Node.js
-   - PostgreSQL
-   - Redis
-   - System dependencies (see above)
+1. **Prerequisites**: Node.js, PostgreSQL, Redis
 2. **Database**: Run migration scripts from `api/migrations/` in numerical order
 3. **Backend**: `cd api && npm install && npm start`
 4. **Frontend**: `cd frontend && npm install && npm run dev`

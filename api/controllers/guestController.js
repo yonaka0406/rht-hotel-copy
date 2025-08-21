@@ -1,4 +1,4 @@
-const { getBrowser } = require('../utils/browserManager');
+const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 const { selectReservation } = require('../models/reservations');
@@ -130,87 +130,27 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
     return allRoomsHtml;
 }
 
-const generatePdf = async (htmlContent, reservationId, isGroup = false) => {
-    let page;
-    try {
-        const browser = await getBrowser();
-        if (!browser) {
-            throw new Error('Failed to get browser instance');
+const generatePdf = async (htmlContent, reservationId, isGroup) => {
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+            top: '20px',
+            right: '20px',
+            bottom: '20px',
+            left: '20px'
         }
-        
-        // Create a new page with error handling
-        page = await browser.newPage().catch(err => {
-            console.error('Failed to create new page:', err);
-            throw new Error('Failed to create new browser page');
-        });
-        
-        // Set timeouts
-        page.setDefaultNavigationTimeout(60000); // 60 seconds
-        page.setDefaultTimeout(60000);
-        
-        // Disable navigation timeout for setContent
-        await page.setDefaultNavigationTimeout(0);
-        
-        // Set the content with error handling for navigation
-        try {
-            await page.setContent(htmlContent, {
-                waitUntil: ['networkidle0', 'domcontentloaded', 'load'],
-                timeout: 120000 // 120 seconds
-            });
-        } catch (navError) {
-            console.warn('Navigation warning:', navError.message);
-            // Continue even if navigation times out, the content might still be loaded
-        }
-        
-        // Wait for any dynamic content to load (3 seconds delay)
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        // Generate PDF with proper error handling
-        let pdfBuffer;
-        try {
-            pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '20px',
-                    right: '20px',
-                    bottom: '20px',
-                    left: '20px'
-                },
-                timeout: 120000, // 120 seconds
-                preferCSSPageSize: true,
-                displayHeaderFooter: false
-            });
-            
-            if (!pdfBuffer || pdfBuffer.length === 0) {
-                throw new Error('Failed to generate PDF: Empty buffer');
-            }
-        } catch (pdfError) {
-            console.error('PDF generation error:', pdfError);
-            throw new Error(`Failed to generate PDF: ${pdfError.message}`);
-        }
-        
-        const filename = isGroup ? `guest_list_group_${reservationId}.pdf` : `guest_list_${reservationId}.pdf`;
-        return { pdfBuffer, filename };
-        
-    } catch (error) {
-        console.error('Error in generatePdf:', error);
-        throw error;
-        
-    } finally {
-        // Close the page if it exists and is open
-        if (page && !page.isClosed()) {
-            try {
-                await page.close().catch(e => console.warn('Warning closing page:', e));
-            } catch (closeError) {
-                console.error('Error closing page:', closeError);
-            }
-        }
-        
-        // Don't close the browser here - let the browser manager handle it
-        // This prevents issues with browser disconnections
-    }
-};
+    });
+
+    await browser.close();
+    
+    const filename = isGroup ? `guest_list_group_${reservationId}.pdf` : `guest_list_${reservationId}.pdf`;
+    return { pdfBuffer, filename };
+}
 
 const generateGuestList = async (req, res) => {
     const { reservationId } = req.params;
