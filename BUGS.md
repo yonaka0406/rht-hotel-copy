@@ -7,7 +7,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 21, 2025
 
-#### Bug #34: Inconsistent Client Name Display for OTA/Web Reservations
+#### Bug #41: Inconsistent Client Name Display for OTA/Web Reservations
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: 
@@ -201,6 +201,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 18, 2025*
-*Total Bugs: 2* (last one #40)
-*Total Feature Requests: 12* (last one #35)
+*Last Updated: August 21, 2025*
+*Total Bugs: 1* (last one #41)
+*Total Feature Requests: 11* (last one #35)
