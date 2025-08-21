@@ -11,7 +11,7 @@ const {
     linkPaymentToReceipt
 } = require('../models/billing');
 const { getUsersByID } = require('../models/user');
-const puppeteer = require('puppeteer');
+const { getBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 
@@ -61,11 +61,11 @@ const generateInvoice = async (req, res) => {
   const invoiceId = req.params.invoice;
   const invoiceData = req.body;  
   const userId = req.user.id;
-  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');  
+  const invoiceHTML = fs.readFileSync(path.join(__dirname, '../components/invoice.html'), 'utf-8');
 
-  let browser;
+  let page;
 
-  try {    
+  try {
     // Save the invoice data to the database
     let max_invoice_number = await selectMaxInvoiceNumber(req.requestId, hotelId, invoiceData.date);
     console.log('invoice_number', max_invoice_number.last_invoice_number);
@@ -73,33 +73,33 @@ const generateInvoice = async (req, res) => {
       const date = new Date(invoiceData.date);
       const year = date.getFullYear() % 100; // last two digits of year
       const month = date.getMonth() + 1; // getMonth returns 0-11
-      
+
       max_invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
-      
+
     } else {
       max_invoice_number += 1;
     }
 
     if (!invoiceData.invoice_number) {
-      invoiceData.invoice_number = max_invoice_number;      
+      invoiceData.invoice_number = max_invoice_number;
     }
-    
+
     await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
-    
-    const userInfo = await getUsersByID(req.requestId, userId);    
-    
-    // Create a browser instance
-    browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox']});
-    const page = await browser.newPage();
+
+    const userInfo = await getUsersByID(req.requestId, userId);
+
+    // Get browser instance from the service
+    const browser = await getBrowser();
+    page = await browser.newPage();
     page.on('console', msg => {
       console.log('PAGE LOG:', msg.type(), msg.text());
     });
 
     //  1. Create HTML content for the PDF
-    const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData, userInfo[0].name); 
+    const htmlContent = generateInvoiceHTML(invoiceHTML, invoiceData, userInfo[0].name);
     //console.log("generateInvoice:", htmlContent);
     await page.setContent(htmlContent, { waitUntil: 'domcontentloaded' });
-    
+
     const imageSelector = 'img[alt="Company Stamp"]';
     await page.waitForSelector(imageSelector);
     await page.evaluate(async selector => {
@@ -118,13 +118,13 @@ const generateInvoice = async (req, res) => {
         }
         return img.complete && img.naturalWidth > 0; //  Check if loaded
     }, 'img[alt="Company Stamp"]'); //  Use a specific selector
-    
+
     console.log('Image loaded:', imageLoaded);
-    
+
     if (!imageLoaded) {
         console.warn('Image might not have loaded correctly.');
     }
-    
+
 
     //  2. Generate PDF
     const pdfBuffer = await page.pdf({
@@ -132,19 +132,16 @@ const generateInvoice = async (req, res) => {
         printBackground: true,
         format: 'A4',
     });
-    
-    // Close the browser instance
-    await browser.close();
 
     //  3. Send PDF as a download
-    res.contentType("application/pdf");    
+    res.contentType("application/pdf");
     res.send(Buffer.from(pdfBuffer));
   } catch (error) {
     console.error("Error generating PDF with Puppeteer:", error);
     res.status(500).send('Error generating blank PDF');
   } finally {
-    if (browser) {
-      await browser.close().catch(err => console.error("Error closing browser:", err));
+    if (page) {
+      await page.close().catch(err => console.error("Error closing page:", err));
     }
   }
 };
@@ -227,7 +224,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
     const taxBreakdownData = req.body.taxBreakdownData;
     const forceRegenerate = req.body.forceRegenerate;
 
-    let browser;
+    let page;
 
     console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
 
@@ -460,8 +457,8 @@ const handleGenerateReceiptRequest = async (req, res) => {
             generateConsolidatedReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentsArrayForPdf, userName, finalTaxBreakdownForPdf) :
             generateReceiptHTML(receiptHTMLTemplate, receiptDataForPdf, paymentDataForPdf, userName, finalTaxBreakdownForPdf);
 
-        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        const page = await browser.newPage();
+        const browser = await getBrowser();
+        page = await browser.newPage();
         await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
         const imageSelector = 'img[alt="Company Stamp"]';
@@ -481,7 +478,6 @@ const handleGenerateReceiptRequest = async (req, res) => {
             margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' },
             printBackground: true, format: 'A4'
         });
-        await browser.close();
         
         const clientNameForFile = (paymentDataForPdf.client_name || 'UnknownClient')
             .replace(/[<>:"/\|?*]/g, '_')
@@ -520,10 +516,11 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     } catch (error) {
         console.error(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF:`, error);
-        if (browser) {
-            await browser.close().catch(err => console.error("Error closing browser:", err));
-        }
         res.status(500).send(`Error generating ${isConsolidated ? 'consolidated' : 'single'} receipt PDF: ${error.message}`);
+    } finally {
+        if (page) {
+            await page.close().catch(err => console.error("Error closing page:", err));
+        }
     }
 };
 function generateReceiptHTML(html, receiptData, paymentData, userName, taxBreakdownData) {

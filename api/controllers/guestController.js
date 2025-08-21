@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const { getBrowser } = require('../services/puppeteerService');
 const fs = require('fs');
 const path = require('path');
 const { selectReservation } = require('../models/reservations');
@@ -131,25 +131,30 @@ const generateGuestListHTMLForRooms = (rooms, guestListHTML, guestData) => {
 }
 
 const generatePdf = async (htmlContent, reservationId, isGroup) => {
-    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    let page;
+    try {
+        const browser = await getBrowser();
+        page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
 
-    const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: {
-            top: '20px',
-            right: '20px',
-            bottom: '20px',
-            left: '20px'
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: {
+                top: '20px',
+                right: '20px',
+                bottom: '20px',
+                left: '20px'
+            }
+        });
+
+        const filename = isGroup ? `guest_list_group_${reservationId}.pdf` : `guest_list_${reservationId}.pdf`;
+        return { pdfBuffer, filename };
+    } finally {
+        if (page) {
+            await page.close();
         }
-    });
-
-    await browser.close();
-    
-    const filename = isGroup ? `guest_list_group_${reservationId}.pdf` : `guest_list_${reservationId}.pdf`;
-    return { pdfBuffer, filename };
+    }
 }
 
 const generateGuestList = async (req, res) => {
