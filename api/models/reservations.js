@@ -4455,7 +4455,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             ];
 
             const reservationAddon = await internalClient.query(query, values);
-            console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
+            //console.log('addOTAReservation reservation_addon:', reservationAddon.rows[0])
           }
         }
       }
@@ -4519,7 +4519,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
           ];
 
           const reservationPayments = await internalClient.query(query, values);
-          console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+          //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
           // Reduce remaining discount
           remainingDiscount -= discountForThisRoom;
@@ -4568,7 +4568,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               ];
 
               const reservationPayments = await internalClient.query(query, values);
-              console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
+              //console.log('addOTAReservation reservation_payments:', reservationPayments.rows[0]);
 
               // Reduce remaining payment
               remainingPayment -= paymentForThisRoom;
