@@ -14,8 +14,6 @@ const getBrowser = async () => {
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--no-zygote',
-      '--single-process',
       '--disable-extensions',
       '--disable-infobars',
       '--window-size=1920,1080',
