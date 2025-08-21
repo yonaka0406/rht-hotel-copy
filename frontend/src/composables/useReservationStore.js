@@ -161,7 +161,7 @@ export function useReservationStore() {
             console.error('Error updating reservation status:', error);
         }
     };
-    const setReservationDetailStatus = async (detail_id, hotel_id, status) => {
+    const setReservationDetailStatus = async (detail_id, hotel_id, status, billable) => {
         // console.log('From Reservation Store => setReservationDetailStatus:',status);
         try {
             setReservationIsUpdating(true);
@@ -172,7 +172,7 @@ export function useReservationStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ hotel_id, status })
+                body: JSON.stringify({ hotel_id, status, billable })
             });
 
             if (!response.ok) {

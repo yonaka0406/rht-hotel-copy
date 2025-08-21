@@ -1035,7 +1035,7 @@ const editReservationStatus = async (req, res) => {
 };
 const editReservationDetailStatus = async (req, res) => {
   const { id } = req.params;
-  const { hotel_id, status } = req.body;
+  const { hotel_id, status, billable } = req.body;
   const updated_by = req.user.id;
 
   try {
@@ -1045,6 +1045,7 @@ const editReservationDetailStatus = async (req, res) => {
       hotel_id,
       status,
       updated_by,
+      billable,
     });
 
     // Respond with the updated reservation details
