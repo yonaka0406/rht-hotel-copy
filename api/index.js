@@ -502,6 +502,22 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 */
 
+const { closeBrowser } = require('./services/puppeteerService');
+
+// Graceful shutdown
+const cleanup = async () => {
+  logger.info('Closing HTTP server.');
+  httpServer.close(async () => {
+    logger.info('HTTP server closed.');
+    await closeBrowser();
+    logger.info('Puppeteer browser closed.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', cleanup);
+process.on('SIGTERM', cleanup);
+
 // Start the servers
 httpServer.listen(PORT, '0.0.0.0', () => {
   logger.info(`HTTP Server is running on http://0.0.0.0:${PORT}`);
