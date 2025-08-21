@@ -80,7 +80,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 6, 2025
 
-#### Feature Request #26: Bulk Room Cancellation in 一括編集 (2025/08/06)
+#### Feature Request #26: Bulk Room Cancellation in 一括編集
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: 
   - Currently, users can cancel individual days in a reservation
