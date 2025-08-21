@@ -114,12 +114,25 @@ const getMyHoldReservations = async (req, res) => {
 const getReservationsToday = async (req, res) => {
   const { hid, date } = req.params;
 
-  try {
-    const reservations = await selectReservationsToday(req.requestId, hid, date);
-    return res.status(200).json({ reservations: reservations || [] });
+  if (!hid || isNaN(parseInt(hid))) {
+    return res.status(400).json({ error: 'Invalid hotel ID' });
+  }
+
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!date || !dateRegex.test(date)) {
+    return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+  }
+
+  try {    
+    const hotelId = parseInt(hid, 10);
+    const reservations = await selectReservationsToday(req.requestId, hotelId, date);
+    return res.status(200).json({ reservations: reservations || [] });    
   } catch (error) {
     console.error('Error fetching reservations:', error);
-    return res.status(500).json({ error: 'Database error occurred while fetching reservations.' });
+    return res.status(500).json({ 
+      error: 'Database error occurred while fetching reservations.',
+      details: error.message 
+    });
   }
 };
 
