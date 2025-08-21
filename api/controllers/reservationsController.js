@@ -982,7 +982,7 @@ const editReservationRoomPlan = async (req, res) => {
       daysOfTheWeek,
       userId: user_id
     };
-    console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
+    //console.log('DEBUGGING editReservationRoomPlan ARGS:', updateData);
     
     const updatedReservation = await updateReservationRoomPlan(req.requestId, updateData);  
     res.json(updatedReservation);
