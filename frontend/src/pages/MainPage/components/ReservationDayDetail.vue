@@ -259,7 +259,7 @@
                             <!-- Tab 4: Cancel -->
                              <TabPanel value="3">
                                 <div class="mb-3">
-                                    <p>当日をキャンセルすると、キャンセル料としてプランの<span class="font-bold">基本料金</span>が請求されます。</p>
+                                    <p>キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span class="font-bold">基本料金</span>のみが請求されます。</p>
                                 </div>
                                 <div v-if="!reservationCancelled" class="flex justify-center items-center">                                    
                                     <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="dayCancel" />
@@ -273,7 +273,7 @@
                 </div>
             </template>            
         </Card>   
-        
+        <ConfirmDialog group="cancel-day"></ConfirmDialog>
     </div>
 </template>
 
@@ -297,7 +297,7 @@
     const toast = useToast();
     import { useConfirm } from "primevue/useconfirm";
     const confirm = useConfirm();
-    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider } from 'primevue';    
+    import { Card, Tabs, TabList, Tab, TabPanels, TabPanel, DataTable, Column, FloatLabel, Select, InputText, InputNumber, Button, Badge, Divider, ConfirmDialog } from 'primevue';
 
     // Stores    
     import { useReservationStore } from '@/composables/useReservationStore';
@@ -541,12 +541,29 @@
 
     // Cancel
     const reservationCancelled = ref(false);
-    const dayCancel = async () => {        
-        await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled');
-
-        reservationCancelled.value = true;
-
-        toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+    const dayCancel = () => {
+        confirm.require({
+            group: 'cancel-day',
+            message: 'キャンセル料の有無を選択してください。',
+            header: 'キャンセル確認',
+            icon: 'pi pi-exclamation-triangle',
+            accept: async () => {
+                await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', true);
+                reservationCancelled.value = true;
+                toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+            },
+            reject: async () => {
+                await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', false);
+                reservationCancelled.value = true;
+                toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+            },
+            acceptLabel: 'キャンセル料発生',
+            acceptClass: 'p-button-danger',
+            acceptIcon: 'pi pi-dollar',
+            rejectLabel: 'キャンセル料無し',
+            rejectClass: 'p-button-success',
+            rejectIcon: 'pi pi-check',
+        });
     };
     const dayRecover = async () => {        
         await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');

@@ -1455,7 +1455,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
   // Get a client from the pool to run multiple queries in a single transaction
   const client = await pool.connect();
 
-  const { id, hotel_id, status, updated_by } = reservationData;
+  const { id, hotel_id, status, updated_by, billable } = reservationData;
 
   try {
     // Start the transaction
@@ -1503,13 +1503,13 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
         UPDATE reservation_details
         SET
           cancelled = gen_random_uuid(),
-          billable = TRUE,
+          billable = $4,
           updated_by = $1,
-          price = $4
+          price = $5
         WHERE id = $2::UUID AND hotel_id = $3
         RETURNING *;
       `;
-      detailValues = [updated_by, id, hotel_id, calculatedPrice];
+      detailValues = [updated_by, id, hotel_id, billable, calculatedPrice];
 
     } else if (status === 'recovered') {
       // If the reservation is on hold or provisory, recovering a detail should not make it billable.
