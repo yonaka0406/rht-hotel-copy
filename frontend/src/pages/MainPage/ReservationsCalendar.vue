@@ -382,12 +382,44 @@ const fetchReservations = async (startDate, endDate) => {
   }
 };
 
+// Utility function
+const formatClientName = (name) => {
+  if (!name) return '';
+  
+  const replacements = {
+    '株式会社': '㈱',
+    '合同会社': '(同)',
+    '有限会社': '(有)',
+    '合名会社': '(名)',
+    '合資会社': '(資)',
+    '一般社団法人': '(一社)',
+    '一般財団法人': '(一財)',
+    '公益社団法人': '(公社)',
+    '公益財団法人': '(公財)',
+    '学校法人': '(学)',
+    '医療法人': '(医)',
+    '社会福祉法人': '(福)',
+    '特定非営利活動法人': '(特非)',
+    'NPO法人': '(NPO)',
+    '宗教法人': '(宗)'
+  };
+
+  let result = name;
+  for (const [key, value] of Object.entries(replacements)) {
+    result = result.replace(new RegExp(key, 'g'), value);
+  }
+  return result;
+};
+
 // Hash map for faster lookups
 const reservedRoomsMap = computed(() => {
   const map = {};
   reservedRooms.value.forEach(reservation => {
     const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
-    map[key] = reservation;
+    map[key] = {
+      ...reservation,
+      client_name: formatClientName(reservation.client_name)
+    };
   });
   return map;
 });
@@ -395,7 +427,10 @@ const tempReservationsMap = computed(() => {
   const map = {};
   tempReservations.value.forEach(reservation => {
     const key = `${reservation.room_id}_${formatDate(new Date(reservation.date))}`;
-    map[key] = reservation;
+    map[key] = {
+      ...reservation,
+      client_name: formatClientName(reservation.client_name)
+    };
   });
   return map;
 });
