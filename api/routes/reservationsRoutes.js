@@ -52,6 +52,8 @@ router.delete('/reservation/delete/hold/:id', authMiddlewareCRUDAccess, reservat
 router.delete('/reservation/delete/room/:id', authMiddlewareCRUDAccess, reservationsController.deleteRoomFromReservation);
 router.delete('/reservation/payment/delete/:id', authMiddlewareCRUDAccess, reservationsController.delReservationPayment);
 
+router.put('/reservation/rooms/cancel', authMiddlewareCRUDAccess, reservationsController.cancelReservationRooms);
+
 // Copy
 router.post('/reservation/copy', authMiddleware, reservationsController.copyReservation);
 

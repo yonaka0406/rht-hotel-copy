@@ -1288,6 +1288,32 @@ export function useReservationStore() {
         }
     };
 
+    const cancelReservationRooms = async (hotelId, reservationId, detailIds, billable) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/reservation/rooms/cancel`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ hotelId, reservationId, detailIds, billable }),
+            });
+    
+            if (!response.ok) {
+                throw new Error('Failed to cancel reservation rooms.');
+            }
+            setReservationIsUpdating(false);
+            return await response.json();
+        } catch (error) {
+            setReservationIsUpdating(false);
+            console.error('Error cancelling reservation rooms:', error);
+            throw error;
+        }
+    };
+
     return {
         reservationIsUpdating,
         availableRooms,
@@ -1340,5 +1366,6 @@ export function useReservationStore() {
         convertBlockToReservation,
         parkingSpotAvailability,
         fetchParkingSpotAvailability,
+        cancelReservationRooms,
     };
 }

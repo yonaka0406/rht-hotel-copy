@@ -7,6 +7,7 @@ const {
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking,
   deleteParkingReservation, deleteBulkParkingReservations,
+  cancelReservationRooms: cancelReservationRoomsModel,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1408,8 +1409,32 @@ const convertBlockToReservation = async (req, res) => {
   }
 };
 
+const cancelReservationRooms = async (req, res) => {
+  const { hotelId, reservationId, detailIds, billable } = req.body;
+  const user_id = req.user.id;
+
+  if (!hotelId || !reservationId || !Array.isArray(detailIds) || detailIds.length === 0) {
+    return res.status(400).json({ error: 'Missing required parameters: hotelId, reservationId, and a non-empty array of detailIds are required.' });
+  }
+
+  try {
+    const result = await cancelReservationRoomsModel(req.requestId, hotelId, reservationId, detailIds, user_id, billable);
+    if (!result.success) {
+      return res.status(404).json({ message: result.message });
+    }
+    res.status(200).json({
+      message: "Rooms cancelled successfully",
+      data: result
+    });
+  } catch (err) {
+    console.error("Error cancelling rooms:", err);
+    res.status(500).json({ error: "Failed to cancel rooms" });
+  }
+};
+
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
   getParkingSpotAvailability,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation,
+  cancelReservationRooms,
 };

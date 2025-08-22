@@ -121,6 +121,7 @@
                         value="3">追加・削除</Tab>
                     <Tab v-if="reservationStatus === '保留中' || reservationStatus === '仮予約' || reservationStatus === '確定'"
                         value="4">期間</Tab>
+                    <Tab value="5">キャンセル</Tab>
                 </TabList>
 
                 <TabPanels>
@@ -414,6 +415,18 @@
                             </div>
                         </div>
                     </TabPanel>
+                    <!-- Tab 6: Cancel -->
+                    <TabPanel value="5">
+                        <div class="mb-3">
+                            <p>この部屋の予約をキャンセルします。キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span class="font-bold">基本料金</span>のみが請求されます。</p>
+                        </div>
+                        <div v-if="!isRoomCancelled" class="flex justify-center items-center">
+                            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="cancelRoomReservation" />
+                        </div>
+                        <div v-else class="flex justify-center items-center">
+                            <Button label="復活" icon="pi pi-history" class="p-button-warn" @click="recoverRoomReservation" />
+                        </div>
+                    </TabPanel>
                 </TabPanels>
             </Tabs>
 
@@ -454,6 +467,8 @@
         :allPlans="plans"
         :isGroup="isGroupPDF"
     />
+
+    <ConfirmDialog group="cancel-room"></ConfirmDialog>
 </template>
 <script setup>
 // Vue
@@ -472,11 +487,13 @@ const props = defineProps({
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge } from 'primevue';
+import { useConfirm } from "primevue/useconfirm";
+const confirm = useConfirm();
+import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge, ConfirmDialog } from 'primevue';
 
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange } = useReservationStore();
+const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange, cancelReservationRooms, setReservationDetailStatus } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
@@ -1243,6 +1260,51 @@ const applyDateChanges = async () => {
             life: 5000
         });
     }
+};
+
+const isRoomCancelled = computed(() => {
+    if (!selectedGroup.value) return false;
+    // If all details in the group are cancelled
+    return selectedGroup.value.details.every(detail => detail.cancelled);
+});
+
+const cancelRoomReservation = () => {
+    confirm.require({
+        group: 'cancel-room', // new group
+        message: 'この部屋のすべての予約をキャンセルします。キャンセル料の有無を選択してください。', // modified message
+        header: 'キャンセル確認',
+        icon: 'pi pi-exclamation-triangle',
+        accept: async () => { // with cancellation fee
+            await cancelAndRecover(true);
+        },
+        reject: async () => { // without cancellation fee
+            await cancelAndRecover(false);
+        },
+        acceptLabel: 'キャンセル料発生',
+        acceptClass: 'p-button-danger',
+        acceptIcon: 'pi pi-dollar',
+        rejectLabel: 'キャンセル料無し',
+        rejectClass: 'p-button-success',
+        rejectIcon: 'pi pi-check',
+    });
+};
+
+const recoverRoomReservation = async () => {
+    for (const detail of selectedGroup.value.details) {
+        await setReservationDetailStatus(detail.id, detail.hotel_id, 'recovered');
+    }
+    toast.add({ severity: 'success', summary: '成功', detail: '部屋の予約が復活されました。', life: 3000 });
+    closeRoomEditDialog();
+};
+
+const cancelAndRecover = async (billable) => {
+    const detailIds = selectedGroup.value.details.map(d => d.id);
+    const hotelId = reservationInfo.value.hotel_id;
+    const reservationId = reservationInfo.value.reservation_id;
+    
+    await cancelReservationRooms(hotelId, reservationId, detailIds, billable);
+    toast.add({ severity: 'warn', summary: 'キャンセル', detail: '部屋の予約がキャンセルされました。', life: 3000 });
+    closeRoomEditDialog();
 };
 
 const openRoomEditDialog = async (group) => {

@@ -5084,6 +5084,96 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
   await Promise.all(insertPromises);
 };
 
+const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    await client.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
+
+    // Mark the reservation details as cancelled
+    const cancelDetailsQuery = `
+      UPDATE reservation_details 
+      SET 
+        cancelled = gen_random_uuid(),
+        billable = $1,
+        updated_by = $2        
+      WHERE id = ANY($3::uuid[]) 
+        AND reservation_id = $4::uuid
+        AND hotel_id = $5
+        AND cancelled IS NULL
+      RETURNING id, number_of_people;
+    `;
+    
+    const cancelResult = await client.query(cancelDetailsQuery, [
+      billable, 
+      updated_by, 
+      detailIds, 
+      reservationId, 
+      hotelId
+    ]);
+
+    if (cancelResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return { success: false, message: 'No valid details to cancel' };
+    }
+    
+    // Get the number of people from the first cancelled detail
+    const peopleReduction = cancelResult.rows[0]?.number_of_people || 0;
+
+    // Update reservation's people count if needed
+    if (peopleReduction > 0) {
+      await client.query(
+        `UPDATE reservations 
+         SET number_of_people = GREATEST(0, number_of_people - $1)             
+         WHERE id = $2 AND hotel_id = $3`,
+        [peopleReduction, reservationId, hotelId]
+      );
+    }
+
+    // Check if all details are now cancelled
+    const { rows: [statusCheck] } = await client.query(
+      `SELECT 
+         COUNT(*) FILTER (WHERE cancelled IS NULL) as active_count,
+         COUNT(*) as total_count
+       FROM reservation_details 
+       WHERE reservation_id = $1`,
+      [reservationId]
+    );
+
+    //console.log('Cancellation status check:', { reservationId, activeCount: statusCheck.active_count, totalCount: statusCheck.total_count });
+
+    // If no active details remain, cancel the entire reservation
+    if (parseInt(statusCheck.active_count, 10) === 0) {
+      //console.log('No active details remaining, cancelling reservation:', reservationId);
+  
+      await client.query(
+        `UPDATE reservations 
+         SET status = 'cancelled'             
+         WHERE id = $1 AND hotel_id = $2`,
+        [reservationId, hotelId]
+      );
+    } else {
+      //console.log('Active details remain, reservation remains active:', { reservationId, activeCount: parseInt(statusCheck.active_count, 10) });
+    }
+
+    await client.query('COMMIT');
+    return { 
+      success: true, 
+      cancelledDetails: cancelResult.rows,
+      reservationCancelled: statusCheck.active_count === 0
+    };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`Error in cancelReservationRooms: ${error.message}`, error);
+    throw new Error(`Failed to cancel reservation rooms: ${error.message}`);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {  
   selectAvailableRooms,
   selectReservedRooms,
@@ -5140,4 +5230,5 @@ module.exports = {
   deleteBulkParkingReservations,
   calculatePriceFromRates,
   insertAggregatedRates,
+  cancelReservationRooms,
 };
