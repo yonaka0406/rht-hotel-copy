@@ -462,6 +462,8 @@
     // Parse clients from clients_json if it exists
     let clients = [];
     try {
+      if (room?.clients_json) {
+        clients = typeof room.clients_json === 'string' 
           ? JSON.parse(room.clients_json)
           : room.clients_json;
       }

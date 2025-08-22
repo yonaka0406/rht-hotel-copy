@@ -2,6 +2,47 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 22, 2025
+
+#### Bug #41: Inconsistent Client Name Display for OTA/Web Reservations
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Client names for OTA and web reservations were not consistently displayed across all UI components
+  - The Google Drive integration showed guest names from reservation_clients when available, but other components didn't follow this pattern
+  - This caused inconsistency in the following pages:
+    - Room Indicator
+    - Reservation List
+    - Other pages showing reservation information
+- **Root Cause**:
+  - Different components were using different logic to display client names
+  - The `clients_json` field containing guest information wasn't being properly parsed or utilized
+  - No consistent fallback mechanism was in place for missing data
+- **Solution**:
+  - Implemented a unified `getClientName` utility function that handles all client name display logic
+  - Added proper parsing of the `clients_json` field which contains guest information for OTA/Web reservations
+  - Established a clear priority for name display:
+    1. `name_kanji` from `clients_json` (for Japanese names)
+    2. `name_kana` from `clients_json` (for kana names)
+    3. `name` from `clients_json` (for English/romanized names)
+    4. Fallback to `client_name` from reservation
+    5. Default to 'ゲスト' if no name is available
+  - Added robust error handling for JSON parsing
+  - Implemented comprehensive logging for debugging
+- **Files Modified**:
+  - `frontend/src/pages/MainPage/RoomIndicator.vue`  
+- **Testing**:
+  - Verified display of OTA reservation names in kanji/kana
+  - Confirmed fallback to English/romanized names when Japanese names aren't available
+  - Tested with various data scenarios including missing or malformed data
+  - Ensured direct bookings continue to show the booker name as before
+- **Implementation Requirements**:
+  - Update all relevant UI components to use the same logic for displaying client names specifically for OTA and web reservations
+  - For OTA and web reservations, prioritize showing guest names from reservation_clients when available
+  - Maintain fallback to existing name fields if reservation_clients data is not available
+  - Ensure this change only affects OTA and web reservations, not direct bookings
+  - Test all affected pages to ensure consistent behavior
+
 ## August 20, 2025
 
 #### Bug #41: Pattern-Based Plan Application Issues
