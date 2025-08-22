@@ -7,7 +7,19 @@
           :legend-items="uniqueLegendItems"
         />
       </template>
-
+<!--
+      <ReservationsCalendarGrid
+        :rooms="selectedHotelRooms"
+        :date-range="dateRange"
+        :reservations="reservedRoomsMap"
+        :compact="headerState.isCompactView"
+        @scroll="onScroll"
+        @cell-click="handleCellClick"
+        @cell-dragstart="handleDragStart"
+        @cell-drop="handleDrop"
+        @cell-contextmenu="showContextMenu"
+      />
+-->
       <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
         ref="tableContainer" @scroll="onScroll">
         <table class="table-auto w-full mb-2" @dragover.prevent>
@@ -105,6 +117,7 @@
           </tbody>
         </table>
       </div>
+
       <template #footer>
         <span class="mr-4 dark:text-gray-100">編集モード：{{ dragModeLabel }}</span>
         <Button v-if="dragMode === 'reorganizeRooms' && hasChanges" @click="applyReorganization"
@@ -221,6 +234,7 @@ import ReservationAddRoom from './components/ReservationAddRoom.vue';
 import ClientForReservationDialog from './components/Dialogs/ClientForReservationDialog.vue';
 import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';
 import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
+//import ReservationsCalendarGrid from './components/ReservationsCalendarGrid.vue';
 
 //Websocket
 import io from 'socket.io-client';
