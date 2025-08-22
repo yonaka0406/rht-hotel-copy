@@ -99,7 +99,9 @@
                     <!-- Client info section -->
                     <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
                       <Avatar icon="pi pi-user" size="small" class="mr-2"/>
-                      <span class="mb-4">{{ room.client_name }}</span> 
+                      <span class="mb-4">
+                        {{ getClientName(room) }}                        
+                      </span> 
                     </div>
                     <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
@@ -454,6 +456,36 @@
     drawerVisible.value = false;
   };
 
+  const getClientName = (room) => {
+    //console.log('getClientName - Full room data:', JSON.parse(JSON.stringify(room)));
+  
+    // Parse clients from clients_json if it exists
+    let clients = [];
+    try {
+          ? JSON.parse(room.clients_json)
+          : room.clients_json;
+      }
+    } catch (e) {
+      console.error('Error parsing clients_json:', e);
+    }
+  
+    //console.log('Parsed clients:', clients);
+          
+    const hasClients = Array.isArray(clients) && clients.length > 0;
+  
+    if (hasClients) {
+      const client = clients[0];
+      const name = client.name_kanji || client.name_kana || client.name || room.client_name;
+      //console.log('Using client name from clients_json:', name);
+      return name;
+    }
+  
+    // Fallback to client_name or default
+    const fallbackName = room?.client_name || 'ゲスト';
+    //console.log('Using fallback name:', fallbackName);
+    return fallbackName;
+  };
+
   // Mount
   onMounted(async () => {
     
@@ -523,6 +555,8 @@
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
     }
   }, { deep: true });
+
+  
 </script>
 
 <style scoped> 
