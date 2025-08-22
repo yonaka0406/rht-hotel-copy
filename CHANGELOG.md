@@ -8,10 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Reservation: Added a confirmation dialog with a billable option when cancelling a single day of a reservation.
-- UI: Shows preferably client staying in Room Indicator instead of booker name.
-- Reservation: Added bulk room cancellation feature with billable option in the bulk edit menu.
-
 ---
 ## Future Releases
 
@@ -375,8 +371,18 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.6] - 2025-08-22
+
+- Feature: Added client name standardization function that automatically abbreviates Japanese company types (e.g., '株式会社' to '㈱') in calendar view and Google exports, ensuring consistent formatting across the system.
+- Feature: Added confirmation dialog with billable option when cancelling individual reservation days, improving billing accuracy.
+- UI: Enhanced Room Indicator to prioritize displaying the name of the client staying in the room rather than the booker's name, improving clarity for front desk operations.
+- Feature: Implemented bulk room cancellation with billable option in the bulk edit menu, streamlining group reservation management. (Feature #26)
+
+---
+
 ## Version History
 
+- **1.1.6** (2025-08-22) - Added client name standardization with Japanese company abbreviations, enhanced reservation management with billable cancellation options, and improved room indicators for better front desk operations. Streamlined group reservation handling with bulk cancellation features.
 - **1.1.5** (2025-08-20) - Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. Enhanced data privacy and protection for guest information.
 - **1.1.4** (2025-08-20) - Added meal count reporting and fixed critical financial calculation issues. Improved reservation management with better handling of non-billable stays and room date changes. Enhanced UI for better visibility of employee and complimentary stays.
 - **1.1.3** (2025-08-15) - Improved billing and receipt generation with better client name handling and stay period display. Enhanced room indicator and dashboard charts with accurate data representation. Fixed addon persistence and parking assignment issues.
