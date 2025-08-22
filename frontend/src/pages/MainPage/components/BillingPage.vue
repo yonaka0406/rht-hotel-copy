@@ -392,15 +392,7 @@
         await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
         isGenerating.value = false;
         displayInvoiceDialog.value = false;        
-    };    
-    
-    
-    onMounted (async () => {        
-        await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
-        
-        console.log('billedList', billedList.value);
-        console.log("Summarized Billed List:", summarizedBilledList.value);
-    });
+    };              
 
     watch([selectedHotelId, selectedMonth], async ([newHotelId, newMonth]) => {
             if (newHotelId && newMonth) {
