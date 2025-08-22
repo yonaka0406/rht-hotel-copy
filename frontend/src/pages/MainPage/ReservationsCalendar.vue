@@ -2,26 +2,10 @@
   <div class="p-2 bg-white dark:bg-gray-900 dark:text-gray-100 min-h-screen">
     <Panel header="" class="bg-white dark:bg-gray-900 dark:text-gray-100 rounded-xl shadow-lg dark:shadow-xl">
       <template #header>
-        <div class="grid grid-cols-6 items-center">
-          <p class="text-lg font-bold dark:text-gray-100">予約カレンダー</p>
-          <div class="flex justify-start grid grid-cols-2 col-span-2 mr-4">
-            <p class="mr-2 dark:text-gray-100">日付へ飛ぶ：</p>
-            <InputText v-model="centerDate" type="date" fluid required
-              class="dark:bg-gray-800 dark:text-gray-100 rounded" />
-          </div>
-          <div class="flex grid grid-cols-5 col-span-2">
-            <div v-for="(legendItem, index) in uniqueLegendItems" :key="index"
-              class="flex items-center text-sm rounded mr-1 font-bold justify-center"
-              style="overflow: hidden; text-overflow: ellipsis" :style="{ backgroundColor: `${legendItem.plan_color}` }"
-              v-tooltip="legendItem.plan_name">
-              <span>{{ legendItem.plan_name }}</span>
-            </div>
-          </div>
-          <div class="flex justify-end">
-            <SelectButton optionLabel="label" optionValue="value" :options="tableModeOptions" v-model="isCompactView"
-              class="dark:bg-gray-800 dark:text-gray-100" />
-          </div>
-        </div>
+        <ReservationsCalendarHeader 
+          v-model="headerState"
+          :legend-items="uniqueLegendItems"
+        />
       </template>
 
       <div class="table-container bg-white dark:bg-gray-900" :class="{ 'compact-view': isCompactView }"
@@ -231,9 +215,12 @@ import { ref, computed, watch, onMounted, nextTick, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 
+// Components
 import ReservationEdit from './ReservationEdit.vue';
 import ReservationAddRoom from './components/ReservationAddRoom.vue';
 import ClientForReservationDialog from './components/Dialogs/ClientForReservationDialog.vue';
+import ReservationsCalendarHeader from './components/ReservationsCalendarHeader.vue';
+import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
 
 //Websocket
 import io from 'socket.io-client';
@@ -246,9 +233,6 @@ import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
 const confirmRoomMode = useConfirm();
 import { Panel, Drawer, Card, Skeleton, SelectButton, InputText, ConfirmDialog, SpeedDial, ContextMenu, Button, Badge, OverlayBadge } from 'primevue';
-
-// Components
-import ReservationsCalendarLegend from './components/ReservationsCalendarLegend.vue';
 
 // Stores  
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -283,14 +267,17 @@ const goToReservation = () => {
   router.push({ name: 'ReservationEdit', params: { reservation_id: reservationId.value } });
 }
 
+// State
+const headerState = ref({
+  date: new Date().toISOString().split('T')[0],
+  isCompactView: false
+});
 const isUpdating = ref(false);
 const isLoading = ref(true);
-const tableModeOptions = ref([
-  { label: '縮小', value: true },
-  { label: '拡大', value: false },
-]);
 const isCompactView = ref(true);
 const centerDate = ref(formatDate(new Date()));
+
+// Computed
 const uniqueLegendItems = computed(() => {
   const uniqueItems = new Set();
   const legendItems = [];
@@ -1476,7 +1463,7 @@ onUnmounted(() => {
   }
 });
 
-// Needed Watchers
+// Watchers
 watch(reservationId, async (newReservationId, oldReservationId) => {
   if (newReservationId) {
 
@@ -1556,7 +1543,15 @@ watch(dragMode, async (newVal, oldVal) => {
   tempRoomData.value = [];
   await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
   // console.log(newVal);
-})
+});
+watch(() => headerState.value.date, (newDate) => {
+  // Handle date change
+  centerDate.value = newDate;
+});
+watch(() => headerState.value.isCompactView, (newViewMode) => {
+  // Handle view mode change
+  isCompactView.value = newViewMode;
+});
 
 </script>
 
