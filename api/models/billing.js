@@ -77,7 +77,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
                           AND reservation_details.cancelled IS NULL 
                     THEN COALESCE(ra.addon_sum,0) 
                     ELSE 0 
-                END
+              END
               ELSE 0 END
             ) AS addon_period_price
           FROM
@@ -159,6 +159,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
 
           WHERE
             reservation_details.hotel_id = $1
+            AND reservation_details.billable = true  
           GROUP BY
             reservation_details.hotel_id,
             reservation_details.reservation_id,
@@ -556,5 +557,3 @@ module.exports = {
   selectPaymentsForReceiptsView,
   linkPaymentToReceipt,
 };
-
-
