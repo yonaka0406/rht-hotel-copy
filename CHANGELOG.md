@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reservation: Added a confirmation dialog with a billable option when cancelling a single day of a reservation.
 - UI: Shows preferably client staying in Room Indicator instead of booker name.
+- Reservation: Added bulk room cancellation feature with billable option in the bulk edit menu.
 
 ---
 ## Future Releases

@@ -4,6 +4,36 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 22, 2025
 
+#### Feature Request #26: Bulk Room Cancellation in 一括編集
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - Currently, users can cancel individual days in a reservation
+  - Add functionality to cancel an entire room using the 一括編集 (Bulk Edit) button
+- **Implementation**:
+  - **Backend**:
+    - Created new API endpoint `PUT /api/reservation/rooms/cancel`
+    - Added transaction support for data consistency
+    - Implemented automatic reservation status update when all rooms are cancelled
+    - Added proper error handling and validation
+  - **Frontend**:
+    - Added "Cancel Room" option in the bulk edit menu
+    - Implemented confirmation dialog with billable option
+    - Added recovery option for cancelled rooms
+    - Integrated with existing state management
+- **Key Features**:
+  - Cancel all days for a specific room in one action
+  - Option to apply cancellation fee
+  - Visual feedback for cancelled rooms
+  - Recovery option for accidental cancellations
+- **Implementation Requirements**:
+  - Add a "Cancel Entire Room" option in the bulk edit menu
+  - Show confirmation dialog before cancellation
+  - Update the reservation status and UI to reflect the cancellation
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - This will provide a more efficient workflow for staff when needing to cancel an entire room's reservation
+  - Should maintain consistency with the existing cancellation workflow for individual days
+
 #### Bug #41: Inconsistent Client Name Display for OTA/Web Reservations
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical

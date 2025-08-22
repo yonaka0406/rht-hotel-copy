@@ -59,22 +59,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding quick view options for common date ranges (today, this week, etc.)
   - Ensure the page is mobile-responsive for on-the-go access
 
-### August 6, 2025
-
-#### Feature Request #26: Bulk Room Cancellation in 一括編集
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
-  - Currently, users can cancel individual days in a reservation
-  - Add functionality to cancel an entire room using the 一括編集 (Bulk Edit) button
-- **Implementation Requirements**:
-  - Add a "Cancel Entire Room" option in the bulk edit menu
-  - Show confirmation dialog before cancellation
-  - Update the reservation status and UI to reflect the cancellation
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Additional Notes**:
-  - This will provide a more efficient workflow for staff when needing to cancel an entire room's reservation
-  - Should maintain consistency with the existing cancellation workflow for individual days
-
 ### July 31, 2025
 
 #### Feature Request #19: Enhanced Log Viewing
