@@ -653,7 +653,7 @@ const getReservationsForGoogle = async (req, res) => {
     const dataToAppend = await selectReservationsForGoogle(req.requestId, hotelId, startDate, endDate);    
     
     if (!dataToAppend || dataToAppend.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(404).json({ error: 'No data found for Google' });
     }
 
     const formattedData = formatDataForSheet(dataToAppend);

@@ -233,7 +233,7 @@
                 </div>
                 <div class="mt-6 flex justify-end">
                     <Button 
-                        label="エクスポート" 
+                        label="ドライブ更新" 
                         icon="pi pi-upload" 
                         class="p-button-primary"
                         :disabled="!isExportFormValid"
