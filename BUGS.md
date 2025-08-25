@@ -73,6 +73,30 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - May affect reporting accuracy if indicators are being counted
   - Check if this occurs with more than 2 rooms as well
 
+#### Bug #47: Google Sheets API Service Unavailability
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The system encounters "Service Unavailable" (503) errors when trying to update Google Sheets with reservation data
+  - Error occurs in the `appendDataToSheet` function within `googleUtils.js`
+  - Affects the synchronization of reservation data with Google Sheets
+- **Error Details**:
+  ```
+  GaxiosError: The service is currently unavailable.
+  Status: 503
+  Endpoint: https://sheets.googleapis.com/v4/spreadsheets/1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY/values/H_10!A1:append
+  ```
+- **Impact**:
+  - Reservation data fails to sync with Google Sheets
+  - May cause data inconsistency between the system and Google Sheets
+- **Temporary Workaround**:
+  - None - this is a Google API service issue
+  - System should implement retry logic with exponential backoff
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Need to implement better error handling and retry logic
+  - Consider adding a queue system for failed sync attempts
+  - Should log these failures for monitoring and manual reconciliation
+
 ### August 22, 2025
 
 #### Feature Request #42: Enhanced Invoice Export and Reservation Details
@@ -475,5 +499,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: August 25, 2025*
-*Total Bugs: 2* (last one #46)
+*Total Bugs: 3* (last one #47)
 *Total Feature Requests: 19* (last one #44)
