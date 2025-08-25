@@ -5,6 +5,62 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 25, 2025
+
+#### Feature Request #44: Customize Room Assignment Order by Hotel
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Allow customization of the room assignment order for each hotel
+  - Enable specific room assignment sequences (e.g., assign room 227 before 201 for a specific hotel)
+  - Support different assignment orders for different hotels
+- **Key Features**:
+  - Hotel-specific room assignment order configuration
+  - Drag-and-drop interface for setting room priority
+  - Default assignment order for hotels without custom configuration
+  - Clear visual indication of the current assignment order
+- **Implementation Requirements**:
+  - Create a new configuration section in the admin panel for room assignment order
+  - Store hotel-specific room priorities in the database
+  - Update the auto-assignment logic to respect the configured order
+  - Add validation to prevent duplicate or invalid room assignments
+  - Include an option to reset to default order
+- **UI/UX Considerations**:
+  - Intuitive drag-and-drop interface for reordering rooms
+  - Visual preview of the current assignment order
+  - Ability to test the assignment order
+  - Clear documentation of the assignment logic
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Initial request is for Kushiro hotel 2F (rooms 227 before 201)
+  - Should be extensible for other hotels and floors
+  - Consider adding bulk import/export for room order configurations
+  - Ensure the system handles cases where configured rooms are unavailable
+
+#### Feature Request #43: Display Cancelled Days in Room View Accordion
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Users want to see at a glance how many days are cancelled for a room without having to expand the accordion
+  - This will improve efficiency when managing reservations with partial cancellations
+- **Key Features**:
+  - Show the count of cancelled days next to the room number/title in the accordion header
+  - Add a visual indicator (e.g., red badge) when all days are cancelled
+  - Keep the existing detailed cancellation information in the expanded view
+- **Implementation Requirements**:
+  - Add cancelled day count to the room summary in the accordion header
+  - Update the UI to clearly indicate fully cancelled rooms
+  - Ensure the information updates in real-time when cancellations are made
+  - Make sure the display is consistent across different views (desktop/mobile)
+- **UI/UX Considerations**:
+  - Use subtle but clear visual indicators that don't overwhelm the interface
+  - Ensure the information is accessible (proper color contrast, screen reader support)
+  - Consider adding a tooltip with more details on hover/focus
+  - Keep the existing cancellation details in the expanded view
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Should be consistent with the existing design system
+  - Consider adding this information to any relevant exports or reports
+  - May need to update any related API responses to include the cancelled day count
+
 ### August 22, 2025
 
 #### Feature Request #42: Enhanced Invoice Export and Reservation Details
@@ -408,4 +464,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 22, 2025*
 *Total Bugs: 1* (last one #41)
-*Total Feature Requests: 17* (last one #42)
+*Total Feature Requests: 19* (last one #44)
