@@ -3606,7 +3606,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-                    console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+                    //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
                 console.log('No reservationGuestId available to add to reservation_clients');
             }
@@ -4390,7 +4390,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-                    console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+                    //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
                 console.log('No reservationGuestId available to add to reservation_clients');
             }
