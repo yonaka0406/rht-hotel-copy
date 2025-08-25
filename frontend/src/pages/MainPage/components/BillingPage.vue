@@ -221,15 +221,27 @@ const calculateNights = (checkIn, checkOut) => {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
     const selectedDate = new Date(selectedMonth.value);
+    
+    // Reset time to midnight for consistent day-based calculations
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
+    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+    const nextMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
+    
+    // Reset time to midnight for month boundaries
+    monthStart.setHours(0, 0, 0, 0);
+    monthEnd.setHours(0, 0, 0, 0);
+    nextMonthStart.setHours(0, 0, 0, 0);
 
     // Adjust dates to be within the selected month
     const startDate = start < monthStart ? monthStart : start;
-    const endDate = end > monthEnd ? monthEnd : end;
+    // Use first day of next month if checkout extends beyond current month
+    const endDate = end > monthEnd ? nextMonthStart : end;
 
-    // Calculate nights
-    const nights = Math.max(0, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)));
+    // Calculate nights - difference between dates (not inclusive of check-out date)
+    const nights = Math.max(0, (endDate - startDate) / (1000 * 60 * 60 * 24));
 
     return nights;
 };
@@ -339,19 +351,52 @@ const openInvoiceDialog = (data) => {
         const roomNumber = block.room_number;
         const checkIn = block.check_in;
         const checkOut = block.check_out;
-        const dateKey = `${checkIn} - ${checkOut}`;
 
-        if (!dateGroups.has(dateKey)) {
-            dateGroups.set(dateKey, {
-                checkIn,
-                checkOut,
-                rooms: 0,
-                nights: Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24))
-            });
+        const start = new Date(checkIn);
+        // Subtract 1 day from check-out since it's treated as a stay date
+        const end = new Date(checkOut);
+        end.setDate(end.getDate() - 1);
+        
+        const selectedDate = new Date(selectedMonth.value);
+        const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+        const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+
+        console.log('Original dates:', { checkIn, checkOut });
+        console.log('Adjusted end date (check-out - 1):', end);
+        console.log('Month range:', { monthStart, monthEnd });
+
+        // Adjust dates to be within the selected month
+        const startDate = start < monthStart ? monthStart : start;
+        const endDate = end > monthEnd ? monthEnd : end;
+        
+        console.log('Adjusted dates for month:', { startDate, endDate });
+        
+        // Calculate nights for this period (inclusive of both dates)
+        const nights = Math.max(0, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
+        console.log('Calculated nights:', nights);
+
+        // Use adjusted dates for grouping
+        const adjustedCheckIn = formatDate(startDate);
+        const adjustedCheckOut = formatDate(endDate);
+        const dateKey = `${adjustedCheckIn} - ${adjustedCheckOut}`;
+
+        if (nights > 0) {  // Only add if there are nights in this month
+            if (!dateGroups.has(dateKey)) {
+                dateGroups.set(dateKey, {
+                    checkIn: adjustedCheckIn,
+                    checkOut: adjustedCheckOut,
+                    rooms: 0,
+                    nights: nights
+                });
+            } else {
+                // If this date range already exists, add the nights for this block
+                dateGroups.get(dateKey).nights += nights;
+            }
+
+            const group = dateGroups.get(dateKey);
+            group.rooms += 1;
+            console.log('Updated group:', { dateKey, group });
         }
-
-        const group = dateGroups.get(dateKey);
-        group.rooms += 1;
     });
 
     // Format the date groups into the required string
@@ -360,7 +405,7 @@ const openInvoiceDialog = (data) => {
         .map(group => {
             const formattedCheckIn = group.checkIn.replace(/-/g, '/');
             const formattedCheckOut = group.checkOut.replace(/-/g, '/');
-            return `・期間：${formattedCheckIn} ～ ${formattedCheckOut} 、${group.rooms}名、宿泊日数：${group.nights * group.rooms}泊`;
+            return `・滞在期間：${formattedCheckIn} ～ ${formattedCheckOut} 、${group.rooms}名、宿泊日数：${group.nights}泊`;
         })
         .join('\n');
 
