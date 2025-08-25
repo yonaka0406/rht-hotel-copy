@@ -9,12 +9,12 @@
                     顧客を合流すると、予約データにも影響があります。
                 </template>
                 <template #content>
-                    <!-- FIX: Added a loading indicator similar to ClientList.vue -->
+                    <!-- Loading indicator -->
                     <div v-if="clientsIsLoading">
                         <!-- You can use a more complex skeleton loader like in ClientList.vue if you prefer -->
                         <p>データを読み込み中...</p>
                     </div>
-                    <!-- FIX: The content below will only be shown after the data has finished loading -->
+                    <!-- Content displayed after data has finished loading -->
                     <div v-else>
                         <DataTable class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm" :value="duplicatePairs"
                             :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20]"
@@ -160,11 +160,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue"; // DEBUG: Added onMounted
 import { useRouter } from 'vue-router';
 import ClientMerge from './components/ClientMerge.vue';
 import { useClientStore } from '@/composables/useClientStore';
-// FIX: Corrected the PrimeVue component imports to be explicit, matching the pattern in ClientList.vue
+// PrimeVue component imports
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -174,6 +174,13 @@ import Drawer from 'primevue/drawer';
 
 const router = useRouter();
 const { clients, clientsIsLoading, mergeClientsCRM } = useClientStore();
+
+// DEBUG: Log component mount
+onMounted(() => {
+    console.log('[ClientDuplicates] Component mounted.');
+    console.log(`[ClientDuplicates] Initial loading state: ${clientsIsLoading.value}`);
+    console.log(`[ClientDuplicates] Initial clients count: ${clients.value ? clients.value.length : 0}`);
+});
 
 const findPotentialDuplicates = (client, clientsArray) => {
     if (!client || !Array.isArray(clientsArray)) return [];
@@ -249,12 +256,18 @@ const findPotentialDuplicates = (client, clientsArray) => {
 };
 
 const clientsWithPotentialDuplicates = computed(() => {
+    console.log('[ClientDuplicates] Computing clientsWithPotentialDuplicates...');
     if (!clients.value || !Array.isArray(clients.value)) {
+        console.log('[ClientDuplicates] clients data not ready. Returning empty array.');
         return [];
     }
-    return clients.value.filter((client) => {
+    console.time('[ClientDuplicates] clientsWithPotentialDuplicates calculation time');
+    const result = clients.value.filter((client) => {
         return findPotentialDuplicates(client, clients.value).length > 0;
     });
+    console.timeEnd('[ClientDuplicates] clientsWithPotentialDuplicates calculation time');
+    console.log(`[ClientDuplicates] Found ${result.length} clients with potential duplicates.`);
+    return result;
 });
 
 const getEarliestEntries = (clientsArray) => {
@@ -278,7 +291,14 @@ const getEarliestEntries = (clientsArray) => {
     return earliestEntries;
 };
 
-const earliestEntries = computed(() => getEarliestEntries(clientsWithPotentialDuplicates.value));
+const earliestEntries = computed(() => {
+    console.log('[ClientDuplicates] Computing earliestEntries...');
+    console.time('[ClientDuplicates] earliestEntries calculation time');
+    const result = getEarliestEntries(clientsWithPotentialDuplicates.value);
+    console.timeEnd('[ClientDuplicates] earliestEntries calculation time');
+    console.log(`[ClientDuplicates] Found ${result.length} earliest entries.`);
+    return result;
+});
 
 const getDuplicatePairs = () => {
     const pairs = [];
@@ -295,11 +315,18 @@ const getDuplicatePairs = () => {
 
     return pairs;
 };
-const duplicatePairs = computed(getDuplicatePairs);
+const duplicatePairs = computed(() => {
+    console.log('[ClientDuplicates] Computing duplicatePairs...');
+    console.time('[ClientDuplicates] duplicatePairs calculation time');
+    const result = getDuplicatePairs();
+    console.timeEnd('[ClientDuplicates] duplicatePairs calculation time');
+    console.log(`[ClientDuplicates] Created ${result.length} duplicate pairs for display.`);
+    return result;
+});
 
 const formatDate = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("Invalid Date object provided to formatDate:", date);
+        console.error("[ClientDuplicates] Invalid Date object provided to formatDate:", date);
         return 'Invalid Date';
     }
     const year = date.getFullYear();
@@ -331,7 +358,7 @@ const mergeClients = async (oldId) => {
     );
 
     if (!pair) {
-        console.warn('No matching earliest client found for:', oldId);
+        console.warn('[ClientDuplicates] No matching earliest client found for merge:', oldId);
         return;
     }
 
@@ -341,9 +368,13 @@ const mergeClients = async (oldId) => {
     drawerProps.value = { oldClientId: oldId, newClientId };
 };
 
-watch(clientsIsLoading, (isLoading) => {
+watch(clientsIsLoading, (isLoading, wasLoading) => {
+    console.log(`[ClientDuplicates] Loading state changed from ${wasLoading} to ${isLoading}`);
     if (isLoading) {
         showDrawer.value = false;
+    } else {
+        // This will trigger the computed properties to re-evaluate with the new client data
+        console.log(`[ClientDuplicates] Loading finished. Clients count: ${clients.value ? clients.value.length : 0}`);
     }
 });
 
