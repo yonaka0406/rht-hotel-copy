@@ -285,6 +285,48 @@ export function useBillingStore() {
         }
     };
 
+    const generateInvoiceExcel = async (hotelId, invoiceNumber, invoiceData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const url = `/api/billing/res/generate/${hotelId}/excel-invoice`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(invoiceData),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            let invoice_number = invoiceNumber;
+            if (!invoiceNumber) {
+                const date = new Date(invoiceData.date);
+                const year = date.getFullYear() % 100;
+                const month = date.getMonth() + 1;
+
+                invoice_number = hotelId * 10000000 + year * 100000 + month * 1000 + 1;
+            }
+
+            const excelBlob = await response.blob();
+
+            // Create a download link
+            const excelUrl = window.URL.createObjectURL(excelBlob);
+            const link = document.createElement('a');
+            link.href = excelUrl;
+            link.setAttribute('download', `請求書-${invoice_number}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+        } catch (error) {
+            console.error("Error generating/downloading Excel:", error);
+        }
+    };
+
     return {
         billableList,
         billedList,
@@ -293,6 +335,7 @@ export function useBillingStore() {
         fetchBillableListView,
         fetchBilledListView,
         generateInvoicePdf,
+        generateInvoiceExcel,
         fetchPaymentsForReceipts,
         handleGenerateReceipt,
         handleGenerateConsolidatedReceipt,

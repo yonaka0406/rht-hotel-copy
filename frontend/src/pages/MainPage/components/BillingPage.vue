@@ -148,7 +148,10 @@
                 </FloatLabel>
                 <small class="ml-1">元データ：{{ invoiceDBData.comment }}</small>
             </div>
-            <Button v-if="!isGenerating" label="PDF作成" @click="generatePdf" />
+            <div class="col-span-12 flex justify-end gap-2">
+                <Button v-if="!isGenerating" label="Excel作成" @click="generateExcel" severity="success" />
+                <Button v-if="!isGenerating" label="PDF作成" @click="generatePdf" />
+            </div>
         </div>
     </Dialog>
 </template>
@@ -159,7 +162,7 @@ import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Dat
 
 // Stores
 import { useBillingStore } from '@/composables/useBillingStore';
-const { billedList, fetchBilledListView, generateInvoicePdf } = useBillingStore();
+const { billedList, fetchBilledListView, generateInvoicePdf, generateInvoiceExcel } = useBillingStore();
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotelId } = useHotelStore();
 
@@ -470,6 +473,17 @@ const generatePdf = async () => {
     //  Trigger server-side PDF generation        
     console.log('Generate PDF clicked', invoiceData.value);
     await generateInvoicePdf(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
+
+    await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
+    isGenerating.value = false;
+    displayInvoiceDialog.value = false;
+};
+
+const generateExcel = async () => {
+    isGenerating.value = true;
+    //  Trigger server-side Excel generation
+    console.log('Generate Excel clicked', invoiceData.value);
+    await generateInvoiceExcel(invoiceData.value.hotel_id, invoiceData.value.invoice_number, invoiceData.value);
 
     await fetchBilledListView(selectedHotelId.value, formatDate(new Date(selectedMonth.value)));
     isGenerating.value = false;
