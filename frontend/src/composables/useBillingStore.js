@@ -288,7 +288,7 @@ export function useBillingStore() {
     const generateInvoiceExcel = async (hotelId, invoiceNumber, invoiceData) => {
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/billing/res/generate/${hotelId}/excel-invoice`;
+            const url = `/api/billing/res/generate/excel-invoice/${hotelId}/${invoiceNumber || 0}`;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {

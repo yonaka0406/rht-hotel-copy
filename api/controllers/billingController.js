@@ -695,6 +695,7 @@ const getPaymentsForReceipts = async (req, res) => {
 
 const generateInvoiceExcel = async (req, res) => {
   const hotelId = req.params.hid;
+  const invoiceId = req.params.invoice;
   const invoiceData = req.body;
   const userId = req.user.id;
 
