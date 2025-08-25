@@ -2,10 +2,14 @@
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
-                <div class="grid grid-cols-6 gap-4 w-full">
+                <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
                         部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity})
-                        ${group.details[0]?.smoking ? ' 🚬' : ''}` }}
+                        ${group.details[0]?.smoking ? ' 🚬' : ''}` }}                        
+                    </div>
+                    <div class="flex items-center justify-center">
+                        <Badge v-if="getCancelledDaysCount(group) > 0 && !isFullyCancelled(group)" :value="`${getCancelledDaysCount(group)}日`" severity="danger" v-tooltip.top="'キャンセルされた日数'" />
+                        <Badge v-if="isFullyCancelled(group)" value="全" severity="danger" v-tooltip.top="'全ての宿泊日がキャンセルされました'" />
                     </div>
                     <div class="flex items-center justify-center">
                         {{ group.details[0]?.number_of_people }}
@@ -731,6 +735,16 @@ const allRoomsHavePlan = computed(() => {
 const allGroupsPeopleCountMatch = computed(() => {
     return groupedRooms.value.every(group => allPeopleCountMatch(group));
 });
+
+const getCancelledDaysCount = (group) => {
+    if (!group || !group.details) return 0;
+    return group.details.filter(detail => detail.cancelled).length;
+};
+
+const isFullyCancelled = (group) => {
+    if (!group || !group.details) return false;
+    return group.details.every(detail => detail.cancelled);
+};
 
 // Dialog: Room Edit
 const visibleRoomEditDialog = ref(false);
