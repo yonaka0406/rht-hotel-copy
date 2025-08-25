@@ -2,6 +2,35 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 25, 2025
+
+#### Feature Request #43: Display Cancelled Days in Room View Accordion
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Users can now see at a glance how many days are cancelled for a room without having to expand the accordion
+  - Improves efficiency when managing reservations with partial cancellations
+- **Implementation**:
+  - Added a red badge showing the count of cancelled days (e.g., "2日") when some days are cancelled
+  - Added a red "全" badge when all days in a room are cancelled
+  - Included tooltips in Japanese for better user guidance
+  - Maintained existing detailed cancellation information in the expanded view
+- **Technical Details**:
+  - Added `getCancelledDaysCount` function to count cancelled days for a room
+  - Added `isFullyCancelled` function to check if all days are cancelled
+  - Implemented responsive design that works across different screen sizes
+- **UI/UX Improvements**:
+  - Clear visual indicators using PrimeVue's Badge component with danger severity
+  - Tooltips provide additional context on hover
+  - Consistent with the existing design system
+  - Accessible with proper contrast and screen reader support
+- **Files Modified**:
+  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - The implementation maintains all existing functionality while adding the new features
+  - No changes to the API were required as the necessary data was already available
+  - The solution is performant as it only processes the cancellation data when needed
+
 ## August 22, 2025
 
 #### Feature Request #26: Bulk Room Cancellation in 一括編集
