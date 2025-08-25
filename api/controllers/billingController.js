@@ -16,6 +16,8 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require("exceljs");
 
+// --- Helper Functions ---
+
 const generateNewInvoiceNumber = async (requestId, hotelId, date) => {
   let result = await selectMaxInvoiceNumber(requestId, hotelId, date);
   let last_invoice_number = result.length > 0 ? result[0].last_invoice_number : null;
@@ -32,6 +34,8 @@ const generateNewInvoiceNumber = async (requestId, hotelId, date) => {
   }
   return new_invoice_number;
 };
+
+// --- Main Export Generation Functions ---
 
 const getBillableListView = async (req, res) => {
   const hotelId = req.params.hid;
@@ -74,6 +78,9 @@ const getBilledListView = async (req, res) => {
   }
 };
 
+/**
+ * Generates an invoice PDF using a new HTML template that matches the Excel layout.
+ */
 const generateInvoice = async (req, res) => {
   const hotelId = req.params.hid;
   const invoiceId = req.params.invoice;
@@ -149,6 +156,10 @@ const generateInvoice = async (req, res) => {
     }
   }
 };
+
+/**
+ * Populates the new HTML invoice template with dynamic data.
+ */
 function generateInvoiceHTML(html, data, userName) {
   const imagePath = path.join(__dirname, '../components/stamp.png');
   //const imageUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
@@ -693,149 +704,87 @@ const getPaymentsForReceipts = async (req, res) => {
   }
 };
 
+/**
+ * Generates an invoice Excel file by loading a template and filling in the data.
+ */
 const generateInvoiceExcel = async (req, res) => {
   const hotelId = req.params.hid;
-  const invoiceId = req.params.invoice;
   const invoiceData = req.body;
   const userId = req.user.id;
 
   try {
-    if (!invoiceData.invoice_number) {
-      invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
-    }
-
-    await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
-
-    const userInfo = await getUsersByID(req.requestId, userId);
-
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("請求書");
-
-    const timestamp = new Date().toLocaleString("ja-JP", {
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", second: "2-digit"
-    });
-
-    const configureWorksheet = (worksheet, title) => {
-      worksheet.pageSetup = {
-        fitToWidth: 1,
-        fitToHeight: 0,
-        paperSize: 9,
-        orientation: "landscape",
-        margins: {
-          left: 0.3, right: 0.3,
-          top: 0.5, bottom: 0.5,
-          header: 0.2, footer: 0.2
-        }
-      };
-
-      worksheet.views = [{ showGridLines: false }];
-
-      const titleCell = worksheet.getRow(1);
-      titleCell.values = [title];
-      titleCell.font = { bold: true, size: 14 };
-      titleCell.alignment = { horizontal: "center", vertical: "middle" };
-
-      const timeCell = worksheet.getRow(2);
-      timeCell.values = [`リスト作成日時：${timestamp}`];
-      timeCell.font = { color: { argb: "BABABA" }, bold: true, size: 9 };
-
-      return {
-        headerRow: 3,
-        dataStartRow: 4
-      };
-    };
-
-    configureWorksheet(worksheet, "請求書");
-
-    worksheet.mergeCells('A3:B3');
-    worksheet.getCell('A3').value = '請求番号:';
-    worksheet.getCell('C3').value = invoiceData.invoice_number;
-
-    worksheet.mergeCells('A4:B4');
-    worksheet.getCell('A4').value = '請求日:';
-    worksheet.getCell('C4').value = invoiceData.date;
-
-    worksheet.mergeCells('A5:B5');
-    worksheet.getCell('A5').value = '支払期限:';
-    worksheet.getCell('C5').value = invoiceData.due_date;
-
-    worksheet.mergeCells('A7:B7');
-    worksheet.getCell('A7').value = '取引先名:';
-    worksheet.getCell('C7').value = invoiceData.client_name;
-
-    worksheet.mergeCells('A8:B8');
-    worksheet.getCell('A8').value = '取引先番号:';
-    worksheet.getCell('C8').value = invoiceData.customer_code;
-
-    worksheet.mergeCells('F3:G3');
-    worksheet.getCell('F3').value = '担当者:';
-    worksheet.getCell('H3').value = userInfo[0].name;
-
-    const headerRow = worksheet.getRow(10);
-    headerRow.values = ['品目', '単価', '数量', '金額', '消費税率', '消費税', '合計'];
-    headerRow.font = { bold: true };
-    headerRow.alignment = { horizontal: "center", vertical: "middle" };
-    headerRow.eachCell((cell) => {
-      cell.border = {
-        bottom: { style: "thin", color: { argb: "000000" } },
-      };
-    });
-
-    let rowIndex = 11;
-    invoiceData.items.forEach((item, index) => {
-      const dataRow = worksheet.addRow({
-        '品目': '宿泊料',
-        '単価': item.total_net_price,
-        '数量': 1,
-        '金額': item.total_net_price,
-        '消費税率': `${item.tax_rate * 100}%`,
-        '消費税': item.total_price - item.total_net_price,
-        '合計': item.total_price
-      });
-      dataRow.alignment = { horizontal: "center", vertical: "middle" };
-      if (index % 2 === 0) {
-        dataRow.eachCell((cell) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: "F2F2F2" },
-          };
-        });
+      // Ensure invoice number exists
+      if (!invoiceData.invoice_number) {
+          invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
       }
-      rowIndex++;
-    });
 
-    const totalRow = worksheet.getRow(rowIndex);
-    worksheet.mergeCells(`A${rowIndex}:F${rowIndex}`);
-    totalRow.getCell('A').value = '合計';
-    totalRow.getCell('A').alignment = { horizontal: 'right', vertical: 'middle' };
-    totalRow.getCell('G').value = invoiceData.invoice_total_value;
-    totalRow.font = { bold: true };
+      // Update database records
+      await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
 
-    const commentRow = worksheet.getRow(rowIndex + 2);
-    worksheet.mergeCells(`A${rowIndex + 2}:H${rowIndex + 4}`);
-    commentRow.getCell('A').value = invoiceData.comment;
-    commentRow.getCell('A').alignment = { wrapText: true, vertical: 'top' };
+      const userInfo = await getUsersByID(req.requestId, userId);
 
-    worksheet.columns.forEach((column) => {
-      let maxLength = 0;
-      column.eachCell({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value ? cell.value.toString() : "";
-        maxLength = Math.max(maxLength, cellValue.length);
-      });
-      column.width = Math.min(Math.max(maxLength + 2, 10), 50);
-    });
+      // --- New Template-based Logic ---
+      
+      // 1. Load the template workbook
+      const templatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.readFile(templatePath);
 
-    res.setHeader("Content-Disposition", "attachment; filename=invoice.xlsx");
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      // 2. Get the worksheet
+      const worksheet = workbook.getWorksheet('請求書フォーマット'); // Use the correct sheet name from your template
 
-    await workbook.xlsx.write(res);
-    res.end();
+      // 3. Fill in the data into specific cells
+      worksheet.getCell('L1').value = invoiceData.invoice_number;
+      worksheet.getCell('L2').value = new Date(invoiceData.date); // Use Date object for correct formatting
+      worksheet.getCell('A4').value = invoiceData.client_name;
+      
+      // Subject line (optional, can be dynamic)
+      worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
+      worksheet.getCell('D10').value = new Date(invoiceData.due_date); // CORRECTED: Only the date, no label
+      
+      // Bank info (assuming it's static or coming from data)
+      worksheet.getCell('D11').value = invoiceData.bank_name || '銀行A'; // CORRECTED: Only the value, no label
+
+      worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
+      
+      // Main total amount (header)
+      worksheet.getCell('D16').value = invoiceData.invoice_total_value;
+
+      // Details section
+      worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
+      worksheet.getCell('J20').value = invoiceData.invoice_total_value;
+
+      // --- Tax & Totals Calculation ---
+      let totalTax = 0;
+      let totalNet = 0;
+      if (invoiceData.items && Array.isArray(invoiceData.items)) {
+          invoiceData.items.forEach(item => {
+              totalTax += (item.total_price - item.total_net_price);
+              totalNet += item.total_net_price;
+          });
+      }
+      
+      // Totals section at the bottom
+      worksheet.getCell('I24').value = invoiceData.invoice_total_value; // 合計金額
+      worksheet.getCell('I25').value = totalTax; // 内消費税
+      worksheet.getCell('I27').value = totalNet; // 10%対象
+      worksheet.getCell('I28').value = totalTax; // 消費税
+
+      // Remarks section
+      worksheet.getCell('C33').value = invoiceData.comment; // CORRECTED: Changed from C32 to C33
+      worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
+
+
+      // 4. Send the file to the client
+      res.setHeader("Content-Disposition", `attachment; filename="invoice-${invoiceData.invoice_number}.xlsx"`);
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+
+      await workbook.xlsx.write(res);
+      res.end();
 
   } catch (error) {
-    console.error("Error generating Excel:", error);
-    res.status(500).send('Error generating Excel');
+      console.error("Error generating Excel from template:", error);
+      res.status(500).send('Error generating Excel');
   }
 };
 

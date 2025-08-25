@@ -146,7 +146,7 @@
                     <Textarea v-model="invoiceData.comment" rows="3" cols="30" fluid />
                     <label>備考</label>
                 </FloatLabel>
-                <small class="ml-1">元データ：{{ invoiceDBData.comment }}</small>
+                <small class="ml-1">元データ：<span style="white-space: pre-line">{{ invoiceDBData.comment }}</span></small>
             </div>
             <div class="col-span-12 flex justify-end gap-2">
                 <Button v-if="!isGenerating" label="Excel作成" @click="generateExcel" severity="success" />
@@ -402,7 +402,7 @@ const openInvoiceDialog = (data) => {
         }
     });
 
-    // Format the date groups into the required string
+    // Format the date groups into the required string with line breaks
     const formattedDateGroups = Array.from(dateGroups.values())
         .sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn))
         .map(group => {
@@ -410,7 +410,7 @@ const openInvoiceDialog = (data) => {
             const formattedCheckOut = group.checkOut.replace(/-/g, '/');
             return `・滞在期間：${formattedCheckIn} ～ ${formattedCheckOut} 、${group.rooms}名、宿泊日数：${group.nights}泊`;
         })
-        .join('\n');
+        .join('\r\n');  // Use \r\n for Windows line endings
 
     // Second pass: Group by tax rates for the invoice items
     data.details.forEach(block => {
@@ -460,7 +460,7 @@ const openInvoiceDialog = (data) => {
         due_date: getAdjustedDueDate(data.date),
         client_name: data.client_kanji || data.client_name,
         invoice_total_stays: data.stays_count,
-        comment: formattedDateGroups,
+        comment: `【宿泊明細】\r\n${formattedDateGroups}`,
     };
 
     console.log('openInvoiceDialog invoiceData', invoiceData.value);
