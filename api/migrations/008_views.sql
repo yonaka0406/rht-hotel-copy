@@ -41,7 +41,7 @@ SELECT
         THEN COALESCE(rg.name_kanji, rg.name_kana, rg.name)
         ELSE COALESCE(c.name_kanji, c.name_kana, c.name)
     END AS client_name,
-    rd.plan_name,
+    rd.plan_name,COALESCE(ph.name, pg.name, rd.plan_name) AS plan_name,
     r.status,
     r.type,
     r.agent
@@ -52,6 +52,8 @@ JOIN clients c ON c.id = r.reservation_client_id
 JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
 JOIN rooms ON rooms.hotel_id = rd.hotel_id AND rooms.id = rd.room_id
 JOIN room_types rt ON rooms.room_type_id = rt.id AND rt.hotel_id = rooms.hotel_id
+LEFT JOIN plans_hotel ph ON ph.id = rd.plans_hotel_id AND ph.hotel_id = rd.hotel_id
+LEFT JOIN plans_global pg ON pg.id = COALESCE(rd.plans_global_id, ph.plans_global_id)
 LEFT JOIN (
     SELECT DISTINCT ON (reservation_details_id, hotel_id)
         hotel_id,

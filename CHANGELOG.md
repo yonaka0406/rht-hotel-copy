@@ -380,8 +380,17 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.7] - 2025-08-25
+
+- Feature: Updated Google Drive export view to use default plan names from the plans_global and plans_hotel tables instead of reservation_details, ensuring consistent plan naming across exports.
+- Feature: Added manual update command in the Admin panel for Google Drive spreadsheet exports, with date range validation (max 31 days) and loading state indicators.
+- UI: Made small improvements to the billing page for better usability and clarity.
+
+---
+
 ## Version History
 
+- **1.1.7** (2025-08-25) - Enhanced Google Drive exports with consistent plan naming and manual update capabilities. Improved billing page UI for better usability.
 - **1.1.6** (2025-08-22) - Added client name standardization with Japanese company abbreviations, enhanced reservation management with billable cancellation options, and improved room indicators for better front desk operations. Streamlined group reservation handling with bulk cancellation features.
 - **1.1.5** (2025-08-20) - Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. Enhanced data privacy and protection for guest information.
 - **1.1.4** (2025-08-20) - Added meal count reporting and fixed critical financial calculation issues. Improved reservation management with better handling of non-billable stays and room date changes. Enhanced UI for better visibility of employee and complimentary stays.
