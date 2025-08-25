@@ -737,13 +737,16 @@ const generateInvoiceExcel = async (req, res) => {
       worksheet.getCell('L1').value = invoiceData.invoice_number;
       worksheet.getCell('L2').value = new Date(invoiceData.date); // Use Date object for correct formatting
       worksheet.getCell('A4').value = invoiceData.client_name;
+      worksheet.getCell('D5').value = invoiceData.customer_code;
       
       // Subject line (optional, can be dynamic)
       worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
-      worksheet.getCell('D10').value = new Date(invoiceData.due_date); // CORRECTED: Only the date, no label
+      worksheet.getCell('D10').value = new Date(invoiceData.due_date);
       
-      // Bank info (assuming it's static or coming from data)
-      worksheet.getCell('D11').value = invoiceData.bank_name || '銀行A'; // CORRECTED: Only the value, no label
+      // Bank info - populating across multiple cells
+      worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
+      worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
+      worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
 
       worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
       
@@ -771,7 +774,7 @@ const generateInvoiceExcel = async (req, res) => {
       worksheet.getCell('I28').value = totalTax; // 消費税
 
       // Remarks section
-      worksheet.getCell('C33').value = invoiceData.comment; // CORRECTED: Changed from C32 to C33
+      worksheet.getCell('C33').value = invoiceData.comment;
       worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
 
 

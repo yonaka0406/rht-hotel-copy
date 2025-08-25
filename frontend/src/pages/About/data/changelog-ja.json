@@ -317,7 +317,7 @@
       "changes": [        
         { "type": "feature", "description": "Google Driveエクスポートビューを更新し、reservation_detailsの代わりにplans_globalおよびplans_hotelテーブルからデフォルトのプラン名を使用するようにしました。これにより、エクスポート全体で一貫したプラン名が使用されます。" },
         { "type": "feature", "description": "管理者パネルにGoogle Driveスプレッドシートエクスポート用の手動更新コマンドを追加しました（31日間の日付範囲検証付き）。" },
-        { "type": "ui", "description": "請求ページの使い勝手と明瞭さを向上させるための小さな改善を実施しました。" }
+        { "type": "feature", "description": "請求書のコメント書式を改行対応に改善し、Excel請求書生成をテンプレートレイアウトに合わせて最適化しました。" }
       ]
     }
   ],

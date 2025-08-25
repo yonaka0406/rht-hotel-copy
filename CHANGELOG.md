@@ -384,7 +384,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 - Feature: Updated Google Drive export view to use default plan names from the plans_global and plans_hotel tables instead of reservation_details, ensuring consistent plan naming across exports.
 - Feature: Added manual update command in the Admin panel for Google Drive spreadsheet exports, with date range validation (max 31 days) and loading state indicators.
-- UI: Made small improvements to the billing page for better usability and clarity.
+- Feature: Enhanced invoice comment formatting with proper line breaks and improved Excel invoice generation to better match the template layout.
 
 ---
 
