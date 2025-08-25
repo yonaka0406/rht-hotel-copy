@@ -4718,7 +4718,7 @@ const cancelOTAReservation = async (requestId, hotel_id, data, client = null) =>
             tax_rate = 0.1,
             price = $3,
             updated_by = 1
-          WHERE reservation_detail_id = $1 AND hotel_id = $2
+          WHERE reservation_details_id = $1 AND hotel_id = $2
           RETURNING *;
         `;
         values = [
