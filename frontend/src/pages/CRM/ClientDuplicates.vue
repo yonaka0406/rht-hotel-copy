@@ -1,156 +1,83 @@
 <template>
-    <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-        <div class="grid grid-cols-12 gap-4">
-            <Card class="flex col-span-12 bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
-                <template #title>
-                    顧客重複チェック
-                </template>
-                <template #subtitle>
-                    顧客を合流すると、予約データにも影響があります。
-                </template>
-                <template #content>
-                    <!-- Loading indicator -->
-                    <div v-if="clientsIsLoading">
-                        <!-- You can use a more complex skeleton loader like in ClientList.vue if you prefer -->
-                        <p>データを読み込み中...</p>
+    <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4">
+        <Card class="bg-white dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700">
+            <template #title>
+                顧客重複チェック
+            </template>
+            <template #subtitle>
+                顧客を合流すると、予約データにも影響があります。
+            </template>
+            <template #content>
+                <!-- Initial data loading indicator -->
+                <div v-if="clientsIsLoading" class="flex justify-center items-center p-8">
+                    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+                    <p class="ml-2">顧客データを読み込み中...</p>
+                </div>
+
+                <!-- Duplicate calculation indicator -->
+                <div v-else-if="isCalculating" class="flex justify-center items-center p-8">
+                    <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+                    <p class="ml-2">重複を計算中...</p>
+                </div>
+
+                <!-- Content displayed after all loading and calculations are finished -->
+                <div v-else>
+                    <DataTable 
+                        class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm" 
+                        :value="duplicatePairs"
+                        :paginator="true" 
+                        :rows="5" 
+                        :rowsPerPageOptions="[5, 10, 20]"
+                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+                        v-if="duplicatePairs.length > 0">
+                        
+                        <Column header="元顧客情報" style="width: 50%;">
+                            <template #body="{ data }">
+                                <ClientCard :client-id="data.earliest.id" />
+                                <div class="mt-2">
+                                    <Button 
+                                        @click="goToEditClientPage(data.earliest.id)" 
+                                        label="顧客編集" 
+                                        icon="pi pi-pencil" 
+                                        severity="info"
+                                        class="p-button-sm w-full" />
+                                </div>
+                            </template>
+                        </Column>
+                        
+                        <Column header="重複候補者" style="width: 50%;">
+                            <template #body="{ data }">
+                                <ul>
+                                    <li v-for="duplicate in data.duplicates" :key="duplicate.id" class="mb-4">
+                                        <ClientCard :client-id="duplicate.id" />
+                                        <div class="mt-2 grid grid-cols-2 gap-2">
+                                            <Button 
+                                                @click="goToEditClientPage(duplicate.id)" 
+                                                label="編集" 
+                                                icon="pi pi-pencil" 
+                                                severity="secondary"
+                                                class="p-button-sm" />
+                                            <Button 
+                                                @click="mergeClients(duplicate.id)" 
+                                                label="この顧客に合流" 
+                                                icon="pi pi-sync" 
+                                                severity="warning"
+                                                class="p-button-sm" />
+                                        </div>
+                                        <Divider v-if="data.duplicates.length > 1" class="my-4" />
+                                    </li>
+                                </ul>
+                            </template>
+                        </Column>
+                    </DataTable>
+                    
+                    <div v-else class="p-4 text-center">
+                        <p>重複候補見つかりませんでした。</p>
                     </div>
-                    <!-- Content displayed after data has finished loading -->
-                    <div v-else>
-                        <DataTable class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm" :value="duplicatePairs"
-                            :paginator="true" :rows="5" :rowsPerPageOptions="[5, 10, 20]"
-                            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-                            v-if="duplicatePairs.length > 0">
-                            <Column header="元顧客情報">
-                                <template #body="{ data }">
-                                    <div class="grid grid-cols-2 flex flex-col gap-1">
-                                        <div class="flex items-center col-span-2">
-                                            <Button @click="goToEditClientPage(data.earliest.id)" severity="info"
-                                                class="p-button-rounded p-button-sm">
-                                                <i class="pi pi-pencil mr-2"></i>顧客編集
-                                            </Button>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'氏名・名称'">
-                                            <i class="pi pi-user text-xs" />
-                                            <span class="text-xs">{{ data.earliest.name }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'カナ'">
-                                            <i class="pi pi-align-left text-xs" />
-                                            <span class="text-xs">{{ data.earliest.name_kana }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'漢字'">
-                                            <i class="pi pi-language text-xs" />
-                                            <span class="text-xs">{{ data.earliest.name_kanji }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'誕生日・設立日'">
-                                            <i class="pi pi-calendar text-xs" />
-                                            <span class="text-xs">{{ data.earliest.date_of_birth === null ? 'N/A' :
-                                                formatDate(new Date(data.earliest.date_of_birth)) }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'法人・個人'">
-                                            <i class="pi pi-users text-xs" />
-                                            <span class="text-xs">{{ data.earliest.legal_or_natural_person === 'natural'
-                                                ? '個人' : '法人' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'性別'">
-                                            <i class="pi pi-venus text-xs" /><i class="pi pi-mars text-xs" />
-                                            <span class="text-xs">{{ data.earliest.gender === 'male' ? '男性' :
-                                                data.earliest.gender === 'female' ? '女性' : 'その他' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'メールアドレス'">
-                                            <i class="pi pi-envelope text-xs" />
-                                            <span class="text-xs">{{ data.earliest.email }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'電話番号'">
-                                            <i class="pi pi-phone text-xs" />
-                                            <span class="text-xs">{{ data.earliest.phone }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'ファックス'">
-                                            <i class="pi pi-print text-xs" />
-                                            <span class="text-xs">{{ data.earliest.fax || 'N/A' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-2" v-tooltip="'作成日時'">
-                                            <i class="pi pi-clock text-xs" />
-                                            <span class="text-xs">{{ formatDateTime(data.earliest.created_at) }}</span>
-                                        </div>
-                                    </div>
-                                </template>
-                            </Column>
-                            <Column header="重複候補者">
-                                <template #body="{ data }">
-                                    <ul class="p-2">
-                                        <li v-for="duplicate in data.duplicates" :key="duplicate.id" class="mb-2">
-                                            <div class="grid grid-cols-2 flex flex-col gap-1">
-                                                <div class="flex items-center gap-2" v-tooltip="'氏名・名称'">
-                                                    <i class="pi pi-user text-xs" />
-                                                    <span class="text-xs">{{ duplicate.name }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'カナ'">
-                                                    <i class="pi pi-align-left text-xs" />
-                                                    <span class="text-xs">{{ duplicate.name_kana }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'漢字'">
-                                                    <i class="pi pi-language text-xs" />
-                                                    <span class="text-xs">{{ duplicate.name_kanji }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'誕生日・設立日'">
-                                                    <i class="pi pi-calendar text-xs" />
-                                                    <span class="text-xs">{{ duplicate.date_of_birth === null ? 'N/A' :
-                                                        formatDate(new Date(duplicate.date_of_birth)) }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'法人・個人'">
-                                                    <i class="pi pi-users text-xs" />
-                                                    <span class="text-xs">{{ duplicate.legal_or_natural_person ===
-                                                        'natural' ? '個人' : '法人' }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'性別'">
-                                                    <i class="pi pi-venus text-xs" /><i class="pi pi-mars text-xs" />
-                                                    <span class="text-xs">{{ duplicate.gender === 'male' ? '男性' :
-                                                        duplicate.gender === 'female' ? '女性' : 'その他' }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'メールアドレス'">
-                                                    <i class="pi pi-envelope text-xs" />
-                                                    <span class="text-xs">{{ duplicate.email }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'電話番号'">
-                                                    <i class="pi pi-phone text-xs" />
-                                                    <span class="text-xs">{{ duplicate.phone }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'ファックス'">
-                                                    <i class="pi pi-print text-xs" />
-                                                    <span class="text-xs">{{ duplicate.fax || 'N/A' }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-2" v-tooltip="'作成日時'">
-                                                    <i class="pi pi-clock text-xs" />
-                                                    <span class="text-xs">{{ formatDateTime(duplicate.created_at)
-                                                        }}</span>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <Button @click="goToEditClientPage(duplicate.id)" severity="info"
-                                                        class="p-button-rounded p-button-sm">
-                                                        <i class="pi pi-pencil mr-2"></i>顧客編集
-                                                    </Button>
-                                                </div>
-                                                <div class="flex items-center">
-                                                    <Button @click="mergeClients(duplicate.id)" severity="warn"
-                                                        class="p-button-rounded p-button-sm">
-                                                        <i class="pi pi-pencil mr-2"></i>顧客合流
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <Divider />
-                                        </li>
-                                    </ul>
-                                </template>
-                            </Column>
-                        </DataTable>
-                        <div v-else class="p-4">
-                            <p>重複候補見つかりませんでした。</p>
-                        </div>
-                    </div>
-                </template>
-            </Card>
-        </div>
+                </div>
+            </template>
+        </Card>
     </div>
 
     <Drawer v-model:visible="showDrawer" class="dark:bg-gray-800 dark:text-gray-200" modal :position="'bottom'"
@@ -160,11 +87,13 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue"; // DEBUG: Added onMounted
+import { ref, watch, onMounted } from "vue";
 import { useRouter } from 'vue-router';
-import ClientMerge from './components/ClientMerge.vue';
 import { useClientStore } from '@/composables/useClientStore';
-// PrimeVue component imports
+
+import ClientCard from './components/ClientCard.vue'; 
+import ClientMerge from './components/ClientMerge.vue';
+
 import Card from 'primevue/card';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
@@ -172,213 +101,139 @@ import Divider from 'primevue/divider';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 
-const router = useRouter();
-const { clients, clientsIsLoading, mergeClientsCRM } = useClientStore();
+console.log('[ClientDuplicates] Script setup started.');
 
-// DEBUG: Log component mount
+const router = useRouter();
+const { clients, clientsIsLoading } = useClientStore();
+
+// --- State Refs ---
+const duplicatePairs = ref([]);
+const isCalculating = ref(false);
+const showDrawer = ref(false);
+const drawerProps = ref({});
+
 onMounted(() => {
     console.log('[ClientDuplicates] Component mounted.');
-    console.log(`[ClientDuplicates] Initial loading state: ${clientsIsLoading.value}`);
-    console.log(`[ClientDuplicates] Initial clients count: ${clients.value ? clients.value.length : 0}`);
 });
 
-const findPotentialDuplicates = (client, clientsArray) => {
-    if (!client || !Array.isArray(clientsArray)) return [];
+// --- OPTIMIZED Asynchronous Duplicate Calculation ---
 
-    const normalizeString = (str) => {
-        if (!str) return '';
-        return str.toLowerCase().replace(/\s+/g, '');
-    };
+const calculateDuplicates = async () => {
+    const allClients = clients.value;
+    if (!allClients || allClients.length === 0) {
+        duplicatePairs.value = [];
+        return;
+    }
 
-    const isSimilarName = (name1, name2) => {
-        if (!name1 || !name2) return false;
+    isCalculating.value = true;
+    console.log('[ClientDuplicates] START: Optimized async duplicate calculation.');
+    console.time('[ClientDuplicates] PERF: Full duplicate calculation');
 
-        const normalized1 = normalizeString(name1);
-        const normalized2 = normalizeString(name2);
+    // Yield to the main thread to allow UI updates (e.g., show "Calculating..." message)
+    await new Promise(resolve => setTimeout(resolve, 0));
 
-        if (normalized1 === normalized2) return true;
+    try {
+        const clientsById = new Map(allClients.map(c => [c.id, c]));
+        const potentialGroups = new Map();
 
-        const maxLength = Math.max(normalized1.length, normalized2.length);
-        const distance = levenshteinDistance(normalized1, normalized2);
-        return distance <= 2 && distance / maxLength < 0.3;
-    };
+        // --- Step 1: Group clients by potential duplicate keys in a single pass ---
+        for (const client of allClients) {
+            const keys = [];
+            if (client.email) keys.push(`email:${client.email.toLowerCase()}`);
+            if (client.phone) keys.push(`phone:${client.phone.replace(/\D/g, '')}`);
+            
+            const normalizedName = normalizeString(client.name);
+            if (normalizedName) keys.push(`name:${normalizedName}`);
 
-    const levenshteinDistance = (a, b) => {
-        const matrix = Array(b.length + 1).fill(null)
-            .map(() => Array(a.length + 1).fill(null));
+            const normalizedKana = normalizeString(client.name_kana);
+            if (normalizedKana) keys.push(`name_kana:${normalizedKana}`);
 
-        for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
-        for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+            if (client.date_of_birth) keys.push(`dob:${new Date(client.date_of_birth).toDateString()}`);
 
-        for (let j = 1; j <= b.length; j++) {
-            for (let i = 1; i <= a.length; i++) {
-                const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-                matrix[j][i] = Math.min(
-                    matrix[j][i - 1] + 1,
-                    matrix[j - 1][i] + 1,
-                    matrix[j - 1][i - 1] + indicator
-                );
+            for (const key of keys) {
+                if (!potentialGroups.has(key)) {
+                    potentialGroups.set(key, new Set());
+                }
+                potentialGroups.get(key).add(client.id);
             }
         }
-        return matrix[b.length][a.length];
-    };
 
-    const matchCriteria = {
-        name: { weight: 2, check: (a, b) => isSimilarName(a, b) },
-        name_kana: { weight: 2, check: (a, b) => isSimilarName(a, b) },
-        name_kanji: { weight: 2, check: (a, b) => isSimilarName(a, b) },
-        phone: { weight: 3, check: (a, b) => a && a === b },
-        fax: { weight: 2, check: (a, b) => a && a === b },
-        email: { weight: 3, check: (a, b) => a && a === b },
-        date_of_birth: {
-            weight: 4,
-            check: (a, b) => a && b && new Date(a).toDateString() === new Date(b).toDateString()
-        }
-    };
+        // --- Step 2: Consolidate all found duplicates into unified groups ---
+        const unifiedGroups = new Map();
+        for (const ids of potentialGroups.values()) {
+            if (ids.size > 1) {
+                const idArray = [...ids];
+                // Use the first ID as the representative for this group
+                const groupRepresentativeId = idArray[0]; 
 
-    return clientsArray.filter((c) => {
-        if (c.id === client.id ||
-            c.legal_or_natural_person !== client.legal_or_natural_person ||
-            c.gender !== client.gender) {
-            return false;
-        }
-
-        const reasons = Object.entries(matchCriteria)
-            .reduce((acc, [key, { check }]) => {
-                if (check(client[key], c[key])) {
-                    acc.push(key);
+                if (!unifiedGroups.has(groupRepresentativeId)) {
+                    unifiedGroups.set(groupRepresentativeId, new Set());
                 }
-                return acc;
-            }, []);
-
-        return reasons.length > 0;
-    });
-};
-
-const clientsWithPotentialDuplicates = computed(() => {
-    console.log('[ClientDuplicates] Computing clientsWithPotentialDuplicates...');
-    if (!clients.value || !Array.isArray(clients.value)) {
-        console.log('[ClientDuplicates] clients data not ready. Returning empty array.');
-        return [];
-    }
-    console.time('[ClientDuplicates] clientsWithPotentialDuplicates calculation time');
-    const result = clients.value.filter((client) => {
-        return findPotentialDuplicates(client, clients.value).length > 0;
-    });
-    console.timeEnd('[ClientDuplicates] clientsWithPotentialDuplicates calculation time');
-    console.log(`[ClientDuplicates] Found ${result.length} clients with potential duplicates.`);
-    return result;
-});
-
-const getEarliestEntries = (clientsArray) => {
-    const earliestEntries = [];
-
-    clientsArray.forEach((client) => {
-        const duplicates = findPotentialDuplicates(client, clientsArray);
-        if (duplicates.length > 0) {
-            let earliest = client;
-            duplicates.forEach((duplicate) => {
-                if (new Date(duplicate.created_at) < new Date(earliest.created_at)) {
-                    earliest = duplicate;
-                }
-            });
-            if (!earliestEntries.some(e => e.id === earliest.id)) {
-                earliestEntries.push(earliest);
+                const group = unifiedGroups.get(groupRepresentativeId);
+                idArray.forEach(id => group.add(id));
             }
         }
-    });
 
-    return earliestEntries;
-};
+        // --- Step 3: Create the final pairs for the UI from the unified groups ---
+        const finalPairs = [];
+        for (const groupIds of unifiedGroups.values()) {
+            const groupClients = [...groupIds].map(id => clientsById.get(id));
 
-const earliestEntries = computed(() => {
-    console.log('[ClientDuplicates] Computing earliestEntries...');
-    console.time('[ClientDuplicates] earliestEntries calculation time');
-    const result = getEarliestEntries(clientsWithPotentialDuplicates.value);
-    console.timeEnd('[ClientDuplicates] earliestEntries calculation time');
-    console.log(`[ClientDuplicates] Found ${result.length} earliest entries.`);
-    return result;
-});
-
-const getDuplicatePairs = () => {
-    const pairs = [];
-
-    earliestEntries.value.forEach((earliest) => {
-        const duplicates = findPotentialDuplicates(earliest, clientsWithPotentialDuplicates.value);
-        if (duplicates.length > 0) {
-            pairs.push({
-                earliest: earliest,
-                duplicates: duplicates,
-            });
+            if (groupClients.length > 1) {
+                // Find the client with the earliest creation date to be the main record
+                const earliest = groupClients.reduce((e, c) => new Date(c.created_at) < new Date(e.created_at) ? c : e);
+                const duplicates = groupClients.filter(c => c.id !== earliest.id);
+                
+                if (duplicates.length > 0) {
+                    finalPairs.push({ earliest, duplicates });
+                }
+            }
         }
-    });
+        
+        duplicatePairs.value = finalPairs;
 
-    return pairs;
-};
-const duplicatePairs = computed(() => {
-    console.log('[ClientDuplicates] Computing duplicatePairs...');
-    console.time('[ClientDuplicates] duplicatePairs calculation time');
-    const result = getDuplicatePairs();
-    console.timeEnd('[ClientDuplicates] duplicatePairs calculation time');
-    console.log(`[ClientDuplicates] Created ${result.length} duplicate pairs for display.`);
-    return result;
-});
-
-const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-        console.error("[ClientDuplicates] Invalid Date object provided to formatDate:", date);
-        return 'Invalid Date';
+    } catch (error) {
+        console.error('[ClientDuplicates] Error during duplicate calculation:', error);
+        duplicatePairs.value = [];
+    } finally {
+        console.timeEnd('[ClientDuplicates] PERF: Full duplicate calculation');
+        console.log(`[ClientDuplicates] END: Calculation finished. Found ${duplicatePairs.value.length} pairs.`);
+        isCalculating.value = false;
     }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-};
-const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
 };
 
+// --- Helper Function ---
+const normalizeString = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().replace(/\s+/g, '');
+};
+
+// --- Watcher ---
+watch(clients, (newClients, oldClients) => {
+    console.log(`[ClientDuplicates] Watcher triggered. Client count changed from ${oldClients?.length ?? 'N/A'} to ${newClients?.length ?? 'N/A'}.`);
+    
+    if (Array.isArray(newClients) && newClients.length > 0) {
+        calculateDuplicates();
+    } else {
+        duplicatePairs.value = [];
+    }
+}, { immediate: true });
+
+
+// --- Component Actions ---
 const goToEditClientPage = (clientId) => {
     router.push({ name: 'ClientEdit', params: { clientId: clientId } });
 };
 
-const showDrawer = ref(false);
-const drawerProps = ref({});
-const mergeClients = async (oldId) => {
-    const pair = duplicatePairs.value.find(pair =>
-        pair.duplicates.some(dup => dup.id === oldId)
-    );
-
+const mergeClients = (oldId) => {
+    const pair = duplicatePairs.value.find(p => p.duplicates.some(dup => dup.id === oldId));
     if (!pair) {
         console.warn('[ClientDuplicates] No matching earliest client found for merge:', oldId);
         return;
     }
-
     const newClientId = pair.earliest.id;
-
     showDrawer.value = true;
     drawerProps.value = { oldClientId: oldId, newClientId };
 };
 
-watch(clientsIsLoading, (isLoading, wasLoading) => {
-    console.log(`[ClientDuplicates] Loading state changed from ${wasLoading} to ${isLoading}`);
-    if (isLoading) {
-        showDrawer.value = false;
-    } else {
-        // This will trigger the computed properties to re-evaluate with the new client data
-        console.log(`[ClientDuplicates] Loading finished. Clients count: ${clients.value ? clients.value.length : 0}`);
-    }
-});
-
 </script>
-<style scoped>
-/* Scoped styles here */
-</style>
