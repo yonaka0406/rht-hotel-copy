@@ -4,6 +4,35 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 26, 2026
 
+#### Bug #46: Duplicate Checkout Indicator in Room Status
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - When a reservation has 2 rooms, the checkout indicator is shown twice in the room status display
+  - This creates confusion about the actual number of checkouts
+- **Reproduction Steps**:
+  1. Create a reservation with 2 rooms
+  2. Check the room status/indicator display
+  3. Observe duplicate checkout indicators
+- **Expected Behavior**:
+  - Should show only one checkout indicator per reservation
+  - The indicator should clearly represent the total number of checkouts
+- **Solution**:
+  - Fixed duplicate checkout indicators by adding deduplication logic in the `roomGroups` computed property
+  - Implemented a `Set` to track processed room IDs and ensure each room appears only once in the check-out list
+  - Moved debug logs after all variables are defined to prevent reference errors
+  - Added proper error handling for date parsing and room processing
+- **Files Modified**:
+  - `frontend/src/pages/MainPage/RoomIndicator.vue`
+- **Testing**:
+  - Verified fix with reservations containing multiple rooms
+  - Confirmed that only one indicator appears per reservation
+  - Tested with various room combinations and statuses
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - The issue was caused by rooms being added multiple times to the check-out list in the frontend display logic
+  - The fix ensures consistent display regardless of the number of rooms in a reservation
+  - No database schema changes were required
+
 #### Bug #45: Incorrect Room Availability Check for Multi-room Reservations
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
@@ -116,6 +145,45 @@ This document contains all fixed and closed issues that were previously tracked 
   - The implementation maintains all existing functionality while adding the new features
   - No changes to the API were required as the necessary data was already available
   - The solution is performant as it only processes the cancellation data when needed
+
+#### Bug #41: Inconsistent Client Name Display for OTA/Web Reservations
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Description**: 
+  - Client names for OTA and web reservations were not consistently displayed across all UI components
+  - The Google Drive integration showed guest names from reservation_clients when available, but other components didn't follow this pattern
+  - This caused inconsistency in the following pages:
+    - Room Indicator
+    - Reservation List
+    - Other pages showing reservation information
+- **Root Cause**:
+  - Different components were using different logic to display client names
+  - The `clients_json` field containing guest information wasn't being properly parsed or utilized
+  - No consistent fallback mechanism was in place for missing data
+- **Solution**:
+  - Implemented a unified `getClientName` utility function that handles all client name display logic
+  - Added proper parsing of the `clients_json` field which contains guest information for OTA/Web reservations
+  - Established a clear priority for name display:
+    1. `name_kanji` from `clients_json` (for Japanese names)
+    2. `name_kana` from `clients_json` (for kana names)
+    3. `name` from `clients_json` (for English/romanized names)
+    4. Fallback to `client_name` from reservation
+    5. Default to 'ゲスト' if no name is available
+  - Added robust error handling for JSON parsing
+  - Implemented comprehensive logging for debugging
+- **Files Modified**:
+  - `frontend/src/pages/MainPage/RoomIndicator.vue`  
+- **Testing**:
+  - Verified display of OTA reservation names in kanji/kana
+  - Confirmed fallback to English/romanized names when Japanese names aren't available
+  - Tested with various data scenarios including missing or malformed data
+  - Ensured direct bookings continue to show the booker name as before
+- **Implementation Requirements**:
+  - Update all relevant UI components to use the same logic for displaying client names specifically for OTA and web reservations
+  - For OTA and web reservations, prioritize showing guest names from reservation_clients when available
+  - Maintain fallback to existing name fields if reservation_clients data is not available
+  - Ensure this change only affects OTA and web reservations, not direct bookings
+  - Test all affected pages to ensure consistent behavior
 
 ## August 22, 2025
 

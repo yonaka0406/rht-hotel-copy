@@ -394,6 +394,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Implemented Winston logging system with file rotation and error tracking for Google Sheets API integration, improving error monitoring and debugging capabilities.
 - Feature: Added Excel export functionality for invoices and reservation details, providing users with more flexible reporting options.
 - Fix: Resolved issue with stay reservation consolidation where parking reservations were incorrectly counted as rooms, ensuring accurate room availability calculations.
+- Fix: Fixed duplicate checkout indicators in room status display by implementing room ID deduplication in the room grouping logic.
 - Feature: Enhanced duplicate client identification and merge functionality in CRM with improved address handling, proper UUID type casting, and fixed relationship updates during merges.
 
 ---

@@ -36,24 +36,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding bulk import/export for room order configurations
   - Ensure the system handles cases where configured rooms are unavailable
 
-#### Bug #46: Duplicate Checkout Indicator in Room Status
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - When a reservation has 2 rooms, the checkout indicator is shown twice in the room status display
-  - This creates confusion about the actual number of checkouts
-- **Reproduction Steps**:
-  1. Create a reservation with 2 rooms
-  2. Check the room status/indicator display
-  3. Observe duplicate checkout indicators
-- **Expected Behavior**:
-  - Should show only one checkout indicator per reservation
-  - The indicator should clearly represent the total number of checkouts
-- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Issue appears to be in the frontend display logic
-  - May affect reporting accuracy if indicators are being counted
-  - Check if this occurs with more than 2 rooms as well
-
 ### August 22, 2025
 
 #### Feature Request #41: Parking Inventory Check in Reservation Inquiry
