@@ -54,6 +54,25 @@
                 </div>
             </div>
 
+            <!-- Addresses Section -->
+            <div v-if="selectedClientAddresses.length > 0" class="mt-4">
+                <Divider />
+                <div class="mt-4">
+                    <h3 class="font-semibold mb-2">登録住所</h3>
+                    <ul class="list-none p-0 m-0">
+                        <li v-for="address in selectedClientAddresses" :key="address.id" class="mb-2 p-2 border rounded-md dark:border-gray-600">
+                            <div class="flex items-center gap-2 font-medium">
+                                <i class="pi pi-map-marker text-blue-500" />
+                                <span>{{ address.address_name || 'N/A' }}</span>
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 ml-6">
+                                {{ formatAddress(address) }}
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
             <!-- Match reasons if available -->
             <div v-if="selectedClient.matchReasons && selectedClient.matchReasons.length > 0"
                  class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
@@ -79,6 +98,7 @@
 <script setup>
 import { computed } from 'vue';
 import Card from 'primevue/card';
+import Divider from 'primevue/divider';
 import { useClientStore } from '@/composables/useClientStore';
 
 // The component now accepts a 'clientId' prop instead of the whole object.
@@ -93,11 +113,27 @@ const props = defineProps({
 const clientStore = useClientStore();
 
 // Create a computed property to reactively find the client from the store's 'clients' ref.
-// This will automatically update if the clients list changes.
 const selectedClient = computed(() => {
-    // Using .value because 'clients' is a ref from the store
     return clientStore.clients.value.find(client => client.id === props.clientId);
 });
+
+// Create a computed property for the client's addresses.
+const selectedClientAddresses = computed(() => {
+    if (!selectedClient.value) return [];
+    // Assuming the store has a way to get addresses by client ID,
+    // or they are part of the client object.
+    // For this example, let's assume they are fetched and stored separately
+    // or passed in somehow. Let's assume a function getAddressesByClientId exists.
+    // A better approach would be to have addresses nested in the client object.
+    // Let's assume selectedClient.value.addresses exists.
+    return selectedClient.value.addresses || [];
+});
+
+const formatAddress = (address) => {
+    if (!address) return 'N/A';
+    const { postal_code, state, city, street } = address;
+    return [postal_code, state, city, street].filter(Boolean).join(' ') || 'N/A';
+};
 
 
 // Helper functions remain the same.

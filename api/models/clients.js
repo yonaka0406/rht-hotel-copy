@@ -922,6 +922,90 @@ const getLegalStatusForClientIds = async (requestId, arrayOfClientIds) => {
   }
 };
 
+async function mergeClientData(requestId, oldClientId, newClientId, mergedFields, addressIdsToKeep = [], userId) {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Update the primary client's data
+    const updateQuery = `
+      UPDATE clients SET
+        name = $1, name_kana = $2, name_kanji = $3, date_of_birth = $4, legal_or_natural_person = $5,
+        gender = $6, email = $7, phone = $8, fax = $9, customer_id = $10, website = $11,
+        billing_preference = $12, comment = $13, updated_by = $14
+      WHERE id = $15
+      RETURNING *;
+    `;
+    const values = [
+      mergedFields.name, mergedFields.name_kana, mergedFields.name_kanji, mergedFields.date_of_birth,
+      mergedFields.legal_or_natural_person, mergedFields.gender, mergedFields.email, mergedFields.phone,
+      mergedFields.fax, mergedFields.customer_id, mergedFields.website, mergedFields.billing_preference,
+      mergedFields.comment, userId, newClientId
+    ];
+    await client.query(updateQuery, values);
+
+    // 2. Re-parent addresses from the old client to the new one
+    if (addressIdsToKeep.length > 0) {
+      const updateAddressesQuery = `
+        UPDATE addresses SET client_id = $1, updated_by = $2 WHERE id = ANY($3::uuid[]);
+      `;
+      await client.query(updateAddressesQuery, [newClientId, userId, addressIdsToKeep]);
+    }
+
+    // 3. Delete addresses from the old client that were not selected to be kept
+    const deleteAddressesQuery = `
+      DELETE FROM addresses WHERE client_id = $1 AND id NOT IN (SELECT unnest($2::uuid[]));
+    `;
+    await client.query(deleteAddressesQuery, [oldClientId, addressIdsToKeep]);
+
+    // 4. Update foreign key references in other tables
+    const tablesToUpdate = [
+      { name: 'reservations', column: 'reservation_client_id' },
+      { name: 'reservation_clients', column: 'client_id' },
+      { name: 'reservation_payments', column: 'client_id' },
+      { name: 'crm_actions', column: 'client_id' }
+    ];
+
+    for (const table of tablesToUpdate) {
+      const query = `UPDATE ${table.name} SET ${table.column} = $1, updated_by = $3 WHERE ${table.column} = $2`;
+      await client.query(query, [newClientId, oldClientId, userId]);
+    }
+
+    // 5. Update client_relationships (source and target)
+    await client.query('UPDATE client_relationships SET source_client_id = $1, updated_by = $3 WHERE source_client_id = $2', [newClientId, oldClientId, userId]);
+    await client.query('UPDATE client_relationships SET target_client_id = $1, updated_by = $3 WHERE target_client_id = $2', [newClientId, oldClientId, userId]);
+
+    // 6. Update projects JSONB field
+    const projectsQuery = `
+      UPDATE projects
+      SET related_clients = (
+        SELECT jsonb_agg(
+          CASE
+            WHEN (elem->>'clientId')::uuid = $1 THEN jsonb_set(elem, '{clientId}', to_jsonb($2::text))
+            ELSE elem
+          END
+        )
+        FROM jsonb_array_elements(related_clients) AS elem
+      )
+      WHERE related_clients @> jsonb_build_array(jsonb_build_object('clientId', $1::text));
+    `;
+    await client.query(projectsQuery, [oldClientId, newClientId]);
+
+    // 7. Finally, delete the old client
+    await client.query('DELETE FROM clients WHERE id = $1', [oldClientId]);
+
+    await client.query('COMMIT');
+    return { success: true, message: 'Clients merged successfully' };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error merging clients:', error);
+    throw new Error('Database error during client merge');
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   toFullWidthKana,
   processNameString,
@@ -950,4 +1034,7 @@ module.exports = {
   findAllCommonRelationshipPairs,
   findLegalPersonClients,
   getLegalStatusForClientIds,
+  mergeClientData,
 };
+
+

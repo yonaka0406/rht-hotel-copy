@@ -109,6 +109,21 @@
                             結果： {{ mergedClient.fax }}
                         </p>
                     </div>
+
+                    <Divider />
+
+                    <div class="mb-2">
+                        <label class="block font-semibold mb-1">住所:</label>
+                        <div v-for="address in combinedAddresses" :key="address.id" class="flex items-center mb-2">
+                            <Checkbox v-model="selectedAddresses" :value="address.id" :inputId="address.id" />
+                            <label :for="address.id" class="ml-2">
+                                <span :class="{'text-blue-500': address.source === 'new', 'text-green-500': address.source === 'old'}">
+                                    [{{ address.source === 'new' ? '新' : '旧' }}]
+                                </span>
+                                {{ address.address_name }}: {{ formatDisplayAddress(address) }}
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </template>
         </Card>
@@ -126,98 +141,117 @@
   </template>
   
 <script setup>
-    import { ref, watch, computed, onMounted } from 'vue';
-    import { useClientStore } from '@/composables/useClientStore';
-    import { Card, SelectButton, Button } from 'primevue';
+import { ref, watch, computed } from 'vue';
+import { useClientStore } from '@/composables/useClientStore';
+import Card from 'primevue/card';
+import SelectButton from 'primevue/selectbutton';
+import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
+import Divider from 'primevue/divider';
 
-    const props = defineProps({
-        oldID: String,
-        newID: String
-    });
+const props = defineProps({
+    oldID: String,
+    newID: String
+});
 
-    const { fetchClient, fetchClients, setClientsIsLoading, mergeClientsCRM } = useClientStore();
+const { fetchClient, fetchClients, setClientsIsLoading, mergeClientsCRM } = useClientStore();
 
-    const oldClient = ref(null);
-    const newClient = ref(null);
-    const mergedClient = ref({
-        name: null,
-        name_kana: null,
-        name_kanji: null,
-        date_of_birth: null,
-        legal_or_natural_person: null,
-        gender: null,
-        email: null,
-        phone: null,
-        fax: null,    
-    });
+const oldClient = ref(null);
+const newClient = ref(null);
+const selectedAddresses = ref([]);
 
-    const formatDate = (date) => {        
-        if (!(date instanceof Date) || isNaN(date.getTime())) {
-            console.error("Invalid Date object:", date);
-            throw new Error("The provided input is not a valid Date object:");
-        }
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-    };
-  // Fetch client data when props change
-  const fetchData = async () => {
+const mergedClient = ref({
+    name: null,
+    name_kana: null,
+    name_kanji: null,
+    date_of_birth: null,
+    legal_or_natural_person: null,
+    gender: null,
+    email: null,
+    phone: null,
+    fax: null,
+});
+
+const combinedAddresses = computed(() => {
+    const addresses = [];
+    if (newClient.value?.addresses) {
+        addresses.push(...newClient.value.addresses.map(a => ({ ...a, source: 'new' })));
+    }
+    if (oldClient.value?.addresses) {
+        addresses.push(...oldClient.value.addresses.map(a => ({ ...a, source: 'old' })));
+    }
+    return addresses;
+});
+
+const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+};
+
+const formatDisplayAddress = (address) => {
+    if (!address) return 'N/A';
+    const { postal_code, state, city, street } = address;
+    return [postal_code, state, city, street].filter(Boolean).join(' ');
+};
+
+const fetchData = async () => {
+    let oldClientData = null;
+    let newClientData = null;
+
     if (props.oldID) {
-      const response = await fetchClient(props.oldID);
-      if (response && response.client) {
-        oldClient.value = response.client.client;
-        if(oldClient.value.date_of_birth){
-            oldClient.value.date_of_birth = formatDate(new Date(oldClient.value.date_of_birth));
-        } 
-      } else {
-        oldClient.value = null;
-      }
+        const response = await fetchClient(props.oldID);
+        if (response && response.client) {
+            oldClient.value = response.client.client;
+            if(oldClient.value.date_of_birth){
+                oldClient.value.date_of_birth = formatDate(new Date(oldClient.value.date_of_birth));
+            } 
+        } else {
+            oldClient.value = null;
+        }
     }
-  
+
     if (props.newID) {
-      const response = await fetchClient(props.newID);
-      if (response && response.client) {
-        newClient.value = response.client.client;
-        if(newClient.value.date_of_birth){
-            newClient.value.date_of_birth = formatDate(new Date(newClient.value.date_of_birth));
-        } 
-      } else {
-        newClient.value = null;
-      }
-      // console.log('oldClient:',oldClient.value);
-      // console.log('newClient:',newClient.value);
+        const response = await fetchClient(props.newID);
+        if (response && response.client) {
+            newClient.value = response.client.client;
+            if(newClient.value.date_of_birth){
+                newClient.value.date_of_birth = formatDate(new Date(newClient.value.date_of_birth));
+            } 
+        } else {
+            newClient.value = null;
+        }
     }
 
-    mergedClient.value.name = newClient.value.name || oldClient.value.name;
-    mergedClient.value.name_kana = newClient.value.name_kana || oldClient.value.name_kana;
-    mergedClient.value.name_kanji = newClient.value.name_kanji || oldClient.value.name_kanji;
-    mergedClient.value.date_of_birth = newClient.value.date_of_birth || oldClient.value.date_of_birth;    
-    mergedClient.value.legal_or_natural_person = newClient.value.legal_or_natural_person || oldClient.value.legal_or_natural_person;
-    mergedClient.value.gender = newClient.value.gender || oldClient.value.gender;
-    mergedClient.value.email = newClient.value.email || oldClient.value.email;
-    mergedClient.value.phone = newClient.value.phone || oldClient.value.phone;
-    mergedClient.value.fax = newClient.value.fax || oldClient.value.fax;
+    mergedClient.value = {
+        name: newClient.value.name || oldClient.value.name,
+        name_kana: newClient.value.name_kana || oldClient.value.name_kana,
+        name_kanji: newClient.value.name_kanji || oldClient.value.name_kanji,
+        date_of_birth: newClient.value.date_of_birth || oldClient.value.date_of_birth,
+        legal_or_natural_person: newClient.value.legal_or_natural_person || oldClient.value.legal_or_natural_person,
+        gender: newClient.value.gender || oldClient.value.gender,
+        email: newClient.value.email || oldClient.value.email,
+        phone: newClient.value.phone || oldClient.value.phone,
+        fax: newClient.value.fax || oldClient.value.fax,
+    };
+};
 
-    // console.log('mergedClient:',mergedClient.value);
+watch(() => [props.oldID, props.newID], fetchData, { immediate: true });
 
-  };
-  
-  watch(() => [props.oldID, props.newID], fetchData, { immediate: true });
+const saveChanges = async () => {
+    const payload = {
+        mergedFields: mergedClient.value,
+        addressIdsToKeep: selectedAddresses.value
+    };
 
-  const saveChanges = async() => {
+    await mergeClientsCRM(props.newID, props.oldID, payload);
 
-    
-    await mergeClientsCRM(props.newID, props.oldID, mergedClient.value);    
-    
     setClientsIsLoading(true);
     const clientsTotalPages = await fetchClients(1);
-    // Fetch clients for all pages
     for (let page = 2; page <= clientsTotalPages; page++) {
         await fetchClients(page);
     }
     setClientsIsLoading(false);
-    
-  };
-
-  </script>
+};
+</script>

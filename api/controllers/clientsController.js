@@ -230,19 +230,23 @@ const updateGroup = async (req, res) => {
 };
 
 const mergeClients = async (req, res) => {
-  const newClientId = req.params.nid;
-  const oldClientId = req.params.oid;
-  const updatedFields = req.body;
+  const { nid: newClientId, oid: oldClientId } = req.params;
+  const { mergedFields, addressIdsToKeep } = req.body;
   const user_id = req.user.id;
 
   try {
-    await clientsModel.editClientFull(req.requestId, newClientId, updatedFields, user_id);
-    await reservationsModel.updateClientInReservation(req.requestId, oldClientId, newClientId);
-    await clientsModel.deleteClient(req.requestId, oldClientId, user_id);
-    res.json({message: 'Success'});
+    const result = await clientsModel.mergeClientData(
+      req.requestId,
+      oldClientId,
+      newClientId,
+      mergedFields,
+      addressIdsToKeep,
+      user_id
+    );
+    res.status(200).json(result);
   } catch (err) {
-  console.error('Error updating client:', err);
-    res.status(500).json({ error: 'Failed to update client' });
+    console.error('Error merging clients:', err);
+    res.status(500).json({ error: 'Failed to merge clients' });
   }
 };
 
