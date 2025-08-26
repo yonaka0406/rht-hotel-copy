@@ -294,7 +294,7 @@
     ];
     const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     const isValidEmail = ref(true);
-    const phonePattern = /^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$/;
+    const phonePattern = '^[+]?[0-9]{1,4}[ ]?[-]?[0-9]{1,4}[ ]?[-]?[0-9]{1,9}$';
     const isValidPhone = ref(true);
     const isValidFAX = ref(true);
     const billingOptions = [
@@ -322,10 +322,12 @@
         isValidEmail.value = emailPattern.test(email);
     };
     const validatePhone = (phone) => {
-        isValidPhone.value = phonePattern.test(phone);
+        const regex = new RegExp(phonePattern);
+        isValidPhone.value = regex.test(phone);
     };
     const validateFAX = (phone) => {
-        isValidFAX.value = phonePattern.test(phone);
+        const regex = new RegExp(phonePattern);
+        isValidFAX.value = regex.test(phone);
     };
     const formatDate = (date) => {
         const year = date.getFullYear();
