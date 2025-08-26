@@ -782,14 +782,23 @@ const generateInvoiceExcel = async (req, res) => {
 
       // Populate the details sheet
       const dailyDetails = invoiceData.daily_details || [];
-      const invoiceDate = new Date(invoiceData.date);
-      const year = invoiceDate.getFullYear();
-      const month = invoiceDate.getMonth();
+      
+      const [invYear, invMonth, invDay] = invoiceData.date.split('-').map(Number);
+      const year = invYear;
+      const month = invMonth - 1; // month is 0-indexed for Date object
+
       const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      const toYYYYMMDD = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
 
       for (let day = 1; day <= daysInMonth; day++) {
         const currentDate = new Date(year, month, day);
-        const dateString = currentDate.toISOString().split('T')[0];
+        const dateString = toYYYYMMDD(currentDate);
         
         const todaysDetails = dailyDetails.filter(d => d.date.startsWith(dateString));
 
@@ -816,7 +825,10 @@ const generateInvoiceExcel = async (req, res) => {
         });
         
         const row = detailsSheet.getRow(8 + day);
-        row.getCell('B').value = currentDate;
+        
+        const utcCurrentDate = new Date(Date.UTC(year, month, day));
+        row.getCell('B').value = utcCurrentDate;
+        
         row.getCell('C').value = planData[4].count > 0 ? planData[4].count : '';
         row.getCell('D').value = planData[4].price > 0 ? planData[4].price : '';
         row.getCell('E').value = planData[3].count > 0 ? planData[3].count : '';
