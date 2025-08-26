@@ -964,6 +964,8 @@ async function mergeClientData(requestId, oldClientId, newClientId, mergedFields
       { name: 'reservations', column: 'reservation_client_id' },
       { name: 'reservation_clients', column: 'client_id' },
       { name: 'reservation_payments', column: 'client_id' },
+      { name: 'invoices', column: 'client_id' },
+      { name: 'waitlist_entries', column: 'client_id' },
       { name: 'crm_actions', column: 'client_id' }
     ];
 
