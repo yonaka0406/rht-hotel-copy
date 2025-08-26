@@ -7,11 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Implemented Winston logging system with file rotation and error tracking for Google Sheets API integration
-- Added Excel export functionality for invoices and reservation details
-- fix: consolidate stay reservations using number_of_rooms field
-  - Prevents parking reservations from being counted as rooms
-  - Correctly handles combos with multiple rooms per reservation
 
 ---
 ## Future Releases
@@ -394,8 +389,18 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.8] - 2025-08-26
+
+- Feature: Implemented Winston logging system with file rotation and error tracking for Google Sheets API integration, improving error monitoring and debugging capabilities.
+- Feature: Added Excel export functionality for invoices and reservation details, providing users with more flexible reporting options.
+- Fix: Resolved issue with stay reservation consolidation where parking reservations were incorrectly counted as rooms, ensuring accurate room availability calculations.
+- Feature: Enhanced duplicate client identification and merge functionality in CRM with improved address handling, proper UUID type casting, and fixed relationship updates during merges.
+
+---
+
 ## Version History
 
+- **1.1.8** (2025-08-26) - Enhanced system reliability with Winston logging and improved CRM client merge functionality. Added Excel exports for invoices and reservation details, and fixed room reservation counting for accurate availability.
 - **1.1.7** (2025-08-25) - Enhanced Google Drive exports with consistent plan naming and manual update capabilities. Improved billing page UI for better usability.
 - **1.1.6** (2025-08-22) - Added client name standardization with Japanese company abbreviations, enhanced reservation management with billable cancellation options, and improved room indicators for better front desk operations. Streamlined group reservation handling with bulk cancellation features.
 - **1.1.5** (2025-08-20) - Added per-room guest list export functionality (宿泊者名簿) with pre-filled guest information. Enhanced data privacy and protection for guest information.
