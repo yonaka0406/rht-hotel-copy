@@ -975,16 +975,16 @@ async function mergeClientData(requestId, oldClientId, newClientId, mergedFields
     }
 
     // 5. Update client_relationships (source and target)
-    await client.query('UPDATE client_relationships SET source_client_id = $1, updated_by = $3 WHERE source_client_id = $2', [newClientId, oldClientId, userId]);
-    await client.query('UPDATE client_relationships SET target_client_id = $1, updated_by = $3 WHERE target_client_id = $2', [newClientId, oldClientId, userId]);
+    await client.query('UPDATE client_relationships SET source_client_id = $1 WHERE source_client_id = $2', [newClientId, oldClientId]);
+    await client.query('UPDATE client_relationships SET target_client_id = $1 WHERE target_client_id = $2', [newClientId, oldClientId]);
 
-    // 6. Update projects JSONB field
+    // 6. Update projects JSONB field    
     const projectsQuery = `
       UPDATE projects
       SET related_clients = (
         SELECT jsonb_agg(
           CASE
-            WHEN (elem->>'clientId')::uuid = $1 THEN jsonb_set(elem, '{clientId}', to_jsonb($2::text))
+            WHEN (elem->>'clientId')::uuid = $1::uuid THEN jsonb_set(elem, '{clientId}', to_jsonb($2::text))
             ELSE elem
           END
         )

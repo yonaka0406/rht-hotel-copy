@@ -11,8 +11,12 @@ CREATE TABLE invoices (
    comment TEXT NULL,
    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
    created_by INT REFERENCES users(id),
+   updated_by INT REFERENCES users(id),
    UNIQUE (id, hotel_id, date, client_id, invoice_number)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE invoices
+ADD COLUMN updated_by INT REFERENCES users(id);
 
 CREATE TABLE receipts (
    id UUID DEFAULT gen_random_uuid(),
