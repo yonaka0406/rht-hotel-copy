@@ -38,7 +38,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 22, 2025
 
-#### Feature Request #41: Parking Inventory Check in Reservation Inquiry
+#### Feature Request #41: Parking Inventory Check in Reservation Inquiry (予約照会)
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
   - Add parking space availability information to the reservation inquiry screen
