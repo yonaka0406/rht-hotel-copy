@@ -36,25 +36,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding bulk import/export for room order configurations
   - Ensure the system handles cases where configured rooms are unavailable
 
-#### Bug #45: Incorrect Room Availability Check for Multi-room Reservations
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - System incorrectly shows "no rooms available" message when trying to book 3 rooms, even though 4 rooms are available
-  - Workaround: User was able to book 2 rooms first, then add another room
-- **Reproduction Steps**:
-  1. Have 4 available rooms of the same type
-  2. Try to make a reservation for 3 rooms
-  3. System incorrectly shows no availability
-  4. Booking 2 rooms first, then adding another room works
-- **Expected Behavior**:
-  - System should correctly show availability for 3 rooms when 4 are available
-  - Should allow booking up to the available room count
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Additional Notes**:
-  - Issue appears to be in the room availability calculation logic
-  - May be related to how the system checks room blocks and existing reservations
-  - Need to verify if this affects all room types or specific ones
-
 #### Bug #46: Duplicate Checkout Indicator in Room Status
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:

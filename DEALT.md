@@ -4,6 +4,30 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 26, 2026
 
+#### Bug #45: Incorrect Room Availability Check for Multi-room Reservations
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - System incorrectly shows "no rooms available" message when trying to book 3 rooms, even though 4 rooms are available
+  - Workaround: User was able to book 2 rooms first, then add another room
+- **Reproduction Steps**:
+  1. Have 4 available rooms of the same type
+  2. Try to make a reservation for 3 rooms
+  3. System incorrectly shows no availability
+  4. Booking 2 rooms first, then adding another room works
+- **Solution**:
+  - Fixed room counting in stay reservation consolidation
+  - Properly filtered out parking reservations before room counting
+  - Correctly used number_of_rooms field from combo objects
+  - Fixed people distribution across multiple rooms in roomCapacities array
+- **Expected Behavior**:
+  - System now correctly shows availability for 3 rooms when 4 are available
+  - Allows booking up to the available room count
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Issue was caused by parking reservations being incorrectly included in room counts
+  - Fix ensures only stay reservations are counted towards room availability
+  - Solution has been verified to work across all room types
+
 #### Feature Request #42: Enhanced Invoice Export and Reservation Details
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:

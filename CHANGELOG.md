@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 - Implemented Winston logging system with file rotation and error tracking for Google Sheets API integration
 - Added Excel export functionality for invoices and reservation details
+- fix: consolidate stay reservations using number_of_rooms field
+  - Prevents parking reservations from being counted as rooms
+  - Correctly handles combos with multiple rooms per reservation
 
 ---
 ## Future Releases
