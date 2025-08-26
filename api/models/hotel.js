@@ -315,7 +315,9 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
             await client.query(
               `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7)
-               ON CONFLICT (hotel_id, reservation_id, room_id, date, cancelled) DO UPDATE SET updated_by = $6`,
+               ON CONFLICT (hotel_id, reservation_id, room_id, date) 
+               WHERE cancelled IS NULL 
+               DO UPDATE SET updated_by = $6`,
               [
                 currentHotelId,
                 mockReservationId,
