@@ -309,6 +309,20 @@
       }
     });
 
+    // Remove duplicate rooms from check-out list (keeping the first occurrence)
+    const uniqueCheckOutRooms = [];
+    const processedRoomIds = new Set();
+    
+    categorizedRooms.checkOut.forEach(room => {
+      if (!processedRoomIds.has(room.room_id)) {
+        uniqueCheckOutRooms.push(room);
+        processedRoomIds.add(room.room_id);
+      }
+    });
+    
+    // Update the checkOut array with unique rooms
+    categorizedRooms.checkOut = uniqueCheckOutRooms;
+
     // 5. FREE ROOMS - Rooms that are available or will become available (including check-outs)
     const unavailableRoomIds = new Set([
       ...blockedRooms.map(room => room.room_id),
@@ -338,6 +352,27 @@
       !unavailableRoomIds.has(room.room_id)
     ) || [];
 
+  /*
+    console.group('Room Groups Debug');
+    console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
+      room_id: r.room_id,
+      room_number: r.room_number,
+      reservation_id: r.reservation_id,
+      status: r.status
+    })));
+    
+    console.log('Check-out Today:', categorizedRooms.checkOut.map(r => ({
+      room_id: r.room_id,
+      room_number: r.room_number,
+      reservation_id: r.reservation_id,
+      status: r.status
+    })));
+    
+    console.log('Occupied:', categorizedRooms.occupied.length);
+    console.log('Free Rooms:', freeRooms.length);
+    console.log('Blocked Rooms:', blockedRooms.length);
+    console.groupEnd();
+  */
     return [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
