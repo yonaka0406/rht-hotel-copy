@@ -704,60 +704,61 @@ const getPaymentsForReceipts = async (req, res) => {
   }
 };
 
-/**
- * Generates an invoice Excel file by loading a template and filling in the data.
- */
 const generateInvoiceExcel = async (req, res) => {
   const hotelId = req.params.hid;
   const invoiceData = req.body;
   const userId = req.user.id;
 
   try {
-      // Ensure invoice number exists
       if (!invoiceData.invoice_number) {
           invoiceData.invoice_number = await generateNewInvoiceNumber(req.requestId, hotelId, invoiceData.date);
       }
 
-      // Update database records
       await updateInvoices(req.requestId, invoiceData.id, hotelId, invoiceData.date, invoiceData.client_id, invoiceData.client_name, invoiceData.invoice_number, invoiceData.due_date, invoiceData.invoice_total_stays, invoiceData.comment);
-
       const userInfo = await getUsersByID(req.requestId, userId);
 
-      // --- New Template-based Logic ---
-      
-      // 1. Load the template workbook
-      const templatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
+      const mainTemplatePath = path.join(__dirname, '../components/請求書テンプレート.xlsx');
+      const detailsTemplatePath = path.join(__dirname, '../components/請求書明細（テンプレート）.xlsx');
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.readFile(templatePath);
+      await workbook.xlsx.readFile(mainTemplatePath);
+      const detailsWorkbook = new ExcelJS.Workbook();
+      await detailsWorkbook.xlsx.readFile(detailsTemplatePath);
 
-      // 2. Get the worksheet
-      const worksheet = workbook.getWorksheet('請求書フォーマット'); // Use the correct sheet name from your template
+      const detailsTemplateSheet = detailsWorkbook.getWorksheet(1);
+      const newSheet = workbook.addWorksheet('請求書明細');
+      detailsTemplateSheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          const newRow = newSheet.getRow(rowNumber);
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+              const newCell = newRow.getCell(colNumber);
+              newCell.value = cell.value;
+              newCell.style = JSON.parse(JSON.stringify(cell.style));
+          });
+          newRow.height = row.height;
+      });
+      for (let i = 1; i <= detailsTemplateSheet.columnCount; i++) {
+          newSheet.getColumn(i).width = detailsTemplateSheet.getColumn(i).width;
+      }
+      detailsTemplateSheet.model.merges.forEach(merge => {
+          newSheet.mergeCells(merge);
+      });
 
-      // 3. Fill in the data into specific cells
+      const worksheet = workbook.getWorksheet('請求書フォーマット');
+      const detailsSheet = workbook.getWorksheet('請求書明細');
+
       worksheet.getCell('L1').value = invoiceData.invoice_number;
-      worksheet.getCell('L2').value = new Date(invoiceData.date); // Use Date object for correct formatting
+      worksheet.getCell('L2').value = new Date(invoiceData.date);
       worksheet.getCell('A4').value = invoiceData.client_name;
       worksheet.getCell('D5').value = invoiceData.customer_code;
-      
-      // Subject line (optional, can be dynamic)
       worksheet.getCell('D9').value = invoiceData.facility_name ? `${invoiceData.facility_name} 宿泊料` : '宿泊料';
       worksheet.getCell('D10').value = new Date(invoiceData.due_date);
-      
-      // Bank info - populating across multiple cells
       worksheet.getCell('D11').value = `${invoiceData.bank_name ?? ''} ${invoiceData.bank_branch_name ?? ''}`.trim();
       worksheet.getCell('D12').value = `${invoiceData.bank_account_type ?? ''} ${invoiceData.bank_account_number ?? ''}`.trim();
       worksheet.getCell('D13').value = invoiceData.bank_account_name ?? '';
-
       worksheet.getCell('L15').value = `担当者： ${userInfo[0].name}`;
-      
-      // Main total amount (header)
       worksheet.getCell('D16').value = invoiceData.invoice_total_value;
-
-      // Details section
       worksheet.getCell('H20').value = `${invoiceData.invoice_total_stays} 泊`;
       worksheet.getCell('J20').value = invoiceData.invoice_total_value;
 
-      // --- Tax & Totals Calculation ---
       let totalTax = 0;
       let totalNet = 0;
       if (invoiceData.items && Array.isArray(invoiceData.items)) {
@@ -766,25 +767,66 @@ const generateInvoiceExcel = async (req, res) => {
               totalNet += item.total_net_price;
           });
       }
-      
-      // Totals section at the bottom
-      worksheet.getCell('I24').value = invoiceData.invoice_total_value; // 合計金額
-      worksheet.getCell('I25').value = totalTax; // 内消費税
-      worksheet.getCell('I27').value = totalNet; // 10%対象
-      worksheet.getCell('I28').value = totalTax; // 消費税
-
-      // Remarks section
+      worksheet.getCell('I24').value = invoiceData.invoice_total_value;
+      worksheet.getCell('I25').value = totalTax;
+      worksheet.getCell('I27').value = totalNet;
+      worksheet.getCell('I28').value = totalTax;
       worksheet.getCell('C33').value = invoiceData.comment;
       worksheet.getCell('C33').alignment = { wrapText: true, vertical: 'top' };
 
+      // Populate the details sheet
+      const dailyDetails = invoiceData.daily_details || [];
+      const invoiceDate = new Date(invoiceData.date);
+      const year = invoiceDate.getFullYear();
+      const month = invoiceDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      // 4. Send the file to the client
+      for (let day = 1; day <= daysInMonth; day++) {
+        const currentDate = new Date(year, month, day);
+        const dateString = currentDate.toISOString().split('T')[0];
+        
+        const todaysDetails = dailyDetails.filter(d => d.date.startsWith(dateString));
+
+        const planData = {
+            4: { count: 0, price: 0 },
+            3: { count: 0, price: 0 },
+            2: { count: 0, price: 0 },
+            1: { count: 0, price: 0 },
+            5: { price: 0 }
+        };
+        let cancelledCount = 0;
+
+        todaysDetails.forEach(detail => {
+            if (detail.cancelled && detail.billable) {
+                cancelledCount++;
+            } else if (!detail.cancelled) {
+                if (planData[detail.plans_global_id]) {
+                    if(planData[detail.plans_global_id].hasOwnProperty('count')) {
+                        planData[detail.plans_global_id].count++;
+                    }
+                    planData[detail.plans_global_id].price += detail.price;
+                }
+            }
+        });
+        
+        const row = detailsSheet.getRow(8 + day);
+        row.getCell('B').value = currentDate;
+        row.getCell('C').value = planData[4].count > 0 ? planData[4].count : '';
+        row.getCell('D').value = planData[4].price > 0 ? planData[4].price : '';
+        row.getCell('E').value = planData[3].count > 0 ? planData[3].count : '';
+        row.getCell('F').value = planData[3].price > 0 ? planData[3].price : '';
+        row.getCell('G').value = planData[2].count > 0 ? planData[2].count : '';
+        row.getCell('H').value = planData[2].price > 0 ? planData[2].price : '';
+        row.getCell('I').value = planData[1].count > 0 ? planData[1].count : '';
+        row.getCell('J').value = planData[1].price > 0 ? planData[1].price : '';
+        row.getCell('K').value = planData[5].price > 0 ? planData[5].price : '';
+        row.getCell('L').value = cancelledCount > 0 ? cancelledCount : '';
+      }
+
       res.setHeader("Content-Disposition", `attachment; filename="invoice-${invoiceData.invoice_number}.xlsx"`);
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-
       await workbook.xlsx.write(res);
       res.end();
-
   } catch (error) {
       console.error("Error generating Excel from template:", error);
       res.status(500).send('Error generating Excel');

@@ -56,7 +56,7 @@
                                     </Column>
                                     <Column header="宿泊日数" style="text-align: center;">
                                         <template #body="slotProps">
-                                            {{ calculateNights(slotProps.data.check_in, slotProps.data.check_out) }}泊
+                                            {{ calculateNights(slotProps.data) }}泊
                                         </template>
                                     </Column>
                                     <Column field="payment_comment" header="コメント"></Column>
@@ -220,32 +220,22 @@ function getAdjustedDueDate(dateStr) {
 
     return formatDate(dueDate);
 };
-const calculateNights = (checkIn, checkOut) => {
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
+const calculateNights = (reservationDetails) => {
+    if (!reservationDetails || !reservationDetails.details) {
+        return 0;
+    }
     const selectedDate = new Date(selectedMonth.value);
-    
-    // Reset time to midnight for consistent day-based calculations
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-    
     const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
     const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
-    const nextMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 1);
-    
-    // Reset time to midnight for month boundaries
-    monthStart.setHours(0, 0, 0, 0);
-    monthEnd.setHours(0, 0, 0, 0);
-    nextMonthStart.setHours(0, 0, 0, 0);
 
-    // Adjust dates to be within the selected month
-    const startDate = start < monthStart ? monthStart : start;
-    // Use first day of next month if checkout extends beyond current month
-    const endDate = end > monthEnd ? nextMonthStart : end;
-
-    // Calculate nights - difference between dates (not inclusive of check-out date)
-    const nights = Math.max(0, (endDate - startDate) / (1000 * 60 * 60 * 24));
-
+    let nights = 0;
+    reservationDetails.details.forEach(day => {
+        const [year, month, d] = day.date.split('-').map(Number);
+        const stayDate = new Date(year, month - 1, d);
+        if (!day.cancelled && stayDate >= monthStart && stayDate <= monthEnd) {
+            nights++;
+        }
+    });
     return nights;
 };
 const formatCurrency = (value) => {
@@ -344,91 +334,88 @@ const displayInvoiceDialog = ref(false);
 const invoiceData = ref({});
 const invoiceDBData = ref({});
 const openInvoiceDialog = (data) => {
-    console.log('openInvoiceDialog', data)
-    let allRoomComments = '';
-    const groupedRates = {};
-    const dateGroups = new Map(); // To group by date ranges
+    const selectedDate = new Date(selectedMonth.value);
+    const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
 
-    // First pass: Collect all rooms and group by date ranges
-    data.details.forEach(block => {
-        const roomNumber = block.room_number;
-        const checkIn = block.check_in;
-        const checkOut = block.check_out;
+    const allDailyDetails = data.details.flatMap(block => block.details || []);
+    const relevantDailyDetails = allDailyDetails.filter(day => {
+        const [year, month, d] = day.date.split('-').map(Number);
+        const stayDate = new Date(year, month - 1, d);
+        return stayDate >= monthStart && stayDate <= monthEnd;
+    });
 
-        const start = new Date(checkIn);
-        // Subtract 1 day from check-out since it's treated as a stay date
-        const end = new Date(checkOut);
-        end.setDate(end.getDate() - 1);
-        
-        const selectedDate = new Date(selectedMonth.value);
-        const monthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
-        const monthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+    const stayDetailsByDate = {};
+    let totalCancellationFees = 0;
 
-        console.log('Original dates:', { checkIn, checkOut });
-        console.log('Adjusted end date (check-out - 1):', end);
-        console.log('Month range:', { monthStart, monthEnd });
-
-        // Adjust dates to be within the selected month
-        const startDate = start < monthStart ? monthStart : start;
-        const endDate = end > monthEnd ? monthEnd : end;
-        
-        console.log('Adjusted dates for month:', { startDate, endDate });
-        
-        // Calculate nights for this period (inclusive of both dates)
-        const nights = Math.max(0, Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
-        console.log('Calculated nights:', nights);
-
-        // Use adjusted dates for grouping
-        const adjustedCheckIn = formatDate(startDate);
-        const adjustedCheckOut = formatDate(endDate);
-        const dateKey = `${adjustedCheckIn} - ${adjustedCheckOut}`;
-
-        if (nights > 0) {  // Only add if there are nights in this month
-            if (!dateGroups.has(dateKey)) {
-                dateGroups.set(dateKey, {
-                    checkIn: adjustedCheckIn,
-                    checkOut: adjustedCheckOut,
-                    rooms: 0,
-                    nights: nights
-                });
-            } else {
-                // If this date range already exists, add the nights for this block
-                dateGroups.get(dateKey).nights += nights;
+    relevantDailyDetails.forEach(day => {
+        if (day.cancelled && day.billable) {
+            totalCancellationFees++;
+        } else if (!day.cancelled) {
+            const dateStr = formatDate(new Date(day.date));
+            if (!stayDetailsByDate[dateStr]) {
+                stayDetailsByDate[dateStr] = 0;
             }
-
-            const group = dateGroups.get(dateKey);
-            group.rooms += 1;
-            console.log('Updated group:', { dateKey, group });
+            stayDetailsByDate[dateStr] += day.number_of_people;
         }
     });
 
-    // Format the date groups into the required string with line breaks
-    const formattedDateGroups = Array.from(dateGroups.values())
-        .sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn))
-        .map(group => {
-            const formattedCheckIn = group.checkIn.replace(/-/g, '/');
-            const formattedCheckOut = group.checkOut.replace(/-/g, '/');
-            return `・滞在期間：${formattedCheckIn} ～ ${formattedCheckOut} 、${group.rooms}名、宿泊日数：${group.nights}泊`;
-        })
-        .join('\r\n');  // Use \r\n for Windows line endings
+    const sortedDates = Object.keys(stayDetailsByDate).sort();
+    const stayPeriods = [];
+    if (sortedDates.length > 0) {
+        let currentPeriod = {
+            start: sortedDates[0],
+            end: sortedDates[0],
+            people: stayDetailsByDate[sortedDates[0]],
+            totalNights: stayDetailsByDate[sortedDates[0]]
+        };
 
-    // Second pass: Group by tax rates for the invoice items
-    data.details.forEach(block => {
-        const comment = block.payment_comment ? block.payment_comment.replace(/\n/g, '<br/>') : '';
-        const rate = block.tax_rate || 0.1;
+        for (let i = 1; i < sortedDates.length; i++) {
+            const [currentYear, currentMonth, currentDay] = sortedDates[i].split('-').map(Number);
+            const currentDate = new Date(currentYear, currentMonth - 1, currentDay);
+            
+            const [prevYear, prevMonth, prevDay] = sortedDates[i-1].split('-').map(Number);
+            const prevDate = new Date(prevYear, prevMonth - 1, prevDay);
 
-        if (!groupedRates[rate]) {
-            groupedRates[rate] = {
-                tax_rate: rate,
-                total_net_price: 0,
-                total_price: 0
-            };
+            const diff = (currentDate - prevDate) / (1000 * 60 * 60 * 24);
+            const currentPeople = stayDetailsByDate[sortedDates[i]];
+
+            if (diff === 1 && currentPeople === currentPeriod.people) {
+                currentPeriod.end = sortedDates[i];
+                currentPeriod.totalNights += currentPeople;
+            } else {
+                stayPeriods.push(currentPeriod);
+                currentPeriod = {
+                    start: sortedDates[i],
+                    end: sortedDates[i],
+                    people: currentPeople,
+                    totalNights: currentPeople
+                };
+            }
         }
+        stayPeriods.push(currentPeriod);
+    }
 
+    const formattedDateGroups = stayPeriods.map(period => {
+        return `・滞在期間：${period.start.replace(/-/g, '/')} ～ ${period.end.replace(/-/g, '/')} 、${period.people}名、宿泊日数：${period.totalNights}泊`;
+    }).join('\r\n');
+
+    let cancellationComment = '';
+    if (totalCancellationFees > 0) {
+        cancellationComment = `・キャンセル料：${totalCancellationFees}日分`;
+    }
+
+    const finalComment = `【宿泊明細】\r\n${formattedDateGroups}${formattedDateGroups && cancellationComment ? '\r\n' : ''}${cancellationComment}`;
+
+    const groupedRates = {};
+    data.details.forEach(block => {
+        const rate = block.tax_rate || 0.1;
+        if (!groupedRates[rate]) {
+            groupedRates[rate] = { tax_rate: rate, total_net_price: 0, total_price: 0 };
+        }
         groupedRates[rate].total_price += block.value;
     });
 
-    // Calculate total net price based on total gross price for each rate
     for (const rate in groupedRates) {
         const grossTotal = groupedRates[rate].total_price;
         groupedRates[rate].total_net_price = Math.floor(grossTotal / (1 + parseFloat(rate)));
@@ -453,6 +440,7 @@ const openInvoiceDialog = (data) => {
         invoice_total_value: data.total_value,
         items: Object.values(groupedRates),
         comment: data.comment,
+        daily_details: allDailyDetails,
     };
 
     invoiceDBData.value = {
@@ -460,11 +448,8 @@ const openInvoiceDialog = (data) => {
         due_date: getAdjustedDueDate(data.date),
         client_name: data.client_kanji || data.client_name,
         invoice_total_stays: data.stays_count,
-        comment: `【宿泊明細】\r\n${formattedDateGroups}`,
+        comment: finalComment,
     };
-
-    console.log('openInvoiceDialog invoiceData', invoiceData.value);
-    console.log('openInvoiceDialog invoiceDBData', invoiceDBData.value);
 
     displayInvoiceDialog.value = true;
 };
