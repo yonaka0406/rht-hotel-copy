@@ -741,9 +741,15 @@ const generateInvoiceExcel = async (req, res) => {
       detailsTemplateSheet.model.merges.forEach(merge => {
           newSheet.mergeCells(merge);
       });
+      newSheet.views = JSON.parse(JSON.stringify(detailsTemplateSheet.views || []));
+      newSheet.pageSetup = JSON.parse(JSON.stringify(detailsTemplateSheet.pageSetup || {}));
 
       const worksheet = workbook.getWorksheet('請求書フォーマット');
       const detailsSheet = workbook.getWorksheet('請求書明細');
+
+      detailsSheet.getCell('A4').value = invoiceData.client_name;
+      detailsSheet.getCell('J1').value = invoiceData.invoice_number;
+      detailsSheet.getCell('G2').value = invoiceData.facility_name;
 
       worksheet.getCell('L1').value = invoiceData.invoice_number;
       worksheet.getCell('L2').value = new Date(invoiceData.date);
