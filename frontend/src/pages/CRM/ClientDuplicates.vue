@@ -22,15 +22,23 @@
 
                 <!-- Content displayed after all loading and calculations are finished -->
                 <div v-else>
+                    <!-- Filter Input -->
+                    <div class="mb-4">
+                        <span class="p-input-icon-left w-full">
+                            <i class="pi pi-search" />
+                            <InputText v-model="filterText" placeholder="元顧客情報をフィルター (氏名、カナ、漢字、メール、電話番号、ファックス)" class="w-full p-inputtext-sm" />
+                        </span>
+                    </div>
+
                     <DataTable 
                         class="dark:bg-gray-800 dark:text-gray-200 p-datatable-sm" 
-                        :value="duplicatePairs"
+                        :value="filteredDuplicatePairs"
                         :paginator="true" 
                         :rows="5" 
                         :rowsPerPageOptions="[5, 10, 20]"
                         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                         currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
-                        v-if="duplicatePairs.length > 0">
+                        v-if="filteredDuplicatePairs.length > 0">
                         
                         <Column header="元顧客情報" style="width: 50%;">
                             <template #body="{ data }">
@@ -82,7 +90,7 @@
                     </DataTable>
                     
                     <div v-else class="p-4 text-center">
-                        <p>重複候補見つかりませんでした。</p>
+                        <p>フィルターに一致する重複候補見つかりませんでした。</p>
                     </div>
                 </div>
             </template>
@@ -96,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 import { useRouter } from 'vue-router';
 import { useClientStore } from '@/composables/useClientStore';
 
@@ -109,6 +117,7 @@ import Column from 'primevue/column';
 import Divider from 'primevue/divider';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
+import InputText from 'primevue/inputtext';
 // Import Accordion components for v4
 import Accordion from 'primevue/accordion';
 import AccordionPanel from 'primevue/accordionpanel';
@@ -126,10 +135,31 @@ const duplicatePairs = ref([]);
 const isCalculating = ref(false);
 const showDrawer = ref(false);
 const drawerProps = ref({});
+const filterText = ref('');
 
 onMounted(() => {
     console.log('[ClientDuplicates] Component mounted.');
 });
+
+// --- Filter Logic ---
+const filteredDuplicatePairs = computed(() => {
+    if (!filterText.value) {
+        return duplicatePairs.value;
+    }
+    const lowerCaseFilter = filterText.value.toLowerCase();
+    return duplicatePairs.value.filter(pair => {
+        const client = pair.earliest;
+        return (
+            (client.name && client.name.toLowerCase().includes(lowerCaseFilter)) ||
+            (client.name_kana && client.name_kana.toLowerCase().includes(lowerCaseFilter)) ||
+            (client.name_kanji && client.name_kanji.toLowerCase().includes(lowerCaseFilter)) ||
+            (client.email && client.email.toLowerCase().includes(lowerCaseFilter)) ||
+            (client.phone && client.phone.includes(lowerCaseFilter)) ||
+            (client.fax && client.fax.includes(lowerCaseFilter))
+        );
+    });
+});
+
 
 // --- ENHANCED Asynchronous Duplicate Calculation ---
 
