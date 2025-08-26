@@ -104,12 +104,12 @@
                     <div class="col-span-1 mt-6">
                         <FloatLabel>
                             <Select v-model="selectedAddon" :options="addonOptions" optionLabel="addon_name"
-                                optionValue="id" class="w-full" :disabled="!comboRow.vehicle_category_id" />
+                                optionValue="id" class="w-full" :disabled="isParkingAddButtonDisabled" />
                             <label>アドオン</label>
                         </FloatLabel>
                     </div>
                     <div class="col-span-1 mt-6">
-                        <Button label="追加" severity="success" type="submit" />
+                        <Button label="追加" severity="success" type="submit" :disabled="isParkingAddButtonDisabled" />
                     </div>
                 </div>
             </form>
@@ -417,6 +417,10 @@ const maxCapacity = computed(() => {
 });
 const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
+});
+const isParkingAddButtonDisabled = computed(() => {
+  console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
+  return !comboRow.value.vehicle_category_id;
 });
 const availableParkingSpots = ref([]);
 
@@ -907,6 +911,7 @@ const validateEmail = (email) => {
 const validatePhone = (phone) => {
     isValidPhone.value = phonePattern.test(phone);
 };
+
 const submitReservation = async () => {
     // Validate email and phone
     validateEmail(reservationDetails.value.email);
@@ -943,20 +948,12 @@ const submitReservation = async () => {
         return;
     }
 
-    // Filter for only 'stay' type combos
-    const stayCombos = Object.fromEntries(
-        Object.entries(consolidatedCombos.value).filter(
-            ([_, combo]) => {
-                // Find the first combo with this room_type_id to check its type
-                const firstCombo = reservationCombos.value.find(c =>
-                    c.room_type_id === combo.room_type_id && c.reservation_type === 'stay'
-                );
-                return firstCombo !== undefined;
-            }
-        )
+    // First, filter for only 'stay' type combos from the original reservationCombos
+    const stayReservationCombos = reservationCombos.value.filter(combo => 
+        combo.reservation_type === 'stay'
     );
 
-    if (Object.keys(stayCombos).length === 0) {
+    if (stayReservationCombos.length === 0) {
         toast.add({
             severity: 'warn',
             summary: '注意',
@@ -965,6 +962,11 @@ const submitReservation = async () => {
         });
         return;
     }
+
+    // Now consolidate only the stay combos
+    // You'll need to implement the consolidation logic here based on how consolidatedCombos is normally created
+    // This is a placeholder - replace with your actual consolidation logic
+    const stayCombos = consolidateStayReservations(stayReservationCombos);
 
     try {
         // 1. Create the main reservation with stay combos
@@ -1075,6 +1077,43 @@ const submitReservation = async () => {
         });
     }
 };
+
+// Helper function to consolidate stay reservations (you'll need to implement this based on your existing logic)
+function consolidateStayReservations(stayReservationCombos) {
+    // This should contain the same logic that's used to create consolidatedCombos.value
+    // but only for stay-type reservations
+    const consolidated = {};
+    
+    stayReservationCombos.forEach((combo, index) => {
+        const key = combo.room_type_id.toString();
+        if (!consolidated[key]) {
+            consolidated[key] = {
+                room_type_id: combo.room_type_id,
+                room_type_name: combo.room_type_name,
+                totalRooms: 0,
+                totalPeople: 0,
+                roomCapacities: []
+            };
+        }
+        
+        // Use number_of_rooms from the combo, not just count combos
+        const numberOfRooms = combo.number_of_rooms || 1;
+        consolidated[key].totalRooms += numberOfRooms;
+        
+        // Add the people count for this combo
+        const totalPeopleInCombo = combo.number_of_people || numberOfRooms; // fallback to number of rooms if people not specified
+        consolidated[key].totalPeople += totalPeopleInCombo;
+        
+        // Create room capacities array - distribute people across rooms
+        const peoplePerRoom = Math.ceil(totalPeopleInCombo / numberOfRooms);
+        for (let i = 0; i < numberOfRooms; i++) {
+            consolidated[key].roomCapacities.push(peoplePerRoom);
+        }
+    });
+    
+    return consolidated;
+}
+
 const goToEditReservationPage = async (reservation_id) => {
     await setReservationId(reservation_id);
 
