@@ -2,6 +2,68 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 26, 2026
+
+#### Feature Request #42: Enhanced Invoice Export and Reservation Details
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Enhanced the invoice (請求書) functionality with Excel export option
+  - Added detailed reservation details (予約明細) view and export
+- **Solution Implemented**:
+  1. **Excel Export Button**
+     - Added a dedicated Excel export button alongside the existing PDF button
+     - Maintained all existing PDF functionality without modifications
+     - Excel export includes all reservation and payment details
+  2. **Reservation Details Export**
+     - Implemented export functionality for reservation details
+     - Preserved all data formatting and calculations in Excel
+     - Used SheetJS (xlsx) library for client-side Excel generation
+- **Technical Details**:
+  - Frontend: Vue.js component with xlsx library integration
+  - Backend: Existing PDF generation remains unchanged
+  - File Naming: `Invoice_[ReservationID]_[Date].xlsx`
+- **UI/UX Improvements**:
+  - Clear visual distinction between PDF and Excel export options
+  - Loading state during file generation
+  - Success/error notifications for export actions
+- **Data Included in Export**:
+  - Guest information
+  - Stay details (dates, room type, rate)
+  - All charges and payment history
+  - Discounts and adjustments
+  - Cancellation policy
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Excel export optimized for both screen viewing and printing
+  - Consider adding batch export in future updates
+  - Current implementation maintains all existing functionality while adding the new export option
+
+#### Bug #47: Google Sheets API Service Unavailability
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - The system encounters "Service Unavailable" (503) errors when trying to update Google Sheets with reservation data
+  - Error occurs in the `appendDataToSheet` function within `googleUtils.js`
+  - Affects the synchronization of reservation data with Google Sheets
+- **Error Details**:
+  ```
+  GaxiosError: The service is currently unavailable.
+  Status: 503
+  Endpoint: https://sheets.googleapis.com/v4/spreadsheets/1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY/values/H_10!A1:append
+  ```
+- **Impact**:
+  - Reservation data fails to sync with Google Sheets
+  - May cause data inconsistency between the system and Google Sheets
+- **Temporary Workaround**:
+  - None - this is a Google API service issue
+  - System should implement retry logic with exponential backoff
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Need to implement better error handling and retry logic
+  - Consider adding a queue system for failed sync attempts
+  - Should log these failures for monitoring and manual reconciliation
+- **Solution**:
+  - Implemented Winston logging for better error tracking and monitoring
+
 ## August 25, 2025
 
 #### Feature Request #43: Display Cancelled Days in Room View Accordion

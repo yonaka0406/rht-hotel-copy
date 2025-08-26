@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Implemented Winston logging system with file rotation and error tracking for Google Sheets API integration
+- Added Excel export functionality for invoices and reservation details
 
 ---
 ## Future Releases
