@@ -14,8 +14,13 @@
             <span>{{ reservationInfo.check_out }}</span>
         </div>
         <div class="col-span-3">
-            <p class="font-bold mb-1">備考：</p>
-            <Textarea v-model="reservationInfo.comment" fluid disabled style="background-color: transparent;" />
+            <p class="font-bold mb-1">備考：<span
+                class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
+            <Textarea v-model="reservationInfo.comment"
+                :disabled="reservationInfo.client_id !== '22222222-2222-2222-2222-222222222222'"
+                @keydown="handleKeydown"
+                :style="{ 'background-color': reservationInfo.client_id === '22222222-2222-2222-2222-222222222222' ? 'white' : 'transparent' }"
+                fluid />
         </div>
     </div>
     <div v-else class="grid grid-cols-2 gap-2 gap-y-4">
@@ -85,7 +90,7 @@
         <div class="field">
             <p class="font-bold flex justify-start items-center">備考：<span
                     class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
-            <Textarea v-model="reservationInfo.comment" @keydown="handleKeydown" fluid />            
+            <Textarea v-model="reservationInfo.comment" @keydown="handleKeydown" fluid />
         </div>
 
         <div class="field flex flex-col col-span-2">
@@ -100,7 +105,7 @@
                 <span class="font-bold">種類：</span>
                 <template v-if="reservationType === '通常予約' || reservationType === '社員'">
                     <SelectButton v-model="reservationTypeSelected" :options="reservationTypeOptions"
-                        optionLabel="label" optionValue="value" @change="updateReservationType" 
+                        optionLabel="label" optionValue="value" @change="updateReservationType"
                         :disabled="reservationStatus === 'キャンセル'" />
                 </template>
                 <template v-else-if="reservationType === 'OTA' || reservationType === '自社WEB'">
@@ -119,11 +124,11 @@
             <div class="absolute top-0 right-0">
                 <Button icon="pi pi-history" class="p-button-rounded p-button-text" @click="showHistoryDialog" />
             </div>
-            
+
             <ConfirmDialog group="delete"></ConfirmDialog>
             <ConfirmDialog group="revert"></ConfirmDialog>
             <ConfirmDialog group="cancel"></ConfirmDialog>
-            <ConfirmDialog group="recovery"></ConfirmDialog>            
+            <ConfirmDialog group="recovery"></ConfirmDialog>
 
             <!-- Delete button for employee reservations (always shown when status is 保留中) -->
             <div v-if="reservationType === '社員' && reservationStatus === '確定'" class="grid grid-cols-4 gap-x-6">
@@ -161,8 +166,7 @@
                     <Button label="キャンセル復活" severity="secondary" raised @click="updateReservationStatus('confirmed')" />
                 </div>
                 <div v-if="reservationStatus === '保留中'" class="field flex flex-col">
-                    <Button :label="'保留中予約を削除'" severity="danger" fluid
-                        @click="deleteReservation" />
+                    <Button :label="'保留中予約を削除'" severity="danger" fluid @click="deleteReservation" />
                 </div>
             </div>
         </div>
@@ -333,18 +337,17 @@
                                     <div class="field col mt-8 ml-2">
                                         <Button label="追加" @click="generateAddonPreview" />
                                     </div>
-                                </div>                                                                
+                                </div>
 
                                 <Divider />
 
                                 <div class="field mt-6">
-                                    <DataTable :value="selectedAddon" class="p-datatable-sm">         
-                                        <Column field="addon_name" header="アドオン名" style="width:40%" />                               
+                                    <DataTable :value="selectedAddon" class="p-datatable-sm">
+                                        <Column field="addon_name" header="アドオン名" style="width:40%" />
                                         <Column field="quantity" header="数量" style="width:20%">
                                             <template #body="slotProps">
                                                 <InputNumber v-model="slotProps.data.quantity" :min="0"
-                                                    placeholder="数量を記入"
-                                                    fluid />
+                                                    placeholder="数量を記入" fluid />
                                             </template>
                                         </Column>
                                         <Column field="price" header="価格" style="width:20%">
@@ -506,7 +509,7 @@ const reservationTypeOptions = computed(() => {
         { label: '通常予約', value: 'default' },
         { label: '社員', value: 'employee' },
     ];
-        
+
 });
 
 // Helper
@@ -610,14 +613,14 @@ const updateReservationType = async (event) => {
         reservationTypeSelected.value = reservationInfo.value.type;
         return;
     }
-    
+
     try {
         const selectedOption = event.value;
         const currentType = reservationType.value;
-        
+
         // Store the current value to revert if needed
         const previousValue = reservationTypeSelected.value;
-        
+
         // If changing from employee to default, validate that all rooms have plans
         if (currentType === '社員' && selectedOption === 'default') {
             if (!allRoomsHavePlan.value) {
@@ -625,27 +628,27 @@ const updateReservationType = async (event) => {
                 await nextTick();
                 // Force update the selected value
                 reservationTypeSelected.value = 'employee';
-                
-                toast.add({ 
-                    severity: 'error', 
-                    summary: 'エラー', 
-                    detail: '通常予約に変更するには、すべての部屋にプランを設定してください。', 
-                    life: 5000 
+
+                toast.add({
+                    severity: 'error',
+                    summary: 'エラー',
+                    detail: '通常予約に変更するには、すべての部屋にプランを設定してください。',
+                    life: 5000
                 });
-        return;
-    }
+                return;
+            }
         }
-    
-    try {
+
+        try {
             await setReservationType(selectedOption);
             // Update the local state on success
             reservationType.value = selectedOption === 'employee' ? '社員' : '通常予約';
-        
-            toast.add({ 
-                severity: 'success', 
-                summary: '成功', 
-                detail: '予約種類が更新されました。', 
-                life: 3000 
+
+            toast.add({
+                severity: 'success',
+                summary: '成功',
+                detail: '予約種類が更新されました。',
+                life: 3000
             });
         } catch (error) {
             // Revert to previous value on error
@@ -655,11 +658,11 @@ const updateReservationType = async (event) => {
 
     } catch (error) {
         console.error('Error updating reservation type:', error);
-        toast.add({ 
-            severity: 'error', 
-            summary: 'エラー', 
-            detail: '予約タイプの更新に失敗しました。', 
-            life: 3000 
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '予約タイプの更新に失敗しました。',
+            life: 3000
         });
     }
 };
@@ -707,11 +710,11 @@ const updateReservationStatus = async (status, type = null) => {
                     console.error('Error updating reservation status:', error);
                     toast.add({ severity: 'error', summary: 'エラー', detail: '予約ステータスの更新に失敗しました。', life: 3000 });
                 }
-                
+
             },
             reject: () => {
                 toast.add({ severity: 'info', summary: 'キャンセル', detail: 'ステータス変更はキャンセルされました。', life: 3000 });
-                
+
             }
         });
         return; // Stop further execution for this specific case
@@ -801,10 +804,10 @@ const updateReservationStatus = async (status, type = null) => {
                     detail: `復活されました。`,
                     life: 3000
                 });
-                
+
             },
             reject: () => {
-                
+
             }
         });
     } else {
@@ -843,7 +846,7 @@ const deleteReservation = () => {
             severity: 'secondary',
             outlined: true,
             icon: 'pi pi-times'
-        },        
+        },
         accept: async () => {
             try {
                 await deleteHoldReservation(reservation_id);
@@ -863,10 +866,10 @@ const deleteReservation = () => {
                 });
             }
             await goToNewReservation();
-            
+
         },
         reject: () => {
-            
+
         }
     });
 };
@@ -912,6 +915,18 @@ const checkOutChange = async (event) => {
 // Comment update
 const handleKeydown = (event) => {
     if (event.key === 'Tab') {
+        // Check if status is blocked and client_id doesn't match the allowed client
+        if (reservationInfo.value.status === 'block' &&
+            reservationInfo.value.client_id !== '22222222-2222-2222-2222-222222222222') {
+            event.preventDefault();
+            toast.add({
+                severity: 'warn',
+                summary: '編集不可',
+                detail: 'この予約の備考は編集できません。',
+                life: 3000
+            });
+            return;
+        }
         updateReservationComment(reservationInfo.value);
     }
 };
@@ -1009,7 +1024,7 @@ const openReservationBulkEditDialog = async () => {
     await fetchPlansForHotel(hotelId);
     await fetchPatternsForHotel(hotelId);
     // Addons
-    const allAddons = await fetchAllAddons(hotelId); 
+    const allAddons = await fetchAllAddons(hotelId);
     //console.log('[ReservationPanel] fetchAllAddons', allAddons);
     addonOptions.value = allAddons.filter(addon => addon.addon_type !== 'parking');
     //console.log('[ReservationPanel] addonOptions', addonOptions.value);
@@ -1140,7 +1155,7 @@ const generateAddonPreview = async () => {
 
     const foundAddon = addonOptions.value.find(addon => addon.id === selectedAddonOption.value);
     const isHotelAddon = foundAddon.id.startsWith('H');
-    
+
     const addonData = {
         addons_global_id: isHotelAddon ? null : foundAddon.addons_global_id,
         addons_hotel_id: isHotelAddon ? foundAddon.addons_hotel_id : null,
@@ -1150,12 +1165,12 @@ const generateAddonPreview = async () => {
         quantity: 1,
         tax_type_id: foundAddon.tax_type_id,
         tax_rate: foundAddon.tax_rate
-    };  
-    
-    selectedAddon.value.push(addonData); 
-    
-    selectedAddonOption.value = '';    
-    
+    };
+
+    selectedAddon.value.push(addonData);
+
+    selectedAddonOption.value = '';
+
 };
 const deleteAddon = (addon) => {
     const index = selectedAddon.value.indexOf(addon);
@@ -1177,7 +1192,7 @@ const applyPlanChangesToAll = async () => {
                 daysOfTheWeek: selectedDays.value
             };
             // Assuming setRoomPlan is refactored to take one object
-            return setRoomPlan(params); 
+            return setRoomPlan(params);
         });
 
         // 2. Wait for all promises to resolve
@@ -1185,25 +1200,25 @@ const applyPlanChangesToAll = async () => {
 
         // 3. This code now runs only after all updates succeed
         closeReservationBulkEditDialog();
-        toast.add({ 
-            severity: 'success', 
-            summary: '成功', 
+        toast.add({
+            severity: 'success',
+            summary: '成功',
             detail: 'すべての部屋の予約明細が更新されました。', // "All rooms updated"
-            life: 3000 
+            life: 3000
         });
 
     } catch (error) {
         // If any of the updates fail, Promise.all will reject
         // and the error will be caught here.
         console.error('Failed to apply bulk changes:', error);
-        
+
         const errorMessage = error.response?.data?.message || '変更の適用に失敗しました。';
-        
-        toast.add({ 
-            severity: 'error', 
-            summary: 'エラー', 
-            detail: errorMessage, 
-            life: 5000 
+
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: errorMessage,
+            life: 5000
         });
     }
 };
@@ -1221,9 +1236,9 @@ const applyPatternChangesToAll = async () => {
             console.log('Applying pattern to room:', roomId);
             try {
                 const result = await setRoomPattern(
-                    reservationInfo.value.hotel_id, 
-                    roomId, 
-                    reservationInfo.value.reservation_id, 
+                    reservationInfo.value.hotel_id,
+                    roomId,
+                    reservationInfo.value.reservation_id,
                     dayPlanSelections.value
                 );
                 console.log('Pattern applied to room:', roomId, result);
@@ -1239,11 +1254,11 @@ const applyPatternChangesToAll = async () => {
         closeReservationBulkEditDialog();
         console.log('Successfully applied pattern to all rooms');
 
-        toast.add({ 
-            severity: 'success', 
-            summary: '成功', 
-            detail: '予約明細が更新されました。', 
-            life: 3000 
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '予約明細が更新されました。',
+            life: 3000
         });
 
     } catch (error) {
@@ -1252,11 +1267,11 @@ const applyPatternChangesToAll = async () => {
             message: error.message,
             stack: error.stack
         });
-        toast.add({ 
-            severity: 'error', 
-            summary: 'エラー', 
-            detail: '変更の適用に失敗しました。詳細はコンソールを確認してください。', 
-            life: 5000 
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '変更の適用に失敗しました。詳細はコンソールを確認してください。',
+            life: 5000
         });
     }
 };
@@ -1349,7 +1364,7 @@ const onActionClick = () => {
 
 onMounted(async () => {
     // console.log('[ReservationPanel] Reservation loaded:', reservationInfo.value);
-    
+
     reservationTypeSelected.value = reservationInfo.value.type;
     selectedClient.value = reservationInfo.value.client_id;
     cancelStartDate.value = new Date(reservationInfo.value.check_in);

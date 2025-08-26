@@ -4,6 +4,38 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 26, 2026
 
+#### Feature Request #40: Temporary Blocking with Notes
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Currently, temporary blocks only show the name of the person who created the block
+  - Need to enhance this to include additional notes for better communication
+- **Solution**:
+  - Made the comment section editable for temporary blocks, allowing users to add and modify notes
+  - The comment section is only editable by the user who created the block
+  - Added validation to ensure only the block creator can modify the comments
+- **Key Features**:
+  - Add an optional notes field to the temporary block creation form
+  - Display both the creator's name and any additional notes in the calendar view
+  - Include the notes in the Notifications Drawer for better visibility
+  - Allow editing of comments by the block creator
+- **Implementation Requirements**:
+  - Update the temporary block creation form to include an optional notes field
+  - Modify the calendar display to show:
+     - Creator's name (as currently shown)
+     - Any additional notes (if provided)
+  - Update the Notifications Drawer to display the notes for temporary blocks
+  - Show notes as tooltips or in the event details view
+  - Include notes in relevant exports and reports
+  - Add validation to restrict comment editing to the block creator
+- **UI/UX Considerations**:
+  - Keep the creator's name visible at all times
+  - Show notes on hover or in an expanded view
+  - Ensure the interface remains clean and uncluttered
+  - In the Notifications Drawer, display the notes in a clear and readable format
+  - Consider adding a visual indicator when a temporary block has additional notes
+  - Make it intuitive for users to identify and edit comments they've created
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+
 #### Bug #46: Duplicate Checkout Indicator in Room Status
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
