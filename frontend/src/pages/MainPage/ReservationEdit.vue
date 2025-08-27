@@ -87,7 +87,90 @@
     const reservation_details = ref(null);
     const reservation_payments = ref(null);
     const parking_reservations = ref([]);
-    
+
+    /**
+     * ✨ Centralized data fetching function.
+     * This single function fetches all necessary data for the reservation,
+     * preventing logic duplication across watchers and event handlers.
+     */
+    const fetchAllReservationData = async () => {
+        if (!reservationId.value) return;
+        if (reservationIsUpdating.value) {
+            console.log('[ReservationEdit] Skipping fetch: update in progress.');
+            return;
+        }
+
+        try {
+            console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`); // <-- MODIFIED LOG
+            await fetchReservation(reservationId.value);
+
+            if (reservationDetails.value?.reservation?.[0]) {
+                const details = reservationDetails.value.reservation[0];
+                reservation_details.value = reservationDetails.value.reservation;
+                reservationStatus.value = details.status;
+
+                const pmtData = await fetchReservationPayments(details.hotel_id, details.reservation_id);
+                reservation_payments.value = pmtData?.payments || [];
+                
+                const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
+                parking_reservations.value = parkData || [];
+            } else {
+                console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`); // <-- NEW LOG
+                // Reset state if no reservation data is found
+                reservation_details.value = [];
+                reservation_payments.value = [];
+                parking_reservations.value = [];
+                reservationStatus.value = null;
+            }
+        } catch (error) {
+            console.error("[ReservationEdit] Failed to fetch all reservation data:", error);
+        }
+    };
+
+    // Lifecycle Hooks
+    onMounted(async () => {
+        await setReservationId(props.reservation_id);
+        await fetchAllReservationData();
+
+        socket.value = io(import.meta.env.VITE_BACKEND_URL);
+
+        socket.value.on('connect', () => {
+            console.log('✅ [WebSocket] Connected to server.'); // <-- MODIFIED LOG
+        });
+
+        console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".'); // <-- NEW LOG
+
+        // Listen for a SPECIFIC event, not a generic one
+        socket.value.on('tableUpdate', (data) => {
+            // This will now trigger on ANY 'tableUpdate' event from the server.
+            console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
+            fetchAllReservationData();
+        });
+    });
+
+    onUnmounted(() => {
+        if (socket.value) {
+            console.log('[ReservationEdit] Disconnecting WebSocket.'); // <-- NEW LOG
+            socket.value.disconnect();
+        }
+    });
+
+    // Watchers now simply call the centralized function
+    watch(reservationIsUpdating, (isUpdating) => {
+        if (isUpdating === false) {
+            console.log('[Watcher] reservationIsUpdating is now false. Refetching data.'); // <-- NEW LOG
+            fetchAllReservationData();
+        }
+    });
+
+    watch(() => props.reservation_id, async (newId) => {
+        if (newId) {
+            console.log(`[Watcher] props.reservation_id changed to ${newId}. Refetching data.`); // <-- NEW LOG
+            await setReservationId(newId);
+            await fetchAllReservationData();
+        }
+    });
+/*
     // Helper function to fetch parking data
     const fetchParkingData = async (hotelId, reservationId) => {
         try {
@@ -100,7 +183,7 @@
         }
     };
     
-    // Fetch reservation details on mount
+    // Fetch reservation details on mount    
     onMounted(async () => {
         
         await setReservationId(props.reservation_id);
@@ -159,6 +242,7 @@
         //console.log('onMounted ReservationEdit reservation_details:', reservation_details.value);
     });   
     
+    
     onUnmounted(() => {
         // Close the Socket.IO connection when the component is unmounted
         if (socket.value) {
@@ -205,7 +289,7 @@
         }
         
     });    
-
+*/
 </script>
 
 <style scoped>
