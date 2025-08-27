@@ -2,6 +2,24 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## August 27, 2026
+
+#### Feature Request #41: Parking Inventory Check in Reservation Inquiry (予約照会)
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Add parking space availability information to the reservation inquiry screen
+  - Help staff quickly check parking allocation without leaving the reservation view
+- **Key Features**:
+  - Display current parking space allocation status
+  - Show remaining parking capacity
+  - Visual indicators for parking availability (e.g., color-coded)
+- **Implementation Requirements**:
+  - Add parking inventory display to the reservation inquiry view
+  - Ensure real-time updates of parking availability
+  - Include parking information in relevant reservation exports
+  - Add appropriate access controls for viewing parking information
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ## August 26, 2026
 
 #### Feature Request #40: Temporary Blocking with Notes

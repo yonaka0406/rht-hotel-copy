@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Feature: Added parking space availability information display in Google Drive (Feature #41)
 
 ---
 ## Future Releases

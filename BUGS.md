@@ -5,6 +5,26 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 27, 2025
+
+#### Bug #45: Parking Calendar Infinite Scroll Not Working
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The parking reservations calendar does not load more data when scrolling, unlike the main reservations calendar
+  - This creates a poor user experience as users cannot view older or future parking reservations beyond the initially loaded range
+- **Affected Areas**:
+  - Parking reservations calendar view
+  - Potentially other calendar views that should support infinite scroll
+- **Expected Behavior**:
+  - When scrolling to the edges of the calendar, additional dates should load automatically
+  - Loading indicators should appear while fetching more data
+  - The behavior should match the main reservations calendar
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Check if the infinite scroll component is properly initialized for the parking calendar
+  - Verify that the API endpoints support pagination for parking reservations
+  - Ensure consistent behavior across all calendar views in the application
+
 ### August 25, 2025
 
 #### Feature Request #44: Customize Room Assignment Order by Hotel
@@ -37,22 +57,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Ensure the system handles cases where configured rooms are unavailable
 
 ### August 22, 2025
-
-#### Feature Request #41: Parking Inventory Check in Reservation Inquiry (予約照会)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Add parking space availability information to the reservation inquiry screen
-  - Help staff quickly check parking allocation without leaving the reservation view
-- **Key Features**:
-  - Display current parking space allocation status
-  - Show remaining parking capacity
-  - Visual indicators for parking availability (e.g., color-coded)
-- **Implementation Requirements**:
-  - Add parking inventory display to the reservation inquiry view
-  - Ensure real-time updates of parking availability
-  - Include parking information in relevant reservation exports
-  - Add appropriate access controls for viewing parking information
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
 #### Feature Request #39: Reservation List Search Enhancements
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -374,6 +378,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 25, 2025*
-*Total Bugs: 3* (last one #47)
+*Last Updated: August 27, 2025*
+*Total Bugs: 1* (last one #45)
 *Total Feature Requests: 19* (last one #44)
