@@ -4,6 +4,29 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 27, 2026
 
+#### Bug #45: Parking Calendar Infinite Scroll Not Working
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - The parking reservations calendar does not load more data when scrolling, unlike the main reservations calendar
+  - This creates a poor user experience as users cannot view older or future parking reservations beyond the initially loaded range
+- **Affected Areas**:
+  - Parking reservations calendar view
+  - Potentially other calendar views that should support infinite scroll
+- **Solution**:
+  - Added scroll event listener to the table container in the `onMounted` lifecycle hook
+  - Implemented initial scroll position setting to 1/5 of the total scroll height
+  - Ensured proper cleanup of event listeners in the `onUnmounted` hook
+  - Matched the behavior with the main reservations calendar for consistency
+- **Expected Behavior**:
+  - When scrolling to the edges of the calendar, additional dates load automatically
+  - Loading indicators appear while fetching more data
+  - The behavior matches the main reservations calendar
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - The infinite scroll now properly initializes when the component mounts
+  - The scroll position is set to show recent dates by default
+  - Event listeners are properly cleaned up to prevent memory leaks
+
 #### Feature Request #41: Parking Inventory Check in Reservation Inquiry (予約照会)
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
@@ -935,7 +958,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## July 29, 2025
 
-### Bug #19: Cancelled Reservations Show in Room Indicator
+#### Bug #19: Cancelled Reservations Show in Room Indicator
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: Cancelled reservations were incorrectly displayed in the Room Indicator page. The system was not properly filtering out reservations with 'cancelled' status from the room indicator view.
@@ -951,7 +974,7 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Date Fixed**: 2025-07-29
 - **Additional Notes**: The fix ensures that rooms with only cancelled reservations now correctly appear in the 空室 (available) section.
 
-### Bug #18: Calendar Scrollbar Disappears on Date Selection
+#### Bug #18: Calendar Scrollbar Disappears on Date Selection
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The horizontal scrollbar in the reservation calendar disappears when a date is selected, making it difficult to navigate between dates.
@@ -973,7 +996,7 @@ This document contains all fixed and closed issues that were previously tracked 
   - The scrollbar now remains visible when needed
   - Improved scrollbar styling for better user experience
 
-### Feature Request #22: Configurable Reservation Inquiry Button
+#### Feature Request #22: Configurable Reservation Inquiry Button
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: 
@@ -990,7 +1013,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## July 27, 2025
 
-### Bug #17: Employee Reservation Price Requirement
+#### Bug #17: Employee Reservation Price Requirement
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The system currently requires a plan/price for employee reservations, but users want to allow confirming employee stays without pricing. However, this could be exploited by marking a reservation as employee to bypass pricing, then changing it back to a regular guest.
@@ -1004,7 +1027,7 @@ This document contains all fixed and closed issues that were previously tracked 
   - Added confirmation dialogs for type changes
 - **Date Fixed**: 2025-07-29
 
-### Bug #14: Unresponsive 'Return to Confirmed' Button
+#### Bug #14: Unresponsive 'Return to Confirmed' Button
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
 - **Description**: The 'Return to Confirmed' (確定に戻す) button does not respond when clicked after check-in. This appears to be related to the PrimeVue ConfirmDialog implementation.

@@ -5,26 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### August 27, 2025
-
-#### Bug #45: Parking Calendar Infinite Scroll Not Working
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - The parking reservations calendar does not load more data when scrolling, unlike the main reservations calendar
-  - This creates a poor user experience as users cannot view older or future parking reservations beyond the initially loaded range
-- **Affected Areas**:
-  - Parking reservations calendar view
-  - Potentially other calendar views that should support infinite scroll
-- **Expected Behavior**:
-  - When scrolling to the edges of the calendar, additional dates should load automatically
-  - Loading indicators should appear while fetching more data
-  - The behavior should match the main reservations calendar
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Additional Notes**:
-  - Check if the infinite scroll component is properly initialized for the parking calendar
-  - Verify that the API endpoints support pagination for parking reservations
-  - Ensure consistent behavior across all calendar views in the application
-
 ### August 25, 2025
 
 #### Feature Request #44: Customize Room Assignment Order by Hotel

@@ -858,6 +858,9 @@
     if (socket.value) {
       socket.value.disconnect();
     }
+    if (tableContainer.value) {
+      tableContainer.value.removeEventListener("scroll", handleScroll);
+    }
   });
   
   const DEBUG = true;
