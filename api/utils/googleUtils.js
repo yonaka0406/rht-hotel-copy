@@ -327,23 +327,9 @@ async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
     }
 }
 
-async function main() {
-    try {
-        const authClient = await authorize();
-        //const sheetId = await createSheet(authClient, 'Hotel PMS Data');
-        const sheetName = '1'; // The range to append data to
-        const dataToAppend = [['New Booking ID', 'Guest Name', 'Check-in Date'], ['1011', 'Sophia Miller', '2025-04-28']]; // Example data
-
-        await appendDataToSheet(authClient, sheetId, sheetName, dataToAppend);
-    } catch (error) {
-        logger.error('An error occurred', error);
-    }
-}
-
-//main();
-
 module.exports = {   
     authorize, 
     clearSheetData,
-    appendDataToSheet,    
+    appendDataToSheet,
+    createSheet  
 };
