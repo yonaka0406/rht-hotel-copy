@@ -61,10 +61,11 @@ const toast = useToast();
 
 const selectedHotel = ref(null);
 const sheetId = ref('');
-const startDate = ref(null);
-const endDate = ref(null);
+const startDate = ref(new Date());
+const endDate = ref(new Date());
 const isLoading = ref(false);
 
+// Calculate days between two dates
 const getDaysDifference = (date1, date2) => {
     const diffTime = Math.abs(date2 - date1);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -77,13 +78,17 @@ const isDateRangeValid = computed(() => {
 });
 
 const isExportFormValid = computed(() => {
-    return selectedHotel.value && sheetId.value && startDate.value && endDate.value && isDateRangeValid.value;
+    return selectedHotel.value &&
+        sheetId.value &&
+        startDate.value &&
+        endDate.value &&
+        isDateRangeValid.value &&
+        !isLoading.value;
 });
 
 const formatDate = (date) => {
-    if (!date) return '';
     const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
 const handleExportToGoogleSheets = async () => {
@@ -92,36 +97,29 @@ const handleExportToGoogleSheets = async () => {
     isLoading.value = true;
     
     try {
-        const response = await fetch('/api/export/google-sheets', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                hotelId: selectedHotel.value,
-                sheetId: sheetId.value,
-                startDate: formatDate(startDate.value),
-                endDate: formatDate(endDate.value)
-            })
-        });
+        const formattedStartDate = formatDate(startDate.value);
+        const formattedEndDate = formatDate(endDate.value);
+
+        const response = await fetch(`/api/report/res/google/${sheetId.value}/${selectedHotel.value}/${formattedStartDate}/${formattedEndDate}`);
 
         if (!response.ok) {
             throw new Error('エクスポートに失敗しました');
         }
 
-        const result = await response.json();
+        const data = await response.json();
+
         toast.add({
             severity: 'success',
             summary: '成功',
-            detail: 'Google スプレッドシートにエクスポートしました',
-            life: 5000
+            detail: 'データをGoogleスプレッドシートにエクスポートしました',
+            life: 3000
         });
     } catch (error) {
         console.error('Export error:', error);
         toast.add({
             severity: 'error',
             summary: 'エラー',
-            detail: error.message || 'エクスポート中にエラーが発生しました',
+            detail: 'エクスポート中にエラーが発生しました: ' + (error.message || '不明なエラー'),
             life: 5000
         });
     } finally {
