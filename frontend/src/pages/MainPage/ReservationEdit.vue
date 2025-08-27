@@ -96,12 +96,12 @@
     const fetchAllReservationData = async () => {
         if (!reservationId.value) return;
         if (reservationIsUpdating.value) {
-            console.log('[ReservationEdit] Skipping fetch: update in progress.');
+            //console.log('[ReservationEdit] Skipping fetch: update in progress.');
             return;
         }
 
         try {
-            console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`); // <-- MODIFIED LOG
+            //console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`);
             await fetchReservation(reservationId.value);
 
             if (reservationDetails.value?.reservation?.[0]) {
@@ -115,7 +115,7 @@
                 const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
                 parking_reservations.value = parkData || [];
             } else {
-                console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`); // <-- NEW LOG
+                //console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`);
                 // Reset state if no reservation data is found
                 reservation_details.value = [];
                 reservation_payments.value = [];
@@ -135,22 +135,22 @@
         socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
         socket.value.on('connect', () => {
-            console.log('✅ [WebSocket] Connected to server.'); // <-- MODIFIED LOG
+            //console.log('✅ [WebSocket] Connected to server.');
         });
 
-        console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".'); // <-- NEW LOG
+        //console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".');
 
         // Listen for a SPECIFIC event, not a generic one
         socket.value.on('tableUpdate', (data) => {
             // This will now trigger on ANY 'tableUpdate' event from the server.
-            console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
+            //console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
             fetchAllReservationData();
         });
     });
 
     onUnmounted(() => {
         if (socket.value) {
-            console.log('[ReservationEdit] Disconnecting WebSocket.'); // <-- NEW LOG
+            //console.log('[ReservationEdit] Disconnecting WebSocket.');
             socket.value.disconnect();
         }
     });
@@ -158,14 +158,14 @@
     // Watchers now simply call the centralized function
     watch(reservationIsUpdating, (isUpdating) => {
         if (isUpdating === false) {
-            console.log('[Watcher] reservationIsUpdating is now false. Refetching data.'); // <-- NEW LOG
+            //console.log('[Watcher] reservationIsUpdating is now false. Refetching data.');
             fetchAllReservationData();
         }
     });
 
     watch(() => props.reservation_id, async (newId) => {
         if (newId) {
-            console.log(`[Watcher] props.reservation_id changed to ${newId}. Refetching data.`); // <-- NEW LOG
+            //console.log(`[Watcher] props.reservation_id changed to ${newId}. Refetching data.`);
             await setReservationId(newId);
             await fetchAllReservationData();
         }
