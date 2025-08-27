@@ -154,9 +154,11 @@ const handleCreateNewSheet = async () => {
     isCreating.value = true;
     
     try {
+        const authToken = localStorage.getItem('authToken'); 
         const response = await fetch(`/api/report/res/google/sheets/create?title=${encodeURIComponent(newSheetTitle.value)}`, {
             method: 'GET',
             headers: {
+                'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json',
             }
         });
