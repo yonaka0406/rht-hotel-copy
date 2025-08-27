@@ -415,6 +415,13 @@ const listenForTableChanges = async () => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
+          if (googleData && Object.keys(googleData).length > 0) {
+            const sheetId = '1LF3HOd7wyI0tlXuCqrnd-1m9OIoUb5EN7pegg0lJnt8'; // prod-parking
+            await fetch(`${baseUrl}/api/report/res/google-parking/${sheetId}/${googleData[0].hotel_id}/${googleData[0].check_in}/${googleData[0].check_out}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
 
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
             method: 'GET',

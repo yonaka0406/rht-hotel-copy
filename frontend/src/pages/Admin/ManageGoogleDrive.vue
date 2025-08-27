@@ -45,6 +45,52 @@
         </div>
     </div>
 
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/50 p-6 mb-4">
+        <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">駐車場予約 Google スプレッドシートエクスポート</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-4">
+                <div>
+                    <label for="parkingHotel"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ホテルを選択</label>
+                    <Select v-model="selectedParkingHotel" :options="hotels" optionLabel="name" optionValue="id"
+                        placeholder="ホテルを選択" class="w-full" :filter="true" filterPlaceholder="検索..."
+                        :filterFields="['name']" />
+                </div>
+                <div>
+                    <label for="parkingSheetId"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">シートID</label>
+                    <InputText id="parkingSheetId" v-model="parkingSheetId" type="text" class="w-full"
+                        placeholder="Google スプレッドシートIDを入力" />
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="parkingStartDate"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">開始日</label>
+                    <DatePicker id="parkingStartDate" v-model="parkingStartDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
+                        :showButtonBar="true" />
+                </div>
+                <div>
+                    <label for="parkingEndDate"
+                        class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">終了日</label>
+                    <DatePicker id="parkingEndDate" v-model="parkingEndDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
+                        :showButtonBar="true" />
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 flex flex-col items-end space-y-2">
+            <div v-if="!isParkingDateRangeValid" class="text-red-500 text-sm mr-2">
+                期間は31日以内に設定してください
+            </div>
+            <div class="flex items-center">
+                <span v-if="isParkingLoading" class="mr-2 text-sm text-gray-500">処理中...</span>
+                <Button :label="isParkingLoading ? '処理中...' : '駐車場予約をエクスポート'"
+                    :icon="isParkingLoading ? 'pi pi-spin pi-spinner' : 'pi pi-upload'" class="p-button-primary"
+                    :disabled="!isParkingExportFormValid" :loading="isParkingLoading" @click="handleExportParkingToGoogleSheets" />
+            </div>
+        </div>
+    </div>
+
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow dark:shadow-gray-900/50 p-6">
         <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6">Google スプレッドシートの新規作成</h2>
         <div class="grid grid-cols-1 gap-4">
@@ -86,6 +132,12 @@ const isLoading = ref(false);
 const newSheetTitle = ref('');
 const isCreating = ref(false);
 
+const selectedParkingHotel = ref(null);
+const parkingSheetId = ref('');
+const parkingStartDate = ref(new Date());
+const parkingEndDate = ref(new Date());
+const isParkingLoading = ref(false);
+
 // Calculate days between two dates
 const getDaysDifference = (date1, date2) => {
     const diffTime = Math.abs(date2 - date1);
@@ -98,6 +150,12 @@ const isDateRangeValid = computed(() => {
     return days <= 31;
 });
 
+const isParkingDateRangeValid = computed(() => {
+    if (!parkingStartDate.value || !parkingEndDate.value) return false;
+    const days = getDaysDifference(new Date(parkingStartDate.value), new Date(parkingEndDate.value));
+    return days <= 31;
+});
+
 const isExportFormValid = computed(() => {
     return selectedHotel.value &&
         sheetId.value &&
@@ -105,6 +163,15 @@ const isExportFormValid = computed(() => {
         endDate.value &&
         isDateRangeValid.value &&
         !isLoading.value;
+});
+
+const isParkingExportFormValid = computed(() => {
+    return selectedParkingHotel.value &&
+        parkingSheetId.value &&
+        parkingStartDate.value &&
+        parkingEndDate.value &&
+        isParkingDateRangeValid.value &&
+        !isParkingLoading.value;
 });
 
 const formatDate = (date) => {
@@ -145,6 +212,42 @@ const handleExportToGoogleSheets = async () => {
         });
     } finally {
         isLoading.value = false;
+    }
+};
+
+const handleExportParkingToGoogleSheets = async () => {
+    if (!isParkingExportFormValid.value) return;
+
+    isParkingLoading.value = true;
+
+    try {
+        const formattedStartDate = formatDate(parkingStartDate.value);
+        const formattedEndDate = formatDate(parkingEndDate.value);
+
+        const response = await fetch(`/api/report/res/google-parking/${parkingSheetId.value}/${selectedParkingHotel.value}/${formattedStartDate}/${formattedEndDate}`);
+
+        if (!response.ok) {
+            throw new Error('駐車場予約のエクスポートに失敗しました');
+        }
+
+        const data = await response.json();
+
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '駐車場予約データをGoogleスプレッドシートにエクスポートしました',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Parking export error:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '駐車場予約のエクスポート中にエラーが発生しました: ' + (error.message || '不明なエラー'),
+            life: 5000
+        });
+    } finally {
+        isParkingLoading.value = false;
     }
 };
 

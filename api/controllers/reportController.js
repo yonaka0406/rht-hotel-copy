@@ -712,6 +712,74 @@ const formatDataForSheet = (reservations) => {
   return [...rows];
 };
 
+const getParkingReservationsForGoogle = async (req, res) => {
+  const sheetId = req.params.sid;
+  const hotelId = req.params.hid;
+  const startDate = req.params.sdate;
+  const endDate = req.params.edate;
+
+  try {
+    const dataToAppend = await selectParkingReservationsForGoogle(req.requestId, hotelId, startDate, endDate);
+
+    if (!dataToAppend || dataToAppend.length === 0) {
+      return res.status(404).json({ error: 'No parking data found for Google' });
+    }
+
+    const formattedData = formatParkingDataForSheet(dataToAppend);
+
+    const authClient = await authorize();
+    const sheetName = `P_${hotelId}`; // distinguish parking from rooms
+    await appendDataToSheet(authClient, sheetId, sheetName, formattedData);
+
+    res.json({ success: 'Parking sheet update request made' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+const formatParkingDataForSheet = (reservations) => {
+  const rows = reservations.map(reservation => {
+    let displayCell = '';
+
+    // Use reservation_status for Google display
+    if (reservation.reservation_status === "hold") {
+      displayCell += "㋭｜";
+    } else if (reservation.reservation_status === "provisory") {
+      displayCell += "㋕｜";
+    }
+    if (reservation.client_name) {
+      displayCell += reservation.client_name;
+    }
+    if (reservation.vehicle_category_name) {
+      displayCell += "、" + reservation.vehicle_category_name;
+    }
+    if (reservation.agent) {
+      displayCell += "、㋔｜" + reservation.agent;
+    } else if (reservation.reservation_type === "employee") {
+      displayCell += "、㋛｜";
+    }
+
+    return [
+      reservation.hotel_id,
+      reservation.hotel_name,
+      reservation.reservation_detail_id,
+      new Date(reservation.date).toLocaleDateString('ja-JP'),
+      reservation.vehicle_category_name || '',
+      reservation.parking_lot_name || '',
+      reservation.spot_number,
+      reservation.client_name || '',
+      reservation.addon_name || '',
+      reservation.reservation_status,
+      reservation.reservation_type,
+      reservation.agent || '',
+      new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+      displayCell
+    ];
+  });
+
+  return [...rows];
+};
+
 const createNewGoogleSheet =  async (req, res) => {
     const { title } = req.query;
     const context = { operation: 'createNewSheet', title };
@@ -802,7 +870,8 @@ module.exports = {
   getReservationsInventory,
   getAllInventory,
   getReservationsForGoogle,
-  createNewGoogleSheet,
+  getParkingReservationsForGoogle,
+  createNewGoogleSheet,  
   getActiveReservationsChange,
   getMonthlyReservationEvolution,
 };
