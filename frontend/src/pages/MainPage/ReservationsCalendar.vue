@@ -60,13 +60,14 @@
                 @contextmenu.prevent="showContextMenu($event, room, date)"
                 draggable="true" :style="getCellStyle(room.room_id, date, dragMode === 'reorganizeRooms')" :class="[
                   'px-2 py-2 text-center text-xs max-h-0 aspect-square w-32 h-16 text-ellipsis border b-4 cell-with-hover',
-                  isCellFirst(room.room_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
-                  isCellLast(room.room_id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
+                  isCellFirst(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-first' : '',
+                  isCellLast(room.room_id, fillRoomInfo(room.room_id, date, dragMode === 'reorganizeRooms')?.reservation_id, date, dragMode === 'reorganizeRooms') ? 'cell-last' : '',
                   'cursor-pointer',
                   isCompactView ? 'compact-cell' : '',
                   isSelectedRoomByDay(room.room_id, date) ? 'selected-room-by-day' : '',
                   !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms') ? 'dark:bg-gray-800 dark:text-gray-100' : ''
                 ]" @mouseover="applyHover(roomIndex, dateIndex)" @mouseleave="removeHover(roomIndex, dateIndex)">
+                
                 <div v-if="isLoading && !isRoomReserved(room.room_id, date, dragMode === 'reorganizeRooms')">
                   <Skeleton class="mb-2 dark:bg-gray-700"></Skeleton>
                 </div>
@@ -115,7 +116,7 @@
                     <i class="pi pi-circle"></i> <span class="dark:text-gray-100">空室</span>
                   </div>
                 </div>
-              </td>
+            </td>
             </tr>
           </tbody>
         </table>
@@ -512,42 +513,69 @@ const getCellStyle = (room_id, date, useTemp = false) => {
 const firstCellMap = computed(() => {
   const firstMap = {};
   reservedRooms.value.forEach(room => {
-    const checkInKey = `${room.room_id}_${formatDate(new Date(room.check_in))}`;
-    firstMap[checkInKey] = true;
+    const checkInDate = formatDate(new Date(room.check_in));
+    const key = `${room.room_id}_${room.reservation_id}_${checkInDate}`;
+    firstMap[key] = true;
   });
   return firstMap;
 });
+
 const lastCellMap = computed(() => {
   const lastMap = {};
   reservedRooms.value.forEach(room => {
-    const checkOutKey = `${room.room_id}_${formatDate(new Date(new Date(room.check_out).setDate(new Date(room.check_out).getDate() - 1)))}`;
-    lastMap[checkOutKey] = true;
+    const checkOutDate = new Date(room.check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    const formattedDate = formatDate(checkOutDate);
+    const key = `${room.room_id}_${room.reservation_id}_${formattedDate}`;
+    lastMap[key] = true;
   });
   return lastMap;
 });
 const firstCellTempMap = computed(() => {
   const firstMap = {};
   tempReservations.value.forEach(room => {
-    const checkInKey = `${room.room_id}_${formatDate(new Date(room.check_in))}`;
-    firstMap[checkInKey] = true;
+    // Format date for consistent comparison
+    const checkInDate = formatDate(new Date(room.check_in));
+    const key = `${room.room_id}_${checkInDate}`;
+    firstMap[key] = true;
   });
   return firstMap;
 });
+
 const lastCellTempMap = computed(() => {
   const lastMap = {};
   tempReservations.value.forEach(room => {
-    const checkOutKey = `${room.room_id}_${formatDate(new Date(new Date(room.check_out).setDate(new Date(room.check_out).getDate() - 1)))}`;
-    lastMap[checkOutKey] = true;
+    // Create date object and subtract one day
+    const checkOutDate = new Date(room.check_out);
+    checkOutDate.setDate(checkOutDate.getDate() - 1);
+    
+    // Format the modified date
+    const formattedDate = formatDate(checkOutDate);
+    const key = `${room.room_id}_${formattedDate}`;
+    lastMap[key] = true;
   });
   return lastMap;
 });
-const isCellFirst = (room_id, date, useTemp = false) => {
-  const key = `${room_id}_${date}`;
-  return useTemp ? !!firstCellTempMap.value[key] : !!firstCellMap.value[key];
+const isCellFirst = (room_id, reservation_id, date, useTemp = false) => {
+  if (useTemp) {
+    // Logic for temporary map
+    const key = `${room_id}_${date}`;
+    return !!firstCellTempMap.value[key];
+  } else {
+    // Logic for main map
+    const key = `${room_id}_${reservation_id}_${date}`;
+    return !!firstCellMap.value[key];
+  }
 };
-const isCellLast = (room_id, date, useTemp = false) => {
-  const key = `${room_id}_${date}`;
-  return useTemp ? !!lastCellTempMap.value[key] : !!lastCellMap.value[key];
+
+const isCellLast = (room_id, reservation_id, date, useTemp = false) => {
+  if (useTemp) {
+    const key = `${room_id}_${date}`;
+    return !!lastCellTempMap.value[key];
+  } else {
+    const key = `${room_id}_${reservation_id}_${date}`;
+    return !!lastCellMap.value[key];
+  }
 };
 const applyHover = (roomIndex, dateIndex) => {
   // Highlight the entire row
