@@ -832,6 +832,21 @@
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
 
+      nextTick(() => {
+          const tableContainer = document.querySelector(".table-container");
+          if (tableContainer) {
+              tableContainer.addEventListener("scroll", handleScroll);
+
+              // Set initial scroll position
+              const totalScrollHeight = tableContainer.scrollHeight;
+              const scrollPosition = totalScrollHeight / 5;
+              tableContainer.scrollTo({
+                  top: scrollPosition,
+                  behavior: "auto", // 'auto' is faster for initial load
+              });
+          }
+      });
+
       isLoading.value = false;
       } catch (error) {
         console.error('[ParkingCalendar] Error initializing data:', error);
