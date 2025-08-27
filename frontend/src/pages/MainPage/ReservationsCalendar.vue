@@ -36,10 +36,13 @@
               </th>
             </tr>
           </thead>
-          <tbody @dragover.prevent>
-            <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex">
+          <tbody @dragover.prevent>            
+            <tr v-for="(date, dateIndex) in dateRange" :key="dateIndex" :class="{ 'row-is-pinned': dateIndex === pinnedRowIndex }">
+
               <td
-                class="px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky left-0 z-10">
+                @click="pinRow(dateIndex)"                
+                class="cursor-pointer px-2 py-2 text-center font-bold bg-white dark:bg-gray-800 dark:text-gray-100 aspect-square w-32 h-16 sticky left-0 z-10">
+    
                 <span class="text-xs dark:text-gray-100">{{ formatDateWithDay(date) }}</span>
 
                 <div class="text-2xs text-gray-500 flex justify-center" :class="{
@@ -290,6 +293,7 @@ const isUpdating = ref(false);
 const isLoading = ref(true);
 const isCompactView = ref(true);
 const centerDate = ref(formatDate(new Date()));
+const pinnedRowIndex = ref(null);
 
 // Computed
 const uniqueLegendItems = computed(() => {
@@ -312,6 +316,14 @@ const uniqueLegendItems = computed(() => {
 
   return legendItems;
 });
+
+const pinRow = (dateIndex) => {
+  if (pinnedRowIndex.value === dateIndex) {
+    pinnedRowIndex.value = null; // Unpin if the same row is clicked
+  } else {
+    pinnedRowIndex.value = dateIndex; // Pin the new row
+  }
+};
 
 // Date range
 const dateRange = ref([]);
@@ -1744,6 +1756,7 @@ thead th:last-child {
 }
 
 .cell-with-hover {
+  position: relative;
   transition: background-color 0.3s ease;
 }
 
@@ -1851,33 +1864,83 @@ tbody tr:hover {
   border-left-color: #9ca3af;
 }
 
-.highlight-row {
-  background-color: #fef9c3 !important;
-  /* yellow-100 */
+.highlight-row::before,
+.highlight-col::before,
+.highlight-cell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Allows clicks to pass through to the cell */
+  z-index: 1;
 }
 
-.highlight-col {
-  background-color: #e0f2fe !important;
-  /* sky-100 */
+/* --- Light Mode Overlay Colors --- */
+
+.highlight-row::before {
+  background-color: rgba(254, 249, 195, 0.2); /* Semi-transparent yellow */
+}
+
+.highlight-col::before {
+  background-color: rgba(224, 242, 254, 0.2); /* Semi-transparent blue */
+}
+
+/* The directly hovered cell gets a stronger overlay that will take precedence */
+.highlight-cell::before {
+  background-color: rgba(253, 230, 138, 0.2); /* Semi-transparent amber */
+}
+
+/* --- Dark Mode Overlay Colors --- */
+
+.dark .highlight-row::before {
+  background-color: rgba(120, 53, 15, 0.4);
+}
+
+.dark .highlight-col::before {
+  background-color: rgba(12, 74, 110, 0.4);
+}
+
+.dark .highlight-cell::before {
+  background-color: rgba(180, 83, 9, 0.6);
 }
 
 .highlight-cell {
-  background-color: #fde68a !important;
-  /* amber-200 */
-  box-shadow: 0 0 0 2px #f59e42 inset;
-  z-index: 2;
-}
-
-.dark .highlight-row {
-  background-color: #78350f !important;
-}
-
-.dark .highlight-col {
-  background-color: #0c4a6e !important;
+  box-shadow: 0 0 0 3px #f59e42 inset;
+  z-index: 2; /* Ensures the border is on top of overlays */
 }
 
 .dark .highlight-cell {
-  background-color: #b45309 !important;
-  box-shadow: 0 0 0 2px #fbbf24 inset;
+  box-shadow: 0 0 0 3px #fbbf24 inset;
+}
+
+.row-is-pinned td {
+  position: relative;   
+  border-top: 2px solid #f59e42 !important; /* Thicker top border */
+  border-bottom: 2px solid #f59e42 !important; /* Thicker bottom border */
+}
+/* Pseudo-element creates the overlay */
+.row-is-pinned td::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* A more subtle, semi-transparent overlay color */
+  background-color: rgba(234, 179, 8, 0.15); /* A subtle amber/yellow */
+  pointer-events: none; /* Ensures you can still click the cell's content */
+  z-index: 1;
+}
+
+.dark .row-is-pinned td {
+  border-top-color: #fbbf24 !important; 
+  border-bottom-color: #fbbf24 !important;
+}
+
+/* Overlay for dark mode */
+.dark .row-is-pinned td::before {
+  background-color: rgba(251, 191, 36, 0.15); /* A subtle amber for dark mode */
 }
 </style>
