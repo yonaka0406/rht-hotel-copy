@@ -320,7 +320,8 @@ const listenForTableChanges = async () => {
     devClient = await listenClient.connect();
     devClient.on('notification', async (msg) => {
       if (msg.channel === 'logs_reservation_changed') {
-        // logger.debug('Notification received: logs_reservation_changed (dev)');
+        logger.debug('Notification received: logs_reservation_changed (dev)');
+        logger.debug(`[Socket.IO] Number of connected clients: ${ioHttp.sockets.sockets.size}`);    
         ioHttp.emit('tableUpdate', 'Reservation update detected');
       }
       if (msg.channel === 'reservation_log_inserted') {
@@ -460,13 +461,11 @@ const listenForTableChanges = async () => {
   }
 };
 
-
-// Start listening for table changes
-listenForTableChanges();
-
 // Socket.IO event handlers
+logger.debug('Socket.IO event handlers');
 ioHttp.on('connection', (socket) => {
-  // logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
+  logger.debug('Client connected (HTTP)', { clientId: socket.id, origin: socket.handshake.headers.origin });
+  logger.debug(`[Socket.IO] Client connected: ${socket.id}. Total clients: ${ioHttp.sockets.sockets.size}`);
   const origin = socket.handshake.headers.origin;
   const environment = origin && origin.includes('test.wehub') ? 'dev' : 'prod';
   socket.join(environment);
@@ -491,6 +490,9 @@ if (ioHttps) {
   });
 }
 */
+
+// Start listening for table changes
+listenForTableChanges();
 
 // Serve static files from the frontend build folder
 app.use(express.static(path.join(__dirname, 'public')));
