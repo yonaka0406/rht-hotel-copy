@@ -1,8 +1,9 @@
 const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectActiveReservationsChange,
   selectMonthlyReservationEvolution } = require('../models/report');
-const { authorize, appendDataToSheet } = require('../utils/googleUtils');
+const { authorize, appendDataToSheet, createSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
+const logger = require('../config/logger');
 
 // Helper
 const formatDate = (date) => {
@@ -711,6 +712,40 @@ const formatDataForSheet = (reservations) => {
   return [...rows];
 };
 
+const createNewGoogleSheet =  async (req, res) => {
+    const { title } = req.query;
+    const context = { operation: 'createNewSheet', title };
+    
+    if (!title) {
+        logger.warn('Missing required parameter: title', context);
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Title is required' 
+        });
+    }
+
+    try {
+        const authClient = await authorize();
+        const spreadsheetId = await createSheet(authClient, title);
+        
+        logger.info('Successfully created new sheet', { ...context, spreadsheetId });
+        return res.status(200).json({ 
+            success: true, 
+            data: { 
+                spreadsheetId,
+                spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`
+            } 
+        });
+    } catch (error) {
+        logger.error('Error creating new sheet', { ...context, error: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to create spreadsheet',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
 const getActiveReservationsChange = async (req, res) => {
   const { hotel_id, date } = req.params;
 
@@ -767,6 +802,7 @@ module.exports = {
   getReservationsInventory,
   getAllInventory,
   getReservationsForGoogle,
+  createNewGoogleSheet,
   getActiveReservationsChange,
   getMonthlyReservationEvolution,
 };
