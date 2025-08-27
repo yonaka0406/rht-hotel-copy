@@ -1,4 +1,7 @@
-const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectActiveReservationsChange,
+const { selectCountReservation, selectCountReservationDetailsPlans, selectCountReservationDetailsAddons, selectOccupationByPeriod, 
+  selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, 
+  selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
+  selectActiveReservationsChange,
   selectMonthlyReservationEvolution } = require('../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
