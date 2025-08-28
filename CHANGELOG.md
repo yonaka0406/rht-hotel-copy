@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 - Feature: Added parking space availability information display in Google Drive (Feature #41)
 - Feature: Enhanced reservations and parking calendar with row pinning and overlay-based row/column highlighting
+- Feature: Added search type selection (stay period/check-in date/creation date) to reservation list filters
 - Fix: Updated reservations calendar to correctly map check-in/check-out dates by including reservation ID in addition to room and date
 - Fix: Fixed infinite scroll in parking calendar to properly load additional dates when scrolling
 

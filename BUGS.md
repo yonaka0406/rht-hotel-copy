@@ -38,35 +38,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 22, 2025
 
-#### Feature Request #39: Reservation List Search Enhancements
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Enhance the existing date range search in the reservation list to support different search types
-  - Replace the static "滞在期間選択：" label with a dropdown for selecting search criteria
-- **Key Features**:
-  1. **Search Type Selection**
-     - Dropdown with options:
-       - 滞在期間 (Stay Period)
-       - チェックイン日 (Check-in Date)
-       - 作成日 (Creation Date)
-     - Default selection: 滞在期間 (to maintain current behavior)
-  2. **Date Range Picker**
-     - Dynamic label updates based on selected search type
-     - Support for single date or date range selection
-     - Quick select options (Today, This Week, This Month, etc.)
-- **Implementation Requirements**:
-  - Replace the current static label with a dropdown component
-  - Update the date picker behavior based on the selected search type
-  - Ensure the search updates in real-time when either the search type or dates change
-  - Make the search criteria persist across page navigation
-  - Update any relevant API endpoints to handle the new search parameters
-- **UI/UX Considerations**:
-  - Place the dropdown immediately to the left of the date picker
-  - Ensure the dropdown is clearly labeled
-  - Add a small help icon explaining the different search types
-  - Make the control responsive for different screen sizes
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-
 #### Feature Request #38: Quote Creator System
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
