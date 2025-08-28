@@ -9,7 +9,7 @@ const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddl
 router.get('/report/res/count/:hid/:sdate/:edate', authMiddleware, getCountReservation);
 router.get('/report/res/count/dtl/:hid/:sdate/:edate', authMiddleware, getCountReservationDetails);
 router.get('/report/occ/:period/:hid/:rdate', authMiddleware, getOccupationByPeriod);
-router.get('/report/res/list/:hid/:sdate/:edate', authMiddleware, getReservationListView);
+router.get('/report/res/list/:search_type/:hid/:sdate/:edate', authMiddleware, getReservationListView);
 router.get('/report/forecast/:hid/:sdate/:edate', authMiddleware, getForecastData);
 router.get('/report/accounting/:hid/:sdate/:edate', authMiddleware, getAccountingData);
 router.get('/report/download/res/list/:hid/:sdate/:edate', authMiddleware, getExportReservationList);

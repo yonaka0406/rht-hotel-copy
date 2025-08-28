@@ -152,9 +152,10 @@ const getReservationListView = async (req, res) => {
   const hotelId = req.params.hid;
   const startDate = req.params.sdate;
   const endDate = req.params.edate;
+  const searchType = req.params.search_type;
 
   try {    
-    const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate);    
+    const data = await selectReservationListView(req.requestId, hotelId, startDate, endDate, searchType);    
     
     // Return empty array with 200 status
     if (!data || data.length === 0) {

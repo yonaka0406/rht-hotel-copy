@@ -143,7 +143,7 @@ export function useReportStore() {
         }
     };
 
-    const fetchReservationListView = async (hotelId, startDate, endDate) => {
+    const fetchReservationListView = async (hotelId, startDate, endDate, searchType = 'stay_period') => {
         try {
             // If API is not available, return limited functionality response
             if (limitedFunctionality.value) {
@@ -152,7 +152,7 @@ export function useReportStore() {
                 return getLimitedFunctionalityResponse();
             }
 
-            const data = await api.get(`/report/res/list/${hotelId}/${startDate}/${endDate}`);
+            const data = await api.get(`/report/res/list/${searchType}/${hotelId}/${startDate}/${endDate}`);
 
             // Convert clients_json field from string to JSON
             if (Array.isArray(data)) {

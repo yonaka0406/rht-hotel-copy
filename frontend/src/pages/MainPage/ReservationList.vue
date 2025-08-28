@@ -4,22 +4,53 @@
         <Card class="mb-4">
             <template #content>
                 <div class="flex justify-end items-center flex-wrap">
-                    <span class="font-bold mr-4">滞在期間選択：</span>
-                    <label class="mr-2">開始日:</label>
-                    <DatePicker v-model="startDateFilter" dateFormat="yy-mm-dd" placeholder="開始日を選択" :selectOtherMonths="true" />
-                    <label class="ml-4 mr-2">終了日:</label>
-                    <DatePicker v-model="endDateFilter" dateFormat="yy-mm-dd" placeholder="終了日を選択" :selectOtherMonths="true" />
-                    <Button label="適用" class="ml-2" size="small" @click="applyDateFilters" :disabled="!startDateFilter || !endDateFilter" />
+                    <FloatLabel>
+                        <Select 
+                            v-model="searchType" 
+                            :options="searchTypeOptions" 
+                            optionLabel="label"
+                            class="mr-2"                            
+                            fluid
+                        />
+                        <label>検索範囲:</label>
+                    </FloatLabel>
+                    <FloatLabel>
+                        <DatePicker 
+                            v-model="startDateFilter" 
+                            dateFormat="yy-mm-dd"                             
+                            :selectOtherMonths="true" 
+                            class="mr-2"
+                            fluid
+                        />
+                        <label>{{ dateRangeLabel.start }}:</label>
+                    </FloatLabel>                    
+                    <FloatLabel>                    
+                        <DatePicker 
+                            v-model="endDateFilter" 
+                            dateFormat="yy-mm-dd" 
+                            :placeholder="`${dateRangeLabel.end}を選択`" 
+                            :selectOtherMonths="true" 
+                            class="mr-2"
+                            fluid
+                        />
+                        <label>{{ dateRangeLabel.end }}:</label>
+                    </FloatLabel>
+                    <Button 
+                        label="適用" 
+                        class="mr-2" 
+                        size="small" 
+                        @click="applyDateFilters" 
+                        :disabled="!startDateFilter || !endDateFilter" 
+                    />
                     <Button
                         label="全フィルタークリア"
                         icon="pi pi-filter-slash"
                         severity="secondary"
-                        class="ml-2"
+                        class="mr-2"
                         size="small"
                         @click="clearAllFilters"
                         v-tooltip.bottom="'全てのフィルターをリセットします'"
-                    />
-                    <!-- Export -->
+                    />                    
                     <SplitButton 
                         label="エクスポート" 
                         icon="pi pi-file-export"
@@ -265,7 +296,7 @@
     // Primevue
     import { useToast } from "primevue/usetoast";
     const toast = useToast();
-    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton } from 'primevue';
+    import { Panel, Drawer, Card, DatePicker, Select, InputText, InputNumber, Button, DataTable, Column, Badge, SplitButton, FloatLabel } from 'primevue';
     import { FilterMatchMode } from '@primevue/core/api';
 
     // Stores
@@ -310,7 +341,12 @@
     const loadTableData = async () => {
         tableLoading.value = true;
         try {
-            await fetchReservationListView(selectedHotelId.value, formatDate(startDateFilter.value), formatDate(endDateFilter.value));
+            await fetchReservationListView(
+                selectedHotelId.value, 
+                formatDate(startDateFilter.value), 
+                formatDate(endDateFilter.value),
+                searchType.value.value
+            );
             tableHeader.value = `予約一覧 ${formatDateWithDay(startDateFilter.value)} ～ ${formatDateWithDay(endDateFilter.value)}`;
         } catch (error) {
             console.error('Error loading table data:', error);
@@ -362,6 +398,22 @@
     });
 
     // Filters     
+    const searchType = ref({ value: 'stay_period', label: '滞在期間' });
+    const searchTypeOptions = [
+        { value: 'stay_period', label: '滞在期間' },
+        { value: 'check_in', label: 'チェックイン日' },
+        { value: 'created_at', label: '作成日' }
+    ];
+    const dateRangeLabel = computed(() => {
+        switch(searchType.value.value) {
+            case 'check_in':
+                return { start: 'チェックイン開始日', end: 'チェックイン終了日' };
+            case 'created_at':
+                return { start: '作成開始日', end: '作成終了日' };
+            default: // stay_period
+                return { start: '開始日', end: '終了日' };
+        }
+    });
     const startDateFilter = ref(new Date(new Date().setDate(new Date().getDate() - 6)));
     const endDateFilter = ref(new Date()); 
     const statusOptions = [
