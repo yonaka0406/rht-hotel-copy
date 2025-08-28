@@ -238,7 +238,7 @@ const getExportReservationList = async (req, res) => {
       csvStream.write({
         ホテルID: reservation.hotel_id,
         ホテル名称: reservation.formal_name,
-        滞在期間:  `${startDate}～${endDate}`,
+        レポート期間:  `${startDate} ～ ${endDate}`,
         ステータス: translateStatus(reservation.status),
         予約者: reservation.booker_name,
         予約者カナ: reservation.booker_name_kana,
@@ -321,7 +321,7 @@ const getExportReservationDetails = async (req, res) => {
       csvStream.write({
         ホテルID: reservation.hotel_id,
         ホテル名称: reservation.formal_name,
-        滞在期間:  `${startDate}～${endDate}`,
+        レポート期間:  `${startDate} ～ ${endDate}`,        
         ステータス: translateStatus(reservation.reservation_status),
         予約種類: translateType(reservation.reservation_type),
         エージェント: reservation.agent,
@@ -338,8 +338,8 @@ const getExportReservationDetails = async (req, res) => {
         部屋タイプ: reservation.room_type_name,
         喫煙部屋: reservation.smoking ? 'はい' : 'いいえ',
         部屋容量: reservation.capacity,
-        滞在人数: reservation.number_of_people,
-        日付: reservation.meal_date,
+        滞在人数: reservation.number_of_people,        
+        宿泊日: formatDate(new Date(reservation.date)),
         プラン名: reservation.plan_name,
         プランタイプ: translatePlanType(reservation.plan_type),
         プラン料金: reservation.plan_price,
