@@ -7,11 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Feature: Added parking space availability information display in Google Drive (Feature #41)
-- Feature: Enhanced reservations and parking calendar with row pinning and overlay-based row/column highlighting
-- Feature: Added search type selection (stay period/check-in date/creation date) to reservation list filters
-- Fix: Updated reservations calendar to correctly map check-in/check-out dates by including reservation ID in addition to room and date
-- Fix: Fixed infinite scroll in parking calendar to properly load additional dates when scrolling
 
 ---
 ## Future Releases
@@ -405,8 +400,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.9] - 2025-08-28
+
+- Feature: Added parking space availability information display in Google Drive (Feature #41)
+- Feature: Enhanced reservations and parking calendar with row pinning and overlay-based row/column highlighting
+- Feature: Added search type selection (stay period/check-in date/creation date) to reservation list filters
+- Fix: Updated reservations calendar to correctly map check-in/check-out dates by including reservation ID in addition to room and date
+- Fix: Fixed infinite scroll in parking calendar to properly load additional dates when scrolling
+
+---
+
 ## Version History
 
+- **1.1.9** (2025-08-28) - Enhanced parking and reservation management with Google Drive integration, improved calendar features, and advanced search filters. Fixed date mapping in reservations and parking calendar scrolling.
 - **1.1.8** (2025-08-26) - Enhanced system reliability with Winston logging and improved CRM client merge functionality. Added Excel exports for invoices and reservation details, and fixed room reservation counting for accurate availability.
 - **1.1.7** (2025-08-25) - Enhanced Google Drive exports with consistent plan naming and manual update capabilities. Improved billing page UI for better usability.
 - **1.1.6** (2025-08-22) - Added client name standardization with Japanese company abbreviations, enhanced reservation management with billable cancellation options, and improved room indicators for better front desk operations. Streamlined group reservation handling with bulk cancellation features.
