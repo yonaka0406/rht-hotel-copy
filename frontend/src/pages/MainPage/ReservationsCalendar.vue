@@ -1628,10 +1628,12 @@ watch(centerDate, async (newVal, oldVal) => {
   });
 });
 watch(dragMode, async (newVal, oldVal) => {
+  // Clear cart items and reservation card data
   selectedRoomByDay.value = [];
   tempRoomData.value = [];
+  reservationCardData.value = [];
+        
   await fetchReservations(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
-  // console.log(newVal);
 });
 watch(() => headerState.value.date, (newDate) => {
   // Handle date change

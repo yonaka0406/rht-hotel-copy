@@ -4,6 +4,24 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## August 29, 2025
 
+#### Bug #45: Cart Items Persist in Calendar View When Switching Modes
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - In the reservations calendar view, when using free mode, items in the cart do not disappear when confirming or switching to another mode
+  - This can lead to confusion and potential booking errors as users might think items are still in their cart
+- **Steps to Reproduce**:
+  1. Open the reservations calendar
+  2. Switch to free mode and add items to cart
+  3. Either confirm the selection or switch to another mode
+  4. Observe that cart items remain visible
+- **Expected Behavior**:
+  - Cart should be cleared when confirming selection or switching modes
+  - Visual feedback should indicate the cart has been cleared
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Affects user experience and could lead to accidental double bookings
+  - Should be fixed in both desktop and mobile views
+
 #### Feature Request #36: Display Cancellation Fee Application Date for Long-term Reservations
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: For long-term reservations (30 days or more), implement a cancellation fee calculator and display the cancellation fee application date (キャンセル料発生日).
