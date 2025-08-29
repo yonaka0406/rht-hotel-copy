@@ -1,16 +1,16 @@
 <template>
-    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" modal header="キャンセル料計算"
+    <Dialog :visible="visible" @update:visible="$emit('update:visible', $event)" modal header="キャンセル料発生計算"
         style="width: 50vw">
         <div v-if="!isLoading">
             <div class="p-fluid" v-if="isLongTermReservation">
-                <div class="field grid">
-                    <div class="col-6">
+                <div class="field flex grid grid-cols-12 gap-x-4">
+                    <div class="col-span-6">
                         <label for="cancellation-date">キャンセル日</label>
                         <DatePicker v-model="cancellationDate" showIcon fluid iconDisplay="input" dateFormat="yy-mm-dd"
                         :numberOfMonths="2"
                         :selectOtherMonths="true" />
                     </div>
-                    <div class="col-6">
+                    <div class="col-span-6">
                         <label for="rule-days">キャンセル料発生日数</label>
                         <InputNumber v-model="ruleDays" inputId="rule-days" :min="0" />
                     </div>

@@ -99,9 +99,10 @@
 
         <div class="field flex flex-col col-span-2" v-if="isLongTermReservation">
             <span :class="{ 'text-red-500': new Date() >= cancellationFeeDate }">
-                {{ cancellationFeeMessage }}
-                <i class="pi pi-info-circle ml-1" v-tooltip.top="'長期予約（30泊以上）は、宿泊開始日の30日前からキャンセル料が発生します。'"></i>
-                <Button label="計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2" @click="showCancellationCalculator = true" />
+                <Button label="キャンセル発生日計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2" @click="showCancellationCalculator = true" />
+                からキャンセル料発生日の確認ができます。
+                <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>
+                
             </span>
         </div>
 
@@ -637,11 +638,8 @@ const cancellationFeeMessage = computed(() => {
 
     const formattedFeeDate = formatDate(feeDate);
 
-    if (today < feeDate) {
-        return `【長期予約】${formattedFeeDate}までにキャンセルすると、キャンセル料は発生しません。`;
-    } else {
-        return `【長期予約】本日キャンセルすると、キャンセル料が発生します。`;
-    }
+    return `キャンセルポリシーは予約の規模に応じて、「〇日前まで」であればキャンセル料が発生しないように設定できます。`;
+    
 });
 
 const numberOfNights = ref(0);

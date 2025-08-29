@@ -8,40 +8,54 @@ import { ref, computed, watch, toRef } from 'vue';
 */
 export function useCancellationFeeCalculator(getReservationDetails, cancellationDate, ruleDays = ref(30)) {
   const reservationInfo = ref({});
+
+    const formatDate = (date) => {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+        console.error("Invalid Date object:", date);
+        throw new Error("The provided input is not a valid Date object:");
+        }
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
   
-  // Watch for changes to reservationDetails
+  // Watch for changes to reservationDetails and handle different data structures
   watch(() => getReservationDetails(), (newDetails) => {
-    
     if (!newDetails) {
       reservationInfo.value = {};
       return;
-    }
-    
-    // If it's an array, get the first item with check_in/check_out, otherwise use the object directly
-    let details = newDetails;
-    
-    if (Array.isArray(newDetails)) {
-      // Find the first item with check_in and check_out
-      details = newDetails.find(item => item.check_in && item.check_out) || {};
-      
-      if (!details.check_in || !details.check_out) {
-        details = {};
-      }
     }    
+    
+    // If it's a plain object, use it directly
+    if (!Array.isArray(newDetails)) {
+      reservationInfo.value = newDetails;
+      return;
+    }
 
-    reservationInfo.value = details;
+    // If it's an array, determine its type
+    if (newDetails.length > 0 && newDetails[0].date && newDetails[0].price) {
+      // Assume it's an array of daily rates and construct a reservation object
+      const firstDay = newDetails[0].date;
+      const lastDayRate = newDetails[newDetails.length - 1];
+      const checkOutDate = new Date(lastDayRate.date);
+      checkOutDate.setHours(12, 0, 0, 0);
+      checkOutDate.setDate(checkOutDate.getDate() + 1);
+
+      reservationInfo.value = {
+        check_in: firstDay,
+        check_out: formatDate(checkOutDate),
+        reservation_rates: newDetails,
+        price_per_night: newDetails.reduce((sum, rate) => sum + (parseFloat(rate.price) || 0), 0) / newDetails.length
+      };
+    } else {
+      // Assume it's an array of reservations, get the first valid one
+      const details = newDetails.find(item => item.check_in && item.check_out) || {};
+      reservationInfo.value = details;
+    }
   }, { immediate: true });
 
-  const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error("Invalid Date object:", date);
-      throw new Error("The provided input is not a valid Date object:");
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
+  
 
   const numberOfNights = computed(() => {
     if (!reservationInfo.value?.check_in || !reservationInfo.value?.check_out) {
@@ -90,7 +104,7 @@ export function useCancellationFeeCalculator(getReservationDetails, cancellation
   
     const checkIn = formatDate(new Date(reservationInfo.value.check_in));
     const checkOut = formatDate(new Date(reservationInfo.value.check_out));
-        const cancelDateObj = new Date(cancellationDate.value);
+    const cancelDateObj = new Date(cancellationDate.value);
     const cancelStart = formatDate(cancelDateObj);
 
     let cancelRangeStart;
@@ -134,21 +148,48 @@ export function useCancellationFeeCalculator(getReservationDetails, cancellation
   const totalFee = computed(() => {
     if (
       nightsCancelled.value.count === 0 ||
-      !isLongTermReservation.value ||
-      !Array.isArray(reservationInfo.value?.reservation_rates)
+      !isLongTermReservation.value
     ) {
       return 0;
     }
 
-    // Use a Set for efficient date lookups
-    const cancelledDates = new Set(nightsCancelled.value.dates);
+        let total = 0;
 
-    const total = reservationInfo.value.reservation_rates
-      .filter(rate => 
-        rate.adjustment_type === 'base_rate' && 
-        cancelledDates.has(rate.date)
-      )
-      .reduce((sum, rate) => sum + (parseFloat(rate.price) || 0), 0);
+    if (Array.isArray(reservationInfo.value?.reservation_rates)) {
+        // Use a Set for efficient date lookups
+        const cancelledDates = new Set(nightsCancelled.value.dates);
+
+        total = reservationInfo.value.reservation_rates
+          .filter(rate => 
+            rate.adjustment_type === 'base_rate' && 
+            cancelledDates.has(rate.date)
+          )
+          .reduce((sum, rate) => sum + (parseFloat(rate.price) || 0), 0);
+        }
+
+        // Fallback calculation if specific dates not found or reservation_rates is empty
+        if (total === 0) {
+            let dailyRate = 0;
+            if (Array.isArray(reservationInfo.value?.reservation_rates)) {
+                const baseRates = reservationInfo.value.reservation_rates.filter(
+                    rate => rate.adjustment_type === 'base_rate'
+                );
+                
+                if (baseRates.length > 0) {
+                    const totalBaseRate = baseRates.reduce(
+                        (sum, rate) => sum + (parseFloat(rate.price) || 0), 
+                        0
+                    );
+                    dailyRate = totalBaseRate / baseRates.length;
+                }
+            }
+
+            if (dailyRate === 0) {
+                dailyRate = parseFloat(reservationInfo.value?.price_per_night) || 0;
+            }
+            
+            total = dailyRate * nightsCancelled.value.count;
+        }
 
     const fee = Math.round(total);
     
