@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Feature: Added date range selection for room cancellations, allowing partial cancellation of multi-day reservations
+
 ---
 ## Future Releases
 

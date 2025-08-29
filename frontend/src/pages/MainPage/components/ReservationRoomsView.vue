@@ -1,15 +1,18 @@
-<template>    
+<template>
     <Accordion :activeIndex="0">
         <AccordionPanel v-for="(group, index) in groupedRooms" :key="group.room_id" :value="group.room_id">
             <AccordionHeader>
                 <div class="grid grid-cols-7 gap-4 w-full">
                     <div class="col-span-3 text-left">
                         部屋： {{ `${group.details[0]?.room_number} - ${group.room_type} (${group.details[0]?.capacity})
-                        ${group.details[0]?.smoking ? ' 🚬' : ''}` }}                        
+                        ${group.details[0]?.smoking ? ' 🚬' : ''}` }}
                     </div>
                     <div class="flex items-center justify-center">
-                        <Badge v-if="getCancelledDaysCount(group) > 0 && !isFullyCancelled(group)" :value="`${getCancelledDaysCount(group)}日`" severity="danger" v-tooltip.top="'キャンセルされた日数'" />
-                        <Badge v-if="isFullyCancelled(group)" value="全" severity="danger" v-tooltip.top="'全ての宿泊日がキャンセルされました'" />
+                        <Badge v-if="getCancelledDaysCount(group) > 0 && !isFullyCancelled(group)"
+                            :value="`${getCancelledDaysCount(group)}日`" severity="danger"
+                            v-tooltip.top="'キャンセルされた日数'" />
+                        <Badge v-if="isFullyCancelled(group)" value="全" severity="danger"
+                            v-tooltip.top="'全ての宿泊日がキャンセルされました'" />
                     </div>
                     <div class="flex items-center justify-center">
                         {{ group.details[0]?.number_of_people }}
@@ -25,7 +28,7 @@
                         <Button icon="pi pi-file-export" label="宿泊者名簿" class="p-button-sm mr-2"
                             @click="openGuestListDialog(group)" severity="info" />
                         <Button icon="pi pi-pencil" label="一括編集" class="p-button-sm"
-                            @click="openRoomEditDialog(group)" />                        
+                            @click="openRoomEditDialog(group)" />
                     </div>
                 </div>
             </AccordionHeader>
@@ -91,8 +94,7 @@
                                     </Column>
                                     <Column header="操作">
                                         <template #body="addonSlotProps">
-                                            <Button icon="pi pi-trash"
-                                                class="p-button-text p-button-danger p-button-sm"
+                                            <Button icon="pi pi-trash" class="p-button-text p-button-danger p-button-sm"
                                                 @click="deleteAddon(addonSlotProps.data)" />
                                         </template>
                                     </Column>
@@ -179,7 +181,7 @@
                                                             <div class="mr-2">{{ slotProps.option.name }} </div>
                                                             <Badge severity="secondary">{{
                                                                 slotProps.option.template_type === 'global' ? 'グローバル' :
-                                                                'ホテル' }}</Badge>
+                                                                    'ホテル' }}</Badge>
                                                         </div>
                                                     </template>
                                                 </Select>
@@ -285,7 +287,7 @@
                                                         class="pi pi-building"></i>
                                                     <i v-else class="pi pi-user"></i>
                                                     {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                                    slotProps.option.name || '' }}
+                                                        slotProps.option.name || '' }}
                                                     <span v-if="slotProps.option.name_kana"> ({{
                                                         slotProps.option.name_kana }})</span>
                                                 </p>
@@ -422,13 +424,35 @@
                     <!-- Tab 6: Cancel -->
                     <TabPanel value="5">
                         <div class="mb-3">
-                            <p>この部屋の予約をキャンセルします。キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span class="font-bold">基本料金</span>のみが請求されます。</p>
+                            <p>この部屋の予約をキャンセルします。キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span
+                                    class="font-bold">基本料金</span>のみが請求されます。</p>
                         </div>
-                        <div v-if="!isRoomCancelled" class="flex justify-center items-center">
-                            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="cancelRoomReservation" />
+                        <div class="field grid grid-cols-12 mt-8">
+                            <div class="col-span-12 md:col-span-5">
+                                <div class="flex justify-center items-center">
+                                    <Checkbox inputId="select-all" v-model="selectAllForCancellation" :binary="true" />
+                                    <label for="select-all" class="ml-2">全日程</label>
+                                </div>
+                            </div>
+                            <div class="col-span-12 md:col-span-7 justify-center items-center">
+                                <FloatLabel>
+                                    <DatePicker v-model="cancelDateRange" selectionMode="range" :manualInput="false"
+                                        :disabled="selectAllForCancellation" class="w-full" dateFormat="yy-mm-dd"
+                                        :minDate="roomMinDate"
+                                        :maxDate="roomMaxDate" :numberOfMonths="2"
+                                        :selectOtherMonths="true" 
+                                        fluid />
+                                    <label for="cancel-date-range">キャンセル期間</label>
+                                </FloatLabel>
+                            </div>
+                        </div>
+                        <div v-if="!isRoomCancelled" class="flex justify-center items-center mt-4">
+                            <Button label="キャンセル" icon="pi pi-times" class="p-button-danger"
+                                @click="cancelRoomReservation" />
                         </div>
                         <div v-else class="flex justify-center items-center">
-                            <Button label="復活" icon="pi pi-history" class="p-button-warn" @click="recoverRoomReservation" />
+                            <Button label="復活" icon="pi pi-history" class="p-button-warn"
+                                @click="recoverRoomReservation" />
                         </div>
                     </TabPanel>
                 </TabPanels>
@@ -464,13 +488,8 @@
     </Dialog>
 
     <!-- Guest List Dialog -->
-    <ReservationGuestListDialog
-        v-model:visible="visibleGuestListDialog"
-        :reservation="selectedReservationForGuestList"
-        :parkingLots="parkingLots"
-        :allPlans="plans"
-        :isGroup="isGroupPDF"
-    />
+    <ReservationGuestListDialog v-model:visible="visibleGuestListDialog" :reservation="selectedReservationForGuestList"
+        :parkingLots="parkingLots" :allPlans="plans" :isGroup="isGroupPDF" />
 
     <ConfirmDialog group="cancel-room"></ConfirmDialog>
 </template>
@@ -493,7 +512,7 @@ import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
-import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge, ConfirmDialog } from 'primevue';
+import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, DataTable, Column, Divider, Dialog, Tabs, TabList, Tab, TabPanels, TabPanel, FloatLabel, InputText, InputNumber, AutoComplete, Select, MultiSelect, DatePicker, ToggleButton, Button, Badge, ConfirmDialog, Checkbox } from 'primevue';
 
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
@@ -810,8 +829,8 @@ const generateAddonPreview = () => {
     }
 
     // console.log('selectedAddon before:',selectedAddon.value);
-    
-    const foundAddon = addonOptions.value.find(addon => 
+
+    const foundAddon = addonOptions.value.find(addon =>
         addon.id === selectedAddonOption.value && addon.addon_type !== 'parking'
     );
     if (!foundAddon) return;
@@ -1139,11 +1158,11 @@ const deleteRoom = async (group) => {
         }
 
         const roomDetails = group.details[0];
-        
+
         // Validate required fields
         const requiredFields = ['hotel_id', 'room_id', 'reservation_id', 'number_of_people'];
         const missingFields = requiredFields.filter(field => !roomDetails[field]);
-        
+
         if (missingFields.length > 0) {
             throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
         }
@@ -1167,26 +1186,26 @@ const deleteRoom = async (group) => {
 
         // Only close dialog and show success if operation was successful
         closeRoomEditDialog();
-        toast.add({ 
-            severity: 'success', 
-            summary: '成功', 
-            detail: '予約明細が更新されました。', 
-            life: 3000 
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '予約明細が更新されました。',
+            life: 3000
         });
 
         return response;
 
     } catch (error) {
         console.error('Error deleting room:', error);
-        
+
         // Show error toast to user
-        toast.add({ 
-            severity: 'error', 
-            summary: 'エラー', 
-            detail: error.message || '予約明細の更新に失敗しました。', 
-            life: 5000 
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: error.message || '予約明細の更新に失敗しました。',
+            life: 5000
         });
-        
+
         // Don't close the dialog on error so user can retry
         // Re-throw if calling code needs to handle it
         throw error;
@@ -1258,11 +1277,11 @@ const applyDateChanges = async () => {
 
         // Only close dialog and show success if operation succeeded
         closeRoomEditDialog();
-        toast.add({ 
-            severity: 'success', 
-            summary: '成功', 
-            detail: '部屋の宿泊期間が更新されました。', 
-            life: 3000 
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '部屋の宿泊期間が更新されました。',
+            life: 3000
         });
 
     } catch (error) {
@@ -1282,17 +1301,72 @@ const isRoomCancelled = computed(() => {
     return selectedGroup.value.details.every(detail => detail.cancelled);
 });
 
+const cancelDateRange = ref(null);
+const selectAllForCancellation = ref(true);
+const roomMinDate = computed(() => {
+    if (!selectedGroup.value?.details?.length) return new Date();
+    return new Date(selectedGroup.value.details[0].date);
+});
+const roomMaxDate = computed(() => {
+    if (!selectedGroup.value?.details?.length) return new Date();
+    const lastDay = new Date(selectedGroup.value.details[selectedGroup.value.details.length - 1].date);    
+    return lastDay;
+});
+
 const cancelRoomReservation = () => {
+    let detailIdsToCancel;
+    let confirmationMessage;
+
+    if (selectAllForCancellation.value) {
+        detailIdsToCancel = selectedGroup.value.details.map(d => d.id);
+        const nights = detailIdsToCancel.length;
+        confirmationMessage = `この部屋のすべての予約（${nights}泊）をキャンセルします。キャンセル料の有無を選択してください。`;
+    } else {
+        if (!cancelDateRange.value || !cancelDateRange.value[0] || !cancelDateRange.value[1]) {
+            toast.add({ severity: 'warn', summary: '警告', detail: 'キャンセルする期間を選択してください。', life: 3000 });
+            return;
+        }
+
+        const startDate = new Date(cancelDateRange.value[0]);
+        const endDate = new Date(cancelDateRange.value[1]);
+
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        detailIdsToCancel = selectedGroup.value.details
+            .filter(detail => {
+                const detailDate = new Date(detail.date);
+                detailDate.setHours(0, 0, 0, 0);
+                return detailDate >= startDate && detailDate <= endDate;
+            })
+            .map(d => d.id);
+
+        const nights = detailIdsToCancel.length;
+        if (nights === 0) {
+            toast.add({ severity: 'warn', summary: '警告', detail: '選択された期間に予約が見つかりません。', life: 3000 });
+            return;
+        }
+
+        const formattedStartDate = formatDate(startDate);
+        const formattedEndDate = formatDate(endDate);
+        confirmationMessage = `${formattedStartDate}から${formattedEndDate}までの${nights}泊をキャンセルします。キャンセル料の有無を選択してください。`;
+    }
+
+    if (detailIdsToCancel.length === 0) {
+        toast.add({ severity: 'warn', summary: '警告', detail: 'キャンセルする宿泊日が見つかりません。', life: 3000 });
+        return;
+    }
+
     confirm.require({
-        group: 'cancel-room', // new group
-        message: 'この部屋のすべての予約をキャンセルします。キャンセル料の有無を選択してください。', // modified message
+        group: 'cancel-room',
+        message: confirmationMessage,
         header: 'キャンセル確認',
         icon: 'pi pi-exclamation-triangle',
         accept: async () => { // with cancellation fee
-            await cancelAndRecover(true);
+            await cancelAndRecover(true, detailIdsToCancel);
         },
         reject: async () => { // without cancellation fee
-            await cancelAndRecover(false);
+            await cancelAndRecover(false, detailIdsToCancel);
         },
         acceptLabel: 'キャンセル料発生',
         acceptClass: 'p-button-danger',
@@ -1311,11 +1385,10 @@ const recoverRoomReservation = async () => {
     closeRoomEditDialog();
 };
 
-const cancelAndRecover = async (billable) => {
-    const detailIds = selectedGroup.value.details.map(d => d.id);
+const cancelAndRecover = async (billable, detailIds) => {
     const hotelId = reservationInfo.value.hotel_id;
     const reservationId = reservationInfo.value.reservation_id;
-    
+
     await cancelReservationRooms(hotelId, reservationId, detailIds, billable);
     toast.add({ severity: 'warn', summary: 'キャンセル', detail: '部屋の予約がキャンセルされました。', life: 3000 });
     closeRoomEditDialog();
@@ -1450,7 +1523,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
     if (isGroup) {
         // --- Send array of room data for group reservation ---
         const roomDataArray = [];
-        
+
         for (const roomGroup of groupedRooms.value) {
             const roomDetail = roomGroup.details[0];
             const roomGuests = roomDetail.reservation_clients.map(client => ({
@@ -1540,7 +1613,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
             all_plan_names_list: plans.value.map(p => p.name).join(','),
         };
     }
-    
+
     visibleGuestListDialog.value = true;
 };
 </script>

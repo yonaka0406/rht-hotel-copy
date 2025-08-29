@@ -2,10 +2,38 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
-## August 28, 2026
+## August 29, 2025
+
+#### Feature Request #37: Selective Date Range for Room Bulk Cancellation
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - Currently, the room bulk cancellation feature cancels all days for the selected room
+  - Need to add the ability to select a specific date range for cancellation
+  - Will implement a date range picker to select start and end dates
+- **Implementation**:
+  - Added a PrimeVue DatePicker component with range selection mode
+  - Implemented a "Select All" checkbox to toggle between full and partial cancellation
+  - The date range picker is disabled when "Select All" is checked
+  - Date range is validated against the reservation period
+  - Confirmation dialog shows the exact date range and number of nights being cancelled
+  - Backend updated to handle partial date range cancellations
+- **Technical Considerations**:
+  - Ensure the backend can handle partial date range cancellations
+  - Validate that the selected date range falls within the reservation period
+  - Update any affected calculations (e.g., cancellation fees, revenue reports)
+  - Maintain existing transaction handling and error recovery
+  - Ensure proper handling of timezone differences
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - The date range picker should be intuitive and prevent invalid selections
+  - Consider adding a summary of the changes before final confirmation
+  - Should work consistently with the existing bulk cancellation functionality
+  - Include clear visual feedback for the selected date range
+
+## August 28, 2025
 
 #### Feature Request #39: Reservation List Search Enhancements
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - Enhance the existing date range search in the reservation list to support different search types
   - Replace the static "滞在期間選択：" label with a dropdown for selecting search criteria
@@ -33,7 +61,7 @@ This document contains all fixed and closed issues that were previously tracked 
   - Make the control responsive for different screen sizes
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-## August 27, 2026
+## August 27, 2025
 
 #### Bug #45: Parking Calendar Infinite Scroll Not Working
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
@@ -74,7 +102,7 @@ This document contains all fixed and closed issues that were previously tracked 
   - Add appropriate access controls for viewing parking information
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-## August 26, 2026
+## August 26, 2025
 
 #### Feature Request #40: Temporary Blocking with Notes
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
