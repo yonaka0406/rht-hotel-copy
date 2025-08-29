@@ -97,6 +97,14 @@
             <Divider />
         </div>
 
+        <div class="field flex flex-col col-span-2" v-if="isLongTermReservation">
+            <span :class="{ 'text-red-500': new Date() >= cancellationFeeDate }">
+                {{ cancellationFeeMessage }}
+                <i class="pi pi-info-circle ml-1" v-tooltip.top="'長期予約（30泊以上）は、宿泊開始日の30日前からキャンセル料が発生します。'"></i>
+                <Button label="計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2" @click="showCancellationCalculator = true" />
+            </span>
+        </div>
+
         <div class="field flex flex-col" v-if="reservationType !== '社員'">
             <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
         </div>
@@ -464,6 +472,12 @@
         :style="{ width: '50vw', 'max-height': '80vh', 'overflow-y': 'auto' }" modal>
         <ReservationCopyDialog :reservation_id="props.reservation_id" @close="showCopyDialog = false" />
     </Dialog>
+
+    <CancellationCalculatorDialog 
+        v-model:visible="showCancellationCalculator" 
+        :reservationDetails="reservation_details" 
+        v-if="reservation_details?.length > 0"
+    />
 </template>
 
 <script setup>
@@ -475,6 +489,7 @@ const router = useRouter();
 import ReservationClientEdit from '@/pages/MainPage/components/ReservationClientEdit.vue';
 import ReservationHistory from '@/pages/MainPage/components/ReservationHistory.vue';
 import ReservationCopyDialog from '@/pages/MainPage/components/Dialogs/ReservationCopyDialog.vue';
+import CancellationCalculatorDialog from '@/pages/MainPage/components/Dialogs/CancellationCalculatorDialog.vue';
 
 // Primevue
 import { useToast } from 'primevue/usetoast';
@@ -601,6 +616,33 @@ const allPeopleCountMatch = (group) => {
         (detail) => detail.number_of_people === detail.reservation_clients.length
     );
 };
+
+const isLongTermReservation = computed(() => numberOfNights.value >= 30);
+
+const cancellationFeeDate = computed(() => {
+    if (!isLongTermReservation.value) return null;
+    const checkInDate = new Date(reservationInfo.value.check_in);
+    checkInDate.setDate(checkInDate.getDate() - 30);
+    return checkInDate;
+});
+
+const cancellationFeeMessage = computed(() => {
+    if (!cancellationFeeDate.value) return '';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const feeDate = new Date(cancellationFeeDate.value);
+    feeDate.setHours(0, 0, 0, 0);
+
+    const formattedFeeDate = formatDate(feeDate);
+
+    if (today < feeDate) {
+        return `【長期予約】${formattedFeeDate}までにキャンセルすると、キャンセル料は発生しません。`;
+    } else {
+        return `【長期予約】本日キャンセルすると、キャンセル料が発生します。`;
+    }
+});
 
 const numberOfNights = ref(0);
 const numberOfNightsTotal = ref(0);
@@ -1094,6 +1136,8 @@ const historyDialogVisible = ref(false);
 const showHistoryDialog = () => {
     historyDialogVisible.value = true;
 };
+
+const showCancellationCalculator = ref(false);
 
 // Tab Apply Plan
 const isPatternInput = ref(false);
