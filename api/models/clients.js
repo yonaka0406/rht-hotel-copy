@@ -737,7 +737,7 @@ const deleteClient = async (requestId, clientId, updatedBy) => {
   `, updatedBy, clientId);
   try {
     const result = await pool.query(query);
-    console.log('deleteClient success');
+    //console.log('deleteClient success');
     return result.rowCount;
   } catch (err) {
     console.error('Error deleting client:', err);

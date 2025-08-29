@@ -942,7 +942,7 @@ const editReservationGuests = async (req, res) => {
             };
             await addReservationClient(req.requestId, guestInfo);
           } else {
-            console.log("Client ID was empty after add client by name");
+            //console.log("Client ID was empty after add client by name");
           }
         }
       }

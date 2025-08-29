@@ -1067,7 +1067,7 @@ const addReservationAddon = async (requestId, addon) => {
     addon.created_by,
     addon.updated_by
   ];
-  console.error('[addReservationAddon] Inserting with values:', values);
+  //console.log('[addReservationAddon] Inserting with values:', values);
 
   try {
     const result = await pool.query(query, values);

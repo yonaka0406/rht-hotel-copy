@@ -236,25 +236,10 @@ const selectOccupationByPeriod = async (requestId, period, hotelId, refDate) => 
   }
 };
 const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd, searchType = 'stay_period') => {
-  console.log(`[${new Date().toISOString()}] [Request ${requestId}] Starting selectReservationListView`);
-  console.log(`[${new Date().toISOString()}] [Request ${requestId}] Parameters:`, { 
-    hotelId, 
-    dateStart, 
-    dateEnd, 
-    searchType,
-    requestId
-  });
-
-  try {
-    const pool = getPool(requestId);
     
-    // Log database connection status
-    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Database pool status:`, {
-      total: pool.totalCount,
-      idle: pool.idleCount,
-      waiting: pool.waitingCount
-    });
-
+  try {
+    const pool = getPool(requestId);    
+  
     // Base query parts
     const selectClause = `
       SELECT
@@ -415,27 +400,9 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
 
     const query = selectClause + dateFilterClause + orderClause;
     const values = [hotelId, dateStart, dateEnd];
-
-    // Log the query and parameters (safely, without sensitive data)
-    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Executing query with parameters:`, {
-      searchType,
-      dateRange: { start: dateStart, end: dateEnd },
-      queryPreview: query.substring(0, 100) + '...' // Just show first 100 chars of query
-    });
-
-    const startTime = Date.now();
+        
     const result = await pool.query(query, values);
-    const executionTime = Date.now() - startTime;
-
-    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Query executed successfully in ${executionTime}ms`);
-    console.log(`[${new Date().toISOString()}] [Request ${requestId}] Retrieved ${result.rowCount} rows`);
-
-    // Log a sample of the result (first 2 rows) if there are results
-    if (result.rows.length > 0) {
-      console.log(`[${new Date().toISOString()}] [Request ${requestId}] Sample results (first 2 rows):`, 
-        JSON.stringify(result.rows.slice(0, 2), null, 2));
-    }
-
+            
     return result.rows;
   } catch (err) {
     console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in selectReservationListView:`, {

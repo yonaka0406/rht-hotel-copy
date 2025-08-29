@@ -22,9 +22,9 @@ async function handleCreateProject(req, res) {
     }
 
     try {
-        console.log(`[${requestId}] Processing create project request for user: ${userId}`);
+        //console.log(`[${requestId}] Processing create project request for user: ${userId}`);
         const newProject = await projectsModel.createProject(requestId, projectData, userId);
-        console.log(`[${requestId}] Project created successfully with ID: ${newProject.id}`);
+        //console.log(`[${requestId}] Project created successfully with ID: ${newProject.id}`);
         res.status(201).json(newProject);
     } catch (error) {
         console.error(`[${requestId}] Error in handleCreateProject for user ${userId}:`, error);
@@ -45,10 +45,10 @@ async function handleGetClientProjects(req, res) {
     }
 
     try {
-        console.log(`[${requestId}] Processing get projects for client ID: ${clientId}`);
+        //console.log(`[${requestId}] Processing get projects for client ID: ${clientId}`);
         const projects = await projectsModel.getProjectsByClientId(requestId, clientId);
                         
-        console.log(`[${requestId}] Successfully fetched ${projects.length} projects for client ID: ${clientId}`);
+        //console.log(`[${requestId}] Successfully fetched ${projects.length} projects for client ID: ${clientId}`);
         res.status(200).json(projects);
     } catch (error) {
         console.error(`[${requestId}] Error in handleGetClientProjects for client ID ${clientId}:`, error);
@@ -75,7 +75,7 @@ async function handleGetAllProjects(req, res) {
     }    
 
     try {
-        console.log(`[${requestId}] Processing get all projects request. Page: ${page}, Limit: ${parsedLimit}, Offset: ${offset}, SearchTerm: '${searchTerm}', Filters: ${JSON.stringify(filters)}`);
+        //console.log(`[${requestId}] Processing get all projects request. Page: ${page}, Limit: ${parsedLimit}, Offset: ${offset}, SearchTerm: '${searchTerm}', Filters: ${JSON.stringify(filters)}`);
         const result = await projectsModel.getAllProjects(requestId, { 
             limit: parsedLimit, 
             offset, 

@@ -130,7 +130,7 @@ const generateInvoice = async (req, res) => {
       return img.complete && img.naturalWidth > 0; //  Check if loaded
     }, 'img[alt="Company Stamp"]'); //  Use a specific selector
 
-    console.log('Image loaded:', imageLoaded);
+    //console.log('Image loaded:', imageLoaded);
 
     if (!imageLoaded) {
       console.warn('Image might not have loaded correctly.');
@@ -233,7 +233,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
   const paymentIds = req.body.payment_ids;
   // Determine if it's single or consolidated
   const isConsolidated = !!req.body.payment_ids && !req.params.payment_id;
-  console.log(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
+  //console.log(`[Receipt Generation] isConsolidated: ${isConsolidated}, paymentId: ${paymentId}, paymentIds: ${paymentIds ? paymentIds.join(',') : 'N/A'}`);
   const hotelId = req.params.hid;
   const userId = req.user.id;
   const taxBreakdownData = req.body.taxBreakdownData;
@@ -241,7 +241,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
   let page;
 
-  console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
+  //console.log(`New receipt request: consolidated=${isConsolidated}, hotelId=${hotelId}, paymentId=${paymentId}, paymentIds=${paymentIds ? paymentIds.join(',') : 'N/A'}, taxBreakdownData:`, taxBreakdownData);
 
   try {
     const userInfo = await getUsersByID(req.requestId, userId);
@@ -277,7 +277,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
     // If receipt exists and we're not forcing regeneration with new data, use existing receipt
     if (existingReceipt && !forceRegenerate && (!taxBreakdownData || taxBreakdownData.length === 0)) {
-      console.log(`Using existing receipt: ${existingReceipt.receipt_number} for ${isConsolidated ? 'consolidated' : 'single'} request`);
+      //console.log(`Using existing receipt: ${existingReceipt.receipt_number} for ${isConsolidated ? 'consolidated' : 'single'} request`);
       isExistingReceipt = true;
 
       // Always use the stored receipt data from database
@@ -344,12 +344,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
           for (let i = 1; i < fetchedPaymentsData.length; i++) {
             if (fetchedPaymentsData[i].payment_date !== commonPaymentDate) {
               commonPaymentDate = null; // Dates are not common
-              console.log('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
+              //console.log('[Receipt Generation] Consolidated: Payment dates differ, defaulting to current date for receipt.');
               break;
             }
           }
           if (commonPaymentDate) {
-            console.log(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
+            //console.log(`[Receipt Generation] Consolidated: Using common payment date for receipt: ${commonPaymentDate}`);
           }
         }
 
@@ -379,7 +379,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         receiptDataForPdf.totalAmount = totalConsolidatedAmount;
 
         // Save consolidated receipt
-        console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
+        //console.log(`[Receipt Generation] Consolidated Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, totalConsolidatedAmount, userId, finalTaxBreakdownForPdf
@@ -400,7 +400,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
           return res.status(400).json({ error: 'payment_id URL parameter is required for single receipts.' });
         }
 
-        console.log(`Generating new receipt for paymentId: ${paymentId}`);
+        //console.log(`Generating new receipt for paymentId: ${paymentId}`);
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
@@ -411,9 +411,9 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Generate receipt number and date based on payment date
-        console.log(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
+        //console.log(`[Receipt Generation] Single Path: Raw payment_date from paymentDataForPdf: '${paymentDataForPdf.payment_date}'`);
         const receiptDateObj = new Date(paymentDataForPdf.payment_date);
-        console.log(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
+        //console.log(`[Receipt Generation] Single Path: Created receiptDateObj: ${receiptDateObj.toISOString()} (UTC)`);
         const year = receiptDateObj.getFullYear() % 100;
         const month = receiptDateObj.getMonth() + 1;
         const prefixStr = `${hotelId}${String(year).padStart(2, '0')}${String(month).padStart(2, '0')}`;
@@ -440,7 +440,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Save the new receipt
-        console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
+        //console.log(`[Receipt Generation] Single Receipt Path: Determined receipt_date: ${receiptDataForPdf.receipt_date}`);
         const saveResult = await saveReceiptNumber(
           req.requestId, hotelId, receiptDataForPdf.receipt_number,
           receiptDataForPdf.receipt_date, amountForDbSingle, userId, finalTaxBreakdownForPdf
@@ -503,10 +503,10 @@ const handleGenerateReceiptRequest = async (req, res) => {
     const fallbackFilename = `${finalReceiptNumber}_receipt.pdf`;
 
     // Debug: Log what we're working with
-    console.log('Original client name:', paymentDataForPdf.client_name);
-    console.log('Sanitized client name:', clientNameForFile);
-    console.log('PDF filename before encoding:', pdfFilename);
-    console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
+    //console.log('Original client name:', paymentDataForPdf.client_name);
+    //console.log('Sanitized client name:', clientNameForFile);
+    //console.log('PDF filename before encoding:', pdfFilename);
+    //console.log('PDF filename after encoding:', encodeURIComponent(pdfFilename));
 
     // The UTF-8 encoded filename for modern browsers
     const encodedPdfFilenameForStar = encodeURIComponent(pdfFilename);

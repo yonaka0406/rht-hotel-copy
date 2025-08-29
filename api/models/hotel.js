@@ -187,32 +187,15 @@ const updateRoom = async (requestId, id, room_type_id, floor, room_number, capac
 };
 
 const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDate, number_of_people, comment, updated_by, block_type) => {
-  console.log('=== updateHotelCalendar called ===');
-  console.log('Input parameters:', {
-    requestId,
-    hotelId,
-    roomIds,
-    startDate,
-    endDate,
-    number_of_people,
-    comment,
-    updated_by,
-    block_type
-  });
-
   const pool = getPool(requestId);
   const client = await pool.connect();
   
-  try {
-    console.log('Starting database transaction');
+  try {    
     await client.query('BEGIN');
-
-    console.log('Processing date range:', { startDate, endDate });
+    
     const start = new Date(startDate);
     const end = new Date(endDate);
     const dateArray = [];
-
-    console.log('Parsed dates - Start:', start, 'End:', end);
     
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       throw new Error('Invalid date format. Please provide valid dates.');
@@ -224,52 +207,36 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
       // If start and end are the same, break after adding the first date
       if (start.getTime() === end.getTime()) break;
     }
-    console.log(`Generated ${dateArray.length} dates from ${startDate} to ${endDate}`);
 
     let hotelsToUpdate = [];
     if (hotelId) {
-      console.log('Using provided hotel ID:', hotelId);
       hotelsToUpdate.push(hotelId);
-    } else {
-      console.log('No hotel ID provided, fetching all hotels');
+    } else {      
       const hotelsResult = await client.query('SELECT id FROM hotels');
-      hotelsToUpdate = hotelsResult.rows.map(hotel => hotel.id);
-      console.log(`Found ${hotelsToUpdate.length} hotels to update`);
+      hotelsToUpdate = hotelsResult.rows.map(hotel => hotel.id);      
     }
 
-    for (const currentHotelId of hotelsToUpdate) {
-      console.log(`\nProcessing hotel ID: ${currentHotelId}`);
+    for (const currentHotelId of hotelsToUpdate) {      
       let roomsToUpdate = [];
       
-      if (roomIds && roomIds.length > 0) {
-        console.log(`Using provided room IDs (${roomIds.length} rooms)`);
+      if (roomIds && roomIds.length > 0) {        
         roomsToUpdate = roomIds;
-      } else {
-        console.log('No room IDs provided, fetching all rooms for hotel');
+      } else {        
         const roomsResult = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [currentHotelId]);
-        roomsToUpdate = roomsResult.rows.map(room => room.id);
-        console.log(`Found ${roomsToUpdate.length} rooms for hotel ${currentHotelId}`);
+        roomsToUpdate = roomsResult.rows.map(room => room.id);        
       }
       
       for (const roomId of roomsToUpdate) {
-        console.log(`\nProcessing room ID: ${roomId}`);
-        
         const reservationIdResult = await client.query('SELECT gen_random_uuid() as id');
         const mockReservationId = reservationIdResult.rows[0].id;
         const checkInDate = dateArray[0];
         // Set checkOutDate to be one day after the last date in dateArray
         const checkOutDate = new Date(dateArray[dateArray.length - 1]);
-        checkOutDate.setDate(checkOutDate.getDate() + 1);
-        
-        console.log('Generated reservation ID:', mockReservationId);
-        console.log('Check-in date:', checkInDate);
-        console.log('Check-out date:', checkOutDate);
+        checkOutDate.setDate(checkOutDate.getDate() + 1);                
 
-        const clientId = block_type === 'temp' ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111';
-        console.log('Using client ID:', clientId, 'for block type:', block_type);
+        const clientId = block_type === 'temp' ? '22222222-2222-2222-2222-222222222222' : '11111111-1111-1111-1111-111111111111';        
 
-        try {
-          console.log('Attempting to insert reservation...');
+        try {          
           await client.query(
             `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, comment, created_by, updated_by)
             VALUES ($1, $2, $3, $4, $5, $6, 'block', $7, $8, $8)
@@ -284,18 +251,15 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
                 comment,
                 updated_by,
             ]
-          );
-          console.log('Successfully inserted reservation');
+          );          
         } catch (error) {
           console.error('Error inserting reservation:', error);
           throw error;
         }
 
         for (const [index, date] of dateArray.entries()) {
-          console.log(`\nProcessing date ${index + 1}/${dateArray.length}:`, date);
-          
-          try {
-            console.log('Checking for existing reservations...');
+                    
+          try {          
             const existingReservation = await client.query(
               `SELECT 1 FROM reservation_details 
                WHERE hotel_id = $1 AND room_id = $2 AND date = $3 AND cancelled IS NULL`,
@@ -310,8 +274,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
                 message: `${date.toISOString().split('T')[0]}に予約は既に登録されています。` 
               };
             }          
-
-            console.log('Inserting reservation detail...');
+            
             await client.query(
               `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -327,8 +290,7 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
                 updated_by,
                 updated_by,
               ]
-            );
-            console.log('Successfully inserted reservation detail');
+            );            
           } catch (error) {
             console.error('Error processing date:', date, error);
             throw error;
@@ -336,17 +298,14 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
         }
       }
     }
-    
-    console.log('All operations completed successfully, committing transaction');
+        
     await client.query('COMMIT');
     return { success: true, message: 'Calendar updated successfully' };
     
   } catch (error) {
     console.error('Error in updateHotelCalendar:', error);
-    try {
-      console.log('Attempting to rollback transaction...');
-      await client.query('ROLLBACK');
-      console.log('Rollback successful');
+    try {      
+      await client.query('ROLLBACK');      
     } catch (rollbackError) {
       console.error('Error during rollback:', rollbackError);
     }
@@ -392,10 +351,7 @@ const selectBlockedRooms = async (requestId, hotelId) => {
     throw new Error('Database error');
   }
 };
-const deleteBlockedRooms = async (requestId, reservationId, userID) => {
-  console.log('=== deleteBlockedRooms called ===');
-  console.log('Input parameters:', { requestId, reservationId, userID });
-  
+const deleteBlockedRooms = async (requestId, reservationId, userID) => {    
   // Validate reservationId is a valid UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(reservationId)) {
@@ -413,15 +369,8 @@ const deleteBlockedRooms = async (requestId, reservationId, userID) => {
     RETURNING *;
   `, userID, reservationId);
 
-  console.log('Generated SQL query:', query);
-
   try {
-    console.log('Attempting to delete reservation with ID:', reservationId);
     const result = await pool.query(query);
-    console.log('Delete result:', {
-      rowCount: result.rowCount,
-      rows: result.rows
-    });
     
     if (result.rowCount === 0) {
       console.warn('No rows were deleted - reservation not found or not a block type');

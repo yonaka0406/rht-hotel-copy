@@ -399,7 +399,7 @@ const insertYadomasterRates = async (requestId, rates) => {
 const insertForecastData = async (requestId, forecasts, user_id) => {
     // Ensure forecasts is an array and not empty
     if (!Array.isArray(forecasts) || forecasts.length === 0) {
-        console.log('insertForecastData: No forecast data provided or forecasts array is empty.');
+        //console.log('insertForecastData: No forecast data provided or forecasts array is empty.');
         return { success: true, count: 0, message: 'No forecast data to process.' };
     }
 
@@ -489,7 +489,7 @@ const insertForecastData = async (requestId, forecasts, user_id) => {
 
 const insertAccountingData = async (requestId, accountingEntries, user_id) => {
     if (!Array.isArray(accountingEntries) || accountingEntries.length === 0) {
-        console.log('insertAccountingData: No accounting data provided or accountingEntries array is empty.');
+        //console.log('insertAccountingData: No accounting data provided or accountingEntries array is empty.');
         return { success: true, count: 0, message: 'No accounting data to process.' };
     }
 

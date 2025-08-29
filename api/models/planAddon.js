@@ -56,7 +56,7 @@ const getPlanAddonById = async (requestId, id) => {
 // Create a new plan_addon
 const createPlanAddon = async (requestId, planAddon) => {
     const pool = getPool(requestId);
-    console.log('createPlanAddon:', planAddon)
+    //console.log('createPlanAddon:', planAddon)
     let hotel_id = null;
     let plans_global_id = null;
     let plans_hotel_id = null;

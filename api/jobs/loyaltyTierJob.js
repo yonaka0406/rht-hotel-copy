@@ -21,14 +21,14 @@ const assignLoyaltyTiers = async () => {
 
         // Disable trigger before any client updates
         await client.query('ALTER TABLE clients DISABLE TRIGGER log_clients_trigger;');
-        console.log('Temporarily disabled log_clients_trigger.');
+        //console.log('Temporarily disabled log_clients_trigger.');
 
         // 1. Initialize all clients to 'newbie'
-        console.log('Initializing clients to newbie...');
+        //console.log('Initializing clients to newbie...');
         await client.query("UPDATE clients SET loyalty_tier = 'newbie'");
 
         // 2. Assign 'prospect' to clients with no reservations, reservation_clients, or reservation_payments entries
-        console.log('Assigning "prospect" tier to clients with no reservation-related entries...');
+        //console.log('Assigning "prospect" tier to clients with no reservation-related entries...');
         const prospectQuery = `
             UPDATE clients c SET loyalty_tier = 'prospect'
             WHERE c.id NOT IN (
@@ -40,11 +40,11 @@ const assignLoyaltyTiers = async () => {
             );
         `;
         const { rowCount: prospectCount } = await client.query(prospectQuery);
-        console.log(`Prospect update affected ${prospectCount} rows.`);
+        //console.log(`Prospect update affected ${prospectCount} rows.`);
 
         // Fetch all tier settings
         const { rows: settings } = await client.query('SELECT * FROM loyalty_tiers ORDER BY tier_name, hotel_id');
-        console.log(`Found ${settings.length} loyalty tier settings.`);
+        //console.log(`Found ${settings.length} loyalty tier settings.`);
 
         const brandLoyalSetting = settings.find(s => s.tier_name === 'brand_loyal');
         const hotelLoyalSettings = settings.filter(s => s.tier_name === 'hotel_loyal');
@@ -52,9 +52,9 @@ const assignLoyaltyTiers = async () => {
 
         // 3. Evaluate 'BRAND_LOYAL'
         if (brandLoyalSetting) {
-            console.log('Evaluating Brand Loyal tier...');
+            //console.log('Evaluating Brand Loyal tier...');
             const startDate = getStartDateForPeriod(brandLoyalSetting.time_period_months);
-            console.log(`Brand Loyal evaluation period: from ${startDate}`);
+            //console.log(`Brand Loyal evaluation period: from ${startDate}`);
 
             const conditions = [];
             if (brandLoyalSetting.min_bookings) {
@@ -82,20 +82,20 @@ const assignLoyaltyTiers = async () => {
                         HAVING ${havingClause}
                     )`;
                 const { rowCount: brandLoyalCount } = await client.query(brandLoyalQuery, [startDate]);
-                console.log(`Brand Loyal update affected ${brandLoyalCount} rows.`);
+                //console.log(`Brand Loyal update affected ${brandLoyalCount} rows.`);
             } else {
-                console.log('No conditions defined for Brand Loyal tier, skipping.');
+                //console.log('No conditions defined for Brand Loyal tier, skipping.');
             }
         } else {
-            console.log('No Brand Loyal tier configuration found, skipping.');
+            //console.log('No Brand Loyal tier configuration found, skipping.');
         }
 
         // 4. Evaluate 'HOTEL_LOYAL' for clients still 'Newbie' or other configurable previous tiers
         if (hotelLoyalSettings.length > 0) {
-            console.log(`Evaluating Hotel Loyal tier for ${hotelLoyalSettings.length} hotels...`);
+            //console.log(`Evaluating Hotel Loyal tier for ${hotelLoyalSettings.length} hotels...`);
             for (const setting of hotelLoyalSettings) {
                 const startDate = getStartDateForPeriod(setting.time_period_months);
-                console.log(`Hotel Loyal evaluation for hotel ${setting.hotel_id}: from ${startDate}`);
+                //console.log(`Hotel Loyal evaluation for hotel ${setting.hotel_id}: from ${startDate}`);
 
                 const conditions = [];
                 if (setting.min_bookings) {
@@ -126,20 +126,20 @@ const assignLoyaltyTiers = async () => {
                             HAVING ${havingClause}
                         )`;
                     const { rowCount: hotelLoyalCount } = await client.query(hotelLoyalQuery, [setting.hotel_id, startDate]);
-                    console.log(`Hotel Loyal update for hotel ${setting.hotel_id} affected ${hotelLoyalCount} rows.`);
+                    //console.log(`Hotel Loyal update for hotel ${setting.hotel_id} affected ${hotelLoyalCount} rows.`);
                 } else {
-                    console.log(`No conditions defined for Hotel Loyal tier (hotel ${setting.hotel_id}), skipping.`);
+                    //console.log(`No conditions defined for Hotel Loyal tier (hotel ${setting.hotel_id}), skipping.`);
                 }
             }
         } else {
-            console.log('No Hotel Loyal tier configurations found, skipping.');
+            //console.log('No Hotel Loyal tier configurations found, skipping.');
         }
 
         // 5. Evaluate 'REPEATER' for clients still 'Newbie' or 'Prospect'
         if (repeaterSetting && repeaterSetting.min_bookings) {
-            console.log('Evaluating Repeater tier...');
+            //console.log('Evaluating Repeater tier...');
             const startDate = getStartDateForPeriod(repeaterSetting.time_period_months);
-            console.log(`Repeater evaluation period: from ${startDate}, min bookings: ${repeaterSetting.min_bookings}`);
+            //console.log(`Repeater evaluation period: from ${startDate}, min bookings: ${repeaterSetting.min_bookings}`);
 
             // Apply REPEATER only if client is currently Newbie or Prospect.
             // Brand Loyal and Hotel Loyal are higher.
@@ -157,13 +157,13 @@ const assignLoyaltyTiers = async () => {
                 )
             `;
             const { rowCount: repeaterCount } = await client.query(repeaterQuery, [startDate, repeaterSetting.min_bookings]);
-            console.log(`Repeater update affected ${repeaterCount} rows.`);
+            //console.log(`Repeater update affected ${repeaterCount} rows.`);
         } else {
-            console.log('No Repeater tier configuration found or min_bookings not set, skipping.');
+            //console.log('No Repeater tier configuration found or min_bookings not set, skipping.');
         }
 
         await client.query('COMMIT');
-        console.log('Loyalty tier assignment job completed successfully.');
+        //console.log('Loyalty tier assignment job completed successfully.');
 
         // Log final counts for verification
         const finalCounts = await client.query(`
@@ -172,7 +172,7 @@ const assignLoyaltyTiers = async () => {
             GROUP BY loyalty_tier
             ORDER BY loyalty_tier
         `);
-        console.log('Final loyalty tier counts:', finalCounts.rows);
+        //console.log('Final loyalty tier counts:', finalCounts.rows);
 
     } catch (error) {
         await client.query('ROLLBACK');
@@ -182,7 +182,7 @@ const assignLoyaltyTiers = async () => {
         try {
             // Always try to re-enable the trigger, even if there was an error
             await client.query('ALTER TABLE clients ENABLE TRIGGER log_clients_trigger;');
-            console.log('Re-enabled log_clients_trigger.');
+            //console.log('Re-enabled log_clients_trigger.');
         } catch (enableTriggerError) {
             console.error('CRITICAL: Failed to re-enable log_clients_trigger:', enableTriggerError);
             // This is critical - you might want to send an alert here
@@ -190,7 +190,7 @@ const assignLoyaltyTiers = async () => {
 
         // Release the client back to the pool
         client.release();
-        console.log('Database client released.');
+        //console.log('Database client released.');
     }
 };
 
@@ -198,7 +198,7 @@ const assignLoyaltyTiers = async () => {
 const scheduleLoyaltyTierJob = () => {    
     cron.schedule('0 2 * * *', async () => {
         try {
-            console.log('Loyalty tier assignment job triggered by cron schedule.');
+            //console.log('Loyalty tier assignment job triggered by cron schedule.');
             await assignLoyaltyTiers();
         } catch (error) {
             console.error('Loyalty tier assignment job failed:', error);            
@@ -207,7 +207,7 @@ const scheduleLoyaltyTierJob = () => {
         scheduled: true,
         timezone: "Asia/Tokyo"
     });
-    console.log('Loyalty tier assignment job scheduled daily at 2 AM.');
+    //console.log('Loyalty tier assignment job scheduled daily at 2 AM.');
 };
 
 module.exports = { assignLoyaltyTiers, scheduleLoyaltyTierJob };

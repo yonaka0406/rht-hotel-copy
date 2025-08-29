@@ -541,7 +541,7 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
     const client = await pool.connect();
 
     try {
-        console.log('Starting bulk delete with IDs:', assignmentIds);
+        //console.log('Starting bulk delete with IDs:', assignmentIds);
         await client.query('BEGIN');
 
         // Get the addon IDs for the assignments we're about to delete
@@ -552,15 +552,15 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
             values: [assignmentIds]
         };
         
-        console.log('Executing query to find addon IDs:', getAddonsQuery);
+        //console.log('Executing query to find addon IDs:', getAddonsQuery);
         const addonsResult = await client.query(getAddonsQuery);
-        console.log('Found addon records:', addonsResult.rows);
+        //console.log('Found addon records:', addonsResult.rows);
         
         const addonIds = addonsResult.rows.map(row => row.reservation_addon_id);
-        console.log('Extracted addon IDs:', addonIds);
+        //console.log('Extracted addon IDs:', addonIds);
 
         if (addonIds.length === 0) {
-            console.log('No matching records found for the provided IDs');
+            //console.log('No matching records found for the provided IDs');
             await client.query('COMMIT');
             return {
                 deletedCount: 0,
@@ -574,10 +574,10 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
             text: 'DELETE FROM reservation_parking WHERE reservation_addon_id = ANY($1::uuid[]) RETURNING *',
             values: [assignmentIds]
         };
-        console.log('Deleting parking assignments with query:', deleteParkingQuery);
+        //console.log('Deleting parking assignments with query:', deleteParkingQuery);
         const deleteResult = await client.query(deleteParkingQuery);
         const deletedCount = deleteResult.rowCount;
-        console.log('Deleted parking assignments:', deleteResult.rows);
+        //console.log('Deleted parking assignments:', deleteResult.rows);
 
         // Then delete the associated addon records
         if (addonIds.length > 0) {
@@ -585,13 +585,13 @@ const bulkDeleteParkingAddonAssignments = async (requestId, assignmentIds) => {
                 text: 'DELETE FROM reservation_addons WHERE id = ANY($1::uuid[]) RETURNING *',
                 values: [addonIds]
             };
-            console.log('Deleting addon records with query:', deleteAddonsQuery);
+            //console.log('Deleting addon records with query:', deleteAddonsQuery);
             const deletedAddons = await client.query(deleteAddonsQuery);
-            console.log('Deleted addon records:', deletedAddons.rows);
+            //console.log('Deleted addon records:', deletedAddons.rows);
         }
 
         await client.query('COMMIT');
-        console.log('Transaction committed successfully');
+        //console.log('Transaction committed successfully');
 
         return {
             deletedCount,

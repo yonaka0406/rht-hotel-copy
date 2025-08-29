@@ -128,8 +128,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       console.error('Room type creation error:', error);
       res.status(500).json({ error: error.message });
     } finally {
-      client.release();
-      //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+      client.release();      
     }
   };
   const roomCreate = async (req, res) => {
@@ -193,8 +192,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       console.error('Room creation error:', error);
       res.status(500).json({ error: error.message });
     } finally {
-      client.release();
-      //console.log("After release:", pool.totalCount, pool.idleCount, pool.waitingCount);
+      client.release();      
     }
 
   };
@@ -387,36 +385,18 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
     const { startDate: startDateParam, endDate: endDateParam } = req.params;
     const { hotelId: hotelIdFromBody, roomIds, number_of_people, comment, block_type } = req.body;
     const updated_by = req.user.id;
-
-    console.log('=== editHotelCalendar Request ===');
-    console.log('Request Params:', req.params);
-    console.log('Request Body:', req.body);
-    console.log('Request User:', req.user);
-
-    console.log('Extracted Values:', {
-      startDateParam,
-      endDateParam,
-      hotelIdFromBody,
-      roomIds,
-      number_of_people,
-      comment,
-      block_type,
-      updated_by
-    });
-
+    
     let numericHotelId, validatedStartDate, validatedEndDate, validatedRoomIds = [];
     const pool = getPool();
     const client = await pool.connect();
 
-    try {
-      console.log('=== Starting Validation ===');
+    try {      
       numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID from body');
       validatedStartDate = validateDateStringParam(startDateParam, 'Start Date parameter');
       validatedEndDate = validateDateStringParam(endDateParam, 'End Date parameter');
 
       // If roomIds is not provided, fetch all room IDs for the hotel
-      if (!roomIds) {
-        console.log('No room IDs provided, fetching all rooms for the hotel');
+      if (!roomIds) {        
         const result = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [numericHotelId]);
         validatedRoomIds = result.rows.map(row => row.id);
       } else {
@@ -432,28 +412,8 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
 
       if (validatedRoomIds.length === 0 && !comment) {
         throw new Error('No valid rooms found for the specified hotel or no comment provided.');
-      }
-
-      console.log('Validated Values:', {
-        numericHotelId,
-        validatedStartDate,
-        validatedEndDate,
-        validatedRoomIds,
-        number_of_people
-      });
-
-      console.log('=== Calling updateHotelCalendar ===', {
-        requestId: req.requestId,
-        numericHotelId,
-        validatedRoomIds,
-        validatedStartDate,
-        validatedEndDate,
-        number_of_people,
-        comment,
-        updated_by,
-        block_type
-      });
-      
+      }      
+            
       const updatedRoom = await updateHotelCalendar(
         req.requestId, 
         numericHotelId, 
@@ -481,17 +441,10 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       client.release();
     }
   };
-  const editBlockedRooms = async (req, res) => {
-    console.log('=== editBlockedRooms called ===');
-    console.log('Request params:', req.params);
-    console.log('User:', req.user);
-    
+  const editBlockedRooms = async (req, res) => {        
     const { id: blockId } = req.params;
     const user_id = req.user?.id;
-    
-    console.log('Block ID parameter:', blockId);
-    console.log('User ID:', user_id);
-
+        
     if (!blockId) {
         console.error('No block ID provided');
         return res.status(400).json({ 
@@ -501,8 +454,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         });
     }
 
-    try {
-        console.log('Attempting to delete blocked room with ID:', blockId);
+    try {    
         const unblock = await deleteBlockedRooms(req.requestId, blockId, user_id);
         
         if (!unblock) {
@@ -513,8 +465,7 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
                 blockId: blockId
             });
         }
-        
-        console.log('Successfully unblocked room with ID:', blockId);
+                
         res.status(200).json({ 
             success: true, 
             message: 'Calendar settings updated.',

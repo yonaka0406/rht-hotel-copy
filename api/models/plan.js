@@ -111,7 +111,7 @@ const getPlanByKey = async (requestId, hotel_id, plan_key) => {
     }
 
     const parts = plan_key.split('h');
-    console.log('plan_key:', plan_key, 'parts:', parts);
+    //console.log('plan_key:', plan_key, 'parts:', parts);
 
     try {
         // Extract IDs from parts
