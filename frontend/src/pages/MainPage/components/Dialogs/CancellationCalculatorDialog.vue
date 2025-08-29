@@ -3,16 +3,20 @@
         style="width: 50vw">
         <div v-if="!isLoading">
             <div class="p-fluid" v-if="isLongTermReservation">
-                <div class="field flex grid grid-cols-12 gap-x-4">
+                <div class="field flex grid grid-cols-12 gap-x-4 mt-6">
                     <div class="col-span-6">
-                        <label for="cancellation-date">キャンセル日</label>
-                        <DatePicker v-model="cancellationDate" showIcon fluid iconDisplay="input" dateFormat="yy-mm-dd"
-                        :numberOfMonths="2"
-                        :selectOtherMonths="true" />
+                        <FloatLabel>                        
+                            <DatePicker v-model="cancellationDate" showIcon fluid iconDisplay="input" dateFormat="yy-mm-dd"
+                            :numberOfMonths="2"
+                            :selectOtherMonths="true" />
+                            <label for="cancellation-date">キャンセル日</label>
+                        </FloatLabel>
                     </div>
                     <div class="col-span-6">
-                        <label for="rule-days">キャンセル料発生日数</label>
-                        <InputNumber v-model="ruleDays" inputId="rule-days" :min="0" />
+                        <FloatLabel>                        
+                            <InputNumber v-model="ruleDays" inputId="rule-days" :min="0" />
+                            <label for="rule-days">キャンセル料発生日数（〇日間前まで）</label>
+                        </FloatLabel>
                     </div>
                 </div>
                 <div class="field mt-4">
@@ -39,7 +43,7 @@
             <ProgressSpinner />
         </div>
         <template #footer>
-            <Button label="閉じる" icon="pi pi-times" @click="$emit('update:visible', false)" class="p-button-text" />
+            <Button label="閉じる" icon="pi pi-times" @click="$emit('update:visible', false)" class="p-button-danger p-button-text p-button-sm" />
         </template>
     </Dialog>
 </template>
@@ -50,6 +54,7 @@ import Dialog from 'primevue/dialog';
 import DatePicker from 'primevue/datepicker';
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 import Card from 'primevue/card';
 import ProgressSpinner from 'primevue/progressspinner';
 import { useCancellationFeeCalculator } from '@/composables/useCancellationFeeCalculator';

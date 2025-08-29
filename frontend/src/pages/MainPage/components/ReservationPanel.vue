@@ -98,11 +98,10 @@
         </div>
 
         <div class="field flex flex-col col-span-2" v-if="isLongTermReservation">
-            <span :class="{ 'text-red-500': new Date() >= cancellationFeeDate }">
+            <span>
                 <Button label="キャンセル発生日計算" icon="pi pi-calculator" class="p-button-text p-button-sm ml-2" @click="showCancellationCalculator = true" />
                 からキャンセル料発生日の確認ができます。
-                <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>
-                
+                <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>                
             </span>
         </div>
 
