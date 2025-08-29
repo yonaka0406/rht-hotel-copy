@@ -105,7 +105,7 @@
                     (tlPlan) => tlPlan.rmtypecode === plan.rmtypecode && tlPlan.netrmtypegroupcode === plan.netrmtypegroupcode
                 );
                 if (matchingTLPlan) {
-                    plan.room_type_id = matchingTLRoom.room_type_id;
+                    plan.room_type_id = matchingTLPlan.room_type_id;
                 }
             });            
         }
