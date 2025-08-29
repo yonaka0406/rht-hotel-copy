@@ -5,6 +5,49 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### August 29, 2025
+
+#### Feature Request #46: Reservation Consolidation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Allow merging of separate reservations into a single reservation when certain conditions are met
+  - Improve booking management by reducing the number of separate reservations for the same guest
+- **Requirements**:
+  - Only allow consolidation if the booker is the same for all reservations
+  - Consolidation should be possible when:
+    1. The check-in and check-out dates are identical, or
+    2. The room is the same and the reservation periods are contiguous
+  - All reservations being merged must be of the same type (e.g., cannot merge 'default' with 'employee' type)
+  - If any reservation has an ota_reservation_id, all reservations must have the same ota_reservation_id to be merged
+  - Preserve all reservation details and history during consolidation
+  - Handle comment fields by concatenating them with clear separation
+- **Implementation Details**:
+  - Add a "Merge Reservations" option in the reservation management interface
+  - Show visual indicators for reservations that can be consolidated
+  - Validate all business rules before allowing consolidation (including type matching)
+  - Update all related records and references to maintain data integrity, including:
+    - reservation_details.reservation_id
+    - reservation_payments.reservation_id    
+  - Combine comments from all merged reservations with clear separation (e.g., "--- Merged from Reservation ID: [ID] ---")
+- **UI/UX Considerations**:
+  - Add a "Merge" button in the reservation panel that only appears when there are mergeable reservations
+  - When clicked, open a dialog showing:
+    - List of all mergeable reservations with key details (dates, room, status)
+    - Preview of how the merged reservation will look
+    - Editable comment field pre-filled with concatenated comments from all reservations
+    - Option to edit/clean up the combined comment before confirming
+  - Clear visual indicators for which reservations can be merged together
+  - Preview of what the consolidated reservation will look like
+  - Confirmation dialog showing all changes before applying consolidation
+  - Option to undo the consolidation if needed
+  - Loading state during the merge operation
+  - Success/error notifications after the operation
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Should handle various edge cases (different rates, special requests, etc.)
+  - Consider impact on reporting and analytics
+  - Ensure proper audit logging of consolidation actions
+
 ### August 25, 2025
 
 #### Feature Request #44: Customize Room Assignment Order by Hotel
@@ -260,4 +303,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: August 29, 2025*
 *Total Bugs: 1* (last one #45)
-*Total Feature Requests: 19* (last one #44)
+*Total Feature Requests: 20* (last one #46)
