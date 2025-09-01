@@ -288,9 +288,7 @@
     }
 
     const allReservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null) || [];
-
-    console.log('allReservations', allReservations);
-    
+        
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = allReservations.filter(room => room.status === 'block');
     
