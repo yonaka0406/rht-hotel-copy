@@ -104,10 +104,14 @@
                 <i class="pi pi-info-circle ml-1" v-tooltip.top=cancellationFeeMessage></i>                
             </span>
         </div>
-
-        <div class="field flex flex-col" v-if="reservationType !== '社員'">
-            <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
-        </div>
+        <div class="field flex flex-col">
+            <div class="items-center flex">
+                <span class="font-bold">支払い：</span>
+                <SelectButton v-model="paymentTimingSelected" :options="paymentTimingOptions"
+                    optionLabel="label" optionValue="value" @change="updatePaymentTiming"
+                    :disabled="reservationStatus === 'キャンセル'" />
+            </div>
+        </div>        
         <div class="field flex flex-col ">
             <div class="items-center flex">
                 <span class="font-bold">種類：</span>
@@ -128,6 +132,9 @@
                 </template>
             </div>
         </div>
+        <div class="field flex flex-col" v-if="reservationType !== '社員'">
+            <span class="items-center flex"><span class="font-bold">ステータス：</span> {{ reservationStatus }}</span>
+        </div>        
         <div class="field flex flex-col col-span-2 relative">
             <div class="absolute top-0 right-0">
                 <Button icon="pi pi-history" class="p-button-rounded p-button-text" @click="showHistoryDialog" />
@@ -514,7 +521,7 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime } = useReservationStore();
+const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime, setPaymentTiming } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 
@@ -524,8 +531,38 @@ const reservationTypeOptions = computed(() => {
         { label: '通常予約', value: 'default' },
         { label: '社員', value: 'employee' },
     ];
-
 });
+
+const paymentTimingSelected = ref(null);
+const paymentTimingOptions = computed(() => {
+    return [
+        { label: '未設定', value: 'not_set' },
+        { label: '事前決済', value: 'prepaid' },
+        { label: '現地決済', value: 'on-site' },
+        { label: '後払い', value: 'postpaid' },
+    ];
+});
+
+const updatePaymentTiming = async (event) => {
+    try {
+        const selectedOption = event.value;
+        await setPaymentTiming(selectedOption);
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: '支払いタイミングが更新されました。',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Error updating payment timing:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '支払いタイミングの更新に失敗しました。',
+            life: 3000
+        });
+    }
+};
 
 // Helper
 const formatDate = (date) => {
@@ -601,7 +638,13 @@ const groupedRooms = computed(() => {
 
 });
 const allRoomsHavePlan = computed(() => {
-    return groupedRooms.value.every(group => allHavePlan(group));
+    // Check if every room in every group has a plan
+    const allPlansSet = groupedRooms.value.every(group => allHavePlan(group));
+
+    // Check if payment_timing is set
+    const paymentTimingSet = reservationInfo.value.payment_timing && reservationInfo.value.payment_timing !== 'not_set';
+
+    return allPlansSet && paymentTimingSet;
 });
 const allHavePlan = (group) => {
     return group.details.every(
@@ -671,7 +714,7 @@ const updateReservationType = async (event) => {
                 toast.add({
                     severity: 'error',
                     summary: 'エラー',
-                    detail: '通常予約に変更するには、すべての部屋にプランを設定してください。',
+                    detail: '通常予約に変更するには、予約の支払いの設定及びすべての部屋にプランを設定してください。',
                     life: 5000
                 });
                 return;
@@ -725,7 +768,7 @@ const updateReservationStatus = async (status, type = null) => {
         toast.add({
             severity: 'warn',
             summary: '警告',
-            detail: '部屋の予約にプランを追加してください。', life: 3000
+            detail: '予約の支払いの設定及び部屋の予約にプランを追加してください。', life: 3000
         });
         return;
     }
@@ -1407,6 +1450,7 @@ onMounted(async () => {
     // console.log('[ReservationPanel] Reservation loaded:', reservationInfo.value);
 
     reservationTypeSelected.value = reservationInfo.value.type;
+    paymentTimingSelected.value = reservationInfo.value.payment_timing;
     selectedClient.value = reservationInfo.value.client_id;
     cancelStartDate.value = new Date(reservationInfo.value.check_in);
     cancelMinDate.value = new Date(reservationInfo.value.check_in);

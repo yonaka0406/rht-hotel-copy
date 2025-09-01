@@ -32,12 +32,16 @@ CREATE TABLE reservations (
     type TEXT CHECK (type IN ('default', 'employee', 'ota', 'web')) NOT NULL DEFAULT 'default',
     agent TEXT NULL,
     ota_reservation_id TEXT NULL,
+    payment_timing TEXT CHECK (payment_timing IN ('not_set', 'prepaid', 'on-site', 'postpaid')) NOT NULL DEFAULT 'not_set'
     comment TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
     PRIMARY KEY (hotel_id, id)
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE reservations
+ADD COLUMN payment_timing TEXT CHECK (payment_timing IN ('not_set', 'prepaid', 'on-site', 'postpaid')) NOT NULL DEFAULT 'not_set';
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),

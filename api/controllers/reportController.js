@@ -39,6 +39,21 @@ const translateStatus = (status) => {
       return '不明';
   }
 };
+
+const translatePaymentTiming = (timing) => {
+  switch (timing) {
+    case 'not_set':
+      return '未設定';
+    case 'prepaid':
+      return '事前決済';
+    case 'on-site':
+      return '現地決済';
+    case 'postpaid':
+      return '後払い';
+    default:
+      return '';
+  }
+};
 const translateType = (type) => {
   switch (type) {    
     case 'default':
@@ -254,6 +269,7 @@ const getExportReservationList = async (req, res) => {
         残高: Math.floor(parseFloat(reservation.price)) - Math.floor(parseFloat(reservation.payment)),
         宿泊者: clientNames,
         支払者: payerNames,
+        支払い: translatePaymentTiming(reservation.payment_timing),        
         予約ID: reservation.id,
         備考: reservation.comment || '',
       });
@@ -352,8 +368,10 @@ const getExportReservationDetails = async (req, res) => {
         /*入金額: reservation.payments,*/
         /*残高: reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) - reservation.payments,*/
         売上高: reservation.billable ? reservation.plan_price + Math.floor(parseFloat(reservation.addon_value)) : 0,
+        支払い: translatePaymentTiming(reservation.payment_timing),
         予約ID: reservation.reservation_id,
         予約詳細ID: reservation.id,
+        詳細キャンセル: reservation.cancelled ? 'キャンセル' : '',
       });
     });
     csvStream.end();
@@ -859,7 +877,6 @@ const getMonthlyReservationEvolution = async (req, res) => {
     }
   }  
 };
-
 
 module.exports = { 
   getCountReservation,

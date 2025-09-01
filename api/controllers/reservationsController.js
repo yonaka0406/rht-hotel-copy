@@ -8,6 +8,7 @@ const {
   insertCopyReservation, selectReservationParking,
   deleteParkingReservation, deleteBulkParkingReservations,
   cancelReservationRooms: cancelReservationRoomsModel,
+  updatePaymentTiming,
 } = require('../models/reservations');
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
@@ -1450,9 +1451,24 @@ const cancelReservationRooms = async (req, res) => {
   }
 };
 
+const editPaymentTiming = async (req, res) => {
+  const { id } = req.params;
+  const { hotel_id, payment_timing } = req.body;
+  const updated_by = req.user.id;
+
+  try {
+    const updatedReservation = await updatePaymentTiming(req.requestId, id, hotel_id, payment_timing, updated_by);
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating payment timing:', err);
+    res.status(500).json({ error: 'Failed to update payment timing' });
+  }
+};
+
 module.exports = {
   getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
   getParkingSpotAvailability,
   createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation,
   cancelReservationRooms,
+  editPaymentTiming,
 };

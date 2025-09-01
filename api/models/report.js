@@ -473,6 +473,7 @@ const selectExportReservationList = async (requestId, hotelId, dateStart, dateEn
       ,details.clients_json
       ,details.payers_json
       ,reservations.comment
+      ,reservations.payment_timing
     FROM
       reservations	
       ,hotels
@@ -616,6 +617,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,reservations.type AS reservation_type
       ,reservations.agent
       ,reservations.ota_reservation_id
+      ,reservations.payment_timing
       ,reservation_details.id
       ,reservation_details.date
       ,rooms.floor
@@ -639,6 +641,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
       ,(COALESCE(reservation_addons.quantity,0) * COALESCE(reservation_addons.price,0)) AS addon_value
       ,COALESCE(reservations.payments,0) AS payments
       ,reservation_details.billable
+      ,reservation_details.cancelled
     FROM
       hotels
       ,rooms
@@ -654,6 +657,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.type
           ,reservations.agent
           ,reservations.ota_reservation_id
+          ,reservations.payment_timing
           ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS booker_name
           ,clients.name_kana AS booker_kana
           ,clients.name_kanji AS booker_kanji
@@ -677,6 +681,7 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
           ,reservations.type
           ,reservations.agent
           ,reservations.ota_reservation_id
+          ,reservations.payment_timing
           ,clients.name_kanji, clients.name, clients.name_kana
       ) AS reservations
       ,reservation_details

@@ -97,11 +97,15 @@
                     </div>
                     
                     <!-- Client info section -->
-                    <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
-                      <Avatar icon="pi pi-user" size="small" class="mr-2"/>
-                      <span class="mb-4">
-                        {{ getClientName(room) }}                        
-                      </span> 
+                     <div v-if="room.client_name">
+                      <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
+                        <Avatar icon="pi pi-user" size="small" class="mr-2"/>
+                        <p class="mb-2">
+                          {{ getClientName(room) }}                    
+                        </p>
+                      </div>
+                      <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>
+                      <div v-else class="mb-2"></div>
                     </div>
                     <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
@@ -153,6 +157,7 @@
     :modal="true"
     :position="'bottom'"
     :style="{height: '75vh'}"    
+    @hide="handleDrawerClose"
     :closable="true"
     class="dark:bg-gray-800"
   >
@@ -239,6 +244,21 @@
       return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const paymentTimingText = (timing) => {
+    switch (timing) {
+        case 'not_set':
+            return '未設定';
+        case 'prepaid':
+            return '事前決済';
+        case 'on-site':
+            return '現地決済';
+        case 'postpaid':
+            return '後払い';
+        default:
+            return '';
+    }
+  };
+
   const getContrastColor = (hexcolor) => {
     if (!hexcolor || typeof hexcolor !== 'string') return '#000000';
     let processedHex = hexcolor.startsWith('#') ? hexcolor.slice(1) : hexcolor;
@@ -268,6 +288,8 @@
     }
 
     const allReservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null) || [];
+
+    console.log('allReservations', allReservations);
     
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
     const blockedRooms = allReservations.filter(room => room.status === 'block');
@@ -357,15 +379,17 @@
     console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
       room_id: r.room_id,
       room_number: r.room_number,
-      reservation_id: r.reservation_id,
-      status: r.status
+      reservation_id: r.id,
+      status: r.status,
+      payment_timing: r.payment_timing
     })));
     
     console.log('Check-out Today:', categorizedRooms.checkOut.map(r => ({
       room_id: r.room_id,
       room_number: r.room_number,
-      reservation_id: r.reservation_id,
-      status: r.status
+      reservation_id: r.id,
+      status: r.status,
+      payment_timing: r.payment_timing
     })));
     
     console.log('Occupied:', categorizedRooms.occupied.length);
@@ -521,6 +545,20 @@
     const fallbackName = room?.client_name || 'ゲスト';
     //console.log('Using fallback name:', fallbackName);
     return fallbackName;
+  };
+
+  const handleDrawerClose = async () => {
+    try {
+      await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+    } catch (error) {
+      console.error('Error refreshing reservations after drawer close:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'エラー',
+        detail: '予約情報の更新に失敗しました',
+        life: 3000
+      });
+    }
   };
 
   // Mount

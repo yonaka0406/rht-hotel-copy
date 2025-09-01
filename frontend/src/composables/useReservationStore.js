@@ -1314,6 +1314,38 @@ export function useReservationStore() {
         }
     };
 
+    const setPaymentTiming = async (payment_timing) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            // Get the hotel_id for the current reservation
+            const hotel_id = await getReservationHotelId(reservationId.value);
+
+            // Assuming you have an API endpoint to update the reservation status
+            const response = await fetch(`/api/reservation/update/payment-timing/${reservationId.value}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ hotel_id, payment_timing })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update payment timing');
+            }
+
+            // Update the local reservationDetails state
+            if (reservationDetails.value.reservation) {
+                reservationDetails.value.reservation[0].payment_timing = payment_timing;
+            }
+
+            setReservationIsUpdating(false);
+        } catch (error) {
+            console.error('Error updating payment timing:', error);
+        }
+    };
+
     return {
         reservationIsUpdating,
         availableRooms,
@@ -1367,5 +1399,6 @@ export function useReservationStore() {
         parkingSpotAvailability,
         fetchParkingSpotAvailability,
         cancelReservationRooms,
+        setPaymentTiming,
     };
 }

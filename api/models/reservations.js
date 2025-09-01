@@ -142,6 +142,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
       ,reservations.number_of_people
       ,reservations.status      
       ,reservations.type
+      ,reservations.payment_timing
       ,reservations.created_at
       ,reservation_details.date
       ,rooms.room_type_id
@@ -208,6 +209,7 @@ const selectReservation = async (requestId, id) => {
       ,reservations.number_of_people as reservation_number_of_people
       ,reservations.status   
       ,reservations.type
+      ,reservations.payment_timing
       ,reservations.agent
       ,reservations.ota_reservation_id
       ,reservations.comment 
@@ -651,7 +653,8 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
       ,reservations.check_out
       ,reservations.check_out_time
       ,reservations.number_of_people as reservation_number_of_people
-      ,reservations.status	  
+      ,reservations.status	
+      ,reservations.payment_timing  
       --,reservation_details.id as reservation_details_id
       --,reservation_details.date
       ,reservation_details.room_id      
@@ -5174,6 +5177,27 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
   }
 };
 
+const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTiming, userId) => {
+  const pool = getPool(requestId);
+  const query = `
+    UPDATE reservations
+    SET
+      payment_timing = $1,
+      updated_by = $2
+    WHERE id = $3::UUID AND hotel_id = $4
+    RETURNING *;
+  `;
+  const values = [paymentTiming, userId, reservationId, hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (err) {
+    console.error('Error updating payment timing:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {  
   selectAvailableRooms,
   selectReservedRooms,
@@ -5231,4 +5255,5 @@ module.exports = {
   calculatePriceFromRates,
   insertAggregatedRates,
   cancelReservationRooms,
+  updatePaymentTiming,
 };
