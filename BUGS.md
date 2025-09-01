@@ -202,35 +202,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider adding a reason field for modifications
   - Ensure all versions remain accessible in the system even if not visible in the main interface
 
-### August 8, 2025
-
-#### Feature Request #27: Add PaymentTiming field to Reservations table
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
-  - Add a PaymentTiming field to the Reservations table to store the payment method (前払い, 現地清算, 後払い) for the whole reservation
-- **Implementation Requirements**:
-  - Add a PaymentTiming field to the Reservations table with options:
-    - 前払い (Prepaid)
-    - 現地清算 (Pay at property)
-    - 後払い (Postpaid)
-  - Set default value to '現地清算 (Pay at property)'
-  - Make this field mandatory before confirming a reservation
-  - Add visual indicators (icons + text) in the reservation overview and Reservation Panel to show the payment timing
-  - Include a tooltip or help text explaining each payment timing option
-  - **Display a cash payment icon in the Room Indicator when PaymentTiming is set to 現地清算**
-    - Icon should be clearly visible but not intrusive
-    - Add hover state showing "現地清算 (Pay at property)" as tooltip
-- **Validation Rules**:
-  - Field must be set before confirming a reservation
-  - Field should be editable until the reservation is checked in
-  - Changes to this field after confirmation should be logged
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Should be consistent with existing UI/UX patterns
-  - Consider accessibility for the new indicator
-  - Add appropriate validation messages if the field is missing during confirmation
-  - Include this field in reservation exports and reports
-  - The cash payment icon should update in real-time when the PaymentTiming is changed
 
 #### Feature Request #28: Dedicated Meal Count Page
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed

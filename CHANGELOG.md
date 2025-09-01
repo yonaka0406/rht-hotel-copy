@@ -8,9 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Feature: Added date range selection for room cancellations, allowing partial cancellation of multi-day reservations
-- Feature: Implemented cancellation fee calculator for long-term reservations (30+ nights) with dynamic fee application date calculation
-- Fix: Resolved issue where cart items would persist when switching between calendar modes, preventing potential booking errors
 
 ---
 ## Future Releases
@@ -413,6 +410,13 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Fix: Fixed infinite scroll in parking calendar to properly load additional dates when scrolling
 
 ---
+
+## [1.1.10] - 2025-09-01
+
+- Feature: Added Payment Timing field to track payment methods (Prepaid, Pay at property, Postpaid) for reservations
+- Feature: Added date range selection for room cancellations, allowing partial cancellation of multi-day reservations
+- Feature: Implemented cancellation fee calculator for long-term reservations (30+ nights) with dynamic fee application date calculation
+- Fix: Resolved issue where cart items would persist when switching between calendar modes, preventing potential booking errors
 
 ## Version History
 
