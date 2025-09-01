@@ -340,7 +340,7 @@ watch(() => internalForm.value.requested_check_out_date, () => {
 
 // Client Search Logic (adapted from ReservationsNewCombo)
 const onClientSelectForWaitlist = (event) => {
-  console.log('[WaitlistDialog] onClientSelectForWaitlist called with', event);
+  //console.log('[WaitlistDialog] onClientSelectForWaitlist called with', event);
   selectedClientForWaitlist.value = event.value;
   isClientSelectedForWaitlist.value = true;
   internalForm.value.client_id = selectedClientForWaitlist.value.id;
@@ -349,7 +349,7 @@ const onClientSelectForWaitlist = (event) => {
   // Do NOT set internalForm.value.client_name_waitlist here!
   internalForm.value.client_legal_or_natural_person_waitlist = selectedClientForWaitlist.value.legal_or_natural_person || 'legal';
   internalForm.value.client_gender_waitlist = selectedClientForWaitlist.value.gender || 'other';
-  console.log('[WaitlistDialog] After select, client_id:', internalForm.value.client_id, 'client_name_waitlist:', internalForm.value.client_name_waitlist);
+  //console.log('[WaitlistDialog] After select, client_id:', internalForm.value.client_id, 'client_name_waitlist:', internalForm.value.client_name_waitlist);
 };
 
 const resetWaitlistClientSelection = () => {
@@ -368,13 +368,13 @@ const getClientNameString = (val) => {
 };
 
 watch(() => internalForm.value.client_name_waitlist, (newName, oldName) => {
-  console.log('[WaitlistDialog] client_name_waitlist changed from', oldName, 'to', newName);
+  //console.log('[WaitlistDialog] client_name_waitlist changed from', oldName, 'to', newName);
   const newNameStr = getClientNameString(newName);
   if (isClientSelectedForWaitlist.value && (
         (typeof newName === 'string' && newNameStr !== (selectedClientForWaitlist.value?.name_kanji || selectedClientForWaitlist.value?.name_kana || selectedClientForWaitlist.value?.name)) ||
         (typeof newName === 'object' && newName?.id !== selectedClientForWaitlist.value?.id)
       )) {
-    console.log('[WaitlistDialog] Resetting client selection due to input change');
+    //console.log('[WaitlistDialog] Resetting client selection due to input change');
     if (!newNameStr) {
       resetWaitlistClientSelection();
       internalForm.value.contact_email = '';
