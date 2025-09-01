@@ -147,7 +147,7 @@
             </Column>
             <Column header="削除" style="width: 100px; text-align: center;">
                 <template #body="{ data }">
-                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click.stop="deletePayment(data)" />
+                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
                 </template>
             </Column>
         </DataTable>
@@ -175,6 +175,8 @@ const toast = useToast();
 import { useConfirm } from "primevue/useconfirm";
 const confirm = useConfirm();
 import { Card, FloatLabel, Select, AutoComplete, InputText, InputNumber, Button, ConfirmDialog, DataTable, Column } from 'primevue';
+
+const isDialogVisible = ref(false);
 
 // Stores
 import { useSettingsStore } from '@/composables/useSettingsStore';
@@ -344,8 +346,8 @@ const addPayment = async () => {
     if (newPayment.value.value > newPayment.value.room_balance) {
         confirm.require({
             group: 'payment',
-            message: "金額が部屋残高を超えています。本当に続行しますか？",
             header: "確認",
+            message: "金額が部屋残高を超えています。本当に続行しますか？",            
             icon: "pi pi-exclamation-triangle",
             rejectProps: {
                 label: 'キャンセル',
@@ -372,8 +374,8 @@ const addPayment = async () => {
 const deletePayment = (payment) => {
     confirm.require({
         group: 'delete',
-        message: `本当に削除しますか？ (金額: ${Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(payment.value)})`,
         header: "確認",
+        message: `本当に削除しますか？ (金額: ${Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(payment.value)})`,        
         icon: "pi pi-exclamation-triangle",
         rejectProps: {
             label: 'キャンセル',
@@ -386,8 +388,10 @@ const deletePayment = (payment) => {
         },
         accept: async () => {
             await deleteReservationPayment(payment.id);
+            confirm.close();
         },
         reject: () => {
+            confirm.close();
         },
     });
 };

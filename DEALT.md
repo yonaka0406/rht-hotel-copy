@@ -4,6 +4,34 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## September 1, 2025
 
+#### Bug #48: Payment Deletion Confirmation Not Grouped
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - When deleting multiple payments in the reservation payment history, each deletion shows a separate confirmation dialog
+  - This creates a poor user experience as users need to confirm each deletion individually
+- **Steps to Reproduce**:
+  1. Navigate to a reservation with multiple payments
+  2. Select multiple payments for deletion
+  3. Click delete button
+- **Expected Behavior**:
+  - A single confirmation dialog should appear showing the total number of selected payments
+  - User should be able to confirm or cancel the deletion of all selected payments at once
+- **Actual Behavior**:
+  - Each selected payment triggers its own confirmation dialog
+  - User must confirm each deletion separately
+- **Impact**:
+  - Decreases efficiency when managing multiple payments
+  - Creates unnecessary friction in the payment management workflow
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Suggested Fix**:
+  - Implement batch confirmation for multiple payment deletions
+  - Update the UI to show a summary of selected payments in the confirmation dialog
+  - Ensure the backend can handle batch deletion of payments
+  - *Temporary Workaround*: Added `confirm.close();` to prevent multiple confirmation dialogs (not recommended as a permanent solution)
+- **Additional Notes**:
+  - Should maintain the ability to delete individual payments when only one is selected
+  - Consider adding a "Select All" option for payments in the current view
+  
 #### Bug #46: Rooms Added After Confirmation Not Marked as Billable
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
@@ -352,10 +380,7 @@ This document contains all fixed and closed issues that were previously tracked 
   - None - this is a Google API service issue
   - System should implement retry logic with exponential backoff
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Need to implement better error handling and retry logic
-  - Consider adding a queue system for failed sync attempts
-  - Should log these failures for monitoring and manual reconciliation
+- **Additional Notes**: Need to implement better error handling and retry logic
 - **Solution**:
   - Implemented Winston logging for better error tracking and monitoring
 
@@ -1286,3 +1311,5 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Resolution**: Added visual lines/borders to room cells to improve visibility and distinguish between different rooms
 - **Date Fixed**: December 19, 2024
 - **Additional Notes**: Visual clarity of the calendar view has been improved as requested.
+
+```
