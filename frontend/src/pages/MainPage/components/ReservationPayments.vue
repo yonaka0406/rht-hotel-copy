@@ -1,5 +1,6 @@
 <template>
     <div class="p-4">
+        <ConfirmDialog group="delete"></ConfirmDialog>
         <ConfirmDialog group="payment"></ConfirmDialog>
         <Card>
             <template #title>
@@ -146,8 +147,7 @@
             </Column>
             <Column header="削除" style="width: 100px; text-align: center;">
                 <template #body="{ data }">
-                    <ConfirmDialog group="delete"></ConfirmDialog>
-                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click="deletePayment(data)" />
+                    <Button icon="pi pi-trash" class="p-button-danger p-button-text" @click.stop="deletePayment(data)" />
                 </template>
             </Column>
         </DataTable>
@@ -390,7 +390,6 @@ const deletePayment = (payment) => {
         reject: () => {
         },
     });
-
 };
 
 // Client select
