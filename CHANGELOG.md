@@ -418,6 +418,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Implemented cancellation fee calculator for long-term reservations (30+ nights) with dynamic fee application date calculation
 - Fix: Added status check to ensure rooms added to confirmed reservations are marked as billable
 - Fix: Resolved issue where cart items would persist when switching between calendar modes, preventing potential booking errors
+- Fix: Fixed address button visibility in CRM client addresses section to ensure it's always visible
 
 ## Version History
 

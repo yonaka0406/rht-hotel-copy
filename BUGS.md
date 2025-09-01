@@ -7,6 +7,33 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 1, 2025
 
+#### Bug #48: Payment Deletion Confirmation Not Grouped
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - When deleting multiple payments in the reservation payment history, each deletion shows a separate confirmation dialog
+  - This creates a poor user experience as users need to confirm each deletion individually
+- **Steps to Reproduce**:
+  1. Navigate to a reservation with multiple payments
+  2. Select multiple payments for deletion
+  3. Click delete button
+- **Expected Behavior**:
+  - A single confirmation dialog should appear showing the total number of selected payments
+  - User should be able to confirm or cancel the deletion of all selected payments at once
+- **Actual Behavior**:
+  - Each selected payment triggers its own confirmation dialog
+  - User must confirm each deletion separately
+- **Impact**:
+  - Decreases efficiency when managing multiple payments
+  - Creates unnecessary friction in the payment management workflow
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Suggested Fix**:
+  - Implement batch confirmation for multiple payment deletions
+  - Update the UI to show a summary of selected payments in the confirmation dialog
+  - Ensure the backend can handle batch deletion of payments
+- **Additional Notes**:
+  - Should maintain the ability to delete individual payments when only one is selected
+  - Consider adding a "Select All" option for payments in the current view
+
 #### Feature Request #47: Mixed Plan Type Indicator
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
@@ -300,5 +327,5 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 ---
 
 *Last Updated: September 1, 2025*
-*Total Bugs: 1* (last one #46)
+*Total Bugs: 1* (last one #48)
 *Total Feature Requests: 14* (last one #47)

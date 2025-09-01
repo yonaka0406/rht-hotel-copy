@@ -170,7 +170,7 @@
     const addresses = computed(() => {
         if (!selectedClientAddress.value || selectedClientAddress.value.length === 0) {
             // console.log('addresses computed selectedClientAddress null')
-            return null;
+            return [];
         }
         // console.log('addresses computed', selectedClientAddress.value)
         
