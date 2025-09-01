@@ -5,6 +5,62 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 1, 2025
+
+#### Bug #46: Rooms Added After Confirmation Not Marked as Billable
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - When rooms are added to a confirmed reservation, they are being created with `billable: false`
+  - These rooms are never updated to `billable: true`, causing them to be excluded from billing
+- **Steps to Reproduce**:
+  1. Create a reservation and confirm it
+  2. Add a new room to the confirmed reservation
+  3. The new room is created with `billable: false`
+  4. The room remains non-billable even after confirmation
+- **Expected Behavior**:
+  - All rooms added to a confirmed reservation should be marked as billable by default
+  - Or, there should be a clear process to mark them as billable
+- **Actual Behavior**:
+  - Newly added rooms in confirmed reservations are created with `billable: false`
+  - No automatic or manual process exists to update this status
+- **Impact**:
+  - Revenue loss as rooms are not being billed
+  - Inconsistent billing status within the same reservation
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Suggested Fix**:
+  - Update the room addition logic to set `billable: true` when adding to a confirmed reservation
+  - Add validation to ensure all rooms in a confirmed reservation are billable
+  - Consider adding a background job to identify and fix existing affected reservations
+- **Additional Notes**:
+  - Check if this affects other reservation statuses (e.g., checked-in, no-show)
+  - Consider adding an audit log for billable status changes
+
+#### Feature Request #47: Mixed Plan Type Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Currently, the system doesn't clearly indicate when a room has multiple plan types assigned (e.g., different meal plans for weekdays vs weekends)
+  - Need to enhance the room indicator to show when multiple plan types are present for a single reservation and display the count of each plan type
+- **Key Features**:
+  - Visual indicator when a room has more than one plan type assigned
+  - Display the count of each plan type in use (e.g., "2-meal plan (2) + Simple Stay (1)")
+  - Tooltip or hover effect showing which dates (including the day of the week) have which plan type and its count
+  - Consistent visual treatment across all relevant views (calendar, room status, etc.)
+- **Implementation Requirements**:
+  - Update the room status indicator component to handle multiple plan types and display their counts
+  - Add database query optimization to efficiently check for multiple plan types and their counts
+  - Ensure the UI remains clean and uncluttered
+  - Add appropriate tooltips or information icons for better UX
+- **UI/UX Considerations**:
+  - Use subtle but noticeable visual cues (e.g., striped colors, small icons)
+  - Ensure the indicator is accessible and colorblind-friendly
+  - Consider adding a "View Plan Details" option for more information
+  - Mobile responsiveness is crucial
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Common use case: Weekday 2-meal plans with weekend simple stay
+  - Should work with existing room status indicators
+  - Consider impact on performance when checking for multiple plan types and their counts
+
 ### August 29, 2025
 
 #### Feature Request #46: Reservation Consolidation
@@ -148,21 +204,20 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### August 8, 2025
 
-#### Feature Request #27: Payment Timing Indicator in Reservation Panel
+#### Feature Request #27: Add PaymentTiming field to Reservations table
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**: 
-  - Add a payment timing indicator in the Reservation Panel to show the payment method (前払い, 現地清算, 後払い)
-  - This field must be set before a reservation can be confirmed
-  - Helps staff quickly identify payment arrangements for each reservation
+  - Add a PaymentTiming field to the Reservations table to store the payment method (前払い, 現地清算, 後払い) for the whole reservation
 - **Implementation Requirements**:
-  - Add a required dropdown/selector in the Reservation Panel with options:
+  - Add a PaymentTiming field to the Reservations table with options:
     - 前払い (Prepaid)
     - 現地清算 (Pay at property)
     - 後払い (Postpaid)
-  - Make this field mandatory when changing reservation status to 'confirmed'
-  - Add visual indicator (icon + text) in the reservation overview
+  - Set default value to '現地清算 (Pay at property)'
+  - Make this field mandatory before confirming a reservation
+  - Add visual indicators (icons + text) in the reservation overview and Reservation Panel to show the payment timing
   - Include a tooltip or help text explaining each payment timing option
-  - **Display a cash payment icon in the Room Indicator when 現地清算 is selected**
+  - **Display a cash payment icon in the Room Indicator when PaymentTiming is set to 現地清算**
     - Icon should be clearly visible but not intrusive
     - Add hover state showing "現地清算 (Pay at property)" as tooltip
 - **Validation Rules**:
@@ -175,7 +230,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider accessibility for the new indicator
   - Add appropriate validation messages if the field is missing during confirmation
   - Include this field in reservation exports and reports
-  - The cash payment icon should update in real-time when the payment timing is changed
+  - The cash payment icon should update in real-time when the PaymentTiming is changed
 
 #### Feature Request #28: Dedicated Meal Count Page
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -301,6 +356,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: August 29, 2025*
-*Total Bugs: 1* (last one #45)
-*Total Feature Requests: 20* (last one #46)
+*Last Updated: September 1, 2025*
+*Total Bugs: 1* (last one #46)
+*Total Feature Requests: 14* (last one #47)
