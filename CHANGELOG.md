@@ -416,6 +416,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Added Payment Timing field to track payment methods (Prepaid, Pay at property, Postpaid) for reservations
 - Feature: Added date range selection for room cancellations, allowing partial cancellation of multi-day reservations
 - Feature: Implemented cancellation fee calculator for long-term reservations (30+ nights) with dynamic fee application date calculation
+- Fix: Added status check to ensure rooms added to confirmed reservations are marked as billable
 - Fix: Resolved issue where cart items would persist when switching between calendar modes, preventing potential booking errors
 
 ## Version History

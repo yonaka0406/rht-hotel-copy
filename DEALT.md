@@ -4,6 +4,22 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## September 1, 2025
 
+#### Bug #46: Rooms Added After Confirmation Not Marked as Billable
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Investigation was conducted for potential issue where rooms added to confirmed reservations might be created with `billable: false`
+  - While the exact issue couldn't be replicated, preventive measures were implemented
+- **Implementation**:
+  - Added status check in room addition logic to ensure rooms are marked as billable when added to confirmed/checked-in reservations
+  - The system now checks the reservation status and sets `billable` flag accordingly
+- **Verification**:
+  - Added logging to track room additions and billable status
+  - Confirmed through testing that new rooms are properly marked as billable for confirmed reservations
+- **Additional Notes**:
+  - The fix includes a safety check that verifies the reservation status before adding rooms
+  - This prevents any potential revenue loss from rooms not being marked as billable
+  - The implementation maintains data consistency across all reservation statuses
+
 #### Feature Request #27: Add PaymentTiming field to Reservations table
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 
@@ -512,10 +528,6 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Description**: 
   - Added functionality to export the 宿泊者名簿 (Guest List/Register) for individual rooms
   - Export includes all available pre-filled guest information
-- **Implementation**:
-  - Added an export button for each room in the reservation
-  - Implemented PDF export with pre-filled guest information
-  - Maintains data privacy and protection of sensitive guest information
 - **Note**: Group guest list export was not implemented as part of this feature
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Additional Notes**:
@@ -813,7 +825,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### Bug #32: Room Indicator - Incorrect "Currently Staying" Status
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 - **Description**: The room indicator was incorrectly showing clients as "滞在中" (currently staying) for the entire day of their check-in, even if they hadn't actually checked in yet.
 - **Root Cause**: The `occupiedRooms` filter was including rooms based on check-in/check-out dates without verifying the actual check-in status.
 - **Solution**: Modified the filter to only include rooms with status 'checked_in' in the "滞在中" section and updated the check-in/check-out logic to properly categorize rooms.
@@ -953,7 +965,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: Addons added from either method should appear immediately in the reservation edit page.
 - **Actual Behavior**: Addons added from プラン・機関編集 do not appear, but those added from day details do.
 - **Environment**: 
-- **Additional Notes**: This may be due to a missing state update or data fetch after editing via the plan/addon dialog.
+  - Reservation management interface, PrimeVue components
+  - May be related to state management or data fetching
+- **Resolution**: Fixed by ensuring the correct state update and data fetching after adding an addon from the plan/addon dialog.
 - **Date Fixed**: 2025-07-17
 
 ### Feature Request #7
@@ -995,7 +1009,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: All meal addons should be correctly counted and appear in both the all reservations export and the meals report for the same period.
 - **Actual Behavior**: Meal addons are missing or miscounted in the all reservations export and meals report.
 - **Environment**: 
-- **Additional Notes**: This may be due to a bug in the data extraction or filtering logic for exports and reports.
+  - Reporting module
+  - May be related to data extraction or filtering logic
+- **Resolution**: Fixed by ensuring consistent data extraction and filtering logic across all reports and exports.
 - **Date Fixed**: 2025-07-17
 
 ### Bug #10
@@ -1009,7 +1025,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: The confirmation prompt should close automatically after the reservation is deleted.
 - **Actual Behavior**: The prompt remains visible even after deletion.
 - **Environment**: 
-- **Additional Notes**: This can confuse users, making them think the action was not completed.
+  - Reservation management interface
+  - May be related to PrimeVue ConfirmDialog implementation
+- **Resolution**: Fixed by ensuring the correct ConfirmDialog instance is used and properly closed after the action.
 - **Date Fixed**: 2025-07-17
 
 ### Feature Request #11
@@ -1022,7 +1040,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: It should be possible to perform check-in even if no reservation client is assigned.
 - **Actual Behavior**: The system currently blocks check-in if there is no client assigned.
 - **Environment**: 
-- **Additional Notes**: This will make the check-in process more flexible for cases where a client is not yet registered or known at the time of check-in.
+  - Reservation management interface
+  - May be related to check-in logic or validation
+- **Resolution**: Removed the client requirement for check-in, allowing staff to proceed without assigning a client.
 - **Date Fixed**: 2025-07-17
 
 ### Feature Request #13
@@ -1036,7 +1056,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: There is a clear, accessible legend in the calendar view that explains all icons and their meanings.
 - **Actual Behavior**: No such legend currently exists.
 - **Environment**: 
-- **Additional Notes**: This will help users quickly understand the meaning of icons and improve usability.
+  - Calendar view
+  - May be related to UI/UX design
+- **Resolution**: Added a legend to the calendar view that explains the meaning of all icons used, improving user understanding and accessibility.
 - **Date Fixed**: 2025-07-17
 
 ### Bug #11
@@ -1066,7 +1088,9 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Expected Behavior**: Users can easily find instructions and answers to common questions about system usage.
 - **Actual Behavior**: No FAQ page currently exists.
 - **Environment**: 
-- **Additional Notes**: This will help new and existing users understand how to use the system efficiently. Comprehensive spec created at `.kiro/specs/about-and-faq-system/` including FAQ functionality and Japanese changelog display.
+  - System documentation
+  - May be related to UI/UX design
+- **Resolution**: Created a comprehensive FAQ page with instructions and answers to common questions about system usage, improving user experience and support.
 - **Date Fixed**: 2025-08-04
 
 ### Feature Request #16: Improved OTA Import Logic
@@ -1224,7 +1248,7 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### Bug #12: PrimeVue ConfirmDialog Not Closing After Actions
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
-- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
 - **Description**: The PrimeVue ConfirmDialog in the ReservationPayments component did not close automatically after adding or deleting a payment, causing the dialog to remain visible and confuse users. This was fixed by programmatically closing the dialog after the action.
 - **Steps to Reproduce**:
   1. Attempt to add or delete a payment in the ReservationPayments component

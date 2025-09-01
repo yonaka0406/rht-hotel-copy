@@ -7,34 +7,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 1, 2025
 
-#### Bug #46: Rooms Added After Confirmation Not Marked as Billable
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - When rooms are added to a confirmed reservation, they are being created with `billable: false`
-  - These rooms are never updated to `billable: true`, causing them to be excluded from billing
-- **Steps to Reproduce**:
-  1. Create a reservation and confirm it
-  2. Add a new room to the confirmed reservation
-  3. The new room is created with `billable: false`
-  4. The room remains non-billable even after confirmation
-- **Expected Behavior**:
-  - All rooms added to a confirmed reservation should be marked as billable by default
-  - Or, there should be a clear process to mark them as billable
-- **Actual Behavior**:
-  - Newly added rooms in confirmed reservations are created with `billable: false`
-  - No automatic or manual process exists to update this status
-- **Impact**:
-  - Revenue loss as rooms are not being billed
-  - Inconsistent billing status within the same reservation
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-- **Suggested Fix**:
-  - Update the room addition logic to set `billable: true` when adding to a confirmed reservation
-  - Add validation to ensure all rooms in a confirmed reservation are billable
-  - Consider adding a background job to identify and fix existing affected reservations
-- **Additional Notes**:
-  - Check if this affects other reservation statuses (e.g., checked-in, no-show)
-  - Consider adding an audit log for billable status changes
-
 #### Feature Request #47: Mixed Plan Type Indicator
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
