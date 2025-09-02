@@ -133,9 +133,7 @@
         loading.value = true;
 
         await fetchClientHistory(clientId.value);        
-        
-        console.log(clientLog.value)
-
+                
         loading.value = false;
     });
 

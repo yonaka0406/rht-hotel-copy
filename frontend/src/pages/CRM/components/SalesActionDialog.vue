@@ -260,12 +260,19 @@
   const populateForm = (data) => {
     currentActionFormData.value = {
       ...initialFormData, // Start with defaults to ensure all fields are present
-      ...data, // Override with provided data
-      action_datetime: data.action_datetime ? new Date(data.action_datetime) : null,
-      due_date: data.due_date ? new Date(data.due_date) : null,
+      id: data?.id || null,
+      client_id: data?.client_id || null,
+      action_type: data?.type || 'call',
+      subject: data?.formal_name || '',
+      details: data?.details || '',
+      outcome: data?.outcome || '',
+      assigned_to: data?.assigned_to || null,
+      status: data?.status || 'pending',
+      action_datetime: data?.action_datetime ? new Date(data.action_datetime) : new Date(),
+      due_date: data?.due_date ? new Date(data.due_date) : null,
     };
 
-    if (currentActionFormData.value.client_id) { // Use currentActionFormData.value.client_id here
+    if (currentActionFormData.value.client_id) {
       const clientObj = props.allClients.find(c => c.id === currentActionFormData.value.client_id);
       if (clientObj) {
         selectedClientObjectForForm.value = {
@@ -315,18 +322,19 @@
     resetForm(); // Reset form when closing
   };
 
-  // --- Watchers ---
+  // --- Watchers ---  
   // Watch for isOpen changes to manage form state when dialog opens/closes
   watch(() => props.isOpen, (newVal) => {
     if (newVal) {
-      // Always populate form with actionData, whether in 'create' or 'edit' mode.
-      // In 'create' mode, actionData will contain initial defaults including client_id if pre-filled.
       populateForm(props.actionData);
-      currentActionFormData.value.action_datetime = new Date(); // Always default to now on open, for both create and edit
+      // Only set to current time for create mode
+      if (props.actionFormMode === 'create') {
+        currentActionFormData.value.action_datetime = new Date();
+      }
     } else {
-      resetForm(); // Reset form when dialog closes
+      resetForm();
     }
-  }, { immediate: true }); // Run immediately to populate if dialog is initially open
+  }, { immediate: true });
 
   // Watch for selectedClientObjectForForm changes to update currentActionFormData.client_id
   watch(selectedClientObjectForForm, (newVal) => {

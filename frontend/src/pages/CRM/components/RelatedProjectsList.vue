@@ -86,10 +86,10 @@
 
     const loadProjects = async () => {
         if (props.currentClientId) {
-            console.log(`RelatedProjectsList: Fetching projects for client ID: ${props.currentClientId}`);
+            //console.log(`RelatedProjectsList: Fetching projects for client ID: ${props.currentClientId}`);
             await fetchRelatedProjects(props.currentClientId);
         } else {
-            console.log('RelatedProjectsList: No currentClientId provided.');
+            //console.log('RelatedProjectsList: No currentClientId provided.');
             relatedProjects.value = []; // Clear if no client ID
         }
     };

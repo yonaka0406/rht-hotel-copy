@@ -82,7 +82,7 @@ export function useClientStore() {
             selectedClient.value = result.client;
             selectedClientAddress.value = result.client.addresses;
             selectedClientGroup.value = result.client.group;
-            console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
+            //console.log('Client Store => selectedClient:', selectedClient.value, 'selectedClientAddress:', selectedClientAddress.value);
             return {
                 client: selectedClient.value,
                 addresses: selectedClientAddress.value,

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 - Feature: Added support for displaying multiple plan types with day counts and tooltips showing active days of the week for each plan in Room Indicator
 - Feature: Implemented customizable room assignment order with new `assignment_priority` column in rooms table for hotel-specific room prioritization
-
+- Fix: Resolved issue in CRM Actions dialog where action date/time and subject weren't being properly loaded when editing an action
 ---
 ## Future Releases
 
