@@ -19,6 +19,7 @@ CREATE TABLE rooms (
     capacity INT NOT NULL DEFAULT 1, -- Max number of guests
     smoking BOOLEAN NOT NULL DEFAULT FALSE,
     for_sale BOOLEAN NOT NULL DEFAULT TRUE,
+    assignment_priority INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -26,3 +27,5 @@ CREATE TABLE rooms (
     UNIQUE (hotel_id, room_type_id, room_number), -- Prevent duplicate room numbers in a single hotel
     FOREIGN KEY (room_type_id, hotel_id) REFERENCES room_types(id, hotel_id) ON DELETE CASCADE
 ) PARTITION BY LIST (hotel_id);
+
+ALTER TABLE rooms ADD COLUMN assignment_priority INTEGER;

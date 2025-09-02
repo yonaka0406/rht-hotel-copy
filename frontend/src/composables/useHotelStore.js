@@ -245,6 +245,61 @@ export function useHotelStore() {
       return hotels.value;
     });
 
+    const getRoomAssignmentOrder = async (hotelId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-assignment-order/${hotelId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch room assignment order', error);
+            return [];
+        }
+    };
+
+    const updateRoomAssignmentOrder = async (hotelId, rooms) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/hotel-assignment-order/${hotelId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ rooms }),
+            });
+            if (!response.ok) throw new Error('Failed to save room assignment order');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to update room assignment order', error);
+            throw error;
+        }
+    };
+
+    const updateRoom = async (roomId, roomData) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/room/${roomId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(roomData),
+            });
+            if (!response.ok) throw new Error('Failed to save room details');
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to update room details', error);
+            throw error;
+        }
+    };
+
     return {
         hotels,
         safeHotels,
@@ -263,5 +318,8 @@ export function useHotelStore() {
         fetchBlockedRooms,
         applyCalendarSettings,
         removeCalendarSettings,
-    };
+        getRoomAssignmentOrder,
+        updateRoomAssignmentOrder,
+        updateRoom,      
+    };    
 }

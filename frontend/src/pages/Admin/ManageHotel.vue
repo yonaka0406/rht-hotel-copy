@@ -240,127 +240,28 @@
     </template>
   </Dialog>
 
-  <Dialog v-model:visible="roomsDialogVisible" :modal="true" header="部屋編集" :style="{ width: '600px' }" class="p-fluid">
-    <template #header>
-      <h2 class="text-lg font-bold ">部屋編集</h2>
-      <Button label="部屋追加" icon="pi pi-plus" @click="openRoomDialog" class="p-button-sm m-2" />
-    </template>
-    <Accordion :activeIndex="0">
+  <ManageHotelRoomsDialog
+    ref="roomsDialogRef"
+    v-model:visible="roomsDialogVisible"
+    :hotelId="selectedHotel?.id"
+    :rooms="rooms"
+    :roomTypes="roomTypes"
+    @save="saveRoomChanges"
+    @open-new-room-dialog="openRoomDialog"
+  />
 
-      <p>保存する前に必ず ENTER キーまたは TAB キーを押して変更を確認してください。</p><br />
-      <AccordionPanel ref="roomsPanel" v-for="roomType in roomTypes" :key="roomType.id" :value="roomType.id">
-        <AccordionHeader>
-          部屋タイプ： {{ roomType.name }}
-        </AccordionHeader>
-        <AccordionContent>
-          <DataTable :value="rooms.filter(room => room.room_type_id === roomType.id)" editMode="cell"
-            class="p-datatable-sm" responsiveLayout="scroll" @cell-edit-complete="onCellEditComplete">
-            <Column field="room_number" header="部屋番号">
-              <template #editor="slotProps">
-                <InputText v-model="slotProps.data.room_number" />
-              </template>
-            </Column>
-            <Column field="room_type_id" header="部屋タイプ">
-              <template #body="slotProps">
-                <span>{{roomTypes.find(rt => rt.id === slotProps.data.room_type_id)?.name}}</span>
-              </template>
-              <template #editor="slotProps">
-                <Select v-model="slotProps.data.room_type_id" :options="roomTypes" optionLabel="name" optionValue="id"
-                  placeholder="部屋タイプを選択する" />
-              </template>
-            </Column>
-            <Column field="capacity" header="人数">
-              <template #editor="slotProps">
-                <InputNumber v-model="slotProps.data.capacity" :min="1" />
-              </template>
-            </Column>
-            <Column field="smoking" header="喫煙">
-              <template #body="slotProps">
-                <div class="flex items-center justify-center">
-                  <Checkbox v-model="slotProps.data.smoking" binary />
-                </div>
-              </template>
-              <template #editor="slotProps">
-                <div class="flex items-center justify-center">
-                  <Checkbox v-model="slotProps.data.smoking" binary />
-                </div>
-              </template>
-            </Column>
-            <Column field="for_sale" header="販売用">
-              <template #body="slotProps">
-                <div class="flex items-center justify-center">
-                  <Checkbox v-model="slotProps.data.for_sale" binary />
-                </div>
-              </template>
-              <template #editor="slotProps">
-                <div class="flex items-center justify-center">
-                  <Checkbox v-model="slotProps.data.for_sale" binary />
-                </div>
-              </template>
-            </Column>
-          </DataTable>
-        </AccordionContent>
-      </AccordionPanel>
-    </Accordion>
-
-    <template #footer>
-      <Button label="保存" icon="pi pi-check" @click="saveRoomChanges"
-        class="p-button-success p-button-text p-button-sm" />
-      <Button label="閉じる" icon="pi pi-times" @click="roomsDialogVisible = false"
-        class="p-button-danger p-button-text p-button-sm" text />
-    </template>
-  </Dialog>
-
-  <Dialog v-model:visible="roomDialog" :modal="true" header="部屋追加" :style="{ width: '50vw' }" class="p-fluid">
-    <div class="grid grid-cols-2 gap-1">
-      <div class="col-span-2 mt-6">
-        <FloatLabel>
-          <label for="floor" class="font-medium mb-2 block">階 *</label>
-          <InputNumber id="floor" v-model="newRoom.floor" :min="1" required fluid />
-        </FloatLabel>
-      </div>
-      <div class="col-span-2 mt-6">
-        <FloatLabel>
-          <label for="room_number" class="font-medium mb-2 block">部屋番号 *</label>
-          <InputText id="room_number" v-model="newRoom.room_number" required fluid />
-        </FloatLabel>
-      </div>
-      <div class="col-span-2 mt-6">
-        <FloatLabel>
-          <label for="room_type_id" class="font-medium mb-2 block">部屋タイプ *</label>
-          <Select id="room_type_id" v-model="newRoom.room_type_id" :options="roomTypes" optionLabel="name"
-            optionValue="id" placeholder="部屋タイプ選択" required fluid />
-        </FloatLabel>
-      </div>
-      <div class="col-span-2 mt-6">
-        <FloatLabel>
-          <label for="capacity" class="font-medium mb-2 block">人数 *</label>
-          <InputNumber id="capacity" v-model="newRoom.capacity" :min="1" required fluid />
-        </FloatLabel>
-      </div>
-      <div class="col-span-1 mt-6">
-        <label for="smoking" class="font-medium mb-2 block">喫煙</label>
-        <Checkbox id="smoking" v-model="newRoom.smoking" binary />
-      </div>
-      <div class="col-span-1 mt-6">
-        <label for="for_sale" class="font-medium mb-2 block">販売用</label>
-        <Checkbox id="for_sale" v-model="newRoom.for_sale" binary />
-      </div>
-    </div>
-    <template #footer>
-      <Button label="追加" icon="pi pi-plus" @click="saveRoom" class="p-button-success p-button-text p-button-sm" />
-      <Button label="キャンセル" icon="pi pi-times" @click="roomDialog = false"
-        class="p-button-danger p-button-text p-button-sm" />
-    </template>
-  </Dialog>
-
+  <ManageHotelAddRoomDialog
+    v-model:visible="roomDialog"
+    :room-types="roomTypes"
+    @save="saveRoom"
+  />
 </template>
 
 <script setup>
 // Vue
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 
-// Stores  
+// Stores
 import { useHotelStore } from '@/composables/useHotelStore';
 const { hotels, fetchHotels, fetchHotelSiteController, editHotel, editHotelSiteController } = useHotelStore();
 
@@ -371,20 +272,21 @@ import { Panel, Dialog, Card, DataTable, Column, FloatLabel, Textarea, InputText
 
 // Components
 import PlanVisibilitySettings from './components/PlanVisibilitySettings.vue';
+import ManageHotelRoomsDialog from './components/dialogs/ManageHotelRoomsDialog.vue';
+import ManageHotelAddRoomDialog from './components/dialogs/ManageHotelAddRoomDialog.vue';
 
 const authToken = localStorage.getItem('authToken');
 
 // Functions
 function onCellEditComplete(event) {
-  // console.log('onCellEditComplete event triggered.');
   const { data, newValue, field } = event;
   if (field) {
     data[field] = newValue;
     data.changed = true;
   }
-};
+}
 
-// Hotels  
+// Hotels
 const dialogVisible = ref(false);
 const siteController = ref(null);
 const siteControllerNewEntry = ref({
@@ -457,22 +359,51 @@ const newRoomType = reactive({
   description: ''
 });
 const rooms = ref([]);
-const newRoom = reactive({
-  floor: 1,
-  room_number: '',
-  room_type_id: null,
-  capacity: 1,
-  smoking: false,
-  for_sale: true
-});
 const roomTypesDialogVisible = ref(false);
 const roomTypeDialog = ref(false);
 const roomsDialogVisible = ref(false);
 const roomDialog = ref(false);
 const selectedHotel = ref(null);
-const roomTypesDataTable = ref(null);
-const roomsPanel = ref(null);
+const roomsDialogRef = ref(null);
 
+const openRoomDialog = () => {
+  roomDialog.value = true;
+};
+
+const saveRoom = async (newRoom) => {
+  try {
+    const response = await fetch('/api/rooms', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...newRoom,
+        hotel_id: selectedHotel.value.id
+      }),
+    });
+
+    if (response.ok) {
+      toast.add({
+        severity: 'success',
+        summary: '成功',
+        detail: '部屋作成されました。',
+        life: 3000
+      });
+      roomDialog.value = false;
+      await fetchRoomTypes();
+      if (roomsDialogRef.value) {
+        roomsDialogRef.value.refreshRooms();
+      }
+    } else {
+      toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
+    }
+  } catch (error) {
+    console.error('部屋作成エラー:', error);
+    toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
+  }
+};
 
 const fetchRoomTypes = async () => {
   try {
@@ -486,12 +417,10 @@ const fetchRoomTypes = async () => {
 
     const data = await response.json();
 
-    // Process the data to extract roomTypes and rooms
     const roomTypesMap = new Map();
     const roomsList = [];
 
     data.forEach((item) => {
-      // Add room type to roomTypesMap if not already added
       if (!roomTypesMap.has(item.room_type_id)) {
         roomTypesMap.set(item.room_type_id, {
           id: item.room_type_id,
@@ -499,8 +428,6 @@ const fetchRoomTypes = async () => {
           description: item.room_type_description,
         });
       }
-
-      // Add room to the rooms list
       const room = {
         id: item.room_id,
         room_number: item.room_number,
@@ -535,60 +462,14 @@ const editRooms = async (hotel) => {
   }
 };
 const saveRoomChanges = async () => {
-  try {
-    // Check for duplicate names
-    const roomNumberSet = new Set();
-    for (const room of rooms.value) {
-      if (roomNumberSet.has(room.room_number)) {
-        toast.add({
-          severity: 'error',
-          summary: 'エラー',
-          detail: '唯一の部屋番号が必要です。', life: 3000
-        });
-        return;
-      }
-      roomNumberSet.add(room.room_number);
-    }
-
-    // Filter out unchanged room types
-    const changedRooms = rooms.value.filter(room => room.changed);
-
-    //Loop through changed room types and update them
-    for (const room of changedRooms) {
-      const response = await fetch(`/api/room/${room.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          room_type_id: room.room_type_id,
-          floor: room.floor,
-          room_number: room.room_number,
-          capacity: room.capacity,
-          smoking: room.smoking,
-          for_sale: room.for_sale
-        })
-      });
-
-      if (response.status === 200) {
-        // console.log(`Room ${room.room_number} updated successfully`);
-      } else {
-        console.error(`部屋 ${room.room_number} の更新に失敗しました`);
-      }
-    }
-
-    toast.add({
-      severity: 'success',
-      summary: '成功',
-      detail: '部屋更新されました。',
-      life: 3000
-    });
-    roomsDialogVisible.value = false;
-  } catch (error) {
-
-  }
-
+  await fetchRoomTypes();
+  roomsDialogVisible.value = false;
+  toast.add({
+    severity: 'success',
+    summary: '成功',
+    detail: '部屋更新されました。',
+    life: 3000
+  });
 };
 const editRoomTypes = async (hotel) => {
   try {
@@ -606,7 +487,6 @@ const editRoomTypes = async (hotel) => {
 };
 const saveRoomTypes = async () => {
   try {
-    // Check for duplicate names
     const nameSet = new Set();
     for (const roomType of roomTypes.value) {
       if (nameSet.has(roomType.name)) {
@@ -615,11 +495,7 @@ const saveRoomTypes = async () => {
       }
       nameSet.add(roomType.name);
     }
-
-    // Filter out unchanged room types
     const changedRoomTypes = roomTypes.value.filter(roomType => roomType.changed);
-
-    //Loop through changed room types and update them
     for (const roomType of changedRoomTypes) {
       if (roomType.changed) {
         const response = await fetch(`/api/room-type/${roomType.id}`, {
@@ -633,15 +509,11 @@ const saveRoomTypes = async () => {
             description: roomType.description
           }),
         });
-
-        if (response.status === 200) {
-          // console.log(`Room type ${roomType.name} updated successfully`);
-        } else {
+        if (response.status !== 200) {
           console.error(`部屋タイプ ${roomType.name} の更新に失敗しました`);
         }
       }
     }
-
     toast.add({
       severity: 'success',
       summary: '成功',
@@ -662,7 +534,6 @@ const openRoomTypeDialog = () => {
   roomTypeDialog.value = true;
 };
 const saveRoomType = async () => {
-  // Check for duplicate names
   const nameSet = new Set();
   for (const roomType of roomTypes.value) {
     nameSet.add(roomType.name);
@@ -687,8 +558,6 @@ const saveRoomType = async () => {
     });
 
     if (response.ok) {
-      const result = await response.json();
-      // console.log(`Room type ${newRoomType.name} created successfully with ID ${result.roomTypeId}`);
       toast.add({
         severity: 'success',
         summary: 'Success',
@@ -699,79 +568,11 @@ const saveRoomType = async () => {
       await fetchRoomTypes();
       roomTypesDialogVisible.value = true;
     } else {
-      console.error(`部屋タイプ ${newRoomType.name} の作成に失敗しました`);
       toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプの作成に失敗しました', life: 3000 });
     }
   } catch (error) {
     console.error('部屋タイプ作成エラー:', error);
     toast.add({ severity: 'error', summary: 'エラー', detail: '部屋タイプの作成に失敗しました', life: 3000 });
-  }
-};
-const openRoomDialog = () => {
-  Object.assign(newRoom, {
-    floor: 1,
-    room_number: '',
-    room_type_id: null,
-    capacity: 1,
-    smoking: false,
-    for_sale: true
-  });
-  roomsDialogVisible.value = false;
-  roomDialog.value = true;
-};
-const saveRoom = async () => {
-  // Check for duplicate names
-  const roomNumberSet = new Set();
-  for (const room of rooms.value) {
-    roomNumberSet.add(room.room_number);
-    if (roomNumberSet.has(newRoom.room_number)) {
-      toast.add({
-        severity: 'error',
-        summary: 'エラー',
-        detail: '唯一の部屋番号が必要です。', life: 3000
-      });
-      return;
-    }
-  }
-
-  try {
-    const response = await fetch('/api/rooms', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        floor: newRoom.floor,
-        room_number: newRoom.room_number,
-        room_type: false,
-        room_type_id: newRoom.room_type_id,
-        capacity: newRoom.capacity,
-        smoking: newRoom.smoking,
-        for_sale: newRoom.for_sale,
-        hotel_id: selectedHotel.value.id
-      }),
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      // console.log(`Room ${newRoom.room_number} created successfully`);
-      toast.add({
-        severity: 'success',
-        summary: '成功',
-        detail: '部屋作成されました。',
-        life: 3000
-      });
-      roomDialog.value = false;
-      await fetchRoomTypes();
-      roomsDialogVisible.value = true;
-    } else {
-      console.error(`部屋 ${newRoomType.name} の作成に失敗しました`);
-      toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
-    }
-  } catch (error) {
-    console.error('部屋作成エラー:', error);
-    toast.add({ severity: 'error', summary: 'エラー', detail: '部屋の作成に失敗しました', life: 3000 });
   }
 };
 
@@ -784,7 +585,6 @@ const openGoogleDriveUrl = () => {
 onMounted(async () => {
   await fetchHotels();
 });
-
 </script>
 
 <style scoped>

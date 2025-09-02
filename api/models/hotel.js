@@ -485,6 +485,59 @@ const getRoomTypeById = async (requestId, roomTypeId, hotelId = null) => {
   }
 };
 
+const getRoomAssignmentOrder = async (requestId, hotelId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      r.id as room_id,
+      r.room_number,
+      r.floor,
+      rt.name as room_type_name,
+      r.assignment_priority,
+      r.capacity,
+      r.smoking,
+      r.for_sale,
+      r.room_type_id
+    FROM rooms r
+    JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
+    WHERE r.hotel_id = $1
+    ORDER BY r.assignment_priority ASC NULLS LAST, r.floor, r.room_number;
+  `;
+  const values = [hotelId];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error getting room assignment order:', err);
+    throw new Error('Database error');
+  }
+};
+
+const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const updatePromises = rooms.map(room => {
+      const query = 'UPDATE rooms SET assignment_priority = $1, updated_by = $2 WHERE id = $3 AND hotel_id = $4';
+      const values = [room.assignment_priority, userId, room.room_id, hotelId];
+      return client.query(query, values);
+    });
+
+    await Promise.all(updatePromises);
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating room assignment order:', error);
+    throw new Error('Database error');
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getAllHotels,
   getHotelByID,
@@ -502,4 +555,6 @@ module.exports = {
   getPlanExclusionSettings,
   updatePlanExclusions,
   getRoomTypeById,
+  getRoomAssignmentOrder,
+  updateRoomAssignmentOrder,
 };

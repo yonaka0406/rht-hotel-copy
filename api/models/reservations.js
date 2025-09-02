@@ -51,7 +51,7 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
       AND r.for_sale = TRUE
       AND r.hotel_id = rt.hotel_id
 	    AND r.room_type_id = rt.id
-    ORDER BY room_type_id, capacity DESC;
+    ORDER BY r.assignment_priority ASC NULLS LAST, room_type_id, capacity DESC;
   `;
 
   const values = [checkIn, checkOut, hotelId];
