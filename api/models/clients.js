@@ -1008,6 +1008,136 @@ async function mergeClientData(requestId, oldClientId, newClientId, mergedFields
   }
 }
 
+// --- Client Impediment Model Methods ---
+const createImpediment = async (requestId, impedimentData, userId) => {
+  const pool = getPool(requestId);
+  const {
+    client_id,
+    impediment_type,
+    restriction_level,
+    description,
+    is_active = true,
+    end_date,
+  } = impedimentData;
+
+  const query = `
+    INSERT INTO client_impediments (
+      client_id,
+      impediment_type,
+      restriction_level,
+      description,
+      is_active,
+      end_date,
+      created_by,
+      updated_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *;
+  `;
+
+  const values = [
+    client_id,
+    impediment_type,
+    restriction_level,
+    description,
+    is_active,
+    end_date,
+    userId,
+    userId,
+  ];
+
+  try {
+    const result = await pool.query(query, values);
+    logger.info(`[ClientImpediment] New impediment created for client ${client_id} by user ${userId}`);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[ClientImpediment] Error creating impediment for client ${client_id}:`, err);
+    throw new Error('Database error while creating client impediment.');
+  }
+};
+const getImpedimentsByClientId = async (requestId, clientId) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT *
+    FROM client_impediments
+    WHERE client_id = $1
+    ORDER BY created_at DESC;
+  `;
+
+  try {
+    const result = await pool.query(query, [clientId]);
+    return result.rows;
+  } catch (err) {
+    logger.error(`[ClientImpediment] Error retrieving impediments for client ${clientId}:`, err);
+    throw new Error('Database error while retrieving client impediments.');
+  }
+};
+const updateImpediment = async (requestId, impedimentId, updatedFields, userId) => {
+  const pool = getPool(requestId);
+  
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+
+  // Dynamically build the SET clause
+  for (const [key, value] of Object.entries(updatedFields)) {
+    if (value !== undefined) {
+      fields.push(`${key} = $${paramIndex++}`);
+      values.push(value);
+    }
+  }
+
+  if (fields.length === 0) {
+    throw new Error("No fields provided for update.");
+  }
+  
+  // Add updated_by and updated_at
+  fields.push(`updated_by = $${paramIndex++}`);
+  values.push(userId);
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  values.push(impedimentId);
+
+  const query = `
+    UPDATE client_impediments
+    SET ${fields.join(', ')}
+    WHERE id = $${paramIndex}
+    RETURNING *;
+  `;
+
+  try {
+    const result = await pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('Impediment not found.');
+    }
+    logger.info(`[ClientImpediment] Impediment ${impedimentId} updated by user ${userId}`);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[ClientImpediment] Error updating impediment ${impedimentId}:`, err);
+    throw new Error('Database error while updating client impediment.');
+  }
+};
+const deleteImpediment = async (requestId, impedimentId) => {
+  const pool = getPool(requestId);
+  const query = `
+    DELETE FROM client_impediments
+    WHERE id = $1
+    RETURNING *;
+  `;
+
+  try {
+    const result = await pool.query(query, [impedimentId]);
+    if (result.rows.length === 0) {
+      throw new Error('Impediment not found.');
+    }
+    logger.info(`[ClientImpediment] Impediment ${impedimentId} deleted.`);
+    return result.rows[0];
+  } catch (err) {
+    logger.error(`[ClientImpediment] Error deleting impediment ${impedimentId}:`, err);
+    throw new Error('Database error while deleting client impediment.');
+  }
+};
+
+
 module.exports = {
   toFullWidthKana,
   processNameString,
@@ -1037,6 +1167,10 @@ module.exports = {
   findLegalPersonClients,
   getLegalStatusForClientIds,
   mergeClientData,
+  createImpediment,
+  getImpedimentsByClientId,
+  updateImpediment,
+  deleteImpediment,
 };
 
 

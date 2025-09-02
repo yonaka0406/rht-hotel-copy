@@ -33,4 +33,10 @@ router.delete('/crm/client-relationships/:relationshipId', authMiddleware_manage
 
 router.get('/clients/:clientId/projects', authMiddleware, handleGetClientProjects);
 
+// --- Client Impediment Routes ---
+router.get('/clients/:clientId/impediments', authMiddleware, clientsController.handleGetImpedimentsByClientId);
+router.post('/clients/impediments', authMiddleware_manageClients, clientsController.handleCreateImpediment);
+router.put('/clients/impediments/:impedimentId', authMiddleware_manageClients, clientsController.handleUpdateImpediment);
+router.delete('/clients/impediments/:impedimentId', authMiddleware_manageClients, clientsController.handleDeleteImpediment);
+
 module.exports = router;

@@ -380,6 +380,70 @@ const handleGetCommonRelationshipPairs = async (req, res) => {
   }
 };
 
+// --- Client Impediment Controller Methods ---
+const handleCreateImpediment = async (req, res) => {
+  const impedimentData = req.body;
+  const userId = req.user.id; // Assuming user ID is available from auth middleware
+
+  if (!impedimentData.client_id || !impedimentData.impediment_type || !impedimentData.restriction_level) {
+    return res.status(400).json({ error: 'Missing required fields: client_id, impediment_type, restriction_level.' });
+  }
+
+  try {
+    const newImpediment = await clientsModel.createImpediment(req.requestId, impedimentData, userId);
+    res.status(201).json(newImpediment);
+  } catch (error) {
+    logger.error(`[Controller] Error creating impediment: ${error.message}`);
+    res.status(500).json({ error: 'Failed to create client impediment.' });
+  }
+};
+const handleGetImpedimentsByClientId = async (req, res) => {
+  const { clientId } = req.params;
+
+  try {
+    const impediments = await clientsModel.getImpedimentsByClientId(req.requestId, clientId);
+    res.status(200).json(impediments);
+  } catch (error) {
+    logger.error(`[Controller] Error retrieving impediments for client ${clientId}: ${error.message}`);
+    res.status(500).json({ error: 'Failed to retrieve client impediments.' });
+  }
+};
+const handleUpdateImpediment = async (req, res) => {
+  const { impedimentId } = req.params;
+  const updatedFields = req.body;
+  const userId = req.user.id;
+
+  if (Object.keys(updatedFields).length === 0) {
+    return res.status(400).json({ error: 'No fields provided for update.' });
+  }
+
+  try {
+    const updatedImpediment = await clientsModel.updateImpediment(req.requestId, impedimentId, updatedFields, userId);
+    res.status(200).json(updatedImpediment);
+  } catch (error) {
+    logger.error(`[Controller] Error updating impediment ${impedimentId}: ${error.message}`);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to update client impediment.' });
+  }
+};
+const handleDeleteImpediment = async (req, res) => {
+  const { impedimentId } = req.params;
+
+  try {
+    const deletedImpediment = await clientsModel.deleteImpediment(req.requestId, impedimentId);
+    res.status(200).json({ message: 'Impediment deleted successfully.', deletedImpediment });
+  } catch (error) {
+    logger.error(`[Controller] Error deleting impediment ${impedimentId}: ${error.message}`);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to delete client impediment.' });
+  }
+};
+
+
 module.exports = { 
   getClients, 
   getClient,
@@ -400,4 +464,8 @@ module.exports = {
   updateGroup,
   mergeClients,
   handleGetRelatedCompanies, handleAddClientRelationship, handleUpdateClientRelationship, handleDeleteClientRelationship, handleGetCommonRelationshipPairs,
+  handleCreateImpediment,
+  handleGetImpedimentsByClientId,
+  handleUpdateImpediment,
+  handleDeleteImpediment,
 };
