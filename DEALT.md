@@ -4,6 +4,39 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ## September 2, 2025
 
+#### Feature Request #44: Customize Room Assignment Order by Hotel
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Allow customization of the room assignment order for each hotel
+  - Enable specific room assignment sequences (e.g., assign room 227 before 201 for a specific hotel)
+  - Support different assignment orders for different hotels
+- **Key Features**:
+  - Hotel-specific room assignment order configuration
+  - Drag-and-drop interface for setting room priority
+  - Default assignment order for hotels without custom configuration
+  - Clear visual indication of the current assignment order
+- **Implementation**:
+  - Added `assignment_priority` column to the `rooms` table to store the custom sort order  
+  - Default value is set to the room ID to maintain backward compatibility
+  - Lower numbers in `assign_order` indicate higher priority in room assignment
+- **Implementation Requirements**:
+  - Create a new configuration section in the admin panel for room assignment order
+  - Store hotel-specific room priorities in the database using the `assign_order` column
+  - Update the auto-assignment logic to respect the configured order
+  - Add validation to prevent duplicate or invalid room assignments
+  - Include an option to reset to default order
+- **UI/UX Considerations**:
+  - Intuitive drag-and-drop interface for reordering rooms
+  - Visual preview of the current assignment order
+  - Ability to test the assignment order
+  - Clear documentation of the assignment logic
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Initial request is for Kushiro hotel 2F (rooms 227 before 201)
+  - Should be extensible for other hotels and floors
+  - Consider adding bulk import/export for room order configurations
+  - Ensure the system handles cases where configured rooms are unavailable
+
 #### Feature Request #47: Mixed Plan Type Indicator
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
@@ -1338,5 +1371,3 @@ This document contains all fixed and closed issues that were previously tracked 
 - **Resolution**: Added visual lines/borders to room cells to improve visibility and distinguish between different rooms
 - **Date Fixed**: December 19, 2024
 - **Additional Notes**: Visual clarity of the calendar view has been improved as requested.
-
-```

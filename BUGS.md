@@ -41,7 +41,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Consider automated review/expiration of certain restrictions
   - Integration with existing client profiles and booking flows
   - Reporting dashboard for monitoring restricted clients
-  
+
 ### August 29, 2025
 
 #### Feature Request #46: Reservation Consolidation
@@ -84,37 +84,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should handle various edge cases (different rates, special requests, etc.)
   - Consider impact on reporting and analytics
   - Ensure proper audit logging of consolidation actions
-
-### August 25, 2025
-
-#### Feature Request #44: Customize Room Assignment Order by Hotel
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Allow customization of the room assignment order for each hotel
-  - Enable specific room assignment sequences (e.g., assign room 227 before 201 for a specific hotel)
-  - Support different assignment orders for different hotels
-- **Key Features**:
-  - Hotel-specific room assignment order configuration
-  - Drag-and-drop interface for setting room priority
-  - Default assignment order for hotels without custom configuration
-  - Clear visual indication of the current assignment order
-- **Implementation Requirements**:
-  - Create a new configuration section in the admin panel for room assignment order
-  - Store hotel-specific room priorities in the database
-  - Update the auto-assignment logic to respect the configured order
-  - Add validation to prevent duplicate or invalid room assignments
-  - Include an option to reset to default order
-- **UI/UX Considerations**:
-  - Intuitive drag-and-drop interface for reordering rooms
-  - Visual preview of the current assignment order
-  - Ability to test the assignment order
-  - Clear documentation of the assignment logic
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Initial request is for Kushiro hotel 2F (rooms 227 before 201)
-  - Should be extensible for other hotels and floors
-  - Consider adding bulk import/export for room order configurations
-  - Ensure the system handles cases where configured rooms are unavailable
 
 ### August 22, 2025
 
