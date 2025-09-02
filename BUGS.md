@@ -5,34 +5,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
-### September 1, 2025
-
-#### Feature Request #47: Mixed Plan Type Indicator
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Currently, the system doesn't clearly indicate when a room has multiple plan types assigned (e.g., different meal plans for weekdays vs weekends)
-  - Need to enhance the room indicator to show when multiple plan types are present for a single reservation and display the count of each plan type
-- **Key Features**:
-  - Visual indicator when a room has more than one plan type assigned
-  - Display the count of each plan type in use (e.g., "2-meal plan (2) + Simple Stay (1)")
-  - Tooltip or hover effect showing which dates (including the day of the week) have which plan type and its count
-  - Consistent visual treatment across all relevant views (calendar, room status, etc.)
-- **Implementation Requirements**:
-  - Update the room status indicator component to handle multiple plan types and display their counts
-  - Add database query optimization to efficiently check for multiple plan types and their counts
-  - Ensure the UI remains clean and uncluttered
-  - Add appropriate tooltips or information icons for better UX
-- **UI/UX Considerations**:
-  - Use subtle but noticeable visual cues (e.g., striped colors, small icons)
-  - Ensure the indicator is accessible and colorblind-friendly
-  - Consider adding a "View Plan Details" option for more information
-  - Mobile responsiveness is crucial
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Common use case: Weekday 2-meal plans with weekend simple stay
-  - Should work with existing room status indicators
-  - Consider impact on performance when checking for multiple plan types and their counts
-
 ### August 29, 2025
 
 #### Feature Request #46: Reservation Consolidation

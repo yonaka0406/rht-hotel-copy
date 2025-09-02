@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-
+- Feature: Added support for displaying multiple plan types with day counts and tooltips showing active days of the week for each plan in Room Indicator
 
 ---
 ## Future Releases

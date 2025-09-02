@@ -67,8 +67,8 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
 };
 
 const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut, capacity_units_required, client = null) => {
-    const pool = getPool(requestId);
-    const query = `
+  const pool = getPool(requestId);
+  const query = `
         WITH occupied_spots AS (
             SELECT
                 parking_spot_id
@@ -95,16 +95,16 @@ const selectAvailableParkingSpots = async (requestId, hotelId, checkIn, checkOut
         ORDER BY ps.capacity_units, ps.id;
     `;
 
-    const values = [checkIn, checkOut, hotelId, capacity_units_required];
+  const values = [checkIn, checkOut, hotelId, capacity_units_required];
 
-    try {
-        const executor = client ? client : pool;
-        const result = await executor.query(query, values);
-        return result.rows;
-    } catch (err) {
-        console.error('Error fetching available parking spots:', err);
-        throw new Error('Database error');
-    }
+  try {
+    const executor = client ? client : pool;
+    const result = await executor.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error fetching available parking spots:', err);
+    throw new Error('Database error');
+  }
 };
 const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) => {
   const pool = getPool(requestId);
@@ -643,81 +643,116 @@ const selectMyHoldReservations = async (requestId, user_id) => {
 const selectReservationsToday = async (requestId, hotelId, date) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT DISTINCT
-      reservations.hotel_id
-      ,reservations.id
-      ,reservations.reservation_client_id
-      ,COALESCE(r_client.name_kanji, r_client.name_kana, r_client.name) as client_name
-      ,reservations.check_in
-      ,reservations.check_in_time
-      ,reservations.check_out
-      ,reservations.check_out_time
-      ,reservations.number_of_people as reservation_number_of_people
-      ,reservations.status	
-      ,reservations.payment_timing  
-      --,reservation_details.id as reservation_details_id
-      --,reservation_details.date
-      ,reservation_details.room_id      
-      ,rooms.room_number
-      ,rooms.floor
-      ,rooms.capacity
-      ,rooms.for_sale
-      ,rooms.smoking
-      ,room_types.name as room_type_name
-      ,reservation_details.number_of_people
-      ,reservation_details.price
-      ,reservation_details.plans_global_id
-      ,reservation_details.plans_hotel_id
-      ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
-      ,reservation_details.plan_type
-      ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
-      ,rc.clients_json::TEXT
-      ,reservation_details.cancelled
-    
+    SELECT a.*, b.details
     FROM
-      hotels
-      ,rooms
-      ,room_types
-      ,reservations
-      ,clients r_client
-      ,reservation_details
-      LEFT JOIN (
-          SELECT 
-            rc.reservation_details_id,
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'client_id', rc.client_id,
-                'name', c.name,
-                'name_kana', c.name_kana,
-                'name_kanji', c.name_kanji,
-                'email', c.email,
-                'phone', c.phone
-              )
-            ) AS clients_json
-          FROM reservation_clients rc
-          JOIN clients c ON rc.client_id = c.id
-          GROUP BY rc.reservation_details_id
-        ) rc ON rc.reservation_details_id = reservation_details.id
-      LEFT JOIN plans_hotel 
-      ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
-      LEFT JOIN plans_global 
-      ON plans_global.id = reservation_details.plans_global_id
+      (
+	      SELECT DISTINCT
+          reservations.hotel_id
+          ,reservations.id
+          ,reservations.reservation_client_id
+          ,COALESCE(r_client.name_kanji, r_client.name_kana, r_client.name) as client_name
+          ,reservations.check_in
+          ,reservations.check_in_time
+          ,reservations.check_out
+          ,reservations.check_out_time
+          ,reservations.number_of_people as reservation_number_of_people
+          ,reservations.status	
+          ,reservations.payment_timing        
+          ,reservation_details.room_id      
+          ,rooms.room_number
+          ,rooms.floor
+          ,rooms.capacity
+          ,rooms.for_sale
+          ,rooms.smoking
+          ,room_types.name as room_type_name
+          ,reservation_details.number_of_people
+          ,reservation_details.price
+          ,reservation_details.plans_global_id
+          ,reservation_details.plans_hotel_id
+          ,COALESCE(plans_hotel.name, plans_global.name) as plan_name
+          ,reservation_details.plan_type
+          ,COALESCE(plans_hotel.color, plans_global.color) as plan_color
+          ,rc.clients_json::TEXT
+          ,reservation_details.cancelled
+    
+        FROM
+          hotels
+          ,rooms
+          ,room_types
+          ,reservations
+          ,clients r_client
+          ,reservation_details
+            LEFT JOIN (
+                SELECT 
+                  rc.reservation_details_id,
+                  JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                      'client_id', rc.client_id,
+                      'name', c.name,
+                      'name_kana', c.name_kana,
+                      'name_kanji', c.name_kanji,
+                      'email', c.email,
+                      'phone', c.phone
+                    )
+                  ) AS clients_json
+                FROM reservation_clients rc
+                JOIN clients c ON rc.client_id = c.id
+                GROUP BY rc.reservation_details_id
+              ) rc ON rc.reservation_details_id = reservation_details.id
+            LEFT JOIN plans_hotel 
+            ON plans_hotel.hotel_id = reservation_details.hotel_id AND plans_hotel.id = reservation_details.plans_hotel_id
+            LEFT JOIN plans_global 
+            ON plans_global.id = reservation_details.plans_global_id
       
+        WHERE
+          reservations.hotel_id = $1 
+          AND (reservation_details.date = $2 OR reservations.check_out = $2)
+          AND reservations.hotel_id = hotels.id
+          AND reservation_details.room_id = rooms.id
+          AND reservation_details.hotel_id = rooms.hotel_id
+          AND room_types.id = rooms.room_type_id
+          AND room_types.hotel_id = rooms.hotel_id
+          AND reservations.id = reservation_details.reservation_id
+          AND reservations.hotel_id = reservation_details.hotel_id
+          AND r_client.id = reservations.reservation_client_id
+      ) AS a
+      ,(
+        SELECT 
+	  	    r.hotel_id
+		      ,r.id
+		      ,rd.room_id		
+	  	    ,JSON_AGG(
+		        JSON_BUILD_OBJECT(
+			        'date', rd.date,
+			        'plans_global_id', rd.plans_global_id,
+      		    'plans_hotel_id', rd.plans_hotel_id,
+			        'plan_name', COALESCE(ph.name, pg.name),
+      		    'plan_type', rd.plan_type,
+      		    'plan_color', COALESCE(ph.color, pg.color)
+		        )
+		      ) AS details
+	      FROM 
+          reservations r,
+          reservation_details rd
+          LEFT JOIN plans_hotel ph
+            ON ph.hotel_id = rd.hotel_id AND ph.id = rd.plans_hotel_id
+          LEFT JOIN plans_global pg
+            ON pg.id = rd.plans_global_id
+		  
+    	  WHERE	      	
+          rd.id IN (SELECT red.id FROM reservations res, reservation_details red WHERE res.hotel_id = $1 AND (red.date = $2 OR res.check_out = $2))
+          AND r.id = rd.reservation_id
+          AND r.hotel_id = rd.hotel_id
+      	GROUP BY
+		      r.hotel_id, r.id
+		      ,rd.room_id
+      ) b
     WHERE
-	    reservations.hotel_id = $1 
-      AND (reservation_details.date = $2 OR reservations.check_out = $2)	    
-      AND reservations.hotel_id = hotels.id
-      AND reservation_details.room_id = rooms.id
-      AND reservation_details.hotel_id = rooms.hotel_id
-      AND room_types.id = rooms.room_type_id
-      AND room_types.hotel_id = rooms.hotel_id
-      AND reservations.id = reservation_details.reservation_id
-      AND reservations.hotel_id = reservation_details.hotel_id
-      AND r_client.id = reservations.reservation_client_id
+	    a.hotel_id = b.hotel_id AND a.id = b.id AND a.room_id = b.room_id
     ORDER BY 
-      rooms.floor
-      ,rooms.room_number
-      ,reservation_details.room_id
+      a.floor
+      ,a.room_number
+      ,a.room_id;
   `;
 
   const values = [hotelId, date];
@@ -943,77 +978,77 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
 // Function to Add
 
 const addReservationHold = async (requestId, reservation) => {
-    const pool = getPool(requestId);
-    const client = await pool.connect();
+  const pool = getPool(requestId);
+  const client = await pool.connect();
 
-    try {
-        await client.query('BEGIN');
+  try {
+    await client.query('BEGIN');
 
-        const reservationQuery = `
+    const reservationQuery = `
             INSERT INTO reservations (
                 hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *;
         `;
-        const reservationValues = [
-            reservation.hotel_id,
-            reservation.reservation_client_id,
-            reservation.check_in,
-            reservation.check_out,
-            reservation.number_of_people,
-            reservation.created_by,
-            reservation.updated_by
-        ];
-        const reservationResult = await client.query(reservationQuery, reservationValues);
-        const newReservation = reservationResult.rows[0];
+    const reservationValues = [
+      reservation.hotel_id,
+      reservation.reservation_client_id,
+      reservation.check_in,
+      reservation.check_out,
+      reservation.number_of_people,
+      reservation.created_by,
+      reservation.updated_by
+    ];
+    const reservationResult = await client.query(reservationQuery, reservationValues);
+    const newReservation = reservationResult.rows[0];
 
-        if (reservation.vehicle_category_id) {
-            const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
-            const categoryResult = await client.query(categoryQuery, [reservation.vehicle_category_id]);
-            if (categoryResult.rows.length === 0) {
-                throw new Error('Vehicle category not found');
-            }
-            const { capacity_units_required } = categoryResult.rows[0];
+    if (reservation.vehicle_category_id) {
+      const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
+      const categoryResult = await client.query(categoryQuery, [reservation.vehicle_category_id]);
+      if (categoryResult.rows.length === 0) {
+        throw new Error('Vehicle category not found');
+      }
+      const { capacity_units_required } = categoryResult.rows[0];
 
-            const availableSpots = await selectAvailableParkingSpots(requestId, reservation.hotel_id, reservation.check_in, reservation.check_out, capacity_units_required, client);
-            if (availableSpots.length === 0) {
-                throw new Error('No available parking spots for the selected vehicle category and dates');
-            }
-            const spotToReserve = availableSpots[0];
+      const availableSpots = await selectAvailableParkingSpots(requestId, reservation.hotel_id, reservation.check_in, reservation.check_out, capacity_units_required, client);
+      if (availableSpots.length === 0) {
+        throw new Error('No available parking spots for the selected vehicle category and dates');
+      }
+      const spotToReserve = availableSpots[0];
 
-            const dateArray = [];
-            for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
-                dateArray.push(new Date(dt));
-            }
+      const dateArray = [];
+      for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
+        dateArray.push(new Date(dt));
+      }
 
-            for (const date of dateArray) {
-                const parkingQuery = `
+      for (const date of dateArray) {
+        const parkingQuery = `
                     INSERT INTO reservation_parking (hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by)
                     VALUES ($1, $2, $3, $4, $5, 'reserved', $6, $7)
                 `;
-                const parkingValues = [
-                    reservation.hotel_id,
-                    newReservation.id,
-                    reservation.vehicle_category_id,
-                    spotToReserve.parking_spot_id,
-                    date,
-                    reservation.created_by,
-                    reservation.updated_by
-                ];
-                await client.query(parkingQuery, parkingValues);
-            }
-        }
-
-        await client.query('COMMIT');
-        return newReservation;
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Error adding reservation hold:', err);
-        throw new Error('Database error: ' + err.message);
-    } finally {
-        client.release();
+        const parkingValues = [
+          reservation.hotel_id,
+          newReservation.id,
+          reservation.vehicle_category_id,
+          spotToReserve.parking_spot_id,
+          date,
+          reservation.created_by,
+          reservation.updated_by
+        ];
+        await client.query(parkingQuery, parkingValues);
+      }
     }
+
+    await client.query('COMMIT');
+    return newReservation;
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding reservation hold:', err);
+    throw new Error('Database error: ' + err.message);
+  } finally {
+    client.release();
+  }
 };
 const addReservationDetail = async (requestId, detail) => {
   const pool = getPool(requestId);
@@ -1113,7 +1148,7 @@ const addRoomToReservation = async (requestId, reservationId, numberOfPeople, ro
 
     // Get reservation status
     const reservationStatusQuery = 'SELECT status FROM reservations WHERE id = $1';
-    const reservationStatusResult = await client.query(reservationStatusQuery, [reservationId]);    
+    const reservationStatusResult = await client.query(reservationStatusQuery, [reservationId]);
     const status = reservationStatusResult.rows[0]?.status;
     const isConfirmed = status === 'confirmed' || status === 'checked_in';
 
@@ -1209,7 +1244,7 @@ const insertReservationPayment = async (requestId, hotelId, reservationId, date,
   }
 };
 
-const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {  
+const updateBlockToReservation = async (requestId, reservationId, clientId, userId) => {
   const pool = getPool(requestId);
   const query = `
     UPDATE reservations
@@ -1346,9 +1381,9 @@ const updateReservationDetail = async (requestId, reservationData) => {
 };
 const updateReservationStatus = async (requestId, reservationData) => {
   const { id, hotel_id, status, updated_by } = reservationData;
-  
+
   const pool = getPool(requestId);
-  const client = await pool.connect();  
+  const client = await pool.connect();
 
   let resStatus = status;
   let type = '';
@@ -1475,7 +1510,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
     const reservationId = reservationIdResult.rows[0]?.reservation_id;
 
     if (!reservationId) {
-        throw new Error('Could not find reservation associated with the detail.');
+      throw new Error('Could not find reservation associated with the detail.');
     }
 
     // Get the current status of the main reservation to determine billable status on recovery
@@ -1492,10 +1527,10 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       WHERE reservation_details_id = $1 AND hotel_id = $2
     `;
     const ratesResult = await client.query(ratesQuery, [id, hotel_id]);
-    
+
     let ratesToUse = [];
     let calculatedPrice;
-    
+
     if (status === 'cancelled') {
       // When cancelling, exclude flat_fee rates for price calculation only
       ratesToUse = ratesResult.rows.filter(rate => rate.adjustment_type !== 'flat_fee');
@@ -1567,9 +1602,9 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
 
     // Only execute the parking query if it was set
     if (parkingQuery) {
-        await client.query(parkingQuery, parkingValues);
+      await client.query(parkingQuery, parkingValues);
     }
-    
+
     // 3. Check remaining details and update the main reservation accordingly
     const remainingDetailsQuery = `
       SELECT
@@ -1603,7 +1638,7 @@ const updateReservationDetailStatus = async (requestId, reservationData) => {
       const updateParams = [new_check_in, new_check_out, updated_by, reservationId, hotel_id];
 
       if (status === 'recovered' && currentReservationStatus === 'cancelled') {
-          updateQuery += ", status = 'confirmed'";
+        updateQuery += ", status = 'confirmed'";
       }
 
       updateQuery += ` WHERE id = $4 AND hotel_id = $5;`;
@@ -1885,7 +1920,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       //console.log(`${result.rowCount} reservation_details records updated.`);
     } else {
       //console.log('Duration has changed. Recreating reservation_details records.');
-      
+
       // Get template record to copy from
       const templateQuery = `
         SELECT plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, billable
@@ -1895,7 +1930,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         LIMIT 1
       `;
       const templateResult = await client.query(templateQuery, [id, hotel_id, old_room_id]);
-      
+
       if (templateResult.rows.length === 0) {
         throw new Error('No template record found to copy from');
       }
@@ -1939,7 +1974,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
       `;
       const deleteResult = await client.query(deleteOldQuery, [id, hotel_id, old_room_id, old_check_in, old_check_out]);
       //console.log(`Deleted ${deleteResult.rowCount} old reservation_details records.`);
-      
+
       // 3. Create all required new dates
       const insertDetailsQuery = `
         INSERT INTO reservation_details (
@@ -1964,7 +1999,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         FROM generate_series($12::DATE, ($13::DATE - INTERVAL '1 day')::DATE, '1 day'::INTERVAL) as date_series(date)
         RETURNING id;
       `;
-      
+
       const insertDetailsValues = [
         hotel_id,                   // $1
         newReservationId,           // $2
@@ -1980,7 +2015,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
         new_check_in,               // $12
         new_check_out               // $13
       ];
-      
+
       const insertedDetails = await client.query(insertDetailsQuery, insertDetailsValues);
       const newReservationDetails = insertedDetails.rows;
       //console.log(`Inserted ${newReservationDetails.length} new reservation_details records.`);
@@ -2003,7 +2038,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
               clientsInserted += clientResult.rowCount || 0;
             }
           }
-          
+
           // Insert addons
           if (addonsToCopy.length > 0) {
             for (const addonRow of addonsToCopy) {
@@ -2040,7 +2075,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
 
     await client.query('COMMIT');
     //console.log('Transaction committed successfully.');
-    
+
     const returnPayload = {
       success: true,
       reservation_id: newReservationId,
@@ -2049,7 +2084,7 @@ const updateRoomByCalendar = async (requestId, roomData) => {
     };
     //console.log('--- Finished updateRoomByCalendar ---', returnPayload);
     return returnPayload;
-    
+
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error in updateRoomByCalendar, transaction rolled back:', err);
@@ -2074,7 +2109,7 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
     const reservationUpdates = {};
 
     // Loop through roomData to update each reservation
-    for (const data of roomData) {      
+    for (const data of roomData) {
       const { id, hotel_id, date, room_id, reservation_id, check_in, check_out } = data;
 
       query = `
@@ -2094,7 +2129,7 @@ const updateCalendarFreeChange = async (requestId, roomData, user_id) => {
       `;
 
       values = [date, room_id, user_id, id, hotel_id];
-      const resultReservationDetails = await client.query(query, values);      
+      const resultReservationDetails = await client.query(query, values);
     }
 
     await client.query('COMMIT');
@@ -2277,17 +2312,17 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
   const plans_hotel_id = plan?.plans_hotel_id === 0 ? null : plan?.plans_hotel_id ?? null;
   const plan_name = plan?.name ?? null;
   const plan_type = plan?.plan_type ?? null;
-  
+
   // Use unified price calculation
   let calculatedPrice = 0;
   if (rates && rates.length > 0) {
     calculatedPrice = calculatePriceFromRates(rates);
-    
+
     // Log if there's a significant difference between provided and calculated price
     if (price !== undefined && Math.abs(calculatedPrice - parseFloat(price)) > 0.01) {
       console.warn(`[updateReservationDetailPlan] Price mismatch: provided=${price}, calculated=${calculatedPrice}`);
     }
-    
+
     // Use the calculated price instead of the provided one
     price = calculatedPrice;
   }
@@ -2466,41 +2501,41 @@ const updateReservationRoomPlan = async (requestId, data) => {
 
     // Set session context for auditing/triggers
     await client.query(format(`SET SESSION "my_app.user_id" = %L;`, userId));
-    
+
     let detailsArray = await selectRoomReservationDetails(requestId, hotelId, roomId, reservationId);
     const validDays = daysOfTheWeek.map(d => d.value);
     // Filter detailsArray to keep only dates that match daysOfTheWeek
     detailsArray = detailsArray.filter(detail => {
       const dayOfWeek = detail.date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-      const isIncluded = validDays.includes(dayOfWeek);      
+      const isIncluded = validDays.includes(dayOfWeek);
       return isIncluded;
     });
-    
+
     // Update the reservation details with promise
     const updatePromises = detailsArray.map(async (detail) => {
       const { id, date } = detail;
-      
+
       try {
         // 1. Update Plan      
-        if (plan) {          
-          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId);          
-        } 
-        
+        if (plan) {
+          await updateReservationDetailPlan(requestId, id, hotelId, plan, [], 0, userId);
+        }
+
         // 2. Update Addons        
         await updateReservationDetailAddon(requestId, id, addons || [], userId);
 
-      } catch (error) {        
+      } catch (error) {
         throw error;
       }
     });
-    
+
     await Promise.all(updatePromises);
-    
+
     // 3. Recalculate Price after updating plans and addons    
     await recalculatePlanPrice(requestId, reservationId, hotelId, roomId, userId);
-    
 
-    await client.query('COMMIT');    
+
+    await client.query('COMMIT');
 
   } catch (error) {
     console.error(`[${new Date().toISOString()}] [Request ${requestId}] Error in transaction:`, error);
@@ -2577,11 +2612,11 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
 };
 const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id, user_id, client = null) => {
   const pool = getPool(requestId);
-  
+
   // Use provided client or create a new connection
   const dbClient = client || await pool.connect();
   const shouldManageTransaction = !client; // Only manage transaction if we created the connection
-  
+
   try {
     // Only begin transaction if we're managing it
     if (shouldManageTransaction) {
@@ -2624,10 +2659,10 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 
       // Fetch new rates
       const newrates = await getRatesForTheDay(requestId, plans_global_id, plans_hotel_id, hotel_id, formattedDate);
-      
+
       // Insert rates using the shared utility function
       await insertAggregatedRates(dbClient, newrates, hotel_id, id, user_id);
-      
+
       // Update the price in reservation_details using the calculated price from rates
       const calculatedPrice = calculatePriceFromRates(newrates);
       const updatePriceQuery = `
@@ -2640,7 +2675,7 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 
     // Wait for all updates to complete
     await Promise.all(dtlUpdatePromises);
-    
+
     // Only commit if we're managing the transaction
     if (shouldManageTransaction) {
       await dbClient.query('COMMIT');
@@ -2768,7 +2803,7 @@ const deleteReservationRoom = async (requestId, hotelId, roomId, reservationId, 
     console.error('Error deleting room:', err);
     throw new Error('Database error');
   } finally {
-    client.release();    
+    client.release();
   }
 };
 const deleteReservationPayment = async (requestId, id, userId) => {
@@ -2838,10 +2873,10 @@ const deleteParkingReservation = async (requestId, id, userId) => {
     WHERE id = $1
     RETURNING *;
   `;
-  
+
   // The userId is no longer needed for the query itself.
   const values = [id];
-  
+
   try {
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -2855,7 +2890,7 @@ const deleteBulkParkingReservations = async (requestId, ids, userId) => {
   if (!Array.isArray(ids) || ids.length === 0) {
     throw new Error('No parking reservation IDs provided for deletion');
   }
-  
+
   const pool = getPool(requestId);
   // Changed the query from UPDATE to a direct DELETE.
   // The RETURNING * clause ensures the deleted rows are returned.
@@ -2864,10 +2899,10 @@ const deleteBulkParkingReservations = async (requestId, ids, userId) => {
     WHERE id = ANY($1::uuid[])
     RETURNING *;
   `;
-  
+
   // The userId is no longer needed for the query itself.
   const values = [ids];
-  
+
   try {
     const result = await pool.query(query, values);
     return result.rows;
@@ -3199,7 +3234,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       updated_by: 1,
     };
 
-    let finalName, finalNameKana, finalNameKanji;    
+    let finalName, finalNameKana, finalNameKanji;
     const { name, nameKana, nameKanji } = await processNameString(sanitizeName(clientData.name));
     finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
     if (clientData.name_kana) {
@@ -3259,7 +3294,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         clientData.created_by,
         clientData.updated_by
       ];
-      
+
       const newClient = await internalClient.query(query, values);
       reservationClientId = newClient.rows[0].id;
       //console.log('Created new client with ID:', reservationClientId);
@@ -3293,7 +3328,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         const newAddress = await internalClient.query(query, values);
         //console.log('addOTAReservation addresses:', newAddress.rows[0]);
       }
-    } 
+    }
 
     // Insert reservations
     query = `
@@ -3412,9 +3447,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
               const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
-              
+
               guestData = {
-                name: name,                
+                name: name,
                 name_kana: nameKana,
                 name_kanji: nameKanji,
                 date_of_birth: guest?.GuestDateOfBirth || null,
@@ -3430,7 +3465,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               if (guestData.name_kana) {
                 finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
               }
-              
+
               // First, try to find an existing client with the same details
               query = `
                 SELECT id FROM clients 
@@ -3443,7 +3478,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   AND email = $7 
                   AND phone = $8 
                 LIMIT 1;
-              `;  
+              `;
 
               values = [
                 finalName,
@@ -3459,7 +3494,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const existingClient = await internalClient.query(query, values);
               if (existingClient.rows.length > 0) {
                 insertedClients.push(existingClient.rows[0]);
-              } else{
+              } else {
                 // Insert new client
                 query = `
                   INSERT INTO clients (
@@ -3481,9 +3516,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   guestData.updated_by
                 ];
 
-                const newClient = await internalClient.query(query, values);            
+                const newClient = await internalClient.query(query, values);
                 insertedClients.push(newClient.rows[0]);
-              } 
+              }
             }
           }
         }
@@ -3497,7 +3532,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             // addon.quantity = BasicInformation.GrandTotalPaxCount || 1;
             addon.quantity = totalPeopleCount || 1;
           });
-        }        
+        }
 
         query = `
           INSERT INTO reservation_details (
@@ -3525,8 +3560,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
         }
         //console.log('addOTAReservation reservation_details:', reservationDetails.rows[0]);
 
-         
-        if(!insertedClients || insertedClients.length === 0) {
+
+        if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
             const guestData = {
@@ -3540,9 +3575,9 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               created_by: 1,
               updated_by: 1,
             };
-                    
+
             const sanitizedName = sanitizeName(guestData.name);
-            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
+            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
               finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
@@ -3560,7 +3595,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 AND email = $7 
                 AND phone = $8 
               LIMIT 1;
-            `;  
+            `;
 
             values = [
               finalName,
@@ -3576,7 +3611,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
             const existingClient = await internalClient.query(query, values);
             if (existingClient.rows.length > 0) {
               reservationGuestId = existingClient.rows[0].id;
-            } else{
+            } else {
               // Insert new client
               query = `
               INSERT INTO clients (
@@ -3586,40 +3621,40 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
               `;
 
               values = [
-              finalName,
-              finalNameKana,
-              finalNameKanji,
-              guestData.date_of_birth,
-              guestData.legal_or_natural_person,
-              guestData.gender,
-              guestData.email,
-              guestData.phone,
-              guestData.created_by,
-              guestData.updated_by
+                finalName,
+                finalNameKana,
+                finalNameKanji,
+                guestData.date_of_birth,
+                guestData.legal_or_natural_person,
+                guestData.gender,
+                guestData.email,
+                guestData.phone,
+                guestData.created_by,
+                guestData.updated_by
               ];
 
               const newClient = await internalClient.query(query, values);
               reservationGuestId = newClient.rows[0].id;
-            }            
-         } else {
-          reservationGuestId = reservationClientId;             
-         }
+            }
+          } else {
+            reservationGuestId = reservationClientId;
+          }
 
           // Add booker's client ID to reservation_clients for testing
           try {
             if (reservationGuestId) {
-                    const result = await internalClient.query(`
+              const result = await internalClient.query(`
                         INSERT INTO reservation_clients (
                             hotel_id, reservation_details_id, client_id, created_by, updated_by
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-                    //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-                console.log('No reservationGuestId available to add to reservation_clients');
+              console.log('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
-              console.error('Error adding booker to reservation_clients:', error);
+            console.error('Error adding booker to reservation_clients:', error);
           }
 
         } else {
@@ -4198,9 +4233,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const rawName = guest?.GuestKanjiName?.trim() || guest?.GuestNameSingleByte?.trim() || BasicInformation?.GuestOrGroupNameKanjiName?.trim() || '';
               const sanitizedName = sanitizeName(rawName);
               const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
-              
+
               guestData = {
-                name: name,                
+                name: name,
                 name_kana: nameKana,
                 name_kanji: nameKanji,
                 date_of_birth: guest?.GuestDateOfBirth || null,
@@ -4216,7 +4251,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               if (guestData.name_kana) {
                 finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
               }
-              
+
               // First, try to find an existing client with the same details
               query = `
                 SELECT id FROM clients 
@@ -4229,7 +4264,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   AND email = $7 
                   AND phone = $8 
                 LIMIT 1;
-              `;  
+              `;
 
               values = [
                 finalName,
@@ -4245,7 +4280,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               const existingClient = await internalClient.query(query, values);
               if (existingClient.rows.length > 0) {
                 insertedClients.push(existingClient.rows[0]);
-              } else{
+              } else {
                 // Insert new client
                 query = `
                   INSERT INTO clients (
@@ -4267,9 +4302,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                   guestData.updated_by
                 ];
 
-                const newClient = await internalClient.query(query, values);            
+                const newClient = await internalClient.query(query, values);
                 insertedClients.push(newClient.rows[0]);
-              } 
+              }
             }
           }
         }
@@ -4282,7 +4317,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             // addon.quantity = BasicRateInformation?.RoomRateOrPersonalRate === 'PersonalRate' ? BasicInformation.GrandTotalPaxCount : 1;
             addon.quantity = totalPeopleCount || 1;
           });
-        }       
+        }
 
         query = `
           INSERT INTO reservation_details (
@@ -4310,7 +4345,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
         }
         console.log('editOTAReservation reservation_details:', reservationDetails.rows[0]);
 
-        if(!insertedClients || insertedClients.length === 0) {
+        if (!insertedClients || insertedClients.length === 0) {
           // if insertedClients array is empty, add just one entry of client id in reservation_clients
           if (Member?.UserName?.trim()) {
             const guestData = {
@@ -4324,9 +4359,9 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               created_by: 1,
               updated_by: 1,
             };
-                    
+
             const sanitizedName = sanitizeName(guestData.name);
-            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);            
+            const { name, nameKana, nameKanji } = await processNameString(sanitizedName);
             finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
             if (guestData.name_kana) {
               finalNameKana = toFullWidthKana(sanitizeName(guestData.name_kana));
@@ -4344,7 +4379,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
                 AND email = $7 
                 AND phone = $8 
               LIMIT 1;
-            `;  
+            `;
 
             values = [
               finalName,
@@ -4360,7 +4395,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
             const existingClient = await internalClient.query(query, values);
             if (existingClient.rows.length > 0) {
               reservationGuestId = existingClient.rows[0].id;
-            } else{
+            } else {
               // Insert new client
               query = `
               INSERT INTO clients (
@@ -4370,40 +4405,40 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
               `;
 
               values = [
-              finalName,
-              finalNameKana,
-              finalNameKanji,
-              guestData.date_of_birth,
-              guestData.legal_or_natural_person,
-              guestData.gender,
-              guestData.email,
-              guestData.phone,
-              guestData.created_by,
-              guestData.updated_by
+                finalName,
+                finalNameKana,
+                finalNameKanji,
+                guestData.date_of_birth,
+                guestData.legal_or_natural_person,
+                guestData.gender,
+                guestData.email,
+                guestData.phone,
+                guestData.created_by,
+                guestData.updated_by
               ];
 
               const newClient = await internalClient.query(query, values);
               reservationGuestId = newClient.rows[0].id;
-            }            
-         } else {
-          reservationGuestId = reservationClientId;             
-         }
+            }
+          } else {
+            reservationGuestId = reservationClientId;
+          }
 
           // Add booker's client ID to reservation_clients for testing
           try {
             if (reservationGuestId) {
-                    const result = await internalClient.query(`
+              const result = await internalClient.query(`
                         INSERT INTO reservation_clients (
                             hotel_id, reservation_details_id, client_id, created_by, updated_by
                         ) VALUES ($1, $2, $3, 1, 1)
                         RETURNING *;
                     `, [hotel_id, reservationDetailsId, reservationGuestId]);
-                    //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
+              //console.log('Added booker to reservation_clients:', result.rows[0] || 'No rows inserted (possible conflict)');
             } else {
-                console.log('No reservationGuestId available to add to reservation_clients');
+              console.log('No reservationGuestId available to add to reservation_clients');
             }
           } catch (error) {
-              console.error('Error adding booker to reservation_clients:', error);
+            console.error('Error adding booker to reservation_clients:', error);
           }
 
         } else {
@@ -5012,7 +5047,7 @@ const calculatePriceFromRates = (rates) => {
 
   Object.values(aggregatedRates).forEach((rate) => {
     let ratePrice = 0;
-    
+
     if (rate.adjustment_type === 'base_rate') {
       ratePrice = rate.adjustment_value;
     } else if (rate.adjustment_type === 'percentage') {
@@ -5020,7 +5055,7 @@ const calculatePriceFromRates = (rates) => {
     } else if (rate.adjustment_type === 'flat_fee') {
       ratePrice = rate.adjustment_value;
     }
-    
+
     totalPrice += ratePrice;
   });
 
@@ -5078,13 +5113,13 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
     `;
 
     return client.query(insertRateQuery, [
-      hotel_id, 
-      reservation_details_id, 
-      rate.adjustment_type, 
+      hotel_id,
+      reservation_details_id,
+      rate.adjustment_type,
       rate.adjustment_value,
-      rate.tax_type_id, 
-      rate.tax_rate, 
-      price, 
+      rate.tax_type_id,
+      rate.tax_rate,
+      price,
       user_id
     ]);
   });
@@ -5095,7 +5130,7 @@ const insertAggregatedRates = async (client, rates, hotel_id, reservation_detail
 const cancelReservationRooms = async (requestId, hotelId, reservationId, detailIds, updated_by, billable = false) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
     await client.query(format(`SET SESSION "my_app.user_id" = %L;`, updated_by));
@@ -5113,12 +5148,12 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
         AND cancelled IS NULL
       RETURNING id, number_of_people;
     `;
-    
+
     const cancelResult = await client.query(cancelDetailsQuery, [
-      billable, 
-      updated_by, 
-      detailIds, 
-      reservationId, 
+      billable,
+      updated_by,
+      detailIds,
+      reservationId,
       hotelId
     ]);
 
@@ -5126,7 +5161,7 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
       await client.query('ROLLBACK');
       return { success: false, message: 'No valid details to cancel' };
     }
-    
+
     // Get the number of people from the first cancelled detail
     const peopleReduction = cancelResult.rows[0]?.number_of_people || 0;
 
@@ -5155,7 +5190,7 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
     // If no active details remain, cancel the entire reservation
     if (parseInt(statusCheck.active_count, 10) === 0) {
       //console.log('No active details remaining, cancelling reservation:', reservationId);
-  
+
       await client.query(
         `UPDATE reservations 
          SET status = 'cancelled'             
@@ -5167,8 +5202,8 @@ const cancelReservationRooms = async (requestId, hotelId, reservationId, detailI
     }
 
     await client.query('COMMIT');
-    return { 
-      success: true, 
+    return {
+      success: true,
       cancelledDetails: cancelResult.rows,
       reservationCancelled: statusCheck.active_count === 0
     };
@@ -5203,7 +5238,7 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
   }
 };
 
-module.exports = {  
+module.exports = {
   selectAvailableRooms,
   selectReservedRooms,
   selectReservation,

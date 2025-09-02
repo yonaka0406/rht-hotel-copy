@@ -2,10 +2,37 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## September 2, 2025
+
+#### Feature Request #47: Mixed Plan Type Indicator
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Enhanced the room indicator to clearly show multiple plan types with their respective day counts
+  - Added tooltips showing which days of the week have which plan type
+- **Implementation**:
+  - Added visual indicators for each plan type with:
+    - Plan name
+    - Reservation count for that plan
+    - Color-coded backgrounds for quick identification
+  - Implemented tooltips showing:
+    - Days of the week when each plan is active
+    - Days are displayed in order from Monday to Sunday
+    - Japanese locale support for day names
+  - Used PrimeVue Button components with badges for clean, accessible display
+- **Technical Details**:
+  - Added getPlanDaysTooltip function to process and sort days
+  - Implemented responsive design that works on all screen sizes
+  - Maintained existing color scheme for consistency
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Successfully handles mixed plan scenarios (e.g., different plans on weekdays vs weekends)
+  - Clean, unobtrusive UI that provides detailed information on hover
+  - Optimized to work with existing reservation data structure
+
 ## September 1, 2025
 
 #### Bug #48: Payment Deletion Confirmation Not Grouped
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - When deleting multiple payments in the reservation payment history, each deletion shows a separate confirmation dialog
   - This creates a poor user experience as users need to confirm each deletion individually

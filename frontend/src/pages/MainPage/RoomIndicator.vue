@@ -121,7 +121,23 @@
                         </span>
                       </div>
                       <div v-if="room.plan_name">
-                        <span class="p-1 rounded-lg" :style="{ backgroundColor: room.plan_color }">{{ room.plan_name }}</span>
+                        <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">
+                          <Button 
+                              type="button" 
+                              :label="`${planName}`" 
+                              :badge="`${planData.count}`" 
+                              badgeSeverity="secondary"
+                              variant="outlined" 
+                              :style="{ 
+                                  backgroundColor: `${planData.color}40`, 
+                                  border: `1px solid ${planData.color}`, 
+                                  color: 'black',
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem'
+                              }" 
+                              v-tooltip.top="getPlanDaysTooltip(room.details, planName)"
+                            />
+                        </div>
                       </div>
                     </div>
                     <div v-else-if="group.title === '本日チェックアウト'" class="flex items-center gap-2">
@@ -131,11 +147,27 @@
                           {{ formatTime(room.check_out_time) }}
                         </span>
                       </div>                      
-                    </div>
+                    </div>                    
                     <div v-else>
                       <div v-if="room.plan_name">
-                        <span class="p-1 rounded-lg" :style="{ backgroundColor: `${room.plan_color}` }">{{ room.plan_name }}</span>
-                      </div>  
+                        <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">                            
+                            <Button 
+                              type="button" 
+                              :label="`${planName}`" 
+                              :badge="`${planData.count}`" 
+                              badgeSeverity="secondary"
+                              variant="outlined" 
+                              :style="{ 
+                                  backgroundColor: `${planData.color}40`, 
+                                  border: `1px solid ${planData.color}`, 
+                                  color: 'black',
+                                  fontSize: '0.75rem',
+                                  padding: '0.25rem 0.5rem'
+                              }"
+                              v-tooltip.top="getPlanDaysTooltip(room.details, planName)"
+                            />
+                        </div>
+                      </div>                      
                     </div>
                   </div>
                 </div>
@@ -204,7 +236,7 @@
   import Avatar from 'primevue/avatar';
   import DatePicker from 'primevue/datepicker';
   import Button from 'primevue/button';
-
+  
   //Stores
   import { useHotelStore } from '@/composables/useHotelStore';
   const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
@@ -558,13 +590,65 @@
       });
     }
   };
+  
+  const planSummary = computed(() => {
+    const roomPlans = {};
+    const reservations = reservedRoomsDayView.value?.reservations || [];
+
+    reservations.forEach(room => {
+      if (room.cancelled) return;
+
+      const roomKey = room.room_number;
+      room.details?.forEach(detail => {
+        const planName = detail?.plan_name || 'No Plan';
+        const planColor = detail?.plan_color || '#CCCCCC';
+
+        if (!roomPlans[roomKey]) {
+          roomPlans[roomKey] = {};
+        }
+
+        if (!roomPlans[roomKey][planName]) {
+          roomPlans[roomKey][planName] = {
+            count: 0,
+            color: planColor
+          };
+        }
+
+        roomPlans[roomKey][planName].count++;
+      });
+    });
+
+    return roomPlans;
+  });
+
+  const getPlanDaysTooltip = (details, planName) => {
+    if (!details || !Array.isArray(details)) return '';
+    
+    // Define day order (0 = Sunday, 1 = Monday, etc.)
+    const dayOrder = { '日': 7, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
+    
+    // Get unique days for the plan
+    const days = [...new Set(
+      details
+        .filter(detail => detail.plan_name === planName)
+        .map(detail => {
+          const date = new Date(detail.date);
+          return date.toLocaleDateString('ja-JP', { weekday: 'short' }).replace('曜日', '');
+        })
+    )];
+    
+    // Sort days according to dayOrder
+    const sortedDays = days.sort((a, b) => dayOrder[a] - dayOrder[b]);
+    
+    return `曜日: ${sortedDays.join(', ')}`;
+  };
+ 
 
   // Mount
   onMounted(async () => {
     
     isLoading.value = true;
-    // console.log('onMounted of RoomIndicator', selectedHotelId.value, today);
-    // console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
+    // console.log('onMounted of RoomIndicator', selectedHotelId.value, today);    
     // console.log('onMounted of selectedDate', selectedDate.value);        
 
     // Establish Socket.IO connection
@@ -594,6 +678,7 @@
     await fetchHotel();
 
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+    //console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
     
     isLoading.value = false;        
     
