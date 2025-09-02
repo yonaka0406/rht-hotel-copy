@@ -7,6 +7,31 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 2, 2025
 
+## Feature Request #50: Enhanced Calendar View for Client Visualization
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The current calendar view can be difficult to read when a single client has multiple or consecutive bookings.
+  - The goal is to improve the visual representation of these bookings to be more like an existing Google Sheet view, which is clearer.
+- **Suggested approaches**:
+  - Adapt the current calendar to match the layout of the Google Sheet view.
+  - Create a new, view-only page that mimics the Google Sheet.
+  - Implement a "client highlight" function that visually groups bookings from the same client. For example, by making the cells thinner and only displaying the client's name once.
+- **Key Features / Requirements**:
+  - Client Grouping Logic:
+    - Identify consecutive or overlapping reservations made by the same client.
+  - Visual Representation (Client Highlight option):
+    - Display the client's name only in the first reservation block of a group.
+    - Subsequent blocks for the same client should be visually connected but condensed (e.g., thinner, without the repeated name).
+    - Use a consistent color or border to link all parts of a single client's stay.
+  - View Options:
+    - Could be a new, dedicated view ("Client View", "Condensed View").
+    - Alternatively, a toggle on the existing calendar to switch the highlight function on/off.
+- **UI/UX Considerations**:
+  - Hovering over a condensed block should reveal the full reservation details.
+  - The visual grouping should be clear and intuitive, improving readability at a glance.
+  - The feature should not negatively impact the performance of the calendar view.
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 #### Feature Request #49: CRM Client Impediment Tracking
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
@@ -279,4 +304,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: September 2, 2025*
 *Total Bugs: 0* (last one #48)
-*Total Feature Requests: 12* (last one #49)
+*Total Feature Requests: 13* (last one #50)
