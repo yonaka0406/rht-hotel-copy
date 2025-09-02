@@ -1017,6 +1017,7 @@ const createImpediment = async (requestId, impedimentData, userId) => {
     restriction_level,
     description,
     is_active = true,
+    start_date,
     end_date,
   } = impedimentData;
 
@@ -1027,10 +1028,11 @@ const createImpediment = async (requestId, impedimentData, userId) => {
       restriction_level,
       description,
       is_active,
+      start_date,
       end_date,
       created_by,
       updated_by
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *;
   `;
 
@@ -1040,6 +1042,7 @@ const createImpediment = async (requestId, impedimentData, userId) => {
     restriction_level,
     description,
     is_active,
+    start_date,
     end_date,
     userId,
     userId,
@@ -1078,23 +1081,27 @@ const updateImpediment = async (requestId, impedimentId, updatedFields, userId) 
   const values = [];
   let paramIndex = 1;
 
+  // Fields that are managed by the server, not by the client
+  const serverManagedFields = ['updated_by', 'updated_at'];
+
   // Dynamically build the SET clause
   for (const [key, value] of Object.entries(updatedFields)) {
-    if (value !== undefined) {
+    // Skip server-managed fields from updatedFields since we set them explicitly
+    if (value !== undefined && !serverManagedFields.includes(key)) {
       fields.push(`${key} = $${paramIndex++}`);
       values.push(value);
     }
   }
 
-  if (fields.length === 0) {
-    throw new Error("No fields provided for update.");
-  }
-  
   // Add updated_by and updated_at
   fields.push(`updated_by = $${paramIndex++}`);
   values.push(userId);
   fields.push(`updated_at = CURRENT_TIMESTAMP`);
 
+  if (fields.length === 0) {
+    throw new Error("No fields provided for update.");
+  }
+  
   values.push(impedimentId);
 
   const query = `
@@ -1172,5 +1179,3 @@ module.exports = {
   updateImpediment,
   deleteImpediment,
 };
-
-

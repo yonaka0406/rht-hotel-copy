@@ -402,6 +402,9 @@ const handleGetImpedimentsByClientId = async (req, res) => {
 
   try {
     const impediments = await clientsModel.getImpedimentsByClientId(req.requestId, clientId);
+    if (!impediments) {
+        return res.status(200).json([]);
+    }
     res.status(200).json(impediments);
   } catch (error) {
     logger.error(`[Controller] Error retrieving impediments for client ${clientId}: ${error.message}`);

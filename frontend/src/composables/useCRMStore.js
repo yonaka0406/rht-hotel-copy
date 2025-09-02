@@ -1,55 +1,33 @@
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
+import { useApi } from './useApi';
 
 const user_actions = ref([]);
 const client_actions = ref([]);
 const actions = ref([]);
+const clientImpediments = ref([]);
+const loadingImpediments = ref(false);
+const errorImpediments = ref(null);
 
 export function useCRMStore() {
+    const { get, post, put, del } = useApi();
     
     const fetchUserActions = async (uid) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/actions/user/${uid}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            user_actions.value = await response.json();
+            user_actions.value = await get(`/actions/user/${uid}`);
         } catch (error) {
             console.error('Failed to fetch actions', error);
         }
     };
     const fetchClientActions = async (cid) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/actions/client/${cid}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            client_actions.value = await response.json();
+            client_actions.value = await get(`/actions/client/${cid}`);
         } catch (error) {
             console.error('Failed to fetch actions', error);
         }
     };
     const fetchAllActions = async () => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch('/api/actions/get', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-    
-            actions.value = await response.json();
+            actions.value = await get('/actions/get');
         } catch (error) {
             console.error('Failed to fetch actions', error);
         }
@@ -57,24 +35,8 @@ export function useCRMStore() {
 
     const addAction = async (actionFields) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch('/api/action/new', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ actionFields }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to add action');
-            }
-
-            const newAction = await response.json();
+            const newAction = await post('/action/new', { actionFields });
             return newAction;
-            
         } catch (error) {
             console.error('Failed to add action:', error);
             throw error;
@@ -83,22 +45,7 @@ export function useCRMStore() {
 
     const editAction = async (id, actionFields) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/action/edit/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ actionFields }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to edit action');
-            }
-
-            const updatedAction = await response.json();
+            const updatedAction = await put(`/action/edit/${id}`, { actionFields });
             return updatedAction;
         } catch (error) {
             console.error('Failed to edit action:', error);
@@ -108,19 +55,7 @@ export function useCRMStore() {
 
     const removeAction = async (id) => {
         try {
-            const authToken = localStorage.getItem('authToken');
-            const response = await fetch(`/api/action/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to remove action');
-            }
-
+            await del(`/action/${id}`);
             return { success: true };
         } catch (error) {
             console.error('Failed to remove action:', error);
@@ -128,18 +63,73 @@ export function useCRMStore() {
         }
     };
 
+    // --- Client Impediment Functions ---
 
+    const fetchImpedimentsByClientId = async (clientId) => {
+        loadingImpediments.value = true;
+        errorImpediments.value = null;
+        try {
+            clientImpediments.value = await get(`/clients/${clientId}/impediments`);
+        } catch (error) {
+            errorImpediments.value = error;
+            console.error(`Failed to fetch impediments for client ${clientId}:`, error);
+        } finally {
+            loadingImpediments.value = false;
+        }
+    };
 
+    const createImpediment = async (impedimentData) => {
+        try {
+            const newImpediment = await post('/clients/impediments', impedimentData);
+            clientImpediments.value.push(newImpediment);
+            return newImpediment;
+        } catch (error) {
+            console.error('Failed to create impediment:', error);
+            throw error;
+        }
+    };
+
+    const updateImpediment = async (impedimentId, impedimentData) => {
+        try {
+            const updatedImpediment = await put(`/clients/impediments/${impedimentId}`, impedimentData);
+            const index = clientImpediments.value.findIndex(i => i.id === impedimentId);
+            if (index !== -1) {
+                clientImpediments.value[index] = updatedImpediment;
+            }
+            return updatedImpediment;
+        } catch (error) {
+            console.error('Failed to update impediment:', error);
+            throw error;
+        }
+    };
+
+    const deleteImpediment = async (impedimentId) => {
+        try {
+            await del(`/clients/impediments/${impedimentId}`);
+            clientImpediments.value = clientImpediments.value.filter(i => i.id !== impedimentId);
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to delete impediment:', error);
+            throw error;
+        }
+    };
 
     return {
         user_actions,
         client_actions,
         actions,        
+        clientImpediments,
+        loadingImpediments,
+        errorImpediments,
         fetchUserActions,
         fetchClientActions,
         fetchAllActions,
         addAction,
         editAction,
         removeAction,
+        fetchImpedimentsByClientId,
+        createImpediment,
+        updateImpediment,
+        deleteImpediment,
     };
 }
