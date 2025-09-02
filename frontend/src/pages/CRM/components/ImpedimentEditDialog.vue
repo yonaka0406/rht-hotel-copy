@@ -1,28 +1,34 @@
 <template>
     <Dialog v-model:visible="dialogVisible" :style="{width: '450px'}" header="障害の詳細" :modal="true" class="p-fluid">
-        <div class="field mt-4">
-            <label for="is_active">ステータス</label>
-            <ToggleSwitch v-model="impediment.is_active" />
+        <div class="field mb-6">
+            <label for="is_active" class="block mb-2">ステータス</label>
+            <ToggleSwitch v-model="impediment.is_active" class="mt-2" />
         </div>
-        <div class="field mt-4">
-            <label for="impediment_type">障害タイプ</label>
-            <SelectButton v-model="impediment.impediment_type" :options="impedimentTypes" optionLabel="label" optionValue="value" />
+        <div class="field mb-6">
+            <label for="impediment_type" class="block mb-2">障害タイプ</label>
+            <SelectButton id="impediment_type" v-model="impediment.impediment_type" :options="impedimentTypes" optionLabel="label" optionValue="value" class="w-full" />
         </div>
-        <div class="field mt-4">
-            <label for="restriction_level">制限レベル</label>
-            <SelectButton v-model="impediment.restriction_level" :options="restrictionLevels" optionLabel="label" optionValue="value" />
+        <div class="field mb-6">
+            <label for="restriction_level" class="block mb-2">制限レベル</label>
+            <SelectButton id="restriction_level" v-model="impediment.restriction_level" :options="restrictionLevels" optionLabel="label" optionValue="value" class="w-full" />
         </div>
-        <div class="field mt-4">
-            <label for="description">説明</label>
-            <Textarea id="description" v-model="impediment.description" required="true" rows="3" cols="20" />
+        <div class="field mb-6">
+            <FloatLabel>
+                <Textarea id="description" v-model="impediment.description" required="true" rows="3" class="w-full" />
+                <label for="description">説明</label>
+            </FloatLabel>
         </div>
-        <div class="field mt-4">
-            <label for="start_date">開始日</label>
-            <DatePicker id="start_date" v-model="impediment.start_date" dateFormat="yy-mm-dd" showIcon />
+        <div class="field mb-6">
+            <FloatLabel>
+                <DatePicker id="start_date" v-model="impediment.start_date" dateFormat="yy-mm-dd" showIcon class="w-full" />
+                <label for="start_date">開始日</label>
+            </FloatLabel>
         </div>
-        <div class="field mt-4">
-            <label for="end_date">終了日</label>
-            <DatePicker id="end_date" v-model="impediment.end_date" dateFormat="yy-mm-dd" showIcon />
+        <div class="field mb-6">
+            <FloatLabel>
+                <DatePicker id="end_date" v-model="impediment.end_date" dateFormat="yy-mm-dd" showIcon class="w-full" />
+                <label for="end_date">終了日</label>
+            </FloatLabel>
         </div>
 
         <template #footer>
@@ -40,6 +46,7 @@ import SelectButton from 'primevue/selectbutton';
 import Textarea from 'primevue/textarea';
 import DatePicker from 'primevue/datepicker';
 import ToggleSwitch from 'primevue/toggleswitch';
+import FloatLabel from 'primevue/floatlabel';
 
 const props = defineProps({
     visible: Boolean,
@@ -90,3 +97,27 @@ const saveImpediment = () => {
     hideDialog();
 };
 </script>
+
+<style scoped>
+:deep(.p-float-label) {
+    margin-top: 0.5rem;
+}
+:deep(.p-float-label label) {
+    left: 1rem;
+}
+:deep(.p-float-label input:focus ~ label),
+:deep(.p-float-label input.p-filled ~ label),
+:deep(.p-float-label textarea:focus ~ label),
+:deep(.p-float-label textarea.p-filled ~ label) {
+    top: -0.75rem;
+    background: var(--surface-card);
+    padding: 0 0.5rem;
+    left: 0.5rem;
+    border-radius: 4px;
+}
+
+/* Add more space between fields */
+.field {
+    margin-bottom: 1.5rem;  /* 6 * 0.25rem = 1.5rem */
+}
+</style>
