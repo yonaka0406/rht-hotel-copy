@@ -198,3 +198,68 @@ FROM (
 		CASE WHEN random() < 0.5 THEN TRUE ELSE FALSE END AS random_boolean
 ) AS random_data;
 */
+
+-- Migration for client_impediments table
+
+-- 1. Define ENUM types for impediment_type and restriction_level
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'impediment_type_enum') THEN
+        CREATE TYPE impediment_type_enum AS ENUM ('payment', 'behavioral', 'other');
+    END IF;
+    
+    -- Drop the old enum type if it exists with different values
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'restriction_level_enum') THEN
+        DROP TYPE restriction_level_enum;
+    END IF;
+    
+    CREATE TYPE restriction_level_enum AS ENUM ('warning', 'block');
+END$$;
+
+-- 2. Create the client_impediments table
+CREATE TABLE IF NOT EXISTS client_impediments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    impediment_type impediment_type_enum NOT NULL,
+    restriction_level restriction_level_enum NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    start_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    end_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_by INT REFERENCES users(id),
+    updated_by INT REFERENCES users(id)
+);
+
+-- 3. Add indexes for performance
+CREATE INDEX IF NOT EXISTS idx_client_impediments_client_id ON client_impediments(client_id);
+CREATE INDEX IF NOT EXISTS idx_client_impediments_impediment_type ON client_impediments(impediment_type);
+CREATE INDEX IF NOT EXISTS idx_client_impediments_is_active ON client_impediments(is_active);
+
+-- 4. Add a trigger to automatically update the updated_at timestamp
+-- (Assuming the function 'update_updated_at_column' is defined in '012_triggers.sql')
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_updated_at_column') THEN
+        CREATE TRIGGER update_client_impediments_updated_at
+        BEFORE UPDATE ON client_impediments
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    ELSE
+        RAISE NOTICE 'Function update_updated_at_column() not found. Trigger not created for client_impediments.';
+    END IF;
+END$$;
+
+-- 5. Add comments to the table and columns for clarity
+COMMENT ON TABLE client_impediments IS 'Stores records of client impediments, such as payment issues or behavioral problems, and the resulting restrictions.';
+COMMENT ON COLUMN client_impediments.client_id IS 'Foreign key linking to the client who has the impediment.';
+COMMENT ON COLUMN client_impediments.impediment_type IS 'The category of the impediment (e.g., payment, behavioral).';
+COMMENT ON COLUMN client_impediments.restriction_level IS 'The level of booking restriction applied to the client.';
+COMMENT ON COLUMN client_impediments.description IS 'A detailed description of the impediment and any related incidents.';
+COMMENT ON COLUMN client_impediments.is_active IS 'Indicates if the impediment and its restrictions are currently in effect.';
+COMMENT ON COLUMN client_impediments.start_date IS 'The date and time when the impediment becomes active.';
+COMMENT ON COLUMN client_impediments.end_date IS 'The date and time when the impediment is set to expire (optional).';
+COMMENT ON COLUMN client_impediments.created_by IS 'The user who created the impediment record.';
+COMMENT ON COLUMN client_impediments.updated_by IS 'The last user who updated the impediment record.';
+
