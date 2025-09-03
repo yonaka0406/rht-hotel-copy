@@ -46,6 +46,12 @@
         </FloatLabel>
       </div>
 
+      <div v-if="impedimentStatus" class="col-span-2">
+        <div :class="impedimentStatus.class" class="p-4 rounded-md">
+            <p class="font-bold">{{ impedimentStatus.summary }}</p>
+            <p>{{ impedimentStatus.detail }}</p>
+        </div>
+      </div>
       <div class="col-span-1" v-if="!isClientSelectedForWaitlist">
         <SelectButton
           v-model="internalForm.client_legal_or_natural_person_waitlist"
@@ -226,7 +232,8 @@
         icon="pi pi-check" 
         @click="handleSubmit" 
         :loading="isLoading" 
-        class="p-button-text p-button-success p-button-sm" 
+        class="p-button-text p-button-success p-button-sm"
+        :disabled="impedimentStatus && impedimentStatus.level === 'block'"
       />
     </template>
   </Dialog>
@@ -238,6 +245,7 @@ import { Dialog, FloatLabel, AutoComplete, SelectButton, RadioButton, InputText,
 import { useToast } from 'primevue/usetoast';
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 import { useClientStore } from '@/composables/useClientStore';
+import { useCRMStore } from '@/composables/useCRMStore';
 import ClientAutoCompleteWithStore from '@/components/ClientAutoCompleteWithStore.vue';
 
 const props = defineProps({
@@ -275,6 +283,7 @@ const smokingOptionsDialog = ref([
 const toast = useToast();
 const waitlistStore = useWaitlistStore();
 const clientStore = useClientStore();
+const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
 // Internal State
 const internalForm = ref({});
@@ -283,6 +292,7 @@ const isClientSelectedForWaitlist = ref(false);
 const isLoading = ref(false);
 const currentStep = ref('1');
 const dateValidationError = ref('');
+const impedimentStatus = ref(null);
 
 const personTypeOptions = ref([
     { label: '法人', value: 'legal' },
@@ -339,11 +349,36 @@ watch(() => internalForm.value.requested_check_out_date, () => {
 
 
 // Client Search Logic (adapted from ReservationsNewCombo)
-const onClientSelectForWaitlist = (event) => {
+const onClientSelectForWaitlist = async (event) => {
   //console.log('[WaitlistDialog] onClientSelectForWaitlist called with', event);
   selectedClientForWaitlist.value = event.value;
   isClientSelectedForWaitlist.value = true;
   internalForm.value.client_id = selectedClientForWaitlist.value.id;
+
+  await fetchImpedimentsByClientId(selectedClientForWaitlist.value.id);
+
+  const blockImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'block');
+  if (blockImpediment) {
+      impedimentStatus.value = {
+          level: 'block',
+          summary: '予約不可',
+          detail: 'このクライアントは予約がブロックされています。',
+          class: 'bg-red-100 border-red-400 text-red-700'
+      };
+  } else {
+      const warningImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'warning');
+      if (warningImpediment) {
+          impedimentStatus.value = {
+              level: 'warning',
+              summary: '警告',
+              detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
+              class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+          };
+      } else {
+          impedimentStatus.value = null;
+      }
+  }
+
   internalForm.value.contact_email = selectedClientForWaitlist.value.email || '';
   internalForm.value.contact_phone = selectedClientForWaitlist.value.phone || '';
   // Do NOT set internalForm.value.client_name_waitlist here!
@@ -443,6 +478,16 @@ const handleClose = () => {
 };
 
 const handleSubmit = async () => {
+  if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
+    toast.add({
+      severity: 'error',
+      summary: '登録不可',
+      detail: 'このクライアントはブロックされているため、順番待ちリストに登録できません。',
+      life: 5000,
+    });
+    return;
+  }
+
   isLoading.value = true;
   internalForm.value.preferred_smoking_status = selectedSmokingPreferenceDialog.value;
 
