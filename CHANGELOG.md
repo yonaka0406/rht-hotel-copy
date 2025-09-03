@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Feature: Added support for displaying multiple plan types with day counts and tooltips showing active days of the week for each plan in Room Indicator
-- Feature: Implemented customizable room assignment order with new `assignment_priority` column in rooms table for hotel-specific room prioritization
-- Fix: Resolved issue in CRM Actions dialog where action date/time and subject weren't being properly loaded when editing an action
+
 ---
 ## Future Releases
 
@@ -327,7 +325,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Updated access control for the 仮ブロック (temporary block) function to be available to all users with CRUD access instead of just database managers.
 - Feature: Enhanced calendar to display actual guest names for OTA reservations instead of booker names, improving staff efficiency when identifying guests. (Feature #17)
 - Feature: Added comment column to the exported reservation data from Reservation List, providing more comprehensive data in exports.
-- Bugfix: Fixed issue with duplicate reservation details for the same room and date by removing the problematic unique constraint on `reservation_details` that included a nullable `cancelled` column. Implemented proper indexing and transaction handling in the period change function. (Bug #35)
+- Bugfix: Fixed duplicate reservation details for the same room and date by removing the problematic unique constraint on `reservation_details` that included a nullable `cancelled` column. Implemented proper indexing and transaction handling in the period change function. (Bug #35)
 - Bugfix: Fixed incorrect "Currently Staying" status display in RoomIndicator.vue, which was showing guests as checked-in on their scheduled check-in date rather than after actual check-in. (Bug #32)
 - Bugfix: Fixed incorrect room distribution in multi-night reservations where the system was showing inconsistent guest counts across different nights. Implemented a "Calculate-Then-Create" pattern to ensure consistent distribution of guests across all nights. (Bug #34)
 - Bugfix: Resolved XML parsing error in otaRoomMaster.vue that occurred when handling single room type responses from the API.
@@ -422,8 +420,22 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Fix: Fixed address button visibility in CRM client addresses section to ensure it's always visible
 - Fix: Added temporary workaround for multiple payment deletion confirmation dialogs
 
+---
+
+## [1.1.11] - 2025-09-03
+
+- Feature: Added support for displaying multiple plan types with day counts and tooltips showing active days of the week for each plan in Room Indicator
+- Feature: Implemented customizable room assignment order with new `assignment_priority` column in rooms table for hotel-specific room prioritization
+- Feature: Partially implemented CRM Client Impediment Tracking with management interface (main page integration pending)
+- Fix: Changed the billable list filter from check-in and check-out date to actual stay date to cover cases where cancelled dates are outside the in and out range
+- Fix: Resolved issue in CRM Actions dialog where action date/time and subject weren't being properly loaded when editing an action
+
+---
+
 ## Version History
 
+- **1.1.11** (2025-09-03) - Enhanced room management with multiple plan type displays, customizable room assignment order, and partial CRM Client Impediment Tracking. Improved billing accuracy with stay date filtering and fixed CRM Actions dialog issues.
+- **1.1.10** (2025-09-01) - Added payment timing tracking, partial room cancellations, and long-term stay cancellation fee calculator. Improved reservation management and fixed various UI/UX issues.
 - **1.1.9** (2025-08-28) - Enhanced parking and reservation management with Google Drive integration, improved calendar features, and advanced search filters. Fixed date mapping in reservations and parking calendar scrolling.
 - **1.1.8** (2025-08-26) - Enhanced system reliability with Winston logging and improved CRM client merge functionality. Added Excel exports for invoices and reservation details, and fixed room reservation counting for accurate availability.
 - **1.1.7** (2025-08-25) - Enhanced Google Drive exports with consistent plan naming and manual update capabilities. Improved billing page UI for better usability.

@@ -2,6 +2,46 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+## September 3, 2025
+
+#### Feature Request #49: CRM Client Impediment Tracking
+- **Status**: [ ] Open [ ] In Progress [x] Partially Implemented [ ] Closed
+- **Implementation Status**:
+  - CRM interface and management implemented
+  - Main page integration not implemented
+- **Description**:
+  - Need a system to track client impediments (e.g., late payments, behavioral issues) and their impact on reservations
+  - Should handle different types of restrictions and their effects on various booking channels
+- **Key Features**:
+  - Impediment types:
+    - Payment issues (late payments, declined payments)
+    - Behavioral issues (damage to property, policy violations)
+    - Other custom restrictions
+  - Restriction levels:
+    - Warning only (no booking restrictions)
+    - Block new direct bookings
+    - Block all bookings (including OTA)
+    - Custom restrictions based on booking channel
+  - OTA-specific handling:
+    - Allow OTA bookings even with payment restrictions (prepaid)
+    - Block OTA bookings for behavioral issues
+- **Implementation Requirements**:
+  - New database table for client impediments
+  - Impediment management interface in CRM
+  - Reservation system integration to enforce restrictions
+  - Alert system for staff when restricted clients attempt to book
+- **UI/UX Considerations**:
+  - Clear visual indicators for clients with impediments
+  - Quick view of restriction details and history
+  - Override capabilities for staff with proper permissions
+  - Audit log of all restriction-related actions
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Need to define escalation paths for different restriction types
+  - Consider automated review/expiration of certain restrictions
+  - Integration with existing client profiles and booking flows
+  - Reporting dashboard for monitoring restricted clients
+
 ## September 2, 2025
 
 #### Feature Request #44: Customize Room Assignment Order by Hotel
