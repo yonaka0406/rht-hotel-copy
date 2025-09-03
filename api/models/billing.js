@@ -158,7 +158,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
               ON rpc.reservation_id = reservation_details.reservation_id
 
           WHERE
-            reservation_details.hotel_id = $1
+            reservation_details.hotel_id = $1            
             AND reservation_details.billable = true  
           GROUP BY
             reservation_details.hotel_id,
@@ -168,9 +168,8 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
             rp.payment
         ) AS details
       WHERE
-        reservations.hotel_id = $1
-        AND reservations.check_out > $2
-        AND reservations.check_in <= $3
+        reservations.hotel_id = details.hotel_id
+        AND reservations.id IN (SELECT reservation_id FROM reservation_details WHERE date BETWEEN $2 AND $3 AND billable = true)
         AND reservations.status not in ('block', 'hold')
         AND reservations.reservation_client_id = booker.id
         AND reservations.id = details.reservation_id
