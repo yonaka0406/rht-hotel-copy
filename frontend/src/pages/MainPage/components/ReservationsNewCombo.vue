@@ -170,7 +170,8 @@
                                         {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
                                             slotProps.option.name || '' }}
                                         <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
-                                        }})</span>
+                                            }})</span>
+                                        <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
                                     </p>
                                     <div class="flex items-center gap-2">
                                         <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
@@ -185,6 +186,13 @@
                         </AutoComplete>
                         <label>個人氏名　||　法人名称</label>
                     </FloatLabel>
+                </div>
+
+                <div v-if="impedimentStatus" class="col-span-2">
+                    <div :class="impedimentStatus.class" class="p-4 rounded-md">
+                    <p class="font-bold">{{ impedimentStatus.summary }}</p>
+                    <p>{{ impedimentStatus.detail }}</p>
+                    </div>
                 </div>
 
                 <!-- Type of person (Legal or Natural) -->
@@ -259,7 +267,8 @@
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog"
                     class="p-button-danger p-button-text p-button-sm" />
                 <Button label="保存" icon="pi pi-check" @click="submitReservation"
-                    class="p-button-success p-button-text p-button-sm" />
+                    class="p-button-success p-button-text p-button-sm" 
+                    :disabled="impedimentStatus && impedimentStatus.level === 'block'" />
             </template>
         </Dialog>
 
@@ -294,6 +303,8 @@ import { useParkingStore } from '@/composables/useParkingStore';
 const { vehicleCategories, fetchVehicleCategories, checkRealTimeAvailability, saveParkingAssignments } = useParkingStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { fetchAllAddons } = usePlansStore();
+import { useCRMStore } from '@/composables/useCRMStore';
+const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
 // Refs for props to pass to WaitlistDialog
 const waitlistDialogVisibleState = ref(false);
@@ -419,8 +430,8 @@ const minNumberOfPeople = computed(() => {
     return comboRow.value.number_of_rooms || 1; // Ensuring at least 1 person
 });
 const isParkingAddButtonDisabled = computed(() => {
-  console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
-  return !comboRow.value.vehicle_category_id;
+    console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
+    return !comboRow.value.vehicle_category_id;
 });
 const availableParkingSpots = ref([]);
 
@@ -477,7 +488,7 @@ const onDateChange = async () => {
     // Update minimum checkout date
     minCheckOutDate.value = new Date(comboRow.value.check_in);
     minCheckOutDate.value.setDate(comboRow.value.check_in.getDate() + 1);
-    
+
     // Ensure check_out is not before the new min date
     if (new Date(comboRow.value.check_out) < minCheckOutDate.value) {
         comboRow.value.check_out = new Date(minCheckOutDate.value);
@@ -494,7 +505,7 @@ const onDateChange = async () => {
         combo.check_in = comboRow.value.check_in;
         combo.check_out = comboRow.value.check_out;
     });
-    
+
     // Fetch available rooms and validate combos
     await checkDates();
     validateCombos();
@@ -575,10 +586,10 @@ const addParkingCombo = () => {
     // Get the selected addon data - ensure we're working with raw values
     const currentAddonId = unref(selectedAddon);
     const currentAddonOptions = unref(addonOptions);
-    const selectedAddonData = currentAddonId 
+    const selectedAddonData = currentAddonId
         ? currentAddonOptions.find(a => a.id === currentAddonId)
         : currentAddonOptions[0];
-    
+
     if (!selectedAddonData) {
         console.error('No addon selected and no default addon available');
         toast.add({
@@ -610,7 +621,7 @@ const addParkingCombo = () => {
     comboRow.value.addon_id = null;
     comboRow.value.addon_name = '';
     comboRow.value.addon_price = 0;
-    
+
     // Reset the select input to the first available addon
     if (addonOptions.value.length > 0) {
         selectedAddon.value = addonOptions.value[0].id;
@@ -833,6 +844,8 @@ const isClientSelected = ref(false);
 const selectedClient = ref(null);
 const client = ref({});
 const filteredClients = ref([]);
+const impedimentStatus = ref(null);
+
 const openDialog = () => {
     reservationDetails.value.check_in = formatDate(reservationCombos.value[0].check_in);
     reservationDetails.value.check_out = formatDate(reservationCombos.value[0].check_out);
@@ -872,12 +885,37 @@ const filterClients = (event) => {
 
     reservationDetails.value.name = query;
 };
-const onClientSelect = (event) => {
+const onClientSelect = async (event) => {
     // Get selected client object from the event
     selectedClient.value = event.value;
     isClientSelected.value = true;
-    // console.log('Selected Client:', selectedClient.value);        
 
+    // Fetch impediments for the selected client
+    await fetchImpedimentsByClientId(selectedClient.value.id);
+
+    // Check for active 'block' impediments
+    const blockImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'block');
+    if (blockImpediment) {
+        impedimentStatus.value = {
+        level: 'block',
+        summary: '予約不可',
+        detail: 'このクライアントは予約がブロックされています。',
+        class: 'bg-red-100 border-red-400 text-red-700'
+        };
+    } else {
+        const warningImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'warning');
+        if (warningImpediment) {
+        impedimentStatus.value = {
+            level: 'warning',
+            summary: '警告',
+            detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
+            class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+        };
+        } else {
+        impedimentStatus.value = null;
+        }
+    }
+    
     // Update reservationDetails with the selected client's information
     reservationDetails.value.client_id = selectedClient.value.id;
     reservationDetails.value.legal_or_natural_person = selectedClient.value.legal_or_natural_person;
@@ -913,6 +951,16 @@ const validatePhone = (phone) => {
 };
 
 const submitReservation = async () => {
+   
+    if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
+        toast.add({
+        severity: 'error',
+        summary: '予約不可',
+        detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
+        life: 5000,
+        });
+        return;
+    }
     // Validate email and phone
     validateEmail(reservationDetails.value.email);
     validatePhone(reservationDetails.value.phone);
@@ -949,7 +997,7 @@ const submitReservation = async () => {
     }
 
     // First, filter for only 'stay' type combos from the original reservationCombos
-    const stayReservationCombos = reservationCombos.value.filter(combo => 
+    const stayReservationCombos = reservationCombos.value.filter(combo =>
         combo.reservation_type === 'stay'
     );
 
@@ -998,11 +1046,11 @@ const submitReservation = async () => {
                 const startDate = new Date(parkingCombo.check_in);
                 const endDate = new Date(parkingCombo.check_out);
                 const dates = [];
-                
+
                 // Set to start of day to avoid timezone issues
                 startDate.setHours(0, 0, 0, 0);
                 endDate.setHours(0, 0, 0, 0);
-                
+
                 // Generate dates up to but not including check_out date
                 for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
                     dates.push(formatDate(new Date(d)));
@@ -1025,20 +1073,20 @@ const submitReservation = async () => {
                         console.error('Invalid spot data:', spot);
                         return null; // Skip creating this assignment if spot is invalid
                     }
-                    
+
                     // Create details array with corresponding reservation detail IDs for each date
                     const details = dates.map((date, dateIndex) => {
                         // Find the reservation detail that matches this date
-                        const detail = createdReservationDetails.find(d => 
+                        const detail = createdReservationDetails.find(d =>
                             new Date(d.date).toISOString().split('T')[0] === date
                         );
-                        
+
                         return {
                             id: detail?.id || reservationDetailIds[0], // Fallback to first ID if not found
                             date: date
                         };
                     });
-                    
+
                     return {
                         id: `temp-${index}-${i}`,
                         hotel_id: hotelId, // Using the correct hotel_id
@@ -1083,7 +1131,7 @@ function consolidateStayReservations(stayReservationCombos) {
     // This should contain the same logic that's used to create consolidatedCombos.value
     // but only for stay-type reservations
     const consolidated = {};
-    
+
     stayReservationCombos.forEach((combo, index) => {
         const key = combo.room_type_id.toString();
         if (!consolidated[key]) {
@@ -1095,22 +1143,22 @@ function consolidateStayReservations(stayReservationCombos) {
                 roomCapacities: []
             };
         }
-        
+
         // Use number_of_rooms from the combo, not just count combos
         const numberOfRooms = combo.number_of_rooms || 1;
         consolidated[key].totalRooms += numberOfRooms;
-        
+
         // Add the people count for this combo
         const totalPeopleInCombo = combo.number_of_people || numberOfRooms; // fallback to number of rooms if people not specified
         consolidated[key].totalPeople += totalPeopleInCombo;
-        
+
         // Create room capacities array - distribute people across rooms
         const peoplePerRoom = Math.ceil(totalPeopleInCombo / numberOfRooms);
         for (let i = 0; i < numberOfRooms; i++) {
             consolidated[key].roomCapacities.push(peoplePerRoom);
         }
     });
-    
+
     return consolidated;
 }
 

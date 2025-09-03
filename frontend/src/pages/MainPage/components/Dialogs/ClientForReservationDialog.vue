@@ -29,6 +29,7 @@
                                         slotProps.option.name || '' }}
                                     <span v-if="slotProps.option.name_kana"> ({{ slotProps.option.name_kana
                                         }})</span>
+                                    <i v-if="slotProps.option.is_blocked" class="pi pi-ban text-red-500 ml-2"></i>
                                 </p>
                                 <div class="flex items-center gap-2">
                                     <p v-if="slotProps.option.phone" class="text-xs text-sky-800">
@@ -46,6 +47,13 @@
                     </AutoComplete>
                     <label>個人氏名　||　法人名称</label>
                 </FloatLabel>
+            </div>
+
+            <div v-if="impedimentStatus" class="col-span-2">
+                <div :class="impedimentStatus.class" class="p-4 rounded-md">
+                    <p class="font-bold">{{ impedimentStatus.summary }}</p>
+                    <p>{{ impedimentStatus.detail }}</p>
+                </div>
             </div>
 
             <!-- Type of person (Legal or Natural) -->
@@ -119,7 +127,7 @@
             <Button label="閉じる" icon="pi pi-times" @click="$emit('close')"
                 class="p-button-danger p-button-text p-button-sm" />
             <Button label="保存" icon="pi pi-check" @click="handleSave"
-                class="p-button-success p-button-text p-button-sm" />
+                class="p-button-success p-button-text p-button-sm" :disabled="impedimentStatus && impedimentStatus.level === 'block'" />
         </template>
     </Dialog>
 </template>
@@ -136,6 +144,8 @@ const deepWatch = (source, cb) => {
 // Store
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, clientsIsLoading, fetchClients, setClientsIsLoading } = useClientStore();
+import { useCRMStore } from '@/composables/useCRMStore';
+const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
 // Toast
 import { useToast } from 'primevue/usetoast';
@@ -190,6 +200,7 @@ const selectedClient = ref(null);
 const isClientSelected = ref(props.isClientSelected);
 const isValidEmail = ref(true);
 const isValidPhone = ref(true);
+const impedimentStatus = ref(null);
 
 // Create RegExp objects for validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -266,11 +277,35 @@ const filterClients = async (event) => {
 };
 
 // Handle client selection from dropdown
-const onClientSelect = (event) => {
+const onClientSelect = async (event) => {
     const client = event.value;
     if (client) {
         selectedClient.value = client;
         isClientSelected.value = true;
+
+        await fetchImpedimentsByClientId(client.id);
+
+        const blockImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'block');
+        if (blockImpediment) {
+            impedimentStatus.value = {
+                level: 'block',
+                summary: '予約不可',
+                detail: 'このクライアントは予約がブロックされています。',
+                class: 'bg-red-100 border-red-400 text-red-700'
+            };
+        } else {
+            const warningImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'warning');
+            if (warningImpediment) {
+                impedimentStatus.value = {
+                    level: 'warning',
+                    summary: '警告',
+                    detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
+                    class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+                };
+            } else {
+                impedimentStatus.value = null;
+            }
+        }
 
         // Update reservation details with client info
         localReservationDetails.value.client_id = client.id;
@@ -336,6 +371,16 @@ const validatePhone = (phone) => {
 
 // Handle form submission
 const handleSave = () => {
+    if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
+        toast.add({
+            severity: 'error',
+            summary: '予約不可',
+            detail: 'このクライアントは予約がブロックされているため、予約を作成できません。',
+            life: 5000,
+        });
+        return;
+    }
+
     // Skip validation if a client is selected (has an ID)
     if (!localClient.value || !localClient.value.id) {
         validateEmail(localReservationDetails.value.email);
