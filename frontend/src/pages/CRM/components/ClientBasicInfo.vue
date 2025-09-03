@@ -136,6 +136,10 @@
                             <label class="mr-2 font-semibold">ロイヤルティ層:</label>
                             <Tag :value="getTierDisplayName(client.loyalty_tier)" :severity="getTierSeverity(client.loyalty_tier)" />
                         </div>
+                        <div v-if="impedimentStatus" class="field col-span-1 flex items-center">
+                            <label class="mr-2 font-semibold">ステータス:</label>
+                            <Tag :value="impedimentStatus.value" :severity="impedimentStatus.severity" />
+                        </div>
                         <div class="field col-span-1 md:col-span-2 xl:col-span-3">
                             <FloatLabel>
                                 <Textarea v-model="client.comment" fluid />                                        
@@ -268,7 +272,7 @@
 </template>
 <script setup>
     // Vue
-    import { ref, onMounted, watch } from 'vue';
+    import { ref, onMounted, watch, computed } from 'vue';
     import { useRoute, useRouter } from 'vue-router';
     const route = useRoute();
     const router = useRouter();
@@ -276,6 +280,8 @@
     // Stores
     import { useClientStore } from '@/composables/useClientStore';
     const { groups, selectedClient, selectedClientGroup, fetchClient, fetchCustomerID, updateClientInfoCRM, fetchClientGroups, createClientGroup, updateClientGroup } = useClientStore();
+    import { useCRMStore } from '@/composables/useCRMStore';
+    const { clientImpediments } = useCRMStore();
 
     // Primevue
     import { useToast } from 'primevue/usetoast';
@@ -301,6 +307,18 @@
         { label: '紙請求', value: 'paper' },
         { label: '電子請求', value: 'digital' },
     ];
+
+    const impedimentStatus = computed(() => {
+        const hasBlock = clientImpediments.value.some(imp => imp.is_active && imp.restriction_level === 'block');
+        if (hasBlock) {
+            return { value: 'ブロック', severity: 'danger' };
+        }
+        const hasWarning = clientImpediments.value.some(imp => imp.is_active && imp.restriction_level === 'warning');
+        if (hasWarning) {
+            return { value: '警告', severity: 'warn' };
+        }
+        return null;
+    });
 
     // Helper
     const normalizeKana = (str) => {
@@ -457,8 +475,8 @@
     );
 
     const getTierDisplayName = (tier) => {
-        if (!tier) return 'N/A'; // Or '未分類' / '該当なし'
-        switch (tier) { // tier is already lowercase
+        if (!tier) return 'N/A';
+        switch (tier) { 
             case 'prospect': return '潜在顧客';
             case 'newbie': return '新規顧客';
             case 'repeater': return 'リピーター';

@@ -7,6 +7,7 @@
       <TabList>
         <Tab value="0" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">基本情報</span>
+          <i v-if="hasBlockImpediment" class="pi pi-ban text-red-500 ml-2"></i>
         </Tab>
         <Tab value="1" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">住所</span>
@@ -26,6 +27,9 @@
         </Tab>
         <Tab value="5" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">障害</span>
+          <Badge>
+            {{ impedimentCount }}
+          </Badge>
         </Tab>
         <Tab value="6" as="div" class="flex items-center gap-2">
           <span class="font-bold whitespace-nowrap">変更履歴</span>
@@ -80,6 +84,8 @@ import { useClientStore } from '@/composables/useClientStore';
 const { selectedClient, selectedClientAddress, fetchClient } = useClientStore();
 import { useProjectStore } from '@/composables/useProjectStore';
 const projectStore = useProjectStore();
+import { useCRMStore } from '@/composables/useCRMStore';
+const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 
 // Primevue
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primevue';
@@ -96,6 +102,14 @@ const addressCount = computed(() => {
   return Object.keys(selectedClientAddress.value).length;
 });
 
+const impedimentCount = computed(() => {
+  return clientImpediments.value.length;
+});
+
+const hasBlockImpediment = computed(() => {
+  return clientImpediments.value.some(imp => imp.is_active && imp.restriction_level === 'block');
+});
+
 // Watch for changes in the route's clientId parameter
 watch(
   () => route.params.clientId,
@@ -105,12 +119,14 @@ watch(
       loadingBasicInfo.value = true;
       try {
         await fetchClient(clientId.value);
+        await fetchImpedimentsByClientId(clientId.value);
         loadingBasicInfo.value = false;
       } catch (error) {
         console.error("Error fetching client data:", error);
         loadingBasicInfo.value = false;
       }
     }
-  }
+  },
+  { immediate: true }
 );
 </script>
