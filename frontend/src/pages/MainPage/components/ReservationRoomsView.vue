@@ -1087,7 +1087,7 @@ const onClientSelect = async (e, rowData) => {
     await fetchImpedimentsByClientId(guests.value[guestIndex].id);
     guests.value[guestIndex].impediment = clientImpediments.value;
 
-    console.log('onClientSelect guests:', guests.value);
+    //console.log('onClientSelect guests:', guests.value);
 };
 const onClientChange = (rowData) => {
     // Find the guest in the guests array that was just selected
