@@ -400,11 +400,12 @@ const listenForTableChanges = async () => {
           });
         }
         if (msg.channel === 'reservation_log_inserted') {
-          /*
+          
           const logId = parseInt(msg.payload, 10);
           // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
           let response = null;
+          /*
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
