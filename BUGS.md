@@ -7,6 +7,28 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ### September 4, 2025
 
+#### Bug #52: Sales Calculation Includes Cancelled Non-Billable Entries
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The sales value calculation is including cancelled entries that should be excluded based on their billable status
+  - This affects the accuracy of financial reporting and revenue calculations
+- **Steps to Reproduce**:
+  1. Create a reservation with billable items
+  2. Cancel the reservation with billable status set to false
+  3. Check the sales report - the cancelled items still appear in the total
+- **Expected Behavior**:
+  - Cancelled entries with billable=false should be excluded from sales calculations
+  - Only active reservations or cancelled reservations with billable=true should be included
+- **Affected Areas**:
+  - Sales reports
+  - Revenue calculations
+  - Financial summaries
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Check all queries that calculate sales totals
+  - Verify the logic in both backend calculations and any frontend aggregations
+  - Add tests to ensure cancelled non-billable entries are properly excluded
+
 #### Feature Request #51: Multi-Room Temporary Block
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:
