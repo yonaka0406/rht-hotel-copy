@@ -110,7 +110,7 @@ const getSuggestions = async (req, res) => {
       number_of_people: row.number_of_people,
     }));
 
-    console.log(`[getSuggestions] DB results:`, suggestions);
+    //console.log(`[getSuggestions] DB results:`, suggestions);
 
     res.json({ suggestions });
   } catch (error) {
