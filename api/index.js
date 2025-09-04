@@ -400,6 +400,7 @@ const listenForTableChanges = async () => {
           });
         }
         if (msg.channel === 'reservation_log_inserted') {
+          /*
           const logId = parseInt(msg.payload, 10);
           // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
@@ -423,6 +424,7 @@ const listenForTableChanges = async () => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
+          */
 
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
             method: 'GET',
