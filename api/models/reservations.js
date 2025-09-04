@@ -3415,7 +3415,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
-    console.log('roomRateArray:', roomRateArray);
+    //console.log('roomRateArray:', roomRateArray);
 
     for (const roomKey in roomsArrayWithID) {
       const roomDetailsArray = roomsArrayWithID[roomKey];
@@ -4200,7 +4200,7 @@ const editOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
-    console.log('roomRateArray:', roomRateArray);
+    //console.log('roomRateArray:', roomRateArray);
 
 
     for (const roomKey in roomsArrayWithID) {
