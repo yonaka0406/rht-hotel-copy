@@ -273,6 +273,12 @@
                     </TabPanel>
                     <!-- Tab 3: Set clients -->
                     <TabPanel value="2">
+                        <div v-if="impedimentStatus" class="col-span-2 mb-4">
+                            <div :class="impedimentStatus.class" class="p-4 rounded-md">
+                                <p class="font-bold">{{ impedimentStatus.summary }}</p>
+                                <p>{{ impedimentStatus.detail }}</p>
+                            </div>
+                        </div>
                         <DataTable :value="guests" class="p-datatable-sm" scrollable responsive>
                             <Column field="name" header="宿泊者" style="width: 40%">
                                 <template #body="slotProps">
@@ -334,56 +340,69 @@
                     </TabPanel>
                     <!-- Tab 4: Modify room -->
                     <TabPanel value="3">
-                        <div class="grid grid-cols-2 gap-4 items-start">
-                            <Card class="mb-3">
-                                <template #title>予約</template>
-                                <template #content>
-                                    <div class="grid grid-cols-1 gap-4 items-center">
-                                        <div>
-                                            <span>宿泊者：{{ reservationInfo.reservation_number_of_people }}</span>
-                                        </div>
-                                    </div>
+                        <div v-if="impedimentStatus" class="col-span-2 mb-4">
+                            <div :class="impedimentStatus.class" class="p-4 rounded-md">
+                                <p class="font-bold">{{ impedimentStatus.summary }}</p>
+                                <p>{{ impedimentStatus.detail }}</p>
+                            </div>
+                        </div>
+                        <DataTable :value="guests" class="p-datatable-sm" scrollable responsive>
+                            <Column field="name" header="宿泊者" style="width: 40%">
+                                <template #body="slotProps">
+                                    <AutoComplete v-model="slotProps.data.name" :placeholder="slotProps.data.guest_no"
+                                        :suggestions="filteredClients" optionLabel="name" @complete="filterClients"
+                                        field="id" @option-select="onClientSelect($event, slotProps.data)"
+                                        @change="onClientChange(slotProps.data)">
+                                        <template #option="slotProps">
+                                            <div>
+                                                <p>
+                                                    <i v-if="slotProps.option.is_legal_person"
+                                                        class="pi pi-building"></i>
+                                                    <i v-else class="pi pi-user"></i>
+                                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
+                                                        slotProps.option.name || '' }}
+                                                    <span v-if="slotProps.option.name_kana"> ({{
+                                                        slotProps.option.name_kana }})</span>
+                                                </p>
+                                                <div class="flex items-center gap-2">
+                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
+                                                            class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
+                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
+                                                            class="pi pi-at"></i> {{ slotProps.option.email }}</p>
+                                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i
+                                                            class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </AutoComplete>
                                 </template>
-                            </Card>
-                            <Card class="mb-3">
-                                <template #title>部屋 {{ selectedGroup.details[0].room_number }}</template>
-                                <template #content>
-                                    <div class="grid grid-cols-1 gap-4 items-center">
-                                        <div>
-                                            <span>宿泊者：{{ selectedGroup.details[0].number_of_people }}</span>
-                                        </div>
-                                        <div>
-                                            <span>定員：{{ selectedGroup.details[0].capacity }}</span>
-                                        </div>
-                                    </div>
+
+                            </Column>
+                            <Column field="gender" header="性別" style="width: 10%">
+                                <template #body="slotProps">
+                                    <Select v-model="slotProps.data.gender" :options="genderOptions" optionLabel="label"
+                                        optionValue="value" placeholder="性別を選択" fluid
+                                        :disabled="slotProps.data.isClientSelected" />
                                 </template>
 
-                            </Card>
-                        </div>
-
-                        <div v-if="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
-                            <p class="col-span-2">部屋を予約から削除して、宿泊者の人数を減らします。</p>
-                            <Button label="部屋削除" severity="danger" icon="pi pi-trash"
-                                @click="deleteRoom(selectedGroup)" />
-                        </div>
-                        <div v-else="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
-                            <p class="col-span-3">部屋を予約から削除より、予約を削除・キャンセルしてください。</p>
-                        </div>
-                        <div v-if="selectedGroup.details[0].number_of_people < selectedGroup.details[0].capacity"
-                            class="grid grid-cols-3 gap-4 items-center mb-4">
-                            <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
-                            <button class="bg-blue-500 text-white hover:bg-blue-600"
-                                @click="changeGuestNumber(selectedGroup, 'add')"><i class="pi pi-plus"></i>
-                                人数増加</button>
-                        </div>
-                        <div v-if="selectedGroup.details[0].number_of_people > 1"
-                            class="grid grid-cols-3 gap-4 items-center mb-4">
-                            <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
-                            <button class="bg-yellow-500 text-white hover:bg-yellow-600"
-                                @click="changeGuestNumber(selectedGroup, 'subtract')"><i class="pi pi-minus"></i>
-                                人数削減</button>
-                        </div>
-
+                            </Column>
+                            <Column field="email" header="メールアドレス" style="width: 25%">
+                                <template #body="slotProps">
+                                    <InputText v-model="slotProps.data.email" :pattern="emailPattern"
+                                        :class="{ 'p-invalid': !isValidEmail }"
+                                        @input="validateEmail(slotProps.data.email)"
+                                        :disabled="slotProps.data.isClientSelected" />
+                                </template>
+                            </Column>
+                            <Column field="phone" header="電話番号" style="width: 25%">
+                                <template #body="slotProps">
+                                    <InputText v-model="slotProps.data.phone" :pattern="phonePattern"
+                                        :class="{ 'p-invalid': !isValidPhone }"
+                                        @input="validatePhone(slotProps.data.phone)"
+                                        :disabled="slotProps.data.isClientSelected" />
+                                </template>
+                            </Column>
+                        </DataTable>
 
                     </TabPanel>
                     <!-- Tab 5: Modify period -->
@@ -438,10 +457,8 @@
                                 <FloatLabel>
                                     <DatePicker v-model="cancelDateRange" selectionMode="range" :manualInput="false"
                                         :disabled="selectAllForCancellation" class="w-full" dateFormat="yy-mm-dd"
-                                        :minDate="roomMinDate"
-                                        :maxDate="roomMaxDate" :numberOfMonths="2"
-                                        :selectOtherMonths="true" 
-                                        fluid />
+                                        :minDate="roomMinDate" :maxDate="roomMaxDate" :numberOfMonths="2"
+                                        :selectOtherMonths="true" fluid />
                                     <label for="cancel-date-range">キャンセル期間</label>
                                 </FloatLabel>
                             </div>
@@ -468,7 +485,8 @@
             <Button v-if="tabsRoomEditDialog === 1" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyRoomChanges" />
             <Button v-if="tabsRoomEditDialog === 2" label="適用" icon="pi pi-check"
-                class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges" />
+                class="p-button-success p-button-text p-button-sm" @click="applyGuestChanges"
+                :disabled="hasBlockingImpediment" />
             <Button v-if="tabsRoomEditDialog === 4" label="適用" icon="pi pi-check"
                 class="p-button-success p-button-text p-button-sm" @click="applyDateChanges" />
 
@@ -517,6 +535,8 @@ import { Card, Accordion, AccordionPanel, AccordionHeader, AccordionContent, Dat
 // Stores
 import { useReservationStore } from '@/composables/useReservationStore';
 const { setRoomPlan, setRoomPattern, setRoomGuests, availableRooms, fetchAvailableRooms, moveReservationRoom, changeReservationRoomGuestNumber, deleteReservationRoom, getAvailableDatesForChange, setCalendarChange, cancelReservationRooms, setReservationDetailStatus } = useReservationStore();
+import { useCRMStore } from '@/composables/useCRMStore';
+const { clientImpediments, fetchImpedimentsByClientId } = useCRMStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 import { useClientStore } from '@/composables/useClientStore';
@@ -765,6 +785,14 @@ const isFullyCancelled = (group) => {
     return group.details.every(detail => detail.cancelled);
 };
 
+const hasBlockingImpediment = computed(() => {
+    return guests.value?.some(guest =>
+        guest.impediment?.some(imp =>
+            imp.is_active && imp.restriction_level === 'block'
+        )
+    );
+});
+
 // Dialog: Room Edit
 const visibleRoomEditDialog = ref(false);
 const tabsRoomEditDialog = ref(0);
@@ -985,6 +1013,7 @@ const initializeGuests = () => {
         gender: 'male',
         email: '',
         phone: '',
+        impediment: null,
         isClientSelected: false
     }));
     if (reservationClients.length > 0) {
@@ -1042,7 +1071,7 @@ const filterClients = (event) => {
         return;
     });
 };
-const onClientSelect = (e, rowData) => {
+const onClientSelect = async (e, rowData) => {
     // Find the guest in the guests array that was just selected
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
@@ -1055,7 +1084,10 @@ const onClientSelect = (e, rowData) => {
         guests.value[guestIndex].isClientSelected = true;
     }
 
-    // console.log('onClientSelect guests:', guests.value);
+    await fetchImpedimentsByClientId(guests.value[guestIndex].id);
+    guests.value[guestIndex].impediment = clientImpediments.value;
+
+    console.log('onClientSelect guests:', guests.value);
 };
 const onClientChange = (rowData) => {
     // Find the guest in the guests array that was just selected
@@ -1069,6 +1101,17 @@ const onClientChange = (rowData) => {
     // console.log('onClientChange guests:', guests.value);
 };
 const applyGuestChanges = async () => {
+    // Check for blocking impediments
+    if (hasBlockingImpediment.value) {
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: 'ブロックされている宿泊者が含まれています。予約を続行できません。',
+            life: 5000
+        });
+        return;
+    }
+
     const guestsWithId = guests.value.filter(guest => guest.id !== null);
     const idSet = new Set();
     const duplicatedGuest = [];
@@ -1309,7 +1352,7 @@ const roomMinDate = computed(() => {
 });
 const roomMaxDate = computed(() => {
     if (!selectedGroup.value?.details?.length) return new Date();
-    const lastDay = new Date(selectedGroup.value.details[selectedGroup.value.details.length - 1].date);    
+    const lastDay = new Date(selectedGroup.value.details[selectedGroup.value.details.length - 1].date);
     return lastDay;
 });
 
@@ -1439,6 +1482,7 @@ const closeRoomEditDialog = () => {
     addons.value = [];
     targetRoom.value = null;
     numberOfPeopleToMove.value = 0;
+    clientImpediments.value = []; // Clear impediments when dialog is closed
 };
 const handleTabChange = async (newTabValue) => {
     tabsRoomEditDialog.value = newTabValue * 1;
@@ -1486,10 +1530,37 @@ const closeDayDetailDialog = async () => {
 };
 
 onMounted(async () => {
-    // console.log('onMounted RoomView:', props.reservation_details);
     const hotelId = reservationInfo.value.hotel_id;
     await fetchPlansForHotel(hotelId);
-    // console.log('fetchPlansForHotel', plans.value);
+
+});
+
+const impedimentStatus = computed(() => {
+    if (!clientImpediments.value || clientImpediments.value.length === 0) {
+        return null;
+    }
+
+    const blockImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'block');
+    if (blockImpediment) {
+        return {
+            level: 'block',
+            summary: '予約不可',
+            detail: 'このクライアントは予約がブロックされています。',
+            class: 'bg-red-100 border-red-400 text-red-700'
+        };
+    }
+
+    const warningImpediment = clientImpediments.value.find(imp => imp.is_active && imp.restriction_level === 'warning');
+    if (warningImpediment) {
+        return {
+            level: 'warning',
+            summary: '警告',
+            detail: 'このクライアントには警告があります。予約を作成する前に確認してください。',
+            class: 'bg-yellow-100 border-yellow-400 text-yellow-700'
+        };
+    }
+
+    return null;
 });
 
 // Watcher
