@@ -67,7 +67,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.total_rooms_real,
       COUNT(CASE WHEN rd.cancelled IS NULL THEN rd.room_id ELSE NULL END) AS room_count,
       SUM(CASE WHEN rd.cancelled IS NULL THEN rd.number_of_people ELSE 0 END) AS people_sum,
-      SUM(CASE WHEN rd.cancelled IS NULL THEN rd.price ELSE 0 END) AS price
+      SUM(rd.price) AS price
     FROM room_total rt
     LEFT JOIN reservation_details rd 
       ON rd.hotel_id = rt.hotel_id AND rd.date = rt.date
@@ -75,11 +75,9 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       ON rd.reservation_id = rsv.id AND rd.hotel_id = rsv.hotel_id
     WHERE 
       rt.hotel_id = $1
-      AND (rd.id IS NULL OR (
-        rd.billable = TRUE
-        AND rsv.type <> 'employee'
-        AND rsv.status NOT IN ('hold', 'block')
-      ))
+      AND rd.billable = TRUE
+      AND rsv.type <> 'employee'
+      AND rsv.status NOT IN ('hold', 'block')      
     GROUP BY 
       rt.date, rt.total_rooms, rt.total_rooms_real
     ORDER BY rt.date;
