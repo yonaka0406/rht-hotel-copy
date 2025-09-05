@@ -229,7 +229,7 @@ export function useClientStore() {
           }
       
           const newClient = await response.json();
-          appendClients(newClient);          
+          appendClients([newClient]);          
           return newClient;
         } catch (error) {
           console.error('Failed to create client.', error);

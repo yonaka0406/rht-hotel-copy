@@ -327,6 +327,8 @@
         // console.log(newClient);
         // console.log('New client id:', newClient.id);
         await setReservationClient(newClient.id);          
+        Object.assign(clientDetails.value, newClient);
+        isClientSelected.value = true;
         toast.add({ severity: 'success', summary: '成功', detail: '新規予約者が登録されました。', life: 3000 });
       }
     };
@@ -394,6 +396,7 @@
               ...selectedClient.value,
               display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name,
           };
+
           client.value = { display_name: selectedClient.value.name_kanji || selectedClient.value.name_kana || selectedClient.value.name };
 
           isClientSelected.value = true;
