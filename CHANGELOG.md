@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Bugfix: Fixed sales calculation to properly exclude cancelled reservations from revenue totals by only including non-cancelled reservation details in the price sum.
+
 ---
 ## Future Releases
 

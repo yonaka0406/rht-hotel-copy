@@ -21,14 +21,12 @@
                 <div>
                     <label for="startDate"
                         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">開始日</label>
-                    <DatePicker id="startDate" v-model="startDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
-                        :showButtonBar="true" />
+                    <InputText id="startDate" v-model="startDate" type="date" class="w-full" />
                 </div>
                 <div>
                     <label for="endDate"
                         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">終了日</label>
-                    <DatePicker id="endDate" v-model="endDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
-                        :showButtonBar="true" />
+                    <InputText id="endDate" v-model="endDate" type="date" class="w-full" />
                 </div>
             </div>
         </div>
@@ -67,14 +65,12 @@
                 <div>
                     <label for="parkingStartDate"
                         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">開始日</label>
-                    <DatePicker id="parkingStartDate" v-model="parkingStartDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
-                        :showButtonBar="true" />
+                    <InputText id="parkingStartDate" v-model="parkingStartDate" type="date" class="w-full" />
                 </div>
                 <div>
                     <label for="parkingEndDate"
                         class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">終了日</label>
-                    <DatePicker id="parkingEndDate" v-model="parkingEndDate" :showIcon="true" dateFormat="yy-mm-dd" class="w-full"
-                        :showButtonBar="true" />
+                    <InputText id="parkingEndDate" v-model="parkingEndDate" type="date" class="w-full" />
                 </div>
             </div>
         </div>
@@ -110,7 +106,7 @@
 
 <script setup>
 // Vue
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 
 // Store
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -126,16 +122,16 @@ import Button from 'primevue/button';
 
 const selectedHotel = ref(null);
 const sheetId = ref('');
-const startDate = ref(new Date());
-const endDate = ref(new Date());
+const startDate = ref('');
+const endDate = ref('');
 const isLoading = ref(false);
 const newSheetTitle = ref('');
 const isCreating = ref(false);
 
 const selectedParkingHotel = ref(null);
 const parkingSheetId = ref('');
-const parkingStartDate = ref(new Date());
-const parkingEndDate = ref(new Date());
+const parkingStartDate = ref('');
+const parkingEndDate = ref('');
 const isParkingLoading = ref(false);
 
 // Calculate days between two dates
@@ -300,6 +296,28 @@ const handleCreateNewSheet = async () => {
     }
 };
 
+watch(startDate, (newDate) => {
+    if (!newDate) return;
+    
+    const date = new Date(newDate);
+    // Check if it's the first day of the month
+    if (date.getDate() === 1) {
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        endDate.value = formatDate(lastDay);
+    }
+});
+
+watch(parkingStartDate, (newDate) => {
+    if (!newDate) return;
+    
+    const date = new Date(newDate);
+    // Check if it's the first day of the month
+    if (date.getDate() === 1) {
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        parkingEndDate.value = formatDate(lastDay);
+    }
+});
+
 onMounted(async () => {
     await fetchHotels();
 
@@ -308,7 +326,9 @@ onMounted(async () => {
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-    startDate.value = firstDay;
-    endDate.value = lastDay;
+    startDate.value = formatDate(firstDay);
+    endDate.value = formatDate(lastDay);
+    parkingStartDate.value = formatDate(firstDay);
+    parkingEndDate.value = formatDate(lastDay);
 });
 </script>
