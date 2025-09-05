@@ -681,10 +681,8 @@ const getReservationsForGoogle = async (req, res) => {
 
     const formattedData = formatDataForSheet(dataToAppend);
     
-    const authClient = await authorize();
-    const sheetName = `H_${hotelId}`;   
-    // console.log('appendDataToSheet', sheetId, sheetName, formattedData);
-    await appendDataToSheet(authClient, sheetId, sheetName, formattedData);
+    const sheetName = `H_${hotelId}`;
+    await appendDataToSheet(sheetId, sheetName, formattedData);
 
     res.json({success: 'Sheet update request made'});
   } catch (err) {
@@ -752,7 +750,7 @@ const getParkingReservationsForGoogle = async (req, res) => {
 
     const authClient = await authorize();
     const sheetName = `P_${hotelId}`; // distinguish parking from rooms
-    await appendDataToSheet(authClient, sheetId, sheetName, formattedData);
+    await appendDataToSheet(sheetId, sheetName, formattedData);
 
     res.json({ success: 'Parking sheet update request made' });
   } catch (err) {
