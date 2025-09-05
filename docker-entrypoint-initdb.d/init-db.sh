@@ -26,4 +26,4 @@ EOSQL
 
 echo "Database initialization completed successfully!"
 
-echo "✅ Database restore from wehub-backup.dump is complete."
+echo "✁EDatabase restore from wehub-backup.dump is complete."
