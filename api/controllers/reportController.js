@@ -702,29 +702,30 @@ const formatDataForSheet = (reservations) => {
       displayCell += "㋕｜";
     }
     if (reservation.client_name) {
-      displayCell += reservation.client_name;
+      displayCell += String(reservation.client_name || '');
     }
     if (reservation.plan_name) {
-      displayCell += "、" + reservation.plan_name;
+      displayCell += "、" + String(reservation.plan_name || '');
     }
     if (reservation.agent) {
-      displayCell += "、㋔｜" + reservation.agent;
+      displayCell += "、㋔｜" + String(reservation.agent || '');
     } else if (reservation.type === "employee") {
       displayCell += "、㋛｜";
     }
 
+    // Ensure all values are converted to strings
     return [
-      reservation.hotel_id,
-      reservation.hotel_name,
-      reservation.reservation_detail_id,
+      String(reservation.hotel_id || ''),
+      String(reservation.hotel_name || ''),
+      String(reservation.reservation_detail_id || ''),
       new Date(reservation.date).toLocaleDateString('ja-JP'),
-      reservation.room_type_name,
-      reservation.room_number,
-      reservation.client_name,
-      reservation.plan_name || '',
-      reservation.status,
-      reservation.type,
-      reservation.agent || '',
+      String(reservation.room_type_name || ''),
+      String(reservation.room_number || ''),
+      String(reservation.client_name || ''),
+      String(reservation.plan_name || ''),
+      String(reservation.status || ''),
+      String(reservation.type || ''),
+      String(reservation.agent || ''),
       new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
       displayCell
     ];
