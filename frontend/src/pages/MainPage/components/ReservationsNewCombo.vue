@@ -431,7 +431,7 @@ const minNumberOfPeople = computed(() => {
 });
 const isParkingAddButtonDisabled = computed(() => {
     console.log('Vehicle category ID:', comboRow.value.vehicle_category_id);
-    return !comboRow.value.vehicle_category_id;
+    return !comboRow.value.vehicle_category_id || maxParkingSpots.value <= 0;
 });
 const availableParkingSpots = ref([]);
 
