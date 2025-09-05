@@ -313,6 +313,8 @@
 
   // Computed
   const roomGroups = computed(() => {
+    console.log('[RoomIndicator] Recalculating room groups...');
+    console.log('[RoomIndicator] Reserved rooms data:', reservedRoomsDayView.value);
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
       console.error("Invalid selectedDate.value:", selectedDate.value);
@@ -404,7 +406,7 @@
       !unavailableRoomIds.has(room.room_id)
     ) || [];
 
-  /*
+  
     console.group('Room Groups Debug');
     console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
       room_id: r.room_id,
@@ -426,7 +428,7 @@
     console.log('Free Rooms:', freeRooms.length);
     console.log('Blocked Rooms:', blockedRooms.length);
     console.groupEnd();
-  */
+  
     return [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
@@ -592,44 +594,55 @@
   };
   
   const planSummary = computed(() => {
+    console.log('[RoomIndicator] Calculating plan summary...');
     const roomPlans = {};
     const reservations = reservedRoomsDayView.value?.reservations || [];
 
-    reservations.forEach(room => {
-      if (room.cancelled) return;
+    console.log(`[RoomIndicator] Processing ${reservations.length} reservations`);
+    
+    reservations.forEach(reservation => {
+      const roomNumber = reservation.room_number;
+      const planName = reservation.plan_name;
+      const checkInDate = reservation.check_in_date;
+      const checkOutDate = reservation.check_out_date;
+      
+      console.log(`[RoomIndicator] Processing reservation ID: ${reservation.id}, Room: ${roomNumber}, Plan: ${planName}, Check-in: ${checkInDate}, Check-out: ${checkOutDate}`);
+      
+      if (!roomPlans[roomNumber]) {
+        roomPlans[roomNumber] = {};
+      }
 
-      const roomKey = room.room_number;
-      room.details?.forEach(detail => {
-        const planName = detail?.plan_name || 'No Plan';
-        const planColor = detail?.plan_color || '#CCCCCC';
+      if (!roomPlans[roomNumber][planName]) {
+        roomPlans[roomNumber][planName] = {
+          count: 0,
+          color: reservation.plan_color
+        };
+      }
 
-        if (!roomPlans[roomKey]) {
-          roomPlans[roomKey] = {};
-        }
-
-        if (!roomPlans[roomKey][planName]) {
-          roomPlans[roomKey][planName] = {
-            count: 0,
-            color: planColor
-          };
-        }
-
-        roomPlans[roomKey][planName].count++;
-      });
+      roomPlans[roomNumber][planName].count++;
     });
 
     return roomPlans;
   });
 
   const getPlanDaysTooltip = (details, planName) => {
-    if (!details || !Array.isArray(details)) return '';
+    console.log(`[RoomIndicator] Getting plan days tooltip for plan: ${planName}`);
+    console.log(`[RoomIndicator] Details for ${planName}:`, details);
+    
+    if (!details || !details.length) {
+      console.log('[RoomIndicator] No details available for this plan');
+      return null;
+    }
+
+    const planDetails = details.filter(detail => detail.plan_name === planName);
+    console.log(`[RoomIndicator] Found ${planDetails.length} matching details for plan ${planName}`);
     
     // Define day order (0 = Sunday, 1 = Monday, etc.)
     const dayOrder = { '日': 7, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
     
     // Get unique days for the plan
     const days = [...new Set(
-      details
+      planDetails
         .filter(detail => detail.plan_name === planName)
         .map(detail => {
           const date = new Date(detail.date);
