@@ -5,6 +5,88 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 5, 2025
+
+#### Feature Request #54: Comment Flag and Attention Icon for Reservations
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a comment flag system to highlight reservations with important comments that require staff attention
+  - Display a visual indicator in the room indicator to alert staff about important comments
+- **Requirements**:
+  - Add a boolean flag to mark reservations with important comments
+  - Display a prominent attention icon (e.g., ⚠️ or 🔔) in the room indicator when a comment is flagged
+  - Make the icon clickable to quickly access the comment
+  - Ensure the flag is visible in both list and calendar views
+- **UI/UX Considerations**:
+  - Use a high-contrast, attention-grabbing color for the icon (e.g., red or orange)
+  - Add a subtle animation (e.g., pulsing) to draw attention to the indicator
+  - Include a tooltip that indicates there's an important comment to read
+  - Ensure the icon is visible but not overly distracting
+- **Implementation Details**:
+  - Add a `has_important_comment` boolean field to the reservations table
+  - Update the `RoomIndicator.vue` component to show the attention icon when the flag is true
+  - Modify the reservation form to allow setting/clearing the important comment flag
+  - Add filtering capabilities to show only reservations with important comments
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Consider adding a dedicated "Important Comments" view in the dashboard
+  - Include an option to mark comments as read/acknowledged
+  - Add audit logging for when important comments are viewed or acknowledged
+  - Ensure the feature is accessible (proper ARIA labels, keyboard navigation, etc.)
+
+#### Feature Request #53: Display Check-Out Date in Room Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add the check-out date to the room indicator component for better at-a-glance information
+  - This will help staff quickly identify when guests are scheduled to depart
+- **Requirements**:
+  - Show the check-out date next to the check-in date in the room indicator
+  - Format the date in a consistent, readable format (e.g., "Sep 5, 2025")
+  - Ensure the date is localized based on user preferences
+  - Make the date responsive to different screen sizes
+- **UI/UX Considerations**:
+  - Place the check-out date below or next to the existing check-in date
+  - Use a slightly smaller font size or lighter color for the check-out date to maintain hierarchy
+  - Consider adding a small icon (e.g., →) between check-in and check-out dates
+  - Ensure the text remains readable on all background colors
+- **Implementation Details**:
+  - Update the `RoomIndicator.vue` component to accept and display the check-out date
+  - Modify any related data fetching to include the check-out date
+  - Add appropriate CSS styling for the new date display
+  - Update any relevant tests
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Consider adding a tooltip with the full date and time on hover
+  - Should work consistently across different room states (occupied, reserved, etc.)
+  - Ensure the layout remains clean and uncluttered
+
+#### Feature Request #52: Slack Integration for Reservation Updates
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Integrate the PMS with Slack to automatically send real-time notifications about reservation updates
+  - This will improve team communication and ensure staff are immediately aware of important reservation changes
+- **Requirements**:
+  - Create a Slack app and obtain necessary API credentials
+  - Configure webhook integration with the PMS
+  - Send notifications for key reservation events (new bookings, modifications, cancellations, check-ins, check-outs)
+  - Include relevant reservation details in notifications (guest name, dates, room type, special requests)
+- **UI/UX Considerations**:
+  - Add Slack configuration section in admin settings
+  - Allow customization of notification preferences (which events trigger notifications)
+  - Enable/disable notifications per channel or user
+  - Include deep links back to the reservation in the PMS
+- **Implementation Details**:
+  - Use Slack's Web API for sending messages
+  - Implement rate limiting and error handling for Slack API calls
+  - Ensure secure storage of Slack credentials
+  - Add logging for sent notifications
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Consider adding @mentions for specific staff members based on reservation details
+  - Include option to test the Slack integration
+  - Should support multiple Slack channels for different departments
+  - Add message formatting with emojis for better readability
+
 ### September 4, 2025
 
 #### Feature Request #51: Multi-Room Temporary Block
@@ -294,6 +376,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 2, 2025*
+*Last Updated: September 5, 2025*
 *Total Bugs: 0* (last one #48)
-*Total Feature Requests: 13* (last one #50)
+*Total Feature Requests: 16* (last one #54)
