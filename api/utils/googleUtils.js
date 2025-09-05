@@ -16,15 +16,84 @@ sudo cp /var/www/html/rht-hotel/api/config/google_sheets_credentials.json /etc/a
 # Make sure you have a valid refresh token generated from an interactive flow
 sudo cp /var/www/html/rht-hotel/api/config/refresh_token.json /etc/app_config/google/refresh_token.json
 */
+
 const redirectUri = 'http://localhost:3000';
 const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
 //const sheetId = '1W10kEbGGk2aaVa-qhMcZ2g3ARvCkUBeHeN2L8SUTqtY'; // prod
 
 const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント', '更新日時', '表示文字列']];
 
+// Connection pooling and rate limiting
+class SheetsConnectionManager {
+    constructor() {
+        this.authClient = null;
+        this.sheetsService = null;
+        this.requestQueue = [];
+        this.isProcessing = false;
+        this.maxConcurrentRequests = 2; // Reduced for better memory management
+        this.requestDelay = 100; // 100ms between requests
+        this.activeRequests = 0;
+    }
+
+    async getAuthClient() {
+        if (!this.authClient) {
+            this.authClient = await authorize();
+            this.sheetsService = google.sheets({ version: 'v4', auth: this.authClient });
+        }
+        return this.authClient;
+    }
+
+    async executeRequest(requestFn) {
+        return new Promise((resolve, reject) => {
+            this.requestQueue.push({ requestFn, resolve, reject });
+            this.processQueue();
+        });
+    }
+
+    async processQueue() {
+        if (this.isProcessing || this.activeRequests >= this.maxConcurrentRequests) {
+            return;
+        }
+
+        if (this.requestQueue.length === 0) {
+            return;
+        }
+
+        this.isProcessing = true;
+        this.activeRequests++;
+
+        const { requestFn, resolve, reject } = this.requestQueue.shift();
+
+        try {
+            await this.getAuthClient();
+            const result = await requestFn(this.sheetsService);
+            resolve(result);
+        } catch (error) {
+            reject(error);
+        } finally {
+            this.activeRequests--;
+            this.isProcessing = false;
+
+            // Add delay between requests to prevent rate limiting
+            setTimeout(() => {
+                this.processQueue();
+            }, this.requestDelay);
+        }
+    }
+
+    // Cleanup method to release resources
+    cleanup() {
+        this.authClient = null;
+        this.sheetsService = null;
+        this.requestQueue = [];
+    }
+}
+
+// Global connection manager instance
+const connectionManager = new SheetsConnectionManager();
+
 /**
  * Authorizes the client with Google API using OAuth2 and a refresh token.
- * @returns {Promise<google.auth.OAuth2>} An authorized OAuth2 client.
  */
 async function authorize() {
     const context = { operation: 'authorize' };
@@ -60,140 +129,122 @@ async function authorize() {
 }
 
 /**
- * Helper function to create a sheets service instance.
- * @param {google.auth.OAuth2} authClient - The authorized OAuth2 client.
- * @returns {google.sheets_v4.Sheets}
- */
-function getSheetsService(authClient) {
-    return google.sheets({ version: 'v4', auth: authClient });
-}
-
-
-/**
  * Checks if a specific sheet (tab) exists within a spreadsheet.
- * @param {google.sheets_v4.Sheets} sheetsService - The Google Sheets service object.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {string} sheetName - The name of the sheet to check.
- * @returns {Promise<boolean>}
  */
-async function checkSheetExists(sheetsService, spreadsheetId, sheetName) {
+async function checkSheetExists(spreadsheetId, sheetName) {
     const context = { operation: 'checkSheetExists', spreadsheetId, sheetName };
-    try {
-        logger.debug('Checking if sheet exists', context);
-        const response = await sheetsService.spreadsheets.get({
-            spreadsheetId: spreadsheetId,
-            fields: 'sheets.properties.title'
-        });
-        const exists = response.data.sheets.some(sheet => sheet.properties.title === sheetName);
-        logger.debug(`Sheet existence check result for "${sheetName}"`, { exists });
-        return exists;
-    } catch (err) {
-        logger.error('Error checking if sheet exists', { ...context, error: err });
-        // If the error is 404 on the spreadsheet itself, it's fair to say the sheet doesn't exist.
-        if (err.code === 404) {
-            return false;
+
+    return connectionManager.executeRequest(async (sheetsService) => {
+        try {
+            logger.debug('Checking if sheet exists', context);
+            const response = await sheetsService.spreadsheets.get({
+                spreadsheetId: spreadsheetId,
+                fields: 'sheets.properties.title'
+            });
+            const exists = response.data.sheets.some(sheet => sheet.properties.title === sheetName);
+            logger.debug(`Sheet existence check result for "${sheetName}"`, { ...context, exists });
+            return exists;
+        } catch (err) {
+            logger.error('Error checking if sheet exists', { ...context, error: err });
+            if (err.code === 404) {
+                return false;
+            }
+            throw err;
         }
-        throw err;
-    }
+    });
 }
 
 /**
  * Creates a new sheet (tab) within an existing spreadsheet.
- * @param {google.sheets_v4.Sheets} sheetsService - The Google Sheets service object.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {string} sheetName - The name of the new sheet.
- * @returns {Promise<any>}
  */
-async function createSheetInSpreadsheet(sheetsService, spreadsheetId, sheetName) {
+async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
     const context = { operation: 'createSheetInSpreadsheet', spreadsheetId, sheetName };
-    try {
-        logger.info('Creating new sheet in spreadsheet', context);
-        const response = await sheetsService.spreadsheets.batchUpdate({
-            spreadsheetId: spreadsheetId,
-            resource: {
-                requests: [{
-                    addSheet: {
-                        properties: { title: sheetName }
-                    }
-                }]
-            }
-        });
-        logger.info(`Sheet "${sheetName}" created successfully`, context);
-        return response.data;
-    } catch (err) {
-        logger.error('Error creating sheet', { ...context, error: err });
-        throw err;
-    }
+
+    return connectionManager.executeRequest(async (sheetsService) => {
+        try {
+            logger.info('Creating new sheet in spreadsheet', context);
+            const response = await sheetsService.spreadsheets.batchUpdate({
+                spreadsheetId: spreadsheetId,
+                resource: {
+                    requests: [{
+                        addSheet: {
+                            properties: { title: sheetName }
+                        }
+                    }]
+                }
+            });
+            logger.info(`Sheet "${sheetName}" created successfully`, context);
+            return response.data;
+        } catch (err) {
+            logger.error('Error creating sheet', { ...context, error: err });
+            throw err;
+        }
+    });
 }
 
 /**
  * Creates a new Google Sheet file (spreadsheet).
- * @param {google.auth.OAuth2} authClient The authorized Google API client.
- * @param {string} title The title for the new spreadsheet.
- * @returns {Promise<string>} The ID of the newly created spreadsheet.
  */
-async function createSheet(authClient, title) {
+async function createSheet(title) {
     const context = { operation: 'createSheet', title };
-    const sheetsService = getSheetsService(authClient);
-    try {
-        logger.info('Creating new spreadsheet file', context);
-        const spreadsheet = await sheetsService.spreadsheets.create({
-            resource: {
-                properties: {
-                    title: title,
+
+    return connectionManager.executeRequest(async (sheetsService) => {
+        try {
+            logger.info('Creating new spreadsheet file', context);
+            const spreadsheet = await sheetsService.spreadsheets.create({
+                resource: {
+                    properties: {
+                        title: title,
+                    },
                 },
-            },
-        });
-        const spreadsheetId = spreadsheet.data.spreadsheetId;
-        logger.info(`Spreadsheet created with ID: ${spreadsheetId}`, context);
-        return spreadsheetId;
-    } catch (error) {
-        logger.error('Error creating spreadsheet file', { ...context, error });
-        throw error;
-    }
+            });
+            const spreadsheetId = spreadsheet.data.spreadsheetId;
+            logger.info(`Spreadsheet created with ID: ${spreadsheetId}`, context);
+            return spreadsheetId;
+        } catch (error) {
+            logger.error('Error creating spreadsheet file', { ...context, error });
+            throw error;
+        }
+    });
 }
 
-
 /**
- * RECOMMENDATION 3: OPTIMIZED
- * Clears all data from a sheet and writes the headers. This is now much more efficient.
- * @param {google.auth.OAuth2} authClient - The authorized OAuth2 client.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {string} sheetName - The name of the sheet to clear.
+ * Clears all data from a sheet and writes the headers.
  */
-async function clearSheetData(authClient, spreadsheetId, sheetName) {
+async function clearSheetData(spreadsheetId, sheetName) {
     const context = { operation: 'clearSheetData', spreadsheetId, sheetName };
-    const sheetsService = getSheetsService(authClient);
 
     try {
         logger.info(`Ensuring sheet "${sheetName}" exists before clearing.`, context);
-        const sheetExists = await checkSheetExists(sheetsService, spreadsheetId, sheetName);
+        const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
         if (!sheetExists) {
             logger.info(`Sheet "${sheetName}" does not exist. Creating it.`, context);
-            await createSheetInSpreadsheet(sheetsService, spreadsheetId, sheetName);
+            await createSheetInSpreadsheet(spreadsheetId, sheetName);
         }
 
-        // Step 1: Clear the entire sheet in one API call.
-        // A1:Z clears all columns from row 1 downwards. More robust than A1:Z1000.
-        logger.info(`Clearing sheet: ${sheetName}`, context);
-        await sheetsService.spreadsheets.values.clear({
-            spreadsheetId: spreadsheetId,
-            range: `${sheetName}!A1:Z`,
+        // Clear the entire sheet
+        await connectionManager.executeRequest(async (sheetsService) => {
+            logger.info(`Clearing sheet: ${sheetName}`, context);
+            return sheetsService.spreadsheets.values.clear({
+                spreadsheetId: spreadsheetId,
+                range: `${sheetName}!A1:Z`,
+            });
         });
-        logger.info(`Sheet "${sheetName}" cleared successfully`, context);
 
-        // Step 2: Write the headers to the first row in a second API call.
-        // Using 'update' is more direct than 'append' for this purpose.
-        logger.info(`Adding headers to sheet: ${sheetName}`, context);
-        await sheetsService.spreadsheets.values.update({
-            spreadsheetId: spreadsheetId,
-            range: `${sheetName}!A1`,
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values: headers,
-            },
+        // Add headers
+        await connectionManager.executeRequest(async (sheetsService) => {
+            logger.info(`Adding headers to sheet: ${sheetName}`, context);
+            return sheetsService.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: `${sheetName}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: headers,
+                },
+            });
         });
-        logger.info(`Sheet "${sheetName}" headers added successfully`, context);
+
+        logger.info(`Sheet "${sheetName}" cleared and headers added successfully`, context);
 
     } catch (err) {
         logger.error('Error clearing sheet data', { ...context, error: err });
@@ -202,81 +253,230 @@ async function clearSheetData(authClient, spreadsheetId, sheetName) {
 }
 
 /**
- * RECOMMENDATIONS 1 & 2: IMPROVED ERROR HANDLING & BATCHING
- * Appends data to a sheet, creating it if it doesn't exist.
- * Includes robust batching and exponential backoff for retries.
- * @param {google.auth.OAuth2} authClient - The authorized OAuth2 client.
- * @param {string} spreadsheetId - The ID of the spreadsheet.
- * @param {string} sheetName - The name of the sheet.
- * @param {Array<Array<any>>} values - An array of rows to append.
+ * MEMORY OPTIMIZED VERSION
+ * Appends data to a sheet with better memory management and circuit breaker pattern.
  */
-async function appendDataToSheet(authClient, spreadsheetId, sheetName, values) {
-    const context = { 
+async function appendDataToSheet(spreadsheetId, sheetName, values) {
+    const context = {
         operation: 'appendDataToSheet',
         spreadsheetId,
         sheetName,
         rowsToAppend: values.length
     };
-    
+
     logger.info('Starting data append to sheet', context);
-    const sheetsService = getSheetsService(authClient);
-    
-    // If there is no data to append, exit early.
+
+    // Early exit for empty data
     if (!values || values.length === 0) {
         logger.info('No data to append. Operation finished.', context);
         return { status: 'success', message: 'No data to append.' };
     }
 
+    // Circuit breaker pattern
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 3;
+    const CIRCUIT_BREAKER_COOLDOWN = 30000; // 30 seconds
+    let circuitBreakerOpen = false;
+    let lastFailureTime = 0;
+
     try {
-        const BATCH_SIZE = 500;
-        const MAX_RETRIES = 5;
+        // Smaller batch size to reduce memory usage
+        const BATCH_SIZE = 100; // Reduced from 500
+        const MAX_RETRIES = 3; // Reduced from 5
         const totalBatches = Math.ceil(values.length / BATCH_SIZE);
-        
+
         logger.info(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
 
         for (let i = 0; i < totalBatches; i++) {
+            // Check circuit breaker
+            if (circuitBreakerOpen) {
+                const timeSinceLastFailure = Date.now() - lastFailureTime;
+                if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN) {
+                    logger.error('Circuit breaker is open, aborting operation', {
+                        ...context,
+                        cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure
+                    });
+                    throw new Error('Circuit breaker is open due to consecutive failures');
+                } else {
+                    circuitBreakerOpen = false;
+                    consecutiveFailures = 0;
+                    logger.info('Circuit breaker reset, resuming operations', context);
+                }
+            }
+
             const startIndex = i * BATCH_SIZE;
             const batch = values.slice(startIndex, startIndex + BATCH_SIZE);
             const batchContext = { ...context, batchNumber: i + 1, totalBatches, batchSize: batch.length };
 
+            let batchSuccess = false;
+
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 try {
                     logger.debug(`Processing batch ${i + 1}/${totalBatches}, attempt ${attempt}`, batchContext);
-                    await sheetsService.spreadsheets.values.append({
-                        spreadsheetId: spreadsheetId,
-                        range: `${sheetName}!A1`,
-                        valueInputOption: 'USER_ENTERED',
-                        insertDataOption: 'INSERT_ROWS',
-                        resource: { values: batch },
+
+                    await connectionManager.executeRequest(async (sheetsService) => {
+                        return sheetsService.spreadsheets.values.append({
+                            spreadsheetId: spreadsheetId,
+                            range: `${sheetName}!A1`,
+                            valueInputOption: 'USER_ENTERED',
+                            insertDataOption: 'INSERT_ROWS',
+                            resource: { values: batch },
+                        });
                     });
+
                     logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
-                    break; // Success, exit retry loop
+                    batchSuccess = true;
+                    consecutiveFailures = 0; // Reset on success
+                    break;
+
                 } catch (err) {
-                    const isRetryable = err.code === 429 || err.code === 503 || (err.response && (err.response.status === 429 || err.response.status === 503));
+                    const isRetryable = err.code === 429 || err.code === 503 ||
+                        (err.response && (err.response.status === 429 || err.response.status === 503));
+
                     if (isRetryable && attempt < MAX_RETRIES) {
-                        const delay = Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000); // Exponential backoff with jitter
-                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...batchContext, attempt, error: err.message });
+                        const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000); // Cap at 10s
+                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, {
+                            ...batchContext,
+                            attempt,
+                            error: err.message
+                        });
                         await new Promise(resolve => setTimeout(resolve, delay));
                     } else {
-                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...batchContext, error: err });
-                        throw err; // Non-retryable error or max retries exceeded
+                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, {
+                            ...batchContext,
+                            error: err.message || err
+                        });
+                        throw err;
                     }
                 }
             }
+
+            if (!batchSuccess) {
+                consecutiveFailures++;
+                lastFailureTime = Date.now();
+
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    circuitBreakerOpen = true;
+                    logger.error('Opening circuit breaker due to consecutive failures', {
+                        ...context,
+                        consecutiveFailures
+                    });
+                    throw new Error(`Circuit breaker opened after ${consecutiveFailures} consecutive failures`);
+                }
+            }
+
+            // Memory management: force garbage collection hint and add small delay
+            if (global.gc && i % 10 === 0) {
+                global.gc();
+            }
+
+            // Small delay to prevent overwhelming the API and allow for memory cleanup
+            if (i < totalBatches - 1) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
         }
-        
+
         logger.info('Successfully completed all batch operations', context);
-        return { status: 'success' };
+        return { status: 'success', processedBatches: totalBatches };
 
     } catch (err) {
-        logger.error('Fatal error in appendDataToSheet', { ...context, error: err });
+        logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
+
+        // Cleanup resources on error
+        connectionManager.cleanup();
+
         throw err;
     }
 }
 
-module.exports = {   
+// Utility function to process large datasets in chunks to prevent memory issues
+async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSize = 1000) {
+    const context = { operation: 'processLargeDataset', spreadsheetId, sheetName };
+    logger.info('Starting large dataset processing', context);
+
+    let processedRows = 0;
+    let chunk = [];
+
+    try {
+        // If dataSource is an array, process it directly
+        if (Array.isArray(dataSource)) {
+            for (let i = 0; i < dataSource.length; i += chunkSize) {
+                const chunk = dataSource.slice(i, i + chunkSize);
+                await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                processedRows += chunk.length;
+
+                logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
+
+                // Memory cleanup between chunks
+                if (global.gc) global.gc();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between chunks
+            }
+        } else {
+            // If dataSource is a stream or iterator, process it chunk by chunk
+            for await (const row of dataSource) {
+                chunk.push(row);
+
+                if (chunk.length >= chunkSize) {
+                    await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                    processedRows += chunk.length;
+                    logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
+
+                    chunk = []; // Clear the chunk to free memory
+                    if (global.gc) global.gc();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            // Process remaining rows
+            if (chunk.length > 0) {
+                await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                processedRows += chunk.length;
+            }
+        }
+
+        logger.info(`Large dataset processing completed. Total rows processed: ${processedRows}`, context);
+        return { status: 'success', processedRows };
+
+    } catch (err) {
+        logger.error('Error in large dataset processing', { ...context, error: err, processedRows });
+        throw err;
+    }
+}
+
+// Graceful shutdown handler
+process.on('SIGINT', () => {
+    logger.info('Received SIGINT, cleaning up...');
+    connectionManager.cleanup();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    logger.info('Received SIGTERM, cleaning up...');
+    connectionManager.cleanup();
+    process.exit(0);
+});
+
+/**
+ * Safe wrapper for appendDataToSheet that handles common parameter mistakes
+ */
+async function safeAppendDataToSheet(spreadsheetIdOrAuth, sheetNameOrSpreadsheetId, valuesOrSheetName, maybeValues) {
+    // Handle the old signature: appendDataToSheet(authClient, spreadsheetId, sheetName, values)
+    if (arguments.length === 4 && typeof spreadsheetIdOrAuth === 'object') {
+        logger.warn('Detected old function signature with authClient parameter. Please update your code.');
+        return appendDataToSheet(sheetNameOrSpreadsheetId, valuesOrSheetName, maybeValues);
+    }
+
+    // Handle the new signature: appendDataToSheet(spreadsheetId, sheetName, values)
+    return appendDataToSheet(spreadsheetIdOrAuth, sheetNameOrSpreadsheetId, valuesOrSheetName);
+}
+
+module.exports = {
     authorize,
     createSheet,
     clearSheetData,
-    appendDataToSheet
+    appendDataToSheet,
+    safeAppendDataToSheet,
+    processLargeDataset,
+    connectionManager, // Export for manual cleanup if needed
+    sanitizeSheetData // Export for testing/debugging
 };
