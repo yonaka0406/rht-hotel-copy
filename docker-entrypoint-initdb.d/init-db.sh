@@ -1,9 +1,7 @@
 #!/bin/bash
 set -e
 
-# This command connects to the default 'postgres' database,
-# creates the new database from the dump file's metadata,
-# and then restores the data into it.
+# First, restore the database
 pg_restore --verbose --no-acl --no-owner \
   --create \
   -U "$POSTGRES_USER" \
@@ -14,16 +12,24 @@ pg_restore --verbose --no-acl --no-owner \
 sleep 5
 
 # Apply necessary permissions
-echo "Applying database permissions..."
+echo "Setting up database user and permissions..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname wehub <<-EOSQL
-    GRANT USAGE ON SCHEMA public TO rhtsys_user;
-    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
-    GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
+    -- Only create the user if it doesn't exist
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'rhtsys_user') THEN
+            CREATE USER rhtsys_user WITH PASSWORD '${POSTGRES_PASSWORD:-password}';
+        ELSE
+            ALTER USER rhtsys_user WITH PASSWORD '${POSTGRES_PASSWORD:-password}';
+        END IF;
+    END
+    \$\$;
+
+    GRANT ALL PRIVILEGES ON DATABASE wehub TO rhtsys_user;
     GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO rhtsys_user;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO rhtsys_user;
+    GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO rhtsys_user;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO rhtsys_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO rhtsys_user;
 EOSQL
 
 echo "Database initialization completed successfully!"
-
-echo "✁EDatabase restore from wehub-backup.dump is complete."
