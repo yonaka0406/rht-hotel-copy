@@ -313,8 +313,8 @@
 
   // Computed
   const roomGroups = computed(() => {
-    console.log('[RoomIndicator] Recalculating room groups...');
-    console.log('[RoomIndicator] Reserved rooms data:', reservedRoomsDayView.value);
+    // console.log('[RoomIndicator] Recalculating room groups...');
+    // console.log('[RoomIndicator] Reserved rooms data:', reservedRoomsDayView.value);
     const selectedDateObj = new Date(selectedDate.value);
     if (isNaN(selectedDateObj.getTime())) {
       console.error("Invalid selectedDate.value:", selectedDate.value);
@@ -407,27 +407,27 @@
     ) || [];
 
   
-    console.group('Room Groups Debug');
-    console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
-      room_id: r.room_id,
-      room_number: r.room_number,
-      reservation_id: r.id,
-      status: r.status,
-      payment_timing: r.payment_timing
-    })));
+    // console.group('Room Groups Debug');
+    // console.log('Check-in Today:', categorizedRooms.checkIn.map(r => ({
+    //   room_id: r.room_id,
+    //   room_number: r.room_number,
+    //   reservation_id: r.id,
+    //   status: r.status,
+    //   payment_timing: r.payment_timing
+    // })));
     
-    console.log('Check-out Today:', categorizedRooms.checkOut.map(r => ({
-      room_id: r.room_id,
-      room_number: r.room_number,
-      reservation_id: r.id,
-      status: r.status,
-      payment_timing: r.payment_timing
-    })));
+    // console.log('Check-out Today:', categorizedRooms.checkOut.map(r => ({
+    //   room_id: r.room_id,
+    //   room_number: r.room_number,
+    //   reservation_id: r.id,
+    //   status: r.status,
+    //   payment_timing: r.payment_timing
+    // })));
     
-    console.log('Occupied:', categorizedRooms.occupied.length);
-    console.log('Free Rooms:', freeRooms.length);
-    console.log('Blocked Rooms:', blockedRooms.length);
-    console.groupEnd();
+    // console.log('Occupied:', categorizedRooms.occupied.length);
+    // console.log('Free Rooms:', freeRooms.length);
+    // console.log('Blocked Rooms:', blockedRooms.length);
+    // console.groupEnd();
   
     return [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
@@ -548,7 +548,7 @@
   };
 
   const getClientName = (room) => {
-    //console.log('getClientName - Full room data:', JSON.parse(JSON.stringify(room)));
+    // console.log('getClientName - Full room data:', JSON.parse(JSON.stringify(room)));
   
     // Parse clients from clients_json if it exists
     let clients = [];
@@ -559,23 +559,23 @@
           : room.clients_json;
       }
     } catch (e) {
-      console.error('Error parsing clients_json:', e);
+      // console.error('Error parsing clients_json:', e);
     }
   
-    //console.log('Parsed clients:', clients);
+    // console.log('Parsed clients:', clients);
           
     const hasClients = Array.isArray(clients) && clients.length > 0;
   
     if (hasClients) {
       const client = clients[0];
       const name = client.name_kanji || client.name_kana || client.name || room.client_name;
-      //console.log('Using client name from clients_json:', name);
+      // console.log('Using client name from clients_json:', name);
       return name;
     }
   
     // Fallback to client_name or default
     const fallbackName = room?.client_name || 'ゲスト';
-    //console.log('Using fallback name:', fallbackName);
+    // console.log('Using fallback name:', fallbackName);
     return fallbackName;
   };
 
@@ -595,7 +595,7 @@
   
   const planSummary = computed(() => {
     const roomNumberToDebug = '103';
-    console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
+    // console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
     
     const roomPlans = {};
     const reservations = reservedRoomsDayView.value?.reservations || [];
@@ -604,7 +604,7 @@
     // Log only room 103 data
     const roomToDebug = reservations.filter(r => r.room_number === roomNumberToDebug);
     if (roomToDebug.length > 0) {
-      console.log(`[RoomIndicator] ${roomNumberToDebug} raw data:`, JSON.parse(JSON.stringify(roomToDebug)));
+      // console.log(`[RoomIndicator] ${roomNumberToDebug} raw data:`, JSON.parse(JSON.stringify(roomToDebug)));
     }
     
     // Process each reservation
@@ -620,12 +620,12 @@
       // Only log for room 103
       const isDebugRoom = roomNumber === roomNumberToDebug;
       if (isDebugRoom) {
-        console.log(`[RoomIndicator] Processing ${roomNumber} reservation:`, {
-          id: reservation.id,
-          check_in: reservation.check_in,
-          check_out: reservation.check_out,
-          details: reservation.details
-        });
+        // console.log(`[RoomIndicator] Processing ${roomNumber} reservation:`, {
+        //   id: reservation.id,
+        //   check_in: reservation.check_in,
+        //   check_out: reservation.check_out,
+        //   details: reservation.details
+        // });
       }
       
       // Only process reservations that are relevant for the selected date
@@ -642,7 +642,7 @@
       
       if (!isCheckingInToday && !isActiveDuringSelectedDate) {
         if (isDebugRoom) {
-          console.log(`[RoomIndicator] Skipping reservation ${reservation.id} - not relevant for selected date`);
+          // console.log(`[RoomIndicator] Skipping reservation ${reservation.id} - not relevant for selected date`);
         }
         return; // Skip this reservation
       }
@@ -655,12 +655,12 @@
       if (reservation.details?.length) {
         reservation.details.forEach(detail => {
           if (isDebugRoom) {
-            console.log(`[RoomIndicator] ${roomNumber} detail:`, {
-              date: detail.date,
-              plan_name: detail.plan_name,
-              plan_color: detail.plan_color,
-              isSelectedDate: detail.date === selectedDateStr
-            });
+            // console.log(`[RoomIndicator] ${roomNumber} detail:`, {
+            //   date: detail.date,
+            //   plan_name: detail.plan_name,
+            //   plan_color: detail.plan_color,
+            //   isSelectedDate: detail.date === selectedDateStr
+            // });
           }
           
           // Count all plan details for non-checkout reservations
@@ -683,29 +683,29 @@
     
     // Log final plan summary for the debug room
     if (roomPlans[roomNumberToDebug]) {
-      console.log(`[RoomIndicator] Final plan summary for ${roomNumberToDebug}:`, 
-        Object.keys(roomPlans[roomNumberToDebug]).map(planName => ({
-          planName,
-          count: roomPlans[roomNumberToDebug][planName].count,
-          dates: roomPlans[roomNumberToDebug][planName].details.map(d => d.date)
-        }))
-      );
+      // console.log(`[RoomIndicator] Final plan summary for ${roomNumberToDebug}:`, 
+      //   Object.keys(roomPlans[roomNumberToDebug]).map(planName => ({
+      //     planName,
+      //     count: roomPlans[roomNumberToDebug][planName].count,
+      //     dates: roomPlans[roomNumberToDebug][planName].details.map(d => d.date)
+      //   }))
+      // );
     }
     
     return roomPlans;
   });
 
   const getPlanDaysTooltip = (details, planName) => {
-    console.log(`[RoomIndicator] Getting plan days tooltip for plan: ${planName}`);
-    console.log(`[RoomIndicator] Details for ${planName}:`, details);
+    // console.log(`[RoomIndicator] Getting plan days tooltip for plan: ${planName}`);
+    // console.log(`[RoomIndicator] Details for ${planName}:`, details);
     
     if (!details || !details.length) {
-      console.log('[RoomIndicator] No details available for this plan');
+      // console.log('[RoomIndicator] No details available for this plan');
       return null;
     }
 
     const planDetails = details.filter(detail => detail.plan_name === planName);
-    console.log(`[RoomIndicator] Found ${planDetails.length} matching details for plan ${planName}`);
+    // console.log(`[RoomIndicator] Found ${planDetails.length} matching details for plan ${planName}`);
     
     // Define day order (0 = Sunday, 1 = Monday, etc.)
     const dayOrder = { '日': 7, '月': 1, '火': 2, '水': 3, '木': 4, '金': 5, '土': 6 };
