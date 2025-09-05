@@ -594,7 +594,6 @@
   };
   
   const planSummary = computed(() => {
-    // Only log room 103 related info
     const roomNumberToDebug = '103';
     console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
     
@@ -629,11 +628,30 @@
         });
       }
       
+      // Only process reservations that are relevant for the selected date
+      const checkInDate = new Date(reservation.check_in);
+      const checkOutDate = new Date(reservation.check_out);
+      const selectedDateObj = new Date(selectedDate.value);
+      
+      // Skip this reservation if it doesn't overlap with the selected date
+      // A reservation is relevant if:
+      // 1. It's checking in today, OR
+      // 2. The selected date falls within the stay period (check-in <= selected < check-out)
+      const isCheckingInToday = formatDate(checkInDate) === selectedDateStr;
+      const isActiveDuringSelectedDate = checkInDate <= selectedDateObj && selectedDateObj < checkOutDate;
+      
+      if (!isCheckingInToday && !isActiveDuringSelectedDate) {
+        if (isDebugRoom) {
+          console.log(`[RoomIndicator] Skipping reservation ${reservation.id} - not relevant for selected date`);
+        }
+        return; // Skip this reservation
+      }
+      
       if (!roomPlans[roomNumber]) {
         roomPlans[roomNumber] = {};
       }
       
-      // Process each day's plan in the reservation
+      // Process each day's plan in the reservation, but only count plans for the selected date
       if (reservation.details?.length) {
         reservation.details.forEach(detail => {
           if (isDebugRoom) {
@@ -645,6 +663,7 @@
             });
           }
           
+          // Count all plan details for non-checkout reservations
           const planName = detail.plan_name || '未設定';
           const planColor = detail.plan_color || '#CCCCCC';
           
