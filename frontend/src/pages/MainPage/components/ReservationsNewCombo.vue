@@ -1237,21 +1237,13 @@ const fetchParkingAddons = async () => {
     }
 };
 
-watch(selectedHotelId, (newHotelId) => {
-    if (newHotelId) {
-        fetchParkingAddons();
-    } else {
-        addonOptions.value = [];
-        selectedAddon.value = null;
-    }
-}, { immediate: true });
-
 const onHotelChange = async (event) => {
     await fetchHotel(event.value);
     comboRow.value.room_type_id = null;
     comboRow.value.vehicle_category_id = null;
     selectedAddon.value = addonOptions.value[0]?.id || null;
     await fetchAvailableRooms();
+    await updateParkingSpots();
 };
 
 const hasStayReservation = computed(() => {
@@ -1292,12 +1284,24 @@ watch(totalPeople, (newTotal) => {
 
 watch(() => selectedHotelId.value,
     async (newId) => {
-        await fetchHotels();
-        await fetchHotel();
-        await checkDates();
+        if (!newId) {
+            addonOptions.value = [];
+            selectedAddon.value = null;
+            return;
+        }
 
-        comboRow.value.room_type_id = roomTypes.value[0].room_type_id;
-        reservationDetails.value.hotel_id = selectedHotelId.value;
-    }
+        await Promise.all([
+            fetchHotels(),
+            fetchHotel(),
+            fetchParkingAddons()
+        ]);
+        
+        await checkDates();
+        await updateParkingSpots();
+
+        comboRow.value.room_type_id = roomTypes.value[0]?.room_type_id || null;
+        reservationDetails.value.hotel_id = newId;
+    },
+    { immediate: true }
 );
 </script>
