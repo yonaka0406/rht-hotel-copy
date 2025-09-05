@@ -594,11 +594,19 @@
   };
   
   const planSummary = computed(() => {
-    console.log('[RoomIndicator] Calculating plan summary...');
+    // Only log room 103 related info
+    const roomNumberToDebug = '103';
+    console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
+    
     const roomPlans = {};
     const reservations = reservedRoomsDayView.value?.reservations || [];
+    const selectedDateStr = formatDate(selectedDate.value);
     
-    console.clear();
+    // Log only room 103 data
+    const roomToDebug = reservations.filter(r => r.room_number === roomNumberToDebug);
+    if (roomToDebug.length > 0) {
+      console.log(`[RoomIndicator] ${roomNumberToDebug} raw data:`, JSON.parse(JSON.stringify(roomToDebug)));
+    }
     
     // Process each reservation
     reservations.forEach(reservation => {
@@ -610,6 +618,17 @@
         return;
       }
       
+      // Only log for room 103
+      const isDebugRoom = roomNumber === roomNumberToDebug;
+      if (isDebugRoom) {
+        console.log(`[RoomIndicator] Processing ${roomNumber} reservation:`, {
+          id: reservation.id,
+          check_in: reservation.check_in,
+          check_out: reservation.check_out,
+          details: reservation.details
+        });
+      }
+      
       if (!roomPlans[roomNumber]) {
         roomPlans[roomNumber] = {};
       }
@@ -617,6 +636,15 @@
       // Process each day's plan in the reservation
       if (reservation.details?.length) {
         reservation.details.forEach(detail => {
+          if (isDebugRoom) {
+            console.log(`[RoomIndicator] ${roomNumber} detail:`, {
+              date: detail.date,
+              plan_name: detail.plan_name,
+              plan_color: detail.plan_color,
+              isSelectedDate: detail.date === selectedDateStr
+            });
+          }
+          
           const planName = detail.plan_name || '未設定';
           const planColor = detail.plan_color || '#CCCCCC';
           
@@ -631,27 +659,19 @@
           roomPlans[roomNumber][planName].count++;
           roomPlans[roomNumber][planName].details.push(detail);
         });
-      } else {
-        // Fallback to reservation-level plan if no details
-        const planName = reservation.plan_name || '未設定';
-        if (!roomPlans[roomNumber][planName]) {
-          roomPlans[roomNumber][planName] = {
-            count: 1,
-            color: reservation.plan_color || '#CCCCCC',
-            details: []
-          };
-        } else {
-          roomPlans[roomNumber][planName].count++;
-        }
       }
     });
     
-    // Log final counts for debugging
-    Object.entries(roomPlans).forEach(([room, plans]) => {
-      console.log(`Room ${room} plans:`, Object.entries(plans).map(([name, data]) => 
-        `${name}: ${data.count} (${data.details?.length || 0} details)`
-      ));
-    });
+    // Log final plan summary for the debug room
+    if (roomPlans[roomNumberToDebug]) {
+      console.log(`[RoomIndicator] Final plan summary for ${roomNumberToDebug}:`, 
+        Object.keys(roomPlans[roomNumberToDebug]).map(planName => ({
+          planName,
+          count: roomPlans[roomNumberToDebug][planName].count,
+          dates: roomPlans[roomNumberToDebug][planName].details.map(d => d.date)
+        }))
+      );
+    }
     
     return roomPlans;
   });
