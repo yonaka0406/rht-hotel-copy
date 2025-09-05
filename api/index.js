@@ -405,7 +405,7 @@ const listenForTableChanges = async () => {
           // logger.info('Notification received: reservation_log_inserted (prod)', { logId });
 
           let response = null;
-          
+          /*
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/google`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
@@ -425,7 +425,7 @@ const listenForTableChanges = async () => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
-          
+          */
 
           response = await fetch(`${baseUrl}/api/log/reservation-inventory/${logId}/site-controller`, {
             method: 'GET',
