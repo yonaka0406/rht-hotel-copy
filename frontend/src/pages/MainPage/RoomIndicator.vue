@@ -43,7 +43,7 @@
               </template>
               <template #content>
                 <div v-if="group.rooms.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2">
-                  <div v-for="room in group.rooms" :key="room.room_id" 
+                  <div v-for="room in group.rooms" :key="`${room.room_id}-${room.id || 'no-reservation'}`" 
                     :class="[
                       'p-2 rounded outline-zinc-500/50 dark:outline-gray-400/50 outline-dashed',
                       // Default background
@@ -324,8 +324,40 @@
     const allReservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null) || [];
         
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
-    const blockedRooms = allReservations.filter(room => room.status === 'block');
-    
+    const blockedRooms = allReservations
+      .filter(room => room.status === 'block')
+      .map(room => ({
+        ...room,
+        // Adjust end date by subtracting one day
+        check_out: (() => {
+          const endDate = new Date(room.check_out);
+          endDate.setDate(endDate.getDate() - 1);
+          return endDate.toISOString();
+        })()
+      }))
+      // Filter out duplicate blocks by keeping only the most recent one per room
+      .reduce((acc, room) => {
+        const existing = acc.find(r => r.room_id === room.room_id);
+        if (!existing || new Date(room.check_out) > new Date(existing.check_out)) {
+          return [...acc.filter(r => r.room_id !== room.room_id), room];
+        }
+        return acc;
+      }, []);
+
+    if (blockedRooms.length > 0) {
+      // console.group('Blocked Rooms - With Adjusted Dates');
+      // console.table(blockedRooms.map(room => ({
+      //   room_id: room.room_id,
+      //   room_number: room.room_number,
+      //   reservation_id: room.id,
+      //   original_check_in: room.check_in,
+      //   original_check_out: room.check_out,
+      //   adjusted_check_out: new Date(room.check_out).toISOString().split('T')[0],
+      //   block_reason: room.client_name
+      // })));
+      // console.groupEnd();
+    }
+
     // Create categorization with priority (no duplicates)
     // Priority: Check-out > Check-in > Occupied
     const categorizedRooms = {
