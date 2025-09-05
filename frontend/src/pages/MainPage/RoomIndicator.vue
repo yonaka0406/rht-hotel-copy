@@ -135,7 +135,7 @@
                                   fontSize: '0.75rem',
                                   padding: '0.25rem 0.5rem'
                               }" 
-                              v-tooltip.top="getPlanDaysTooltip(room.details, planName)"
+                              v-tooltip.top="getPlanDaysTooltip(planData.details, planName)"
                             />
                         </div>
                       </div>
@@ -164,7 +164,7 @@
                                   fontSize: '0.75rem',
                                   padding: '0.25rem 0.5rem'
                               }"
-                              v-tooltip.top="getPlanDaysTooltip(room.details, planName)"
+                              v-tooltip.top="getPlanDaysTooltip(planData.details, planName)"
                             />
                         </div>
                       </div>                      
@@ -597,31 +597,62 @@
     console.log('[RoomIndicator] Calculating plan summary...');
     const roomPlans = {};
     const reservations = reservedRoomsDayView.value?.reservations || [];
-
-    console.log(`[RoomIndicator] Processing ${reservations.length} reservations`);
     
+    console.clear();
+    
+    // Process each reservation
     reservations.forEach(reservation => {
-      const roomNumber = reservation.room_number;
-      const planName = reservation.plan_name;
-      const checkInDate = reservation.check_in_date;
-      const checkOutDate = reservation.check_out_date;
+      if (!reservation?.id) return;
       
-      console.log(`[RoomIndicator] Processing reservation ID: ${reservation.id}, Room: ${roomNumber}, Plan: ${planName}, Check-in: ${checkInDate}, Check-out: ${checkOutDate}`);
+      const roomNumber = reservation.room_number;
+      if (!roomNumber) {
+        console.error('[RoomIndicator] Missing room number for reservation:', reservation);
+        return;
+      }
       
       if (!roomPlans[roomNumber]) {
         roomPlans[roomNumber] = {};
       }
-
-      if (!roomPlans[roomNumber][planName]) {
-        roomPlans[roomNumber][planName] = {
-          count: 0,
-          color: reservation.plan_color
-        };
+      
+      // Process each day's plan in the reservation
+      if (reservation.details?.length) {
+        reservation.details.forEach(detail => {
+          const planName = detail.plan_name || '未設定';
+          const planColor = detail.plan_color || '#CCCCCC';
+          
+          if (!roomPlans[roomNumber][planName]) {
+            roomPlans[roomNumber][planName] = {
+              count: 0,
+              color: planColor,
+              details: []
+            };
+          }
+          
+          roomPlans[roomNumber][planName].count++;
+          roomPlans[roomNumber][planName].details.push(detail);
+        });
+      } else {
+        // Fallback to reservation-level plan if no details
+        const planName = reservation.plan_name || '未設定';
+        if (!roomPlans[roomNumber][planName]) {
+          roomPlans[roomNumber][planName] = {
+            count: 1,
+            color: reservation.plan_color || '#CCCCCC',
+            details: []
+          };
+        } else {
+          roomPlans[roomNumber][planName].count++;
+        }
       }
-
-      roomPlans[roomNumber][planName].count++;
     });
-
+    
+    // Log final counts for debugging
+    Object.entries(roomPlans).forEach(([room, plans]) => {
+      console.log(`Room ${room} plans:`, Object.entries(plans).map(([name, data]) => 
+        `${name}: ${data.count} (${data.details?.length || 0} details)`
+      ));
+    });
+    
     return roomPlans;
   });
 
