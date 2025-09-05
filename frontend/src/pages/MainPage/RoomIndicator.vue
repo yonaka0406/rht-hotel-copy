@@ -754,7 +754,7 @@
           return;
       }
 
-      await fetchReservationsToday(selectedHotelId, today);
+      await fetchReservationsToday(selectedHotelId.value, today);
     });
 
     await fetchHotels();
