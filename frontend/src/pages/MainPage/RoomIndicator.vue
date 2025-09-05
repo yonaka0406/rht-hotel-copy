@@ -737,6 +737,26 @@
     // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
+    // Add debounce utility function
+    const debounce = (func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
+
+    // Add debounced fetch function
+    const debouncedFetchReservations = debounce(async () => {
+      if (!isUpdating.value) {
+        await fetchReservationsToday(selectedHotelId.value, today);
+      }
+    }, 1000); // 1s debounce time
+
     socket.value.on('connect', () => {
       // console.log('Connected to server');
     });
@@ -748,18 +768,12 @@
     });
     
     socket.value.on('tableUpdate', async (data) => {
-      // Prevent fetching if bulk update is in progress
-      if (isUpdating.value) {
-          // console.log('Skipping fetchReservation because update is still running');
-          return;
-      }
-
-      await fetchReservationsToday(selectedHotelId.value, today);
+      // Use the debounced function instead of direct fetch
+      debouncedFetchReservations();
     });
 
     await fetchHotels();
     await fetchHotel();
-
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
     //console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
     

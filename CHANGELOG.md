@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Bugfix: Fixed WebSocket-triggered update of room indicator
 - Bugfix: Fixed sales calculation to properly exclude cancelled reservations from revenue totals by only including non-cancelled reservation details in the price sum. (Bug #52)
 - Bugfix: Fixed an issue where changing the hotel would not update the parking availability information.
 
