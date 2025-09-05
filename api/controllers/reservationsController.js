@@ -51,8 +51,30 @@ const getReservedRooms = async (req, res) => {
     return res.status(400).json({ error: 'Missing required query parameters: hotel_id, start_date, and end_date.' });
   }
 
+  // Validate and format dates
+  const formatDate = (dateStr) => {
+    // Check if date is in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // Try to parse YY-MM-DD format (e.g., 20-08-26)
+    const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{2})$/);
+    if (match) {
+      const year = parseInt(match[1], 10);
+      // Assuming years 00-79 are 2000-2079
+      const fullYear = year >= 80 ? 1900 + year : 2000 + year;
+      return `${fullYear}-${match[2]}-${match[3]}`;
+    }
+    
+    throw new Error(`Invalid date format: ${dateStr}. Expected YYYY-MM-DD or YY-MM-DD`);
+  };
+
   try {
-    const reservedRooms = await selectReservedRooms(req.requestId, hotel_id, start_date, end_date);
+    const formattedStartDate = formatDate(start_date);
+    const formattedEndDate = formatDate(end_date);
+    
+    const reservedRooms = await selectReservedRooms(req.requestId, hotel_id, formattedStartDate, formattedEndDate);
 
     if (reservedRooms.length === 0) {
       return res.status(201).json({ message: 'No reserved rooms for the specified period.' });
@@ -61,6 +83,12 @@ const getReservedRooms = async (req, res) => {
     return res.status(200).json({ reservedRooms });
   } catch (error) {
     console.error('Error fetching reserved rooms:', error);
+    if (error.message.includes('Invalid date format')) {
+      return res.status(400).json({ 
+        error: error.message,
+        details: 'Please provide dates in YYYY-MM-DD format (e.g., 2020-08-26) or YY-MM-DD format (e.g., 20-08-26)'
+      });
+    }
     return res.status(500).json({ error: 'Database error occurred while fetching reserved rooms.' });
   }
 };

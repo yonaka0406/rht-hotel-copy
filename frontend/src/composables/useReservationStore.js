@@ -769,9 +769,28 @@ export function useReservationStore() {
     };
     const fetchReservationsToday = async (hotelId, day) => {
         // console.log('From Reservation Store => fetchReservationsToday');
-        try{
+        try {
+            // Ensure day is a properly formatted date string (YYYY-MM-DD)
+            let dateStr = day;
+            if (day instanceof Date) {
+                // If day is a Date object, format it as YYYY-MM-DD
+                const year = day.getFullYear();
+                const month = String(day.getMonth() + 1).padStart(2, '0');
+                const dayOfMonth = String(day.getDate()).padStart(2, '0');
+                dateStr = `${year}-${month}-${dayOfMonth}`;
+            } else if (typeof day === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+                // If day is a string but not in YYYY-MM-DD format, try to parse it
+                const parsedDate = new Date(day);
+                if (!isNaN(parsedDate.getTime())) {
+                    const year = parsedDate.getFullYear();
+                    const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                    const dayOfMonth = String(parsedDate.getDate()).padStart(2, '0');
+                    dateStr = `${year}-${month}-${dayOfMonth}`;
+                }
+            }
+
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/reservation/today/${hotelId}/${day}`;
+            const url = `/api/reservation/today/${hotelId}/${dateStr}`;
 
             const response = await fetch(url, {
                 method: 'GET',
