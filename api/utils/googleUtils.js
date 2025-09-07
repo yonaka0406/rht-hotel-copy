@@ -272,14 +272,30 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
         return { status: 'success', message: 'No data to append.' };
     }
 
-    // Circuit breaker pattern
-    let consecutiveFailures = 0;
-    const MAX_CONSECUTIVE_FAILURES = 3;
-    const CIRCUIT_BREAKER_COOLDOWN = 30000; // 30 seconds
-    let circuitBreakerOpen = false;
-    let lastFailureTime = 0;
-
     try {
+        // Check if sheet exists, create it if it doesn't
+        const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
+        if (!sheetExists) {
+            logger.info(`Sheet '${sheetName}' does not exist, creating it now`, context);
+            await createSheetInSpreadsheet(spreadsheetId, sheetName);
+            // Write headers if this is a new sheet
+            await connectionManager.executeRequest(async (sheetsService) => {
+                return sheetsService.spreadsheets.values.update({
+                    spreadsheetId: spreadsheetId,
+                    range: `${sheetName}!A1`,
+                    valueInputOption: 'USER_ENTERED',
+                    resource: { values: headers },
+                });
+            });
+        }
+
+        // Circuit breaker pattern
+        let consecutiveFailures = 0;
+        const MAX_CONSECUTIVE_FAILURES = 3;
+        const CIRCUIT_BREAKER_COOLDOWN = 30000; // 30 seconds
+        let circuitBreakerOpen = false;
+        let lastFailureTime = 0;
+
         // Smaller batch size to reduce memory usage
         const BATCH_SIZE = 100; // Reduced from 500
         const MAX_RETRIES = 3; // Reduced from 5
