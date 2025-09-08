@@ -405,6 +405,53 @@ export function useReservationStore() {
             console.error('Error updating reservation:', err);
         }
     };
+
+    const setReservationImportantComment = async (reservationId, hotelId, isImportant) => {
+        try {
+            console.log('[setReservationImportantComment] Starting update', { reservationId, hotelId, isImportant });
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+    
+            console.log('[setReservationImportantComment] Sending request to server');
+            const response = await fetch(`/api/reservation/update/comment-flag/${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    hotelId, 
+                    has_important_comment: isImportant 
+                })
+            });
+    
+            console.log('[setReservationImportantComment] Received response', { 
+                status: response.status,
+                statusText: response.statusText
+            });
+    
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('[setReservationImportantComment] Server responded with error:', errorText);
+                throw new Error(`Failed to update important comment status: ${response.status} ${response.statusText}`);
+            }
+    
+            const result = await response.json();
+            console.log('[setReservationImportantComment] Update successful', { result });
+            
+            setReservationIsUpdating(false);
+            return result;
+        } catch(err) {
+            console.error('[setReservationImportantComment] Error in function:', {
+                error: err,
+                errorMessage: err.message,
+                stack: err.stack
+            });
+            setReservationIsUpdating(false);
+            throw err;
+        }
+    };
+
     const setReservationTime = async (indicator, reservationId, hotelId, time) => {
         try {
             setReservationIsUpdating(true);
@@ -723,16 +770,8 @@ export function useReservationStore() {
                 },                
             });
 
-            if (!response.ok) {
-                // If 404 or any other error, log the message and return an empty array
-                if (response.status === 404) {
-                    // console.log('No hold reservations found.');
-                    holdReservations.value = [];  // Empty array if no reservations found
-                } else {
-                    const errorText = await response.text();
-                    console.error(`API Error: ${response.status} ${response.statusText} ${errorText}`);
-                }
-                return;  // Exit the function early if there's an error
+            if (!response.ok) {                                        
+                reservedRoomsDayView.value = [];
             }
 
             const data = await response.json();
@@ -1391,6 +1430,7 @@ export function useReservationStore() {
         setCalendarChange,
         setCalendarFreeChange,
         setReservationComment,
+        setReservationImportantComment,
         setReservationTime,
         setRoomPlan,
         setRoomPattern,

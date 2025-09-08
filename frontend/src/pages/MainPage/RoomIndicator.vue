@@ -75,7 +75,7 @@
                     </div>
                     
                     <!-- Rest of your existing room card content -->
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between">                      
                       <span class="font-semibold dark:text-white">{{ room.room_number + '：' + room.room_type_name }}</span>
                       <div class="flex items-center">
                         <div v-if="room.number_of_people" class="flex items-center mr-2">
@@ -99,10 +99,16 @@
                     <!-- Client info section -->
                      <div v-if="room.client_name">
                       <div v-if="room.client_name" class="flex self-center dark:text-gray-200" @click="openEditReservation(room)">
+                        <i v-if="room.has_important_comment" 
+                            class="pi pi-exclamation-triangle text-yellow-500 animate-pulse" style="font-size: 2rem"
+                            v-tooltip.top="'重要コメントがあります'">
+                        </i>
+                        <div v-else>
                         <Avatar icon="pi pi-user" size="small" class="mr-2"/>
+                        </div>
                         <p class="mb-2">
                           {{ getClientName(room) }}                    
-                        </p>
+                        </p>                        
                       </div>
                       <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>
                       <div v-else class="mb-2"></div>

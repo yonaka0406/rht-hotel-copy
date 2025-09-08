@@ -34,6 +34,7 @@ CREATE TABLE reservations (
     ota_reservation_id TEXT NULL,
     payment_timing TEXT CHECK (payment_timing IN ('not_set', 'prepaid', 'on-site', 'postpaid')) NOT NULL DEFAULT 'not_set'
     comment TEXT NULL,
+    has_important_comment BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_by INT REFERENCES users(id),
     updated_by INT DEFAULT NULL REFERENCES users(id),
@@ -42,6 +43,11 @@ CREATE TABLE reservations (
 
 ALTER TABLE reservations
 ADD COLUMN payment_timing TEXT CHECK (payment_timing IN ('not_set', 'prepaid', 'on-site', 'postpaid')) NOT NULL DEFAULT 'not_set';
+ALTER TABLE reservations 
+ADD COLUMN has_important_comment BOOLEAN NOT NULL DEFAULT false;
+
+-- Update the comment to include information about the new column
+COMMENT ON COLUMN reservations.has_important_comment IS 'Flag indicating if this reservation has an important comment that requires attention';
 
 CREATE TABLE reservation_details (
     id UUID DEFAULT gen_random_uuid(),

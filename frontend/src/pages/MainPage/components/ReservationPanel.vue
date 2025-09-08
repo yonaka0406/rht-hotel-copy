@@ -88,9 +88,27 @@
 
         </div>
         <div class="field">
-            <p class="font-bold flex justify-start items-center">備考：<span
-                    class="text-xs text-gray-400">(タブキーで編集確定)</span></p>
-            <Textarea v-model="reservationInfo.comment" @keydown="handleKeydown" fluid />
+            <div class="flex justify-between items-center">
+                <p class="font-bold flex items-center">
+                    備考：
+                    <span class="text-xs text-gray-400 ml-2">(タブキーで編集確定)</span>
+                </p>
+                <Button 
+                    v-tooltip.top="'重要コメントとしてマーク'"
+                    :class="{ 'p-button-warning': reservationInfo.has_important_comment }"
+                    :icon="reservationInfo.has_important_comment ? 'pi pi-star-fill' : 'pi pi-star'"
+                    @click="toggleImportantComment"
+                    text
+                    rounded
+                    aria-label="重要コメントとしてマーク"
+                />
+            </div>
+            <Textarea 
+                v-model="reservationInfo.comment" 
+                @keydown="handleKeydown" 
+                :class="{ 'border-yellow-500 border-2': reservationInfo.has_important_comment }"
+                class="w-full"
+            />
         </div>
 
         <div class="field flex flex-col col-span-2">
@@ -521,7 +539,9 @@ const props = defineProps({
 
 //Stores
 import { useReservationStore } from '@/composables/useReservationStore';
-const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, setReservationComment, setReservationTime, setPaymentTiming } = useReservationStore();
+const { setReservationId, setReservationType, setReservationStatus, setReservationDetailStatus, setRoomPlan, setRoomPattern, 
+    deleteHoldReservation, availableRooms, fetchAvailableRooms, addRoomToReservation, getAvailableDatesForChange, setCalendarChange, 
+    setReservationComment, setReservationImportantComment, setReservationTime, setPaymentTiming } = useReservationStore();
 import { usePlansStore } from '@/composables/usePlansStore';
 const { plans, addons, patterns, fetchPlansForHotel, fetchPlanAddons, fetchAllAddons, fetchPatternsForHotel } = usePlansStore();
 
@@ -559,6 +579,37 @@ const updatePaymentTiming = async (event) => {
             severity: 'error',
             summary: 'エラー',
             detail: '支払いタイミングの更新に失敗しました。',
+            life: 3000
+        });
+    }
+};
+
+const toggleImportantComment = async () => {
+    try {
+        const hotelId = reservationInfo.value.hotel_id;
+        const newValue = !reservationInfo.value.has_important_comment;
+        await setReservationImportantComment(
+            props.reservation_id,
+            hotelId,
+            newValue
+        );
+        
+        // Update local state
+        reservationInfo.value.has_important_comment = newValue;
+        
+        // Show feedback
+        toast.add({
+            severity: 'success',
+            summary: '成功',
+            detail: newValue ? '重要コメントとしてマークしました' : '重要コメントのマークを解除しました',
+            life: 3000
+        });
+    } catch (error) {
+        console.error('Error updating important comment status:', error);
+        toast.add({
+            severity: 'error',
+            summary: 'エラー',
+            detail: '重要コメントの更新に失敗しました',
             life: 3000
         });
     }

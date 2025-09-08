@@ -213,6 +213,7 @@ const selectReservation = async (requestId, id) => {
       ,reservations.agent
       ,reservations.ota_reservation_id
       ,reservations.comment 
+      ,reservations.has_important_comment
       ,reservation_details.date
       ,rooms.room_type_id
       ,room_types.name AS room_type_name
@@ -368,6 +369,7 @@ const selectReservationDetail = async (requestId, id) => {
       reservations.agent,
       reservations.ota_reservation_id,
       reservations.comment,
+      reservations.has_important_comment,
       reservation_details.date,
       rooms.room_type_id,
       room_types.name AS room_type_name,
@@ -658,6 +660,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
           ,reservations.number_of_people as reservation_number_of_people
           ,reservations.status	
           ,reservations.payment_timing        
+          ,reservations.has_important_comment
           ,reservation_details.room_id      
           ,rooms.room_number
           ,rooms.floor
@@ -1684,6 +1687,33 @@ const updateReservationComment = async (requestId, reservationData) => {
 
   } catch (error) {
     console.error('Error updating reservation detail:', err);
+    throw new Error('Database error');
+  }
+};
+const updateReservationCommentFlag = async (requestId, reservationData) => {
+  const pool = getPool(requestId);
+  const { id, hotelId, has_important_comment, updated_by } = reservationData;
+
+  try {
+    const query = `
+        UPDATE reservations
+        SET
+          has_important_comment = $1,
+          updated_by = $2          
+        WHERE id = $3::UUID AND hotel_id = $4
+        RETURNING *;
+    `;
+    const values = [
+      has_important_comment,
+      updated_by,
+      id,
+      hotelId,
+    ];
+    const result = await pool.query(query, values);
+    return result.rows[0];
+
+  } catch (error) {
+    console.error('Error updating reservation comment flag:', error);
     throw new Error('Database error');
   }
 };
@@ -5263,6 +5293,7 @@ module.exports = {
   updateReservationStatus,
   updateReservationDetailStatus,
   updateReservationComment,
+  updateReservationCommentFlag,
   updateReservationTime,
   updateReservationType,
   updateReservationResponsible,

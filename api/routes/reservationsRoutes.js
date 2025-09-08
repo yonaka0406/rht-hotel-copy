@@ -40,6 +40,7 @@ router.put('/reservation/update/room/plan/:hid/:rid/:id', authMiddlewareCRUDAcce
 router.put('/reservation/update/room/pattern/:hid/:rid/:id', authMiddlewareCRUDAccess, reservationsController.editReservationRoomPattern);
 router.put('/reservation/update/status/:id', authMiddlewareCRUDAccess, reservationsController.editReservationStatus);
 router.put('/reservation/update/comment/:id', authMiddlewareCRUDAccess, reservationsController.editReservationComment);
+router.put('/reservation/update/comment-flag/:id', authMiddlewareCRUDAccess, reservationsController.editReservationCommentFlag);
 router.put('/reservation/update/time/:id', authMiddlewareCRUDAccess, reservationsController.editReservationTime);
 router.put('/reservation/update/type/:id', authMiddlewareCRUDAccess, reservationsController.editReservationType);
 router.put('/reservation/update/client/:id', authMiddlewareCRUDAccess, reservationsController.editReservationResponsible);

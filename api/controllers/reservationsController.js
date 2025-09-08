@@ -3,7 +3,7 @@ const {
   selectFailedOtaReservations,
   selectParkingSpotAvailability,
   addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
-  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
+  updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking,
   deleteParkingReservation, deleteBulkParkingReservations,
@@ -57,7 +57,7 @@ const getReservedRooms = async (req, res) => {
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       return dateStr;
     }
-    
+
     // Try to parse YY-MM-DD format (e.g., 20-08-26)
     const match = dateStr.match(/^(\d{2})-(\d{2})-(\d{2})$/);
     if (match) {
@@ -66,14 +66,14 @@ const getReservedRooms = async (req, res) => {
       const fullYear = year >= 80 ? 1900 + year : 2000 + year;
       return `${fullYear}-${match[2]}-${match[3]}`;
     }
-    
+
     throw new Error(`Invalid date format: ${dateStr}. Expected YYYY-MM-DD or YY-MM-DD`);
   };
 
   try {
     const formattedStartDate = formatDate(start_date);
     const formattedEndDate = formatDate(end_date);
-    
+
     const reservedRooms = await selectReservedRooms(req.requestId, hotel_id, formattedStartDate, formattedEndDate);
 
     if (reservedRooms.length === 0) {
@@ -84,7 +84,7 @@ const getReservedRooms = async (req, res) => {
   } catch (error) {
     console.error('Error fetching reserved rooms:', error);
     if (error.message.includes('Invalid date format')) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: error.message,
         details: 'Please provide dates in YYYY-MM-DD format (e.g., 2020-08-26) or YY-MM-DD format (e.g., 20-08-26)'
       });
@@ -1138,6 +1138,25 @@ const editReservationComment = async (req, res) => {
     res.status(500).json({ error: 'Failed to update reservation comment' });
   }
 };
+const editReservationCommentFlag = async (req, res) => {
+  const { id } = req.params;
+  const { hotelId, has_important_comment } = req.body;
+  const updated_by = req.user.id;
+
+  try {
+    const updatedReservation = await updateReservationCommentFlag(req.requestId, {
+      id,
+      hotelId,
+      has_important_comment,
+      updated_by,
+    });
+
+    res.json(updatedReservation);
+  } catch (err) {
+    console.error('Error updating important comment flag:', err);
+    res.status(500).json({ error: 'Failed to update important comment flag' });
+  }
+};
 const editReservationTime = async (req, res) => {
   const { id } = req.params;
   const { hotelId, indicator, time } = req.body;
@@ -1494,9 +1513,14 @@ const editPaymentTiming = async (req, res) => {
 };
 
 module.exports = {
-  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking,
-  getParkingSpotAvailability,
-  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation,
-  cancelReservationRooms,
+  getAvailableRooms, getReservedRooms, getReservation, getReservationDetails, getMyHoldReservations, getReservationsToday, 
+  getAvailableDatesForChange, getReservationClientIds, getReservationPayments, getReservationParking, getParkingSpotAvailability,
+  createReservationHold, createHoldReservationCombo, createReservationDetails, createReservationAddons, createReservationClient, 
+  addNewRoomToReservation, alterReservationRoom, createReservationPayment, createBulkReservationPayment, editReservationDetail, 
+  editReservationGuests, editReservationPlan, editReservationAddon, editReservationRoom, editReservationRoomPlan, 
+  editReservationRoomPattern, editReservationStatus, editReservationDetailStatus, editReservationComment, editReservationCommentFlag, 
+  editReservationTime, editReservationType, editReservationResponsible, editRoomFromCalendar, editCalendarFreeChange, editRoomGuestNumber, 
+  deleteHoldReservation, deleteRoomFromReservation, delReservationPayment, copyReservation, getFailedOtaReservations, 
+  handleDeleteParkingReservation, handleBulkDeleteParkingReservations, convertBlockToReservation, cancelReservationRooms,
   editPaymentTiming,
 };
