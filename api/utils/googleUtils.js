@@ -32,8 +32,8 @@ class SheetsConnectionManager {
         this.sheetsService = null;
         this.requestQueue = [];
         this.isProcessing = false;
-        this.maxConcurrentRequests = 2; // Reduced for better memory management
-        this.requestDelay = 100; // 100ms between requests
+        this.maxConcurrentRequests = 1; // Reduced for better memory management
+        this.requestDelay = 1001; // 1s between requests
         this.activeRequests = 0;
     }
 
