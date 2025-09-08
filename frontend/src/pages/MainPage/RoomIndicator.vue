@@ -643,7 +643,7 @@
     // console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
     
     const roomPlans = {};
-    const reservations = reservedRoomsDayView.value?.reservations || [];
+    const reservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null && room.status !== 'cancelled') || [];
     const selectedDateStr = formatDate(selectedDate.value);
     
     // Log only room 103 data
