@@ -110,8 +110,8 @@
                           {{ getClientName(room) }}                    
                         </p>                        
                       </div>
-                      <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>
-                      <div v-else class="mb-2"></div>
+                      <p v-if="room.payment_timing === 'on-site'" class="mb-2 text-emerald-500"><i class="pi pi-wallet mr-1"></i>{{ paymentTimingText(room.payment_timing) }}</p>                      
+                      <div v-else class="mb-2"></div>                      
                     </div>
                     <div v-else @click="openNewReservation(room)" class="dark:text-gray-200">
                       <Avatar icon="pi pi-plus" size="small" class="mr-2"/>
@@ -119,32 +119,36 @@
                     </div>
                     
                     <!-- Time and plan info -->
-                    <div v-if="group.title === '本日チェックイン'" class="flex items-center gap-2">
-                      <div>
+                    <div v-if="group.title === '本日チェックイン'">
+                      <div  class="flex items-center gap-2">
                         <span class="dark:text-gray-200">
                           <i class="pi pi-clock mr-1"></i>
                           {{ formatTime(room.check_in_time) }}
                         </span>
+                      
+                        <div v-if="room.plan_name">
+                          <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">
+                            <Button 
+                                type="button" 
+                                :label="`${planName}`" 
+                                :badge="`${planData.count}`" 
+                                badgeSeverity="secondary"
+                                variant="outlined" 
+                                :style="{ 
+                                    backgroundColor: `${planData.color}40`, 
+                                    border: `1px solid ${planData.color}`, 
+                                    color: 'black',
+                                    fontSize: '0.75rem',
+                                    padding: '0.25rem 0.5rem'
+                                }" 
+                                v-tooltip.top="getPlanDaysTooltip(planData.details, planName)"
+                              />
+                          </div>
+                        </div>                      
                       </div>
-                      <div v-if="room.plan_name">
-                        <div v-for="(planData, planName) in planSummary[room.room_number]" :key="planName" class="mb-1">
-                          <Button 
-                              type="button" 
-                              :label="`${planName}`" 
-                              :badge="`${planData.count}`" 
-                              badgeSeverity="secondary"
-                              variant="outlined" 
-                              :style="{ 
-                                  backgroundColor: `${planData.color}40`, 
-                                  border: `1px solid ${planData.color}`, 
-                                  color: 'black',
-                                  fontSize: '0.75rem',
-                                  padding: '0.25rem 0.5rem'
-                              }" 
-                              v-tooltip.top="getPlanDaysTooltip(planData.details, planName)"
-                            />
-                        </div>
-                      </div>
+                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        <i class="pi pi-calendar mr-1"></i>アウト: {{ formatDate(new Date(room.check_out)) }}
+                      </p>
                     </div>
                     <div v-else-if="group.title === '本日チェックアウト'" class="flex items-center gap-2">
                       <div>
@@ -172,7 +176,10 @@
                               }"
                               v-tooltip.top="getPlanDaysTooltip(planData.details, planName)"
                             />
-                        </div>
+                        </div> 
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        <i class="pi pi-calendar mr-1"></i>アウト: {{ formatDate(new Date(room.check_out)) }}
+                      </p>                       
                       </div>                      
                     </div>
                   </div>
