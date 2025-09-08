@@ -3,25 +3,32 @@
 services:
   # The PostgreSQL Database Service
   db:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     container_name: wehub-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: wehub
     ports:
       # Exposes the database on your local machine's port 5432
       - "5432:5432"
     volumes:      
-      # This line mounts your local scripts into the container
-      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
       # Persists database data on your host machine
       - postgres_data:/var/lib/postgresql/data
+      # Mount initialization scripts with proper ownership
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      # Temporary volume to ensure scripts are executable
+      - ./docker-entrypoint-initdb.d/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./docker-entrypoint-initdb.d/wehub-backup.dump:/docker-entrypoint-initdb.d/wehub-backup.dump
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d wehub"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   # The Redis 7 Service
   redis:
