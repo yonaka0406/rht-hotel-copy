@@ -73,7 +73,7 @@ class SheetsConnectionManager {
         } finally {
             this.activeRequests--;
             this.isProcessing = false;
-            
+
             // Add delay between requests to prevent rate limiting
             setTimeout(() => {
                 this.processQueue();
@@ -133,20 +133,32 @@ async function authorize() {
  */
 async function checkSheetExists(spreadsheetId, sheetName) {
     const context = { operation: 'checkSheetExists', spreadsheetId, sheetName };
-    
+    const cacheKey = `${spreadsheetId}_${sheetName}`;
+
+    if (sheetExistsCache.has(cacheKey)) {
+        logger.debug(`Cache hit for sheet existence: "${sheetName}"`, context);
+        return sheetExistsCache.get(cacheKey);
+    }
+
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
-            logger.debug('Checking if sheet exists', context);
+            logger.debug('Checking if sheet exists (API call)', context);
             const response = await sheetsService.spreadsheets.get({
                 spreadsheetId: spreadsheetId,
                 fields: 'sheets.properties.title'
             });
             const exists = response.data.sheets.some(sheet => sheet.properties.title === sheetName);
+            
+            sheetExistsCache.set(cacheKey, exists);
+            setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
+
             logger.debug(`Sheet existence check result for "${sheetName}"`, { ...context, exists });
             return exists;
         } catch (err) {
             logger.error('Error checking if sheet exists', { ...context, error: err });
             if (err.code === 404) {
+                sheetExistsCache.set(cacheKey, false);
+                setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
                 return false;
             }
             throw err;
@@ -159,7 +171,7 @@ async function checkSheetExists(spreadsheetId, sheetName) {
  */
 async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
     const context = { operation: 'createSheetInSpreadsheet', spreadsheetId, sheetName };
-    
+
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
             logger.info('Creating new sheet in spreadsheet', context);
@@ -173,6 +185,10 @@ async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
                     }]
                 }
             });
+            const cacheKey = `${spreadsheetId}_${sheetName}`;
+            sheetExistsCache.set(cacheKey, true);
+            setTimeout(() => sheetExistsCache.delete(cacheKey), 300000); // 5 minute cache
+
             logger.info(`Sheet "${sheetName}" created successfully`, context);
             return response.data;
         } catch (err) {
@@ -187,7 +203,7 @@ async function createSheetInSpreadsheet(spreadsheetId, sheetName) {
  */
 async function createSheet(title) {
     const context = { operation: 'createSheet', title };
-    
+
     return connectionManager.executeRequest(async (sheetsService) => {
         try {
             logger.info('Creating new spreadsheet file', context);
@@ -216,13 +232,8 @@ async function clearSheetData(spreadsheetId, sheetName) {
 
     try {
         logger.info(`Ensuring sheet "${sheetName}" exists before clearing.`, context);
-        const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
-        if (!sheetExists) {
-            logger.info(`Sheet "${sheetName}" does not exist. Creating it.`, context);
-            await createSheetInSpreadsheet(spreadsheetId, sheetName);
-        }
+        await ensureSheetExists(spreadsheetId, sheetName); // Use the helper
 
-        // Clear the entire sheet
         await connectionManager.executeRequest(async (sheetsService) => {
             logger.info(`Clearing sheet: ${sheetName}`, context);
             return sheetsService.spreadsheets.values.clear({
@@ -231,7 +242,6 @@ async function clearSheetData(spreadsheetId, sheetName) {
             });
         });
 
-        // Add headers
         await connectionManager.executeRequest(async (sheetsService) => {
             logger.info(`Adding headers to sheet: ${sheetName}`, context);
             return sheetsService.spreadsheets.values.update({
@@ -252,66 +262,60 @@ async function clearSheetData(spreadsheetId, sheetName) {
     }
 }
 
+async function ensureSheetExists(spreadsheetId, sheetName) {
+    const context = { operation: 'ensureSheetExists', spreadsheetId, sheetName };
+    logger.info(`Ensuring sheet "${sheetName}" exists.`, context);
+    const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
+
+    if (!sheetExists) {
+        logger.info(`Sheet "${sheetName}" does not exist. Creating it and adding headers.`, context);
+        await createSheetInSpreadsheet(spreadsheetId, sheetName);
+        await connectionManager.executeRequest(async (sheetsService) => {
+            return sheetsService.spreadsheets.values.update({
+                spreadsheetId: spreadsheetId,
+                range: `${sheetName}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                resource: { values: headers },
+            });
+        });
+    }
+}
+
 /**
  * MEMORY OPTIMIZED VERSION
  * Appends data to a sheet with better memory management and circuit breaker pattern.
  */
-async function appendDataToSheet(spreadsheetId, sheetName, values) {
+async function _appendInBatches(spreadsheetId, sheetName, values) {
     const context = { 
-        operation: 'appendDataToSheet',
+        operation: '_appendInBatches',
         spreadsheetId,
         sheetName,
         rowsToAppend: values.length
     };
     
-    logger.info('Starting data append to sheet', context);
-    
-    // Early exit for empty data
     if (!values || values.length === 0) {
-        logger.info('No data to append. Operation finished.', context);
+        logger.info('No data to append.', context);
         return { status: 'success', message: 'No data to append.' };
     }
 
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 3;
+    const CIRCUIT_BREAKER_COOLDOWN = 30000;
+    let circuitBreakerOpen = false;
+    let lastFailureTime = 0;
+
     try {
-        // Check if sheet exists, create it if it doesn't
-        const sheetExists = await checkSheetExists(spreadsheetId, sheetName);
-        if (!sheetExists) {
-            logger.info(`Sheet '${sheetName}' does not exist, creating it now`, context);
-            await createSheetInSpreadsheet(spreadsheetId, sheetName);
-            // Write headers if this is a new sheet
-            await connectionManager.executeRequest(async (sheetsService) => {
-                return sheetsService.spreadsheets.values.update({
-                    spreadsheetId: spreadsheetId,
-                    range: `${sheetName}!A1`,
-                    valueInputOption: 'USER_ENTERED',
-                    resource: { values: headers },
-                });
-            });
-        }
-
-        // Circuit breaker pattern
-        let consecutiveFailures = 0;
-        const MAX_CONSECUTIVE_FAILURES = 3;
-        const CIRCUIT_BREAKER_COOLDOWN = 30000; // 30 seconds
-        let circuitBreakerOpen = false;
-        let lastFailureTime = 0;
-
-        // Smaller batch size to reduce memory usage
-        const BATCH_SIZE = 100; // Reduced from 500
-        const MAX_RETRIES = 3; // Reduced from 5
+        const BATCH_SIZE = 500;
+        const MAX_RETRIES = 3;
         const totalBatches = Math.ceil(values.length / BATCH_SIZE);
         
         logger.info(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
 
         for (let i = 0; i < totalBatches; i++) {
-            // Check circuit breaker
             if (circuitBreakerOpen) {
                 const timeSinceLastFailure = Date.now() - lastFailureTime;
                 if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN) {
-                    logger.error('Circuit breaker is open, aborting operation', { 
-                        ...context, 
-                        cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure 
-                    });
+                    logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
                     throw new Error('Circuit breaker is open due to consecutive failures');
                 } else {
                     circuitBreakerOpen = false;
@@ -328,8 +332,6 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
             
             for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
                 try {
-                    logger.debug(`Processing batch ${i + 1}/${totalBatches}, attempt ${attempt}`, batchContext);
-                    
                     await connectionManager.executeRequest(async (sheetsService) => {
                         return sheetsService.spreadsheets.values.append({
                             spreadsheetId: spreadsheetId,
@@ -342,26 +344,18 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
                     
                     logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
                     batchSuccess = true;
-                    consecutiveFailures = 0; // Reset on success
+                    consecutiveFailures = 0;
                     break;
                     
                 } catch (err) {
-                    const isRetryable = err.code === 429 || err.code === 503 || 
-                        (err.response && (err.response.status === 429 || err.response.status === 503));
+                    const isRetryable = err.code === 429 || err.code === 503 || (err.response && (err.response.status === 429 || err.response.status === 503));
                     
                     if (isRetryable && attempt < MAX_RETRIES) {
-                        const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000); // Cap at 10s
-                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { 
-                            ...batchContext, 
-                            attempt, 
-                            error: err.message 
-                        });
+                        const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000);
+                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...batchContext, attempt, error: err.message });
                         await new Promise(resolve => setTimeout(resolve, delay));
                     } else {
-                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { 
-                            ...batchContext, 
-                            error: err.message || err 
-                        });
+                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...batchContext, error: err.message || err });
                         throw err;
                     }
                 }
@@ -373,20 +367,15 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
                 
                 if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
                     circuitBreakerOpen = true;
-                    logger.error('Opening circuit breaker due to consecutive failures', { 
-                        ...context, 
-                        consecutiveFailures 
-                    });
+                    logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
                     throw new Error(`Circuit breaker opened after ${consecutiveFailures} consecutive failures`);
                 }
             }
 
-            // Memory management: force garbage collection hint and add small delay
             if (global.gc && i % 10 === 0) {
                 global.gc();
             }
             
-            // Small delay to prevent overwhelming the API and allow for memory cleanup
             if (i < totalBatches - 1) {
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
@@ -397,12 +386,122 @@ async function appendDataToSheet(spreadsheetId, sheetName, values) {
 
     } catch (err) {
         logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
-        
-        // Cleanup resources on error
         connectionManager.cleanup();
-        
         throw err;
     }
+}
+/*
+async function appendDataToSheet(spreadsheetId, sheetName, values) {
+    const context = {
+        operation: 'appendDataToSheet',
+        spreadsheetId,
+        sheetName,
+        rowsToAppend: values.length
+    };
+
+    logger.info('Starting data append to sheet', context);
+
+    if (!values || values.length === 0) {
+        logger.info('No data to append. Operation finished.', context);
+        return { status: 'success', message: 'No data to append.' };
+    }
+    
+    let consecutiveFailures = 0;
+    const MAX_CONSECUTIVE_FAILURES = 3;
+    const CIRCUIT_BREAKER_COOLDOWN = 30000;
+    let circuitBreakerOpen = false;
+    let lastFailureTime = 0;
+
+    try {
+        const BATCH_SIZE = 500; // Using larger batch size for fewer requests
+        const MAX_RETRIES = 3;
+        const totalBatches = Math.ceil(values.length / BATCH_SIZE);
+
+        logger.info(`Processing ${totalBatches} batch(es) of data`, { ...context, batchSize: BATCH_SIZE });
+
+        for (let i = 0; i < totalBatches; i++) {
+            if (circuitBreakerOpen) {
+                const timeSinceLastFailure = Date.now() - lastFailureTime;
+                if (timeSinceLastFailure < CIRCUIT_BREAKER_COOLDOWN) {
+                    logger.error('Circuit breaker is open, aborting operation', { ...context, cooldownRemaining: CIRCUIT_BREAKER_COOLDOWN - timeSinceLastFailure });
+                    throw new Error('Circuit breaker is open due to consecutive failures');
+                } else {
+                    circuitBreakerOpen = false;
+                    consecutiveFailures = 0;
+                    logger.info('Circuit breaker reset, resuming operations', context);
+                }
+            }
+
+            const startIndex = i * BATCH_SIZE;
+            const batch = values.slice(startIndex, startIndex + BATCH_SIZE);
+            const batchContext = { ...context, batchNumber: i + 1, totalBatches, batchSize: batch.length };
+
+            let batchSuccess = false;
+
+            for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+                try {
+                    await connectionManager.executeRequest(async (sheetsService) => {
+                        return sheetsService.spreadsheets.values.append({
+                            spreadsheetId: spreadsheetId,
+                            range: `${sheetName}!A1`,
+                            valueInputOption: 'USER_ENTERED',
+                            insertDataOption: 'INSERT_ROWS',
+                            resource: { values: batch },
+                        });
+                    });
+
+                    logger.info(`Successfully processed batch ${i + 1}/${totalBatches}`, batchContext);
+                    batchSuccess = true;
+                    consecutiveFailures = 0;
+                    break;
+
+                } catch (err) {
+                    const isRetryable = err.code === 429 || err.code === 503 || (err.response && (err.response.status === 429 || err.response.status === 503));
+
+                    if (isRetryable && attempt < MAX_RETRIES) {
+                        const delay = Math.min(Math.pow(2, attempt) * 1000 + Math.floor(Math.random() * 1000), 10000);
+                        logger.warn(`Retryable error on batch ${i + 1}. Retrying in ${delay}ms...`, { ...batchContext, attempt, error: err.message });
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        logger.error(`Failed to process batch ${i + 1} after ${attempt} attempts.`, { ...batchContext, error: err.message || err });
+                        throw err;
+                    }
+                }
+            }
+
+            if (!batchSuccess) {
+                consecutiveFailures++;
+                lastFailureTime = Date.now();
+
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    circuitBreakerOpen = true;
+                    logger.error('Opening circuit breaker due to consecutive failures', { ...context, consecutiveFailures });
+                    throw new Error(`Circuit breaker opened after ${consecutiveFailures} consecutive failures`);
+                }
+            }
+
+            if (global.gc && i % 10 === 0) {
+                global.gc();
+            }
+
+            if (i < totalBatches - 1) {
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+        }
+
+        logger.info('Successfully completed all batch operations', context);
+        return { status: 'success', processedBatches: totalBatches };
+
+    } catch (err) {
+        logger.error('Fatal error in appendDataToSheet', { ...context, error: err.message || err });
+        connectionManager.cleanup();
+        throw err;
+    }
+}
+*/
+async function appendDataToSheet(spreadsheetId, sheetName, values) {
+    await ensureSheetExists(spreadsheetId, sheetName);
+    return _appendInBatches(spreadsheetId, sheetName, values);
 }
 
 // Utility function to process large datasets in chunks to prevent memory issues
@@ -411,41 +510,38 @@ async function processLargeDataset(spreadsheetId, sheetName, dataSource, chunkSi
     logger.info('Starting large dataset processing', context);
 
     let processedRows = 0;
-    let chunk = [];
     
     try {
-        // If dataSource is an array, process it directly
+        // Now this only needs to call the helper, which handles all the logic.
+        await ensureSheetExists(spreadsheetId, sheetName);
+
         if (Array.isArray(dataSource)) {
             for (let i = 0; i < dataSource.length; i += chunkSize) {
                 const chunk = dataSource.slice(i, i + chunkSize);
-                await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                // We call the internal function directly since the sheet is already guaranteed to exist.
+                await _appendInBatches(spreadsheetId, sheetName, chunk);
                 processedRows += chunk.length;
-                
                 logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
-                
-                // Memory cleanup between chunks
                 if (global.gc) global.gc();
-                await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between chunks
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         } else {
-            // If dataSource is a stream or iterator, process it chunk by chunk
+            let chunk = [];
             for await (const row of dataSource) {
                 chunk.push(row);
                 
                 if (chunk.length >= chunkSize) {
-                    await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                    await _appendInBatches(spreadsheetId, sheetName, chunk);
                     processedRows += chunk.length;
                     logger.info(`Processed ${processedRows} rows so far`, { ...context, processedRows });
-                    
-                    chunk = []; // Clear the chunk to free memory
+                    chunk = [];
                     if (global.gc) global.gc();
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
             
-            // Process remaining rows
             if (chunk.length > 0) {
-                await appendDataToSheet(spreadsheetId, sheetName, chunk);
+                await _appendInBatches(spreadsheetId, sheetName, chunk);
                 processedRows += chunk.length;
             }
         }
@@ -476,17 +572,15 @@ process.on('SIGTERM', () => {
  * Safe wrapper for appendDataToSheet that handles common parameter mistakes
  */
 async function safeAppendDataToSheet(spreadsheetIdOrAuth, sheetNameOrSpreadsheetId, valuesOrSheetName, maybeValues) {
-    // Handle the old signature: appendDataToSheet(authClient, spreadsheetId, sheetName, values)
     if (arguments.length === 4 && typeof spreadsheetIdOrAuth === 'object') {
         logger.warn('Detected old function signature with authClient parameter. Please update your code.');
         return appendDataToSheet(sheetNameOrSpreadsheetId, valuesOrSheetName, maybeValues);
     }
     
-    // Handle the new signature: appendDataToSheet(spreadsheetId, sheetName, values)
     return appendDataToSheet(spreadsheetIdOrAuth, sheetNameOrSpreadsheetId, valuesOrSheetName);
 }
 
-module.exports = {   
+module.exports = {
     authorize,
     createSheet,
     clearSheetData,
