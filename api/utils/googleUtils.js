@@ -23,6 +23,8 @@ const sheetId = '1nrtx--UdBvYfB5OH2Zki5YAVc6b9olf_T_VSNNDbZng'; // dev
 
 const headers = [['施設ID', '施設名', '予約詳細ID', '日付', '部屋タイプ', '部屋番号', '予約者', 'プラン', 'ステータス', '種類', 'エージェント', '更新日時', '表示文字列']];
 
+const sheetExistsCache = new Map();
+
 // Connection pooling and rate limiting
 class SheetsConnectionManager {
     constructor() {
