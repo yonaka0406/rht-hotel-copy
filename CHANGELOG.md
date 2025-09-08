@@ -8,9 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Bugfix: Fixed WebSocket-triggered update of room indicator
-- Bugfix: Fixed sales calculation to properly exclude cancelled reservations from revenue totals by only including non-cancelled reservation details in the price sum. (Bug #52)
-- Bugfix: Fixed an issue where changing the hotel would not update the parking availability information.
 
 ---
 ## Future Releases
@@ -436,8 +433,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.12] - 2025-09-08
+
+- Bugfix: Fixed WebSocket-triggered update of room indicator
+- Bugfix: Fixed sales calculation to properly exclude cancelled reservations from revenue totals by only including non-cancelled reservation details in the price sum. (Bug #52)
+- Bugfix: Fixed an issue where changing the hotel would not update the parking availability information.
+- Feature: Added comment flag system to highlight reservations with important comments (Feature #54)
+- Feature: Added check-out date display in room indicator for better at-a-glance information (Feature #53)
+
+---
+
 ## Version History
 
+- **1.1.12** (2025-09-08) - Enhanced reservation management with comment flag system for important notes and improved room indicator with check-out date display. Fixed WebSocket updates, sales calculations for cancelled reservations, and hotel change handling for parking availability.
 - **1.1.11** (2025-09-03) - Enhanced room management with multiple plan type displays, customizable room assignment order, and partial CRM Client Impediment Tracking. Improved billing accuracy with stay date filtering and fixed CRM Actions dialog issues.
 - **1.1.10** (2025-09-01) - Added payment timing tracking, partial room cancellations, and long-term stay cancellation fee calculator. Improved reservation management and fixed various UI/UX issues.
 - **1.1.9** (2025-08-28) - Enhanced parking and reservation management with Google Drive integration, improved calendar features, and advanced search filters. Fixed date mapping in reservations and parking calendar scrolling.
