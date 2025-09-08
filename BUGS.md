@@ -5,6 +5,100 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 8, 2025
+
+#### Feature Request #58: セルフチェックイン案内済のマーク (Self-Check-in Notification Mark)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a visual indicator to show when a guest has been sent self-check-in instructions
+  - This will help staff quickly identify which guests have already received check-in information
+- **Requirements**:
+  - Add a clear, visible mark (e.g., icon or badge) next to guest names or in the reservation details
+  - The mark should be easily noticeable but not intrusive
+  - Include a tooltip or hover text indicating when the self-check-in instructions were sent
+  - Consider adding the ability to toggle this status from the reservation interface
+- **Affected Components**:
+  - Reservation list view
+  - Guest details panel
+  - Reservation details dialog
+  - Any related database fields for tracking self-check-in status
+- **Priority**: [x] Low [ ] Medium [ ] High [ ] Critical
+
+#### Bug #57: 宿泊者名簿 Name Order Consistency and Address Display
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The 宿泊者名簿 (Guest List) dialog is not consistently displaying names in the correct order (name_kanji, name_kana, name)
+  - This inconsistency can cause confusion and affect the professional appearance of exported documents
+  - Address fields for 宿泊者 (guests) are not being properly filled in the guest list
+- **Requirements**:
+  - Ensure the name fields are consistently displayed in the order: name_kanji, name_kana, name
+  - Verify the order is maintained in both the dialog display and any exported files
+  - Add input validation to prevent empty or incorrectly formatted names
+  - Update any related tooltips or help text to clarify the expected name format
+  - Ensure all address fields (postal_code, address1, address2, city, prefecture, country) are properly included in the guest list
+  - Validate that address information is correctly mapped from the guest profile to the guest list
+- **Affected Components**:
+  - Guest List dialog component
+  - Name and address display components in the reservation interface
+  - Any related export functionality for guest lists
+  - Guest profile data mapping logic
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Bug #53: 宿泊者名簿 Should Use payment_timing Field for 現地決済
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The 宿泊者名簿 (Guest List) dialog's 現地決済 (On-site Payment) field should be determined by the `payment_timing` field from the reservations table
+  - Currently, the payment timing information is not being properly reflected in the guest list dialog
+- **Affected Component**: 
+  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+
+#### Feature Request #56: Room Indicator 平日/土日 プラン表記
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add visual indicators to room displays showing whether the current rate is based on 平日 (weekday) or 土日 (weekend/holiday) pricing
+  - This will help staff quickly identify which rate plan is being applied to each room
+- **Requirements**:
+  - Add clear visual indicators (e.g., "平日" or "土日") next to or as part of the room rate display
+  - Consider using different colors or icons to distinguish between weekday and weekend rates
+  - Ensure the indicator is visible but not overwhelming in the room display
+  - Update any relevant tooltips or hover states to include rate plan information
+- **Affected Components**:
+  - Room indicator component(s) in the reservation/room management interface
+  - Rate display components
+  - Any related styling for rate displays
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #55: Display Booker and Client in Room Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Enhance the room indicator to show both the booker's name and the client's name who is staying in the room
+  - This will help staff quickly identify both who made the booking and who is actually staying in the room
+- **Requirements**:
+  - Update the room indicator UI to accommodate both names
+  - Consider using a format like "Booker: [Name] | Guest: [Name]" or similar
+  - Ensure the text remains readable in the available space
+  - Add tooltips for full names if truncated
+- **Affected Components**:
+  - Room indicator component(s) in the reservation/room management interface
+  - Any related styling for the room indicators
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #54: 団体用名簿 (Group Guest List) Export
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add functionality to generate a single guest list file for all rooms in a reservation at once
+  - This will be particularly useful for group reservations where multiple rooms are booked under the same reservation
+- **Requirements**:
+  - Create a new "Export Group Guest List" button/option in the reservation interface
+  - Combine guest information from all rooms in the reservation into a single file
+  - Include all necessary guest details in the exported file
+  - Support common export formats (PDF, Excel, CSV)
+- **Affected Component**:
+  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
+  - Backend API endpoints for guest list generation
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 5, 2025
 
 #### Feature Request #52: Slack Integration for Reservation Updates
@@ -65,7 +159,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Feature Request #50: Enhanced Calendar View for Client Visualization
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
+- **Description**: 
   - The current calendar view can be difficult to read when a single client has multiple or consecutive bookings.
   - The goal is to improve the visual representation of these bookings to be more like an existing Google Sheet view, which is clearer.
 - **Suggested approaches**:
@@ -323,6 +417,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 5, 2025*
-*Total Bugs: 0* (last one #48)
-*Total Feature Requests: 16* (last one #54)
+*Last Updated: September 8, 2025*
+*Total Bugs: 1* (last one #57)
+*Total Feature Requests: 20* (last one #58)
