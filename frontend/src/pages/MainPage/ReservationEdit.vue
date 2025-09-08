@@ -1,175 +1,173 @@
 <template>
-    <!-- Top Panel -->
-    <Card class="m-2">
-        <template #title>予約編集</template>
-        <template #content>
-            <ReservationPanel 
-                v-if="reservationId && reservation_details"
-                :reservation_id="reservationId"
-                :reservation_details="reservation_details"                    
-            />
-        </template>  
-    </Card>
-    
-     <div v-if="reservationStatus !== 'block'">
-        <!-- Rooms Data component-->
+    <div v-if="initialLoad" class="flex justify-center">
+        <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent" animationDuration=".5s"
+            aria-label="Loading" />
+    </div>
+    <div v-else>
+        <!-- Top Panel -->
         <Card class="m-2">
-            <template #title>部屋</template>
+            <template #title>予約編集</template>
             <template #content>
-                <ReservationRoomsView 
-                    v-if="reservation_details"
-                    :reservation_details="reservation_details"                    
-                />
-            </template>            
-        </Card>
-
-        <!-- Parking Data component-->
-        <Card class="m-2">
-            <template #title>駐車場</template>
-            <template #content>
-                <ReservationParking
-                    v-if="reservation_details"
-                    :reservation-details="reservation_details"
-                    :parking-reservations="parking_reservations || []"                    
-                />            
+                <ReservationPanel v-if="reservationId && reservation_details" :reservation_id="reservationId"
+                    :reservation_details="reservation_details" />
             </template>
         </Card>
 
-        <!-- Payments Data component-->
-        <Card class="m-2">
-            <template #title>清算</template>
-            <template #content>
-                <ReservationPayments
-                    v-if="reservation_details && reservation_payments"
-                    :reservation_details="reservation_details"
-                    :reservation_payments="reservation_payments"
-                />            
-            </template>
-        </Card>
+        <div v-if="reservationStatus !== 'block'">
+            <!-- Rooms Data component-->
+            <Card class="m-2">
+                <template #title>部屋</template>
+                <template #content>
+                    <ReservationRoomsView v-if="reservation_details" :reservation_details="reservation_details" />
+                </template>
+            </Card>
+
+            <!-- Parking Data component-->
+            <Card class="m-2">
+                <template #title>駐車場</template>
+                <template #content>
+                    <ReservationParking v-if="reservation_details" :reservation-details="reservation_details"
+                        :parking-reservations="parking_reservations || []" />
+                </template>
+            </Card>
+
+            <!-- Payments Data component-->
+            <Card class="m-2">
+                <template #title>清算</template>
+                <template #content>
+                    <ReservationPayments v-if="reservation_details && reservation_payments"
+                        :reservation_details="reservation_details" :reservation_payments="reservation_payments" />
+                </template>
+            </Card>
+        </div>
     </div>
 </template>
 
 <script setup>
-    // Vue
-    import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
+// Vue
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 
-    import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
-    import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
-    import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
-    import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
+import ReservationPanel from '@/pages/MainPage/components/ReservationPanel.vue';
+import ReservationRoomsView from '@/pages/MainPage/components/ReservationRoomsView.vue';
+import ReservationPayments from '@/pages/MainPage/components/ReservationPayments.vue';
+import ReservationParking from '@/pages/MainPage/components/ReservationParking.vue';
 
-    const props = defineProps({
-        reservation_id: {
-            type: String,
-            required: true,
-        },
-        room_id: {
-            type: [String, Number],
-            required: false,
-            default: null,
-        },
+const props = defineProps({
+    reservation_id: {
+        type: String,
+        required: true,
+    },
+    room_id: {
+        type: [String, Number],
+        required: false,
+        default: null,
+    },
+});
+
+// Websocket
+import { io } from 'socket.io-client';
+const socket = ref(null);
+
+// Stores
+import { useReservationStore } from '@/composables/useReservationStore';
+const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
+import { useParkingStore } from '@/composables/useParkingStore';
+const { fetchParkingReservations } = useParkingStore();
+
+// Primevue
+import { Card } from 'primevue';
+import { ProgressSpinner } from 'primevue';
+
+const reservationStatus = ref(null);
+const reservation_details = ref(null);
+const reservation_payments = ref(null);
+const parking_reservations = ref([]);
+const initialLoad = ref(false);
+
+/**
+ * ✨ Centralized data fetching function.
+ * This single function fetches all necessary data for the reservation,
+ * preventing logic duplication across watchers and event handlers.
+ */
+const fetchAllReservationData = async () => {
+    if (!reservationId.value) return;
+    if (reservationIsUpdating.value) {
+        //console.log('[ReservationEdit] Skipping fetch: update in progress.');
+        return;
+    }
+
+    try {
+        //console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`);
+        await fetchReservation(reservationId.value);
+
+        if (reservationDetails.value?.reservation?.[0]) {
+            const details = reservationDetails.value.reservation[0];
+            reservation_details.value = reservationDetails.value.reservation;
+            reservationStatus.value = details.status;
+
+            const pmtData = await fetchReservationPayments(details.hotel_id, details.reservation_id);
+            reservation_payments.value = pmtData?.payments || [];
+
+            const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
+            parking_reservations.value = parkData || [];
+        } else {
+            //console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`);
+            // Reset state if no reservation data is found
+            reservation_details.value = [];
+            reservation_payments.value = [];
+            parking_reservations.value = [];
+            reservationStatus.value = null;
+        }
+    } catch (error) {
+        console.error("[ReservationEdit] Failed to fetch all reservation data:", error);
+    }
+};
+
+// Lifecycle Hooks
+onMounted(async () => {
+    initialLoad.value = true;
+    await setReservationId(props.reservation_id);
+    await fetchAllReservationData();
+    initialLoad.value = false;
+
+    socket.value = io(import.meta.env.VITE_BACKEND_URL);
+
+    socket.value.on('connect', () => {
+        //console.log('✅ [WebSocket] Connected to server.');
     });
 
-    // Websocket
-    import { io } from 'socket.io-client';
-    const socket = ref(null);
+    //console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".');
 
-    // Stores
-    import { useReservationStore } from '@/composables/useReservationStore';
-    const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
-    import { useParkingStore } from '@/composables/useParkingStore';    
-    const { fetchParkingReservations } = useParkingStore();
-    
-    // Primevue
-    import { Card } from 'primevue';
-        
-    const reservationStatus = ref(null);    
-    const reservation_details = ref(null);
-    const reservation_payments = ref(null);
-    const parking_reservations = ref([]);
+    // Listen for a SPECIFIC event, not a generic one
+    socket.value.on('tableUpdate', (data) => {
+        // This will now trigger on ANY 'tableUpdate' event from the server.
+        //console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
+        fetchAllReservationData();
+    });
+});
 
-    /**
-     * ✨ Centralized data fetching function.
-     * This single function fetches all necessary data for the reservation,
-     * preventing logic duplication across watchers and event handlers.
-     */
-    const fetchAllReservationData = async () => {
-        if (!reservationId.value) return;
-        if (reservationIsUpdating.value) {
-            //console.log('[ReservationEdit] Skipping fetch: update in progress.');
-            return;
-        }
+onUnmounted(() => {
+    if (socket.value) {
+        //console.log('[ReservationEdit] Disconnecting WebSocket.');
+        socket.value.disconnect();
+    }
+});
 
-        try {
-            //console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`);
-            await fetchReservation(reservationId.value);
+// Watchers now simply call the centralized function
+watch(reservationIsUpdating, (isUpdating) => {
+    if (isUpdating === false) {
+        //console.log('[Watcher] reservationIsUpdating is now false. Refetching data.');
+        fetchAllReservationData();
+    }
+});
 
-            if (reservationDetails.value?.reservation?.[0]) {
-                const details = reservationDetails.value.reservation[0];
-                reservation_details.value = reservationDetails.value.reservation;
-                reservationStatus.value = details.status;
-
-                const pmtData = await fetchReservationPayments(details.hotel_id, details.reservation_id);
-                reservation_payments.value = pmtData?.payments || [];
-                
-                const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
-                parking_reservations.value = parkData || [];
-            } else {
-                //console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`);
-                // Reset state if no reservation data is found
-                reservation_details.value = [];
-                reservation_payments.value = [];
-                parking_reservations.value = [];
-                reservationStatus.value = null;
-            }
-        } catch (error) {
-            console.error("[ReservationEdit] Failed to fetch all reservation data:", error);
-        }
-    };
-
-    // Lifecycle Hooks
-    onMounted(async () => {
-        await setReservationId(props.reservation_id);
+watch(() => props.reservation_id, async (newId) => {
+    if (newId) {
+        //console.log(`[Watcher] props.reservation_id changed to ${newId}. Refetching data.`);
+        await setReservationId(newId);
         await fetchAllReservationData();
-
-        socket.value = io(import.meta.env.VITE_BACKEND_URL);
-
-        socket.value.on('connect', () => {
-            //console.log('✅ [WebSocket] Connected to server.');
-        });
-
-        //console.log('[ReservationEdit] Setting up WebSocket listener for "tableUpdate".');
-
-        // Listen for a SPECIFIC event, not a generic one
-        socket.value.on('tableUpdate', (data) => {
-            // This will now trigger on ANY 'tableUpdate' event from the server.
-            //console.log('📬 [WebSocket] Generic "tableUpdate" event received. Refetching all data as requested.');
-            fetchAllReservationData();
-        });
-    });
-
-    onUnmounted(() => {
-        if (socket.value) {
-            //console.log('[ReservationEdit] Disconnecting WebSocket.');
-            socket.value.disconnect();
-        }
-    });
-
-    // Watchers now simply call the centralized function
-    watch(reservationIsUpdating, (isUpdating) => {
-        if (isUpdating === false) {
-            //console.log('[Watcher] reservationIsUpdating is now false. Refetching data.');
-            fetchAllReservationData();
-        }
-    });
-
-    watch(() => props.reservation_id, async (newId) => {
-        if (newId) {
-            //console.log(`[Watcher] props.reservation_id changed to ${newId}. Refetching data.`);
-            await setReservationId(newId);
-            await fetchAllReservationData();
-        }
-    });
+    }
+});
 /*
     // Helper function to fetch parking data
     const fetchParkingData = async (hotelId, reservationId) => {
@@ -292,5 +290,4 @@
 */
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>
