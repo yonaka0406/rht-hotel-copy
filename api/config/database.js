@@ -4,17 +4,36 @@ const { Pool } = require('pg');
 const url = require('url');
 const logger = require('./logger'); // Use Winston logger
 
-// Create both pools
-const pool = new Pool({
-  user: process.env.PG_USER,
-  host: process.env.PG_HOST,
-  database: process.env.PG_DATABASE,
-  password: process.env.PG_PASSWORD,
-  port: process.env.PG_PORT,
-  max: 50,
-  idleTimeoutMillis: 2000,
-  connectionTimeoutMillis: 2000,
-});
+let pool;
+
+if (process.env.NODE_ENV === 'localhost') {
+  // Supabase connection for localhost environment
+  pool = new Pool({
+    user: process.env.SUPABASE_USER,
+    host: process.env.SUPABASE_HOST,
+    database: process.env.SUPABASE_DATABASE,
+    password: process.env.SUPABASE_PASSWORD,
+    port: process.env.SUPABASE_PORT,
+    max: 50,
+    idleTimeoutMillis: 2000,
+    connectionTimeoutMillis: 2000,
+  });
+  console.log('Connecting to Supabase database for localhost environment.');
+} else {
+  // Default pool for other environments (e.g., development)
+  pool = new Pool({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+    max: 50,
+    idleTimeoutMillis: 2000,
+    connectionTimeoutMillis: 2000,
+  });
+  console.log('Connecting to local PostgreSQL database.');
+}
+
 
 const prodPool = new Pool({
   user: process.env.PG_USER,
@@ -191,4 +210,4 @@ module.exports = {
   getEnvironment,
   setupRequestContext,
   isDomainProduction
-}; 
+};
