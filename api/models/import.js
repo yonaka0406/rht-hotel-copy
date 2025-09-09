@@ -101,7 +101,7 @@ const insertYadomasterClients = async (requestId, clients) => {
         for (const c of clients) {
             const { name, nameKana, nameKanji } = await processNameString(c.name); // Still process names individually
 
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
             values.push(
                 c.id,
                 name,
@@ -110,13 +110,14 @@ const insertYadomasterClients = async (requestId, clients) => {
                 c.legal_or_natural_person,
                 c.gender,
                 c.phone,
-                c.created_by
+                c.created_by,
+                'Imported from Yadomaster'
             );
         }
 
         const query = `
             INSERT INTO clients (
-                id, name, name_kana, name_kanji, legal_or_natural_person, gender, phone, created_by
+                id, name, name_kana, name_kanji, legal_or_natural_person, gender, phone, created_by, comment
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
