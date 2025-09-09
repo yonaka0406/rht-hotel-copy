@@ -101,7 +101,7 @@ const insertYadomasterClients = async (requestId, clients) => {
         for (const c of clients) {
             const { name, nameKana, nameKanji } = await processNameString(c.name); // Still process names individually
 
-            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 c.id,
                 name,
@@ -152,7 +152,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         let valueIndex = 1;
 
         for (const reservation of reservations) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 reservation.id,
                 reservation.hotel_id,
@@ -207,7 +207,7 @@ const insertYadomasterDetails = async (requestId, details) => {
         let valueIndex = 1;
 
         for (const detail of details) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 detail.id,
                 detail.hotel_id,
@@ -263,7 +263,7 @@ const insertYadomasterPayments = async (requestId, payments) => {
         let valueIndex = 1;
 
         for (const payment of payments) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 payment.hotel_id,
                 payment.reservation_id,
@@ -314,7 +314,7 @@ const insertYadomasterAddons = async (requestId, addons) => {
         let valueIndex = 1;
 
         for (const addon of addons) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, 3, 0.1, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, 3, 0.1, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 addon.hotel_id,
                 addon.reservation_detail_id,
@@ -364,7 +364,7 @@ const insertYadomasterRates = async (requestId, rates) => {
         let valueIndex = 1;
 
         for (const rate of rates) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 rate.hotel_id,
                 rate.reservation_details_id,
