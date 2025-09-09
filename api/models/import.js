@@ -101,7 +101,7 @@ const insertYadomasterClients = async (requestId, clients) => {
         for (const c of clients) {
             const { name, nameKana, nameKanji } = await processNameString(c.name); // Still process names individually
 
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 c.id,
                 name,
@@ -110,13 +110,14 @@ const insertYadomasterClients = async (requestId, clients) => {
                 c.legal_or_natural_person,
                 c.gender,
                 c.phone,
-                c.created_by
+                c.created_by,
+                'Imported from Yadomaster'
             );
         }
 
         const query = `
             INSERT INTO clients (
-                id, name, name_kana, name_kanji, legal_or_natural_person, gender, phone, created_by
+                id, name, name_kana, name_kanji, legal_or_natural_person, gender, phone, created_by, comment
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
 
@@ -151,10 +152,10 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         let valueIndex = 1;
 
         for (const reservation of reservations) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
+                parseInt(reservation.hotel_id, 10),
                 reservation.id,
-                reservation.hotel_id,
                 reservation.reservation_client_id,
                 reservation.check_in,
                 reservation.check_in_time,
@@ -170,7 +171,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
 
         const query = `
             INSERT INTO reservations (
-                id, hotel_id, reservation_client_id, check_in, check_in_time, check_out, number_of_people, status, type, agent, comment, 
+                hotel_id, id, reservation_client_id, check_in, check_in_time, check_out, number_of_people, status, type, agent, comment, 
                 created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
@@ -206,10 +207,10 @@ const insertYadomasterDetails = async (requestId, details) => {
         let valueIndex = 1;
 
         for (const detail of details) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
+                parseInt(detail.hotel_id, 10),
                 detail.id,
-                detail.hotel_id,
                 detail.reservation_id,
                 detail.date,
                 detail.room_id,
@@ -226,7 +227,7 @@ const insertYadomasterDetails = async (requestId, details) => {
 
         const query = `
             INSERT INTO reservation_details (
-                id, hotel_id, reservation_id, date, room_id, 
+                hotel_id, id, reservation_id, date, room_id, 
                 number_of_people, plans_global_id, plans_hotel_id, plan_name, price, cancelled, 
                 billable, created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
@@ -262,9 +263,9 @@ const insertYadomasterPayments = async (requestId, payments) => {
         let valueIndex = 1;
 
         for (const payment of payments) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
-                payment.hotel_id,
+                parseInt(payment.hotel_id, 10),
                 payment.reservation_id,
                 payment.date,
                 payment.room_id,
@@ -313,9 +314,9 @@ const insertYadomasterAddons = async (requestId, addons) => {
         let valueIndex = 1;
 
         for (const addon of addons) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, 3, 0.1, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, 3, 0.1, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
-                addon.hotel_id,
+                parseInt(addon.hotel_id, 10),
                 addon.reservation_detail_id,
                 addon.addons_global_id,
                 addon.addons_hotel_id,
@@ -363,9 +364,9 @@ const insertYadomasterRates = async (requestId, rates) => {
         let valueIndex = 1;
 
         for (const rate of rates) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
-                rate.hotel_id,
+                parseInt(rate.hotel_id, 10),
                 rate.reservation_details_id,
                 rate.adjustment_value,
                 rate.tax_type_id,

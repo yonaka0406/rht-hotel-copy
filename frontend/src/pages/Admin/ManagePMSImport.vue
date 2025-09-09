@@ -328,10 +328,24 @@
             };
         }
 
+        // Deduplicate rows based on reservation number, date, room, and 分類, but only for '宿泊' entries
+        const seenAccommodationKeys = new Set();
+        const deduplicatedData = parsedCsvData.value.filter(row => {
+            if (row['分類'] === '宿泊') {
+                const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}-${row['分類']}`;
+                if (seenAccommodationKeys.has(key)) {
+                    return false; // Duplicate '宿泊' entry, discard
+                }
+                seenAccommodationKeys.add(key);
+            }
+            // For '宿泊' entries, if not seen, or for non-'宿泊' entries, always keep
+            return true;
+        });
+
         // Extract the required fields and remove duplicates
         const uniqueReservations = new Map();
 
-        parsedCsvData.value.forEach((row) => {
+        deduplicatedData.forEach((row) => {
             const reservationNumber = row['予約番号'] * 1;
             const checkInDate = row['チェックイン日'];
             const checkOutDate = row['チェックアウト日'];
@@ -379,7 +393,7 @@
             }
 
             // Min and Max dates
-            const currentReservation = uniqueReservations.get(reservationKey);            
+            const currentReservation = uniqueReservations.get(reservationKey);
             if (new Date(stayDate) < new Date(currentReservation.min宿泊日)) {
                 currentReservation.min宿泊日 = stayDate;  // Update to the earlier date
             }            
@@ -412,7 +426,7 @@
                             numberOfPeople: row['数量'],
                             planName: row['商品名漢字'],
                             price: row['単価'],
-                            cancelled: row['分類'] === 'キャンセル料',                        
+                            cancelled: row['分類'] === 'キャンセル料',
                         });
                     }
                     // Add to payments
@@ -486,7 +500,7 @@
             totalReservations,
             willImportCount,
             willNotImportCount,
-            totalCsvRows: parsedCsvData.value.length
+            totalCsvRows: deduplicatedData.length
         };
     });
     const yadomasterReservationsSQL = computed (() => {

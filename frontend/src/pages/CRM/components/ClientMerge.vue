@@ -103,7 +103,7 @@
             </template>
         </Card>
         <div class="flex justify-center items-center mt-4">
-            <Button @click="saveChanges()" severity="warn" class="p-button p-button-sm ">
+            <Button @click="saveChanges()" severity="warn" class="p-button p-button-sm " :disabled="isMerging">
                 <i class="pi pi-pencil mr-2"></i>顧客合流
             </Button>
         </div>
@@ -113,12 +113,15 @@
 
 <script setup>
 // Vue
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, defineEmits } from 'vue';
+import { useToast } from 'primevue/usetoast';
 
 const props = defineProps({
     oldID: String,
     newID: String
 });
+
+const emit = defineEmits(['close']);
 
 // Store
 import { useClientStore } from '@/composables/useClientStore';
@@ -131,6 +134,8 @@ import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import Divider from 'primevue/divider';
 
+const toast = useToast();
+const isMerging = ref(false);
 const oldClientData = ref(null);
 const newClientData = ref(null);
 const oldClient = ref(null);
@@ -219,18 +224,28 @@ const combinedAddresses = computed(() => {
 watch(() => [props.oldID, props.newID], fetchData, { immediate: true });
 
 const saveChanges = async () => {
+    isMerging.value = true;
     const payload = {
         mergedFields: mergedClient.value,
         addressIdsToKeep: selectedAddresses.value
     };
 
-    await mergeClientsCRM(props.newID, props.oldID, payload);
+    try {
+        await mergeClientsCRM(props.newID, props.oldID, payload);
 
-    setClientsIsLoading(true);
-    const clientsTotalPages = await fetchClients(1);
-    for (let page = 2; page <= clientsTotalPages; page++) {
-        await fetchClients(page);
+        setClientsIsLoading(true);
+        const clientsTotalPages = await fetchClients(1);
+        for (let page = 2; page <= clientsTotalPages; page++) {
+            await fetchClients(page);
+        }
+        setClientsIsLoading(false);
+
+        toast.add({ severity: 'success', summary: '成功', detail: '顧客合流が完了しました。', life: 3000 });
+        emit('close');
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'エラー', detail: '顧客合流に失敗しました。', life: 3000 });
+    } finally {
+        isMerging.value = false;
     }
-    setClientsIsLoading(false);
 };
 </script>

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Added toast notifications for better user feedback during client merge operations in CRM
+- Enhanced Yadomaster data import with better data validation and error handling
 
 ---
 ## Future Releases
@@ -459,7 +461,7 @@ This marks the first stable release of the comprehensive Hotel Management System
 - **1.1.1** (2025-08-12) - Fixed addon selection without plan, added OTA Queue Table, and resolved issues with billable status and Google Drive link navigation.
 - **1.1.0** (2025-08-04) - Refactored client reservation dialog for better maintainability. Enhanced OTA reservation handling with transaction support and Japanese UI improvements. Added hotel display ordering and calendar temp block functionality.
 - **1.0.7** (2025-07-29) - Fixed issues with reservation management UI and calendar navigation. Improved employee reservation handling and room indicator filtering. Added Japanese error notifications for better user feedback.
-- **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target.
+- **1.0.6** (2025-07-28) - Fixed frontend plan rate calculations and reservation calendar date updates. Optimized build process for low-memory VPS environments by disabling minification and source maps, implementing smart chunking, and using ES2015 target to reduce memory usage during frontend builds.
 - **1.0.5** (2025-07-23) - OTA reservations are now wrapped in a transaction to prevent duplicate bookings when processing multiple requests simultaneously. Addon quantity calculation now correctly uses the number of people per room instead of the total reservation people, fixing incorrect addon counts for multi-room bookings.
 - **1.0.4** (2025-07-17) - Added reservation copy function, calendar UI/UX improvements, bugfixes for client/edit/addon/meal exports, and new calendar legend.
 - **1.0.3** (2025-07-16) - Added comprehensive About/FAQ system with searchable help documentation and enhanced codebase documentation.
