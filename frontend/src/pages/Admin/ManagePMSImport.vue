@@ -328,10 +328,25 @@
             };
         }
 
+        // Filter out rows with the same reservation number, date, room, and 分類 === '宿泊'
+        const keyCounts = parsedCsvData.value.reduce((acc, row) => {
+            const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}`;
+            acc[key] = (acc[key] || 0) + 1;
+            return acc;
+        }, {});
+
+        const filteredData = parsedCsvData.value.filter(row => {
+            const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}`;
+            if (keyCounts[key] > 1 && row['分類'] === '宿泊') {
+                return false; // Discard this row
+            }
+            return true; // Keep this row
+        });
+
         // Extract the required fields and remove duplicates
         const uniqueReservations = new Map();
 
-        parsedCsvData.value.forEach((row) => {
+        filteredData.forEach((row) => {
             const reservationNumber = row['予約番号'] * 1;
             const checkInDate = row['チェックイン日'];
             const checkOutDate = row['チェックアウト日'];
@@ -379,7 +394,7 @@
             }
 
             // Min and Max dates
-            const currentReservation = uniqueReservations.get(reservationKey);            
+            const currentReservation = uniqueReservations.get(reservationKey);
             if (new Date(stayDate) < new Date(currentReservation.min宿泊日)) {
                 currentReservation.min宿泊日 = stayDate;  // Update to the earlier date
             }            
@@ -412,7 +427,7 @@
                             numberOfPeople: row['数量'],
                             planName: row['商品名漢字'],
                             price: row['単価'],
-                            cancelled: row['分類'] === 'キャンセル料',                        
+                            cancelled: row['分類'] === 'キャンセル料',
                         });
                     }
                     // Add to payments
@@ -486,7 +501,7 @@
             totalReservations,
             willImportCount,
             willNotImportCount,
-            totalCsvRows: parsedCsvData.value.length
+            totalCsvRows: filteredData.length
         };
     });
     const yadomasterReservationsSQL = computed (() => {
