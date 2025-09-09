@@ -495,8 +495,8 @@
                 clients: [],
                 reservations: [],
                 reservation_details: [],
-                reservation_payments: [],                
                 reservation_addons: [],                
+                reservation_payments: [],                
                 reservation_rates: [],
             };
         }
@@ -582,22 +582,8 @@
             });
     
             //reservation_details table  
-            const detailsMap = new Map();
-            const uniqueDetails = [];
-            
-            // First pass: Filter out duplicate room-date combinations with the same type (宿泊/キャンセル料)
+            const detailsMap = new Map();          
             reservation.details.forEach(detail => {
-                const detailKey = `${detail.roomNumber}-${detail.date}-${detail.cancelled ? 'cancelled' : 'stay'}`;
-                if (!detailsMap.has(detailKey)) {
-                    detailsMap.set(detailKey, true);
-                    uniqueDetails.push(detail);
-                } else {
-                    console.warn(`Skipping duplicate detail for reservation ${reservation.予約番号}, room ${detail.roomNumber}, date ${detail.date}, type: ${detail.cancelled ? 'キャンセル料' : '宿泊'}`);
-                }
-            });
-
-            // Process only unique details
-            uniqueDetails.forEach(detail => {
                 const detailId = uuidv4();
 
                 reservation_details.push({
