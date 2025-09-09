@@ -33,15 +33,46 @@ This directory contains the backend API for the Hotel Management System. It is a
 
 ## Setup and Installation
 
-1.  **Navigate to the API directory:**
+1.  **Prerequisites:**
+    *   Node.js (v14 or later)
+    *   PostgreSQL (v12 or later)
+    *   Redis (v6 or later)
+    *   npm or yarn package manager
+
+2.  **Supabase Setup (Windows):**
+    ```powershell
+    # Install Scoop (Windows package manager) if not already installed
+    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+    irm get.scoop.sh | iex
+
+    # Install Supabase CLI
+    scoop install supabase
+
+    # Verify installation
+    supabase --version
+
+    # Login to your Supabase account
+    supabase login
+
+    # Link your project (replace <your-project-ref> with your actual project reference)
+    supabase link --project-ref <your-project-ref>
+    ```
+
+3.  **Database Restoration:**
+    ```powershell
+    # Restore database from dump (replace placeholders with your actual values)
+    pg_restore --clean --if-exists --no-owner --no-acl -d "<your-database-connection-string>" "docker-entrypoint-initdb.d\wehub-backup.dump"
+    ```
+
+4.  **Navigate to the API directory:**
     ```bash
     cd api
     ```
-2.  **Install dependencies:**
+5.  **Install dependencies:**
     ```bash
     npm install
     ```
-3.  **Database Setup:**
+6.  **Database Setup:**
     *   Ensure you have a running PostgreSQL instance.
     *   Create a database for the application (e.g., `hotel_system_db`).
     *   Connect to your database and execute the SQL migration scripts located in the `api/migrations/` directory.
@@ -61,7 +92,7 @@ This directory contains the backend API for the Hotel Management System. It is a
         12. `012_triggers.sql` (Attaches log triggers and other custom triggers)
         13. `013_waitlist.sql` ✅ **NEW** - Waitlist system database schema and functions
     *   **Note on Google Authentication:** The `LOGIN_WITH_GOOGLE.md` guide might mention a `migration_script.sql`. This is now superseded by the numbered migration files. Ensure all Google Auth related fields (e.g., in the `users` table) are correctly defined within `001_initial_schema.sql` or other relevant early migration files.
-4.  **Environment Variables:**
+7.  **Environment Variables:**
     *   Create a `.env` file in the `api` directory (i.e., `api/.env`).
     *   Populate the `.env` file with the following variables, adjusting values as necessary. Refer to `config/database.js`, `config/oauth.js`, `config/redis.js`, `config/session.js`, and `utils/emailUtils.js` for more context on their usage.
 
@@ -102,7 +133,7 @@ This directory contains the backend API for the Hotel Management System. It is a
         **TL-Lincoln Integration (OTA):**
         *   `XML_SYSTEM_ID`: Your system's unique identifier provided by TL-Lincoln.
         *   `XML_REQUEST_URL`: The base URL for the TL-Lincoln API (e.g., `https://www.tl-lincoln.net/pmsservice/V1/`).
-5.  **Start the server:**
+8.  **Start the server:**
     *   For development (with automatic restarts via Nodemon):
         ```bash
         npm run dev
