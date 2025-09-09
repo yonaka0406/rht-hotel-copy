@@ -4,8 +4,8 @@
     "private": true,
     "scripts": {
         "build": "npm run build:frontend",
-        "build:frontend": "npm --prefix frontend run build -- --mode production",        
-        "build:frontend:dev": "npm --prefix frontend run build:dev",     
+        "build:frontend": "npm --prefix frontend run build -- --mode production",
+        "build:frontend:dev": "npm --prefix frontend run build:dev",
         "deploy:frontend:test": "sudo rm -rf /var/www/test.wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/test.wehub.work/dist/",
         "deploy:frontend:prod": "sudo rm -rf /var/www/wehub.work/dist/* && sudo cp -r frontend/dist/* /var/www/wehub.work/dist/",
         "stop:apache": "sudo systemctl stop apache2",
@@ -35,7 +35,8 @@
         "validate:docs": "node scripts/validate-all-docs.js"
     },
     "devDependencies": {
-        "concurrently": "^9.2.0"
+        "concurrently": "^9.2.0",
+        "supabase": "^2.39.2"
     },
     "dependencies": {
         "dotenv": "^17.2.0",
