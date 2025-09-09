@@ -328,25 +328,24 @@
             };
         }
 
-        // Filter out rows with the same reservation number, date, room, and 分類 === '宿泊'
-        const keyCounts = parsedCsvData.value.reduce((acc, row) => {
-            const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}`;
-            acc[key] = (acc[key] || 0) + 1;
-            return acc;
-        }, {});
-
-        const filteredData = parsedCsvData.value.filter(row => {
-            const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}`;
-            if (keyCounts[key] > 1 && row['分類'] === '宿泊') {
-                return false; // Discard this row
+        // Deduplicate rows based on reservation number, date, room, and 分類, but only for '宿泊' entries
+        const seenAccommodationKeys = new Set();
+        const deduplicatedData = parsedCsvData.value.filter(row => {
+            if (row['分類'] === '宿泊') {
+                const key = `${row['予約番号']}-${row['宿泊日']}-${row['部屋番号']}-${row['分類']}`;
+                if (seenAccommodationKeys.has(key)) {
+                    return false; // Duplicate '宿泊' entry, discard
+                }
+                seenAccommodationKeys.add(key);
             }
-            return true; // Keep this row
+            // For '宿泊' entries, if not seen, or for non-'宿泊' entries, always keep
+            return true;
         });
 
         // Extract the required fields and remove duplicates
         const uniqueReservations = new Map();
 
-        filteredData.forEach((row) => {
+        deduplicatedData.forEach((row) => {
             const reservationNumber = row['予約番号'] * 1;
             const checkInDate = row['チェックイン日'];
             const checkOutDate = row['チェックアウト日'];
@@ -501,7 +500,7 @@
             totalReservations,
             willImportCount,
             willNotImportCount,
-            totalCsvRows: filteredData.length
+            totalCsvRows: deduplicatedData.length
         };
     });
     const yadomasterReservationsSQL = computed (() => {
