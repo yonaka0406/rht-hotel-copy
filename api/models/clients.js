@@ -931,17 +931,16 @@ async function mergeClientData(requestId, oldClientId, newClientId, mergedFields
     // 1. Update the primary client's data
     const updateQuery = `
       UPDATE clients SET
-        name = $1, name_kana = $2, name_kanji = $3, date_of_birth = $4, legal_or_natural_person = $5,
-        gender = $6, email = $7, phone = $8, fax = $9, customer_id = $10, website = $11,
-        billing_preference = $12, comment = $13, updated_by = $14
-      WHERE id = $15
+        name = $1, name_kana = $2, name_kanji = $3, date_of_birth = $4, 
+        legal_or_natural_person = $5, gender = $6, email = $7, phone = $8, 
+        fax = $9, updated_by = $10
+      WHERE id = $11
       RETURNING *;
     `;
     const values = [
       mergedFields.name, mergedFields.name_kana, mergedFields.name_kanji, mergedFields.date_of_birth,
       mergedFields.legal_or_natural_person, mergedFields.gender, mergedFields.email, mergedFields.phone,
-      mergedFields.fax, mergedFields.customer_id, mergedFields.website, mergedFields.billing_preference,
-      mergedFields.comment, userId, newClientId
+      mergedFields.fax, userId, newClientId
     ];
     await client.query(updateQuery, values);
 
