@@ -99,7 +99,7 @@
 
     <Drawer v-model:visible="showDrawer" class="dark:bg-gray-800 dark:text-gray-200" modal :position="'bottom'"
         :style="{ height: '75vh' }" closable>
-        <ClientMerge :newID="drawerProps.newClientId" :oldID="drawerProps.oldClientId" />
+        <ClientMerge :newID="drawerProps.newClientId" :oldID="drawerProps.oldClientId" @close="handleMergeClose" />
     </Drawer>
 </template>
 
@@ -286,6 +286,10 @@ const mergeClients = (oldId) => {
     const newClientId = pair.earliest.id;
     showDrawer.value = true;
     drawerProps.value = { oldClientId: oldId, newClientId };
+};
+
+const handleMergeClose = () => {
+    showDrawer.value = false;
 };
 
 </script>
