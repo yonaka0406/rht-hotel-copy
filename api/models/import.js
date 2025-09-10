@@ -152,7 +152,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         let valueIndex = 1;
 
         for (const reservation of reservations) {
-            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}::uuid, ${valueIndex++}::uuid, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
+            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
             values.push(
                 parseInt(reservation.hotel_id, 10),
                 reservation.id,  
@@ -176,6 +176,8 @@ const insertYadomasterReservations = async (requestId, reservations) => {
                 created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
+
+        console.log(query.split('\n').slice(0, 10).join('\n'));
 
         await client.query(query, values);
 
