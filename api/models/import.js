@@ -152,11 +152,11 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         let valueIndex = 1;
 
         for (const reservation of reservations) {
-            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}::uuid, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
+            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}::uuid, ${valueIndex++}::uuid, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
             values.push(
                 parseInt(reservation.hotel_id, 10),
-                reservation.id,
-                reservation.reservation_client_id,
+                reservation.id,  
+                reservation.reservation_client_id,  
                 reservation.check_in,
                 reservation.check_in_time,
                 reservation.check_out,
