@@ -5,6 +5,71 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 10, 2025
+
+#### Feature Request #60: Meal Count Display for Easy Copy-Paste
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Currently, meal counts are only visible when exporting to Excel
+  - Add a dialog that shows meal count information in a text format that can be easily copied and pasted into Slack
+- **Requirements**:
+  - Add a new button/option to display meal count summary in a dialog
+  - Format the text in a clear, copy-paste friendly way for Slack
+  - Include date range, meal types, and counts
+  - Add a "Copy to Clipboard" button for easy sharing
+- **Affected Components**:
+  - Meal management UI
+  - Report generation components
+  - Frontend dialog components
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #61: 清掃機能 (Cleaning Management)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - New cleaning management page needed
+  - Requirements gathering in progress
+  - More details to be confirmed
+- **Requirements**:
+  - [ ] Define cleaning status tracking needs
+  - [ ] Determine required cleaning task types
+  - [ ] Identify necessary user roles and permissions
+  - [ ] Specify room status transitions
+  - [ ] Clarify reporting requirements
+- **Questions to Resolve**:
+  - What cleaning statuses need to be tracked?
+  - What information should be visible on the cleaning dashboard?
+  - Are there different cleaning types (e.g., stayover, checkout, deep clean)?
+  - How should cleaning assignments be managed?
+  - What notifications or alerts are needed?
+- **Affected Components**:
+  - New cleaning management UI
+  - Room status management
+  - Housekeeping workflow
+- **Priority**: [ ] Low [ ] Medium [ ] High [ ] Critical
+
+#### Feature Request #62: Check-in/Out Statistics with Gender Breakdown
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a report showing the number of clients checking in and out within a specified date range
+  - Include gender breakdown for both check-ins and check-outs
+  - Provide both numerical counts and percentage breakdowns
+- **Requirements**:
+  - Date range selector for filtering data
+  - Summary cards showing total check-ins and check-outs
+  - Gender breakdown (Male/Female/Other/Not Specified)
+  - Option to view data in table format
+  - Export functionality (CSV/Excel)
+- **Data Points to Include**:
+  - Total check-ins/check-outs
+  - Gender distribution
+  - Daily breakdown within selected period
+  - Comparison metrics (e.g., vs previous period)
+- **Affected Components**:
+  - Reports module
+  - Analytics dashboard
+  - Database queries for guest statistics
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 9, 2025
 
 #### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
@@ -386,7 +451,7 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 #### Feature Request #15: Plan Display Order and Categories
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: 
+- **Description**:
   - Allow setting the display order of plans
   - Enable configuration of facility display order in dropdowns
   - Implement global plan categories and organize hotel plans by room type
@@ -435,6 +500,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 8, 2025*
+*Last Updated: September 10, 2025*
 *Total Bugs: 1* (last one #57)
-*Total Feature Requests: 20* (last one #58)
+*Total Feature Requests: 23* (last one #62)
