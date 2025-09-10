@@ -207,7 +207,7 @@
 
     <!-- Cancel Date Dialog -->
     <Dialog v-model:visible="showDateDialog" header="日付を選択" modal>
-        <p>何一からキャンセル料が発生しますか？</p>
+        <p>何日からキャンセル料が発生しますか？</p>
         <DatePicker v-model="cancelStartDate" showIcon fluid iconDisplay="input" showOnFocus
             :minDate="cancelMinDate || undefined" :maxDate="cancelMaxDate || undefined" dateFormat="yy-mm-dd" />
         <template #footer>
