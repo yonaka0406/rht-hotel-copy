@@ -176,9 +176,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
                 created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
-
-        console.log(query.split('\n').slice(0, 10).join('\n'));
-
+        
         await client.query(query, values);
 
         await client.query('COMMIT');
