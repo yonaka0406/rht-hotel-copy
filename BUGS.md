@@ -70,6 +70,31 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Database queries for guest statistics
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
+#### Feature Request #63: Reservation Checklist and Room Indicator Integration
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a visual checklist to track reservation-related tasks (e.g., self-check-in explained, ID verified, etc.)
+  - Display checklist status in the room indicator for quick visual reference
+  - Allow staff to update checklist items directly from the reservation panel
+- **Requirements**:
+  - Configurable checklist items per reservation type
+  - Visual indicators (icons/colors) for each checklist item
+  - Status summary in the room indicator (e.g., checkmark for completed, exclamation for pending)
+  - Tooltip showing detailed checklist status on hover
+  - Permission-based access to update checklist items
+- **Checklist Items to Include**:
+  - [ ] Self-check-in instructions provided
+  - [ ] ID verification completed
+  - [ ] Payment confirmed
+  - [ ] Special requests addressed
+  - [ ] Welcome message sent
+- **Affected Components**:
+  - Reservation management UI
+  - Room indicator component
+  - Database schema for storing checklist status
+  - Backend API for checklist operations
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 9, 2025
 
 #### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
@@ -502,4 +527,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: September 10, 2025*
 *Total Bugs: 1* (last one #57)
-*Total Feature Requests: 23* (last one #62)
+*Total Feature Requests: 24* (last one #63)
