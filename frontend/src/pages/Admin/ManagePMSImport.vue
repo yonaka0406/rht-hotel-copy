@@ -356,6 +356,7 @@
             const bookerTel = row['電話番号'] ? row['電話番号'].toString().replace(/\D/g, '').replace(/^0+/, '') : '';
             const numberOfPeople = row['大人男'] * 1 + row['大人女'] * 1 + row['子供Ａ'] * 1 + row['子供Ｂ'] * 1 + row['子供Ｃ'] * 1 + row['子供Ｄ'] * 1 + row['子供Ｅ'] * 1 + row['子供Ｆ'] * 1;
             const type = row['NET予約番号'] ? (row['NET予約番号'].startsWith('TY') ? 'web' : 'ota') : 'default';
+            const ota_reservation_id = row['NET予約番号'];
             const agentName = row['エージェント名'];
             const concatenatedNotes = [
                 row['顧客備考'] || '',
@@ -382,6 +383,7 @@
                     bookerName: bookerName,
                     bookerTel: bookerTel,
                     numberOfPeople: numberOfPeople,
+                    ota_reservation_id: ota_reservation_id,
                     type: type,
                     typeName: type === 'web' ? '自社ウェブ' : (type === 'ota' ? 'OTA' : '通常'),
                     agentName: agentName,
@@ -589,6 +591,7 @@
                 number_of_people: reservation.numberOfPeople,
                 status: 'confirmed',  // Default to hold
                 type: reservation.type,
+                ota_reservation_id: reservation.ota_reservation_id,
                 agent: reservation.agentName || null,
                 comment: reservation.comment || null,                
                 created_by: 1,                

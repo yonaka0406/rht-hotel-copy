@@ -152,7 +152,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
         let valueIndex = 1;
 
         for (const reservation of reservations) {
-            valuePlaceholders.push(`($${valueIndex++}, $${valueIndex++}::uuid, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++}, $${valueIndex++})`);
+            valuePlaceholders.push(`(${valueIndex++}, ${valueIndex++}::uuid, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++}, ${valueIndex++})`);
             values.push(
                 parseInt(reservation.hotel_id, 10),
                 reservation.id,
@@ -163,6 +163,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
                 reservation.number_of_people,
                 reservation.status,
                 reservation.type,
+                reservation.ota_reservation_id,
                 reservation.agent,
                 reservation.comment,
                 reservation.created_by,
@@ -171,7 +172,7 @@ const insertYadomasterReservations = async (requestId, reservations) => {
 
         const query = `
             INSERT INTO reservations (
-                hotel_id, id, reservation_client_id, check_in, check_in_time, check_out, number_of_people, status, type, agent, comment, 
+                hotel_id, id, reservation_client_id, check_in, check_in_time, check_out, number_of_people, status, type, ota_reservation_id, agent, comment, 
                 created_by
             ) VALUES ${valuePlaceholders.join(', ')}            
         `;
