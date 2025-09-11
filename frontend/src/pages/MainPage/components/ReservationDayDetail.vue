@@ -513,7 +513,7 @@
                     
         await setReservationAddons(props.reservation_details.id, addonDataArray);
 
-        const data = await fetchReservationDetail(props.reservation_details.id);
+        const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
         reservationDetail.value = data.reservation[0];
         
         toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
@@ -527,7 +527,7 @@
         // console.log('targetRoom', targetRoom.value.value);
         await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
 
-        const data = await fetchReservationDetail(props.reservation_details.id);
+        const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
         reservationDetail.value = data.reservation[0];
 
         toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
@@ -575,7 +575,7 @@
 
     onMounted(async() => {   
         // console.log('onMounted ReservationDayDetail:', props.reservation_details);
-        const data = await fetchReservationDetail(props.reservation_details.id);
+        const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
         reservationDetail.value = data.reservation[0];        
         reservationCancelled.value = props.reservation_details.cancelled ? true : false;        
 

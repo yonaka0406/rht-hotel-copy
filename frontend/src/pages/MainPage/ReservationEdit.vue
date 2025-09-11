@@ -73,6 +73,8 @@ import { useReservationStore } from '@/composables/useReservationStore';
 const { reservationIsUpdating, reservationId, setReservationId, reservationDetails, fetchReservation, fetchReservationPayments } = useReservationStore();
 import { useParkingStore } from '@/composables/useParkingStore';
 const { fetchParkingReservations } = useParkingStore();
+import { useHotelStore } from '@/composables/useHotelStore';
+const { selectedHotelId } = useHotelStore();
 
 // Primevue
 import { Card } from 'primevue';
@@ -98,7 +100,7 @@ const fetchAllReservationData = async () => {
 
     try {
         //console.log(`[ReservationEdit] ➡️ Fetching all data for reservation ID: ${reservationId.value}`);
-        await fetchReservation(reservationId.value);
+        await fetchReservation(reservationId.value, selectedHotelId.value);
 
         if (reservationDetails.value?.reservation?.[0]) {
             const details = reservationDetails.value.reservation[0];
@@ -129,6 +131,8 @@ onMounted(async () => {
     await setReservationId(props.reservation_id);
     await fetchAllReservationData();
     initialLoad.value = false;
+
+    console.log('[ReservationEdit] selectedHotelId', selectedHotelId.value);
 
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 

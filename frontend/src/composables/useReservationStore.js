@@ -42,7 +42,7 @@ export function useReservationStore() {
         // console.log('From Reservation Store => getReservationHotelId');
         if (!reservationDetails.value.reservation) {
             // console.log('From Reservation Store => getReservationHotelId made fetchReservation call');
-            await fetchReservation(reservation_id);
+            await fetchReservation(reservation_id, );
         }
 
         return reservationDetails.value.reservation?.[0]?.hotel_id || null;
@@ -233,8 +233,7 @@ export function useReservationStore() {
             throw new Error('Failed to update reservation client');
             }
     
-            const updatedReservation = await response.json();
-            await fetchReservation(reservationId.value);
+            const updatedReservation = await response.json();            
 
             setReservationIsUpdating(false);
             
@@ -592,12 +591,12 @@ export function useReservationStore() {
     };  
 
     // Fetch
-    const fetchReservation = async (reservation_id) => {
+    const fetchReservation = async (reservation_id, hotel_id) => {
         // console.log('From Reservation Store => fetchReservation:',reservation_id);
         reservationId.value = reservation_id;            
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/reservation/info?id=${reservation_id}`;
+            const url = `/api/reservation/info?id=${reservation_id}&hotel_id=${hotel_id}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
@@ -634,11 +633,11 @@ export function useReservationStore() {
             return null;
         }
     };
-    const fetchReservationDetail = async (id) => {
+    const fetchReservationDetail = async (id, hotel_id) => {
         // console.log('From Reservation Store => fetchReservationDetail:',id);
         try {
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/reservation/detail/info?id=${id}`;
+            const url = `/api/reservation/detail/info?id=${id}&hotel_id=${hotel_id}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {

@@ -184,7 +184,7 @@ const selectReservedRooms = async (requestId, hotel_id, start_date, end_date) =>
     throw new Error('Database error');
   }
 };
-const selectReservation = async (requestId, id) => {
+const selectReservation = async (requestId, id, hotel_id) => {
   const pool = getPool(requestId);
 
   // Validate that id is not null or undefined
@@ -311,13 +311,14 @@ const selectReservation = async (requestId, id) => {
 
     WHERE
       reservations.id = $1
+      AND reservation_details.hotel_id = $2
 
     ORDER BY
       rooms.room_number
       ,reservation_details.date  
   `;
 
-  const values = [id];
+  const values = [id, hotel_id];
 
   /*
     // Removed because of performance
@@ -352,7 +353,7 @@ const selectReservation = async (requestId, id) => {
     throw new Error('Database error');
   }
 };
-const selectReservationDetail = async (requestId, id) => {
+const selectReservationDetail = async (requestId, id, hotel_id) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
@@ -455,10 +456,10 @@ const selectReservationDetail = async (requestId, id) => {
           FROM reservation_rates rr        
           GROUP BY rr.reservation_details_id
         ) rr ON rr.reservation_details_id = reservation_details.id
-    WHERE reservation_details.id = $1
+    WHERE reservation_details.id = $1 AND reservation_details.hotel_id = $2
   `;
 
-  const values = [id];
+  const values = [id, hotel_id];
 
   try {
     const result = await pool.query(query, values);
@@ -4862,7 +4863,7 @@ const insertCopyReservation = async (requestId, originalReservationId, newClient
   try {
     await client.query('BEGIN');
 
-    const originalReservation = await _selectReservation(requestId, originalReservationId);
+    const originalReservation = await _selectReservation(requestId, originalReservationId, hotelID);
     logger.debug('[copyReservation] originalReservation', { originalReservation });
     if (originalReservation.length === 0) {
       throw new Error('Original reservation not found');

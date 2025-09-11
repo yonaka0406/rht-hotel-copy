@@ -1199,7 +1199,7 @@ const onDragStart = async (event, roomId, date) => {
     const days = Math.floor((new Date(check_out) - new Date(check_in)) / (1000 * 60 * 60 * 24));
     dragFrom.value = { reservation_id, room_id, room_number, room_type_name, number_of_people, check_in, check_out, days };
 
-    const reservationData = await fetchReservation(reservation_id);
+    const reservationData = await fetchReservation(reservation_id, selectedHotelId.value);
 
     // console.log('dragFrom',dragFrom.value)
   } else {
@@ -1556,7 +1556,7 @@ onUnmounted(() => {
 watch(reservationId, async (newReservationId, oldReservationId) => {
   if (newReservationId) {
 
-    await fetchReservation(newReservationId);
+    await fetchReservation(newReservationId, selectedHotelId.value);
   }
 }, { immediate: true });
 watch(selectedHotelId, async (newVal, oldVal) => {

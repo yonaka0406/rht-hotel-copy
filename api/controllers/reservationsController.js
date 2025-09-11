@@ -94,10 +94,10 @@ const getReservedRooms = async (req, res) => {
 };
 
 const getReservation = async (req, res) => {
-  const { id } = req.query;
+  const { id, hotel_id } = req.query;
 
   try {
-    const reservation = await selectReservation(req.requestId, id);
+    const reservation = await selectReservation(req.requestId, id, hotel_id);
 
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation for the provided id.' });
@@ -111,10 +111,10 @@ const getReservation = async (req, res) => {
 };
 
 const getReservationDetails = async (req, res) => {
-  const { id } = req.query;
+  const { id, hotel_id } = req.query;
 
   try {
-    const reservation = await selectReservationDetail(req.requestId, id);
+    const reservation = await selectReservationDetail(req.requestId, id, hotel_id);
 
     if (reservation.length === 0) {
       return res.status(404).json({ message: 'No reservation detail for the provided id.' });
