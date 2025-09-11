@@ -606,7 +606,7 @@ const createReservationDetails = async (req, res) => {
     const newReservationAddon = await addReservationDetail(req.requestId, reservationData);
     // console.log('newReservationAddon:', newReservationAddon);
     // console.log('ogm_id:', ogm_id);
-    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id);
+    const ogmReservationAddons = await selectReservationAddons(req.requestId, ogm_id, hotel_id);
     // console.log('ogmReservationAddons:', ogmReservationAddons);
 
     // Update reservation guests

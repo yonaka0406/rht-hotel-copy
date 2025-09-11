@@ -508,14 +508,14 @@ const selectRoomReservationDetails = async (requestId, hotelId, roomId, reservat
     throw new Error('Database error');
   }
 };
-const selectReservationAddons = async (requestId, id) => {
+const selectReservationAddons = async (requestId, id, hotelId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT * FROM reservation_addons
-    WHERE reservation_detail_id = $1
+    WHERE reservation_detail_id = $1 AND hotel_id = $2
   `;
 
-  const values = [id];
+  const values = [id, hotelId];
 
   try {
     const result = await pool.query(query, values);
