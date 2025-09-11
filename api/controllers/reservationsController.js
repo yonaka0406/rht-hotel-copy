@@ -1258,24 +1258,43 @@ const editRoomGuestNumber = async (req, res) => {
 const deleteHoldReservation = async (req, res) => {
   const { hid, id } = req.params;
   const user_id = req.user.id;
+
   try {
-    const { success, count } = await deleteHoldReservationById(req.requestId, id, hid, user_id);
-    if (success) {
-      res.json({ success: true, count });
-    } else {
-      res.status(404).json({ 
+    const result = await deleteHoldReservationById(req.requestId, id, hid, user_id);
+    
+    // Handle case where result is undefined
+    if (!result) {
+      return res.status(500).json({ 
         success: false, 
+        message: 'Error processing delete request: No result returned' 
+      });
+    }
+
+    const { success, count } = result;
+    
+    if (success) {
+      return res.json({ success: true, count });
+    } else {
+      return res.status(404).json({ 
+        success: false, 
+        count,
         message: 'Reservation not found, already deleted, or not eligible for deletion' 
       });
     }
   } catch (err) {
-    console.error('Error deleting hold reservation:', err);
-    res.status(500).json({ 
-      error: err.message || 'Failed to delete reservation' 
+    console.error(`[${req.requestId}] Error in deleteHoldReservation:`, {
+      error: err.message,
+      stack: err.stack,
+      reservation_id: id,
+      hotel_id: hid,
+      user_id
+    });
+    return res.status(500).json({ 
+      error: err.message || 'Failed to delete reservation',
+      details: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   }
 };
-
 const deleteRoomFromReservation = async (req, res) => {
   const { hotelId, roomId, reservationId, numberOfPeople } = req.body;
   const user_id = req.user.id;

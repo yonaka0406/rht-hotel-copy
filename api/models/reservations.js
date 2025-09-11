@@ -2806,26 +2806,52 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 // Delete
 const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);
-  const query = format(`
-    -- Set the updated_by value in a session variable
-    SET SESSION "my_app.user_id" = %L;
+  // A transaction must run on a single client connection
+  const client = await pool.connect();
 
-    WITH deleted AS (
-      DELETE FROM reservations    
-      WHERE id = %L AND hotel_id = %L
-      RETURNING *
-    )
-    SELECT 
-      (SELECT COUNT(*) > 0 FROM deleted) AS success,
-      (SELECT COUNT(*) FROM deleted) AS count;
-  `, updated_by, reservation_id, hotel_id);
+  // Define queries
+  const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
+
+  const deleteQuery = {
+    text: `
+      WITH deleted AS (
+        DELETE FROM reservations
+        WHERE id = $1 AND hotel_id = $2
+        RETURNING *
+      )
+      SELECT
+        COALESCE((SELECT COUNT(*) > 0 FROM deleted), false) AS success,
+        COALESCE((SELECT COUNT(*) FROM deleted), 0) AS count;
+    `,
+    values: [reservation_id, hotel_id],
+  };
 
   try {
-    const result = await pool.query(query);
-    return result.rows[0]; // This will return { success: boolean, count: number }
+    // Start the transaction
+    await client.query('BEGIN');
+
+    // Execute the queries on the same client
+    await client.query(setSessionQuery);
+    const result = await client.query(deleteQuery);
+
+    // If both succeed, commit the transaction
+    await client.query('COMMIT');
+
+    return result.rows[0] || { success: false, count: 0 };
+
   } catch (err) {
-    console.error('Error deleting reservation:', err);
-    throw err;
+    // If any query fails, roll back the entire transaction
+    await client.query('ROLLBACK');
+
+    console.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
+      error: err.message,
+      stack: err.stack
+    });
+    throw err; // Re-throw the error after rolling back
+
+  } finally {
+    // ALWAYS release the client back to the pool
+    client.release();
   }
 };
 const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by) => {
