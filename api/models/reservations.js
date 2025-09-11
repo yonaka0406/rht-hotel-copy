@@ -821,22 +821,19 @@ const selectReservationClientIds = async (requestId, hotelId, reservationId) => 
       id, name, name_kana, name_kanji, COALESCE(name_kanji, name_kana, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
     FROM
     (
-      SELECT clients.*
-      FROM clients, reservations
-      WHERE
-        reservations.id = $1
-        AND reservations.hotel_id = $2
-        AND clients.id = reservations.reservation_client_id
+      SELECT clients.*      
+      FROM reservations r
+        JOIN clients c 
+          ON c.id = r.reservation_client_id
+      WHERE r.id = $1 AND r.hotel_id = $2
 
-      UNION ALL
+      UNION
 
       SELECT clients.*
-      FROM clients, reservation_details, reservation_clients
-      WHERE
-        reservation_details.reservation_id = $1
-        AND reservation_details.hotel_id = $2
-        AND reservation_details.id = reservation_clients.reservation_details_id
-        AND clients.id = reservation_clients.client_id
+      FROM reservation_details rd
+        JOIN reservation_clients rc ON rc.reservation_details_id = rd.id AND rc.hotel_id = rd.hotel_id
+        JOIN clients c ON c.id = rc.client_id
+      WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
     ) AS ALL_CLIENTS
   `;
 
