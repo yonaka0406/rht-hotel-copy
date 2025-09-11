@@ -1029,9 +1029,13 @@ const insertParkingBulk = async (client, reservation, spotsToReserve, dateArray)
     await client.query(query, values);
   }
 };
-const addReservationHold = async (requestId, reservation, roomsToReserve) => {
-  const pool = getPool(requestId);
-  const client = await pool.connect();
+const addReservationHold = async (requestId, reservation, client = null, roomsToReserve = []) => {
+  const pool = client || getPool(requestId);
+  let shouldReleaseClient = false;
+  if (!client) {    
+    client = await pool.connect();
+    shouldReleaseClient = true;
+  }
 
   try {
     await client.query('BEGIN');
@@ -1073,7 +1077,9 @@ const addReservationHold = async (requestId, reservation, roomsToReserve) => {
     console.error('Error adding reservation hold:', err);
     throw new Error('Database error: ' + err.message);
   } finally {
-    client.release();
+    if (shouldReleaseClient) {
+      client.release();
+    }
   }
 };
 
@@ -1109,6 +1115,51 @@ const addReservationDetail = async (requestId, detail) => {
     throw new Error('Database error');
   }
 };
+const addReservationDetailsBatch = async (requestId, details, client = null) => {
+  const pool = client || getPool(requestId);
+  let shouldReleaseClient = false;
+  if (!client) {    
+    client = await pool.connect();
+    shouldReleaseClient = true;
+  }
+  try{
+    await client.query('BEGIN');
+  
+    const values = [];
+    const placeholders = details.map((d, i) => {
+      const offset = i * 12;
+      values.push(
+        d.hotel_id, d.reservation_id, d.date, d.room_id,
+        d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
+        d.number_of_people, d.price, d.created_by, d.updated_by
+      );
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12})`;
+    }).join(', ');
+
+    const query = `
+      INSERT INTO reservation_details (
+        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
+      )
+      VALUES ${placeholders}
+      RETURNING *;
+    `;
+
+    const result = await client.query(query, values);
+    
+    await client.query('COMMIT');
+
+    return result.rows;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error adding reservation hold details:', err);
+    throw new Error('Database error: ' + err.message);
+  } finally {
+    if (shouldReleaseClient) {
+      client.release();
+    }
+  }
+};
+
 const addReservationAddon = async (requestId, addon) => {
   // console.log('addReservationAddon:',addon)
   const pool = getPool(requestId);
@@ -2759,17 +2810,22 @@ const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, up
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
 
-    DELETE FROM reservations    
-    WHERE id = %L AND hotel_id = %L AND (status = 'hold' OR type = 'employee')
-    RETURNING *;
+    WITH deleted AS (
+      DELETE FROM reservations    
+      WHERE id = %L AND hotel_id = %L
+      RETURNING *
+    )
+    SELECT 
+      (SELECT COUNT(*) > 0 FROM deleted) AS success,
+      (SELECT COUNT(*) FROM deleted) AS count;
   `, updated_by, reservation_id, hotel_id);
 
   try {
     const result = await pool.query(query);
-    return result.rowCount;
+    return result.rows[0]; // This will return { success: boolean, count: number }
   } catch (err) {
     console.error('Error deleting reservation:', err);
-    throw new Error('Database error');
+    throw err;
   }
 };
 const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by) => {
@@ -5308,6 +5364,7 @@ module.exports = {
   selectParkingSpotAvailability,
   addReservationHold,
   addReservationDetail,
+  addReservationDetailsBatch,
   addReservationAddon,
   addReservationClient,
   addRoomToReservation,

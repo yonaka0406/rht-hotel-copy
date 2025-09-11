@@ -2,7 +2,7 @@ const {
   selectAvailableRooms, selectReservedRooms, selectReservation, selectReservationDetail, selectReservationAddons, selectMyHoldReservations, selectReservationsToday, selectAvailableDatesForChange, selectReservationClientIds, selectReservationPayments,
   selectFailedOtaReservations,
   selectParkingSpotAvailability,
-  addReservationHold, addReservationDetail, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
+  addReservationHold, addReservationDetail, addReservationDetailsBatch, addReservationAddon, addReservationClient, addRoomToReservation, insertReservationPayment, insertBulkReservationPayment,
   updateReservationDetail, updateReservationStatus, updateReservationDetailStatus, updateReservationComment, updateReservationCommentFlag, updateReservationTime, updateReservationType, updateReservationResponsible, updateRoomByCalendar, updateCalendarFreeChange, updateReservationRoomGuestNumber, updateReservationGuest, updateClientInReservation, updateReservationDetailPlan, updateReservationDetailAddon, updateReservationDetailRoom, updateReservationRoom, updateReservationRoomWithCreate, updateReservationRoomPlan, updateReservationRoomPattern, updateBlockToReservation,
   deleteHoldReservationById, deleteReservationAddonsByDetailId, deleteReservationClientsByDetailId, deleteReservationRoom, deleteReservationPayment,
   insertCopyReservation, selectReservationParking,
@@ -13,6 +13,7 @@ const {
 const { addClientByName } = require('../models/clients');
 const { getPriceForReservation } = require('../models/planRate');
 const logger = require('../config/logger');
+const { getPool } = require('../config/database');
 
 //Helper
 const formatDate = (date) => {
@@ -267,41 +268,25 @@ const createReservationHold = async (req, res) => {
     phone,
     vehicle_category_id,
   } = req.body;
+
   const created_by = req.user.id;
   const updated_by = req.user.id;
 
-  const dateRange = [];
-  let currentDate = new Date(check_in);
-  while (currentDate < new Date(check_out)) {
-    dateRange.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();  
 
   try {
-    logger.warn(`[RES_CREATE] Received reservation request`, { hotel_id, room_type_id, room_id, client_id, check_in, check_out, number_of_people, name, legal_or_natural_person, gender, email, phone, created_by });
+    await client.query('BEGIN');
+
+    // --- Step 1: Create or fetch client ---
     let finalClientId = client_id;
-
-    // Check if client_id is null
     if (!client_id) {
-      logger.warn(`[RES_CREATE] No client_id provided, creating new client`, { name, legal_or_natural_person, gender, email, phone });
-      // Create the client if no client_id is provided
-      const clientData = {
-        name: name,
-        legal_or_natural_person,
-        gender,
-        email,
-        phone,
-        created_by,
-        updated_by,
-      };
-      logger.warn(`[RESERVATION_CLIENT_CREATE] clientData: ${JSON.stringify(clientData)}`);
-      // Add new client and get the created client's id
-      const newClient = await addClientByName(req.requestId, clientData);
-      finalClientId = newClient.id; // Use the newly created client's id
-      logger.warn(`[RES_CREATE] Created new client`, { client_id: finalClientId });
+      const clientData = { name, legal_or_natural_person, gender, email, phone, created_by, updated_by };
+      const newClient = await addClientByName(req.requestId, clientData, client);
+      finalClientId = newClient.id;
     }
-
-    // Add the reservation with the final client_id
+    
+    // --- Step 2: Create reservation ---
     const reservationData = {
       hotel_id,
       reservation_client_id: finalClientId,
@@ -312,90 +297,71 @@ const createReservationHold = async (req, res) => {
       created_by,
       updated_by
     };
+    const newReservation = await addReservationHold(req.requestId, reservationData, client);
 
-    logger.warn(`[RES_CREATE] Inserting reservation`, reservationData);
-    // Add the reservation to the database
-    const newReservation = await addReservationHold(req.requestId, reservationData);
-    logger.warn(`[RES_CREATE] Reservation inserted`, { reservation_id: newReservation.id });
-    // Get available rooms for the reservation period
-    const availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out);
-
-    const reservationDetails = [];
-    const availableRoomsFiltered = [];
-    if (room_type_id !== null) {
-      availableRoomsFiltered.value = availableRooms.filter(room => room.room_type_id === Number(room_type_id));
-      logger.warn(`[RES_CREATE] Filtering available rooms by room_type_id`, { room_type_id, availableRooms: availableRoomsFiltered.value });
-    } else if (room_id !== null) {
-      availableRoomsFiltered.value = availableRooms.filter(room => room.room_id === Number(room_id));
-      logger.warn(`[RES_CREATE] Filtering available rooms by room_id`, { room_id, availableRooms: availableRoomsFiltered.value });
+    // --- Step 3: Get available rooms ---
+    let availableRooms = await selectAvailableRooms(req.requestId, hotel_id, check_in, check_out, client);
+    
+    // Filter rooms if needed
+    if (room_type_id) {
+      availableRooms = availableRooms.filter(r => r.room_type_id === Number(room_type_id));
+    } else if (room_id) {
+      availableRooms = availableRooms.filter(r => r.room_id === Number(room_id));
     }
 
-    if (availableRoomsFiltered.value.length === 0) {
-      logger.warn(`[RES_CREATE] No available rooms for the specified period`, { hotel_id, check_in, check_out });
+    if (availableRooms.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: 'No available rooms for the specified period.' });
     }
 
+    // --- Step 4: Assign people to rooms ---
+    const dateRange = [];
+    let currentDate = new Date(check_in);
+    while (currentDate < new Date(check_out)) {
+      dateRange.push(formatDate(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
     let remainingPeople = number_of_people;
-    // Distribute people into rooms
-    while (remainingPeople > 0) {
-      let bestRoom = null;
-      for (const room of availableRoomsFiltered.value) {
-        if (room.capacity === remainingPeople) {
-          bestRoom = room;
-          break;
-        }
-        if (room.capacity > remainingPeople && (!bestRoom || room.capacity < bestRoom.capacity)) {
-          bestRoom = room;
-        }
-      }
-      if (!bestRoom && availableRoomsFiltered.value.length > 0) {
-        bestRoom = availableRoomsFiltered.value.reduce(
-          (prev, curr) => (curr.capacity > prev.capacity ? curr : prev),
-          availableRoomsFiltered.value[0]
-        );
-      }
-      if (!bestRoom) {
-        logger.warn(`[RES_CREATE] No room found for remaining people`, { remainingPeople });
-        break;
-      }
-      const peopleAssigned = Math.min(remainingPeople, bestRoom.capacity);
-      remainingPeople -= peopleAssigned;
-      dateRange.forEach((date) => {
+    const reservationDetails = [];
+        
+    while (remainingPeople > 0 && availableRooms.length > 0) {
+      // Pick smallest room that can accommodate remaining people
+      availableRooms.sort((a, b) => a.capacity - b.capacity);
+      let room = availableRooms.find(r => r.capacity >= remainingPeople) || availableRooms[availableRooms.length - 1];
+      const assigned = Math.min(remainingPeople, room.capacity);
+
+      dateRange.forEach(date => {
         reservationDetails.push({
           reservation_id: newReservation.id,
           hotel_id,
-          room_id: bestRoom.room_id,
-          date: formatDate(date),
+          room_id: room.room_id,
+          date,
           plans_global_id: null,
           plans_hotel_id: null,
           plan_name: null,
           plan_type: 'per_room',
-          number_of_people: peopleAssigned,
+          number_of_people: assigned,
           price: 0,
           created_by,
           updated_by,
         });
       });
-      availableRoomsFiltered.value = availableRoomsFiltered.value.filter(room => room.room_id !== bestRoom.room_id);
-      logger.warn(`[RES_CREATE] Assigned people to room`, { bestRoom, peopleAssigned, remainingPeople });
+
+      remainingPeople -= assigned;
+      availableRooms = availableRooms.filter(r => r.room_id !== room.room_id);
     }
 
-    // Add reservation details to the database
-    const createdReservationDetails = [];
-    for (const detail of reservationDetails) {
-      const createdDetail = await addReservationDetail(req.requestId, detail);
-      createdReservationDetails.push(createdDetail);
-    }
+    // --- Step 5: Batch insert reservation details ---
+    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
 
-    logger.warn(`[RES_CREATE] Reservation creation complete`, { reservation_id: newReservation.id });
-    res.status(201).json({
-      reservation: newReservation,
-      reservationDetails: createdReservationDetails,
-    });
-
+    await client.query('COMMIT');
+    res.status(201).json({ reservation: newReservation });
+    
   } catch (err) {
-    logger.warn('[RES_CREATE] Error creating reservation', { error: err.message, stack: err.stack });
+    await client.query('ROLLBACK');
     res.status(500).json({ error: 'Failed to create reservation' });
+  } finally {
+    client.release();
   }
 };
 
@@ -403,21 +369,21 @@ const createHoldReservationCombo = async (req, res) => {
   const { header, combo } = req.body;
   const user_id = req.user.id;
 
-  // Add debug log for incoming request
-  logger.debug(`[${req.requestId}] createHoldReservationCombo - Request received`, {
-    header,
-    combo: Object.keys(combo).length,
-    user_id
-  });
+  const pool = getPool(req.requestId);
+  const client = await pool.connect();
 
+  // Compute date range
   const dateRange = [];
   let currentDate = new Date(header.check_in);
   while (currentDate < new Date(header.check_out)) {
-    dateRange.push(new Date(currentDate));
+    dateRange.push(formatDate(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
   }
 
   try {
+    await client.query('BEGIN');
+
+    // --- Step 1: Create or fetch client ---
     let finalClientId = header.client_id;
 
     // Check if client_id is null and create a new client if needed.
@@ -431,12 +397,12 @@ const createHoldReservationCombo = async (req, res) => {
         phone: header.phone,
         user_id,
       };
-      const newClient = await addClientByName(req.requestId, clientData);
+      const newClient = await addClientByName(req.requestId, clientData, client);
       finalClientId = newClient.id;
       logger.debug(`[${req.requestId}] createHoldReservationCombo - Created new client`, { client_id: finalClientId });
     }
 
-    // Add the main reservation record.
+    // --- Step 2: Create main reservation ---
     const reservationData = {
       hotel_id: header.hotel_id,
       reservation_client_id: finalClientId,
@@ -446,44 +412,35 @@ const createHoldReservationCombo = async (req, res) => {
       created_by: user_id,
       updated_by: user_id
     };
-    const newReservation = await addReservationHold(req.requestId, reservationData);
+    const newReservation = await addReservationHold(req.requestId, reservationData, client);
 
-    // Get all available rooms for the entire period.
-    const availableRooms = await selectAvailableRooms(req.requestId, header.hotel_id, header.check_in, header.check_out);
+    // --- Step 3: Get available rooms ---
+    let availableRooms = await selectAvailableRooms(req.requestId, header.hotel_id, header.check_in, header.check_out, client);
 
     const reservationDetails = [];
 
-    // This main loop iterates through each requested room type combo.
+    // --- Step 4: Loop through each room type in combo ---
     for (const roomTypeId in combo) {
       const roomCombo = combo[roomTypeId];
       let remainingPeople = roomCombo.totalPeople;
 
-      // Filter for available rooms of the correct type.
-      let availableRoomsFiltered = availableRooms.filter(room => room.room_type_id === roomCombo.room_type_id);
-      availableRoomsFiltered.sort((a, b) => a.capacity - b.capacity);
+      // Filter and sort available rooms
+      let availableRoomsFiltered = availableRooms
+        .filter(room => room.room_type_id === roomCombo.room_type_id)
+        .sort((a, b) => a.capacity - b.capacity);
 
-      // Select the smallest available rooms first.
       const selectedRooms = availableRoomsFiltered.slice(0, roomCombo.totalRooms);
 
       if (selectedRooms.length < roomCombo.totalRooms) {
-        // It's important to stop here if not enough rooms are available.
-        // NOTE: For atomicity, this entire function should be in a transaction.
-        // If an error happens here, the reservation header is created without details.
+        await client.query('ROLLBACK');
         return res.status(400).json({ error: `Not enough rooms available for room type: ${roomCombo.room_type_name}` });
       }
 
-      // =================================================================
-      // BUG FIX: "Calculate-Then-Create" Logic
-      // First, determine the final guest count for each room.
-      // =================================================================
-
-      // Use a Map to track assignments before creating DB records.
+      // --- Step 4a: Assign people to rooms ---
       const roomAssignments = new Map();
-      selectedRooms.forEach(room => {
-        roomAssignments.set(room.room_id, { room: room, people: 0 });
-      });
+      selectedRooms.forEach(room => roomAssignments.set(room.room_id, { room, people: 0 }));
 
-      // 1. Assign one person to each selected room to "claim" it.
+      // 1. Assign one person to each room
       for (const room of selectedRooms) {
         if (remainingPeople > 0) {
           roomAssignments.get(room.room_id).people += 1;
@@ -491,44 +448,38 @@ const createHoldReservationCombo = async (req, res) => {
         }
       }
 
-      // 2. Distribute remaining people into the available capacity of the selected rooms.
+      // 2. Distribute remaining people
       if (remainingPeople > 0) {
         for (const room of selectedRooms) {
           const assignment = roomAssignments.get(room.room_id);
           const availableCapacity = assignment.room.capacity - assignment.people;
-          const peopleToAssign = Math.min(remainingPeople, availableCapacity);
-
-          if (peopleToAssign > 0) {
-            assignment.people += peopleToAssign;
-            remainingPeople -= peopleToAssign;
+          const toAssign = Math.min(remainingPeople, availableCapacity);
+          if (toAssign > 0) {
+            assignment.people += toAssign;
+            remainingPeople -= toAssign;
           }
         }
       }
 
-      // The complex "Adjust rooms" logic was here. It contained the same bug
-      // and is difficult to fix without a full refactor. It has been removed.
-      // This simplified logic is correct, but may not be as optimal in room selection
-      // as the original code intended. The fully refactored example provides a
-      // cleaner way to handle such optimizations.
-
       if (remainingPeople > 0) {
-        return res.status(400).json({ error: `Not enough capacity to assign all guests for room type: ${roomCombo.room_type_name}` });
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `Not enough capacity for room type: ${roomCombo.room_type_name}` });
       }
 
-      // 3. NOW, create the reservation detail records with the FINAL guest count.
-      roomAssignments.forEach((assignment) => {
-        if (assignment.people > 0) { // Only create details if people are assigned
-          dateRange.forEach((date) => {
+      // --- Step 4b: Generate reservation details ---
+      roomAssignments.forEach(assignment => {
+        if (assignment.people > 0) {
+          dateRange.forEach(date => {
             reservationDetails.push({
               reservation_id: newReservation.id,
               hotel_id: header.hotel_id,
               room_id: assignment.room.room_id,
-              date: formatDate(date), // Assuming you have a formatDate utility
+              date,
               plans_global_id: null,
               plans_hotel_id: null,
               plan_name: null,
               plan_type: 'per_room',
-              number_of_people: assignment.people, // Use the final calculated number
+              number_of_people: assignment.people,
               price: 0,
               created_by: user_id,
               updated_by: user_id,
@@ -536,33 +487,25 @@ const createHoldReservationCombo = async (req, res) => {
           });
         }
       });
+
+      // Remove assigned rooms from availableRooms
+      availableRooms = availableRooms.filter(r => !selectedRooms.find(sr => sr.room_id === r.room_id));
     }
 
-    // Add all the generated reservation details to the database in bulk.
-    const createdReservationDetails = [];
-    logger.debug(`[${req.requestId}] createHoldReservationCombo - Adding ${reservationDetails.length} reservation details`);
+    // --- Step 5: Batch insert reservation details ---
+    const createdReservationDetails = await addReservationDetailsBatch(req.requestId, reservationDetails, client);
 
-    for (const detail of reservationDetails) {
-      const createdDetail = await addReservationDetail(req.requestId, detail);
-      createdReservationDetails.push(createdDetail);
-    }
-
-    logger.debug(`[${req.requestId}] createHoldReservationCombo - Successfully created reservation`, {
-      reservation_id: newReservation.id,
-      details_count: createdReservationDetails.length
-    });
+    await client.query('COMMIT');
 
     res.status(201).json({
-      reservation: newReservation,
-      reservationDetails: createdReservationDetails,
+      reservation: newReservation      
     });
-
   } catch (err) {
-    logger.error(`[${req.requestId}] createHoldReservationCombo - Error: ${err.message}`, {
-      error: err,
-      stack: err.stack
-    });
+    await client.query('ROLLBACK');
+    logger.error(`[${req.requestId}] createHoldReservationCombo - Error: ${err.message}`, { stack: err.stack });
     res.status(500).json({ error: 'Failed to create reservation' });
+  } finally {
+    client.release();
   }
 };
 
@@ -1316,17 +1259,22 @@ const deleteHoldReservation = async (req, res) => {
   const { hid, id } = req.params;
   const user_id = req.user.id;
   try {
-    const updatedReservation = await deleteHoldReservationById(req.requestId, id, hid, user_id);
-    if (updatedReservation > 0) {
-      res.json({ success: true });
+    const { success, count } = await deleteHoldReservationById(req.requestId, id, hid, user_id);
+    if (success) {
+      res.json({ success: true, count });
     } else {
-      res.status(404).json({ success: false, message: 'Reservation not found or not deleted.' });
+      res.status(404).json({ 
+        success: false, 
+        message: 'Reservation not found, already deleted, or not eligible for deletion' 
+      });
     }
   } catch (err) {
     console.error('Error deleting hold reservation:', err);
-    res.status(500).json({ error: 'Failed to delete reservation' });
+    res.status(500).json({ 
+      error: err.message || 'Failed to delete reservation' 
+    });
   }
-}
+};
 
 const deleteRoomFromReservation = async (req, res) => {
   const { hotelId, roomId, reservationId, numberOfPeople } = req.body;

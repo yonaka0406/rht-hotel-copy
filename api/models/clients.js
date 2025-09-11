@@ -270,13 +270,15 @@ const selectClientGroups = async (requestId) => {
     throw new Error('Database error');
   }
 };
-const addClientByName = async (requestId, client) => {
-  const pool = getPool(requestId);
+const addClientByName = async (requestId, client = {}, dbClient = null) => {
+  
+  const pool = dbClient || getPool(requestId);
+
   let finalName, finalNameKana, finalNameKanji;
-  logger.warn(`[CLIENT_CREATE] Original name input: ${client.name}`);
+  //logger.warn(`[CLIENT_CREATE] Original name input: ${client.name}`);
   const { name, nameKana, nameKanji } = await processNameString(client.name);
   finalName = name; finalNameKana = nameKana; finalNameKanji = nameKanji;
-  logger.warn(`[CLIENT_CREATE] Capitalized name: ${finalName}`);
+  //logger.warn(`[CLIENT_CREATE] Capitalized name: ${finalName}`);
   if (client.name_kana) {
     finalNameKana = toFullWidthKana(client.name_kana);
   }
@@ -298,11 +300,11 @@ const addClientByName = async (requestId, client) => {
     client.updated_by
   ];
   try {
-    logger.warn('[CLIENT_CREATE] addClientByName input', { client });
-    logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
-    logger.warn('[CLIENT_CREATE] Query and values', { query, values });
+    //logger.warn('[CLIENT_CREATE] addClientByName input', { client });
+    //logger.warn('[CLIENT_CREATE] Processed names', { finalName, finalNameKana, finalNameKanji });
+    //logger.warn('[CLIENT_CREATE] Query and values', { query, values });
     const result = await pool.query(query, values);
-    logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id });
+    //logger.warn('[CLIENT_CREATE] Client inserted', { client_id: result.rows[0]?.id });
     return result.rows[0];
   } catch (err) {
     logger.warn('Error adding client', { error: err.message, stack: err.stack });
