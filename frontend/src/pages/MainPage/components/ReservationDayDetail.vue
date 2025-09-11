@@ -510,8 +510,8 @@
         }));
 
         // console.log('addonDataArray:', addonDataArray);
-                    
-        await setReservationAddons(props.reservation_details.id, addonDataArray);
+        
+        await setReservationAddons(props.reservation_details.id, props.reservation_details.hotel_id, addonDataArray);
 
         const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
         reservationDetail.value = data.reservation[0];

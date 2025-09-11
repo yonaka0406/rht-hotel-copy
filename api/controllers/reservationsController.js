@@ -875,8 +875,8 @@ const editReservationDetail = async (req, res) => {
       price: calcPrice.value,
       updated_by,
     });
-    if (planChange) {
-      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, updated_by);
+    if (planChange) {      
+      const deletedAddonsCount = await deleteReservationAddonsByDetailId(req.requestId, updatedReservation.id, hotel_id, updated_by);
     }
 
     // Add the reservation add-ons if any
@@ -1001,12 +1001,17 @@ const editReservationPlan = async (req, res) => {
 };
 
 const editReservationAddon = async (req, res) => {
-  const { id } = req.params;
+  const { id, hid } = req.params;
   const addons = req.body;
   const user_id = req.user.id;
 
+  console.log('[reservationsController] editReservationAddon', {
+    'id': id,
+    'hotel_id': hid
+  })
+
   try {
-    const updatedReservation = await updateReservationDetailAddon(req.requestId, id, addons, user_id);
+    const updatedReservation = await updateReservationDetailAddon(req.requestId, id, hid, addons, user_id);
     res.json(updatedReservation);
   } catch (err) {
     console.error('Error updating reservation detail:', err);

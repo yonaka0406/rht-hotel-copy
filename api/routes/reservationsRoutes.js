@@ -34,7 +34,7 @@ router.put('/reservation/update/details/:id', authMiddlewareCRUDAccess, reservat
 router.put('/reservation/update/detail/status/:id', authMiddlewareCRUDAccess, reservationsController.editReservationDetailStatus);
 router.put('/reservation/update/guest/:id', authMiddlewareCRUDAccess, reservationsController.editReservationGuests);
 router.put('/reservation/update/plan/:id', authMiddlewareCRUDAccess, reservationsController.editReservationPlan);
-router.put('/reservation/update/addon/:id', authMiddlewareCRUDAccess, reservationsController.editReservationAddon);
+router.put('/reservation/update/addon/:hid/:id', authMiddlewareCRUDAccess, reservationsController.editReservationAddon);
 router.put('/reservation/update/room/:id', authMiddlewareCRUDAccess, reservationsController.editReservationRoom);
 router.put('/reservation/update/room/plan/:hid/:rid/:id', authMiddlewareCRUDAccess, reservationsController.editReservationRoomPlan);
 router.put('/reservation/update/room/pattern/:hid/:rid/:id', authMiddlewareCRUDAccess, reservationsController.editReservationRoomPattern);

@@ -264,13 +264,13 @@ export function useReservationStore() {
             console.error('Error updating reservation:', error);
         }
     };
-    const setReservationAddons = async (detail_id, addons) => {
-        // console.log('From Reservation Store => setReservationAddons');
+    const setReservationAddons = async (detail_id, hotel_id, addons) => {
+        console.log('From Reservation Store => setReservationAddons', detail_id, hotel_id, addons);
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
             // Assuming you have an API endpoint to update the reservation
-            const response = await fetch(`/api/reservation/update/addon/${detail_id}`, {
+            const response = await fetch(`/api/reservation/update/addon/${hotel_id}/${detail_id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,

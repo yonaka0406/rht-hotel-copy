@@ -2422,15 +2422,15 @@ const updateReservationDetailPlan = async (requestId, id, hotel_id, plan, rates,
     client.release();
   }
 };
-const updateReservationDetailAddon = async (requestId, id, addons, user_id) => {
+const updateReservationDetailAddon = async (requestId, id, hotel_id, addons, user_id) => {
   if (!Array.isArray(addons)) {
     addons = [];
   }
-  await deleteReservationAddonsByDetailId(requestId, id, user_id);
-  const reservationDetail = await selectReservationDetail(requestId, id);
+  await deleteReservationAddonsByDetailId(requestId, id, hotel_id, user_id);
+  
   const addOnPromises = addons.map(addon =>
     addReservationAddon(requestId, {
-      hotel_id: reservationDetail[0].hotel_id,
+      hotel_id: hotel_id,
       reservation_detail_id: id,
       addons_global_id: addon.addons_global_id,
       addons_hotel_id: addon.addons_hotel_id,
@@ -2565,7 +2565,7 @@ const updateReservationRoomPlan = async (requestId, data) => {
         }
 
         // 2. Update Addons        
-        await updateReservationDetailAddon(requestId, id, addons || [], userId);
+        await updateReservationDetailAddon(requestId, id, hotelId, addons || [], userId);
 
       } catch (error) {
         throw error;
@@ -2633,7 +2633,7 @@ const updateReservationRoomPattern = async (requestId, reservationId, hotelId, r
       }
 
       // 2. Update Addons
-      await updateReservationDetailAddon(requestId, id, addons, user_id);
+      await updateReservationDetailAddon(requestId, id, hotelId, addons, user_id);
 
     });
 
@@ -2761,16 +2761,16 @@ const deleteHoldReservationById = async (requestId, reservation_id, updated_by) 
     throw new Error('Database error');
   }
 };
-const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, updated_by) => {
+const deleteReservationAddonsByDetailId = async (requestId, reservation_detail_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
 
     DELETE FROM reservation_addons
-    WHERE reservation_detail_id = %L AND addon_type <> 'parking'
+    WHERE reservation_detail_id = %L AND hotel_id = %L AND addon_type <> 'parking'
     RETURNING *;
-  `, updated_by, reservation_detail_id);
+  `, updated_by, reservation_detail_id, hotel_id);
 
   try {
     const result = await pool.query(query);

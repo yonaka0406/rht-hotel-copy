@@ -131,9 +131,7 @@ onMounted(async () => {
     await setReservationId(props.reservation_id);
     await fetchAllReservationData();
     initialLoad.value = false;
-
-    console.log('[ReservationEdit] selectedHotelId', selectedHotelId.value);
-
+    
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
 
     socket.value.on('connect', () => {
