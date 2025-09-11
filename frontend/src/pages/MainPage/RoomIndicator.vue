@@ -798,7 +798,7 @@
     // Add debounced fetch function
     const debouncedFetchReservations = debounce(async () => {
       if (!isUpdating.value) {
-        await fetchReservationsToday(selectedHotelId.value, today);
+        await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
       }
     }, 1000); // 1s debounce time
 
