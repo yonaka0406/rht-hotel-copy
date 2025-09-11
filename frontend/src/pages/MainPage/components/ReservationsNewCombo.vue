@@ -265,10 +265,10 @@
             </div>
             <template #footer>
                 <Button label="閉じる" icon="pi pi-times" @click="closeDialog"
-                    class="p-button-danger p-button-text p-button-sm" />
-                <Button label="保存" icon="pi pi-check" @click="submitReservation"
+                    class="p-button-danger p-button-text p-button-sm" :disabled="isSubmitting" />
+                <Button :label="isSubmitting ? '処理中...' : '保存'" icon="pi" :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi-check'" @click="submitReservation"
                     class="p-button-success p-button-text p-button-sm" 
-                    :disabled="impedimentStatus && impedimentStatus.level === 'block'" />
+                    :disabled="(impedimentStatus && impedimentStatus.level === 'block') || isSubmitting" />
             </template>
         </Dialog>
 
@@ -951,7 +951,8 @@ const validatePhone = (phone) => {
 };
 
 const submitReservation = async () => {
-   
+    if (isSubmitting.value) return;
+       
     if (impedimentStatus.value && impedimentStatus.value.level === 'block') {
         toast.add({
         severity: 'error',
@@ -1017,6 +1018,8 @@ const submitReservation = async () => {
     const stayCombos = consolidateStayReservations(stayReservationCombos);
 
     try {
+        isSubmitting.value = true;
+        
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
         //console.log('Reservation response:', response); // Debug log to check the response structure
@@ -1095,6 +1098,8 @@ const submitReservation = async () => {
             detail: '予約の作成中にエラーが発生しました。',
             life: 5000,
         });
+    } finally {
+        isSubmitting.value = false;
     }
 };
 
@@ -1221,6 +1226,8 @@ const onHotelChange = async (event) => {
 const hasStayReservation = computed(() => {
     return reservationCombos.value.some(combo => combo.reservation_type === 'stay');
 });
+
+const isSubmitting = ref(false);
 
 onMounted(async () => {
     await fetchHotels();
