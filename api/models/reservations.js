@@ -3352,7 +3352,7 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
 
   const selectPlanId = async (code) => {
     // console.log('selectTLPlanMaster:', planMaster);  
-    console.log('selectPlanId code:', code);
+    //console.log('selectPlanId code:', code);
     const match = planMaster.find(item => item.plangroupcode == code);
     if (match) {
       return {
