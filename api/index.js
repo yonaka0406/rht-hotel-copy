@@ -207,7 +207,7 @@ if (httpsServer) {
 const PORT = process.env.PORT || 5000;
 const baseUrl = `http://localhost:${PORT}`; // This should point to your backend directly if accessed internally.
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.raw({ type: 'text/xml' }));
 //assets for the frontend
 app.use('/34ba90cc-a65c-4a6e-93cb-b42a60626108', express.static(absoluteStampPath));
