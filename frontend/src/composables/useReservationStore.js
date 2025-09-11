@@ -972,12 +972,12 @@ export function useReservationStore() {
     };
 
     // Delete
-    const deleteHoldReservation = async (id) => {
+    const deleteHoldReservation = async (hotel_id, id) => {
         // console.log('From Reservation Store => deleteHoldReservation');
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
-            const url = `/api/reservation/delete/hold/${id}`;
+            const url = `/api/reservation/delete/hold/${hotel_id}/${id}`;
             const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {

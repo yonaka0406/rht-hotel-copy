@@ -963,6 +963,7 @@ const updateReservationStatus = async (status, type = null) => {
 
 };
 const deleteReservation = () => {
+    const hotel_id = reservationInfo.value.hotel_id;
     const reservation_id = reservationInfo.value.reservation_id;
 
     confirm.require({
@@ -982,7 +983,7 @@ const deleteReservation = () => {
         },
         accept: async () => {
             try {
-                await deleteHoldReservation(reservation_id);
+                await deleteHoldReservation(hotel_id, reservation_id);
                 toast.add({
                     severity: 'success',
                     summary: '成功',

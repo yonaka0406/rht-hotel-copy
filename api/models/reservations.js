@@ -600,47 +600,32 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT      
-      reservation_details.hotel_id
-      ,hotels.name
-      ,reservation_details.reservation_id
-      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) as client_name
-      ,reservations.check_in
-      ,reservations.check_out
-      ,reservations.number_of_people
-      ,reservations.status      
-    FROM
-      hotels
-      ,rooms
-      ,room_types
-      ,reservations
-      ,reservation_details
-      ,clients
-    WHERE
-      reservations.created_by = $1
-      AND reservations.status = 'hold'
-      AND reservations.hotel_id = hotels.id
-      AND reservation_details.room_id = rooms.id
-      AND reservation_details.hotel_id = rooms.hotel_id
-      AND room_types.id = rooms.room_type_id
-      AND room_types.hotel_id = rooms.hotel_id
-      AND reservations.id = reservation_details.reservation_id
-      AND reservations.hotel_id = reservation_details.hotel_id
-      AND clients.id = reservations.reservation_client_id
-    GROUP BY
-      hotels.name
-      ,reservation_details.hotel_id
-      ,reservation_details.reservation_id
-      ,clients.name_kanji
-      ,clients.name_kana
-      ,clients.name
-      ,reservations.check_in
-      ,reservations.check_out
-      ,reservations.number_of_people
-      ,reservations.status
-    ORDER BY
-      reservations.check_in
-      ,reservation_details.reservation_id      
+    SELECT DISTINCT
+      rd.hotel_id,
+      h.name,
+      rd.reservation_id,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
+      r.check_in,
+      r.check_out,
+      r.number_of_people,
+      r.status
+    FROM reservations r
+    JOIN reservation_details rd
+        ON rd.reservation_id = r.id
+        AND rd.hotel_id = r.hotel_id
+    JOIN rooms rm
+        ON rm.id = rd.room_id
+        AND rm.hotel_id = rd.hotel_id
+    JOIN room_types rt
+        ON rt.id = rm.room_type_id
+        AND rt.hotel_id = rm.hotel_id
+    JOIN hotels h
+        ON h.id = r.hotel_id
+    JOIN clients c
+        ON c.id = r.reservation_client_id
+    WHERE r.created_by = $1
+      AND r.status = 'hold'
+    ORDER BY r.check_in, rd.reservation_id;       
   `;
 
   const values = [user_id];
@@ -821,7 +806,7 @@ const selectReservationClientIds = async (requestId, hotelId, reservationId) => 
       id, name, name_kana, name_kanji, COALESCE(name_kanji, name_kana, name) AS display_name, legal_or_natural_person, gender, date_of_birth, email, phone, fax
     FROM
     (
-      SELECT clients.*      
+      SELECT c.*      
       FROM reservations r
         JOIN clients c 
           ON c.id = r.reservation_client_id
@@ -829,7 +814,7 @@ const selectReservationClientIds = async (requestId, hotelId, reservationId) => 
 
       UNION
 
-      SELECT clients.*
+      SELECT c.*
       FROM reservation_details rd
         JOIN reservation_clients rc ON rc.reservation_details_id = rd.id AND rc.hotel_id = rd.hotel_id
         JOIN clients c ON c.id = rc.client_id
@@ -994,20 +979,70 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
 };
 
 // Function to Add
+const insertParkingBulk = async (client, reservation, spotsToReserve, dateArray) => {
+  const CHUNK_SIZE = 100; // rows per batch
+  const columnsPerRow = 7;
 
-const addReservationHold = async (requestId, reservation) => {
+  // Generate all rows (room × date)
+  const allRows = [];
+  for (const spot of spotsToReserve) {
+    for (const date of dateArray) {
+      allRows.push({
+        hotel_id: reservation.hotel_id,
+        reservation_id: reservation.id,
+        vehicle_category_id: reservation.vehicle_category_id,
+        parking_spot_id: spot.parking_spot_id,
+        date,
+        created_by: reservation.created_by,
+        updated_by: reservation.updated_by
+      });
+    }
+  }
+
+  // Chunked inserts
+  for (let i = 0; i < allRows.length; i += CHUNK_SIZE) {
+    const chunk = allRows.slice(i, i + CHUNK_SIZE);
+    const placeholders = [];
+    const values = [];
+
+    chunk.forEach((row, index) => {
+      const baseIndex = index * columnsPerRow;
+      placeholders.push(
+        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, 'reserved', $${baseIndex + 6}, $${baseIndex + 7})`
+      );
+      values.push(
+        row.hotel_id,
+        row.reservation_id,
+        row.vehicle_category_id,
+        row.parking_spot_id,
+        row.date,
+        row.created_by,
+        row.updated_by
+      );
+    });
+
+    const query = `
+      INSERT INTO reservation_parking (
+        hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by
+      ) VALUES ${placeholders.join(', ')}
+    `;
+    await client.query(query, values);
+  }
+};
+const addReservationHold = async (requestId, reservation, roomsToReserve) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
+    // Insert reservation
     const reservationQuery = `
-            INSERT INTO reservations (
-                hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING *;
-        `;
+      INSERT INTO reservations (
+        hotel_id, reservation_client_id, check_in, check_out, number_of_people, created_by, updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *;
+    `;
     const reservationValues = [
       reservation.hotel_id,
       reservation.reservation_client_id,
@@ -1020,46 +1055,19 @@ const addReservationHold = async (requestId, reservation) => {
     const reservationResult = await client.query(reservationQuery, reservationValues);
     const newReservation = reservationResult.rows[0];
 
-    if (reservation.vehicle_category_id) {
-      const categoryQuery = 'SELECT capacity_units_required FROM vehicle_categories WHERE id = $1';
-      const categoryResult = await client.query(categoryQuery, [reservation.vehicle_category_id]);
-      if (categoryResult.rows.length === 0) {
-        throw new Error('Vehicle category not found');
-      }
-      const { capacity_units_required } = categoryResult.rows[0];
-
-      const availableSpots = await selectAvailableParkingSpots(requestId, reservation.hotel_id, reservation.check_in, reservation.check_out, capacity_units_required, client);
-      if (availableSpots.length === 0) {
-        throw new Error('No available parking spots for the selected vehicle category and dates');
-      }
-      const spotToReserve = availableSpots[0];
-
+    if (reservation.vehicle_category_id && roomsToReserve.length > 0) {
+      // Build date array
       const dateArray = [];
       for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
         dateArray.push(new Date(dt));
       }
 
-      for (const date of dateArray) {
-        const parkingQuery = `
-                    INSERT INTO reservation_parking (hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by)
-                    VALUES ($1, $2, $3, $4, $5, 'reserved', $6, $7)
-                `;
-        const parkingValues = [
-          reservation.hotel_id,
-          newReservation.id,
-          reservation.vehicle_category_id,
-          spotToReserve.parking_spot_id,
-          date,
-          reservation.created_by,
-          reservation.updated_by
-        ];
-        await client.query(parkingQuery, parkingValues);
-      }
+      // Bulk insert parking for all rooms and dates
+      await insertParkingBulk(client, { ...reservation, id: newReservation.id }, roomsToReserve, dateArray);
     }
 
     await client.query('COMMIT');
     return newReservation;
-
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error adding reservation hold:', err);
@@ -1068,6 +1076,7 @@ const addReservationHold = async (requestId, reservation) => {
     client.release();
   }
 };
+
 const addReservationDetail = async (requestId, detail) => {
   const pool = getPool(requestId);
   const query = `
@@ -2744,16 +2753,16 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 };
 
 // Delete
-const deleteHoldReservationById = async (requestId, reservation_id, updated_by) => {
+const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);
   const query = format(`
     -- Set the updated_by value in a session variable
     SET SESSION "my_app.user_id" = %L;
 
     DELETE FROM reservations    
-    WHERE id = %L AND (status = 'hold' OR type = 'employee')
+    WHERE id = %L AND hotel_id = %L AND (status = 'hold' OR type = 'employee')
     RETURNING *;
-  `, updated_by, reservation_id);
+  `, updated_by, reservation_id, hotel_id);
 
   try {
     const result = await pool.query(query);

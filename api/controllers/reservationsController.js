@@ -566,7 +566,6 @@ const createHoldReservationCombo = async (req, res) => {
   }
 };
 
-
 const createReservationDetails = async (req, res) => {
   const {
     ogm_id,
@@ -1314,10 +1313,10 @@ const editRoomGuestNumber = async (req, res) => {
 
 // DELETE
 const deleteHoldReservation = async (req, res) => {
-  const { id } = req.params;
+  const { hid, id } = req.params;
   const user_id = req.user.id;
   try {
-    const updatedReservation = await deleteHoldReservationById(req.requestId, id, user_id);
+    const updatedReservation = await deleteHoldReservationById(req.requestId, id, hid, user_id);
     if (updatedReservation > 0) {
       res.json({ success: true });
     } else {

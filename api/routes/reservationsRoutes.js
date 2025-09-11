@@ -50,7 +50,7 @@ router.put('/reservation/update/free/calendar', authMiddlewareCRUDAccess, reserv
 router.put('/reservation/update/room/guestnumber/:id', authMiddlewareCRUDAccess, reservationsController.editRoomGuestNumber);
 router.put('/reservation/convert/:id', authMiddlewareCRUDAccess, reservationsController.convertBlockToReservation);
 
-router.delete('/reservation/delete/hold/:id', authMiddlewareCRUDAccess, reservationsController.deleteHoldReservation);
+router.delete('/reservation/delete/hold/:hid/:id', authMiddlewareCRUDAccess, reservationsController.deleteHoldReservation);
 router.delete('/reservation/delete/room/:id', authMiddlewareCRUDAccess, reservationsController.deleteRoomFromReservation);
 router.delete('/reservation/payment/delete/:id', authMiddlewareCRUDAccess, reservationsController.delReservationPayment);
 
