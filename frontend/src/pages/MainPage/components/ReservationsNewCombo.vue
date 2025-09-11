@@ -1019,7 +1019,7 @@ const submitReservation = async () => {
     try {
         // 1. Create the main reservation with stay combos
         const response = await createHoldReservationCombo(reservationDetails.value, stayCombos);
-        console.log('Reservation response:', response); // Debug log to check the response structure
+        //console.log('Reservation response:', response); // Debug log to check the response structure
 
         if (!response) {
             throw new Error('No response received from server');
@@ -1030,7 +1030,7 @@ const submitReservation = async () => {
 
          // Make sure we're getting the reservation ID correctly
         const reservationId = reservation?.id || (Array.isArray(reservation) ? reservation[0]?.id : null);
-        console.log('Extracted reservation ID:', reservationId);
+        //console.log('Extracted reservation ID:', reservationId);
 
         if (!reservationId) {
             console.error('Could not determine reservation ID from response:', response);
@@ -1041,14 +1041,14 @@ const submitReservation = async () => {
 
         // 2. Handle parking reservations if any
         const parkingCombos = reservationCombos.value.filter(c => c.reservation_type === 'parking');
-        console.log('Found parking combos:', parkingCombos);
+        //console.log('Found parking combos:', parkingCombos);
 
         if (parkingCombos.length > 0) {
-            console.log('Processing parking assignments for reservation ID:', reservationId);
+            //console.log('Processing parking assignments for reservation ID:', reservationId);
 
             // One assignment per parking combo, backend will expand it further
             const assignments = parkingCombos.map((parkingCombo, index) => {
-                console.log(`Processing parking combo ${index + 1}:`, parkingCombo);
+                //console.log(`Processing parking combo ${index + 1}:`, parkingCombo);
 
                 return {
                     hotel_id: hotelId,
@@ -1064,20 +1064,20 @@ const submitReservation = async () => {
                 };
             });
 
-            console.log('Final assignments to be saved:', assignments);
+            //console.log('Final assignments to be saved:', assignments);
 
             // Save all parking assignments
             if (assignments.length > 0) {
                 try {
                     await saveParkingAssignments(assignments);
-                    console.log('Successfully saved parking assignments');
+                    //console.log('Successfully saved parking assignments');
                 } catch (error) {
                     console.error('Error saving parking assignments:', error);
                     throw error;
                 }
             }
         } else {
-            console.log('No parking combos to process');
+            //console.log('No parking combos to process');
         }
 
         // Show success message and reset form

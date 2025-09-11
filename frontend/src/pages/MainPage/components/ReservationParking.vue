@@ -261,7 +261,7 @@ const selectedRoomParkingSpots = computed(() => {
   
   const spots = [];
   const targetRoomId = String(selectedRoomId.value);
-  console.log(`[DEBUG] Filtering spots for room ID: ${targetRoomId} (type: ${typeof targetRoomId})`);  
+  //console.log(`[DEBUG] Filtering spots for room ID: ${targetRoomId} (type: ${typeof targetRoomId})`);  
     
   parkingAssignments.value.forEach(assignment => {
     if (String(assignment.roomId) === targetRoomId && assignment.dates) {
@@ -279,7 +279,7 @@ const selectedRoomParkingSpots = computed(() => {
     }
   });
   
-  console.log('[ReservationParking] Selected room parking spots:', spots);
+  //console.log('[ReservationParking] Selected room parking spots:', spots);
   return spots;
 });
 
