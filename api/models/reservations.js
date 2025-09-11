@@ -535,59 +535,57 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
       ,details.total_price
       ,COALESCE(payments.total_payment, 0) AS total_payment
       ,COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
-    FROM
+    FROM 
       (
         SELECT
-          reservation_details.hotel_id
-          ,reservation_details.reservation_id
-          ,reservation_details.room_id
-          ,SUM(COALESCE(rates_price, 0) + COALESCE(addon_sum,0)) as total_price	
-        FROM
-          reservation_details 
-          LEFT JOIN 
-          (
-            SELECT 
-            rr.reservation_details_id
-            ,SUM(rr.price) AS rates_price
-            FROM reservation_rates rr, reservation_details rd
-            WHERE rr.reservation_details_id = rd.id AND rd.billable = TRUE 
-                AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+          rd.hotel_id
+          ,rd.reservation_id
+          ,rd.room_id
+          ,SUM(COALESCE(rr.rates_price, 0) + COALESCE(ra.addon_sum, 0)) AS total_price
+        FROM reservation_details rd
+        LEFT JOIN (
+            SELECT
+                rr.reservation_details_id,
+                SUM(rr.price) AS rates_price
+            FROM reservation_rates rr
+            JOIN reservation_details rd2
+              ON rd2.id = rr.reservation_details_id
+            AND rd2.hotel_id = $1
+            AND rd2.reservation_id = $2
+            WHERE rd2.billable = TRUE
+              AND (rd2.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
             GROUP BY rr.reservation_details_id
-          ) rr ON rr.reservation_details_id = reservation_details.id           
-          LEFT JOIN
-          (
-            SELECT 
-            ra.hotel_id
-            ,ra.reservation_detail_id
-            ,SUM(COALESCE(ra.quantity,0) * COALESCE(ra.price,0)) as addon_sum
+        ) rr ON rr.reservation_details_id = rd.id
+        LEFT JOIN (
+            SELECT
+                ra.hotel_id,
+                ra.reservation_detail_id,
+                SUM(COALESCE(ra.quantity, 0) * COALESCE(ra.price, 0)) AS addon_sum
             FROM reservation_addons ra
+            JOIN reservation_details rd3
+              ON rd3.id = ra.reservation_detail_id
+            AND rd3.hotel_id = $1
+            AND rd3.reservation_id = $2
             GROUP BY ra.hotel_id, ra.reservation_detail_id
-          ) ra
-          ON reservation_details.hotel_id = ra.hotel_id AND reservation_details.id = ra.reservation_detail_id
-        GROUP BY
-          reservation_details.hotel_id
-          ,reservation_details.reservation_id
-          ,reservation_details.room_id
-      ) AS details
-      LEFT JOIN
-      (
+        ) ra ON ra.hotel_id = rd.hotel_id AND ra.reservation_detail_id = rd.id
+        WHERE rd.hotel_id = $1
+          AND rd.reservation_id = $2
+        GROUP BY rd.hotel_id, rd.reservation_id, rd.room_id
+    ) AS details
+    LEFT JOIN (
         SELECT
-          hotel_id
-          ,reservation_id
-          ,room_id
-          ,SUM(value) as total_payment
-        FROM 
-          reservation_payments 
-        GROUP BY
-          hotel_id
-          ,reservation_id
-          ,room_id
-      ) AS payments
-      ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
-
-    WHERE details.hotel_id = $1 AND details.reservation_id = $2
-
-    ORDER BY 1, 2, 6 DESC
+            hotel_id,
+            reservation_id,
+            room_id,
+            SUM(value) AS total_payment
+        FROM reservation_payments
+        WHERE hotel_id = $1 AND reservation_id = $2
+        GROUP BY hotel_id, reservation_id, room_id
+    ) AS payments
+    ON details.hotel_id = payments.hotel_id
+    AND details.reservation_id = payments.reservation_id
+    AND details.room_id = payments.room_id
+    ORDER BY 1, 2, 6 DESC;
   `;
 
   const values = [hotelId, reservationId];
