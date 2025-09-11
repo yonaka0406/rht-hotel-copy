@@ -851,24 +851,26 @@ const selectReservationPayments = async (requestId, hotelId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT 
-      reservation_payments.*
-      ,payment_types.name as payment_type_name
-      ,payment_types.transaction as transaction_type
-      ,rooms.room_number
-      ,COALESCE(clients.name_kanji, clients.name_kana, clients.name) AS payer_name
+      rp.*,
+      pt.name AS payment_type_name,
+      pt.transaction AS transaction_type,
+      r.room_number,
+      COALESCE(c.name_kanji, c.name_kana, c.name) AS payer_name
     FROM 
-      reservation_payments
-      ,payment_types
-      ,rooms
-      ,clients
-    WHERE
-      reservation_payments.hotel_id = $1
-      AND reservation_payments.reservation_id = $2
-      AND reservation_payments.payment_type_id = payment_types.id
-      AND reservation_payments.room_id = rooms.id
-      AND reservation_payments.client_id = clients.id
-    ORDER BY
-      reservation_payments.date, reservation_payments.client_id, reservation_payments.value
+      reservation_payments rp
+      JOIN payment_types pt 
+        ON rp.payment_type_id = pt.id
+      JOIN rooms r
+        ON rp.room_id = r.id AND rp.hotel_id = r.hotel_id
+      JOIN clients c
+        ON rp.client_id = c.id
+    WHERE 
+        rp.hotel_id = $1
+        AND rp.reservation_id = $2
+    ORDER BY 
+        rp.date,
+        rp.client_id,
+        rp.value;
   `;
 
   const values = [hotelId, reservationId];
