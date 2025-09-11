@@ -270,7 +270,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
                   'price', ra.price
               )
           ) AS addons_json
-        FROM reservation_addons ra          
+        FROM reservation_addons ra JOIN reservation_details rd ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
         GROUP BY
           reservation_detail_id
       ) ra ON reservation_details.id = ra.reservation_detail_id
@@ -288,8 +289,9 @@ const selectReservation = async (requestId, id, hotel_id) => {
 			        'phone', c.phone
             )
           ) AS clients_json
-        FROM reservation_clients rc
-        JOIN clients c ON rc.client_id = c.id
+        FROM reservation_clients rc JOIN clients c ON rc.client_id = c.id
+			    JOIN reservation_details rd ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
+		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
         GROUP BY rc.reservation_details_id
       ) rc ON rc.reservation_details_id = reservation_details.id
         LEFT JOIN 
@@ -305,7 +307,8 @@ const selectReservation = async (requestId, id, hotel_id) => {
               'price', rr.price              
             )
           ) AS rates_json
-        FROM reservation_rates rr        
+        FROM reservation_rates rr JOIN reservation_details rd ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id 
+		    WHERE rd.reservation_id = $1 AND rd.hotel_id = $2
         GROUP BY rr.reservation_details_id
       ) rr ON rr.reservation_details_id = reservation_details.id
 
@@ -421,7 +424,10 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
                     'price', ra.price
                 )
             ) AS addons_json
-          FROM reservation_addons ra		
+          FROM reservation_addons ra
+          JOIN reservation_details rd 
+            ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
           GROUP BY ra.reservation_detail_id
         ) ra ON reservation_details.id = ra.reservation_detail_id
       LEFT JOIN (
@@ -439,6 +445,9 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
             ) AS clients_json
           FROM reservation_clients rc
           JOIN clients c ON rc.client_id = c.id
+          JOIN reservation_details rd 
+            ON rd.id = rc.reservation_details_id AND rd.hotel_id = rc.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
           GROUP BY rc.reservation_details_id
         ) rc ON rc.reservation_details_id = reservation_details.id
       LEFT JOIN (
@@ -453,7 +462,10 @@ const selectReservationDetail = async (requestId, id, hotel_id) => {
                 'price', rr.price              
               )
             ) AS rates_json
-          FROM reservation_rates rr        
+          FROM reservation_rates rr
+          JOIN reservation_details rd 
+            ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
+          WHERE rd.id = $1 AND rd.hotel_id = $2
           GROUP BY rr.reservation_details_id
         ) rr ON rr.reservation_details_id = reservation_details.id
     WHERE reservation_details.id = $1 AND reservation_details.hotel_id = $2
