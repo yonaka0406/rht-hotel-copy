@@ -428,7 +428,7 @@ export function useParkingStore() {
         }
     };
 
-    const saveParkingAssignments = async (reservationDetailIds, assignments) => {
+    const saveParkingAssignments = async (assignments) => {
         setReservationIsUpdating(true);
         try {
             const authToken = localStorage.getItem('authToken');
@@ -438,7 +438,7 @@ export function useParkingStore() {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ reservationDetailIds, assignments }),
+                body: JSON.stringify({ assignments }),
             });
 
             if (!response.ok) {

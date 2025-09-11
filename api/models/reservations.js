@@ -1116,46 +1116,72 @@ const addReservationDetail = async (requestId, detail) => {
   }
 };
 const addReservationDetailsBatch = async (requestId, details, client = null) => {
-  const pool = client || getPool(requestId);
+  const pool = getPool(requestId);
   let shouldReleaseClient = false;
-  if (!client) {    
-    client = await pool.connect();
+  let dbClient = client;
+
+  if (!dbClient) {
+    dbClient = await pool.connect();
     shouldReleaseClient = true;
   }
-  try{
-    await client.query('BEGIN');
-  
-    const values = [];
-    const placeholders = details.map((d, i) => {
-      const offset = i * 12;
-      values.push(
-        d.hotel_id, d.reservation_id, d.date, d.room_id,
-        d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
-        d.number_of_people, d.price, d.created_by, d.updated_by
-      );
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12})`;
-    }).join(', ');
 
-    const query = `
-      INSERT INTO reservation_details (
-        hotel_id, reservation_id, date, room_id, plans_global_id, plans_hotel_id, plan_name, plan_type, number_of_people, price, created_by, updated_by
-      )
-      VALUES ${placeholders}
-      RETURNING *;
-    `;
+  try {
+    if (shouldReleaseClient) {
+      await dbClient.query('BEGIN');
+    }
 
-    const result = await client.query(query, values);
-    
-    await client.query('COMMIT');
+    const columns = [
+      'hotel_id', 'reservation_id', 'date', 'room_id', 'plans_global_id',
+      'plans_hotel_id', 'plan_name', 'plan_type', 'number_of_people', 'price',
+      'created_by', 'updated_by'
+    ];
+    const NUM_COLUMNS = columns.length;
+    const POSTGRES_PARAM_LIMIT = 32767;
+    const BATCH_SIZE = Math.floor(POSTGRES_PARAM_LIMIT / NUM_COLUMNS);
 
-    return result.rows;
+    const allCreatedDetails = [];
+
+    for (let i = 0; i < details.length; i += BATCH_SIZE) {
+      const batch = details.slice(i, i + BATCH_SIZE);
+      
+      const values = [];
+      const placeholders = batch.map((d, j) => {
+        const offset = j * NUM_COLUMNS;
+        values.push(
+          d.hotel_id, d.reservation_id, d.date, d.room_id,
+          d.plans_global_id, d.plans_hotel_id, d.plan_name, d.plan_type,
+          d.number_of_people, d.price, d.created_by, d.updated_by
+        );
+        return `(${Array.from(
+          { length: NUM_COLUMNS },
+          (_, k) => `$${offset + k + 1}`
+        ).join(', ')})`;
+      }).join(', ');
+
+      const query = `
+        INSERT INTO reservation_details (${columns.join(', ')})
+        VALUES ${placeholders}
+        RETURNING *;
+      `;
+      
+      const result = await dbClient.query(query, values);
+      allCreatedDetails.push(...result.rows);
+    }
+
+    if (shouldReleaseClient) {
+      await dbClient.query('COMMIT');
+    }
+
+    return allCreatedDetails;
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (shouldReleaseClient) {
+      await dbClient.query('ROLLBACK');
+    }
     console.error('Error adding reservation hold details:', err);
-    throw new Error('Database error: ' + err.message);
+    throw err;
   } finally {
     if (shouldReleaseClient) {
-      client.release();
+      dbClient.release();
     }
   }
 };
