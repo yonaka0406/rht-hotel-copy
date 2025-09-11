@@ -164,3 +164,7 @@ ALTER TABLE reservation_addons DROP CONSTRAINT reservation_addons_addon_type_che
 ALTER TABLE reservation_addons
 ADD CONSTRAINT reservation_addons_addon_type_check
 CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
+
+
+-- Indexes
+CREATE INDEX idx_reservations_user_status_checkin ON reservations (created_by, status, check_in);
