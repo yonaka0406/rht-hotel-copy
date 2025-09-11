@@ -754,7 +754,12 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
             ON pg.id = rd.plans_global_id
 		  
     	  WHERE	      	
-          rd.id IN (SELECT red.id FROM reservations res, reservation_details red WHERE res.hotel_id = $1 AND (red.date = $2 OR res.check_out = $2))
+          rd.id IN (
+            SELECT red.id 
+            FROM reservations res JOIN reservation_details red 
+              ON res.id = red.reservation_id AND res.hotel_id = red.hotel_id
+            WHERE res.hotel_id = $1 AND (red.date = $2 OR res.check_out = $2)
+          )
           AND r.id = rd.reservation_id
           AND r.hotel_id = rd.hotel_id
       	GROUP BY
