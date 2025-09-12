@@ -647,7 +647,7 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
 }
 
 const saveParkingAssignments = async (requestId, assignments, userId) => {
-    //console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`);
+    console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`, assignments);
     const pool = getPool(requestId);
     const client = await pool.connect();
 
@@ -673,21 +673,42 @@ const saveParkingAssignments = async (requestId, assignments, userId) => {
 
             const { 
                 hotel_id, reservation_id, vehicle_category_id, 
-                check_in, check_out, unit_price, number_of_vehicles = 1 
+                check_in, check_out, unit_price, number_of_vehicles = 1, spotId: preferredSpotId 
             } = assignment;
 
             // 1. Fetch reservation_details for this reservation
-            const detailsRes = await client.query(
-                `SELECT id, room_id, date 
-                 FROM reservation_details 
-                 WHERE reservation_id = $1 AND hotel_id = $2
-                   AND date >= $3 AND date < $4
-                 ORDER BY room_id, date`,
-                [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out))]
-            );
+            console.log('Fetching reservation details with params:', {
+                reservation_id,
+                hotel_id,
+                check_in: formatDate(new Date(check_in)),
+                check_out: formatDate(new Date(check_out))
+            });
+
+            const query = {
+                text: `SELECT id, room_id, date 
+                    FROM reservation_details 
+                    WHERE reservation_id = $1 AND hotel_id = $2
+                    AND date >= $3 AND date <= $4
+                    ORDER BY room_id, date`,
+                values: [reservation_id, hotel_id, formatDate(new Date(check_in)), formatDate(new Date(check_out))]
+            };
+
+            console.log('Executing query:', {
+                text: query.text,
+                values: query.values
+            });
+
+            const detailsRes = await client.query(query);
             const reservationDetails = detailsRes.rows;
             if (!reservationDetails.length) {
-                console.warn(`No reservation details found for reservation ${reservation_id}`);
+                console.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
+                    reservation_id,
+                    hotel_id,
+                    check_in: formatDate(new Date(check_in)),
+                    check_out: formatDate(new Date(check_out)),
+                    formatted_check_in: formatDate(new Date(check_in)),
+                    formatted_check_out: formatDate(new Date(check_out))
+                });
                 continue;
             }
 
@@ -741,13 +762,50 @@ const saveParkingAssignments = async (requestId, assignments, userId) => {
                     [hotel_id, formatDate(new Date(date))]
                 );
                 const reserved = reservedRes.rows.map(r => r.parking_spot_id);
-                const available = candidateSpots.filter(id => !reserved.includes(id));
-                if (available.length < number_of_vehicles) {
-                    throw new Error(`Not enough parking spots for ${date} (need ${number_of_vehicles}, available ${available.length})`);
+                
+                let assignedSpot = null;
+
+                // Prioritize preferredSpotId if provided and available
+                if (preferredSpotId) {
+                    const isPreferredSpotCandidate = candidateSpots.includes(preferredSpotId);
+                    const isPreferredSpotReserved = reserved.includes(preferredSpotId);
+
+                    if (isPreferredSpotCandidate && !isPreferredSpotReserved) {
+                        assignedSpot = preferredSpotId;
+                    } else {
+                        console.warn(`Preferred spot ${preferredSpotId} is not available or not a candidate for date ${date}. Falling back to auto-assignment.`);
+                    }
+                }
+
+                // If no preferred spot or preferred spot not available, find an available spot
+                if (assignedSpot === null) {
+                    const available = candidateSpots.filter(id => !reserved.includes(id));
+                    if (available.length < number_of_vehicles) {
+                        throw new Error(`Not enough parking spots for ${date} (need ${number_of_vehicles}, available ${available.length})`);
+                    }
+                    assignedSpot = available[0]; // Pick the first available spot
+                }
+
+                if (assignedSpot === null) {
+                    throw new Error(`Could not assign a parking spot for date ${date}.`);
+                }
+
+                const spotsToAssign = [];
+                // If a preferred spot is provided and available
+                if (preferredSpotId && candidateSpots.includes(preferredSpotId) && !reserved.includes(preferredSpotId)) {
+                    spotsToAssign.push(preferredSpotId);
+                }
+
+                // Fill the rest with other available spots
+                const otherAvailableSpots = candidateSpots.filter(id => !reserved.includes(id) && id !== preferredSpotId);
+                spotsToAssign.push(...otherAvailableSpots);
+
+                if (spotsToAssign.length < number_of_vehicles) {
+                    throw new Error(`Not enough parking spots for ${date} (need ${number_of_vehicles}, available ${spotsToAssign.length})`);
                 }
 
                 for (let v = 0; v < number_of_vehicles; v++) {
-                    const assignedSpot = available[v];
+                    const currentAssignedSpot = spotsToAssign[v];
 
                     addonValues.push([
                         hotel_id,
@@ -766,7 +824,7 @@ const saveParkingAssignments = async (requestId, assignments, userId) => {
                         hotel_id,
                         reservation_details_id: detail.id,
                         vehicle_category_id,
-                        parking_spot_id: assignedSpot,
+                        parking_spot_id: currentAssignedSpot,
                         date: formatDate(new Date(date)),
                         created_by: userId
                     });

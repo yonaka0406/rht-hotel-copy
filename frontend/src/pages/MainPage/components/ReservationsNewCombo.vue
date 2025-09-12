@@ -1060,7 +1060,7 @@ const submitReservation = async () => {
                     check_in: parkingCombo.check_in,
                     check_out: parkingCombo.check_out,
                     number_of_vehicles: parkingCombo.number_of_rooms || 1,
-                    unit_price: parkingCombo.price || 0,
+                    unit_price: parkingCombo.addon_price || 0,
                     created_by: reservation.created_by,
                     updated_by: reservation.updated_by,
                     status: 'reserved'

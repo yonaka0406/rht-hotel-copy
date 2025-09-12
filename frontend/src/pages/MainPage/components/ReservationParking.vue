@@ -328,6 +328,11 @@ const onParkingSave = async (saveData) => {
         if (!hotelId) {
             throw new Error('Hotel ID is not available in reservation details.');
         }
+        
+        const reservationId = props.reservationDetails[0].reservation_id;
+        if (!reservationId) {
+            throw new Error('Reservation ID is not available in reservation details.');
+        }
 
         const reservationDetailIds = props.reservationDetails.map(d => d.id);
         if (!reservationDetailIds.length) {
@@ -335,7 +340,6 @@ const onParkingSave = async (saveData) => {
         }
 
         let assignmentsToSave = [];
-        const dates = saveData.details ? saveData.details.map(d => d.date) : [];
         const unitPrice = Number(saveData.unitPrice) || 0;
         const comment = saveData.comment || '';
 
@@ -347,12 +351,14 @@ const onParkingSave = async (saveData) => {
                     ...existingAssignment,
                     ...saveData,
                     hotel_id: hotelId,
+                    reservation_id: reservationId,
+                    check_in: saveData.startDate,
+                    check_out: saveData.endDate,
                     spotId: saveData.spotId,
-                    vehicleCategoryId: saveData.vehicleCategoryId,
-                    unitPrice: unitPrice,
+                    vehicle_category_id: saveData.vehicleCategoryId, // Changed to snake_case
+                    unit_price: unitPrice, // Changed to snake_case
                     comment: comment,
-                    dates: dates,
-                    totalPrice: unitPrice * dates.length,
+                    totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)), // Calculate days from startDate and endDate
                     updated_at: new Date().toISOString()
                 }];
             }
@@ -361,21 +367,21 @@ const onParkingSave = async (saveData) => {
             assignmentsToSave = [{
                 id: `temp-${Date.now()}`,
                 hotel_id: hotelId,
+                reservation_id: reservationId,
+                check_in: saveData.startDate,
+                check_out: saveData.endDate,
                 ...saveData,
                 spotId: saveData.spotId,
-                vehicleCategoryId: saveData.vehicleCategoryId,
-                unitPrice: unitPrice,
+                vehicle_category_id: saveData.vehicleCategoryId, // Changed to snake_case
+                unit_price: unitPrice, // Changed to snake_case
                 comment: comment,
-                dates: dates,
-                totalPrice: unitPrice * dates.length,
-                created_by: 'system',
-                updated_by: 'system',
+                totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             }];
         }
 
-        await parkingStore.saveParkingAssignments(reservationDetailIds, assignmentsToSave);
+        await parkingStore.saveParkingAssignments(assignmentsToSave);
         
         // Refresh data after saving
         await parkingStore.fetchParkingReservations(props.reservationDetails[0].hotel_id, props.reservationDetails[0].reservation_id);

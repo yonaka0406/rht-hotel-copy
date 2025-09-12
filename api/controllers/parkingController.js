@@ -514,7 +514,18 @@ const saveParkingAssignments = async (req, res) => {
     const { assignments } = req.body;
     const user_id = req.user.id;
     try {
-        const result = await parkingModel.saveParkingAssignments(req.requestId, assignments, user_id);
+        // Add user_id to each assignment
+        const assignmentsWithUser = assignments.map(assignment => ({
+            ...assignment,
+            created_by: user_id,
+            updated_by: user_id
+        }));
+        
+        const result = await parkingModel.saveParkingAssignments(
+            req.requestId, 
+            assignmentsWithUser, 
+            user_id            
+        );
         res.json(result);
     } catch (error) {
         console.error(error);
