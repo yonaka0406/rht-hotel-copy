@@ -40,11 +40,11 @@ SELECT
         WHEN r.type IN ('ota', 'web') AND rg.client_id IS NOT NULL 
         THEN COALESCE(rg.name_kanji, rg.name_kana, rg.name)
         ELSE COALESCE(c.name_kanji, c.name_kana, c.name)
-    END AS client_name,
-    rd.plan_name,COALESCE(ph.name, pg.name, rd.plan_name) AS plan_name,
-    r.status,
-    r.type,
-    r.agent
+    END AS client_name    
+    ,COALESCE(ph.name, pg.name, rd.plan_name) AS plan_name
+    ,r.status
+    ,r.type
+    ,r.agent
 FROM
     hotels h
 JOIN reservations r ON h.id = r.hotel_id
