@@ -284,13 +284,22 @@ export function useHotelStore() {
     const updateRoom = async (roomId, roomData) => {
         try {
             const authToken = localStorage.getItem('authToken');
+            // Use hotel_id from roomData if available, otherwise fall back to selectedHotelId.value
+            const hotelId = roomData.hotel_id || selectedHotelId.value;
+            if (!hotelId) {
+                throw new Error('No hotel ID available for room update');
+            }
+            
             const response = await fetch(`/api/room/${roomId}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(roomData),
+                body: JSON.stringify({
+                    ...roomData,
+                    hotel_id: hotelId
+                }),
             });
             if (!response.ok) throw new Error('Failed to save room details');
             return await response.json();

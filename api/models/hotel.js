@@ -159,10 +159,10 @@ const updateHotelSiteController = async (requestId, id, data) => {
   }
 };
 
-const updateRoomType = async (requestId, id, name, description, updated_by) => {
+const updateRoomType = async (requestId, id, name, description, updated_by, hotelId) => {
   const pool = getPool(requestId);
-  const query = 'UPDATE room_types SET name = $1, description = $2, updated_by = $3 WHERE id = $4 RETURNING *';
-  const values = [name, description, updated_by, id];
+  const query = 'UPDATE room_types SET name = $1, description = $2, updated_by = $3 WHERE id = $4 AND hotel_id = $5 RETURNING *';
+  const values = [name, description, updated_by, id, hotelId];
 
   try {
     const result = await pool.query(query, values);
@@ -172,10 +172,10 @@ const updateRoomType = async (requestId, id, name, description, updated_by) => {
     throw new Error('Database error');
   }
 };
-const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by) => {
+const updateRoom = async (requestId, id, room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, hotelId) => {
   const pool = getPool(requestId);
-  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, updated_by = $7 WHERE id = $8 RETURNING *';
-  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, id];
+  const query = 'UPDATE rooms SET room_type_id = $1, floor = $2, room_number = $3, capacity = $4, smoking = $5, for_sale = $6, updated_by = $7 WHERE id = $8 AND hotel_id = $9 RETURNING *';
+  const values = [room_type_id, floor, room_number, capacity, smoking, for_sale, updated_by, id, hotelId];
 
   try {
     const result = await pool.query(query, values);

@@ -506,7 +506,8 @@ const saveRoomTypes = async () => {
           },
           body: JSON.stringify({
             name: roomType.name,
-            description: roomType.description
+            description: roomType.description,
+            hotel_id: selectedHotel.value.id
           }),
         });
         if (response.status !== 200) {

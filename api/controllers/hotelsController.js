@@ -332,52 +332,54 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
   };
   const editRoomType = async (req, res) => {
     const { id: idParam } = req.params;
-    const { name, description } = req.body;
+    const { name, description, hotel_id: hotelIdFromBody } = req.body;
     const updated_by = req.user.id;
 
-    let numericId, validatedName;
+    let numericId, validatedName, numericHotelId;
     try {
       numericId = validateNumericParam(idParam, 'Room Type ID');
       validatedName = validateNonEmptyStringParam(name, 'Room Type Name');
+      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedRoomType = await updateRoomType(req.requestId, numericId, validatedName, description, updated_by);
+      const updatedRoomType = await updateRoomType(req.requestId, numericId, validatedName, description, updated_by, numericHotelId);
       if (!updatedRoomType) {
         return res.status(404).json({ message: 'Room type not found' });
       }
       res.status(200).json(updatedRoomType);
     } catch (error) {
-      console.error('Error updating hotel:', error);
+      console.error('Error updating room type:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   };
   const editRoom = async (req, res) => {
     const { id: idParam } = req.params;
-    const { room_type_id, floor, room_number, capacity, smoking, for_sale } = req.body;
+    const { room_type_id, floor, room_number, capacity, smoking, for_sale, hotel_id: hotelIdFromBody } = req.body;
     const updated_by = req.user.id;
 
-    let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity;
+    let numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, numericHotelId;
     try {
       numericId = validateNumericParam(idParam, 'Room ID');
       numericRoomTypeId = validateNumericParam(String(room_type_id), 'Room Type ID');
       numericFloor = validateNumericParam(String(floor), 'Floor');
       validatedRoomNumber = validateNonEmptyStringParam(room_number, 'Room Number');
       numericCapacity = validateNumericParam(String(capacity), 'Capacity');
+      numericHotelId = validateNumericParam(hotelIdFromBody, 'Hotel ID');
     } catch (error) {
       return res.status(400).json({ error: error.message });
     }
 
     try {
-      const updatedRoom = await updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, updated_by);
+      const updatedRoom = await updateRoom(req.requestId, numericId, numericRoomTypeId, numericFloor, validatedRoomNumber, numericCapacity, smoking, for_sale, updated_by, numericHotelId);
       if (!updatedRoom) {
         return res.status(404).json({ message: 'Room not found' });
       }
       res.status(200).json(updatedRoom);
     } catch (error) {
-      console.error('Error updating hotel:', error);
+      console.error('Error updating room:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   };

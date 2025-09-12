@@ -15,3 +15,4 @@ CREATE INDEX idx_clients_customer_id ON clients (customer_id);
 CREATE INDEX idx_reservation_payments_client_id ON reservation_payments (client_id);
 CREATE INDEX idx_crm_actions_assigned_to_datetime ON crm_actions (assigned_to, action_datetime DESC);
 CREATE INDEX idx_crm_actions_client_id_datetime ON crm_actions (client_id, action_datetime DESC);
+CREATE INDEX idx_reservation_details_hotel_room_date_cancelled ON reservation_details (hotel_id, room_id, date) WHERE cancelled IS NULL;

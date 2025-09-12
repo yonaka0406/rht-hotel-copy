@@ -151,6 +151,7 @@ const saveChanges = async () => {
         capacity: room.capacity,
         smoking: room.smoking,
         for_sale: room.for_sale,
+        hotel_id: props.hotelId
       });
     }
 
