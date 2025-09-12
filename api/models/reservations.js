@@ -528,63 +528,44 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
   const pool = getPool(requestId);
   const query = `
     SELECT
-      details.hotel_id
-      ,details.reservation_id
-      ,details.room_id
-      ,details.total_price
-      ,COALESCE(payments.total_payment, 0) AS total_payment
-      ,COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
-    FROM 
-      (
-        SELECT
-          rd.hotel_id
-          ,rd.reservation_id
-          ,rd.room_id
-          ,SUM(COALESCE(rr.rates_price, 0) + COALESCE(ra.addon_sum, 0)) AS total_price
-        FROM reservation_details rd
-        LEFT JOIN (
-            SELECT
-                rr.reservation_details_id,
-                SUM(rr.price) AS rates_price
-            FROM reservation_rates rr
-            JOIN reservation_details rd2
-              ON rd2.id = rr.reservation_details_id
-            AND rd2.hotel_id = $1
-            AND rd2.reservation_id = $2
-            WHERE rd2.billable = TRUE
-              AND (rd2.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
-            GROUP BY rr.reservation_details_id
-        ) rr ON rr.reservation_details_id = rd.id
-        LEFT JOIN (
-            SELECT
-                ra.hotel_id,
-                ra.reservation_detail_id,
-                SUM(COALESCE(ra.quantity, 0) * COALESCE(ra.price, 0)) AS addon_sum
-            FROM reservation_addons ra
-            JOIN reservation_details rd3
-              ON rd3.id = ra.reservation_detail_id
-            AND rd3.hotel_id = $1
-            AND rd3.reservation_id = $2
-            GROUP BY ra.hotel_id, ra.reservation_detail_id
-        ) ra ON ra.hotel_id = rd.hotel_id AND ra.reservation_detail_id = rd.id
-        WHERE rd.hotel_id = $1
-          AND rd.reservation_id = $2
-        GROUP BY rd.hotel_id, rd.reservation_id, rd.room_id
+      details.hotel_id,
+      details.reservation_id,
+      details.room_id,
+      details.total_price,
+      COALESCE(payments.total_payment, 0) AS total_payment,
+      COALESCE(details.total_price, 0) - COALESCE(payments.total_payment, 0) AS balance
+    FROM (
+      SELECT
+        rd.hotel_id,
+        rd.reservation_id,
+        rd.room_id,
+        SUM(COALESCE(rr.price, 0)) + SUM(COALESCE(ra.quantity, 0) * COALESCE(ra.price, 0)) AS total_price
+      FROM
+        reservation_details rd
+      LEFT JOIN
+        reservation_rates rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id AND rd.billable = TRUE AND (rd.cancelled IS NULL OR rr.adjustment_type = 'base_rate')
+      LEFT JOIN
+        reservation_addons ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
+      WHERE
+        rd.hotel_id = $1 AND rd.reservation_id = $2
+      GROUP BY
+        rd.hotel_id, rd.reservation_id, rd.room_id
     ) AS details
     LEFT JOIN (
-        SELECT
-            hotel_id,
-            reservation_id,
-            room_id,
-            SUM(value) AS total_payment
-        FROM reservation_payments
-        WHERE hotel_id = $1 AND reservation_id = $2
-        GROUP BY hotel_id, reservation_id, room_id
-    ) AS payments
-    ON details.hotel_id = payments.hotel_id
-    AND details.reservation_id = payments.reservation_id
-    AND details.room_id = payments.room_id
-    ORDER BY 1, 2, 6 DESC;
+      SELECT
+        hotel_id,
+        reservation_id,
+        room_id,
+        SUM(value) AS total_payment
+      FROM
+        reservation_payments
+      WHERE
+        hotel_id = $1 AND reservation_id = $2
+      GROUP BY
+        hotel_id, reservation_id, room_id
+    ) AS payments ON details.hotel_id = payments.hotel_id AND details.reservation_id = payments.reservation_id AND details.room_id = payments.room_id
+    ORDER BY
+      1, 2, 6 DESC;
   `;
 
   const values = [hotelId, reservationId];
@@ -599,20 +580,6 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
-    WITH user_hold_reservations AS (
-      SELECT
-        id,
-        hotel_id,
-        reservation_client_id,
-        check_in,
-        check_out,
-        number_of_people,
-        status
-      FROM reservations
-      WHERE
-        created_by = $1
-        AND status = 'hold'
-    )
     SELECT
       r.hotel_id,
       h.name,
@@ -622,11 +589,12 @@ const selectMyHoldReservations = async (requestId, user_id) => {
       r.check_out,
       r.number_of_people,
       r.status
-    FROM user_hold_reservations r
-    JOIN hotels h
-      ON h.id = r.hotel_id
-    JOIN clients c
-      ON c.id = r.reservation_client_id
+    FROM reservations r
+    JOIN hotels h ON h.id = r.hotel_id
+    JOIN clients c ON c.id = r.reservation_client_id
+    WHERE
+      r.created_by = $1
+      AND r.status = 'hold'
     ORDER BY r.check_in, r.id;
   `;
 
@@ -730,7 +698,7 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
 			        'plan_name', COALESCE(ph.name, pg.name),
       		    'plan_type', rd.plan_type,
       		    'plan_color', COALESCE(ph.color, pg.color)
-		        )
+		        ) ORDER BY rd.date
 		      ) AS details
 	      FROM 
           reservations r,
@@ -741,8 +709,8 @@ const selectReservationsToday = async (requestId, hotelId, date) => {
             ON pg.id = rd.plans_global_id
 		  
     	  WHERE	      	
-          rd.id IN (
-            SELECT red.id 
+          r.id IN (
+            SELECT DISTINCT res.id 
             FROM reservations res JOIN reservation_details red 
               ON res.id = red.reservation_id AND res.hotel_id = red.hotel_id
             WHERE res.hotel_id = $1 AND (red.date = $2 OR res.check_out = $2)
@@ -814,7 +782,7 @@ const selectReservationClientIds = async (requestId, hotelId, reservationId) => 
           ON c.id = r.reservation_client_id
       WHERE r.id = $1 AND r.hotel_id = $2
 
-      UNION
+      UNION ALL
 
       SELECT c.*
       FROM reservation_details rd
