@@ -107,3 +107,35 @@ npm run dev
   - `npm test`: Runs frontend tests with Vitest.
 - **`root/`**
   - `npm run validate-docs`: Runs all documentation validation scripts.
+
+## 8. Database Access
+
+To connect to the PostgreSQL database container using `docker-compose`, you can use the `psql` command.
+
+### Connecting as the `postgres` superuser
+
+The `postgres` user is the default superuser. You can connect to the `wehub` database using:
+
+```bash
+docker-compose exec db psql -U postgres -d wehub
+```
+
+### Connecting as the `rhtsys_user` application user
+
+The `rhtsys_user` is the application-specific user created during database initialization. You can connect to the `wehub` database using:
+
+```bash
+docker-compose exec db psql -U rhtsys_user -d wehub
+```
+
+## 9. Database Query Optimization Workflow
+
+A common workflow for optimizing database queries involves the following steps:
+
+1.  **Connect to the Docker DB Container:** Use `docker-compose exec db psql -U postgres -d wehub` (or `rhtsys_user`) to connect to the PostgreSQL database running in the Docker container.
+2.  **Run `EXPLAIN ANALYZE`:** Execute the SQL query with `EXPLAIN ANALYZE` prepended to understand its execution plan and identify performance bottlenecks.
+3.  **Analyze and Optimize:** Based on the `EXPLAIN ANALYZE` output, identify areas for optimization (e.g., missing indexes, inefficient joins, filter pushdown). Modify the query or database schema as needed.
+4.  **Re-run `EXPLAIN ANALYZE`:** After making changes, run `EXPLAIN ANALYZE` again on the modified query to verify the impact of the optimizations.
+5.  **Iterate:** Repeat steps 3 and 4 until the desired performance is achieved.
+
+**Note:** If you encounter issues with password prompts, ensure your `api/.env` file (or environment variables) correctly sets `POSTGRES_PASSWORD`. By default, it's `password`.
