@@ -346,63 +346,28 @@
                                 <p>{{ impedimentStatus.detail }}</p>
                             </div>
                         </div>
-                        <DataTable :value="guests" class="p-datatable-sm" scrollable responsive>
-                            <Column field="name" header="宿泊者" style="width: 40%">
-                                <template #body="slotProps">
-                                    <AutoComplete v-model="slotProps.data.name" :placeholder="slotProps.data.guest_no"
-                                        :suggestions="filteredClients" optionLabel="name" @complete="filterClients"
-                                        field="id" @option-select="onClientSelect($event, slotProps.data)"
-                                        @change="onClientChange(slotProps.data)">
-                                        <template #option="slotProps">
-                                            <div>
-                                                <p>
-                                                    <i v-if="slotProps.option.is_legal_person"
-                                                        class="pi pi-building"></i>
-                                                    <i v-else class="pi pi-user"></i>
-                                                    {{ slotProps.option.name_kanji || slotProps.option.name_kana ||
-                                                        slotProps.option.name || '' }}
-                                                    <span v-if="slotProps.option.name_kana"> ({{
-                                                        slotProps.option.name_kana }})</span>
-                                                </p>
-                                                <div class="flex items-center gap-2">
-                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
-                                                            class="pi pi-phone"></i> {{ slotProps.option.phone }}</p>
-                                                    <p v-if="slotProps.option.phone" class="text-xs text-sky-800"><i
-                                                            class="pi pi-at"></i> {{ slotProps.option.email }}</p>
-                                                    <p v-if="slotProps.option.fax" class="text-xs text-sky-800"><i
-                                                            class="pi pi-send"></i> {{ slotProps.option.fax }}</p>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </AutoComplete>
-                                </template>
-
-                            </Column>
-                            <Column field="gender" header="性別" style="width: 10%">
-                                <template #body="slotProps">
-                                    <Select v-model="slotProps.data.gender" :options="genderOptions" optionLabel="label"
-                                        optionValue="value" placeholder="性別を選択" fluid
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
-
-                            </Column>
-                            <Column field="email" header="メールアドレス" style="width: 25%">
-                                <template #body="slotProps">
-                                    <InputText v-model="slotProps.data.email" :pattern="emailPattern"
-                                        :class="{ 'p-invalid': !isValidEmail }"
-                                        @input="validateEmail(slotProps.data.email)"
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
-                            </Column>
-                            <Column field="phone" header="電話番号" style="width: 25%">
-                                <template #body="slotProps">
-                                    <InputText v-model="slotProps.data.phone" :pattern="phonePattern"
-                                        :class="{ 'p-invalid': !isValidPhone }"
-                                        @input="validatePhone(slotProps.data.phone)"
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
-                            </Column>
-                        </DataTable>
+                        <div v-if="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
+                            <p class="col-span-2">部屋を予約から削除して、宿泊者の人数を減らします。</p>
+                            <Button label="部屋削除" severity="danger" icon="pi pi-trash"
+                                @click="deleteRoom(selectedGroup)" />
+                        </div>
+                        <div v-else="groupedRooms.length > 1" class="grid grid-cols-3 gap-4 items-center mb-4">
+                            <p class="col-span-3">部屋を予約から削除より、予約を削除・キャンセルしてください。</p>
+                        </div>
+                        <div v-if="selectedGroup.details[0].number_of_people < selectedGroup.details[0].capacity"
+                            class="grid grid-cols-3 gap-4 items-center mb-4">
+                            <p class="col-span-2">予約の宿泊者の人数を<span class="font-bold text-blue-700">増やします</span>。</p>
+                            <button class="bg-blue-500 text-white hover:bg-blue-600"
+                                @click="changeGuestNumber(selectedGroup, 'add')"><i class="pi pi-plus"></i>
+                                人数増加</button>
+                        </div>
+                        <div v-if="selectedGroup.details[0].number_of_people > 1"
+                            class="grid grid-cols-3 gap-4 items-center mb-4">
+                            <p class="col-span-2">予約の宿泊者の人数をを<span class="font-bold text-yellow-700">減らします</span>。</p>
+                            <button class="bg-yellow-500 text-white hover:bg-yellow-600"
+                                @click="changeGuestNumber(selectedGroup, 'subtract')"><i class="pi pi-minus"></i>
+                                人数削減</button>
+                        </div>
 
                     </TabPanel>
                     <!-- Tab 5: Modify period -->
