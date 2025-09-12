@@ -13,3 +13,5 @@ CREATE INDEX idx_addresses_client_id ON addresses (client_id);
 CREATE INDEX idx_clients_group_order ON clients (client_group_id, legal_or_natural_person, name_kana, name_kanji, name);
 CREATE INDEX idx_clients_customer_id ON clients (customer_id);
 CREATE INDEX idx_reservation_payments_client_id ON reservation_payments (client_id);
+CREATE INDEX idx_crm_actions_assigned_to_datetime ON crm_actions (assigned_to, action_datetime DESC);
+CREATE INDEX idx_crm_actions_client_id_datetime ON crm_actions (client_id, action_datetime DESC);

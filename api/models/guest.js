@@ -12,10 +12,11 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
             -- alternative_name placeholder
             '' AS alternative_name,
             (
-                SELECT array_agg(ps.spot_name)
-                FROM reservation_parking_spots rps
+                SELECT array_agg(ps.spot_number)
+                FROM reservation_parking rps
+                JOIN reservation_details rd ON rps.reservation_details_id = rd.id AND rps.hotel_id = rd.hotel_id
                 JOIN parking_spots ps ON rps.parking_spot_id = ps.id
-                WHERE rps.reservation_id = r.id
+                WHERE rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             ) AS parking_lot_names,
             (
                 SELECT SUM(rp.value)
@@ -38,14 +39,13 @@ const getGuestListDetails = async (requestId, hotelId, reservationId) => {
                 SELECT json_agg(
                     json_build_object(
                         'name', c.name,
-                        'address', c.address,
-                        'phone', c.phone,
-                        'car_number_plate', c.car_number_plate
+                        'phone', c.phone
                     )
                 )
                 FROM reservation_clients rc
+                JOIN reservation_details rd ON rc.reservation_details_id = rd.id AND rc.hotel_id = rd.hotel_id
                 JOIN clients c ON rc.client_id = c.id
-                WHERE rc.reservation_id = r.id
+                WHERE rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
             ) AS guests
         FROM
             reservations r
