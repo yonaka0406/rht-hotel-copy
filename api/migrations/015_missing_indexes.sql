@@ -1,0 +1,10 @@
+CREATE INDEX idx_reservations_client_id_status ON reservations (reservation_client_id, status);
+CREATE INDEX idx_clients_name_kana ON clients (name_kana);
+CREATE INDEX idx_reservation_details_hotel_billable_date_res_id ON reservation_details (hotel_id, billable, date, reservation_id);
+CREATE INDEX idx_reservation_payments_res_id_payment_type_id ON reservation_payments (reservation_id, payment_type_id);
+CREATE INDEX idx_reservation_addons_hotel_res_detail_id ON reservation_addons (hotel_id, reservation_detail_id);
+CREATE INDEX idx_reservation_clients_res_details_id_client_id ON reservation_clients (reservation_details_id, client_id);
+CREATE INDEX idx_reservation_details_res_id_date_billable ON reservation_details (reservation_id, date, billable);
+CREATE INDEX idx_invoices_hotel_id_year_month ON invoices (hotel_id, date_part('year', date), date_part('month', date));
+CREATE INDEX idx_reservation_details_hotel_id_year_month_billable_res_id_room_id ON reservation_details (hotel_id, date_part('year', date), date_part('month', date), billable, reservation_id, room_id);
+CREATE INDEX idx_reservation_rates_hotel_id_res_details_id ON reservation_rates (hotel_id, reservation_details_id);

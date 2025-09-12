@@ -262,12 +262,12 @@ const handleGenerateReceiptRequest = async (req, res) => {
     let existingReceipt = null;
     if (!isConsolidated && paymentId) {
       // For single payment requests, check if a receipt already exists
-      existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId);
+      existingReceipt = await getReceiptByPaymentId(req.requestId, paymentId, hotelId);
     } else if (isConsolidated && Array.isArray(paymentIds) && paymentIds.length > 0) {
       // For consolidated requests, check if any of the payments already has a receipt
       // If any payment already has a receipt, we should use that existing receipt data
       for (const pid of paymentIds) {
-        const existingReceiptForPayment = await getReceiptByPaymentId(req.requestId, pid);
+        const existingReceiptForPayment = await getReceiptByPaymentId(req.requestId, pid, hotelId);
         if (existingReceiptForPayment) {
           existingReceipt = existingReceiptForPayment;
           break; // Use the first existing receipt found
@@ -289,7 +289,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
       // Get payment data for PDF generation (use first payment for consolidated)
       const paymentForPdfId = isConsolidated ? paymentIds[0] : paymentId;
-      paymentDataForPdf = await getPaymentById(req.requestId, paymentForPdfId);
+      paymentDataForPdf = await getPaymentById(req.requestId, paymentForPdfId, hotelId);
       if (!paymentDataForPdf) {
         return res.status(404).json({ error: 'Payment data not found' });
       }
@@ -302,7 +302,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
       if (isConsolidated) {
         paymentsArrayForPdf = [];
         for (const pid of paymentIds) {
-          const paymentData = await getPaymentById(req.requestId, pid);
+          const paymentData = await getPaymentById(req.requestId, pid, hotelId);
           if (paymentData) {
             paymentsArrayForPdf.push(paymentData);
           }
@@ -321,7 +321,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         let fetchedPaymentsData = [];
         let clientNameCheck = null;
         for (const pid of paymentIds) {
-          const singlePaymentData = await getPaymentById(req.requestId, pid);
+          const singlePaymentData = await getPaymentById(req.requestId, pid, hotelId);
           if (!singlePaymentData) {
             return res.status(404).json({ error: `Payment data not found for payment_id: ${pid}` });
           }
@@ -391,7 +391,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Link all payments to the receipt
         for (const pData of fetchedPaymentsData) {
-          await linkPaymentToReceipt(req.requestId, pData.id, saveResult.id);
+          await linkPaymentToReceipt(req.requestId, pData.id, saveResult.id, hotelId);
         }
 
       } else {
@@ -404,7 +404,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
 
         // Fetch payment data if not already fetched
         if (!paymentDataForPdf) {
-          paymentDataForPdf = await getPaymentById(req.requestId, paymentId);
+          paymentDataForPdf = await getPaymentById(req.requestId, paymentId, hotelId);
           if (!paymentDataForPdf) {
             return res.status(404).json({ error: 'Payment data not found' });
           }
@@ -451,7 +451,7 @@ const handleGenerateReceiptRequest = async (req, res) => {
         }
 
         // Link payment to receipt
-        await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id);
+        await linkPaymentToReceipt(req.requestId, paymentId, saveResult.id, hotelId);
       }
     }
 

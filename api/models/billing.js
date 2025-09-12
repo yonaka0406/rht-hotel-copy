@@ -169,7 +169,7 @@ const selectBillableListView = async (requestId, hotelId, dateStart, dateEnd) =>
         ) AS details
       WHERE
         reservations.hotel_id = details.hotel_id
-        AND reservations.id IN (SELECT reservation_id FROM reservation_details WHERE date BETWEEN $2 AND $3 AND billable = true)
+        AND EXISTS (SELECT 1 FROM reservation_details rd WHERE rd.reservation_id = reservations.id AND rd.hotel_id = reservations.hotel_id AND rd.date BETWEEN $2 AND $3 AND rd.billable = true)
         AND reservations.status not in ('block', 'hold')
         AND reservations.reservation_client_id = booker.id
         AND reservations.id = details.reservation_id
@@ -227,7 +227,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
           AND rd.reservation_id = reservations.id
           AND rd.room_id = reservation_payments.room_id
           AND rd.billable = TRUE
-          AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+          AND rd.date >= date_trunc('month', $2::date)
+          AND rd.date < date_trunc('month', $2::date) + interval '1 month'
       ) AS reservation_details_json
       -- The subquery for reservation rates and addons also needed to be filtered by month.
       -- This ensures the total prices are correct for the billing period.
@@ -248,7 +249,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               AND rd.reservation_id = reservations.id
               AND rd.room_id = reservation_payments.room_id
               AND rd.billable = TRUE              
-              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.date >= date_trunc('month', $2::date)
+              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
 
             UNION ALL
             SELECT
@@ -263,7 +265,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
               AND rd.reservation_id = reservations.id
               AND rd.room_id = reservation_payments.room_id
               AND rd.billable = TRUE              
-              AND DATE_TRUNC('month', rd.date) = DATE_TRUNC('month', $2::date)
+              AND rd.date >= date_trunc('month', $2::date)
+              AND rd.date < date_trunc('month', $2::date) + interval '1 month'
           ) AS inside
           GROUP BY tax_rate
         ) AS taxed_group
@@ -281,7 +284,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
         FROM reservation_details
         WHERE billable = TRUE
           -- Add the month filter to this subquery
-          AND DATE_TRUNC('month', date) = DATE_TRUNC('month', $2::date)
+          AND date >= date_trunc('month', $2::date)
+          AND date < date_trunc('month', $2::date) + interval '1 month'
         GROUP BY hotel_id, reservation_id, room_id
       ) AS details
       ON details.hotel_id = reservation_payments.hotel_id AND details.reservation_id = reservation_payments.reservation_id AND details.room_id = reservation_payments.room_id
@@ -299,7 +303,8 @@ const selectBilledListView = async (requestId, hotelId, month) => {
       ON clients.id = reservation_payments.client_id
     WHERE
       invoices.hotel_id = $1
-      AND DATE_TRUNC('month', invoices.date) = DATE_TRUNC('month', $2::date)
+      AND invoices.date >= date_trunc('month', $2::date)
+      AND invoices.date < date_trunc('month', $2::date) + interval '1 month'
   ;`;
   const values = [hotelId, month];
 
@@ -380,7 +385,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
         JOIN
       clients c ON p.client_id = c.id
         JOIN
-      reservations res ON res.id = p.reservation_id
+      reservations res ON res.id = p.reservation_id AND res.hotel_id = p.hotel_id
         JOIN 
       rooms rs ON rs.id = p.room_id
         LEFT JOIN
@@ -404,7 +409,7 @@ async function selectPaymentsForReceiptsView(requestId, hotelId, startDate, endD
 }
 
 // Actual implementations
-async function getPaymentById(requestId, paymentId) {
+async function getPaymentById(requestId, paymentId, hotelId) {
   const pool = getPool(requestId);
   const paymentQuery = `
     SELECT
@@ -425,11 +430,11 @@ async function getPaymentById(requestId, paymentId) {
     FROM reservation_payments p
     JOIN clients c ON p.client_id = c.id
     JOIN hotels h ON p.hotel_id = h.id
-    WHERE p.id = $1;
+    WHERE p.id = $1 AND p.hotel_id = $2;
   `;
 
   try {
-    const paymentResult = await pool.query(paymentQuery, [paymentId]);
+    const paymentResult = await pool.query(paymentQuery, [paymentId, hotelId]);
     if (paymentResult.rows.length === 0) {
       return null;
     }
@@ -460,7 +465,7 @@ async function getPaymentById(requestId, paymentId) {
   }
 }
 
-async function getReceiptByPaymentId(requestId, paymentId) {
+async function getReceiptByPaymentId(requestId, paymentId, hotelId) {
   const pool = getPool(requestId);
   const query = `
     SELECT
@@ -469,11 +474,11 @@ async function getReceiptByPaymentId(requestId, paymentId) {
         r.amount,
         r.tax_breakdown
     FROM reservation_payments p
-    JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id
-    WHERE p.id = $1;
+    JOIN receipts r ON p.receipt_id = r.id AND p.hotel_id = r.hotel_id    
+    WHERE p.id = $1 AND p.hotel_id = $2;
   `;
   try {
-    const result = await pool.query(query, [paymentId]);
+    const result = await pool.query(query, [paymentId, hotelId]);
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (err) {
     console.error('Error in getReceiptByPaymentId:', err);
@@ -527,11 +532,11 @@ async function saveReceiptNumber(requestId, hotelId, receiptNumber, receiptDate,
   }
 }
 
-async function linkPaymentToReceipt(requestId, paymentId, receiptId) {
+async function linkPaymentToReceipt(requestId, paymentId, receiptId, hotelId) {
   const pool = getPool(requestId);
-  const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2';
+  const query = 'UPDATE reservation_payments SET receipt_id = $1 WHERE id = $2 AND hotel_id = $3';
   try {
-    const result = await pool.query(query, [receiptId, paymentId]);
+    const result = await pool.query(query, [receiptId, paymentId, hotelId]);
     // Log if no row was updated, but still consider it a success if query executed
     if (result.rowCount === 0) {
       console.warn(`Attempted to link payment ${paymentId} to receipt ${receiptId}, but no payment row was updated. Payment ID might be incorrect or already linked.`);
@@ -540,6 +545,7 @@ async function linkPaymentToReceipt(requestId, paymentId, receiptId) {
   } catch (err) {
     console.error(`Error in linkPaymentToReceipt for paymentId ${paymentId}, receiptId ${receiptId}:`, err);
     // Throw a more specific error or a generic one based on policy
+    
     throw new Error('Database error while linking payment to receipt.');
   }
 }

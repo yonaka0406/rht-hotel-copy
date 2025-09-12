@@ -137,5 +137,10 @@ A common workflow for optimizing database queries involves the following steps:
 3.  **Analyze and Optimize:** Based on the `EXPLAIN ANALYZE` output, identify areas for optimization (e.g., missing indexes, inefficient joins, filter pushdown). Modify the query or database schema as needed.
 4.  **Re-run `EXPLAIN ANALYZE`:** After making changes, run `EXPLAIN ANALYZE` again on the modified query to verify the impact of the optimizations.
 5.  **Iterate:** Repeat steps 3 and 4 until the desired performance is achieved.
+6.  **Consolidate Indexes into Migration File:** After identifying and creating new indexes for optimization, consolidate all `CREATE INDEX` statements into a new, numbered SQL migration file (e.g., `api/migrations/015_new_indexes.sql`). This ensures that all index changes are version-controlled and applied consistently across environments.
+
+## 10. User Assistance
+
+*   **Providing IDs:** If the model requires example IDs (e.g., UUIDs for database queries), the user can provide them upon request.
 
 **Note:** If you encounter issues with password prompts, ensure your `api/.env` file (or environment variables) correctly sets `POSTGRES_PASSWORD`. By default, it's `password`.
