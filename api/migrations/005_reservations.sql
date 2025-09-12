@@ -167,6 +167,8 @@ CHECK (addon_type IN ('breakfast', 'lunch', 'dinner', 'other', 'parking'));
 
 
 -- Indexes
+-- Indexes
 CREATE INDEX idx_reservations_user_status_checkin ON reservations (created_by, status, check_in);
 CREATE INDEX idx_reservation_details_hotel_date ON reservation_details (hotel_id, date);
 CREATE INDEX idx_reservations_hotel_checkout ON reservations (hotel_id, check_out);
+CREATE INDEX idx_reservations_created_by_status ON reservations (created_by, status);

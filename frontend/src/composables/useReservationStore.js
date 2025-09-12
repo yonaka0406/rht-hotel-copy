@@ -6,6 +6,7 @@ const availableRooms = ref([]);
 const availableRoomsForCopy = ref([]);
 const reservedRooms = ref([]);
 const holdReservations = ref([]);
+const isHoldListLoading = ref(false);
 const failedOtaReservations = ref([]);
 const reservationId = ref(null);
 const reservationDetails = ref({});
@@ -756,7 +757,9 @@ export function useReservationStore() {
         }
     };
     const fetchMyHoldReservations = async () => {
-        // console.log('From Reservation Store => fetchMyHoldReservations');
+        if (isHoldListLoading.value) return;
+
+        isHoldListLoading.value = true;
         try{
             const authToken = localStorage.getItem('authToken');
             const url = `/api/reservation/hold-list`;
@@ -803,6 +806,8 @@ export function useReservationStore() {
 
         } catch (error) {
             console.error("Error fetching hold reservations:", error);
+        } finally {
+            isHoldListLoading.value = false;
         }
     };
     const fetchReservationsToday = async (hotelId, day) => {
@@ -1409,6 +1414,7 @@ export function useReservationStore() {
         availableRoomsForCopy,
         reservedRooms,
         holdReservations,
+        isHoldListLoading,
         failedOtaReservations,
         reservationId,
         reservationDetails,

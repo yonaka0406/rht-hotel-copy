@@ -600,32 +600,35 @@ const selectReservationBalance = async (requestId, hotelId, reservationId) => {
 const selectMyHoldReservations = async (requestId, user_id) => {
   const pool = getPool(requestId);
   const query = `
-    SELECT DISTINCT
-      rd.hotel_id,
+    WITH user_hold_reservations AS (
+      SELECT
+        id,
+        hotel_id,
+        reservation_client_id,
+        check_in,
+        check_out,
+        number_of_people,
+        status
+      FROM reservations
+      WHERE
+        created_by = $1
+        AND status = 'hold'
+    )
+    SELECT
+      r.hotel_id,
       h.name,
-      rd.reservation_id,
+      r.id AS reservation_id,
       COALESCE(c.name_kanji, c.name_kana, c.name) AS client_name,
       r.check_in,
       r.check_out,
       r.number_of_people,
       r.status
-    FROM reservations r
-    JOIN reservation_details rd
-        ON rd.reservation_id = r.id
-        AND rd.hotel_id = r.hotel_id
-    JOIN rooms rm
-        ON rm.id = rd.room_id
-        AND rm.hotel_id = rd.hotel_id
-    JOIN room_types rt
-        ON rt.id = rm.room_type_id
-        AND rt.hotel_id = rm.hotel_id
+    FROM user_hold_reservations r
     JOIN hotels h
-        ON h.id = r.hotel_id
+      ON h.id = r.hotel_id
     JOIN clients c
-        ON c.id = r.reservation_client_id
-    WHERE r.created_by = $1
-      AND r.status = 'hold'
-    ORDER BY r.check_in, rd.reservation_id;       
+      ON c.id = r.reservation_client_id
+    ORDER BY r.check_in, r.id;
   `;
 
   const values = [user_id];
