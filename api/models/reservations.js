@@ -32,7 +32,7 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
       WHERE
         date >= $1 AND date < $2
         AND room_id IS NOT NULL
-        AND cancelled IS NULL 
+        AND cancelled IS NULL
     )
     SELECT
       r.id AS room_id,
@@ -44,14 +44,13 @@ const selectAvailableRooms = async (requestId, hotelId, checkIn, checkOut, clien
       r.smoking,
       r.for_sale
     FROM
-      rooms r, room_types rt
+      rooms r
+    JOIN room_types rt ON r.room_type_id = rt.id AND r.hotel_id = rt.hotel_id
     WHERE
       r.hotel_id = $3
       AND r.id NOT IN (SELECT room_id FROM occupied_rooms)
       AND r.for_sale = TRUE
-      AND r.hotel_id = rt.hotel_id
-	    AND r.room_type_id = rt.id
-    ORDER BY r.assignment_priority ASC NULLS LAST, room_type_id, capacity DESC;
+    ORDER BY r.assignment_priority ASC NULLS LAST, r.room_type_id, r.capacity DESC;
   `;
 
   const values = [checkIn, checkOut, hotelId];
