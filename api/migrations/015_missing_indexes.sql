@@ -8,3 +8,8 @@ CREATE INDEX idx_reservation_details_res_id_date_billable ON reservation_details
 CREATE INDEX idx_invoices_hotel_id_year_month ON invoices (hotel_id, date_part('year', date), date_part('month', date));
 CREATE INDEX idx_reservation_details_hotel_id_year_month_billable_res_id_room_id ON reservation_details (hotel_id, date_part('year', date), date_part('month', date), billable, reservation_id, room_id);
 CREATE INDEX idx_reservation_rates_hotel_id_res_details_id ON reservation_rates (hotel_id, reservation_details_id);
+CREATE INDEX idx_clients_name ON clients (name);
+CREATE INDEX idx_addresses_client_id ON addresses (client_id);
+CREATE INDEX idx_clients_group_order ON clients (client_group_id, legal_or_natural_person, name_kana, name_kanji, name);
+CREATE INDEX idx_clients_customer_id ON clients (customer_id);
+CREATE INDEX idx_reservation_payments_client_id ON reservation_payments (client_id);

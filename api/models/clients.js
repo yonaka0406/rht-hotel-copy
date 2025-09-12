@@ -731,35 +731,46 @@ const selectClientReservations = async (requestId, clientId) => {
 };
 const deleteClient = async (requestId, clientId, updatedBy) => {
   const pool = getPool(requestId);
-  const query = format(`
-    SET SESSION "my_app.user_id" = %L;
-    DELETE FROM clients
-    WHERE id = %L
-    RETURNING *;
-  `, updatedBy, clientId);
+  const client = await pool.connect();
   try {
-    const result = await pool.query(query);
-    //console.log('deleteClient success');
+    await client.query('BEGIN');
+    await client.query(format('SET SESSION "my_app.user_id" = %L;', updatedBy));
+    const query = format(`
+      DELETE FROM clients
+      WHERE id = %L
+      RETURNING *;
+    `, clientId);
+    const result = await client.query(query);
+    await client.query('COMMIT');
     return result.rowCount;
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error deleting client:', err);
     throw new Error('Database error');
+  } finally {
+    client.release();
   }
 };
 const deleteAddress = async (requestId, addressId, updatedBy) => {
   const pool = getPool(requestId);
-  const query = format(`
-    SET SESSION "my_app.user_id" = %L;
-    DELETE FROM addresses
-    WHERE id = %L
-    RETURNING *;
-  `, updatedBy, addressId);
+  const client = await pool.connect();
   try {
-    const result = await pool.query(query);
+    await client.query('BEGIN');
+    await client.query(format('SET SESSION "my_app.user_id" = %L;', updatedBy));
+    const query = format(`
+      DELETE FROM addresses
+      WHERE id = %L
+      RETURNING *;
+    `, addressId);
+    const result = await client.query(query);
+    await client.query('COMMIT');
     return result.rowCount;
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error deleting address:', err);
     throw new Error('Database error');
+  } finally {
+    client.release();
   }
 };
 
