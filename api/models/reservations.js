@@ -5388,6 +5388,7 @@ const updatePaymentTiming = async (requestId, reservationId, hotelId, paymentTim
 
 module.exports = {
   selectAvailableRooms,
+  selectAvailableParkingSpots,
   selectReservedRooms,
   selectReservation,
   selectReservationDetail,
@@ -5400,6 +5401,7 @@ module.exports = {
   selectReservationPayments,
   selectReservationParking,
   selectParkingSpotAvailability,
+  insertParkingBulk,
   addReservationHold,
   addReservationDetail,
   addReservationDetailsBatch,
