@@ -1311,6 +1311,10 @@ const submitMultiBlock = async () => {
             emit('block-success', response);
             emit('refresh-calendar');
             
+            // Refresh room and parking availability
+            await checkDates();
+            await updateParkingSpots();
+
             // If we have reservation IDs, we could store them for future reference
             if (response.room_ids?.length > 0) {
                 console.log('Created temporary block reservations:', response.room_ids);

@@ -14,16 +14,18 @@
         </Card>
 
         <!-- New Card for Blocked Room Details -->
-        <Card v-if="reservationStatus === 'block' && blockedRoomInfo" class="m-2">
+        <Card v-if="reservationStatus === 'block' && blockedRoomInfo" class="m-2 w-1/2">
             <template #title>ブロックされた部屋</template>
             <template #content>
-                <div class="field">
-                    <label class="font-bold">部屋数:</label>
-                    <span>{{ blockedRoomInfo.count }}</span>
-                </div>
-                <div class="field mt-2">
-                    <label class="font-bold">部屋番号:</label>
-                    <span>{{ blockedRoomInfo.roomNumbers }}</span>
+                <div class="flex flex-col gap-3">
+                    <div class="flex items-center gap-2">
+                        <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋数:</label>
+                        <Tag :value="blockedRoomInfo.count" severity="info" rounded></Tag>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋番号:</label>
+                        <Tag v-for="roomNumber in blockedRoomInfo.roomNumbers.split(', ')" :key="roomNumber" :value="roomNumber" severity="secondary" rounded></Tag>
+                    </div>
                 </div>
             </template>
         </Card>
@@ -94,6 +96,7 @@ const { selectedHotelId } = useHotelStore();
 // Primevue
 import { Card } from 'primevue';
 import { ProgressSpinner } from 'primevue';
+import { Tag } from 'primevue';
 
 const reservationStatus = ref(null);
 const reservation_details = ref(null);
