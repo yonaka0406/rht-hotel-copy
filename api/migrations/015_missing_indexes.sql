@@ -86,3 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_reservations_hotel_id_reservation_client_id ON re
 CREATE INDEX IF NOT EXISTS idx_reservation_payments_hotel_id_client_id_reservation_id ON reservation_payments (hotel_id, client_id, reservation_id);
 CREATE INDEX IF NOT EXISTS idx_reservation_clients_hotel_id_client_id_reservation_details_id ON reservation_clients (hotel_id, client_id, reservation_details_id);
 CREATE INDEX IF NOT EXISTS idx_reservation_details_id_reservation_id ON reservation_details (id, reservation_id);
+
+CREATE INDEX IF NOT EXISTS idx_payment_types_transaction_id ON payment_types (transaction, id);
+CREATE INDEX IF NOT EXISTS idx_tax_info_percentage_name ON tax_info (percentage, name);
+CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_tier_name_hotel_id ON loyalty_tiers (tier_name, hotel_id);
