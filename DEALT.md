@@ -2,6 +2,25 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### September 16, 2025
+
+#### Bug #58: New Reservation Combo Not Loading All Clients
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The client selection dropdown in the new reservation form is not displaying all available clients
+  - Some clients are missing from the dropdown, making it impossible to select them for new reservations
+- **Steps to Reproduce**:
+  1. Navigate to create a new reservation
+  2. Click on the client selection dropdown
+  3. Search for a client that should exist in the system
+- **Expected Behavior**: All active clients should appear in the dropdown
+- **Actual Behavior**: Only a subset of clients is displayed
+- **Affected Components**:
+  - New reservation form
+  - Client selection component
+  - Client search API endpoint
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+
 ## September 8, 2025
 
 #### Feature Request #54: Comment Flag and Attention Icon for Reservations

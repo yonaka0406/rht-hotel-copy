@@ -422,10 +422,11 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 #### Feature Request #19: Enhanced Log Viewing
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**: Improve log viewing to include:
-  - Plans and addons changes
-  - Room number changes
-  - Client information modifications
+- **Description**:
+  - Improve log viewing to include:
+    - Plans and addons changes
+    - Room number changes
+    - Client information modifications
 - **Priority**: [ ] Low [x] Medium [ ] Critical
 - **Additional Notes**: This will help with auditing and tracking changes in the system.
 
@@ -525,6 +526,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 10, 2025*
-*Total Bugs: 1* (last one #57)
+*Last Updated: September 16, 2025*
+*Total Bugs: 1* (last one #58)
 *Total Feature Requests: 24* (last one #63)

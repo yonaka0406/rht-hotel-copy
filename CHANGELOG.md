@@ -8,9 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Added toast notifications for better user feedback during client merge operations in CRM
-- Enhanced Yadomaster data import with better data validation and error handling
-
 ---
 ## Future Releases
 
@@ -445,8 +442,19 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.13] - 2025-09-16
+
+- Feature: Added toast notifications for better user feedback during client merge operations in CRM
+- Feature: Enhanced Yadomaster data import with better data validation and error handling
+- Feature: Improved reservation edit UI by disabling action buttons during form submission to prevent duplicate actions
+- Feature: Optimized database queries for long reservation operations, significantly improving performance for reservations with extended stays
+- Fix: Resolved issue where new reservation client dropdown was not displaying all available clients
+
+---
+
 ## Version History
 
+- **1.1.13** (2025-09-16) - Improved CRM operations with toast notifications and enhanced Yadomaster data import. Optimized reservation management with UI improvements for form submission and database queries for extended stays. Fixed client dropdown display in new reservations.
 - **1.1.12** (2025-09-08) - Enhanced reservation management with comment flag system for important notes and improved room indicator with check-out date display. Fixed WebSocket updates, sales calculations for cancelled reservations, and hotel change handling for parking availability.
 - **1.1.11** (2025-09-03) - Enhanced room management with multiple plan type displays, customizable room assignment order, and partial CRM Client Impediment Tracking. Improved billing accuracy with stay date filtering and fixed CRM Actions dialog issues.
 - **1.1.10** (2025-09-01) - Added payment timing tracking, partial room cancellations, and long-term stay cancellation fee calculator. Improved reservation management and fixed various UI/UX issues.
