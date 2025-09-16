@@ -72,3 +72,17 @@ CREATE INDEX IF NOT EXISTS idx_reservation_clients_res_details_id_client_id ON r
 
 -- reservation_payments
 CREATE INDEX IF NOT EXISTS idx_reservation_payments_res_id_hotel_id ON reservation_payments (reservation_id, hotel_id);
+
+-- Add GIN indexes for ILIKE search columns
+CREATE INDEX IF NOT EXISTS trgm_idx_client_name ON clients USING GIN (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_idx_client_name_kana ON clients USING GIN (name_kana gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_idx_client_name_kanji ON clients USING GIN (name_kanji gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_idx_client_email ON clients USING GIN (email gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_idx_client_phone ON clients USING GIN (phone gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS trgm_idx_reservations_ota_reservation_id ON reservations USING GIN (ota_reservation_id gin_trgm_ops);
+
+-- Add indexes for joins and filters
+CREATE INDEX IF NOT EXISTS idx_reservations_hotel_id_reservation_client_id ON reservations (hotel_id, reservation_client_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_payments_hotel_id_client_id_reservation_id ON reservation_payments (hotel_id, client_id, reservation_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_clients_hotel_id_client_id_reservation_details_id ON reservation_clients (hotel_id, client_id, reservation_details_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_id_reservation_id ON reservation_details (id, reservation_id);
