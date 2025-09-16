@@ -294,7 +294,7 @@ import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.v
 import { useHotelStore } from '@/composables/useHotelStore';
 const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHotel } = useHotelStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading, createBasicClient } = useClientStore();
+const { clients, fetchClients, setClientsIsLoading, createBasicClient, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
 const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
@@ -1240,13 +1240,7 @@ onMounted(async () => {
     reservationDetails.value.hotel_id = selectedHotelId.value;
 
     if (clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            fetchClients(page);
-        }
-        setClientsIsLoading(false);
+        fetchAllClientsForFiltering();
     }
 });
 

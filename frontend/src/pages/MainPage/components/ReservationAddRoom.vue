@@ -83,7 +83,7 @@ const { selectedHotelId, selectedHotelRooms, applyCalendarSettings } = useHotelS
 import { useReservationStore } from '@/composables/useReservationStore';
 const { getAvailableDatesForChange, setReservationId, fetchMyHoldReservations } = useReservationStore();
 import { useClientStore } from '@/composables/useClientStore';
-const { clients, fetchClients, setClientsIsLoading } = useClientStore();
+const { clients, fetchAllClientsForFiltering } = useClientStore();
 import { useUserStore } from '@/composables/useUserStore';
 const { fetchUser, logged_user } = useUserStore();
 
@@ -276,13 +276,7 @@ onMounted(async () => {
     maxNumberOfPeople.value = selectedRoom.value.room_capacity;
 
     if (clients.value.length === 0) {
-        setClientsIsLoading(true);
-        const clientsTotalPages = await fetchClients(1);
-        // Fetch clients for all pages
-        for (let page = 2; page <= clientsTotalPages; page++) {
-            await fetchClients(page);
-        }
-        setClientsIsLoading(false);
+        fetchAllClientsForFiltering();
     }
     const datesResult = await getAvailableDatesForChange(selectedRoom.value.id, selectedRoom.value.room_id, formatDate(today.value), formatDate(tomorrow.value));
 
