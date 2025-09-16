@@ -48,3 +48,27 @@ CREATE INDEX IF NOT EXISTS trgm_idx_project_name ON projects USING GIN (project_
 
 -- Add B-tree index for project_name for sorting (if not covered by GIN index)
 CREATE INDEX IF NOT EXISTS idx_projects_project_name ON projects (project_name);
+
+-- reservation_details
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_date_cancelled_billable_res_id_id ON reservation_details (hotel_id, date, cancelled, billable, reservation_id, id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_id_plans_global_id_plans_hotel_id ON reservation_details (hotel_id, plans_global_id, plans_hotel_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_id_room_id ON reservation_details (hotel_id, room_id);
+
+-- reservations
+CREATE INDEX IF NOT EXISTS idx_reservations_id_hotel_status_type ON reservations (id, hotel_id, status, type);
+CREATE INDEX IF NOT EXISTS idx_reservations_check_in_check_out ON reservations (check_in, check_out);
+CREATE INDEX IF NOT EXISTS idx_reservations_reservation_client_id ON reservations (reservation_client_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_created_at ON reservations (created_at);
+
+-- rooms
+CREATE INDEX IF NOT EXISTS idx_rooms_id_hotel_for_sale ON rooms (id, hotel_id, for_sale);
+
+-- reservation_addons
+CREATE INDEX IF NOT EXISTS idx_reservation_addons_hotel_res_detail_id_global_hotel_addon_name ON reservation_addons (hotel_id, reservation_detail_id, addons_global_id, addons_hotel_id, addon_name);
+CREATE INDEX IF NOT EXISTS idx_reservation_addons_hotel_res_detail_id_quantity_price ON reservation_addons (hotel_id, reservation_detail_id, quantity, price);
+
+-- reservation_clients
+CREATE INDEX IF NOT EXISTS idx_reservation_clients_res_details_id_client_id ON reservation_clients (reservation_details_id, client_id);
+
+-- reservation_payments
+CREATE INDEX IF NOT EXISTS idx_reservation_payments_res_id_hotel_id ON reservation_payments (reservation_id, hotel_id);
