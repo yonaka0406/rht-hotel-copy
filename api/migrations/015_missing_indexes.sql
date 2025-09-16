@@ -27,3 +27,8 @@ CREATE INDEX IF NOT EXISTS idx_parking_spots_is_active_parking_lot_id ON parking
 CREATE INDEX IF NOT EXISTS idx_reservation_parking_hotel_id_date_cancelled ON reservation_parking (hotel_id, date, cancelled);
 CREATE INDEX IF NOT EXISTS idx_reservation_details_id_hotel_id ON reservation_details (id, hotel_id);
 CREATE INDEX IF NOT EXISTS idx_reservations_id_hotel_id ON reservations (id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_plans_global_name ON plans_global (name);
+CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_name ON plans_hotel (hotel_id, name);
+CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_id ON plans_hotel (hotel_id, id);
+CREATE INDEX IF NOT EXISTS idx_plan_templates_hotel_id_name ON plan_templates (hotel_id, name);
+CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_plans_global_id ON plans_hotel (hotel_id, plans_global_id);
