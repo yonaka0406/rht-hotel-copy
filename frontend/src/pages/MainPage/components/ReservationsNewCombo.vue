@@ -1282,12 +1282,21 @@ const submitMultiBlock = async () => {
                 roomTypeCounts[combo.room_type_id] += combo.number_of_rooms;
             });
         
+        // Get parking combos
+        const parkingCombos = reservationCombos.value
+            .filter(combo => combo.reservation_type === 'parking')
+            .map(combo => ({
+                vehicle_category_id: combo.vehicle_category_id,
+                number_of_rooms: combo.number_of_rooms
+            }));
+
         // Prepare the request data
         const requestData = {
             hotel_id: selectedHotelId.value,
             check_in: formatDate(stayReservation.check_in),
             check_out: formatDate(stayReservation.check_out),
             room_type_counts: roomTypeCounts,
+            parking_combos: parkingCombos, // Add parking combos
             comment: blockComment.value.trim(),
             number_of_people: stayReservation.number_of_people
         };

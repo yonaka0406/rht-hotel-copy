@@ -584,13 +584,14 @@ const updateRoomAssignmentOrderController = async (req, res) => {
 
 const blockMultipleRooms = async (req, res) => {
   console.log('Starting blockMultipleRooms with request body:', JSON.stringify(req.body, null, 2));
-  const { 
-      hotel_id, 
-      check_in, 
-      check_out, 
-      room_type_counts, 
-      comment, 
-      number_of_people 
+  const {
+      hotel_id,
+      check_in,
+      check_out,
+      room_type_counts,
+      parking_combos, // Add parking_combos
+      comment,
+      number_of_people
   } = req.body;
   
   const updated_by = req.user.id;
@@ -609,22 +610,47 @@ const blockMultipleRooms = async (req, res) => {
   
   // Convert room_type_counts to an array of { room_type_id, count }
   const roomTypeCounts = [];
-  try {
-      console.log('Processing room type counts:', JSON.stringify(room_type_counts, null, 2));
-      for (const [roomTypeId, count] of Object.entries(room_type_counts)) {
-          roomTypeCounts.push({
-              room_type_id: parseInt(roomTypeId, 10),
-              count: parseInt(count, 10)
-          });
-      }
-      console.log('Processed room type counts:', JSON.stringify(roomTypeCounts, null, 2));
-  } catch (error) {
-      const errorMsg = 'Invalid room_type_counts format. Expected an object with room_type_id as keys and counts as values.';
-      console.error('Error processing room type counts:', errorMsg, error);
-      return res.status(400).json({
-          success: false,
-          message: errorMsg
-      });
+  if (room_type_counts) { // Ensure room_type_counts exists
+    try {
+        console.log('Processing room type counts:', JSON.stringify(room_type_counts, null, 2));
+        for (const [roomTypeId, count] of Object.entries(room_type_counts)) {
+            roomTypeCounts.push({
+                room_type_id: parseInt(roomTypeId, 10),
+                count: parseInt(count, 10)
+            });
+        }
+        console.log('Processed room type counts:', JSON.stringify(roomTypeCounts, null, 2));
+    } catch (error) {
+        const errorMsg = 'Invalid room_type_counts format. Expected an object with room_type_id as keys and counts as values.';
+        console.error('Error processing room type counts:', errorMsg, error);
+        return res.status(400).json({
+            success: false,
+            message: errorMsg
+        });
+    }
+  }
+
+  // Process parking_combos
+  const parkingCombos = [];
+  if (parking_combos) { // Ensure parking_combos exists
+    try {
+        console.log('Processing parking combos:', JSON.stringify(parking_combos, null, 2));
+        // Assuming parking_combos is an array of objects like { vehicle_category_id, number_of_rooms }
+        for (const combo of parking_combos) {
+            parkingCombos.push({
+                vehicle_category_id: parseInt(combo.vehicle_category_id, 10),
+                number_of_rooms: parseInt(combo.number_of_rooms, 10)
+            });
+        }
+        console.log('Processed parking combos:', JSON.stringify(parkingCombos, null, 2));
+    } catch (error) {
+        const errorMsg = 'Invalid parking_combos format. Expected an array of objects with vehicle_category_id and number_of_rooms.';
+        console.error('Error processing parking combos:', errorMsg, error);
+        return res.status(400).json({
+            success: false,
+            message: errorMsg
+        });
+    }
   }
   
   // Validate date range
@@ -662,6 +688,7 @@ const blockMultipleRooms = async (req, res) => {
           check_in,
           check_out,
           roomTypeCounts, // Use the processed roomTypeCounts
+          parkingCombos,  // Pass the processed parkingCombos
           comment,
           number_of_people,
           updated_by

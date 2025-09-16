@@ -536,7 +536,32 @@ const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
   }
 };
 
-const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, room_type_counts_processed, comment, number_of_people, userId) => {
+
+
+// Helper
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getVehicleCategoryCapacity = async (requestId, vehicle_category_id) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT capacity_units_required FROM vehicle_categories WHERE id = $1;
+  `;
+  const values = [vehicle_category_id];
+  try {
+    const result = await pool.query(query, values);
+    return result.rows[0]?.capacity_units_required || 0;
+  } catch (err) {
+    console.error('Error fetching vehicle category capacity:', err);
+    throw new Error('Database error');
+  }
+};
+
+const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, room_type_counts_processed, parking_combos_processed, comment, number_of_people, userId) => {
   const pool = getPool(requestId);
   const client = await pool.connect();
   let blockedRoomIds = [];
@@ -622,6 +647,65 @@ const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, ro
       }
     }
 
+    // --- Parking Spot Blocking Logic ---
+    if (parking_combos_processed && parking_combos_processed.length > 0) {
+      // Move require inside the function, but outside the loop
+      const { selectAvailableParkingSpots } = require('../models/reservations'); 
+      const { saveParkingAssignments } = require('../models/parking'); // Import saveParkingAssignments 
+
+      console.log(`[${requestId}] Starting parking spot blocking for ${parking_combos_processed.length} combos.`);
+      for (const parkingCombo of parking_combos_processed) {
+        const { vehicle_category_id, number_of_rooms: requestedSpots } = parkingCombo;
+        console.log(`[${requestId}] Processing parking combo: vehicle_category_id=${vehicle_category_id}, requestedSpots=${requestedSpots}`);
+
+        const capacity_units_required = await getVehicleCategoryCapacity(requestId, vehicle_category_id);
+        console.log(`[${requestId}] Capacity units required for vehicle_category_id ${vehicle_category_id}: ${capacity_units_required}`);
+        if (capacity_units_required === 0) {
+          console.warn(`[${requestId}] Vehicle category ${vehicle_category_id} has 0 capacity units required. Skipping parking block.`);
+          continue;
+        }
+
+        // Fetch available parking spots for the given dates and capacity units
+        console.log(`[${requestId}] Fetching available parking spots for hotel ${hotel_id}, dates ${formatDate(startDate)} to ${formatDate(endDate)}, capacity ${capacity_units_required}`);
+        const availableSpots = await selectAvailableParkingSpots(
+          requestId,
+          hotel_id,
+          formatDate(startDate), // Use formatDate for consistency
+          formatDate(endDate),   // Use formatDate for consistency
+          capacity_units_required,
+          client // Pass the client for transaction
+        );
+        console.log(`[${requestId}] Found ${availableSpots.length} available parking spots.`);
+
+        if (availableSpots.length < requestedSpots) {
+          console.warn(`[${requestId}] Not enough available parking spots for vehicle category ${vehicle_category_id}. Requested: ${requestedSpots}, Available: ${availableSpots.length}`);
+          throw new Error(`Not enough available parking spots for vehicle category ${vehicle_category_id}. Requested: ${requestedSpots}, Available: ${availableSpots.length}`);
+        }
+
+        // Select the required number of spots
+        const spotsToReserve = availableSpots.slice(0, requestedSpots);
+        console.log(`[${requestId}] Selected ${spotsToReserve.length} spots to reserve:`, spotsToReserve.map(s => s.parking_spot_id));
+
+        // Prepare assignments for saveParkingAssignments
+        const parkingAssignments = spotsToReserve.map(s => ({
+          hotel_id: hotel_id,
+          reservation_id: mockReservationId,
+          vehicle_category_id: vehicle_category_id,
+          check_in: formatDate(startDate),
+          check_out: formatDate(endDate),
+          unit_price: 0, // Assuming 0 for blocked spots, or fetch from somewhere
+          number_of_vehicles: 1, // Each spot is one vehicle
+          spotId: s.parking_spot_id // Preferred spot
+        }));
+        
+        await saveParkingAssignments(requestId, parkingAssignments, userId, client);
+        console.log(`[${requestId}] Successfully assigned ${parkingAssignments.length} parking spots.`);
+        
+      }
+    } else {
+      console.log(`[${requestId}] No parking combos to process.`);
+    }
+
     await client.query('COMMIT');
     return { success: true, blocked_room_ids: blockedRoomIds };
 
@@ -654,4 +738,5 @@ module.exports = {
   getRoomAssignmentOrder,
   updateRoomAssignmentOrder,
   blockRoomsByRoomType,
+  getVehicleCategoryCapacity,
 };

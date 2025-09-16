@@ -949,56 +949,6 @@ const selectParkingSpotAvailability = async (requestId, hotelId, startDate, endD
 };
 
 // Function to Add
-const insertParkingBulk = async (client, reservation, spotsToReserve, dateArray) => {
-  const CHUNK_SIZE = 100; // rows per batch
-  const columnsPerRow = 7;
-
-  // Generate all rows (room × date)
-  const allRows = [];
-  for (const spot of spotsToReserve) {
-    for (const date of dateArray) {
-      allRows.push({
-        hotel_id: reservation.hotel_id,
-        reservation_id: reservation.id,
-        vehicle_category_id: reservation.vehicle_category_id,
-        parking_spot_id: spot.parking_spot_id,
-        date,
-        created_by: reservation.created_by,
-        updated_by: reservation.updated_by
-      });
-    }
-  }
-
-  // Chunked inserts
-  for (let i = 0; i < allRows.length; i += CHUNK_SIZE) {
-    const chunk = allRows.slice(i, i + CHUNK_SIZE);
-    const placeholders = [];
-    const values = [];
-
-    chunk.forEach((row, index) => {
-      const baseIndex = index * columnsPerRow;
-      placeholders.push(
-        `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, 'reserved', $${baseIndex + 6}, $${baseIndex + 7})`
-      );
-      values.push(
-        row.hotel_id,
-        row.reservation_id,
-        row.vehicle_category_id,
-        row.parking_spot_id,
-        row.date,
-        row.created_by,
-        row.updated_by
-      );
-    });
-
-    const query = `
-      INSERT INTO reservation_parking (
-        hotel_id, reservation_id, vehicle_category_id, parking_spot_id, date, status, created_by, updated_by
-      ) VALUES ${placeholders.join(', ')}
-    `;
-    await client.query(query, values);
-  }
-};
 const addReservationHold = async (requestId, reservation, client = null, roomsToReserve = []) => {
   const pool = client || getPool(requestId);
   let shouldReleaseClient = false;
@@ -1028,18 +978,7 @@ const addReservationHold = async (requestId, reservation, client = null, roomsTo
     ];
     const reservationResult = await client.query(reservationQuery, reservationValues);
     const newReservation = reservationResult.rows[0];
-
-    if (reservation.vehicle_category_id && roomsToReserve.length > 0) {
-      // Build date array
-      const dateArray = [];
-      for (let dt = new Date(reservation.check_in); dt < new Date(reservation.check_out); dt.setDate(dt.getDate() + 1)) {
-        dateArray.push(new Date(dt));
-      }
-
-      // Bulk insert parking for all rooms and dates
-      await insertParkingBulk(client, { ...reservation, id: newReservation.id }, roomsToReserve, dateArray);
-    }
-
+    
     await client.query('COMMIT');
     return newReservation;
   } catch (err) {
@@ -5401,7 +5340,6 @@ module.exports = {
   selectReservationPayments,
   selectReservationParking,
   selectParkingSpotAvailability,
-  insertParkingBulk,
   addReservationHold,
   addReservationDetail,
   addReservationDetailsBatch,

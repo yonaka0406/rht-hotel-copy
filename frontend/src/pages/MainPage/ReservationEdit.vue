@@ -14,21 +14,45 @@
         </Card>
 
         <!-- New Card for Blocked Room Details -->
-        <Card v-if="reservationStatus === 'block' && blockedRoomInfo" class="m-2 w-1/2">
-            <template #title>ブロックされた部屋</template>
-            <template #content>
-                <div class="flex flex-col gap-3">
-                    <div class="flex items-center gap-2">
-                        <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋数:</label>
-                        <Tag :value="blockedRoomInfo.count" severity="info" rounded></Tag>
+                <!-- Container for Blocked Room and Parking Details -->
+        <div v-if="reservationStatus === 'block'" class="flex">
+            <!-- Debug logs for parking -->
+            {{ console.log('[ReservationEdit Template] reservationStatus:', reservationStatus) }}
+            {{ console.log('[ReservationEdit Template] parking_reservations:', parking_reservations) }}
+            <!-- Card for Blocked Room Details -->
+            <Card v-if="blockedRoomInfo" class="m-2 w-1/2">
+                <template #title>ブロックされた部屋</template>
+                <template #content>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center gap-2">
+                            <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋数:</label>
+                            <Tag :value="blockedRoomInfo.count" severity="info" rounded></Tag>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋番号:</label>
+                            <Tag v-for="roomNumber in blockedRoomInfo.roomNumbers.split(', ')" :key="roomNumber" :value="roomNumber" severity="secondary" rounded></Tag>
+                        </div>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <label class="font-bold text-surface-700 dark:text-surface-0/80">部屋番号:</label>
-                        <Tag v-for="roomNumber in blockedRoomInfo.roomNumbers.split(', ')" :key="roomNumber" :value="roomNumber" severity="secondary" rounded></Tag>
+                </template>
+            </Card>
+
+            <!-- Card for Blocked Parking Details -->
+            <Card v-if="blockedRoomInfo && parking_reservations && parking_reservations.parking && parking_reservations.parking.length > 0" class="m-2 w-1/2">
+                <template #title>ブロックされた駐車場</template>
+                <template #content>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center gap-2">
+                            <label class="font-bold text-surface-700 dark:text-surface-0/80">駐車台数:</label>
+                            <Tag :value="parking_reservations.parking.length" severity="info" rounded></Tag>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <label class="font-bold text-surface-700 dark:text-surface-0/80">駐車スペース:</label>
+                            <Tag v-for="parkingSpot in sortedParkingSpots" :key="parkingSpot.id" :value="parkingSpot.spot_number" severity="secondary" rounded></Tag>
+                        </div>
                     </div>
-                </div>
-            </template>
-        </Card>
+                </template>
+            </Card>
+        </div>
 
         <div v-if="reservationStatus !== 'block'">
             <!-- Rooms Data component-->
@@ -130,6 +154,7 @@ const fetchAllReservationData = async () => {
 
             const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
             parking_reservations.value = parkData || [];
+            console.log('[ReservationEdit] Fetched parking_reservations:', parking_reservations.value); // Debug log
         } else {
             //console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`);
             // Reset state if no reservation data is found
@@ -177,6 +202,16 @@ const blockedRoomInfo = computed(() => {
         console.log('[blockedRoomInfo] Conditions not met for displaying blocked room info.');
     }
     return null;
+});
+
+// Computed property for sorted parking spots
+const sortedParkingSpots = computed(() => {
+    if (parking_reservations.value && parking_reservations.value.parking) {
+        return [...parking_reservations.value.parking].sort((a, b) => {
+            return parseInt(a.spot_number) - parseInt(b.spot_number);
+        });
+    }
+    return [];
 });
 
 // Lifecycle Hooks

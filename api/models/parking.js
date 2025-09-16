@@ -642,14 +642,20 @@ async function getAddonDetails(client, hotel_id, addons_hotel_id, addons_global_
     };
 }
 
-const saveParkingAssignments = async (requestId, assignments, userId) => {
+const saveParkingAssignments = async (requestId, assignments, userId, client = null) => {
     console.log(`[saveParkingAssignments] Starting with ${assignments.length} assignments for user ${userId}`, assignments);
     const pool = getPool(requestId);
-    const client = await pool.connect();
+    let localClient = client;
+    let releaseClient = false;
+
+    if (!localClient) {
+        localClient = await pool.connect(requestId);
+        releaseClient = true;
+        //console.log('Starting database transaction...');
+        await localClient.query('BEGIN');
+    }
 
     try {
-        //console.log('Starting database transaction...');
-        await client.query('BEGIN');
 
         // Validate assignments
         for (const assignment of assignments) {
@@ -885,10 +891,14 @@ const saveParkingAssignments = async (requestId, assignments, userId) => {
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
         console.error('Error in saveParkingAssignments:', error);
-        try { await client.query('ROLLBACK'); } catch {}
+        if (releaseClient) {
+            try { await localClient.query('ROLLBACK'); } catch (rollbackError) { console.error('Error during rollback:', rollbackError); }
+        }
         throw error;
     } finally {
-        try { client.release(); } catch {}
+        if (releaseClient) {
+            try { localClient.release(); } catch (releaseError) { console.error('Error during client release:', releaseError); }
+        }
     }
 };
 
