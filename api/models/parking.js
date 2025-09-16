@@ -343,17 +343,15 @@ const checkParkingVacancies = async (requestId, hotel_id, startDate, endDate, ve
         SELECT COUNT(DISTINCT ps.id) as available_spots
         FROM parking_spots ps
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
-        WHERE pl.hotel_id = $1 
-        AND ps.is_active = true
-        AND ps.capacity_units >= $2
-        AND ps.id NOT IN (
-            SELECT DISTINCT rp.parking_spot_id
-            FROM reservation_parking rp
-            WHERE rp.hotel_id = $1
+        LEFT JOIN reservation_parking rp ON ps.id = rp.parking_spot_id
+            AND rp.hotel_id = $1
             AND rp.date >= $3
             AND rp.date < $4
             AND rp.cancelled IS NULL
-        )
+        WHERE pl.hotel_id = $1
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND rp.parking_spot_id IS NULL
     `;
     const values = [hotel_id, capacityUnitsRequired, startDate, endDate];
     const result = await pool.query(query, values);
@@ -402,17 +400,15 @@ const getAvailableSpotsForDates = async (requestId, hotel_id, startDate, endDate
             pl.description as parking_lot_description
         FROM parking_spots ps
         JOIN parking_lots pl ON ps.parking_lot_id = pl.id
-        WHERE pl.hotel_id = $1 
-        AND ps.is_active = true
-        AND ps.capacity_units >= $2
-        AND ps.id NOT IN (
-            SELECT DISTINCT rp.parking_spot_id
-            FROM reservation_parking rp
-            WHERE rp.hotel_id = $1
+        LEFT JOIN reservation_parking rp ON ps.id = rp.parking_spot_id
+            AND rp.hotel_id = $1
             AND rp.date >= $3
             AND rp.date < $4
             AND rp.cancelled IS NULL
-        )
+        WHERE pl.hotel_id = $1
+        AND ps.is_active = true
+        AND ps.capacity_units >= $2
+        AND rp.parking_spot_id IS NULL
         ORDER BY pl.name, ps.spot_number::integer
     `;
     const values = [hotel_id, capacityUnits, startDate, endDate];

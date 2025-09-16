@@ -22,3 +22,8 @@ CREATE INDEX idx_reservations_hotel_id_created_at ON reservations (hotel_id, cre
 CREATE INDEX idx_reservations_hotel_id_check_in ON reservations (hotel_id, check_in);
 CREATE INDEX idx_reservation_details_reservation_id_hotel_id ON reservation_details (reservation_id, hotel_id);
 CREATE INDEX idx_waitlist_entries_hotel_id_status_req_date ON waitlist_entries (hotel_id, status, requested_check_in_date);
+CREATE INDEX IF NOT EXISTS idx_vehicle_categories_capacity_name ON vehicle_categories (capacity_units_required, name);
+CREATE INDEX IF NOT EXISTS idx_parking_spots_is_active_parking_lot_id ON parking_spots (is_active, parking_lot_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_parking_hotel_id_date_cancelled ON reservation_parking (hotel_id, date, cancelled);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_id_hotel_id ON reservation_details (id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_id_hotel_id ON reservations (id, hotel_id);
