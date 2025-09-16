@@ -1233,6 +1233,43 @@ const selectMonthlyReservationEvolution = async (requestId, hotel_id, target_mon
   }
 }
 
+const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
+  const pool = getPool(requestId);
+  const query = `
+    SELECT
+      COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
+      rd.cancelled IS NOT NULL AND rd.billable = TRUE AS is_cancelled_billable,
+      SUM(
+        CASE
+          WHEN rd.plan_type = 'per_room' THEN rd.price
+          ELSE rd.price * rd.number_of_people
+        END
+      ) AS total_sales
+    FROM reservation_details rd
+    JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+    LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+    LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+    WHERE rd.hotel_id = $1
+      AND rd.date BETWEEN $2 AND $3
+      AND rd.billable = TRUE
+      AND r.status NOT IN ('hold', 'block')
+      AND r.type <> 'employee'
+    GROUP BY
+      1, 2
+    ORDER BY
+      1, 2;
+  `;
+  const values = [hotelId, dateStart, dateEnd];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in selectSalesByPlan:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -1250,4 +1287,5 @@ module.exports = {
   selectParkingReservationsForGoogle,
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution,
+  selectSalesByPlan,
 };

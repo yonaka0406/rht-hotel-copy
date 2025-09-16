@@ -149,6 +149,45 @@
                 <template #content>
                     <div ref="heatMap" class="w-full h-96"></div>             
                 </template>
+            </Card> 
+
+            <!-- Sales by Plan Breakdown -->
+            <Card class="col-span-12">
+                <template #title>
+                    <div class="flex justify-between items-center">
+                        <p>プラン別売上内訳</p>
+                        <SelectButton v-model="salesByPlanViewMode" :options="salesByPlanViewOptions" optionLabel="name" optionValue="value" />
+                    </div>
+                </template>
+                <template #content>
+                    <div v-if="salesByPlanViewMode === 'chart'" ref="salesByPlanChart" class="w-full h-96"></div>
+                    <DataTable v-else :value="processedSalesByPlan" responsiveLayout="scroll">
+                        <Column field="plan_name" header="プラン名"></Column>
+                        <Column field="regular_sales" header="通常売上" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ slotProps.data.regular_sales.toLocaleString('ja-JP') }} 円
+                            </template>
+                        </Column>
+                        <Column field="cancelled_sales" header="キャンセル売上" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ slotProps.data.cancelled_sales.toLocaleString('ja-JP') }} 円
+                            </template>
+                        </Column>
+                        <Column header="合計" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ (slotProps.data.regular_sales + slotProps.data.cancelled_sales).toLocaleString('ja-JP') }} 円
+                            </template>
+                        </Column>
+                        <ColumnGroup type="footer">
+                            <Row>
+                                <Column footer="合計:" :colspan="1" footerStyle="text-align:right"/>
+                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                            </Row>
+                        </ColumnGroup>
+                    </DataTable>
+                </template>
             </Card>            
         </div>
     </div>
@@ -159,11 +198,11 @@
     import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from "vue";    
 
     // Primevue
-    import { Card, DatePicker, SelectButton, Fieldset } from 'primevue';
+    import { Card, DatePicker, SelectButton, Fieldset, DataTable, Column, ColumnGroup, Row } from 'primevue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -173,6 +212,11 @@
     const viewOptions = ref([
         { name: '単月表示', value: 'month' }, // Current Month View
         { name: '年度累計表示', value: 'yearCumulative' } // Cumulative View (Current Year)
+    ]);
+    const salesByPlanViewMode = ref('chart');
+    const salesByPlanViewOptions = ref([
+        { name: 'グラフ', value: 'chart' },
+        { name: 'テーブル', value: 'table' }
     ]);
 
     // --- Date Computations ---
@@ -210,6 +254,48 @@
     const allReservationsData = ref([]);
     const forecastData = ref([]);
     const accountingData = ref([]);
+    const salesByPlan = ref([]);
+
+    const processedSalesByPlan = computed(() => {
+        const planMap = new Map();
+
+        salesByPlan.value.forEach(item => {
+            const planName = item.plan_name;
+            const sales = parseFloat(item.total_sales);
+
+            if (!planMap.has(planName)) {
+                planMap.set(planName, {
+                    plan_name: planName,
+                    regular_sales: 0,
+                    cancelled_sales: 0,
+                });
+            }
+
+            const planEntry = planMap.get(planName);
+            if (item.is_cancelled_billable) {
+                planEntry.cancelled_sales += sales;
+            } else {
+                planEntry.regular_sales += sales;
+            }
+        });
+
+        console.log('Processed Sales by Plan Map:', planMap); // DEBUG
+        const sortedData = Array.from(planMap.values());
+        sortedData.sort((a, b) => {
+            const totalA = a.regular_sales + a.cancelled_sales;
+            const totalB = b.regular_sales + b.cancelled_sales;
+            return totalB - totalA; // For descending order
+        });
+        return sortedData;
+    });
+
+    const salesByPlanTotals = computed(() => {
+        return processedSalesByPlan.value.reduce((acc, item) => {
+            acc.regular_sales += item.regular_sales;
+            acc.cancelled_sales += item.cancelled_sales;
+            return acc;
+        }, { regular_sales: 0, cancelled_sales: 0 });
+    });
     const dataFetchStartDate = computed(() => startOfYear.value);
     const dataFetchEndDate = computed(() => { // For heatmap range, ending last day of selectedMonth + 2 months
         const date = new Date(selectedMonth.value);
@@ -495,6 +581,8 @@
     // Line Chart
     const lineChart = ref(null);
     let myLineChart = null;
+    const salesByPlanChart = ref(null);
+    let mySalesByPlanChart = null;
     const lineChartAxisX = ref([]);
     const lineChartSeriesData = ref([]);
     const lineChartSeriesSumData = ref([]);
@@ -632,10 +720,88 @@
         }
         myLineChart.setOption(option, true);
     };
+
+    const processSalesByPlanChartData = () => {
+        if (salesByPlanViewMode.value === 'chart') {
+            initSalesByPlanChart();
+        }
+    };
+
+    const initSalesByPlanChart = () => {
+        if (!salesByPlanChart.value) return;
+
+        const chartData = processedSalesByPlan.value;
+        const planNames = chartData.map(item => item.plan_name);
+        const regularSales = chartData.map(item => item.regular_sales);
+        const cancelledSales = chartData.map(item => item.cancelled_sales);
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                },
+                valueFormatter: (value) => value.toLocaleString('ja-JP') + ' 円'
+            },
+            legend: {
+                data: ['通常売上', 'キャンセル売上']
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                axisLabel: {
+                    formatter: (value) => value.toLocaleString('ja-JP') + ' 円'
+                }
+            },
+            yAxis: {
+                type: 'category',
+                data: planNames
+            },
+            series: [
+                {
+                    name: '通常売上',
+                    type: 'bar',
+                    stack: 'total',
+                    label: {
+                        show: true,
+                        formatter: (params) => params.value.toLocaleString('ja-JP') + ' 円'
+                    },
+                    emphasis: {
+                        focus: 'series'
+                    },
+                    data: regularSales
+                },
+                {
+                    name: 'キャンセル売上',
+                    type: 'bar',
+                    stack: 'total',
+                    label: {
+                        show: true,
+                        formatter: (params) => params.value.toLocaleString('ja-JP') + ' 円'
+                    },
+                    emphasis: {
+                        focus: 'series'
+                    },
+                    data: cancelledSales
+                }
+            ]
+        };
+
+        if (!mySalesByPlanChart) {
+            mySalesByPlanChart = echarts.init(salesByPlanChart.value);
+        }
+        mySalesByPlanChart.setOption(option, true);
+    };
         
     const handleResize = () => {
         if (myHeatMap) myHeatMap.resize();
         if (myLineChart) myLineChart.resize();
+        if (mySalesByPlanChart) mySalesByPlanChart.resize();
     };
 
     // --- Data Fetching and Processing ---
@@ -654,6 +820,8 @@
             const rawData = await fetchCountReservation(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
             const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
             const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
+            const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+            console.log('Raw Sales by Plan Data:', salesByPlanResult); // DEBUG
 
             if (rawData && Array.isArray(rawData)) {                
                 allReservationsData.value = rawData.map(item => ({
@@ -682,6 +850,7 @@
             } else {
                 accountingData.value = [];
             }
+            salesByPlan.value = salesByPlanResult;
             // console.log('accountingData', accountingData.value);
             
         } catch (error) {
@@ -693,6 +862,7 @@
         await nextTick();
         processHeatMapData(); 
         processLineChartData();
+        processSalesByPlanChartData();
         calculateMetrics();
     };
 
@@ -711,9 +881,21 @@
         window.removeEventListener('resize', handleResize);
         if (myHeatMap) myHeatMap.dispose();
         if (myLineChart) myLineChart.dispose();
+        if (mySalesByPlanChart) mySalesByPlanChart.dispose();
     });
 
-    watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });    
+    watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });
+
+    watch(salesByPlanViewMode, (newValue) => {
+        if (newValue === 'table' && mySalesByPlanChart) {
+            mySalesByPlanChart.dispose();
+            mySalesByPlanChart = null;
+        } else if (newValue === 'chart') {
+            nextTick(() => {
+                processSalesByPlanChartData();
+            });
+        }
+    });    
   
 </script>
 <style scoped>

@@ -544,6 +544,19 @@ export function useReportStore() {
         }
     };
 
+    const fetchSalesByPlan = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/sales-by-plan/${hotelId}/${startDate}/${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch sales by plan:', error);
+            return [];
+        }
+    };
+
     return {
         reservationList,
         apiErrorCount, // Expose the API error counter
@@ -563,5 +576,6 @@ export function useReportStore() {
         getSearchSuggestions,
         getSavedSearches,
         manageSavedSearches,
+        fetchSalesByPlan,
     };
 }
