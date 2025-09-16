@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 - Feature: Implemented multi-room temporary block functionality, allowing users to block multiple rooms simultaneously from the "Add New Reservation" dropdown. (#51)
+- Bugfix: Reporting: Fixed an issue where the total room count for the 'All Hotels' summary in the reporting page was incorrectly calculated as zero.
 
 ---
 ## Future Releases
