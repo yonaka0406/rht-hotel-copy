@@ -88,7 +88,7 @@
                                                         </FloatLabel>
                                                     </div>
                                                     <div class="field mt-6 col-span-2 flex justify-center">
-                                                        <Button label="追加" type="submit" />
+                                                        <Button label="追加" type="submit" :loading="isSubmitting" :disabled="isSubmitting" />
                                                     </div>                                                
                                                 </div>
                                             </form>
@@ -205,7 +205,7 @@
                                     </Card>                                    
                                     <Divider />
                                     <div class="flex justify-center items-center">                                    
-                                        <Button label="保存" severity="info" type="submit" />
+                                        <Button label="保存" severity="info" type="submit" :loading="isSubmitting" :disabled="isSubmitting" />
                                     </div>
                                 </form>                                
                             </TabPanel>
@@ -242,7 +242,7 @@
                                     </div>
                                     <Divider />
                                     <div class="flex justify-center items-center">
-                                    <Button label="保存" severity="info" type="submit" />
+                                    <Button label="保存" severity="info" type="submit" :loading="isSubmitting" :disabled="isSubmitting" />
                                     </div>
                                 </form>
                             </TabPanel>
@@ -262,10 +262,22 @@
                                     <p>キャンセルをクリックすると、キャンセル料が適用されるかどうかの確認ダイアログが表示されます。適用される場合、プランの<span class="font-bold">基本料金</span>のみが請求されます。</p>
                                 </div>
                                 <div v-if="!reservationCancelled" class="flex justify-center items-center">                                    
-                                    <Button label="キャンセル" icon="pi pi-times" class="p-button-danger" @click="dayCancel" />
+                                    <Button 
+                                        :label="isSubmitting ? '処理中...' : 'キャンセル'" 
+                                        @click="dayCancel"
+                                        :disabled="isSubmitting"
+                                        :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-times'"
+                                        class="p-button-danger"
+                                    />
                                 </div>
                                 <div v-else class="flex justify-center items-center">                                    
-                                    <Button label="復活" icon="pi pi-history" class="p-button-warn" @click="dayRecover" />
+                                    <Button 
+                                        :label="isSubmitting ? '処理中...' : '復活'" 
+                                        @click="dayRecover"
+                                        :disabled="isSubmitting"
+                                        :icon="isSubmitting ? 'pi pi-spin pi-spinner' : 'pi pi-history'"
+                                        class="p-button-warn"
+                                    />
                                 </div>
                             </TabPanel>
                         </TabPanels>
@@ -472,51 +484,59 @@
         }
     };
     const savePlan = async () => {
-        //console.log('savePlan:', selectedRates.value);
+        isSubmitting.value = true;
+        try {
+            //console.log('savePlan:', selectedRates.value);
         
-        const plan_key = selectedPlan.value;
-        let plans_global_id = 0;
-        let plans_hotel_id = 0;
-        let plan_name = '';
-        let plan_type = '';
-        let selectedPlanObject = null;
+            const plan_key = selectedPlan.value;
+            let plans_global_id = 0;
+            let plans_hotel_id = 0;
+            let plan_name = '';
+            let plan_type = '';
+            let selectedPlanObject = null;
 
-        if (plan_key) {
-            const [global, hotel] = plan_key.split('h').map(Number);
-            plans_global_id = global || 0;
-            plans_hotel_id = hotel || 0;         
-            selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
-            if (selectedPlanObject) {
-                plan_name = selectedPlanObject.name;
-                plan_type = selectedPlanObject.plan_type;
+            if (plan_key) {
+                const [global, hotel] = plan_key.split('h').map(Number);
+                plans_global_id = global || 0;
+                plans_hotel_id = hotel || 0;         
+                selectedPlanObject = plans.value.find(plan => plan.plan_key === plan_key);
+                if (selectedPlanObject) {
+                    plan_name = selectedPlanObject.name;
+                    plan_type = selectedPlanObject.plan_type;
+                }
             }
-        }
 
-        const price = planTotalRate.value || 0;
+            const price = planTotalRate.value || 0;
 
-        if (selectedPlanObject) {
-            await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
-        }
+            if (selectedPlanObject) {
+                await setReservationPlan(props.reservation_details.id, props.reservation_details.hotel_id, selectedPlanObject, selectedRates.value, price);
+            }
 
-        const addonDataArray = selectedAddon.value.map(addon => ({
-            hotel_id: props.reservation_details.hotel_id,  
-            addons_global_id: addon.addons_global_id,
-            addons_hotel_id: addon.addons_hotel_id,
-            addon_name: addon.addon_name,
-            quantity: addon.quantity,
-            price: addon.price,
-            tax_type_id: addon.tax_type_id,
-            tax_rate: addon.tax_rate
-        }));
+            const addonDataArray = selectedAddon.value.map(addon => ({
+                hotel_id: props.reservation_details.hotel_id,  
+                addons_global_id: addon.addons_global_id,
+                addons_hotel_id: addon.addons_hotel_id,
+                addon_name: addon.addon_name,
+                quantity: addon.quantity,
+                price: addon.price,
+                tax_type_id: addon.tax_type_id,
+                tax_rate: addon.tax_rate
+            }));
 
-        // console.log('addonDataArray:', addonDataArray);
+            // console.log('addonDataArray:', addonDataArray);
         
-        await setReservationAddons(props.reservation_details.id, props.reservation_details.hotel_id, addonDataArray);
+            await setReservationAddons(props.reservation_details.id, props.reservation_details.hotel_id, addonDataArray);
 
-        const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
-        reservationDetail.value = data.reservation[0];
+            const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
+            reservationDetail.value = data.reservation[0];
         
-        toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
+        } catch (error) {
+            console.error('Error saving plan:', error);
+            // Show error toast if needed
+        } finally {
+            isSubmitting.value = false;
+        }
     };
 
     // Room
@@ -524,14 +544,22 @@
     const numberOfPeopleToMove = ref(0);
     const filteredRooms = ref(null);
     const saveRoom = async () => {
-        // console.log('targetRoom', targetRoom.value.value);
-        await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
+        isSubmitting.value = true;
+        try {
+            // console.log('targetRoom', targetRoom.value.value);
+            await setReservationRoom(props.reservation_details.id, targetRoom.value.value);
 
-        const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
-        reservationDetail.value = data.reservation[0];
+            const data = await fetchReservationDetail(props.reservation_details.id, props.reservation_details.hotel_id);
+            reservationDetail.value = data.reservation[0];
 
-        toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約が編集されました。', life: 3000 });
 
+        } catch (error) {
+            console.error('Error saving room:', error);
+            // Show error toast if needed
+        } finally {
+            isSubmitting.value = false;
+        }
     };
 
     // Clients
@@ -541,36 +569,53 @@
 
     // Cancel
     const reservationCancelled = ref(false);
-    const dayCancel = () => {
-        confirm.require({
-            group: 'cancel-day',
-            message: 'キャンセル料の有無を選択してください。',
-            header: 'キャンセル確認',
-            icon: 'pi pi-exclamation-triangle',
-            accept: async () => {
-                await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', true);
-                reservationCancelled.value = true;
-                toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
-            },
-            reject: async () => {
-                await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', false);
-                reservationCancelled.value = true;
-                toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
-            },
-            acceptLabel: 'キャンセル料発生',
-            acceptClass: 'p-button-danger',
-            acceptIcon: 'pi pi-dollar',
-            rejectLabel: 'キャンセル料無し',
-            rejectClass: 'p-button-success',
-            rejectIcon: 'pi pi-check',
-        });
+    const isSubmitting = ref(false);
+    const dayCancel = async () => {
+        isSubmitting.value = true;
+        try {
+            confirm.require({
+                group: 'cancel-day',
+                message: 'キャンセル料の有無を選択してください。',
+                header: 'キャンセル確認',
+                icon: 'pi pi-exclamation-triangle',
+                accept: async () => {
+                    await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', true);
+                    reservationCancelled.value = true;
+                    toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+                },
+                reject: async () => {
+                    await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'cancelled', false);
+                    reservationCancelled.value = true;
+                    toast.add({ severity: 'warn', summary: 'キャンセル', detail: '予約がキャンセルされました。', life: 3000 });
+                },
+                acceptLabel: 'キャンセル料発生',
+                acceptClass: 'p-button-danger',
+                acceptIcon: 'pi pi-dollar',
+                rejectLabel: 'キャンセル料無し',
+                rejectClass: 'p-button-success',
+                rejectIcon: 'pi pi-check',
+            });
+        } catch (error) {
+            console.error('Error cancelling:', error);
+            // Show error toast if needed
+        } finally {
+            isSubmitting.value = false;
+        }
     };
     const dayRecover = async () => {        
-        await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');
+        isSubmitting.value = true;
+        try {
+            await setReservationDetailStatus(props.reservation_details.id, props.reservation_details.hotel_id, 'recovered');
 
-        reservationCancelled.value = false;
+            reservationCancelled.value = false;
 
-        toast.add({ severity: 'success', summary: '成功', detail: '予約が復活されました。', life: 3000 });
+            toast.add({ severity: 'success', summary: '成功', detail: '予約が復活されました。', life: 3000 });
+        } catch (error) {
+            console.error('Error recovering:', error);
+            // Show error toast if needed
+        } finally {
+            isSubmitting.value = false;
+        }
     };
 
     onMounted(async() => {   

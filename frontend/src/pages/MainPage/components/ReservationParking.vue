@@ -14,7 +14,8 @@
           label="駐車場追加"
           class="p-button-sm p-button-success"
           @click="openAddParkingDialog"
-          :disabled="!canAddParking"
+          :disabled="!canAddParking || isSubmitting"
+          :loading="isSubmitting"
         />
       </div>
     </div>
@@ -137,7 +138,7 @@ const showParkingSpotsDialog = ref(false);
 const selectedRoomId = ref(null);
 const selectedRoomName = ref('');
 const processing = ref(false);
-const loading = ref(false);
+const isSubmitting = ref(false);
 
 // Watch for changes in parkingReservations prop
 watch(() => props.parkingReservations, (newVal) => {
@@ -318,7 +319,7 @@ const openParkingSpotsDialog = (roomId, roomName) => {
 };
 
 const onParkingSave = async (saveData) => {
-    loading.value = true;
+    isSubmitting.value = true;
     try {
         if (!props.reservationDetails || props.reservationDetails.length === 0) {
             throw new Error('Reservation details are not available.');
@@ -355,10 +356,10 @@ const onParkingSave = async (saveData) => {
                     check_in: saveData.startDate,
                     check_out: saveData.endDate,
                     spotId: saveData.spotId,
-                    vehicle_category_id: saveData.vehicleCategoryId, // Changed to snake_case
-                    unit_price: unitPrice, // Changed to snake_case
+                    vehicle_category_id: saveData.vehicleCategoryId,
+                    unit_price: unitPrice,
                     comment: comment,
-                    totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)), // Calculate days from startDate and endDate
+                    totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
                     updated_at: new Date().toISOString()
                 }];
             }
@@ -372,8 +373,8 @@ const onParkingSave = async (saveData) => {
                 check_out: saveData.endDate,
                 ...saveData,
                 spotId: saveData.spotId,
-                vehicle_category_id: saveData.vehicleCategoryId, // Changed to snake_case
-                unit_price: unitPrice, // Changed to snake_case
+                vehicle_category_id: saveData.vehicleCategoryId,
+                unit_price: unitPrice,
                 comment: comment,
                 totalPrice: unitPrice * ((new Date(saveData.endDate).getTime() - new Date(saveData.startDate).getTime()) / (1000 * 60 * 60 * 24)),
                 created_at: new Date().toISOString(),
@@ -393,7 +394,7 @@ const onParkingSave = async (saveData) => {
             life: 3000
         });
         showParkingDialog.value = false;
-
+        isSubmitting.value = false;
     } catch (error) {
         console.error('Error saving parking assignment:', error);
         toast.add({
@@ -402,8 +403,7 @@ const onParkingSave = async (saveData) => {
             detail: '駐車場予約の保存に失敗しました',
             life: 3000
         });
-    } finally {
-        loading.value = false;
+        isSubmitting.value = false;
     }
 };
 
