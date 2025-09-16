@@ -16,3 +16,9 @@ CREATE INDEX idx_reservation_payments_client_id ON reservation_payments (client_
 CREATE INDEX idx_crm_actions_assigned_to_datetime ON crm_actions (assigned_to, action_datetime DESC);
 CREATE INDEX idx_crm_actions_client_id_datetime ON crm_actions (client_id, action_datetime DESC);
 CREATE INDEX idx_reservation_details_hotel_room_date_cancelled ON reservation_details (hotel_id, room_id, date) WHERE cancelled IS NULL;
+CREATE INDEX idx_logs_reservation_record_id_action ON logs_reservation (record_id, action);
+CREATE INDEX idx_logs_clients_record_id_action ON logs_clients (record_id, action);
+CREATE INDEX idx_reservations_hotel_id_created_at ON reservations (hotel_id, created_at);
+CREATE INDEX idx_reservations_hotel_id_check_in ON reservations (hotel_id, check_in);
+CREATE INDEX idx_reservation_details_reservation_id_hotel_id ON reservation_details (reservation_id, hotel_id);
+CREATE INDEX idx_waitlist_entries_hotel_id_status_req_date ON waitlist_entries (hotel_id, status, requested_check_in_date);

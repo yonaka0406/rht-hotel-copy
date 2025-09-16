@@ -20,7 +20,8 @@ BEGIN
             reservations r
         WHERE
             r.hotel_id = p_hotel_id
-            AND r.created_at::DATE BETWEEN (p_reference_date - p_lookback_days) AND p_reference_date
+            AND r.created_at >= (p_reference_date - p_lookback_days)
+            AND r.created_at < (p_reference_date + INTERVAL '1 day')
             AND r.status <> 'cancelled'
     ),
     RoomNights AS (
@@ -61,7 +62,8 @@ BEGIN
             reservations r
         WHERE
             r.hotel_id = p_hotel_id
-            AND r.check_in::DATE BETWEEN (p_reference_date - p_lookback_days) AND p_reference_date
+            AND r.check_in >= (p_reference_date - p_lookback_days)
+            AND r.check_in < (p_reference_date + INTERVAL '1 day')
             AND r.status <> 'cancelled'
     ),
     RoomNights AS (
@@ -101,7 +103,8 @@ BEGIN
             reservations r
         WHERE
             r.hotel_id = p_hotel_id
-            AND r.created_at::DATE = p_target_date
+            AND r.created_at >= p_target_date
+            AND r.created_at < (p_target_date + INTERVAL '1 day')
             AND r.status <> 'cancelled'
     )
     SELECT
