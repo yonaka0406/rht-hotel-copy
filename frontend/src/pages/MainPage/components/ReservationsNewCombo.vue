@@ -126,6 +126,8 @@
                     <div class="flex gap-2 ml-2 mt-2">
                         <Button v-if="hasStayReservation && validationErrors.length === 0" label="新規予約"
                             icon="pi pi-calendar" @click="openDialog" />
+                        <Button v-if="hasStayReservation && validationErrors.length === 0" label="複数部屋を仮ブロック"
+                            icon="pi pi-lock" severity="warn" @click="openMultiBlockDialog" />
                     </div>
                 </template>
                 <template #content>
@@ -272,6 +274,23 @@
             </template>
         </Dialog>
 
+        <!-- Multi-Block Dialog -->
+        <Dialog v-model:visible="multiBlockDialogVisible" 
+                header="複数部屋を仮ブロック" 
+                :modal="true" 
+                :style="{ width: '50vw' }">
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">コメント</label>
+                    <Textarea v-model="blockComment" rows="3" class="w-full" />
+                </div>
+            </div>
+            <template #footer>
+                <Button label="キャンセル" icon="pi pi-times" @click="multiBlockDialogVisible = false" class="p-button-danger p-button-text p-button-sm" text />
+                <Button label="ブロックする" icon="pi pi-lock" @click="submitMultiBlock" :loading="isSubmittingBlock" severity="warn" />
+            </template>
+        </Dialog>
+
         <WaitlistDialog v-model:visible="waitlistDialogVisibleState" :initialHotelId="selectedHotelId"
             :initialHotelName="selectedHotel ? selectedHotel.name : ''" :initialRoomTypeId="waitlistInitialRoomTypeId"
             :initialCheckInDate="waitlistInitialCheckInDate" :initialCheckOutDate="waitlistInitialCheckOutDate"
@@ -288,7 +307,7 @@ const router = useRouter();
 // Primevue
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
-import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column, Divider } from 'primevue';
+import { Panel, Card, Dialog, FloatLabel, DatePicker, InputText, InputNumber, AutoComplete, Select, SelectButton, RadioButton, Button, DataTable, Column, Divider, Textarea } from 'primevue';
 import WaitlistDialog from '@/pages/MainPage/components/Dialogs/WaitlistDialog.vue';
 // Stores
 import { useHotelStore } from '@/composables/useHotelStore';
@@ -296,7 +315,7 @@ const { selectedHotel, selectedHotelId, selectedHotelRooms, fetchHotels, fetchHo
 import { useClientStore } from '@/composables/useClientStore';
 const { clients, fetchClients, setClientsIsLoading, createBasicClient, fetchAllClientsForFiltering } = useClientStore();
 import { useReservationStore } from '@/composables/useReservationStore';
-const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo } = useReservationStore();
+const { availableRooms, fetchAvailableRooms, reservationId, setReservationId, fetchReservation, fetchMyHoldReservations, createHoldReservationCombo, blockMultipleRooms  } = useReservationStore();
 import { useWaitlistStore } from '@/composables/useWaitlistStore';
 const waitlistStore = useWaitlistStore();
 import { useParkingStore } from '@/composables/useParkingStore';
@@ -1228,6 +1247,103 @@ const hasStayReservation = computed(() => {
 });
 
 const isSubmitting = ref(false);
+const isSubmittingBlock = ref(false);
+
+const multiBlockDialogVisible = ref(false);
+const blockComment = ref('');
+
+const openMultiBlockDialog = () => {
+    multiBlockDialogVisible.value = true;
+};
+
+const submitMultiBlock = async () => {
+    if (!blockComment.value.trim()) {
+        toast.add({ severity: 'warn', summary: 'コメントを入力してください', life: 3000 });
+        return;
+    }
+
+    isSubmittingBlock.value = true;
+
+    try {
+        // Get the first stay reservation to get check-in/check-out dates
+        const stayReservation = reservationCombos.value.find(combo => combo.reservation_type === 'stay');
+        if (!stayReservation) {
+            throw new Error('宿泊予約が見つかりません');
+        }
+        
+        // Get unique room types and their counts
+        const roomTypeCounts = {};
+        reservationCombos.value
+            .filter(combo => combo.reservation_type === 'stay')
+            .forEach(combo => {
+                if (!roomTypeCounts[combo.room_type_id]) {
+                    roomTypeCounts[combo.room_type_id] = 0;
+                }
+                roomTypeCounts[combo.room_type_id] += combo.number_of_rooms;
+            });
+        
+        // Prepare the request data
+        const requestData = {
+            hotel_id: selectedHotelId.value,
+            check_in: formatDate(stayReservation.check_in),
+            check_out: formatDate(stayReservation.check_out),
+            room_type_counts: roomTypeCounts,
+            comment: blockComment.value.trim(),
+            number_of_people: stayReservation.number_of_people
+        };
+        
+        // Call the API
+        const response = await blockMultipleRooms(requestData);
+        
+        if (response.success) {
+            toast.add({ 
+                severity: 'success', 
+                summary: '部屋を仮ブロックしました',
+                detail: `${response.blocked_rooms}部屋をブロックしました`,
+                life: 5000 
+            });
+            
+            // Reset the form
+            multiBlockDialogVisible.value = false;
+            blockComment.value = '';
+            
+            // Emit events to refresh the parent component
+            emit('block-success', response);
+            emit('refresh-calendar');
+            
+            // If we have reservation IDs, we could store them for future reference
+            if (response.room_ids?.length > 0) {
+                console.log('Created temporary block reservations:', response.room_ids);
+            }
+        } else {
+            throw new Error(response.message || '部屋のブロックに失敗しました');
+        }
+    } catch (error) {
+        console.error('Error blocking rooms:', error);
+        
+        let errorMessage = error.message || '部屋のブロック中にエラーが発生しました';
+        
+        // Handle specific error cases
+        if (error.error?.includes('予約は既に登録されています')) {
+            errorMessage = '選択された日付には既に予約が入っている部屋があります。';
+        } else if (error.status === 400) {
+            errorMessage = `リクエストが無効です: ${errorMessage}`;
+        } else if (error.status === 404) {
+            errorMessage = '指定されたリソースが見つかりませんでした。';
+        }
+        
+        toast.add({ 
+            severity: 'error', 
+            summary: 'エラー',
+            detail: errorMessage,
+            life: 5000 
+        });
+    } finally {
+        isSubmittingBlock.value = false;
+    }
+};
+
+const emit = defineEmits(['refresh-calendar', 'block-success']);
 
 onMounted(async () => {
     await fetchHotels();

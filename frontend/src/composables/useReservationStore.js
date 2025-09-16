@@ -1258,6 +1258,34 @@ export function useReservationStore() {
         }
     };
 
+    const blockMultipleRooms = async (data) => {
+        try {
+            setReservationIsUpdating(true);
+            const authToken = localStorage.getItem('authToken');
+            
+            const response = await fetch('/api/hotels/multi-block-rooms', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to block multiple rooms');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error blocking multiple rooms:', error);
+            throw error;
+        } finally {
+            setReservationIsUpdating(false);
+        }
+    };
+
     // Watchers
     watch(reservedRooms, (newValue, oldValue) => {
         if (newValue !== oldValue) {
@@ -1464,5 +1492,6 @@ export function useReservationStore() {
         fetchParkingSpotAvailability,
         cancelReservationRooms,
         setPaymentTiming,
+        blockMultipleRooms,
     };
 }

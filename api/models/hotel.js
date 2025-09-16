@@ -201,11 +201,9 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
       throw new Error('Invalid date format. Please provide valid dates.');
     }
 
-    // Include the start date in the range by using <= comparison
-    for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+    // Include the start date in the range, up to but not including the end date
+    for (let dt = new Date(start); dt < end; dt.setDate(dt.getDate() + 1)) {
       dateArray.push(new Date(dt));
-      // If start and end are the same, break after adding the first date
-      if (start.getTime() === end.getTime()) break;
     }
 
     let hotelsToUpdate = [];
@@ -538,6 +536,104 @@ const updateRoomAssignmentOrder = async (requestId, hotelId, rooms, userId) => {
   }
 };
 
+const blockRoomsByRoomType = async (requestId, hotel_id, check_in, check_out, room_type_counts_processed, comment, number_of_people, userId) => {
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  let blockedRoomIds = [];
+
+  try {
+    await client.query('BEGIN');
+
+    const startDate = new Date(check_in);
+    const endDate = new Date(check_out);
+    const dateArray = [];
+
+    for (let dt = new Date(startDate); dt < endDate; dt.setDate(dt.getDate() + 1)) {
+      dateArray.push(new Date(dt));
+    }
+
+    const mockReservationId = (await client.query('SELECT gen_random_uuid() as id')).rows[0].id;
+    const checkInDate = dateArray[0];
+    const checkOutDate = new Date(dateArray[dateArray.length - 1]);
+    checkOutDate.setDate(checkOutDate.getDate() + 1);
+    const clientId = '22222222-2222-2222-2222-222222222222'; // Client ID for temp blocks
+
+    // Insert the main reservation entry ONCE for the entire block
+    await client.query(
+      `INSERT INTO reservations (id, hotel_id, reservation_client_id, check_in, check_out, number_of_people, status, comment, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, 'block', $7, $8, $8)`,
+      [
+        mockReservationId,
+        hotel_id,
+        clientId,
+        checkInDate,
+        checkOutDate,
+        number_of_people || 1,
+        comment,
+        userId,
+      ]
+    );
+
+    for (const roomTypeRequest of room_type_counts_processed) {
+      const { room_type_id, count } = roomTypeRequest;
+
+      // Find available rooms of this type for the entire date range
+      const availableRoomsResult = await client.query(
+        `SELECT r.id AS room_id
+         FROM rooms r
+         WHERE r.hotel_id = $1 AND r.room_type_id = $2
+         AND NOT EXISTS (
+           SELECT 1
+           FROM reservation_details rd
+           WHERE rd.room_id = r.id
+             AND rd.hotel_id = $1
+             AND rd.date >= $3 AND rd.date < $4
+             AND rd.cancelled IS NULL
+         )
+         ORDER BY r.assignment_priority ASC NULLS LAST, r.floor, r.room_number
+         LIMIT $5`,
+        [hotel_id, room_type_id, startDate, endDate, count]
+      );
+
+      const roomsToBlock = availableRoomsResult.rows.map(row => row.room_id);
+
+      if (roomsToBlock.length < count) {
+        console.warn(`[${requestId}] Not enough rooms of type ${room_type_id} available. Requested: ${count}, Found: ${roomsToBlock.length}`);
+      }
+
+      for (const roomId of roomsToBlock) {
+        // Insert reservation details for each day, using the single mockReservationId
+        for (const date of dateArray) {
+          await client.query(
+            `INSERT INTO reservation_details (hotel_id, reservation_id, date, room_id, number_of_people, created_by, updated_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [
+              hotel_id,
+              mockReservationId,
+              date,
+              roomId,
+              number_of_people || 1,
+              userId,
+              userId,
+            ]
+          );
+        }
+        blockedRoomIds.push(roomId);
+      }
+    }
+
+    await client.query('COMMIT');
+    return { success: true, blocked_room_ids: blockedRoomIds };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`[${requestId}] Error in blockRoomsByRoomType:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getAllHotels,
   getHotelByID,
@@ -557,4 +653,5 @@ module.exports = {
   getRoomTypeById,
   getRoomAssignmentOrder,
   updateRoomAssignmentOrder,
+  blockRoomsByRoomType,
 };

@@ -13,6 +13,21 @@
             </template>
         </Card>
 
+        <!-- New Card for Blocked Room Details -->
+        <Card v-if="reservationStatus === 'block' && blockedRoomInfo" class="m-2">
+            <template #title>ブロックされた部屋</template>
+            <template #content>
+                <div class="field">
+                    <label class="font-bold">部屋数:</label>
+                    <span>{{ blockedRoomInfo.count }}</span>
+                </div>
+                <div class="field mt-2">
+                    <label class="font-bold">部屋番号:</label>
+                    <span>{{ blockedRoomInfo.roomNumbers }}</span>
+                </div>
+            </template>
+        </Card>
+
         <div v-if="reservationStatus !== 'block'">
             <!-- Rooms Data component-->
             <Card class="m-2">
@@ -124,6 +139,42 @@ const fetchAllReservationData = async () => {
         console.error("[ReservationEdit] Failed to fetch all reservation data:", error);
     }
 };
+
+// Computed property for blocked room information
+const blockedRoomInfo = computed(() => {
+    console.log('[blockedRoomInfo] Evaluating...');
+    console.log('[blockedRoomInfo] reservationStatus.value:', reservationStatus.value);
+    console.log('[blockedRoomInfo] reservation_details.value:', reservation_details.value);
+
+    if (reservationStatus.value === 'block' && reservation_details.value && reservation_details.value.length > 0) {
+        // Collect all unique room_ids and room_numbers from the reservation_details array
+        const uniqueRoomDetails = {};
+        reservation_details.value.forEach(detail => {
+            if (detail.room_id && detail.room_number) {
+                uniqueRoomDetails[detail.room_id] = detail.room_number;
+            }
+        });
+
+        const roomIds = Object.keys(uniqueRoomDetails);
+        const roomNumbers = Object.values(uniqueRoomDetails);
+
+        console.log('[blockedRoomInfo] Collected roomIds:', roomIds);
+        console.log('[blockedRoomInfo] Collected roomNumbers:', roomNumbers);
+
+        if (roomIds.length > 0) {
+            console.log('[blockedRoomInfo] Returning blocked room info.');
+            return {
+                count: roomIds.length,
+                roomNumbers: roomNumbers.join(', ')
+            };
+        } else {
+            console.log('[blockedRoomInfo] No room IDs found in reservation_details.');
+        }
+    } else {
+        console.log('[blockedRoomInfo] Conditions not met for displaying blocked room info.');
+    }
+    return null;
+});
 
 // Lifecycle Hooks
 onMounted(async () => {

@@ -1,6 +1,7 @@
 const { getPool } = require('../config/database');
 const { validateNumericParam, validateNonEmptyStringParam, validateDateStringParam, validateIntegerParam } = require('../utils/validationUtils');
-const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions, getRoomAssignmentOrder, updateRoomAssignmentOrder } = require('../models/hotel');
+const hotelModel = require('../models/hotel');
+const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteController, updateRoomType, updateRoom, updateHotelCalendar, selectBlockedRooms, getAllHotelRoomTypesById, getAllRoomsByHotelId, deleteBlockedRooms, getPlanExclusionSettings, updatePlanExclusions, getRoomAssignmentOrder, updateRoomAssignmentOrder } = hotelModel;
 
 // POST
   const hotels = async (req, res) => {
@@ -432,12 +433,17 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
         return res.status(400).json({ success: false, message: updatedRoom.message });
       }
       
-      res.status(200).json({ success: true, message: 'Rooms updated successfully' });
+      res.status(200).json({
+        success: true,
+        message: 'Rooms updated successfully',
+        roomIds: validatedRoomIds
+      });
     } catch (error) {
       console.error('Error updating hotel:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: error.message || 'Internal server error' 
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update rooms',
+        error: error.message
       });
     } finally {
       client.release();
@@ -576,23 +582,144 @@ const updateRoomAssignmentOrderController = async (req, res) => {
   }
 };
 
+const blockMultipleRooms = async (req, res) => {
+  console.log('Starting blockMultipleRooms with request body:', JSON.stringify(req.body, null, 2));
+  const { 
+      hotel_id, 
+      check_in, 
+      check_out, 
+      room_type_counts, 
+      comment, 
+      number_of_people 
+  } = req.body;
+  
+  const updated_by = req.user.id;
+  const requestId = req.requestId;
+  console.log(`Processing request ${requestId} for hotel ${hotel_id} by user ${updated_by}`);
+  
+  // Validate required fields
+  if (!hotel_id || !check_in || !check_out || !room_type_counts || !comment) {
+      const errorMsg = 'Missing required fields: hotel_id, check_in, check_out, room_type_counts, and comment are required.';
+      console.error('Validation error:', errorMsg);
+      return res.status(400).json({
+          success: false,
+          message: errorMsg
+      });
+  }
+  
+  // Convert room_type_counts to an array of { room_type_id, count }
+  const roomTypeCounts = [];
+  try {
+      console.log('Processing room type counts:', JSON.stringify(room_type_counts, null, 2));
+      for (const [roomTypeId, count] of Object.entries(room_type_counts)) {
+          roomTypeCounts.push({
+              room_type_id: parseInt(roomTypeId, 10),
+              count: parseInt(count, 10)
+          });
+      }
+      console.log('Processed room type counts:', JSON.stringify(roomTypeCounts, null, 2));
+  } catch (error) {
+      const errorMsg = 'Invalid room_type_counts format. Expected an object with room_type_id as keys and counts as values.';
+      console.error('Error processing room type counts:', errorMsg, error);
+      return res.status(400).json({
+          success: false,
+          message: errorMsg
+      });
+  }
+  
+  // Validate date range
+  const startDate = new Date(check_in);
+  const endDate = new Date(check_out);
+  console.log(`Validating date range: ${startDate} to ${endDate}`);
+  
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      const errorMsg = 'Invalid date format. Please use YYYY-MM-DD.';
+      console.error('Date validation error:', errorMsg);
+      return res.status(400).json({
+          success: false,
+          message: errorMsg
+      });
+  }
+  
+  if (startDate >= endDate) {
+      const errorMsg = 'Check-out date must be after check-in date.';
+      console.error('Date range validation error:', errorMsg);
+      return res.status(400).json({
+          success: false,
+          message: errorMsg
+      });
+  }
+  
+  const pool = getPool(requestId);
+  const client = await pool.connect();
+  console.log('Database connection established');
+  
+  try {
+      // Call the model function to block rooms by room type
+      const result = await hotelModel.blockRoomsByRoomType(
+          requestId,
+          hotel_id,
+          check_in,
+          check_out,
+          roomTypeCounts, // Use the processed roomTypeCounts
+          comment,
+          number_of_people,
+          updated_by
+      );
+
+      if (result.success) {
+          console.log(`Transaction committed. Successfully blocked ${result.blocked_room_ids.length} rooms`);
+          const successResponse = {
+              success: true,
+              message: `Successfully blocked ${result.blocked_room_ids.length} rooms`,
+              blocked_rooms: result.blocked_room_ids.length,
+              room_ids: result.blocked_room_ids
+          };
+          console.log('Sending success response:', JSON.stringify(successResponse, null, 2));
+          res.status(200).json(successResponse);
+      } else {
+          // This case should ideally be handled by blockRoomsByRoomType throwing an error
+          // but as a fallback, if it returns success: false, handle it here.
+          console.error('Error in blockMultipleRooms: Model returned failure without throwing:', result.message);
+          res.status(400).json({
+              success: false,
+              message: result.message || 'Failed to block rooms due to an unknown reason.'
+          });
+      }
+      
+  } catch (error) {
+      console.error('Error in blockMultipleRooms transaction:', error);
+      // The blockRoomsByRoomType function already handles its own transaction and rollback.
+      // If an error reaches here, it means blockRoomsByRoomType threw an error.
+      res.status(500).json({
+          success: false,
+          message: 'Failed to block rooms',
+          error: error.message
+      });
+  } finally {
+      // The client is released by blockRoomsByRoomType, so no need to release here.
+      // console.log('Database connection released');
+  }
+};
+
 module.exports = { 
   hotels, 
   roomTypeCreate, 
   roomCreate, 
   getHotels,
   getHotelRoomTypes,
+  getHotelRooms,
   editHotel, 
   editHotelSiteController,
   editRoomType, 
   editRoom, 
   editHotelCalendar, 
-  getHotelRooms, 
   getBlockedRooms, 
   fetchHotelSiteController, 
   editBlockedRooms,
   getPlanExclusionSettingsController,
   updatePlanExclusionSettingsController,
   getRoomAssignmentOrderController,
-  updateRoomAssignmentOrderController
+  updateRoomAssignmentOrderController,
+  blockMultipleRooms
 };

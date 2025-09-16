@@ -1,6 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const { hotels, roomTypeCreate, roomCreate, getHotels, getHotelRoomTypes, editHotel, editHotelSiteController, editRoomType, editRoom, editHotelCalendar, getHotelRooms, fetchHotelSiteController, getBlockedRooms, editBlockedRooms, getPlanExclusionSettingsController, updatePlanExclusionSettingsController, getRoomAssignmentOrderController, updateRoomAssignmentOrderController } = require('../controllers/hotelsController');
+const { 
+  hotels, 
+  roomTypeCreate, 
+  roomCreate, 
+  getHotels, 
+  getHotelRoomTypes, 
+  editHotel, 
+  editHotelSiteController, 
+  editRoomType, 
+  editRoom, 
+  editHotelCalendar, 
+  getHotelRooms, 
+  fetchHotelSiteController, 
+  getBlockedRooms, 
+  editBlockedRooms, 
+  getPlanExclusionSettingsController, 
+  updatePlanExclusionSettingsController, 
+  getRoomAssignmentOrderController, 
+  updateRoomAssignmentOrderController,
+  blockMultipleRooms 
+} = require('../controllers/hotelsController');
 const { authMiddleware, authMiddlewareCRUDAccess, authMiddleware_manageDB } = require('../middleware/authMiddleware');
 
 router.get('/hotel-list', authMiddleware, getHotels);
@@ -24,5 +44,6 @@ router.put('/hotel-assignment-order/:id', authMiddleware_manageDB, updateRoomAss
 
 router.put('/hotel-calendar/update/:startDate/:endDate', authMiddlewareCRUDAccess, editHotelCalendar);
 router.put('/hotel-calendar/unblock/:id', authMiddlewareCRUDAccess, editBlockedRooms);
+router.post('/hotels/multi-block-rooms', authMiddlewareCRUDAccess, blockMultipleRooms);
 
 module.exports = router;
