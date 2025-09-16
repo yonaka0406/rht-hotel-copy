@@ -236,33 +236,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Should support multiple Slack channels for different departments
   - Add message formatting with emojis for better readability
 
-### September 4, 2025
-
-#### Feature Request #51: Multi-Room Temporary Block
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Add functionality to create temporary blocks for multiple rooms simultaneously from the "Add New Reservation" combo box
-  - This will improve efficiency when needing to block multiple rooms at once for the same time period
-- **Requirements**:
-  - Add a "Temporary Block" option in the "Add New Reservation" dropdown
-  - Allow selecting multiple rooms when creating a temporary block
-  - Enable setting a single date range that applies to all selected rooms
-  - Include an optional note field for the reason of the block
-- **UI/UX Considerations**:
-  - Add a checkbox or multi-select interface for room selection
-  - Show a summary of selected rooms before confirming the block
-  - Provide visual feedback for successfully created blocks
-  - Allow quick modification of the block if needed
-- **Implementation Details**:
-  - Extend the existing temporary block functionality to handle multiple rooms
-  - Ensure proper validation of room availability
-  - Update the calendar view to clearly show temporary blocks
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
-- **Additional Notes**:
-  - Should maintain existing temporary block features (duration, reason, etc.)
-  - Consider adding a "Select All" option for rooms
-  - Should work consistently with the existing room filtering system
-
 ### September 2, 2025
 
 ## Feature Request #50: Enhanced Calendar View for Client Visualization

@@ -378,6 +378,17 @@
         { "type": "bugfix", "description": "キャンセル済み予約が売上計算に含まれないよう修正し、正確な収益計算を実現" },
         { "type": "bugfix", "description": "ホテル変更時に駐車場の空き状況が正しく更新されない問題を修正" }
       ]
+    },
+    {
+      "version": "1.1.13",
+      "date": "2025-09-16",
+      "changes": [
+        { "type": "feature", "description": "CRMでのクライアント統合操作中にトースト通知を追加し、ユーザーフィードバックを改善" },
+        { "type": "feature", "description": "Yadomasterデータのインポート機能を強化し、データ検証とエラーハンドリングを改善" },
+        { "type": "feature", "description": "予約編集UIを改善し、フォーム送信中にアクションボタンを無効化して二重送信を防止" },
+        { "type": "feature", "description": "長期滞在予約のデータベースクエリを最適化し、パフォーマンスを大幅に改善" },
+        { "type": "bugfix", "description": "新規予約時のクライアントドロップダウンにすべての利用可能なクライアントが表示されない問題を修正" }
+      ]
     }
   ],
   "backlog": [

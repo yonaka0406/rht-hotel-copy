@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
+- Feature: Implemented multi-room temporary block functionality, allowing users to block multiple rooms simultaneously from the "Add New Reservation" dropdown. (#51)
 
 ---
 ## Future Releases

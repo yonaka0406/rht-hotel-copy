@@ -4,8 +4,33 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### September 16, 2025
 
+#### Feature Request #51: Multi-Room Temporary Block
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**:
+  - Add functionality to create temporary blocks for multiple rooms simultaneously from the "Add New Reservation" combo box
+  - This will improve efficiency when needing to block multiple rooms at once for the same time period
+- **Requirements**:
+  - Add a "Temporary Block" option in the "Add New Reservation" dropdown
+  - Allow selecting multiple rooms when creating a temporary block
+  - Enable setting a single date range that applies to all selected rooms
+  - Include an optional note field for the reason of the block
+- **UI/UX Considerations**:
+  - Add a checkbox or multi-select interface for room selection
+  - Show a summary of selected rooms before confirming the block
+  - Provide visual feedback for successfully created blocks
+  - Allow quick modification of the block if needed
+- **Implementation Details**:
+  - Extend the existing temporary block functionality to handle multiple rooms
+  - Ensure proper validation of room availability
+  - Update the calendar view to clearly show temporary blocks
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+- **Additional Notes**:
+  - Should maintain existing temporary block features (duration, reason, etc.)
+  - Consider adding a "Select All" option for rooms
+  - Should work consistently with the existing room filtering system
+
 #### Bug #58: New Reservation Combo Not Loading All Clients
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**:
   - The client selection dropdown in the new reservation form is not displaying all available clients
   - Some clients are missing from the dropdown, making it impossible to select them for new reservations
