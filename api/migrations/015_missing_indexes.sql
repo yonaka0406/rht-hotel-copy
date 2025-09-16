@@ -39,3 +39,12 @@ CREATE INDEX IF NOT EXISTS idx_plans_rates_hotel_plan_hotel_id_global_id ON plan
 CREATE INDEX IF NOT EXISTS idx_plans_rates_date_start_date_end ON plans_rates (date_start, date_end);
 CREATE INDEX IF NOT EXISTS idx_plans_rates_order_by_fields ON plans_rates (adjustment_type, condition_type DESC, date_start, plans_global_id, hotel_id, plans_hotel_id);
 CREATE INDEX IF NOT EXISTS idx_plans_rates_group_by_fields ON plans_rates (condition_type, adjustment_type, condition_value, tax_type_id, tax_rate);
+-- Add GIN index for related_clients JSONB column
+CREATE INDEX IF NOT EXISTS idx_projects_related_clients ON projects USING GIN (related_clients jsonb_path_ops);
+
+-- Enable pg_trgm extension and add GIN index for project_name for ILIKE searches
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS trgm_idx_project_name ON projects USING GIN (project_name gin_trgm_ops);
+
+-- Add B-tree index for project_name for sorting (if not covered by GIN index)
+CREATE INDEX IF NOT EXISTS idx_projects_project_name ON projects (project_name);
