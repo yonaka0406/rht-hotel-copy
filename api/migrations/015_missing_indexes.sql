@@ -90,3 +90,6 @@ CREATE INDEX IF NOT EXISTS idx_reservation_details_id_reservation_id ON reservat
 CREATE INDEX IF NOT EXISTS idx_payment_types_transaction_id ON payment_types (transaction, id);
 CREATE INDEX IF NOT EXISTS idx_tax_info_percentage_name ON tax_info (percentage, name);
 CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_tier_name_hotel_id ON loyalty_tiers (tier_name, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_users_status_role_email_id ON users (status_id, role_id, email, id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_auth_provider_provider_user_id ON users (auth_provider, provider_user_id);
