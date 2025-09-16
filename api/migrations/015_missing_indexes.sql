@@ -108,3 +108,23 @@ CREATE INDEX IF NOT EXISTS idx_plans_hotel_id_hotel_id_plans_global_id ON plans_
 CREATE INDEX IF NOT EXISTS idx_plans_global_id ON plans_global (id);
 CREATE INDEX IF NOT EXISTS idx_reservation_clients_res_details_id_hotel_id_client_id_created_at ON reservation_clients (reservation_details_id, hotel_id, client_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_client_relationships_source_target_type ON client_relationships (source_relationship_type, target_relationship_type);
+
+CREATE INDEX IF NOT EXISTS idx_reservations_created_by_status_check_in_id ON reservations (created_by, status, check_in, id);
+CREATE INDEX IF NOT EXISTS idx_reservations_hotel_id_check_in_check_out_status_client_id ON reservations (hotel_id, check_in, check_out, status, reservation_client_id);
+CREATE INDEX IF NOT EXISTS idx_reservations_hotel_id_id_reservation_client_id ON reservations (hotel_id, id, reservation_client_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_date_room_id_cancelled ON reservation_details (date, room_id, cancelled);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_id_room_id_reservation_id ON reservation_details (hotel_id, room_id, reservation_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_reservation_id_hotel_id_id ON reservation_details (reservation_id, hotel_id, id);
+CREATE INDEX IF NOT EXISTS idx_rooms_hotel_id_for_sale_assignment_priority_room_type_id_capacity ON rooms (hotel_id, for_sale, assignment_priority, room_type_id, capacity);
+CREATE INDEX IF NOT EXISTS idx_rooms_id_hotel_id_room_type_id_room_number ON rooms (id, hotel_id, room_type_id, room_number);
+CREATE INDEX IF NOT EXISTS idx_room_types_id_hotel_id ON room_types (id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_parking_date_parking_spot_id ON reservation_parking (date, parking_spot_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_parking_hotel_id_res_details_id_date_parking_spot_id_vehicle_category_id ON reservation_parking (hotel_id, reservation_details_id, date, parking_spot_id, vehicle_category_id);
+CREATE INDEX IF NOT EXISTS idx_parking_spots_parking_lot_id_is_active_capacity_units_id ON parking_spots (parking_lot_id, is_active, capacity_units, id);
+CREATE INDEX IF NOT EXISTS idx_parking_lots_id_hotel_id ON parking_lots (id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_addons_res_detail_id_hotel_id_quantity_price ON reservation_addons (reservation_detail_id, hotel_id, quantity, price);
+CREATE INDEX IF NOT EXISTS idx_reservation_addons_res_detail_id_hotel_id ON reservation_addons (reservation_detail_id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_reservation_rates_res_detail_id_hotel_id_adj_type_price ON reservation_rates (reservation_details_id, hotel_id, adjustment_type, price);
+CREATE INDEX IF NOT EXISTS idx_reservation_payments_hotel_id_res_id_room_id_date_client_id_value_payment_type_id ON reservation_payments (hotel_id, reservation_id, room_id, date, client_id, value, payment_type_id);
+CREATE INDEX IF NOT EXISTS idx_plans_hotel_id_hotel_id ON plans_hotel (id, hotel_id);
+CREATE INDEX IF NOT EXISTS idx_ota_reservation_queue_status_created_at ON ota_reservation_queue (status, created_at);
