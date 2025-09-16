@@ -32,3 +32,5 @@ CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_name ON plans_hotel (hotel_i
 CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_id ON plans_hotel (hotel_id, id);
 CREATE INDEX IF NOT EXISTS idx_plan_templates_hotel_id_name ON plan_templates (hotel_id, name);
 CREATE INDEX IF NOT EXISTS idx_plans_hotel_hotel_id_plans_global_id ON plans_hotel (hotel_id, plans_global_id);
+CREATE INDEX IF NOT EXISTS idx_plan_addons_global_plan_hotel_id ON plan_addons (plans_global_id, plans_hotel_id);
+CREATE INDEX IF NOT EXISTS idx_plan_addons_hotel_plan_hotel_id_global_id ON plan_addons (plans_hotel_id, hotel_id, plans_global_id);
