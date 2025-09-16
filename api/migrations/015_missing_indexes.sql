@@ -93,3 +93,5 @@ CREATE INDEX IF NOT EXISTS idx_loyalty_tiers_tier_name_hotel_id ON loyalty_tiers
 CREATE INDEX IF NOT EXISTS idx_users_status_role_email_id ON users (status_id, role_id, email, id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_auth_provider_provider_user_id ON users (auth_provider, provider_user_id);
+CREATE INDEX IF NOT EXISTS idx_waitlist_entries_hotel_status_room_type_dates_created_at ON waitlist_entries (hotel_id, status, room_type_id, requested_check_in_date, requested_check_out_date, created_at);
+CREATE INDEX IF NOT EXISTS idx_waitlist_entries_confirmation_token_expires_at ON waitlist_entries (confirmation_token, token_expires_at);
