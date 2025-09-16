@@ -95,3 +95,16 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 CREATE INDEX IF NOT EXISTS idx_users_auth_provider_provider_user_id ON users (auth_provider, provider_user_id);
 CREATE INDEX IF NOT EXISTS idx_waitlist_entries_hotel_status_room_type_dates_created_at ON waitlist_entries (hotel_id, status, room_type_id, requested_check_in_date, requested_check_out_date, created_at);
 CREATE INDEX IF NOT EXISTS idx_waitlist_entries_confirmation_token_expires_at ON waitlist_entries (confirmation_token, token_expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_rooms_hotel_id_id_room_type_id_for_sale ON rooms (hotel_id, id, room_type_id, for_sale);
+CREATE INDEX IF NOT EXISTS idx_room_types_hotel_id_id ON room_types (hotel_id, id);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_id_room_id_date_cancelled ON reservation_details (hotel_id, room_id, date, cancelled);
+CREATE INDEX IF NOT EXISTS idx_reservation_details_hotel_id_reservation_id_id_date_cancelled_plans ON reservation_details (hotel_id, reservation_id, id, date, cancelled, plans_hotel_id, plans_global_id);
+CREATE INDEX IF NOT EXISTS idx_sc_tl_rooms_hotel_id_room_type_id ON sc_tl_rooms (hotel_id, room_type_id);
+CREATE INDEX IF NOT EXISTS idx_hotels_id ON hotels (id);
+CREATE INDEX IF NOT EXISTS idx_reservations_hotel_id_id_reservation_client_id_type ON reservations (hotel_id, id, reservation_client_id, type);
+CREATE INDEX IF NOT EXISTS idx_clients_id ON clients (id);
+CREATE INDEX IF NOT EXISTS idx_plans_hotel_id_hotel_id_plans_global_id ON plans_hotel (id, hotel_id, plans_global_id);
+CREATE INDEX IF NOT EXISTS idx_plans_global_id ON plans_global (id);
+CREATE INDEX IF NOT EXISTS idx_reservation_clients_res_details_id_hotel_id_client_id_created_at ON reservation_clients (reservation_details_id, hotel_id, client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_client_relationships_source_target_type ON client_relationships (source_relationship_type, target_relationship_type);
