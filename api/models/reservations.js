@@ -2802,51 +2802,67 @@ const recalculatePlanPrice = async (requestId, reservation_id, hotel_id, room_id
 // Delete
 const deleteHoldReservationById = async (requestId, reservation_id, hotel_id, updated_by) => {
   const pool = getPool(requestId);
-  // A transaction must run on a single client connection
   const client = await pool.connect();
 
-  // Define queries
-  const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
-
-  const deleteQuery = {
-    text: `
-      WITH deleted AS (
-        DELETE FROM reservations
-        WHERE id = $1 AND hotel_id = $2
-        RETURNING *
-      )
-      SELECT
-        COALESCE((SELECT COUNT(*) > 0 FROM deleted), false) AS success,
-        COALESCE((SELECT COUNT(*) FROM deleted), 0) AS count;
-    `,
-    values: [reservation_id, hotel_id],
-  };
-
   try {
-    // Start the transaction
     await client.query('BEGIN');
 
-    // Execute the queries on the same client
+    // Temporarily disable logging triggers    
+    await client.query('ALTER TABLE reservation_details DISABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_payments DISABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_clients DISABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_addons DISABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_rates DISABLE TRIGGER USER;');
+
+    const setSessionQuery = `SET SESSION "my_app.user_id" = '${updated_by}';`;
     await client.query(setSessionQuery);
+    
+    // Perform the delete operation
+    const deleteQuery = {
+      text: `
+        WITH deleted AS (
+          DELETE FROM reservations
+          WHERE id = $1 AND hotel_id = $2
+          RETURNING *
+        )
+        SELECT
+          COALESCE((SELECT COUNT(*) > 0 FROM deleted), false) AS success,
+          COALESCE((SELECT COUNT(*) FROM deleted), 0) AS count;
+      `,
+      values: [reservation_id, hotel_id],
+    };
     const result = await client.query(deleteQuery);
 
-    // If both succeed, commit the transaction
+    // Re-enable logging triggers    
+    await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
+    await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
+
     await client.query('COMMIT');
 
     return result.rows[0] || { success: false, count: 0 };
 
   } catch (err) {
-    // If any query fails, roll back the entire transaction
-    await client.query('ROLLBACK');
+    // Ensure triggers are re-enabled even on rollback
+    try {      
+      await client.query('ALTER TABLE reservation_details ENABLE TRIGGER USER;');
+      await client.query('ALTER TABLE reservation_payments ENABLE TRIGGER USER;');
+      await client.query('ALTER TABLE reservation_clients ENABLE TRIGGER USER;');
+      await client.query('ALTER TABLE reservation_addons ENABLE TRIGGER USER;');
+      await client.query('ALTER TABLE reservation_rates ENABLE TRIGGER USER;');
+    } catch (reEnableErr) {
+      console.error('Error re-enabling triggers after rollback:', reEnableErr);
+    }
 
+    await client.query('ROLLBACK');
     console.error(`[${requestId}] Transaction failed. Rolling back. Error:`, {
       error: err.message,
       stack: err.stack
     });
-    throw err; // Re-throw the error after rolling back
-
+    throw err;
   } finally {
-    // ALWAYS release the client back to the pool
     client.release();
   }
 };
