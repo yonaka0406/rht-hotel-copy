@@ -67,6 +67,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
             rd.reservation_id,
             rd.id AS reservation_detail_id,
             rd.number_of_people,
+            CASE WHEN rd.cancelled IS NULL THEN FALSE ELSE TRUE END AS cancelled,
             -- Calculate net plan price
             COALESCE(
                 CASE
@@ -77,31 +78,38 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
             -- Calculate net addon price
             COALESCE(ra.net_price_sum, 0) AS net_addon_price
         FROM
-            reservation_details rd
+            reservations res
+		    JOIN
+            reservation_details rd ON res.hotel_id = rd.hotel_id AND res.id = rd.reservation_id
         LEFT JOIN (
             -- Aggregate net prices from reservation_rates for each reservation_detail
             SELECT
+                hotel_id,
                 reservation_details_id,
                 SUM(net_price) AS net_price
             FROM
                 reservation_rates
             WHERE hotel_id = $1
             GROUP BY
-                reservation_details_id
-        ) rr ON rd.id = rr.reservation_details_id
+                hotel_id, reservation_details_id
+        ) rr ON rd.id = rr.reservation_details_id AND rd.hotel_id = rr.hotel_id
         LEFT JOIN (
             -- Aggregate net prices from reservation_addons for each reservation_detail
             SELECT
+                hotel_id,
                 reservation_detail_id,
                 SUM(net_price * quantity) AS net_price_sum
             FROM
                 reservation_addons
             WHERE hotel_id = $1
             GROUP BY
-                reservation_detail_id
-        ) ra ON rd.id = ra.reservation_detail_id
+                hotel_id, reservation_detail_id
+        ) ra ON rd.id = ra.reservation_detail_id AND rd.hotel_id = ra.hotel_id
         WHERE
-            rd.billable = TRUE            
+            rd.billable = TRUE 
+            AND rd.hotel_id = $1 AND rd.date BETWEEN $2 AND $3
+			      AND res.status NOT IN('hold','block')
+			      AND res.type <> 'employee'           
     )
 
     -- 4. Main Query (using calculated net prices)
@@ -109,18 +117,14 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       rt.date,
       rt.total_rooms,
       rt.total_rooms_real,
-      COUNT(CASE WHEN rsv.status NOT IN ('cancelled', 'block') THEN rdn.reservation_detail_id ELSE NULL END) AS room_count, -- Adjusted room_count
-      SUM(CASE WHEN rsv.status NOT IN ('cancelled', 'block') THEN rdn.number_of_people ELSE 0 END) AS people_sum, -- Adjusted people_sum
+      COUNT(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.reservation_detail_id END) AS room_count, -- Adjusted room_count
+      SUM(CASE WHEN rdn.cancelled = TRUE THEN NULL ELSE rdn.number_of_people END) AS people_sum, -- Adjusted people_sum      
       SUM(rdn.net_plan_price + rdn.net_addon_price) AS price -- This will be the pre-tax total revenue
     FROM room_total rt
     LEFT JOIN reservation_details_net_price rdn
       ON rdn.hotel_id = rt.hotel_id AND rdn.date = rt.date
-    LEFT JOIN reservations rsv
-      ON rdn.reservation_id = rsv.id AND rdn.hotel_id = rsv.hotel_id
     WHERE
       rt.hotel_id = $1
-      AND rsv.type <> 'employee'
-      AND rsv.status NOT IN ('hold', 'block')
     GROUP BY
       rt.date, rt.total_rooms, rt.total_rooms_real
     ORDER BY rt.date;
