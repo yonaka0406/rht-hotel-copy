@@ -219,9 +219,71 @@ const selectWaitlistEntriesToday = async (requestId, hotelId, date) => {
     }
 };
 
+const getBookingSourceBreakdown = async (requestId, hotelId, startDate, endDate) => {
+    const pool = getPool(requestId);
+    try {
+        const query = `
+            SELECT
+                r.type,
+                r.agent,
+                COUNT(rd.id) as room_nights
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            WHERE r.hotel_id = $1
+              AND r.status NOT IN('hold','block')
+              AND r.type <> 'employee'
+              AND rd.date BETWEEN $2 AND $3
+              AND rd.cancelled IS NULL
+            GROUP BY r.type, r.agent;
+        `;
+        const values = [hotelId, startDate, endDate];
+        const result = await pool.query(query, values);
+
+        return result.rows.map(row => ({
+            type: row.type,
+            agent: row.agent,
+            room_nights: parseInt(row.room_nights, 10),
+        }));
+    } catch (error) {
+        console.error(`Error fetching booking source breakdown for hotel ${hotelId}:`, error);
+        throw error;
+    }
+};
+
+const getPaymentTimingBreakdown = async (requestId, hotelId, startDate, endDate) => {
+    const pool = getPool(requestId);
+    try {
+        const query = `
+            SELECT
+                r.payment_timing,
+                COUNT(rd.id) AS reservation_count
+            FROM reservation_details rd
+            JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+            WHERE r.hotel_id = $1
+            AND r.status NOT IN('hold','block')
+            AND r.type <> 'employee'
+            AND rd.date BETWEEN $2 AND $3
+            AND rd.cancelled IS NULL
+            GROUP BY r.payment_timing;
+        `;
+        const values = [hotelId, startDate, endDate];
+        const result = await pool.query(query, values);
+
+        return result.rows.map(row => ({
+            paymentTiming: row.payment_timing,
+            count: parseInt(row.reservation_count, 10),
+        }));
+    } catch (error) {
+        console.error(`Error fetching payment timing breakdown for hotel ${hotelId}:`, error);
+        throw error;
+    }
+};
+
 module.exports = {
     selectReservationsToday,
     selectBookingAverageLeadTime,
     selectArrivalAverageLeadTime,
     selectWaitlistEntriesToday,
+    getBookingSourceBreakdown,
+    getPaymentTimingBreakdown,
 };

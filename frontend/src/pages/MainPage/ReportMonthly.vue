@@ -146,6 +146,28 @@
                 </Fieldset>
             </Panel>
 
+            <!-- Other KPIs Panel -->
+            <Panel header="予約チャンネルと支払タイミング" toggleable :collapsed="false" class="col-span-12">
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-6">
+                        <Card>
+                            <template #title>予約チャンネル内訳 (泊数ベース)</template>
+                            <template #content>
+                                <div ref="bookingSourceChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <Card>
+                            <template #title>支払タイミング内訳</template>
+                            <template #content>
+                                <div ref="paymentTimingChart" class="w-full h-60"></div>
+                            </template>
+                        </Card>
+                    </div>
+                </div>
+            </Panel>
+
             <!-- Line Chart -->
             <Card class="col-span-12">
                 <template #title>
@@ -297,7 +319,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown, fetchBookingSourceBreakdown, fetchPaymentTimingBreakdown } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -331,6 +353,16 @@
         newDate.setUTCDate(newDate.getUTCDate() + days);
         return newDate;
     };
+
+    const translatePaymentTiming = (timing) => {
+      const map = {
+          'not_set': '未設定',
+          'prepaid': '事前決済',
+          'on-site': '現地決済',
+          'postpaid': '後払い'
+      };
+      return map[timing] || timing;
+    };
     const startOfMonth = computed(() => {
         const date = new Date(selectedMonth.value);
         date.setDate(1);
@@ -357,6 +389,8 @@
     const accountingData = ref([]);
     const salesByPlan = ref([]);
     const occupationBreakdownData = ref(null);
+    const bookingSourceData = ref([]);
+    const paymentTimingData = ref([]);
 
     const filteredOccupationBreakdownData = computed(() => {
         if (!occupationBreakdownData.value) return [];
@@ -552,8 +586,8 @@
         }        
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
-        console.log('OCC Calculation - totalRoomsSold:', totalRoomsSold);
-        console.log('OCC Calculation - totalAvailableRoomNightsInPeriod:', totalAvailableRoomNightsInPeriod);
+        //console.log('OCC Calculation - totalRoomsSold:', totalRoomsSold);
+        //console.log('OCC Calculation - totalAvailableRoomNightsInPeriod:', totalAvailableRoomNightsInPeriod);
         OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
 
         // Calculate Forecast
@@ -591,8 +625,7 @@
         VisualMapComponent,
         LegendComponent,
     } from 'echarts/components';
-    import { HeatmapChart, ScatterChart } from 'echarts/charts';
-    import { BarChart, LineChart } from 'echarts/charts';
+    import { HeatmapChart, ScatterChart, BarChart, LineChart, PieChart, SunburstChart } from 'echarts/charts';
     import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
 
@@ -605,6 +638,8 @@
         ScatterChart,
         BarChart,
         LineChart,
+        PieChart,
+        SunburstChart,
         UniversalTransition,
         CanvasRenderer
     ]);
@@ -730,6 +765,10 @@
     let mySalesByPlanChart = null;
     const occupationBreakdownChart = ref(null);
     let myOccupationBreakdownChart = null;
+    const bookingSourceChart = ref(null);
+    let myBookingSourceChart = null;
+    const paymentTimingChart = ref(null);
+    let myPaymentTimingChart = null;
     const lineChartAxisX = ref([]);
     const lineChartSeriesData = ref([]);
     const lineChartSeriesSumData = ref([]);
@@ -1045,8 +1084,8 @@
             total: data['確定'] + data['ブロック'] + data['未予約']
         })).sort((a, b) => b.total - a.total);
 
-        console.log('totalConfirmedNights:', totalConfirmedNights);
-        console.log('yAxisCategories:', yAxisCategories);
+        //console.log('totalConfirmedNights:', totalConfirmedNights);
+        //console.log('yAxisCategories:', yAxisCategories);
         
         // Create series data for each plan
         const series = processedPlans.map(plan => ({
@@ -1180,12 +1219,153 @@
         }
         myOccupationBreakdownChart.setOption(option, true);
     };
+
+    const initBookingSourceChart = () => {
+        if (!bookingSourceChart.value) return;
+
+        const sourceData = bookingSourceData.value;
+        if (!sourceData || sourceData.length === 0) return;
+
+        const data = [];
+        const directNode = { name: '直予約', value: 0 };
+        const otaNode = { name: 'OTA', children: [] };
+
+        const agentMap = new Map();
+
+        sourceData.forEach(item => {
+            if (item.type === 'ota') {
+                const agentName = item.agent || 'その他';
+                if (!agentMap.has(agentName)) {
+                    agentMap.set(agentName, 0);
+                }
+                agentMap.set(agentName, agentMap.get(agentName) + item.room_nights);
+            } else {
+                directNode.value += item.room_nights;
+            }
+        });
+
+        agentMap.forEach((value, name) => {
+            otaNode.children.push({ name, value });
+        });
+
+        if (directNode.value > 0) data.push(directNode);
+        if (otaNode.children.length > 0) data.push(otaNode);
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: (params) => {
+                    if (params.treePathInfo && params.treePathInfo.length > 0) {
+                        const current = params.treePathInfo[params.treePathInfo.length - 1];
+                        const rootTotal = params.treePathInfo[0].value; // Get the total from the root node
+                        const percentage = (current.value / rootTotal * 100).toFixed(1);
+                        return `${params.name}: ${current.value}泊 (${percentage}%)`;
+                    }
+                    return `${params.name}: ${params.value}泊`;
+                }
+            },
+            series: {
+                type: 'sunburst',
+                data: data,
+                radius: [0, '100%'],
+                center: ['50%', '50%'],                                           
+                label: {
+                    rotate: 'radial',
+                    formatter: (params) => {
+                        // Calculate percentage based on root total if available
+                        if (params.treePathInfo && params.treePathInfo.length > 0) {
+                            const current = params.treePathInfo[params.treePathInfo.length - 1];
+                            const rootTotal = params.treePathInfo[0].value;
+                            const percentage = (current.value / rootTotal * 100).toFixed(1);
+                            
+                            // Only show label if percentage is above threshold (e.g., 2%)
+                            if (percentage > 2) {
+                                return `${params.name}\n${percentage}%`;
+                            }
+                        }
+                        return ''; // Return empty string for small segments
+                    },
+                    show: true
+                },
+                grid: {
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    left: 0,
+                    containLabel: false
+                }
+            }
+        };
+
+        if (!myBookingSourceChart) {
+            myBookingSourceChart = echarts.init(bookingSourceChart.value);
+        }
+        myBookingSourceChart.setOption(option, true);
+    };
+
+    const initPaymentTimingChart = () => {
+        if (!paymentTimingChart.value) return;
+
+        const paymentData = paymentTimingData.value;
+        if (!paymentData || paymentData.length === 0) return;
+
+        const chartData = paymentData.map(item => ({
+            value: item.count,
+            name: translatePaymentTiming(item.paymentTiming)
+        }));
+
+        const option = {
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                bottom: '5%',
+                left: 'center'
+            },
+            series: [
+                {
+                    name: '支払タイミング',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    padAngle: 5,
+                    itemStyle: {
+                        borderRadius: 10
+                    },
+                    label: {
+                        show: true,
+                        position: 'outside',
+                        formatter: '{d}%'
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 24,
+                            fontWeight: 'bold'
+                        }
+                    },
+                    labelLine: {
+                        show: true
+                    },
+                    data: chartData
+                }
+            ]
+        };
+
+        if (!myPaymentTimingChart) {
+            myPaymentTimingChart = echarts.init(paymentTimingChart.value);
+        }
+        myPaymentTimingChart.setOption(option, true);
+    };
         
     const handleResize = () => {
         if (myHeatMap) myHeatMap.resize();
         if (myLineChart) myLineChart.resize();
         if (mySalesByPlanChart) mySalesByPlanChart.resize();
         if (myOccupationBreakdownChart) myOccupationBreakdownChart.resize();
+        if (myBookingSourceChart) myBookingSourceChart.resize();
+        if (myPaymentTimingChart) myPaymentTimingChart.resize();
     };
 
     // --- Data Fetching and Processing ---
@@ -1206,6 +1386,8 @@
             const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
             const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
             const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+            const bookingSourceResult = await fetchBookingSourceBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
+            const paymentResult = await fetchPaymentTimingBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
 
             if (rawData && Array.isArray(rawData)) {                
                 allReservationsData.value = rawData.map(item => ({
@@ -1236,6 +1418,8 @@
             }
             salesByPlan.value = salesByPlanResult;
             occupationBreakdownData.value = occupationBreakdownResult;
+            bookingSourceData.value = bookingSourceResult;
+            paymentTimingData.value = paymentResult;
             // console.log('Occupation Breakdown Data (frontend):', occupationBreakdownData.value); // DEBUG - Removed
             // console.log('Occupation Breakdown Data Length (frontend):', occupationBreakdownData.value ? occupationBreakdownData.value.length : 0); // DEBUG - Removed
             // console.log('accountingData', accountingData.value);
@@ -1251,6 +1435,8 @@
         processLineChartData();
         processSalesByPlanChartData();
         processOccupationBreakdownChartData(); // New call
+        initBookingSourceChart();
+        initPaymentTimingChart();
         calculateMetrics();
     };
 
@@ -1271,6 +1457,8 @@
         if (myLineChart) myLineChart.dispose();
         if (mySalesByPlanChart) mySalesByPlanChart.dispose();
         if (myOccupationBreakdownChart) myOccupationBreakdownChart.dispose(); // New dispose
+        if (myBookingSourceChart) myBookingSourceChart.dispose();
+        if (myPaymentTimingChart) myPaymentTimingChart.dispose();
     });
 
     watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });

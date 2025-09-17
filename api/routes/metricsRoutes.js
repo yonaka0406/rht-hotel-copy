@@ -7,4 +7,7 @@ router.get('/metrics/average-lead-time/booking/:hotelId/:lookback/:date', metric
 router.get('/metrics/average-lead-time/arrival/:hotelId/:lookback/:date', metricsController.getArrivalAverageLeadTime);
 router.get('/metrics/waitlist-entries-today/:hotelId/:date', metricsController.getWaitlistEntriesToday);
 
+router.get('/metrics/booking-source', metricsController.fetchBookingSourceBreakdown);
+router.get('/metrics/payment-timing', metricsController.fetchPaymentTimingBreakdown);
+
 module.exports = router;

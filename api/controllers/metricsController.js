@@ -46,9 +46,31 @@ const getWaitlistEntriesToday = async (req, res) => {
     }
 };
 
+const fetchBookingSourceBreakdown = async (req, res) => {
+    const { hotelId, startDate, endDate } = req.query;
+    try {
+        const data = await metricsModels.getBookingSourceBreakdown(req.requestId, hotelId, startDate, endDate);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const fetchPaymentTimingBreakdown = async (req, res) => {
+    const { hotelId, startDate, endDate } = req.query;
+    try {
+        const data = await metricsModels.getPaymentTimingBreakdown(req.requestId, hotelId, startDate, endDate);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getReservationsToday,
     getBookingAverageLeadTime,
     getArrivalAverageLeadTime,
     getWaitlistEntriesToday,
+    fetchBookingSourceBreakdown,
+    fetchPaymentTimingBreakdown,
 };

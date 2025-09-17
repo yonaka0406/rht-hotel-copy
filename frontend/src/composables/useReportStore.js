@@ -570,6 +570,32 @@ export function useReportStore() {
         }
     };
 
+    const fetchBookingSourceBreakdown = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/metrics/booking-source?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch booking source breakdown:', error);
+            return [];
+        }
+    };
+
+    const fetchPaymentTimingBreakdown = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/metrics/payment-timing?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`);
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch payment timing breakdown:', error);
+            return [];
+        }
+    };
+
     return {
         reservationList,
         apiErrorCount,
@@ -590,5 +616,7 @@ export function useReportStore() {
         manageSavedSearches,
         fetchSalesByPlan,
         fetchOccupationBreakdown,
+        fetchBookingSourceBreakdown,
+        fetchPaymentTimingBreakdown,
     }
 }
