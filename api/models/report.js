@@ -9,7 +9,6 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
   const pool = getPool(requestId);
   const query = `
     WITH
-
     -- 0. Dates that actually appear in reservation_details
     dates AS (
       SELECT DISTINCT hotel_id, date
@@ -20,16 +19,16 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 
     -- 1. Blocked rooms count per date
     blocked_rooms AS (
-      SELECT 
+      SELECT
         rd.hotel_id,
         rd.date,
         COUNT(CASE WHEN r.status = 'block' THEN rd.room_id ELSE NULL END) AS blocked_count
       FROM reservations r
-      JOIN reservation_details rd 
+      JOIN reservation_details rd
         ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
-      JOIN rooms 
+      JOIN rooms
         ON rd.room_id = rooms.id
-      WHERE 
+      WHERE
         r.hotel_id = $1
         AND rd.date BETWEEN $2 AND $3
         AND r.status = 'block'
@@ -39,7 +38,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 
     -- 2. Room inventory
     room_inventory AS (
-      SELECT 
+      SELECT
         hotel_id,
         COUNT(*) AS total_rooms
       FROM rooms
@@ -49,7 +48,7 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
 
     -- 3. Rooms left per date (only reservation dates)
     room_total AS (
-      SELECT 
+      SELECT
         d.hotel_id,
         d.date,
         ri.total_rooms,
@@ -58,30 +57,73 @@ const selectCountReservation = async (requestId, hotelId, dateStart, dateEnd) =>
       CROSS JOIN room_inventory ri
       LEFT JOIN blocked_rooms br
         ON br.date = d.date AND br.hotel_id = ri.hotel_id
+    ),
+
+    -- New CTE to calculate net prices for each reservation_detail
+    reservation_details_net_price AS (
+        SELECT
+            rd.hotel_id,
+            rd.date,
+            rd.reservation_id,
+            rd.id AS reservation_detail_id,
+            rd.number_of_people,
+            -- Calculate net plan price
+            COALESCE(
+                CASE
+                    WHEN rd.plan_type = 'per_room' THEN rr.net_price
+                    ELSE rr.net_price * rd.number_of_people
+                END, 0
+            ) AS net_plan_price,
+            -- Calculate net addon price
+            COALESCE(ra.net_price_sum, 0) AS net_addon_price
+        FROM
+            reservation_details rd
+        LEFT JOIN (
+            -- Aggregate net prices from reservation_rates for each reservation_detail
+            SELECT
+                reservation_details_id,
+                SUM(net_price) AS net_price
+            FROM
+                reservation_rates
+            WHERE hotel_id = $1
+            GROUP BY
+                reservation_details_id
+        ) rr ON rd.id = rr.reservation_details_id
+        LEFT JOIN (
+            -- Aggregate net prices from reservation_addons for each reservation_detail
+            SELECT
+                reservation_detail_id,
+                SUM(net_price * quantity) AS net_price_sum
+            FROM
+                reservation_addons
+            WHERE hotel_id = $1
+            GROUP BY
+                reservation_detail_id
+        ) ra ON rd.id = ra.reservation_detail_id
+        WHERE
+            rd.billable = TRUE            
     )
 
-    -- 4. Main Query (using reservation_details.price directly)
-    SELECT 
+    -- 4. Main Query (using calculated net prices)
+    SELECT
       rt.date,
       rt.total_rooms,
       rt.total_rooms_real,
-      COUNT(CASE WHEN rd.cancelled IS NULL THEN rd.room_id ELSE NULL END) AS room_count,
-      SUM(CASE WHEN rd.cancelled IS NULL THEN rd.number_of_people ELSE 0 END) AS people_sum,
-      SUM(rd.price) AS price
+      COUNT(CASE WHEN rsv.status NOT IN ('cancelled', 'block') THEN rdn.reservation_detail_id ELSE NULL END) AS room_count, -- Adjusted room_count
+      SUM(CASE WHEN rsv.status NOT IN ('cancelled', 'block') THEN rdn.number_of_people ELSE 0 END) AS people_sum, -- Adjusted people_sum
+      SUM(rdn.net_plan_price + rdn.net_addon_price) AS price -- This will be the pre-tax total revenue
     FROM room_total rt
-    LEFT JOIN reservation_details rd 
-      ON rd.hotel_id = rt.hotel_id AND rd.date = rt.date
-    LEFT JOIN reservations rsv 
-      ON rd.reservation_id = rsv.id AND rd.hotel_id = rsv.hotel_id
-    WHERE 
+    LEFT JOIN reservation_details_net_price rdn
+      ON rdn.hotel_id = rt.hotel_id AND rdn.date = rt.date
+    LEFT JOIN reservations rsv
+      ON rdn.reservation_id = rsv.id AND rdn.hotel_id = rsv.hotel_id
+    WHERE
       rt.hotel_id = $1
-      AND rd.billable = TRUE
       AND rsv.type <> 'employee'
-      AND rsv.status NOT IN ('hold', 'block')      
-    GROUP BY 
+      AND rsv.status NOT IN ('hold', 'block')
+    GROUP BY
       rt.date, rt.total_rooms, rt.total_rooms_real
     ORDER BY rt.date;
-
   `;
   const values = [hotelId, dateStart, dateEnd]
 
