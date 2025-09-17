@@ -159,7 +159,7 @@
                     </div>
                     <div class="col-span-12 md:col-span-6">
                         <Card>
-                            <template #title>支払タイミング内訳</template>
+                            <template #title>支払タイミング内訳 (泊数ベース)</template>
                             <template #content>
                                 <div ref="paymentTimingChart" class="w-full h-60"></div>
                             </template>
@@ -197,7 +197,10 @@
             <Card class="col-span-12">
                 <template #title>
                     <div class="flex justify-between items-center">
-                        <p>プラン別売上内訳</p>
+                        <div>
+                            <p>プラン別売上内訳</p>
+                            <small>（税込み）</small>
+                        </div>                        
                         <SelectButton v-model="salesByPlanViewMode" :options="salesByPlanViewOptions" optionLabel="name" optionValue="value" />
                     </div>
                 </template>
@@ -935,13 +938,20 @@
             grid: {
                 left: '3%',
                 right: '4%',
-                bottom: '3%',
+                bottom: '10%',
                 containLabel: true
             },
             xAxis: {
                 type: 'value',
+                name: '売上 (税込み)',
+                nameLocation: 'middle',
+                nameGap: 30,
                 axisLabel: {
                     formatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + ' 万円'
+                },
+                nameTextStyle: {
+                    fontWeight: 'bold',
+                    fontSize: 12
                 }
             },
             yAxis: {
@@ -1103,8 +1113,12 @@
                     if (value === 0) return '';
                     
                     // Calculate percentage of total bookable nights
-                    const percentage = totalBookableRoomNights > 0 ? ((value / totalBookableRoomNights) * 100).toFixed(1) : 0;
-                    return `${value.toLocaleString('ja-JP')} 泊 (${percentage}%)`;
+                    const percentage = totalBookableRoomNights > 0 ? ((value / totalBookableRoomNights) * 100) : 0;
+                    // Only show label if percentage is 10% or higher
+                    if (percentage >= 10) {
+                        return `${value.toLocaleString('ja-JP')} 泊 (${percentage.toFixed(1)}%)`;
+                    }
+                    return '';
                 }
             },
             data: yAxisCategories.map(category => plan[category])
@@ -1317,7 +1331,7 @@
         const option = {
             tooltip: {
                 trigger: 'item',
-                formatter: '{a} <br/>{b}: {c} ({d}%)'
+                formatter: '{a} <br/>{b}: {c} 泊 ({d}%)'
             },
             legend: {
                 bottom: '5%',
