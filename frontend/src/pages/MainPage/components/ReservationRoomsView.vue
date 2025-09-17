@@ -1603,6 +1603,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
                 // Additional room-specific data
                 room_type: roomGroup.room_type,
                 capacity: roomDetail.capacity,
+                payment_timing: reservationInfo.value.payment_timing,
             };
 
             roomDataArray.push(roomData);
@@ -1647,6 +1648,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
             number_of_people: group.details[0]?.number_of_people,
             payment_total: payment_total,
             all_plan_names_list: plans.value.map(p => p.name).join(','),
+            payment_timing: reservationInfo.value.payment_timing,
         };
     }
 

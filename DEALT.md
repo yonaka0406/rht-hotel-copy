@@ -4,6 +4,15 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### September 17, 2025
 
+#### Bug #53: 宿泊者名簿 Should Use payment_timing Field for 現地決済
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - The 宿泊者名簿 (Guest List) dialog's 現地決済 (On-site Payment) field should be determined by the `payment_timing` field from the reservations table
+  - Currently, the payment timing information is not being properly reflected in the guest list dialog
+- **Affected Component**: 
+  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+
 #### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:

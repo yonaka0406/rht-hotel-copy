@@ -210,6 +210,7 @@ const props = defineProps({
     parkingLots: Array,
     allPlans: Array,
     isGroup: Boolean,
+    paymentTiming: String,
 });
 
 const emit = defineEmits(['update:visible']);
@@ -255,13 +256,11 @@ const initializeFields = (reservation) => {
         const allAssignedParking = [...new Set(reservation.flatMap(r => r.assigned_parking_lot_names || []))];
         selectedParkingLots.value = allAssignedParking;
         
-        // Calculate total payment for all rooms
-        const totalPayment = reservation.reduce((sum, r) => sum + (r.payment_total || 0), 0);
-        paymentOption.value = totalPayment > 0 ? 'あり' : 'なし';
+        paymentOption.value = (firstReservation.payment_timing === 'on-site') ? 'あり' : 'なし';
     } else {
         selectedPlans.value = firstReservation.assigned_plan_names || [];
         selectedParkingLots.value = firstReservation.assigned_parking_lot_names || [];
-        paymentOption.value = (firstReservation.payment_total > 0) ? 'あり' : 'なし';
+        paymentOption.value = (firstReservation.payment_timing === 'on-site') ? 'あり' : 'なし';
     }
 
     const formatJapaneseDate = (dateString) => {
@@ -290,7 +289,11 @@ const initializeFields = (reservation) => {
         check_out_month: { label: 'チェックアウト月', value: checkOutDate.month, include: true },
         check_out_day: { label: 'チェックアウト日', value: checkOutDate.day, include: true },
         check_out_weekday: { label: 'チェックアウト曜日', value: checkOutDate.weekday, include: true },
-        payment_total: { label: '現地決済', value: totalPayment ? new Intl.NumberFormat('ja-JP').format(totalPayment) : '0', include: true },
+        payment_total: {
+            label: '現地決済',
+            value: paymentOption.value === 'なし' ? '0' : (totalPayment ? new Intl.NumberFormat('ja-JP').format(totalPayment) : '0'),
+            include: true
+        },
         room_numbers: { label: '部屋番号', value: firstReservation.room_numbers ? firstReservation.room_numbers.join(', ') : '', include: true },
         comment: { label: '備考', value: firstReservation.comment, include: true },
     };

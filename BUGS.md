@@ -134,15 +134,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Guest profile data mapping logic
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-#### Bug #53: 宿泊者名簿 Should Use payment_timing Field for 現地決済
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - The 宿泊者名簿 (Guest List) dialog's 現地決済 (On-site Payment) field should be determined by the `payment_timing` field from the reservations table
-  - Currently, the payment timing information is not being properly reflected in the guest list dialog
-- **Affected Component**: 
-  - `frontend/src/pages/MainPage/components/ReservationRoomsView.vue`
-- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
-
 #### Feature Request #56: Room Indicator 平日/土日 プラン表記
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
 - **Description**:

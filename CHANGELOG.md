@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Bugfix: Modified Guest List Dialog to pass payment_timing and use it to define on site payment status.
+
 ---
 ## Future Releases
 
