@@ -162,6 +162,11 @@
                 <template #content>
                     <div v-if="salesByPlanViewMode === 'chart'" ref="salesByPlanChart" class="w-full h-96"></div>
                     <DataTable v-else :value="processedSalesByPlan" responsiveLayout="scroll">
+                        <template #header>
+                            <div class="flex flex-wrap items-center justify-end">
+                                <span class="text-sm font-bold">(税込み)</span>                                
+                            </div>
+                        </template>
                         <Column field="plan_name" header="プラン名"></Column>
                         <Column field="regular_sales" header="通常売上" bodyStyle="text-align:right">
                             <template #body="slotProps">
@@ -180,10 +185,10 @@
                         </Column>
                         <ColumnGroup type="footer">
                             <Row>
-                                <Column footer="合計:" :colspan="1" footerStyle="text-align:right"/>
-                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
-                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
-                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
+                                <Column footer="合計" :colspan="1" footerStyle="text-align:left"/>
+                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
                             </Row>
                         </ColumnGroup>
                     </DataTable>
