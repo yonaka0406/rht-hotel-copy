@@ -4,6 +4,22 @@ This document contains all fixed and closed issues that were previously tracked 
 
 ### September 17, 2025
 
+#### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add a detailed breakdown of occupancy rates and sales by different room plans
+  - This will help in analyzing which plans are most profitable and popular
+- **Requirements**:
+  - Group occupancy data by room plan types
+  - Show both count of rooms sold and revenue per plan
+  - Include percentage breakdown of total occupancy by plan
+  - Option to filter by date range
+  - Export functionality for the breakdown data
+- **Affected Components**:
+  - Reports module
+  - Analytics dashboard
+  - Database queries for plan-based metrics
+
 #### Bug Fix #59: Change Report Numbers to Show Pre-Tax Values
 - **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
 - **Description**: 

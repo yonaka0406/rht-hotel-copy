@@ -95,24 +95,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Backend API for checklist operations
 - **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
 
-### September 9, 2025
-
-#### Feature Request #59: 宿泊プラン別の稼働率・売上内訳 (Occupancy and Sales Breakdown by Plan)
-- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
-- **Description**:
-  - Add a detailed breakdown of occupancy rates and sales by different room plans
-  - This will help in analyzing which plans are most profitable and popular
-- **Requirements**:
-  - Group occupancy data by room plan types
-  - Show both count of rooms sold and revenue per plan
-  - Include percentage breakdown of total occupancy by plan
-  - Option to filter by date range
-  - Export functionality for the breakdown data
-- **Affected Components**:
-  - Reports module
-  - Analytics dashboard
-  - Database queries for plan-based metrics
-
 ### September 8, 2025
 
 #### Feature Request #58: セルフチェックイン案内済のマーク (Self-Check-in Notification Mark)
