@@ -181,9 +181,9 @@
                         <ColumnGroup type="footer">
                             <Row>
                                 <Column footer="合計:" :colspan="1" footerStyle="text-align:right"/>
-                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
-                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円'" footerStyle="text-align:right"/>
+                                <Column :footer="salesByPlanTotals.regular_sales.toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
+                                <Column :footer="salesByPlanTotals.cancelled_sales.toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
+                                <Column :footer="(salesByPlanTotals.regular_sales + salesByPlanTotals.cancelled_sales).toLocaleString('ja-JP') + ' 円 (税込み)'" footerStyle="text-align:right"/>
                             </Row>
                         </ColumnGroup>
                     </DataTable>
@@ -863,7 +863,7 @@
                 axisPointer: {
                     type: 'shadow'
                 },
-                valueFormatter: (value) => value.toLocaleString('ja-JP') + ' 円'
+                valueFormatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
             },
             legend: {
                 data: ['通常売上', 'キャンセル売上']
@@ -877,7 +877,7 @@
             xAxis: {
                 type: 'value',
                 axisLabel: {
-                    formatter: (value) => value.toLocaleString('ja-JP') + ' 円'
+                    formatter: (value) => Math.round(value / 10000).toLocaleString('ja-JP') + ' 万円'
                 }
             },
             yAxis: {
@@ -890,8 +890,8 @@
                     type: 'bar',
                     stack: 'total',
                     label: {
-                        show: true,
-                        formatter: (params) => params.value.toLocaleString('ja-JP') + ' 円'
+                        show: false,
+                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
                     },
                     emphasis: {
                         focus: 'series'
@@ -903,8 +903,8 @@
                     type: 'bar',
                     stack: 'total',
                     label: {
-                        show: true,
-                        formatter: (params) => params.value.toLocaleString('ja-JP') + ' 円'
+                        show: false,
+                        formatter: (params) => Math.round(params.value / 10000).toLocaleString('ja-JP') + ' 万円 (税込み)'
                     },
                     emphasis: {
                         focus: 'series'
