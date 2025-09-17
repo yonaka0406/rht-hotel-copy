@@ -557,9 +557,22 @@ export function useReportStore() {
         }
     };
 
+    const fetchOccupationBreakdown = async (hotelId, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.get(`/report/occupation-breakdown/${hotelId}/${startDate}/${endDate}`);
+            return data || []; // Expect an array
+        } catch (error) {
+            console.error('Failed to fetch occupation breakdown:', error);
+            return {};
+        }
+    };
+
     return {
         reservationList,
-        apiErrorCount, // Expose the API error counter
+        apiErrorCount,
         fetchCountReservation,
         fetchCountReservationDetails,
         fetchOccupationByPeriod,
@@ -571,11 +584,11 @@ export function useReportStore() {
         exportMealCount,
         fetchActiveReservationsChange,
         fetchMonthlyReservationEvolution,
-        // New search methods
         searchReservations,
         getSearchSuggestions,
         getSavedSearches,
         manageSavedSearches,
         fetchSalesByPlan,
-    };
+        fetchOccupationBreakdown,
+    }
 }

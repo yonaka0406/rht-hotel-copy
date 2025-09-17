@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getCountReservation, getCountReservationDetails, getOccupationByPeriod, getReservationListView, getForecastData, getAccountingData, 
     getExportReservationList, getExportReservationDetails, getExportMealCount, getReservationsInventory, getAllInventory, 
-    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan } = require('../controllers/reportController');
+    getReservationsForGoogle, getParkingReservationsForGoogle, createNewGoogleSheet, getActiveReservationsChange, getMonthlyReservationEvolution, getSalesByPlan, getOccupationBreakdown } = require('../controllers/reportController');
 const { authMiddleware, authMiddlewareAdmin } = require('../middleware/authMiddleware');
 
 // Existing routes
@@ -27,5 +27,6 @@ router.get('/report/res/google/sheets/create', authMiddlewareAdmin, createNewGoo
 router.get('/report/active-reservations-change/:hotel_id/:date', authMiddleware, getActiveReservationsChange);
 router.get('/report/monthly-reservation-evolution/:hotel_id/:target_month', authMiddleware, getMonthlyReservationEvolution);
 router.get('/report/sales-by-plan/:hid/:sdate/:edate', authMiddleware, getSalesByPlan);
+router.get('/report/occupation-breakdown/:hid/:sdate/:edate', authMiddleware, getOccupationBreakdown);
 
 module.exports = router;

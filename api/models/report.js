@@ -1270,6 +1270,85 @@ const selectSalesByPlan = async (requestId, hotelId, dateStart, dateEnd) => {
   }
 };
 
+const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate) => {
+  const pool = getPool(requestId);
+  const query = `
+    WITH date_range AS (
+      SELECT 
+        ($3::DATE - $2::DATE + 1) AS total_days
+    ),
+    hotel_rooms AS (
+      SELECT 
+        COUNT(*) as total_rooms
+      FROM rooms
+      WHERE hotel_id = $1 AND for_sale = true
+    ),
+    total_bookable_nights AS (
+      SELECT 
+        (hotel_rooms.total_rooms * date_range.total_days) AS total_bookable_room_nights
+      FROM date_range, hotel_rooms
+    ),
+    plan_data AS (
+      SELECT
+          COALESCE(ph.name, pg.name, 'プラン未設定') AS plan_name,
+          COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) AS undecided_nights,
+          COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) AS confirmed_nights,
+          COUNT(CASE WHEN r.type = 'employee' THEN 1 END) AS employee_nights,
+          COUNT(CASE WHEN r.status = 'block' THEN 1 END) AS blocked_nights,
+          (COUNT(CASE WHEN r.status IN ('hold', 'provisory') AND r.type <> 'employee' THEN 1 END) +
+           COUNT(CASE WHEN r.status IN ('confirmed', 'checked_in', 'checked_out') AND r.type <> 'employee' THEN 1 END) +
+           COUNT(CASE WHEN r.type = 'employee' THEN 1 END) +
+           COUNT(CASE WHEN r.status = 'block' THEN 1 END)) AS total_occupied_nights,
+          COUNT(rd.id) AS total_reservation_details_nights
+      FROM reservation_details rd
+      JOIN reservations r ON rd.reservation_id = r.id AND rd.hotel_id = r.hotel_id
+      LEFT JOIN plans_hotel ph ON rd.plans_hotel_id = ph.id AND rd.hotel_id = ph.hotel_id
+      LEFT JOIN plans_global pg ON rd.plans_global_id = pg.id
+      WHERE rd.hotel_id = $1
+        AND rd.date BETWEEN $2 AND $3
+        AND rd.cancelled IS NULL
+      GROUP BY
+          COALESCE(ph.name, pg.name, 'プラン未設定')
+    )
+    SELECT * FROM (
+        SELECT 
+            plan_name,
+            undecided_nights,
+            confirmed_nights,
+            employee_nights,
+            blocked_nights,
+            total_occupied_nights,
+            total_reservation_details_nights,
+            (SELECT total_bookable_room_nights FROM total_bookable_nights) AS total_bookable_room_nights
+        FROM plan_data
+        
+        UNION ALL
+        
+        SELECT
+            'Total Available' AS plan_name,
+            0::bigint AS undecided_nights,
+            0::bigint AS confirmed_nights,
+            0::bigint AS employee_nights,
+            0::bigint AS blocked_nights,
+            0::bigint AS total_occupied_nights,
+            0::bigint AS total_reservation_details_nights,
+            total_bookable_room_nights
+        FROM total_bookable_nights
+    ) AS union_result
+    ORDER BY
+        CASE WHEN plan_name = 'Total Available' THEN 'zzz' ELSE plan_name END;
+  `;
+  const values = [hotelId, startDate, endDate];
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in selectOccupationBreakdown:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -1288,4 +1367,5 @@ module.exports = {
   selectActiveReservationsChange,
   selectMonthlyReservationEvolution,
   selectSalesByPlan,
+  selectOccupationBreakdown,
 };

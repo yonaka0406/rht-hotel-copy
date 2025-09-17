@@ -188,7 +188,77 @@
                         </ColumnGroup>
                     </DataTable>
                 </template>
-            </Card>            
+            </Card>
+            <!-- Occupation Breakdown -->
+            <Card class="col-span-12">
+                <template #title>
+                    <div class="flex justify-between items-center">
+                        <p>稼働率内訳</p>
+                        <SelectButton v-model="occupationBreakdownViewMode" :options="occupationBreakdownViewOptions" optionLabel="name" optionValue="value" />
+                    </div>
+                </template>
+                <template #content>
+                    <div v-if="occupationBreakdownViewMode === 'chart'" ref="occupationBreakdownChart" class="w-full h-96"></div>
+                    <DataTable v-else-if="filteredOccupationBreakdownData && filteredOccupationBreakdownData.length > 0" :value="filteredOccupationBreakdownData" responsiveLayout="scroll">
+                        <Column field="plan_name" header="プラン名"></Column>
+                        <Column field="undecided_nights" header="未確定泊数" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ parseInt(slotProps.data.undecided_nights || '0').toLocaleString('ja-JP') }}
+                            </template>
+                        </Column>
+                        <Column field="confirmed_nights" header="確定泊数" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ parseInt(slotProps.data.confirmed_nights || '0').toLocaleString('ja-JP') }}
+                            </template>
+                        </Column>
+                        <Column field="employee_nights" header="社員泊数" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ parseInt(slotProps.data.employee_nights || '0').toLocaleString('ja-JP') }}
+                            </template>
+                        </Column>
+                        <Column field="blocked_nights" header="ブロック泊数" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ parseInt(slotProps.data.blocked_nights || '0').toLocaleString('ja-JP') }}
+                            </template>
+                        </Column>
+                        <Column field="total_occupied_nights" header="合計稼働泊数" bodyStyle="text-align:right">
+                            <template #body="slotProps">
+                                {{ parseInt(slotProps.data.total_occupied_nights || '0').toLocaleString('ja-JP') }}
+                            </template>
+                        </Column>
+                        <ColumnGroup type="footer">
+                            <Row>
+                                <Column footer="合計:" :colspan="1" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.undecided_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.confirmed_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.employee_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.blocked_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.total_occupied_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                            </Row>
+                            <Row>
+                                <Column footer="合計利用可能泊数:" :colspan="5" footerStyle="text-align:right"/>
+                                <Column :footer="occupationBreakdownTotals.total_bookable_room_nights.toLocaleString('ja-JP')" footerStyle="text-align:right"/>
+                            </Row>
+                            <Row>
+                                <Column footer="確定泊数 / (合計利用可能泊数 - ブロック泊数):" :colspan="5" footerStyle="text-align:right"/>
+                                <Column :footer="
+                                    (() => {
+                                        const confirmed = occupationBreakdownTotals.confirmed_nights;
+                                        const totalAvailable = occupationBreakdownTotals.total_bookable_room_nights;
+                                        const blocked = occupationBreakdownTotals.blocked_nights;
+                                        const denominator = totalAvailable - blocked;
+                                        if (denominator <= 0) return 'N/A';
+                                        return ((confirmed / denominator) * 100).toFixed(2) + '%';
+                                    })()
+                                " footerStyle="text-align:right"/>
+                            </Row>
+                        </ColumnGroup>
+                    </DataTable>
+                    <div v-else>
+                        <p>稼働率内訳データがありません。</p>
+                    </div>
+                </template>
+            </Card>
         </div>
     </div>
 </template>
@@ -202,7 +272,7 @@
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
-    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan } = useReportStore();
+    const { reservationList, fetchCountReservation, fetchCountReservationDetails, fetchOccupationByPeriod, fetchReservationListView, fetchForecastData, fetchAccountingData, fetchSalesByPlan, fetchOccupationBreakdown } = useReportStore();
     import { useHotelStore } from '@/composables/useHotelStore';
     const { selectedHotelId, fetchHotels, fetchHotel } = useHotelStore();
 
@@ -215,6 +285,12 @@
     ]);
     const salesByPlanViewMode = ref('chart');
     const salesByPlanViewOptions = ref([
+        { name: 'グラフ', value: 'chart' },
+        { name: 'テーブル', value: 'table' }
+    ]);
+
+    const occupationBreakdownViewMode = ref('chart');
+    const occupationBreakdownViewOptions = ref([
         { name: 'グラフ', value: 'chart' },
         { name: 'テーブル', value: 'table' }
     ]);
@@ -255,6 +331,12 @@
     const forecastData = ref([]);
     const accountingData = ref([]);
     const salesByPlan = ref([]);
+    const occupationBreakdownData = ref(null);
+
+    const filteredOccupationBreakdownData = computed(() => {
+        if (!occupationBreakdownData.value) return [];
+        return occupationBreakdownData.value.filter(item => item.plan_name !== 'Total Available');
+    });
 
     const processedSalesByPlan = computed(() => {
         const planMap = new Map();
@@ -279,7 +361,7 @@
             }
         });
 
-        console.log('Processed Sales by Plan Map:', planMap); // DEBUG
+        //console.log('Processed Sales by Plan Map:', planMap);
         const sortedData = Array.from(planMap.values());
         sortedData.sort((a, b) => {
             const totalA = a.regular_sales + a.cancelled_sales;
@@ -296,6 +378,41 @@
             return acc;
         }, { regular_sales: 0, cancelled_sales: 0 });
     });
+
+    const occupationBreakdownTotals = computed(() => {
+        if (!occupationBreakdownData.value) return { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0, total_bookable_room_nights: 0 };
+
+        let totalBookable = 0;
+        const filteredData = occupationBreakdownData.value.filter(item => {
+            if (item.plan_name === 'Total Available') {
+                totalBookable = parseInt(item.total_bookable_room_nights || '0');
+                return false; // Exclude this row from the sum
+            }
+            return true;
+        });
+
+        const totals = filteredData.reduce((acc, item) => {
+            const undecided = parseInt(item.undecided_nights || '0');
+            const confirmed = parseInt(item.confirmed_nights || '0');
+            const employee = parseInt(item.employee_nights || '0');
+            const blocked = parseInt(item.blocked_nights || '0');
+            const totalOccupied = parseInt(item.total_occupied_nights || '0');
+            const totalReservationDetails = parseInt(item.total_reservation_details_nights || '0');
+
+            acc.undecided_nights += undecided;
+            acc.confirmed_nights += confirmed;
+            acc.employee_nights += employee;
+            acc.blocked_nights += blocked;
+            acc.total_occupied_nights += totalOccupied;
+            acc.total_reservation_details_nights += totalReservationDetails;
+            acc.not_booked_nor_blocked_nights += (totalReservationDetails - totalOccupied);
+            return acc;
+        }, { undecided_nights: 0, confirmed_nights: 0, employee_nights: 0, blocked_nights: 0, total_occupied_nights: 0, total_reservation_details_nights: 0, not_booked_nor_blocked_nights: 0 });
+
+        totals.total_bookable_room_nights = totalBookable;
+        return totals;
+    });
+
     const dataFetchStartDate = computed(() => startOfYear.value);
     const dataFetchEndDate = computed(() => { // For heatmap range, ending last day of selectedMonth + 2 months
         const date = new Date(selectedMonth.value);
@@ -410,6 +527,8 @@
         }        
         revPAR.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round(totalRevenue / totalAvailableRoomNightsInPeriod) : 0;
         
+        console.log('OCC Calculation - totalRoomsSold:', totalRoomsSold);
+        console.log('OCC Calculation - totalAvailableRoomNightsInPeriod:', totalAvailableRoomNightsInPeriod);
         OCC.value = totalAvailableRoomNightsInPeriod > 0 ? Math.round((totalRoomsSold / totalAvailableRoomNightsInPeriod) * 10000) / 100 : 0;
 
         // Calculate Forecast
@@ -447,7 +566,7 @@
         VisualMapComponent,
         LegendComponent,
     } from 'echarts/components';
-    import { HeatmapChart } from 'echarts/charts';
+    import { HeatmapChart, ScatterChart } from 'echarts/charts';
     import { BarChart, LineChart } from 'echarts/charts';
     import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
@@ -458,6 +577,7 @@
         LegendComponent,
         VisualMapComponent,
         HeatmapChart,
+        ScatterChart,
         BarChart,
         LineChart,
         UniversalTransition,
@@ -583,6 +703,8 @@
     let myLineChart = null;
     const salesByPlanChart = ref(null);
     let mySalesByPlanChart = null;
+    const occupationBreakdownChart = ref(null);
+    let myOccupationBreakdownChart = null;
     const lineChartAxisX = ref([]);
     const lineChartSeriesData = ref([]);
     const lineChartSeriesSumData = ref([]);
@@ -797,11 +919,248 @@
         }
         mySalesByPlanChart.setOption(option, true);
     };
+
+    const processOccupationBreakdownChartData = () => {
+        if (occupationBreakdownViewMode.value === 'chart') {
+            initOccupationBreakdownChart();
+        }
+    };
+
+    const initOccupationBreakdownChart = () => {
+        if (!occupationBreakdownChart.value || !occupationBreakdownData.value || !Array.isArray(occupationBreakdownData.value)) return;
+
+        const chartData = occupationBreakdownData.value;
+        
+        // Find the total bookable room nights from the 'Total Available' row
+        const totalAvailableRow = chartData.find(row => row.plan_name === 'Total Available');
+        const totalBookableRoomNights = totalAvailableRow ? parseInt(totalAvailableRow.total_bookable_room_nights || '0') : 0;
+        
+        // Filter out the 'Total Available' row from plan data
+        const planData = chartData.filter(row => row.plan_name !== 'Total Available');
+        
+        // If no plan data, show empty chart
+        if (!planData.length) {
+            const option = {
+                title: {
+                    text: 'データがありません',
+                    left: 'center',
+                    top: 'middle'
+                }
+            };
+            if (!myOccupationBreakdownChart) {
+                myOccupationBreakdownChart = echarts.init(occupationBreakdownChart.value);
+            }
+            myOccupationBreakdownChart.setOption(option, true);
+            return;
+        }
+        
+        // Define Y-axis categories
+        const yAxisCategories = ['確定', 'ブロック', '未予約'];
+        
+        // Get unique plan names and process them
+        const planMap = new Map();
+        let totalOccupiedNights = 0;
+        let totalConfirmedNights = 0; // Initialize totalConfirmedNights
+        
+        planData.forEach(plan => {
+            let planName = plan.plan_name;
+            
+            // Check if this is an employee reservation and rename it
+            if (plan.employee_nights && parseInt(plan.employee_nights) > 0) {
+                planName = '社員';
+            }
+            
+            // Skip 未定 plans - they will be counted in "not booked"
+            if (planName === '未定') {
+                const undecidedNights = parseInt(plan.undecided_nights || '0');
+                totalOccupiedNights += undecidedNights;
+                return;
+            }
+            
+            if (!planMap.has(planName)) {
+                planMap.set(planName, {
+                    '確定': 0,
+                    'ブロック': 0,
+                    '未予約': 0
+                });
+            }
+            
+            const planEntry = planMap.get(planName);
+            
+            // Add confirmed nights
+            const confirmed = parseInt(plan.confirmed_nights || '0');
+            planEntry['確定'] += confirmed;
+            totalConfirmedNights += confirmed; // Accumulate total confirmed nights
+            
+            // Add blocked nights
+            planEntry['ブロック'] += parseInt(plan.blocked_nights || '0');
+            
+            // Count total occupied nights for this plan
+            totalOccupiedNights += confirmed;
+            totalOccupiedNights += parseInt(plan.blocked_nights || '0');
+            totalOccupiedNights += parseInt(plan.employee_nights || '0');
+        });
+        
+        // Calculate total not booked nights
+        const totalNotBookedNights = totalBookableRoomNights - totalOccupiedNights;
+        
+        // Add "not booked" as a separate series if there are unbooked nights
+        if (totalNotBookedNights > 0) {
+            planMap.set('未予約', {
+                '確定': 0,
+                'ブロック': 0,
+                '未予約': totalNotBookedNights
+            });
+        }
+        
+        // Convert map to array and sort by total nights (descending)
+        const processedPlans = Array.from(planMap.entries()).map(([planName, data]) => ({
+            planName,
+            ...data,
+            total: data['確定'] + data['ブロック'] + data['未予約']
+        })).sort((a, b) => b.total - a.total);
+
+        console.log('totalConfirmedNights:', totalConfirmedNights);
+        console.log('yAxisCategories:', yAxisCategories);
+        
+        // Create series data for each plan
+        const series = processedPlans.map(plan => ({
+            name: plan.planName,
+            type: 'bar',
+            stack: 'total',
+            emphasis: {
+                focus: 'series'
+            },
+            label: {
+                show: true,
+                position: 'top',
+                formatter: (params) => {
+                    const value = params.value;
+                    if (value === 0) return '';
+                    
+                    // Calculate percentage of total bookable nights
+                    const percentage = totalBookableRoomNights > 0 ? ((value / totalBookableRoomNights) * 100).toFixed(1) : 0;
+                    return `${value.toLocaleString('ja-JP')} 泊 (${percentage}%)`;
+                }
+            },
+            data: yAxisCategories.map(category => plan[category])
+        }));
+
+        // Add a dummy series for the total confirmed nights markPoint
+        series.push({
+            name: '', // Set an empty name to prevent it from showing in tooltip/legend
+            type: 'scatter', // Use scatter to just show a point
+            showInLegend: false, // Hide this series from the legend
+            data: [
+                {
+                    name: '確定合計',
+                    value: totalConfirmedNights,
+                    xAxis: totalConfirmedNights,
+                    yAxis: '確定',
+                    label: {
+                        show: true,
+                        formatter: `{c} 泊`,
+                        position: 'right'
+                    },
+                    itemStyle: {
+                        opacity: 0 // Make the point invisible
+                    }
+                }
+            ],
+            markPoint: {
+                data: [
+                    {
+                        name: '確定合計',
+                        value: totalConfirmedNights,
+                        xAxis: totalConfirmedNights,
+                        yAxis: '確定',
+                        label: {
+                            show: true,
+                            formatter: `{c} 泊`,
+                            position: 'right'
+                        }
+                    }
+                ]
+            }
+        });
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                },
+                formatter: (params) => {
+                    const categoryName = params[0].axisValue;
+                    let tooltipContent = `${categoryName}<br/>`;
+                    let totalForCategory = 0;
+                    
+                    // Filter out the dummy series from params for total calculation
+                    const filteredParams = params.filter(item => item.seriesName !== '' && item.seriesName !== '確定合計');
+
+                    // Calculate total for the current category
+                    filteredParams.forEach(item => {
+                        totalForCategory += item.value;
+                    });
+
+                    filteredParams.forEach(item => {
+                        if (item.value > 0) {
+                            const categoryPercentage = totalBookableRoomNights > 0 ? ((item.value / totalBookableRoomNights) * 100).toFixed(1) : 0;
+                            const withinCategoryPercentage = totalForCategory > 0 ? ((item.value / totalForCategory) * 100).toFixed(1) : 0;
+                            tooltipContent += `${item.marker} ${item.seriesName}: ${item.value.toLocaleString('ja-JP')} 泊 (合計の${categoryPercentage}%, ${categoryName}の${withinCategoryPercentage}%)<br/>`;
+                        }
+                    });
+                    tooltipContent += `<br/>合計利用可能泊数: ${totalBookableRoomNights.toLocaleString('ja-JP')} 泊`;
+                    return tooltipContent;
+                }
+            },
+            legend: {
+                data: processedPlans.map(plan => plan.planName),
+                type: 'scroll', // Add scroll if there are many plans
+                bottom: 0
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%', // Increased to accommodate scrollable legend
+                top: '5%',
+                containLabel: true
+            },
+            xAxis: {
+                type: 'value',
+                name: '泊数',
+                axisLabel: {
+                    formatter: (value) => value.toLocaleString('ja-JP') + ' 泊'
+                }
+            },
+            yAxis: {
+                type: 'category',
+                data: yAxisCategories,
+                axisLabel: {
+                    formatter: (value) => {
+                        const labels = {
+                            '確定': '確定',
+                            'ブロック': 'ブロック',
+                            '未予約': '未予約'
+                        };
+                        return labels[value] || value;
+                    }
+                }
+            },
+            series: series
+        };
+
+        if (!myOccupationBreakdownChart) {
+            myOccupationBreakdownChart = echarts.init(occupationBreakdownChart.value);
+        }
+        myOccupationBreakdownChart.setOption(option, true);
+    };
         
     const handleResize = () => {
         if (myHeatMap) myHeatMap.resize();
         if (myLineChart) myLineChart.resize();
         if (mySalesByPlanChart) mySalesByPlanChart.resize();
+        if (myOccupationBreakdownChart) myOccupationBreakdownChart.resize();
     };
 
     // --- Data Fetching and Processing ---
@@ -821,7 +1180,7 @@
             const forecastDataResult = await fetchForecastData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
             const accountingDataResult = await fetchAccountingData(selectedHotelId.value, dataFetchStartDate.value, dataFetchEndDate.value);
             const salesByPlanResult = await fetchSalesByPlan(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
-            console.log('Raw Sales by Plan Data:', salesByPlanResult); // DEBUG
+            const occupationBreakdownResult = await fetchOccupationBreakdown(selectedHotelId.value, metricsEffectiveStartDate.value, metricsEffectiveEndDate.value);
 
             if (rawData && Array.isArray(rawData)) {                
                 allReservationsData.value = rawData.map(item => ({
@@ -851,6 +1210,9 @@
                 accountingData.value = [];
             }
             salesByPlan.value = salesByPlanResult;
+            occupationBreakdownData.value = occupationBreakdownResult;
+            // console.log('Occupation Breakdown Data (frontend):', occupationBreakdownData.value); // DEBUG - Removed
+            // console.log('Occupation Breakdown Data Length (frontend):', occupationBreakdownData.value ? occupationBreakdownData.value.length : 0); // DEBUG - Removed
             // console.log('accountingData', accountingData.value);
             
         } catch (error) {
@@ -863,6 +1225,7 @@
         processHeatMapData(); 
         processLineChartData();
         processSalesByPlanChartData();
+        processOccupationBreakdownChartData(); // New call
         calculateMetrics();
     };
 
@@ -882,6 +1245,7 @@
         if (myHeatMap) myHeatMap.dispose();
         if (myLineChart) myLineChart.dispose();
         if (mySalesByPlanChart) mySalesByPlanChart.dispose();
+        if (myOccupationBreakdownChart) myOccupationBreakdownChart.dispose(); // New dispose
     });
 
     watch([selectedMonth, selectedHotelId, viewMode], fetchDataAndProcess, { deep: true });
@@ -893,6 +1257,17 @@
         } else if (newValue === 'chart') {
             nextTick(() => {
                 processSalesByPlanChartData();
+            });
+        }
+    });
+
+    watch(occupationBreakdownViewMode, (newValue) => {
+        if (newValue === 'table' && myOccupationBreakdownChart) {
+            myOccupationBreakdownChart.dispose();
+            myOccupationBreakdownChart = null;
+        } else if (newValue === 'chart') {
+            nextTick(() => {
+                processOccupationBreakdownChartData();
             });
         }
     });    
