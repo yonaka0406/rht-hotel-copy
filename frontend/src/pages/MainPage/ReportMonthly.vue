@@ -22,122 +22,136 @@
                     </div>
                 </template>
             </Card>            
-            <!-- Line Chart -->
-            <Card class="col-span-12 md:col-span-6">
-                <template #title>
-                    <p>売上</p>
-                </template>
-                <template #subtitle>
-                    <p>{{ lineChartTitle }}</p>
-                </template>
-                <template #content>    
-                    <div ref="lineChart" class="w-full h-60"></div>                
-                </template>
-            </Card>
-            <!-- Indexes -->
-            <Card class="col-span-12 md:col-span-6">
-                <template #title>
-                    <div v-if="viewMode==='month'">
-                        <span>当月KPI<small>　PMSx計画</small></span><br/>
-                        <small>（税抜き）</small>
-                    </div>
-                    <div v-else>
-                        <span>当年度累計KPI<small>　PMSx計画</small></span><br/>
-                        <small>（税抜き）</small>
-                    </div>
-                </template>
-                <template #content>
-                    <div class="grid grid-cols-12 gap-2">                        
-                        <div class="col-span-6">
-                            <Fieldset legend="総売上" :toggleable="true" :collapsed="true" class="w-full text-sm">
-                                <p class="m-0">仮予約、確定予約のプランとアドオンの合計。</p>
-                                <p class="m-0">保留予約と社員を含まない金額。</p>                                
-                            </Fieldset>
-                        </div>    
-                        <div class="flex justify-center items-center col-span-6 p-2">
-                            <div class="grid">
-                                <span class="text-3xl lg:text-4xl font-bold text-blue-600">
-                                    {{ displayedCumulativeSales.toLocaleString('ja-JP') }} 円
-                                </span>
-                                <span v-if="forecastSales" class="text-sm text-blue-400">
-                                    (計画: {{ forecastSales.toLocaleString('ja-JP') }} 円)
-                                </span>
-                                <span v-if="salesDifference" :class="['text-sm', salesDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                    ({{ salesDifference > 0 ? '+' : '' }}{{ salesDifference.toLocaleString('ja-JP') }} 円)
-                                </span>
+            
+
+            <Panel toggleable :collapsed="false" class="col-span-12">
+                <template #header>
+                    <div class="flex items-center gap-2">                        
+                        <span class="font-bold ml-2 mt-2">
+                            <div v-if="viewMode==='month'">
+                                <span>当月KPI<small>　PMSx計画</small></span><br/>
+                                <small>（税抜き）</small>
                             </div>
-                        </div>
-                        <div class="col-span-6 flex flex-col justify-center items-center p-2">
-                            <Fieldset legend="ADR" :toggleable="true" :collapsed="true" class="w-full text-sm">
+                            <div v-else>
+                                <span>当年度累計KPI<small>　PMSx計画</small></span><br/>
+                                <small>（税抜き）</small>
+                            </div>
+                        </span>
+                    </div>
+                </template>
+                <div class="grid grid-cols-12 gap-4">
+                    <Card class="col-span-12 md:col-span-6 lg:col-span-3">
+                        <template #title>総売上</template>
+                        <template #content>
+                            <div class="flex justify-center items-center p-2">
+                                <div class="grid">
+                                    <span class="text-3xl lg:text-4xl font-bold text-blue-600">
+                                        {{ displayedCumulativeSales.toLocaleString('ja-JP') }} 円
+                                    </span>
+                                    <span v-if="forecastSales" class="text-sm text-blue-400">
+                                        (計画: {{ forecastSales.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                    <span v-if="salesDifference" :class="['text-sm', salesDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                        ({{ salesDifference > 0 ? '+' : '' }}{{ salesDifference.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                </div>
+                            </div>
+                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
+                                <p class="m-0">仮予約、確定予約のプランとアドオンの合計。</p>
+                                <p class="m-0">保留予約と社員を含まない金額。</p>
+                            </Fieldset>
+                        </template>
+                    </Card>
+                    <Card class="col-span-12 md:col-span-6 lg:col-span-3">
+                        <template #title>ADR</template>
+                        <template #content>
+                            <div class="flex justify-center items-center p-2">
+                                <div class="grid">
+                                    <span class="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 leading-snug">
+                                        {{ ADR.toLocaleString('ja-JP') }} 円
+                                    </span>
+                                    <span v-if="forecastADR" class="text-sm text-green-400 mt-1">
+                                        (計画: {{ forecastADR.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                    <span v-if="ADRDifference" :class="['text-sm mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                        ({{ ADRDifference > 0 ? '+' : '' }}{{ ADRDifference.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                </div>
+                            </div>
+                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
                                 <p class="m-0">客室平均単価：</p>
                                 <p class="m-0 text-center">
                                     <span class="inline-block">
                                         <span class="">売上の合計</span><br>
                                         <span class="inline-block border-t border-black px-2">販売部屋数の合計</span>
                                     </span>
-                                </p>                                
+                                </p>
                             </Fieldset>
-                        </div>  
-                        <div class="flex justify-center items-center col-span-6 p-2">
-                            <div class="grid">
-                                <span class="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600 leading-snug">
-                                    {{ ADR.toLocaleString('ja-JP') }} 円
-                                </span>
-                                <span v-if="forecastADR" class="text-sm text-green-400 mt-1">
-                                    (計画: {{ forecastADR.toLocaleString('ja-JP') }} 円)
-                                </span>
-                                <span v-if="ADRDifference" :class="['text-sm mt-1', ADRDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                    ({{ ADRDifference > 0 ? '+' : '' }}{{ ADRDifference.toLocaleString('ja-JP') }} 円)
-                                </span>
+                        </template>
+                    </Card>
+                    <Card class="col-span-12 md:col-span-6 lg:col-span-3">
+                        <template #title>RevPAR</template>
+                        <template #content>
+                            <div class="flex justify-center items-center p-2">
+                                <div class="grid">
+                                    <span class="text-3xl lg:text-4xl font-bold text-purple-600">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
+                                    <span v-if="forecastRevPAR" class="text-sm text-purple-400">
+                                        (計画: {{ forecastRevPAR.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                    <span v-if="revPARDifference" :class="['text-sm', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                        ({{ revPARDifference > 0 ? '+' : '' }}{{ revPARDifference.toLocaleString('ja-JP') }} 円)
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-span-6 flex flex-col justify-center items-center p-2">
-                            <Fieldset legend="RevPAR" :toggleable="true" :collapsed="true" class="w-full text-sm">
+                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
                                 <p class="m-0">1室あたりの収益額：</p>
-                                 <p class="m-0 text-center">
+                                <p class="m-0 text-center">
                                     <span class="inline-block">
                                         <span class="">売上の合計</span><br>
                                         <span class="inline-block border-t border-black px-2">販売可能総部屋数 × 期間日数</span>
                                     </span>
-                                </p>                                
+                                </p>
                             </Fieldset>
-                        </div>
-                        <div class="flex justify-center items-center col-span-6 p-2">
-                            <div class="grid">
-                                <span class="text-3xl lg:text-4xl font-bold text-purple-600">{{ revPAR.toLocaleString('ja-JP') }} 円</span>
-                                <span v-if="forecastRevPAR" class="text-sm text-purple-400">
-                                    (計画: {{ forecastRevPAR.toLocaleString('ja-JP') }} 円)
-                                </span>
-                                <span v-if="revPARDifference" :class="['text-sm', revPARDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                    ({{ revPARDifference > 0 ? '+' : '' }}{{ revPARDifference.toLocaleString('ja-JP') }} 円)
-                                </span>
+                        </template>
+                    </Card>
+                    <Card class="col-span-12 md:col-span-6 lg:col-span-3">
+                        <template #title>OCC</template>
+                        <template #content>
+                            <div class="flex justify-center items-center p-2">
+                                <div class="grid">
+                                    <span class="text-3xl lg:text-4xl font-bold">{{ OCC }} %</span>
+                                    <span v-if="forecastOCC" class="text-sm text-orange-400">
+                                        (計画: {{ forecastOCC }} %)
+                                    </span>
+                                    <span v-if="OCCDifference" :class="['text-sm', OCCDifference > 0 ? 'text-green-500' : 'text-red-500']">
+                                        ({{ OCCDifference > 0 ? '+' : '' }}{{ parseFloat(OCCDifference).toFixed(2) }} %)
+                                    </span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-span-6 flex flex-col justify-center items-center p-2">
-                            <Fieldset legend="OCC" :toggleable="true" :collapsed="true" class="w-full text-sm">
+                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
                                 <p class="m-0">稼働率：</p>
-                                 <p class="m-0 text-center">
+                                <p class="m-0 text-center">
                                     <span class="inline-block">
                                         <span class="">販売部屋数の合計</span><br>
                                         <span class="inline-block border-t border-black px-2">販売可能総部屋数</span>
                                     </span>
-                                </p>                                
+                                </p>
                             </Fieldset>
-                        </div>
-                        <div class="flex justify-center items-center col-span-6 p-2">
-                            <div class="grid">
-                                <span class="text-3xl lg:text-4xl font-bold">{{ OCC }} %</span>
-                                <span v-if="forecastOCC" class="text-sm text-orange-400">
-                                    (計画: {{ forecastOCC }} %)
-                                </span>
-                                <span v-if="OCCDifference" :class="['text-sm', OCCDifference > 0 ? 'text-green-500' : 'text-red-500']">
-                                    ({{ OCCDifference > 0 ? '+' : '' }}{{ parseFloat(OCCDifference).toFixed(2) }} %)
-                                </span>
+                        </template>
+                    </Card>
+                </div>
+            </Panel>
 
-                            </div>
-                        </div>
-                    </div>
-                    
+            <!-- Line Chart -->
+            <Card class="col-span-12">
+                <template #title>
+                    <p>売上推移</p>
+                </template>
+                <template #subtitle>
+                    <p>{{ lineChartTitle }}</p>
+                </template>
+                <template #content>    
+                    <div ref="lineChart" class="w-full h-60"></div>                
                 </template>
             </Card>
             <!-- Heat Map -->
@@ -275,7 +289,7 @@
     import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick} from "vue";    
 
     // Primevue
-    import { Card, DatePicker, SelectButton, Fieldset, DataTable, Column, ColumnGroup, Row } from 'primevue';
+    import { Card, DatePicker, SelectButton, Fieldset, DataTable, Column, ColumnGroup, Row, Panel } from 'primevue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
