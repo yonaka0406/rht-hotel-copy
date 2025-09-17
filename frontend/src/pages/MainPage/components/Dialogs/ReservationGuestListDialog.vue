@@ -86,7 +86,7 @@
                     <div class="grid-item label">プラン</div>
                     <div class="grid-item col-span-3 flex-wrap">
                         <div v-for="plan in allPlans" :key="plan.id" class="flex items-center mr-4">
-                            <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.name"></Checkbox>
+                            <Checkbox v-model="selectedPlans" :inputId="'plan_' + plan.id" :value="plan.plan_key"></Checkbox>
                             <label :for="'plan_' + plan.id" class="ml-2"> {{ plan.name }} </label>
                         </div>
                     </div>
@@ -228,10 +228,10 @@ const fields = ref({});
 const guests = ref([]);
 
 const initializeFields = (reservation) => {
-    console.log('Component received props:', { 
-      reservation,
-      isGroup: props.isGroup 
-    });    
+    //console.log('Component received props:', { 
+    //  reservation,
+    //  isGroup: props.isGroup 
+    //});    
     
     if (!reservation) {
         fields.value = {};
@@ -250,15 +250,14 @@ const initializeFields = (reservation) => {
 
     // For group reservations, collect all plans from all rooms
     if (props.isGroup && Array.isArray(reservation)) {
-        const allAssignedPlans = [...new Set(reservation.flatMap(r => r.assigned_plan_names || []))];
-        selectedPlans.value = allAssignedPlans;
+        selectedPlans.value = [...new Set(reservation.flatMap(r => r.assigned_plan_names || []))];
         
         const allAssignedParking = [...new Set(reservation.flatMap(r => r.assigned_parking_lot_names || []))];
         selectedParkingLots.value = allAssignedParking;
         
         paymentOption.value = (firstReservation.payment_timing === 'on-site') ? 'あり' : 'なし';
     } else {
-        selectedPlans.value = firstReservation.assigned_plan_names || [];
+                selectedPlans.value = firstReservation.assigned_plan_names || [];
         selectedParkingLots.value = firstReservation.assigned_parking_lot_names || [];
         paymentOption.value = (firstReservation.payment_timing === 'on-site') ? 'あり' : 'なし';
     }
@@ -388,8 +387,8 @@ const closeDialog = () => {
 };
 
 const generatePDF = async () => {
-    console.log('--- generatePDF function called ---');
-    console.log('Props reservation object:', props.reservation);
+    //console.log('--- generatePDF function called ---');
+    //console.log('Props reservation object:', props.reservation);
 
     const guestData = {};
     for (const key in fields.value) {
@@ -411,7 +410,7 @@ const generatePDF = async () => {
     
     guestData.all_parking_lots_list = props.parkingLots.map(lot => lot.name).join(', ');
 
-    console.log('Hotel name:', guestData.hotel_name);
+    //console.log('Hotel name:', guestData.hotel_name);
 
     guestData.guests = guests.value.map(guestFields => {
         const guest = {};
@@ -429,7 +428,7 @@ const generatePDF = async () => {
         return guest;
     });
 
-    console.log('Data to be sent to PDF function:', guestData);
+    //console.log('Data to be sent to PDF function:', guestData);
 
     let result;
     const reservationId = Array.isArray(props.reservation) ? props.reservation[0].id : props.reservation.id;

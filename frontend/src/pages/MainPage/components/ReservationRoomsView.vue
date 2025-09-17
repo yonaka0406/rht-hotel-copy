@@ -1574,7 +1574,17 @@ const openGuestListDialog = async (group, isGroup = false) => {
                 .filter(detail => detail.billable)
                 .reduce((acc, detail) => acc + parseFloat(detail.price), 0);
 
-            const roomAssignedPlanNames = [...new Set(roomGroup.details.map(d => d.plan_name).filter(Boolean))];
+            const roomAssignedPlanKeys = [...new Set(roomGroup.details.map(d => {
+                //console.log('Debug (RView): Original d.plan_name:', d.plan_name);
+                const matchingPlan = plans.value.find(plan => {
+                    //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.name}": ${d.plan_name.includes(plan.name)}`);
+                    return d.plan_name.includes(plan.name);
+                });
+                const mappedKey = matchingPlan ? matchingPlan.plan_key : d.plan_name;
+                //console.log(`Debug (RView): Mapped "${d.plan_name}" to "${mappedKey}"`);
+                return mappedKey; // Fallback to name if key not found
+            }).filter(Boolean))];
+            //console.log('Debug (RView): Final roomAssignedPlanKeys:', roomAssignedPlanKeys);
 
             // Fetch parking data for this room
             await fetchParkingLots();
@@ -1594,7 +1604,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
                 guests: roomGuests,
                 comment: reservationInfo.value.comment,
                 smoking: roomDetail.smoking,
-                assigned_plan_names: roomAssignedPlanNames,
+                assigned_plan_names: roomAssignedPlanKeys,
                 assigned_parking_lot_names: assignedParkingLotNames,
                 hotel_name: reservationInfo.value.hotel_name,
                 number_of_people: roomDetail.number_of_people,
@@ -1622,7 +1632,17 @@ const openGuestListDialog = async (group, isGroup = false) => {
             postal_code: c.postal_code
         }));
         const room_numbers = [group.details[0].room_number];
-        const assignedPlanNames = [...new Set(group.details.map(d => d.plan_name).filter(Boolean))];
+        const assignedPlanKeys = [...new Set(group.details.map(d => {
+            //console.log('Debug (RView): Original d.plan_name:', d.plan_name);
+            const matchingPlan = plans.value.find(plan => {
+                //console.log(`Debug (RView): Checking if "${d.plan_name}" includes "${plan.name}": ${d.plan_name.includes(plan.name)}`);
+                return d.plan_name.includes(plan.name);
+            });
+            const mappedKey = matchingPlan ? matchingPlan.plan_key : d.plan_name;
+            //console.log(`Debug (RView): Mapped "${d.plan_name}" to "${mappedKey}"`);
+            return mappedKey; // Fallback to name if key not found
+        }).filter(Boolean))];
+        //console.log('Debug (RView): Final assignedPlanKeys:', assignedPlanKeys);
         const payment_total = group.details.filter(detail => detail.billable).reduce((acc, detail) => acc + parseFloat(detail.price), 0);
 
         await fetchParkingLots();
@@ -1642,7 +1662,7 @@ const openGuestListDialog = async (group, isGroup = false) => {
             guests: guests,
             comment: reservationInfo.value.comment,
             smoking: group?.details[0]?.smoking,
-            assigned_plan_names: assignedPlanNames,
+            assigned_plan_names: assignedPlanKeys,
             assigned_parking_lot_names: assignedParkingLotNames,
             hotel_name: reservationInfo.value.hotel_name,
             number_of_people: group.details[0]?.number_of_people,
