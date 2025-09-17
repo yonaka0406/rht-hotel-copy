@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 ## Unreleased
-- Feature: Implemented multi-room temporary block functionality, allowing users to block multiple rooms simultaneously from the "Add New Reservation" dropdown. (#51)
-- Bugfix: Reporting: Fixed an issue where the total room count for the 'All Hotels' summary in the reporting page was incorrectly calculated as zero.
 
 ---
 ## Future Releases
@@ -454,8 +452,18 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.14] - 2025-09-17
+
+- Feature: Implemented multi-room temporary block functionality, allowing users to block multiple rooms simultaneously from the "Add New Reservation" dropdown. (#51)
+- Feature: Enhanced ReportMonthly with plan breakdown for both plans and occupancy data, providing more detailed reporting capabilities.
+- Bugfix: Reporting: Fixed an issue where the total room count for the 'All Hotels' summary in the reporting page was incorrectly calculated as zero.
+- Bugfix: Reporting: Updated all financial reports to display pre-tax values (税抜き) for consistency with accounting practices and forecast data.
+
+---
+
 ## Version History
 
+- **1.1.14** (2025-09-17) - Introduced multi-room temporary block functionality and enhanced reporting with detailed plan breakdowns. Fixed reporting issues including room count calculations and updated financial reports to display pre-tax values for consistency with accounting standards.
 - **1.1.13** (2025-09-16) - Improved CRM operations with toast notifications and enhanced Yadomaster data import. Optimized reservation management with UI improvements for form submission and database queries for extended stays. Fixed client dropdown display in new reservations.
 - **1.1.12** (2025-09-08) - Enhanced reservation management with comment flag system for important notes and improved room indicator with check-out date display. Fixed WebSocket updates, sales calculations for cancelled reservations, and hotel change handling for parking availability.
 - **1.1.11** (2025-09-03) - Enhanced room management with multiple plan type displays, customizable room assignment order, and partial CRM Client Impediment Tracking. Improved billing accuracy with stay date filtering and fixed CRM Actions dialog issues.

@@ -2,6 +2,23 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### September 17, 2025
+
+#### Bug Fix #59: Change Report Numbers to Show Pre-Tax Values
+- **Status**: [ ] Open [ ] In Progress [x] Fixed [x] Closed
+- **Description**: 
+  - The reports currently display financial numbers including tax (税込み) when comparing with forecast data.
+  - This should be changed to show values before tax (税抜き) for consistency with accounting practices and to match the forecast data format.
+- **Affected Reports**:
+  - Monthly/Yearly KPI reports
+  - Sales by Plan breakdown
+  - Any other reports showing financial comparisons with forecasts
+- **Required Changes**:
+  - Update all report calculations to use pre-tax values
+  - Ensure consistent labeling (e.g., "税抜き価格") 
+  - Update any related tooltips or documentation
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+
 ### September 16, 2025
 
 #### Feature Request #51: Multi-Room Temporary Block
