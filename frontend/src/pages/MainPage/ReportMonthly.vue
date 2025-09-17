@@ -56,10 +56,6 @@
                                     </span>
                                 </div>
                             </div>
-                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
-                                <p class="m-0">仮予約、確定予約のプランとアドオンの合計。</p>
-                                <p class="m-0">保留予約と社員を含まない金額。</p>
-                            </Fieldset>
                         </template>
                     </Card>
                     <Card class="col-span-12 md:col-span-6 lg:col-span-3">
@@ -78,15 +74,6 @@
                                     </span>
                                 </div>
                             </div>
-                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
-                                <p class="m-0">客室平均単価：</p>
-                                <p class="m-0 text-center">
-                                    <span class="inline-block">
-                                        <span class="">売上の合計</span><br>
-                                        <span class="inline-block border-t border-black px-2">販売部屋数の合計</span>
-                                    </span>
-                                </p>
-                            </Fieldset>
                         </template>
                     </Card>
                     <Card class="col-span-12 md:col-span-6 lg:col-span-3">
@@ -103,15 +90,6 @@
                                     </span>
                                 </div>
                             </div>
-                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
-                                <p class="m-0">1室あたりの収益額：</p>
-                                <p class="m-0 text-center">
-                                    <span class="inline-block">
-                                        <span class="">売上の合計</span><br>
-                                        <span class="inline-block border-t border-black px-2">販売可能総部屋数 × 期間日数</span>
-                                    </span>
-                                </p>
-                            </Fieldset>
                         </template>
                     </Card>
                     <Card class="col-span-12 md:col-span-6 lg:col-span-3">
@@ -128,18 +106,44 @@
                                     </span>
                                 </div>
                             </div>
-                            <Fieldset legend="説明" :toggleable="true" :collapsed="true" class="w-full text-sm mt-4">
-                                <p class="m-0">稼働率：</p>
-                                <p class="m-0 text-center">
-                                    <span class="inline-block">
-                                        <span class="">販売部屋数の合計</span><br>
-                                        <span class="inline-block border-t border-black px-2">販売可能総部屋数</span>
-                                    </span>
-                                </p>
-                            </Fieldset>
                         </template>
                     </Card>
                 </div>
+                <Fieldset legend="KPI 説明" :toggleable="true" :collapsed="true" class="mt-4">
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-12 md:col-span-3">
+                            <strong>総売上:</strong>
+                            <p class="m-0 text-sm">仮予約、確定予約のプランとアドオンの合計。保留予約と社員を含まない金額。</p>
+                        </div>
+                        <div class="col-span-12 md:col-span-3">
+                            <strong>ADR (客室平均単価):</strong>
+                            <p class="m-0 text-center text-sm">
+                                <span class="inline-block">
+                                    <span class="">売上の合計</span><br>
+                                    <span class="inline-block border-t border-black px-2">販売部屋数の合計</span>
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-span-12 md:col-span-3">
+                            <strong>RevPAR (1室あたりの収益額):</strong>
+                            <p class="m-0 text-center text-sm">
+                                <span class="inline-block">
+                                    <span class="">売上の合計</span><br>
+                                    <span class="inline-block border-t border-black px-2">販売可能総部屋数 × 期間日数</span>
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-span-12 md:col-span-3">
+                            <strong>OCC (稼働率):</strong>
+                            <p class="m-0 text-center text-sm">
+                                <span class="inline-block">
+                                    <span class="">販売部屋数の合計</span><br>
+                                    <span class="inline-block border-t border-black px-2">販売可能総部屋数</span>
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </Fieldset>
             </Panel>
 
             <!-- Line Chart -->
