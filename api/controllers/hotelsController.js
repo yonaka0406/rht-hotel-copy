@@ -398,6 +398,13 @@ const { getAllHotels, getHotelSiteController, updateHotel, updateHotelSiteContro
       validatedStartDate = validateDateStringParam(startDateParam, 'Start Date parameter');
       validatedEndDate = validateDateStringParam(endDateParam, 'End Date parameter');
 
+      // If start and end dates are the same, increment end date by one day
+      if (validatedStartDate === validatedEndDate) {
+        const tempEndDate = new Date(validatedEndDate);
+        tempEndDate.setDate(tempEndDate.getDate() + 1);
+        validatedEndDate = tempEndDate.toISOString().split('T')[0];
+      }
+
       // If roomIds is not provided, fetch all room IDs for the hotel
       if (!roomIds) {        
         const result = await client.query('SELECT id FROM rooms WHERE hotel_id = $1', [numericHotelId]);

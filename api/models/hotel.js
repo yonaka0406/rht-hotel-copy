@@ -193,8 +193,11 @@ const updateHotelCalendar = async (requestId, hotelId, roomIds, startDate, endDa
   try {    
     await client.query('BEGIN');
     
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
     const dateArray = [];
     
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
