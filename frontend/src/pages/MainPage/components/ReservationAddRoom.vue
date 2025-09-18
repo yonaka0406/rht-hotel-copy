@@ -232,14 +232,10 @@ const submitTempBlock = async () => {
             ? logged_user.value[0].name
             : 'User'; // Default name if not available or structure is different
 
-        // Create a new date object for check_out and subtract one day
-        const adjustedCheckOut = new Date(reservationDetails.value.check_out);
-        adjustedCheckOut.setDate(adjustedCheckOut.getDate() - 1);
-
         const result = await applyCalendarSettings(
             selectedHotelId.value,
             reservationDetails.value.check_in,
-            adjustedCheckOut.toISOString().split('T')[0], // Format as YYYY-MM-DD
+            reservationDetails.value.check_out, // Format as YYYY-MM-DD
             [props.room_id],
             reservationDetails.value.number_of_people,
             `${userName}の部屋押さえ`,
