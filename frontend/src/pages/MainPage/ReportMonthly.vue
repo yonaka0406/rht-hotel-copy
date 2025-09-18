@@ -1449,7 +1449,7 @@
             color: ["#3fb1e3", "#6be6c1", "#626c91", "#a0a7e6", "#c4ebad", "#96dee8"],
             tooltip: {
                 trigger: 'item',
-                formatter: '{a} <br/>{b}: {c} 泊 ({d}%)'
+                formatter: '{b}: {c} 泊 ({d}%)'
             },
             legend: {
                 bottom: '5%',
@@ -1459,7 +1459,8 @@
                 {
                     name: '支払タイミング',
                     type: 'pie',
-                    radius: ['40%', '70%'],
+                    radius: ['40%', '60%'],
+                    center: ['50%', '40%'],
                     avoidLabelOverlap: false,
                     padAngle: 5,
                     itemStyle: {
