@@ -290,7 +290,7 @@ onMounted(async () => {
 
 // Watch
 watch([today, tomorrow], ([checkInDate, checkOutDate]) => {
-    if (checkInDate && checkOutDate) {
+    if (checkInDate && checkOutDate && !isNaN(checkInDate.getTime()) && !isNaN(checkOutDate.getTime())) {
         reservationDetails.value.check_in = formatDate(checkInDate);
         reservationDetails.value.check_out = formatDate(checkOutDate);
         reservationDetails.value.number_of_nights = numberOfNights.value;
