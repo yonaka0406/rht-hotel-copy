@@ -3417,11 +3417,21 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       }
     }
 
+    let agentName = SalesOfficeInformation.SalesOfficeCompanyName;
+    if (BasicInformation.TravelAgencyBookingNumber && BasicInformation.TravelAgencyBookingNumber.startsWith('TY')) {
+        agentName += '（r-with)';
+    }
+
+    let reservationType = 'ota';
+    if (BasicInformation.TravelAgencyBookingNumber && BasicInformation.TravelAgencyBookingNumber.startsWith('TY')) {
+        reservationType = 'web';
+    }
+
     // Insert reservations
     query = `
       INSERT INTO reservations (
         hotel_id, reservation_client_id, check_in, check_in_time, check_out, check_out_time, number_of_people, status, type, agent, ota_reservation_id, comment, payment_timing, created_by, updated_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'ota', $8, $9, $10, 'prepaid', 1, 1)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'confirmed', $8, $9, $10, $11, 'prepaid', 1, 1)
       RETURNING *;
     `;
 
@@ -3433,7 +3443,8 @@ const addOTAReservation = async (requestId, hotel_id, data, client = null) => {
       BasicInformation.CheckOutDate,
       BasicInformation.CheckOutTime || DEFAULT_CHECK_OUT_TIME,
       BasicInformation.GrandTotalPaxCount,
-      SalesOfficeInformation.SalesOfficeCompanyName,
+      reservationType,
+      agentName,
       BasicInformation.TravelAgencyBookingNumber,
       reservationComment,
     ];
