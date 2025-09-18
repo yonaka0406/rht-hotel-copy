@@ -467,6 +467,8 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Bugfix: Fixed Guest List not marking client's plan when reservation is from OTA
 - Bugfix: Modified Guest List Dialog to pass payment_timing and use it to define on site payment status.
 - Bugfix: Set default payment_timing to 'prepaid' for OTA reservations and improved website reservation identification
+- Bugfix: Addressed issues with date parsing and single-day blocking in the hotel calendar functionality.
+- Feature: Color theming and changes to charts in Monthly Report.
 
 ---
 
