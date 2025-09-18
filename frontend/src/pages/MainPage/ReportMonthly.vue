@@ -357,6 +357,12 @@
         return newDate;
     };
 
+    const isWeekend = (dateString) => {
+        const date = new Date(dateString);
+        const dayOfWeek = date.getDay(); // 0 for Sunday, 6 for Saturday
+        return dayOfWeek === 0 || dayOfWeek === 6;
+    };
+
     const translatePaymentTiming = (timing) => {
       const map = {
           'not_set': '未設定',
@@ -825,7 +831,15 @@
                 newXAxis.push(dayKey);
 
                 const salesForDay = dailySalesMap.get(dayKey) || 0;
-                newSeriesData.push(Math.round(salesForDay));
+                const item = {
+                    value: Math.round(salesForDay)
+                };
+                if (isWeekend(dayKey)) {
+                    item.itemStyle = {
+                        color: '#FFC0CB' // Light pink for weekends
+                    };
+                }
+                newSeriesData.push(item);
                 cumulativeSum += salesForDay;
                 newSeriesSumData.push(Math.round(cumulativeSum));
 
@@ -860,7 +874,26 @@
      const initLineChart = () => {
         if (!lineChart.value) return;
         const option = {
-            tooltip: { trigger: 'axis', position: 'top' },
+            tooltip: {
+                trigger: 'axis',
+                position: 'top',
+                formatter: (params) => {
+                    let dateStr = params[0].name;
+                    let tooltipContent = '';
+                    if (viewMode.value === 'month') {
+                        const date = new Date(dateStr);
+                        const daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
+                        const dayOfWeek = daysOfWeek[date.getDay()];
+                        tooltipContent += `${dateStr} (${dayOfWeek})<br/>`;
+                    } else {
+                        tooltipContent += `${dateStr}<br/>`;
+                    }
+                    params.forEach(item => {
+                        tooltipContent += `${item.marker} ${item.seriesName}: ${item.value.toLocaleString('ja-JP')} 円<br/>`;
+                    });
+                    return tooltipContent;
+                }
+            },
             legend: {
                 data: viewMode.value === 'month' ? ['日次売上', '当月累計'] : ['月次売上', '年度累計'],
                 bottom: 0
