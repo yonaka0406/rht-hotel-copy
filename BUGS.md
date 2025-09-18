@@ -5,6 +5,64 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 18, 2025
+
+#### Feature Request #65: 耐用人数 (Capacity-based) Occupancy Indicator
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Currently, occupancy is measured based on room count only
+  - Evaluate implementing a new performance metric based on 耐用人数 (total people capacity)
+  - This would provide a more accurate measure of hotel utilization
+- **Requirements**:
+  - [ ] Analyze current occupancy calculation methods
+  - [ ] Determine how to track and store people capacity per room
+  - [ ] Design new occupancy calculation based on people capacity
+  - [ ] Compare room-based vs people-based occupancy metrics
+  - [ ] Determine if this should replace or complement existing occupancy metrics
+  - [ ] Design UI to display the new metric
+- **Benefits**:
+  - More accurate measurement of hotel utilization
+  - Better understanding of actual guest capacity usage
+  - Potential for more dynamic pricing strategies
+  - Improved resource allocation
+- **Technical Considerations**:
+  - Database schema changes may be needed to track room capacities
+  - Historical data analysis for comparison
+  - Impact on reporting and analytics
+  - Performance implications for real-time calculations
+- **Affected Components**:
+  - Occupancy calculation logic
+  - Reporting module
+  - Analytics dashboard
+  - Database schema (potential)
+  - Reservation system
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
+#### Feature Request #64: Excel 名簿 (Roster) Download for Check-ins
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Add functionality to download an Excel file containing guest rosters for all rooms checking in on a selected date
+  - The Excel file should be immediately downloadable without requiring a preview dialog
+  - Users should be able to edit the Excel file or print it directly
+- **Requirements**:
+  - Add a new button/option in the reservations view to download the roster
+  - Generate Excel file with one row per guest/room
+  - Include relevant guest and reservation information in the Excel file
+  - Format the Excel file for easy printing
+  - Support filtering by date range
+- **Data to Include**:
+  - Guest name (as it appears on ID)
+  - Room number
+  - Check-in/check-out dates
+  - Number of guests
+  - Contact information
+  - Special requests/notes
+- **Affected Components**:
+  - Reservation management UI
+  - Report generation backend
+  - Excel export functionality
+- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+
 ### September 10, 2025
 
 #### Feature Request #60: Meal Count Display for Easy Copy-Paste
@@ -53,22 +111,40 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
   - Add a report showing the number of clients checking in and out within a specified date range
   - Include gender breakdown for both check-ins and check-outs
   - Provide both numerical counts and percentage breakdowns
+  - **New**: Add a "Copy to Slack" button that formats the data in a clean, easy-to-read format for part-time staff
 - **Requirements**:
   - Date range selector for filtering data
   - Summary cards showing total check-ins and check-outs
   - Gender breakdown (Male/Female/Other/Not Specified)
   - Option to view data in table format
   - Export functionality (CSV/Excel)
+  - **New**: "Copy to Slack" button that copies formatted text to clipboard
+  - **New**: Format should be clean and readable in Slack (use emojis, proper spacing)
 - **Data Points to Include**:
   - Total check-ins/check-outs
   - Gender distribution
   - Daily breakdown within selected period
   - Comparison metrics (e.g., vs previous period)
+- **Example Slack Output**:
+  ```
+  📊 *Check-in/Out Report for Sep 18, 2025*
+  
+  ✅ *Check-ins*: 12
+  👥 Gender: 5♂️ 6♀️ 
+  
+  🚪 *Check-outs*: 8
+  👥 Gender: 3♂️ 5♀️ 
+  
+  📅 *Daily Breakdown*
+  - Sep 18: 12 in, 8 out
+  - Sep 19: 15 in (forecast)
+  ```
 - **Affected Components**:
   - Reports module
   - Analytics dashboard
   - Database queries for guest statistics
-- **Priority**: [ ] Low [x] Medium [ ] High [ ] Critical
+  - New clipboard utility for Slack formatting
+- **Priority**: [ ] Low [ ] Medium [ ] High [x] Critical
 
 #### Feature Request #63: Reservation Checklist and Room Indicator Integration
 - **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
@@ -474,4 +550,4 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 *Last Updated: September 17, 2025*
 *Total Bugs: 1* (last one #59)
-*Total Feature Requests: 24* (last one #63)
+*Total Feature Requests: 26* (last one #65)
