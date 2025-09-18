@@ -266,7 +266,7 @@ export function useReservationStore() {
         }
     };
     const setReservationAddons = async (detail_id, hotel_id, addons) => {
-        console.log('From Reservation Store => setReservationAddons', detail_id, hotel_id, addons);
+        //console.log('From Reservation Store => setReservationAddons', detail_id, hotel_id, addons);
         try {
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
@@ -408,11 +408,11 @@ export function useReservationStore() {
 
     const setReservationImportantComment = async (reservationId, hotelId, isImportant) => {
         try {
-            console.log('[setReservationImportantComment] Starting update', { reservationId, hotelId, isImportant });
+            //console.log('[setReservationImportantComment] Starting update', { reservationId, hotelId, isImportant });
             setReservationIsUpdating(true);
             const authToken = localStorage.getItem('authToken');
     
-            console.log('[setReservationImportantComment] Sending request to server');
+            //console.log('[setReservationImportantComment] Sending request to server');
             const response = await fetch(`/api/reservation/update/comment-flag/${reservationId}`, {
                 method: 'PUT',
                 headers: {
@@ -425,10 +425,10 @@ export function useReservationStore() {
                 })
             });
     
-            console.log('[setReservationImportantComment] Received response', { 
-                status: response.status,
-                statusText: response.statusText
-            });
+            //console.log('[setReservationImportantComment] Received response', { 
+            //    status: response.status,
+            //    statusText: response.statusText
+            //});
     
             if (!response.ok) {
                 const errorText = await response.text();
@@ -437,7 +437,7 @@ export function useReservationStore() {
             }
     
             const result = await response.json();
-            console.log('[setReservationImportantComment] Update successful', { result });
+            //console.log('[setReservationImportantComment] Update successful', { result });
             
             setReservationIsUpdating(false);
             return result;
