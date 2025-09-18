@@ -199,9 +199,29 @@ const triggerGoogleCalendarSync = async (req, res) => {
   }
 };
 
+const getUserById = async (req, res) => {
+  const logger = req.app.locals.logger;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const { id } = req.params; // Get ID from URL parameters
+
+  try {
+    const user = await getUsersByID(req.requestId, id);
+    if (!user || user.length === 0) {
+      logger.info(`User not found by ID: ${id}.`, { requestId: req.requestId });
+      return res.status(404).json({ error: isProduction ? 'User not found.' : 'User not found' });
+    }
+    res.json({ user: user[0] }); // Return the first user found
+  } catch (error) {
+    const specificError = `Error getting user by ID: ${error.message}`;
+    logger.error(specificError, { userId: id, error: error.message, stack: error.stack, requestId: req.requestId });
+    res.status(500).json({ error: isProduction ? 'An error occurred. Please try again later.' : specificError });
+  }
+};
+
 module.exports = { 
   users, 
   getUser, 
+  getUserById, 
   registerUser, 
   updateUser,  
   createUserCalendar,

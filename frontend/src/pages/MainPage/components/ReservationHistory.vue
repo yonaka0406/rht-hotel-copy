@@ -23,6 +23,8 @@
     const { reservationLog, fetchReservationHistory } = useLogStore();
     import { useClientStore } from '@/composables/useClientStore';
     const { fetchClient } = useClientStore();
+    import { useUserStore } from '@/composables/useUserStore';
+    const { getUserById } = useUserStore();
 
     // Primevue
     import { Panel, Timeline, ProgressSpinner } from 'primevue';
@@ -90,6 +92,8 @@
             type: '種類',
             agent: 'エージェント',
             comment: '備考',
+            payment_timing: '支払いタイミング',
+            updated_by: '更新者',
         };
         return labels[key] || key; // Return Japanese label or default key
     };
@@ -118,6 +122,15 @@
         if (key === 'reservation_client_id') {
             //const client = await fetchClient(value);
             //return client.client.name;
+        }
+        if (key === 'payment_timing') {
+            const paymentTimingLabels = {
+                not_set: '未設定',
+                prepaid: '前払い',
+                'on-site': '現地払い',
+                postpaid: '後払い',
+            };
+            return paymentTimingLabels[value] || value;
         }
 
         return value;
@@ -152,11 +165,72 @@
         }
     };
 
+    async function replaceUserIdsWithNames(userIds) {
+        if (userIds.length === 0) {
+            console.log('No user IDs to process');
+            return;
+        }
+
+        console.log('Processing user IDs:', Array.from(userIds));
+        
+        try {
+            const userMap = {};
+            for (const userId of userIds) {
+                try {
+                    console.log(`Fetching user with ID: ${userId}`);
+                    const response = await getUserById(userId);
+                    console.log(`Received user data for ${userId}:`, response);
+                    
+                    // Access the nested user object from the response
+                    const userData = response?.user;
+                    
+                    if (userData?.name) {
+                        userMap[userId] = userData.name;
+                        console.log(`Mapped user ${userId} to name: ${userData.name}`);
+                    } else {
+                        userMap[userId] = '不明なユーザー';
+                        console.warn(`Could not get user name for ID ${userId}. Received:`, response);
+                    }
+                } catch (error) {
+                    console.error(`Error fetching user ${userId} in replaceUserIdsWithNames loop:`, error);
+                    userMap[userId] = '不明なユーザー';
+                }
+            }
+
+            console.log('User ID to name mapping:', userMap);
+            
+            reservationLog.value = reservationLog.value.map(log => {
+                if (log.changed_fields?.updated_by) {
+                    const { from, to } = log.changed_fields.updated_by;
+                    console.log(`Updating log entry ${log.id}:`, { original: { from, to } });
+                    
+                    const updatedLog = {
+                        ...log,
+                        changed_fields: {
+                            ...log.changed_fields,
+                            updated_by: {
+                                from: from ? userMap[from] || '不明なユーザー' : 'なし',
+                                to: to ? userMap[to] || '不明なユーザー' : 'なし'
+                            }
+                        }
+                    };
+                    
+                    console.log(`Updated log entry ${log.id}:`, updatedLog);
+                    return updatedLog;
+                }
+                return log;
+            });
+        } catch (error) {
+            console.error('Failed to process user names:', error);
+        }
+    };
+
     onMounted(async () => {
         loading.value = true;
+        console.log('Fetching reservation history for ID:', props.reservation_id);
 
         await fetchReservationHistory(props.reservation_id);
-        // console.log('reservationLog:', reservationLog.value);
+        console.log('Fetched reservation logs:', reservationLog.value);
 
         const clientIds = new Set();
         reservationLog.value.forEach(log => {
@@ -166,8 +240,21 @@
                 if (to) clientIds.add(to);
             }
         });
+        console.log('Found client IDs to resolve:', Array.from(clientIds));
         await replaceClientIdsWithNames(clientIds);
 
+        const userIds = new Set();
+        reservationLog.value.forEach(log => {
+            if (log.changed_fields?.updated_by) {
+                const { from, to } = log.changed_fields.updated_by;
+                if (from) userIds.add(from);
+                if (to) userIds.add(to);
+            }
+        });
+        console.log('Found user IDs to resolve:', Array.from(userIds));
+        await replaceUserIdsWithNames(userIds);
+
+        console.log('Completed processing reservation history');
         loading.value = false;
     });
 

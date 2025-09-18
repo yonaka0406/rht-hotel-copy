@@ -21,6 +21,29 @@ export function useUserStore() {
             console.error('Failed to fetch users.', error);
         }
     };
+
+    const getUserById = async (userId) => {
+        try {
+            const authToken = localStorage.getItem('authToken');
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch user by ID.', error);
+            throw error;
+        }
+    };
+
     const fetchUser = async () => {
         try {
             const authToken = localStorage.getItem('authToken');
@@ -101,6 +124,7 @@ export function useUserStore() {
         users,
         logged_user,         
         fetchUsers,
+        getUserById,
         fetchUser,
         createUserCalendar,        
         triggerCalendarSyncStore,
