@@ -1335,14 +1335,16 @@
                     color: '#000' // Labels black
                 },
                 itemStyle: {
-                    borderColor: '#fff'
+                    borderColor: '#fff',
+                    borderRadius: 5 // Rounded borders for the main treemap items
                 },
                 levels: [
                     {
                         itemStyle: {
                             borderWidth: 4, // Thicker border
                             borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
-                            gapWidth: 2 // Thicker gap
+                            gapWidth: 2, // Thicker gap
+                            borderRadius: 5 // Rounded borders for the first level
                         },
                         upperLabel: {
                             show: false, // Changed to false
@@ -1365,7 +1367,8 @@
                         itemStyle: {
                             borderWidth: 6, // Thicker border
                             borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
-                            gapWidth: 2 // Thicker gap
+                            gapWidth: 2, // Thicker gap
+                            borderRadius: 5 // Rounded borders for the second level
                         },
                         emphasis: {
                             itemStyle: {
@@ -1378,7 +1381,8 @@
                         itemStyle: {
                             borderWidth: 6, // Thicker border
                             borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
-                            gapWidth: 2 // Thicker gap
+                            gapWidth: 2, // Thicker gap
+                            borderRadius: 5 // Rounded borders for the third level
                         },
                         emphasis: {
                             itemStyle: {
