@@ -628,11 +628,11 @@
         VisualMapComponent,
         LegendComponent,
     } from 'echarts/components';
-    import { HeatmapChart, ScatterChart, BarChart, LineChart, PieChart, SunburstChart } from 'echarts/charts';
+    import { HeatmapChart, ScatterChart, BarChart, LineChart, PieChart, SunburstChart, TreemapChart } from 'echarts/charts';
     import { UniversalTransition } from 'echarts/features';
     import { CanvasRenderer } from 'echarts/renderers';
 
-    echarts.use([        
+    echarts.use([
         TooltipComponent,
         GridComponent,
         LegendComponent,
@@ -643,11 +643,10 @@
         LineChart,
         PieChart,
         SunburstChart,
+        TreemapChart, // Added TreemapChart
         UniversalTransition,
         CanvasRenderer
     ]);
-
-    // HeatMap
     const heatMap = ref(null);
     let myHeatMap; 
     const heatMapAxisX = computed(() => { 
@@ -1243,29 +1242,50 @@
         const data = [];
         const directNode = { name: '直予約', value: 0 };
         const otaNode = { name: 'OTA', children: [] };
+        const webNode = { name: '自社HP', children: [] }; // Renamed to represent 自社HP specifically
+        const webParentNode = { name: 'WEB', children: [] }; // New parent node for WEB
 
-        const agentMap = new Map();
+        const otaAgentMap = new Map();
+        const webAgentMap = new Map(); // This will now collect agents for 自社HP
 
         sourceData.forEach(item => {
             if (item.type === 'ota') {
                 const agentName = item.agent || 'その他';
-                if (!agentMap.has(agentName)) {
-                    agentMap.set(agentName, 0);
+                if (!otaAgentMap.has(agentName)) {
+                    otaAgentMap.set(agentName, 0);
                 }
-                agentMap.set(agentName, agentMap.get(agentName) + item.room_nights);
+                otaAgentMap.set(agentName, otaAgentMap.get(agentName) + item.room_nights);
+            } else if (item.type === 'web') {
+                const agentName = item.agent || 'その他'; // This 'agent' would be 'official' or 'other' for web
+                if (!webAgentMap.has(agentName)) {
+                    webAgentMap.set(agentName, 0);
+                }
+                webAgentMap.set(agentName, webAgentMap.get(agentName) + item.room_nights);
             } else {
                 directNode.value += item.room_nights;
             }
         });
 
-        agentMap.forEach((value, name) => {
+        otaAgentMap.forEach((value, name) => {
             otaNode.children.push({ name, value });
         });
 
+        webAgentMap.forEach((value, name) => {
+            webNode.children.push({ name, value });
+        });
+
+        // Now, construct the main 'data' array
         if (directNode.value > 0) data.push(directNode);
-        if (otaNode.children.length > 0) data.push(otaNode);
+
+        // Add OTA and 自社HP (webNode) as children of webParentNode
+        if (otaNode.children.length > 0) webParentNode.children.push(otaNode);
+        if (webNode.children.length > 0) webParentNode.children.push(webNode);
+
+        // Push the webParentNode if it has children
+        if (webParentNode.children.length > 0) data.push(webParentNode);
 
         const option = {
+            color: ['#FFDAB9', '#B2EBF2', '#E6E6FA', '#F08080', '#EEE8AA'], // New pastel colors
             tooltip: {
                 trigger: 'item',
                 formatter: (params) => {
@@ -1279,35 +1299,80 @@
                 }
             },
             series: {
-                type: 'sunburst',
+                type: 'treemap',
                 data: data,
                 radius: [0, '100%'],
                 center: ['50%', '50%'],                                           
                 label: {
-                    rotate: 'radial',
                     formatter: (params) => {
-                        // Calculate percentage based on root total if available
+                        // This formatter will now apply to lower levels
                         if (params.treePathInfo && params.treePathInfo.length > 0) {
                             const current = params.treePathInfo[params.treePathInfo.length - 1];
                             const rootTotal = params.treePathInfo[0].value;
                             const percentage = (current.value / rootTotal * 100).toFixed(1);
-                            
-                            // Only show label if percentage is above threshold (e.g., 2%)
-                            if (percentage > 2) {
+
+                            if (percentage > 2) { // Only show for lower levels if percentage is significant
                                 return `${params.name}\n${percentage}%`;
                             }
                         }
-                        return ''; // Return empty string for small segments
+                        return '';
                     },
-                    show: true
+                    color: '#000' // Labels black
                 },
-                grid: {
-                    top: 0,
-                    right: 0,
-                    bottom: 0,
-                    left: 0,
-                    containLabel: false
-                }
+                itemStyle: {
+                    borderColor: '#fff'
+                },
+                levels: [
+                    {
+                        itemStyle: {
+                            borderWidth: 4, // Thicker border
+                            borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
+                            gapWidth: 2 // Thicker gap
+                        },
+                        upperLabel: {
+                            show: false, // Changed to false
+                            formatter: (params) => {
+                                const current = params.treePathInfo[params.treePathInfo.length - 1];
+                                const rootTotal = params.treePathInfo[0].value;
+                                const percentage = (current.value / rootTotal * 100).toFixed(1);
+                                return `${params.name}\n${percentage}%`; // Always show name and percentage for top-level
+                            },
+                            color: '#000' // Labels black
+                        },
+                        emphasis: { // Added emphasis for first level
+                            itemStyle: {
+                                borderColor: 'rgba(221, 221, 221, 0.7)', // Light grey border with transparency on hover
+                                borderWidth: 4 // Thicker border on hover
+                            }
+                        }
+                    },
+                    {
+                        itemStyle: {
+                            borderWidth: 6, // Thicker border
+                            borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
+                            gapWidth: 2 // Thicker gap
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                borderColor: 'rgba(221, 221, 221, 0.7)', // Light grey border with transparency on hover
+                                borderWidth: 4 // Thicker border on hover
+                            }
+                        }
+                    },
+                    {
+                        itemStyle: {
+                            borderWidth: 6, // Thicker border
+                            borderColor: 'rgba(70, 92, 107, 0.5)', // Dark blue-grey border with transparency
+                            gapWidth: 2 // Thicker gap
+                        },
+                        emphasis: {
+                            itemStyle: {
+                                borderColor: 'rgba(221, 221, 221, 0.7)', // Light grey border with transparency on hover
+                                borderWidth: 2 // Thicker border on hover
+                            }
+                        }
+                    }
+                ]
             }
         };
 
