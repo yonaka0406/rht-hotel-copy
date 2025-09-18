@@ -865,41 +865,54 @@
                 data: viewMode.value === 'month' ? ['日次売上', '当月累計'] : ['月次売上', '年度累計'],
                 bottom: 0
             },
-            grid: { top: '20%', height: '70%', left: '3%', right: '4%', bottom: '10%', containLabel: true }, // Adjusted grid
+            grid: { top: '20%', height: '70%', left: '3%', right: '10%', bottom: '10%', containLabel: true }, // Increased right padding
             xAxis: {
                 type: 'category',
-                boundaryGap: viewMode.value === 'month', // true for bar-like, false for line to touch edges
+                boundaryGap: true, // Always true for bar charts
                 data: lineChartAxisX.value,
-                axisLabel: { 
-                    rotate: viewMode.value === 'month' ? 45 : 0, // Rotate daily labels
-                    formatter: (value) => { // Custom formatter for dates if needed
+                axisLabel: {
+                    rotate: viewMode.value === 'month' ? 45 : 0,
+                    formatter: (value) => {
                         if (viewMode.value === 'month' && typeof value === 'string' && value.includes('-')) {
-                            return value.substring(5); // Show MM-DD
+                            return value.substring(5);
                         }
                         return value;
                     }
                 }
             },
-            yAxis: {
-                type: 'value',
-                name: viewMode.value === 'month' ? '日次売上 (円)' : '月次売上 (円)',
-                axisLabel: {
-                    formatter: (value) => value >= 10000 ? `${(value / 10000).toLocaleString()}万円` : `${value.toLocaleString()}円`
+            yAxis: [ // Changed to an array for two Y-axes
+                {
+                    type: 'value',
+                    name: viewMode.value === 'month' ? '日次売上 (円)' : '月次売上 (円)',
+                    axisLabel: {
+                        formatter: (value) => value >= 10000 ? `${(value / 10000).toLocaleString()}万円` : `${value.toLocaleString()}円`
+                    }
+                },
+                {
+                    type: 'value',
+                    name: viewMode.value === 'month' ? '当月累計 (円)' : '年度累計 (円)', // Name for the second Y-axis
+                    axisLabel: {
+                        formatter: (value) => value >= 10000 ? `${(value / 10000).toLocaleString()}万円` : `${value.toLocaleString()}円`
+                    },
+                    alignTicks: true // Align ticks with the first y-axis
                 }
-            },
+            ],
             series: [
                 {
                     name: viewMode.value === 'month' ? '日次売上' : '月次売上',
                     type: 'bar',
                     data: lineChartSeriesData.value,
-                    itemStyle: { color: '#5470C6' }
+                    itemStyle: { color: '#4ea397' }, // Updated color
+                    yAxisIndex: 0, // Explicitly assign to the first Y-axis
+                    barCategoryGap: '20%' // Add gap between bars
                 },
                 {
                     name: viewMode.value === 'month' ? '当月累計' : '年度累計',
                     type: 'line',
                     smooth: true,
                     data: lineChartSeriesSumData.value,
-                    itemStyle: { color: '#91CC75' }
+                    itemStyle: { color: '#22c3aa' }, // Updated color
+                    yAxisIndex: 1 // Assign to the second Y-axis
                 }
             ]
         };
@@ -924,6 +937,7 @@
         const cancelledSales = chartData.map(item => item.cancelled_sales);
 
         const option = {
+            color: ["#3fb1e3", "#6be6c1", "#626c91", "#a0a7e6", "#c4ebad", "#96dee8"],
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
@@ -1162,6 +1176,7 @@
         });
 
         const option = {
+            color: ["#2ec7c9", "#b6a2de", "#5ab1ef", "#ffb980", "#d87a80", "#8d98b3", "#e5cf0d", "#97b552", "#95706d", "#dc69aa", "#07a2a4", "#9a7fd1", "#588dd5", "#f5994e", "#c05050", "#59678c", "#c9ab00", "#7eb00a", "#6f5553", "#c14089", "#FFC0CB", "#ADD8E6", "#90EE90", "#FFD700", "#FFA07A"],
             tooltip: {
                 trigger: 'axis',
                 axisPointer: {
@@ -1193,7 +1208,7 @@
             },
             legend: {
                 data: processedPlans.map(plan => plan.planName),
-                type: 'scroll', // Add scroll if there are many plans
+                // Removed type: 'scroll' to allow wrapping
                 bottom: 0
             },
             grid: {
@@ -1394,6 +1409,7 @@
         }));
 
         const option = {
+            color: ["#3fb1e3", "#6be6c1", "#626c91", "#a0a7e6", "#c4ebad", "#96dee8"],
             tooltip: {
                 trigger: 'item',
                 formatter: '{a} <br/>{b}: {c} 泊 ({d}%)'
