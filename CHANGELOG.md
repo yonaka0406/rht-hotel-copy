@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Bugfix: Fixed Guest List not marking client's plan when reservation is from OTA
-- Bugfix: Modified Guest List Dialog to pass payment_timing and use it to define on site payment status.
 
 ---
 ## Future Releases
@@ -461,6 +459,14 @@ This marks the first stable release of the comprehensive Hotel Management System
 - Feature: Enhanced ReportMonthly with plan breakdown for both plans and occupancy data, providing more detailed reporting capabilities.
 - Bugfix: Reporting: Fixed an issue where the total room count for the 'All Hotels' summary in the reporting page was incorrectly calculated as zero.
 - Bugfix: Reporting: Updated all financial reports to display pre-tax values (税抜き) for consistency with accounting practices and forecast data.
+
+---
+
+## [1.1.15] - 2025-09-18
+
+- Bugfix: Fixed Guest List not marking client's plan when reservation is from OTA
+- Bugfix: Modified Guest List Dialog to pass payment_timing and use it to define on site payment status.
+- Bugfix: Set default payment_timing to 'prepaid' for OTA reservations and improved website reservation identification
 
 ---
 
