@@ -25,6 +25,30 @@
                 :hotel-id="selectedHotelIdForReport"
                 :target-month="firstDayOfMonthForApi"
                 :trigger-fetch="reportTriggerKey"
+            />
+            <ChannelSummarySingleMonthAllHotels
+                v-else-if="selectedReportType === 'channelSummary' && period === 'month' && selectedHotels.length > 1"
+                :selected-hotels="selectedHotels"
+                :trigger-fetch="reportTriggerKey"
+                :selected-date="selectedDate"
+            />
+            <ChannelSummarySingleMonthHotel
+                v-else-if="selectedReportType === 'channelSummary' && period === 'month' && selectedHotels.length === 1"
+                :hotel-id="selectedHotelIdForReport"
+                :trigger-fetch="reportTriggerKey"
+                :selected-date="selectedDate"
+            />
+            <ChannelSummaryYearCumulativeAllHotels
+                v-else-if="selectedReportType === 'channelSummary' && period === 'year' && selectedHotels.length > 1"
+                :selected-hotels="selectedHotels"
+                :trigger-fetch="reportTriggerKey"
+                :selected-date="selectedDate"
+            />
+            <ChannelSummaryYearCumulativeHotel
+                v-else-if="selectedReportType === 'channelSummary' && period === 'year' && selectedHotels.length === 1"
+                :hotel-id="selectedHotelIdForReport"
+                :trigger-fetch="reportTriggerKey"
+                :selected-date="selectedDate"
             />            
             
             <div v-else> 
@@ -75,6 +99,10 @@
     // Import New Report Components
     import ChangeInActiveReservationsReport from './components/ChangeInActiveReservationsReport.vue';
     import MonthlyReservationEvolutionReport from './components/MonthlyReservationEvolutionReport.vue';
+    import ChannelSummarySingleMonthAllHotels from './components/ChannelSummarySingleMonthAllHotels.vue';
+    import ChannelSummarySingleMonthHotel from './components/ChannelSummarySingleMonthHotel.vue';
+    import ChannelSummaryYearCumulativeAllHotels from './components/ChannelSummaryYearCumulativeAllHotels.vue';
+    import ChannelSummaryYearCumulativeHotel from './components/ChannelSummaryYearCumulativeHotel.vue';
 
     // Stores
     import { useReportStore } from '@/composables/useReportStore';
@@ -472,7 +500,8 @@
     const fetchData = async () => {
         // Prevent fetching summary data if a new specialized report type is selected
         if (selectedReportType.value === 'activeReservationsChange' || 
-            selectedReportType.value === 'monthlyReservationEvolution') {
+            selectedReportType.value === 'monthlyReservationEvolution' ||
+            selectedReportType.value === 'channelSummary') {
             loading.value = false; 
             pmsTotalData.value = {}; forecastTotalData.value = {}; accountingTotalData.value = {};
             return; 

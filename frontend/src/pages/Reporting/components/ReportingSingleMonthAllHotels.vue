@@ -964,7 +964,7 @@
     };
 
     onMounted(async () => {
-        console.log('RSMAll: onMounted', props.revenueData, props.occupancyData);
+        //console.log('RSMAll: onMounted', props.revenueData, props.occupancyData);
 
         if (selectedView.value === 'graph') {
             // Use nextTick to ensure containers are rendered before initializing

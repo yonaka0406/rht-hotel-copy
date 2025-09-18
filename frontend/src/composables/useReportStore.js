@@ -596,6 +596,19 @@ export function useReportStore() {
         }
     };
 
+    const fetchChannelSummary = async (hotelIds, startDate, endDate) => {
+        try {
+            if (limitedFunctionality.value) {
+                return getLimitedFunctionalityResponse();
+            }
+            const data = await api.post('/report/channel-summary', { hotelIds, startDate, endDate });
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            console.error('Failed to fetch channel summary:', error);
+            return [];
+        }
+    };
+
     return {
         reservationList,
         apiErrorCount,
@@ -618,5 +631,6 @@ export function useReportStore() {
         fetchOccupationBreakdown,
         fetchBookingSourceBreakdown,
         fetchPaymentTimingBreakdown,
+        fetchChannelSummary,
     }
 }

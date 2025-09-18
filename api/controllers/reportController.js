@@ -2,7 +2,7 @@ const { selectCountReservation, selectCountReservationDetailsPlans, selectCountR
   selectReservationListView, selectForecastData, selectAccountingData, selectExportReservationList, selectExportReservationDetails, 
   selectExportMealCount, selectReservationsInventory, selectAllRoomTypesInventory, selectReservationsForGoogle, selectParkingReservationsForGoogle, 
   selectActiveReservationsChange,
-  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown } = require('../models/report');
+  selectMonthlyReservationEvolution, selectSalesByPlan, selectOccupationBreakdown, selectChannelSummary } = require('../models/report');
 const { authorize, appendDataToSheet, createSheet } = require('../utils/googleUtils');
 const { format } = require("@fast-csv/format");
 const ExcelJS = require("exceljs");
@@ -913,6 +913,21 @@ const getOccupationBreakdown = async (req, res) => {
   }
 };
 
+const getChannelSummary = async (req, res) => {
+  const { hotelIds, startDate, endDate } = req.body;
+
+  try {
+    const data = await selectChannelSummary(req.requestId, hotelIds, startDate, endDate);
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
+    }
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = { 
   getCountReservation,
   getCountReservationDetails,
@@ -932,4 +947,5 @@ module.exports = {
   getMonthlyReservationEvolution,
   getSalesByPlan,
   getOccupationBreakdown,
+  getChannelSummary,
 };

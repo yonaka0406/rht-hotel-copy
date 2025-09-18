@@ -1395,6 +1395,43 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
   }
 };
 
+const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => {
+  const pool = getPool(requestId);
+  let query = `
+    SELECT
+      h.id AS hotel_id,
+      h.name AS hotel_name,
+      COUNT(rd.id) AS reserved_dates,
+      (COUNT(CASE WHEN r.type IN ('web', 'ota') THEN 1 END) * 100.0 / COUNT(rd.id)) AS web_percentage,
+      (COUNT(CASE WHEN r.type = 'default' THEN 1 END) * 100.0 / COUNT(rd.id)) AS direct_percentage
+    FROM reservations r
+    JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+    JOIN hotels h ON r.hotel_id = h.id
+    WHERE r.hotel_id = ANY($1::int[])
+    AND r.type <> 'employee' AND r.status NOT IN('hold','block') AND rd.cancelled IS NULL 
+  `;
+  const values = [hotelIds];
+
+  // Add date filtering
+  if (startDate && endDate) {
+    query += ` AND rd.date BETWEEN $2::date AND $3::date`;
+    values.push(startDate, endDate);
+  } else if (startDate) { // If only startDate is provided, assume it's a year
+    query += ` AND TO_CHAR(r.created_at, 'YYYY') = $2`;
+    values.push(startDate);
+  }
+
+  query += ` GROUP BY h.id, h.name;`;
+
+  try {
+    const result = await pool.query(query, values);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in selectChannelSummary:', err);
+    throw new Error('Database error');
+  }
+};
+
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
@@ -1414,4 +1451,5 @@ module.exports = {
   selectMonthlyReservationEvolution,
   selectSalesByPlan,
   selectOccupationBreakdown,
+  selectChannelSummary,
 };
