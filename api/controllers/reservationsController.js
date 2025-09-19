@@ -890,7 +890,11 @@ const editReservationGuests = async (req, res) => {
       guestDataArray.guestsToAdd = guestsToAdd;
     }
 
-    const existingReservation = await selectReservation(req.requestId, id);
+    const existingReservation = await selectReservation(req.requestId, id, guestDataArray.hotel_id);
+    if (existingReservation.length === 0) {
+      return res.status(404).json({ error: "Reservation not found or no details associated with it." });
+    }
+
     const filteredReservations = existingReservation.filter(reservation => reservation.room_id === guestDataArray.room_id);
 
     for (const reservationDetail of filteredReservations) {
