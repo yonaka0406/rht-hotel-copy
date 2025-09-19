@@ -334,10 +334,20 @@
       return [];
     }
 
-    const allReservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null) || [];
-        
+    const allReservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null) || [];
+
+    // Filter out duplicate reservations based on their unique 'id'
+    const uniqueReservations = [];
+    const seenReservationIds = new Set();
+    allReservations.forEach(reservation => {
+      if (reservation.id && !seenReservationIds.has(reservation.id)) {
+        uniqueReservations.push(reservation);
+        seenReservationIds.add(reservation.id);
+      }
+    });
+
     // 1. BLOCKED ROOMS - Always blocked regardless of dates
-    const blockedRooms = allReservations
+    const blockedRooms = uniqueReservations
       .filter(room => room.status === 'block')
       .map(room => ({
         ...room,
@@ -431,7 +441,7 @@
     ]);
     
     // Also exclude rooms that have reservations overlapping this date (but not checking out today)
-    allReservations.forEach(room => {
+    uniqueReservations.forEach(room => {
       if (room.status === 'block') return;
       
       const checkInDate = new Date(room.check_in);
@@ -474,6 +484,27 @@
     // console.log('Blocked Rooms:', blockedRooms.length);
     // console.groupEnd();
   
+    // --- Start Debug Block for Duplicate Keys ---
+    const groupsForDebug = [
+      { title: '本日チェックイン', rooms: categorizedRooms.checkIn },
+      { title: '本日チェックアウト', rooms: categorizedRooms.checkOut },
+      { title: '滞在', rooms: categorizedRooms.occupied },
+      { title: '空室', rooms: freeRooms },
+      { title: '部屋ブロック', rooms: blockedRooms },
+    ];
+
+    groupsForDebug.forEach(group => {
+      const seenKeys = new Set();
+      group.rooms.forEach(room => {
+        const key = `${room.room_id}-${room.id || 'no-reservation'}`;
+        if (seenKeys.has(key)) {
+          console.warn(`[RoomIndicator] Duplicate key detected in group "${group.title}": ${key}`, room);
+        }
+        seenKeys.add(key);
+      });
+    });
+    // --- End Debug Block for Duplicate Keys ---
+
     return [
       { title: '本日チェックイン', rooms: categorizedRooms.checkIn, color: 'bg-blue-100', darkColor: 'dark:bg-blue-900/30' },
       { title: '本日チェックアウト', rooms: categorizedRooms.checkOut, color: 'bg-green-100', darkColor: 'dark:bg-green-900/30' },
@@ -482,6 +513,7 @@
       { title: '部屋ブロック', rooms: blockedRooms, color: 'bg-red-100', darkColor: 'dark:bg-red-900/30' },
     ];
   });
+  
 
   const summaryMetrics = computed(() => {
     // For summary metrics, we want to show the operational status
@@ -643,7 +675,7 @@
     // console.log(`[RoomIndicator] Calculating plan summary for selected date: ${formatDate(selectedDate.value)}`);
     
     const roomPlans = {};
-    const reservations = reservedRoomsDayView.value?.reservations?.filter(room => room.cancelled === null && room.status !== 'cancelled') || [];
+    const reservations = reservedRoomsDayView.value?.filter(room => room.cancelled === null && room.status !== 'cancelled') || [];
     const selectedDateStr = formatDate(selectedDate.value);
     
     // Log only room 103 data
@@ -776,8 +808,9 @@
   onMounted(async () => {
     
     isLoading.value = true;
-    // console.log('onMounted of RoomIndicator', selectedHotelId.value, today);    
-    // console.log('onMounted of selectedDate', selectedDate.value);        
+    console.log('[RoomIndicator] onMounted: Initializing component.');
+    console.log('[RoomIndicator] onMounted: Initial selectedDate:', formatDate(selectedDate.value));
+    console.log('[RoomIndicator] onMounted: Initial selectedHotelId:', selectedHotelId.value);
 
     // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -798,21 +831,24 @@
     // Add debounced fetch function
     const debouncedFetchReservations = debounce(async () => {
       if (!isUpdating.value) {
+        console.log('[RoomIndicator] debouncedFetchReservations: Fetching reservations due to socket update.');
         await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+        console.log('[RoomIndicator] debouncedFetchReservations: reservedRoomsDayView after socket update:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       }
     }, 1000); // 1s debounce time
 
     socket.value.on('connect', () => {
-      // console.log('Connected to server');
+      console.log('Connected to server');
     });
     socket.value.on('connect_error', (err) => {
-      // console.error('Socket connection error:', err);
+      console.error('Socket connection error:', err);
     });
     socket.value.on('connect_timeout', () => {
-      // console.error('Socket connection timeout');
+      console.error('Socket connection timeout');
     });
     
     socket.value.on('tableUpdate', async (data) => {
+      console.log('[RoomIndicator] Socket tableUpdate received:', data);
       // Use the debounced function instead of direct fetch
       debouncedFetchReservations();
     });
@@ -820,7 +856,7 @@
     await fetchHotels();
     await fetchHotel();
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    //console.log('onMounted of reservedRoomsDayView', reservedRoomsDayView.value);
+    console.log('[RoomIndicator] onMounted: reservedRoomsDayView after initial fetch:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
     
     isLoading.value = false;        
     
@@ -837,11 +873,14 @@
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
     try {
-      // console.log('[RoomIndicator] selectedHotelId changed:', { oldValue, newValue });
+      console.log('[RoomIndicator] Watcher: selectedHotelId changed:', { oldValue, newValue });
       if (newValue !== oldValue) {
         selectedDate.value = today;
+        console.log('[RoomIndicator] Watcher: Resetting selectedDate to today:', formatDate(selectedDate.value));
         await fetchHotel();
+        console.log('[RoomIndicator] Watcher: Fetching reservations for new hotelId and today\'s date.');
         await fetchReservationsToday(selectedHotelId.value, formatDate(today));
+        console.log('[RoomIndicator] Watcher: reservedRoomsDayView after hotelId change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       }
     } catch (error) {
       console.error('[RoomIndicator] Error in selectedHotelId watcher:', error);
@@ -849,10 +888,16 @@
   });
   
   watch(selectedDate, async (newValue, oldValue) => {
-    // console.log('[RoomIndicator] selectedDate changed:', { oldValue, newValue });
-    if (newValue !== oldValue) {
-      // console.log('[RoomIndicator] Fetching reservations for date:', newValue);
+    console.log('[RoomIndicator] Watcher: selectedDate changed:', {
+      oldValue: oldValue ? formatDate(oldValue) : 'undefined',
+      newValue: newValue ? formatDate(newValue) : 'undefined'
+    });
+    if (newValue && oldValue && formatDate(newValue) !== formatDate(oldValue)) { // Compare formatted dates to avoid unnecessary fetches for same date object but different instances
+      console.log('[RoomIndicator] Watcher: selectedDate is different. Fetching reservations for date:', formatDate(selectedDate.value));
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
+      console.log('[RoomIndicator] Watcher: reservedRoomsDayView after selectedDate change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+    } else {
+      console.log('[RoomIndicator] Watcher: selectedDate changed but formatted date is the same or invalid. No fetch triggered.');
     }
   }, { deep: true });
 

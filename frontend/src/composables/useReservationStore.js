@@ -812,6 +812,7 @@ export function useReservationStore() {
     };
     const fetchReservationsToday = async (hotelId, day) => {
         // console.log('From Reservation Store => fetchReservationsToday');
+        reservedRoomsDayView.value = []; // Explicitly clear before fetching new data
         try {
             // Ensure day is a properly formatted date string (YYYY-MM-DD)
             let dateStr = day;
@@ -848,7 +849,7 @@ export function useReservationStore() {
             }
 
             const data = await response.json();
-            reservedRoomsDayView.value = data;
+            reservedRoomsDayView.value = data.reservations || [];
             
             return data;
 
