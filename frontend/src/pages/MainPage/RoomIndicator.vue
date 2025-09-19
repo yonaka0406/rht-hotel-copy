@@ -809,7 +809,19 @@
     
     isLoading.value = true;
     console.log('[RoomIndicator] onMounted: Initializing component.');
-    console.log('[RoomIndicator] onMounted: Initial selectedDate:', formatDate(selectedDate.value));
+
+    // Initialize selectedDate from URL parameter or default to today
+    const routeDate = router.currentRoute.value.params.date;
+    if (routeDate) {
+      selectedDate.value = new Date(routeDate);
+      console.log('[RoomIndicator] onMounted: Initial selectedDate from URL:', formatDate(selectedDate.value));
+    } else {
+      selectedDate.value = new Date();
+      // If no date in URL, update URL to today's date
+      router.replace({ params: { date: formatDate(selectedDate.value) } });
+      console.log('[RoomIndicator] onMounted: Initial selectedDate defaulted to today:', formatDate(selectedDate.value));
+    }
+
     console.log('[RoomIndicator] onMounted: Initial selectedHotelId:', selectedHotelId.value);
 
     // Establish Socket.IO connection
@@ -896,6 +908,9 @@
       console.log('[RoomIndicator] Watcher: selectedDate is different. Fetching reservations for date:', formatDate(selectedDate.value));
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
       console.log('[RoomIndicator] Watcher: reservedRoomsDayView after selectedDate change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+      
+      // Update URL parameter
+      router.push({ params: { date: formatDate(selectedDate.value) } });
     } else {
       console.log('[RoomIndicator] Watcher: selectedDate changed but formatted date is the same or invalid. No fetch triggered.');
     }

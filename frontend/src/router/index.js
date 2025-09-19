@@ -59,7 +59,7 @@ const routes = [
     component: MainPage,
     children: [
       { path: '/dashboard', name: 'Dashboard', component: Dashboard },
-      { path: '/reservations/day', name: 'RoomIndicator', component: RoomIndicator },
+      { path: '/reservations/day/:date?', name: 'RoomIndicator', component: RoomIndicator },
       { path: '/reservations/new', name: 'ReservationsNew', component: ReservationsNew },
       { path: '/reservations/edit/:reservation_id', name: 'ReservationEdit', component: ReservationEdit, props: true },
       { path: '/reservations/calendar', name: 'ReservationsCalendar', component: ReservationsCalendar },
