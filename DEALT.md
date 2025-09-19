@@ -2,6 +2,31 @@
 
 This document contains all fixed and closed issues that were previously tracked in BUGS.md.
 
+### September 19, 2025
+
+#### Bug #66: Unable to Add 宿泊者 (Guests) to Reservation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Users are unable to add 宿泊者 (guests) to an existing reservation
+  - The "Add Guest" button/functionality is either not working or not visible
+  - This prevents proper guest management for reservations
+- **Steps to Reproduce**:
+  1. Open an existing reservation
+  2. Attempt to add a new guest
+  3. Observe the issue
+- **Expected Behavior**:
+  - Users should be able to add multiple guests to a reservation
+  - Guest information should be saved and associated with the reservation
+- **Affected Components**:
+  - Reservation management interface
+  - Guest information form
+  - Backend API endpoints for guest management
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Check if this affects all reservation types or specific ones
+  - Verify if there are any error messages in the console
+  - Check if this is a frontend or backend issue
+
 ### September 17, 2025
 
 #### Bug #53: 宿泊者名簿 Should Use payment_timing Field for 現地決済

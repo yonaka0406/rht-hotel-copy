@@ -8,13 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
-- Bugfix: Resolved data persistence and duplicate key issues by ensuring `reservedRoomsDayView` is correctly updated and cleared.
-- Feature: Added a button to the reservation list drawer to navigate to the reservation edit page.
-- Feature: Implemented date persistence via URL parameter (`/reservations/day/:date`), allowing page refreshes to maintain the selected date.
-- Feature: Added Channel reports to the Reporting module.
-- Feature: Added Payment Timing reports to the Reporting module.
-- Bugfix: Fixed the meal count report summary date and the lunch serve date.
-
 ---
 ## Future Releases
 
@@ -478,8 +471,22 @@ This marks the first stable release of the comprehensive Hotel Management System
 
 ---
 
+## [1.1.16] - 2025-09-19
+
+- Bugfix: Resolved data persistence and duplicate key issues by ensuring `reservedRoomsDayView` is correctly updated and cleared.
+- Feature: Added a button to the reservation list drawer to navigate to the reservation edit page.
+- Feature: Implemented date persistence via URL parameter (`/reservations/day/:date`), allowing page refreshes to maintain the selected date.
+- Feature: Added Channel reports to the Reporting module.
+- Feature: Added Payment Timing reports to the Reporting module.
+- Bugfix: Fixed the meal count report summary date and the lunch serve date.
+- Bugfix: Fixed cases where it was not possible to add guests to the reservation.
+
+---
+
 ## Version History
 
+- **1.1.16** (2025-09-19) - Enhanced reservation management with improved guest handling and data persistence. Added comprehensive reporting features including Channel and Payment Timing reports, and resolved meal count report date issues.
+- **1.1.15** (2025-09-18) - Improved OTA reservation handling and payment timing management. Enhanced calendar functionality and added visual theming to monthly reports.
 - **1.1.14** (2025-09-17) - Introduced multi-room temporary block functionality and enhanced reporting with detailed plan breakdowns. Fixed reporting issues including room count calculations and updated financial reports to display pre-tax values for consistency with accounting standards.
 - **1.1.13** (2025-09-16) - Improved CRM operations with toast notifications and enhanced Yadomaster data import. Optimized reservation management with UI improvements for form submission and database queries for extended stays. Fixed client dropdown display in new reservations.
 - **1.1.12** (2025-09-08) - Enhanced reservation management with comment flag system for important notes and improved room indicator with check-out date display. Fixed WebSocket updates, sales calculations for cancelled reservations, and hotel change handling for parking availability.
