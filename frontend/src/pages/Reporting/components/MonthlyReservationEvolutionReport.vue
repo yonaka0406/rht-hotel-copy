@@ -56,7 +56,8 @@ import {
   GridComponent,
   LegendComponent,
   TitleComponent,
-  VisualMapComponent // Added
+  VisualMapComponent, // Added
+  DataZoomComponent // Added for zoomable charts
 } from 'echarts/components';
 import { LineChart, HeatmapChart } from 'echarts/charts'; // Added
 import { CanvasRenderer } from 'echarts/renderers';
@@ -68,6 +69,7 @@ echarts.use([
   LegendComponent,
   TitleComponent,
   VisualMapComponent, // Added
+  DataZoomComponent, // Added for zoomable charts
   LineChart,
   HeatmapChart,       // Added
   CanvasRenderer,
@@ -157,6 +159,19 @@ const fetchReportData = async () => {
         loading.value = false;
     }
 };
+
+const averageDataWithOccupationRate = computed(() => {
+    const totalRooms = currentHotelTotalRooms.value;
+    if (!averageData.value || averageData.value.length === 0 || !totalRooms || totalRooms <= 0) {
+        return [];
+    }
+
+    return averageData.value.map(item => ({
+        ...item,
+        avg_occupation_rate: item.avg_booked_room_nights / totalRooms
+    }));
+});      
+
 
 // Helper function to get all dates in a given month (YYYY-MM-DD format for the first day)
 const getDaysInMonth = (targetMonthIsoString) => {
@@ -268,19 +283,26 @@ const heatmapChartInstance = shallowRef(null); // Ref for the heatmap ECharts in
 
 // ECharts options computed property - definition remains the same
 const echartsOptions = computed(() => {
-    if (!averageData.value || averageData.value.length === 0) {
+    if (!averageDataWithOccupationRate.value || averageDataWithOccupationRate.value.length === 0) {
         return null;
     }
     return {
         tooltip: {
             trigger: 'axis',
             formatter: (params) => {
-                const param = params[0];
-                return `リード日数: ${param.axisValueLabel}<br/>平均予約室数: ${param.value}`;
+                let tooltipContent = `リード日数: ${params[0].axisValueLabel}<br/>`;
+                params.forEach(param => {
+                    if (param.seriesName === '平均予約室数') {
+                        tooltipContent += `平均予約室数: ${param.value.toFixed(1)}<br/>`;
+                    } else if (param.seriesName === '平均稼働率') {
+                        tooltipContent += `平均稼働率: ${(param.value * 100).toFixed(2)}%<br/>`;
+                    }
+                });
+                return tooltipContent;
             }
         },
         legend: {
-            data: ['平均予約室数'],
+            data: ['平均予約室数', '平均稼働率'],
             bottom: 10,
         },
         grid: {
@@ -289,28 +311,79 @@ const echartsOptions = computed(() => {
             bottom: '15%',
             containLabel: true
         },
+        dataZoom: [
+            {
+                type: 'inside',
+                xAxisIndex: [0],
+                filterMode: 'filter'
+            },
+            {
+                type: 'slider',
+                xAxisIndex: [0],
+                bottom: '0%',
+                height: 20,
+                start: 0,
+                end: 100,
+                handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-9.1,0.7-9.1,0.7v2.8c0,0-3.6,0.4-3.6,4.7v1.3H10.7z',
+                handleSize: '80%',
+                handleStyle: {
+                    color: '#fff',
+                    shadowBlur: 3,
+                    shadowColor: 'rgba(0, 0, 0, 0.6)',
+                    shadowOffsetX: 2,
+                    shadowOffsetY: 2
+                },
+                textStyle: {
+                    color: '#fff'
+                }
+            }
+        ],
         xAxis: {
             type: 'category',
             name: 'リード日数',
             nameLocation: 'middle',
             nameGap: 30,
-            data: averageData.value.map(item => item.lead_days.toString()),
+            data: averageDataWithOccupationRate.value.map(item => item.lead_days.toString()),
         },
-        yAxis: {
-            type: 'value',
-            name: '平均予約室数',
-            nameLocation: 'middle',
-            nameGap: 40,
-            min: 0, // Keep min 0
-            axisLabel: {
-                formatter: '{value}'
+        yAxis: [
+            {
+                type: 'value',
+                name: '平均稼働率',
+                nameLocation: 'middle',
+                nameGap: 40,
+                min: 0,
+                max: 1,
+                axisLabel: {
+                    formatter: (value) => `${(value * 100).toFixed(0)}%`
+                }
+            },
+            {
+                type: 'value',
+                name: '平均予約室数',
+                nameLocation: 'middle',
+                nameGap: 40,
+                min: 0,
+                axisLabel: {
+                    formatter: '{value}'
+                }
             }
-        },
+        ],
         series: [
             {
                 name: '平均予約室数',
                 type: 'line',
-                data: averageData.value.map(item => parseFloat(item.avg_booked_room_nights)), // Using parseFloat as per last fix
+                yAxisIndex: 1,
+                data: averageDataWithOccupationRate.value.map(item => parseFloat(item.avg_booked_room_nights)),
+                smooth: true,
+                emphasis: {
+                    focus: 'series'
+                }
+            },
+            {
+                name: '平均稼働率',
+                type: 'line',
+                areaStyle: {},
+                data: averageDataWithOccupationRate.value.map(item => parseFloat(item.avg_occupation_rate)),
                 smooth: true,
                 emphasis: {
                     focus: 'series'
