@@ -16,10 +16,16 @@ const isLoadingCommonRelationshipPairs = ref(false);
 export function useClientStore() {
     
     const setClients = (newClients) => {
-        clients.value = newClients;
+        clients.value = newClients.map(client => ({
+            ...client,
+            display_name: client.name_kanji || client.name_kana || client.name || ''
+        }));
     };
     const appendClients = (newClients) => {
-        clients.value = [...clients.value, ...newClients]; // Append new clients
+        clients.value = [...clients.value, ...newClients.map(client => ({
+            ...client,
+            display_name: client.name_kanji || client.name_kana || client.name || ''
+        }))]; // Append new clients
     };
     const setClientsIsLoading = (bool) => {
         clientsIsLoading.value = bool;

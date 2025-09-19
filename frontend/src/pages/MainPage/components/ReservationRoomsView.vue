@@ -282,9 +282,9 @@
                         <DataTable :value="guests" class="p-datatable-sm" scrollable responsive>
                             <Column field="name" header="宿泊者" style="width: 40%">
                                 <template #body="slotProps">
-                                    <AutoComplete v-model="slotProps.data.name" :placeholder="slotProps.data.guest_no"
-                                        :suggestions="filteredClients" optionLabel="name" @complete="filterClients"
-                                        field="id" @option-select="onClientSelect($event, slotProps.data)"
+                                    <AutoComplete v-model="slotProps.data.client" :placeholder="slotProps.data.guest_no"
+                                        :suggestions="filteredClients" optionLabel="display_name" @complete="filterClients"
+                                        field="display_name" @option-select="onClientSelect($event, slotProps.data)"
                                         @change="onClientChange(slotProps.data)">
                                         <template #option="slotProps">
                                             <div>
@@ -313,27 +313,24 @@
                             </Column>
                             <Column field="gender" header="性別" style="width: 10%">
                                 <template #body="slotProps">
-                                    <Select v-model="slotProps.data.gender" :options="genderOptions" optionLabel="label"
-                                        optionValue="value" placeholder="性別を選択" fluid
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
+                                                                         <Select v-model="slotProps.data.client.gender" :options="genderOptions" optionLabel="label"
+                                                                            optionValue="value" placeholder="性別を選択" fluid
+                                                                            :disabled="!!slotProps.data.client?.id" />                                </template>
 
                             </Column>
                             <Column field="email" header="メールアドレス" style="width: 25%">
                                 <template #body="slotProps">
-                                    <InputText v-model="slotProps.data.email" :pattern="emailPattern"
-                                        :class="{ 'p-invalid': !isValidEmail }"
-                                        @input="validateEmail(slotProps.data.email)"
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
+                                                                         <InputText v-model="slotProps.data.client.email" :pattern="emailPattern"
+                                                                            :class="{ 'p-invalid': !isValidEmail }"
+                                                                            @input="validateEmail(slotProps.data.client.email)"
+                                                                            :disabled="!!slotProps.data.client?.id" />                                </template>
                             </Column>
                             <Column field="phone" header="電話番号" style="width: 25%">
                                 <template #body="slotProps">
-                                    <InputText v-model="slotProps.data.phone" :pattern="phonePattern"
-                                        :class="{ 'p-invalid': !isValidPhone }"
-                                        @input="validatePhone(slotProps.data.phone)"
-                                        :disabled="slotProps.data.isClientSelected" />
-                                </template>
+                                                                         <InputText v-model="slotProps.data.client.phone" :pattern="phonePattern"
+                                                                            :class="{ 'p-invalid': !isValidPhone }"
+                                                                            @input="validatePhone(slotProps.data.client.phone)"
+                                                                            :disabled="!!slotProps.data.client?.id" />                                </template>
                             </Column>
                         </DataTable>
 
@@ -752,7 +749,7 @@ const isFullyCancelled = (group) => {
 
 const hasBlockingImpediment = computed(() => {
     return guests.value?.some(guest =>
-        guest.impediment?.some(imp =>
+        guest.client?.impediment?.some(imp =>
             imp.is_active && imp.restriction_level === 'block'
         )
     );
@@ -970,32 +967,35 @@ const initializeGuests = () => {
     const reservationClients = selectedGroup.value.details[0]?.reservation_clients || '';
     // console.log('Room capacity:', capacity);
     // console.log('Existing guest in reservation:', reservationClients);
-    guests.value = Array.from({ length: capacity }, (_, i) => ({
-        id: null,
-        guest_no: '宿泊者 ' + (i + 1),
-        name: '',
-        legal_or_natural_person: 'natural',
-        gender: 'male',
-        email: '',
-        phone: '',
-        impediment: null,
-        isClientSelected: false
-    }));
-    if (reservationClients.length > 0) {
-        // Fill the array with reservation_clients data
-        reservationClients.forEach((client, i) => {
-            if (i < capacity) { // Important check: Don't exceed capacity
-                guests.value[i] = { // Update existing guest object
-                    id: client.client_id || null,
-                    guest_no: '宿泊者 ' + (i + 1),
-                    name: client.name_kanji || client.name || '',
-                    ...client, // Keep all other client properties
-                    isClientSelected: true
-                };
-            }
-        });
-    }
-};
+        guests.value = Array.from({ length: capacity }, (_, i) => ({
+            guest_no: '宿泊者 ' + (i + 1),
+            client: {}, // Initialize client as an empty object
+            impediment: null,
+            isClientSelected: false
+        }));
+        if (reservationClients.length > 0) {
+            // Fill the array with reservation_clients data
+            reservationClients.forEach((client, i) => {
+                if (i < capacity) { // Important check: Don't exceed capacity
+                    guests.value[i] = { // Update existing guest object
+                        guest_no: '宿泊者 ' + (i + 1),
+                        client: { // Create a client object with necessary properties
+                            id: client.client_id || null,
+                            name: client.name,
+                            name_kana: client.name_kana,
+                            name_kanji: client.name_kanji,
+                            legal_or_natural_person: client.legal_or_natural_person,
+                            gender: client.gender,
+                            email: client.email,
+                            phone: client.phone,
+                            display_name: client.name_kanji || client.name_kana || client.name || '' // Add display_name
+                        },
+                        impediment: null,
+                        isClientSelected: true
+                    };
+                }
+            });
+        }}
 const filterClients = (event) => {
     const query = event.query.toLowerCase();
     const normalizedQuery = normalizePhone(query);
@@ -1040,30 +1040,23 @@ const onClientSelect = async (e, rowData) => {
     // Find the guest in the guests array that was just selected
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
-    // console.log('guestIndex',guestIndex);
-    // console.log('event:', e.value);
-
-    // Update the guest's information
+    // Update the guest's client information
     if (guestIndex > -1) {
-        guests.value[guestIndex] = { ...guests.value[guestIndex], ...e.value };
+        guests.value[guestIndex].client = e.value; // Assign the entire client object
         guests.value[guestIndex].isClientSelected = true;
     }
 
-    await fetchImpedimentsByClientId(guests.value[guestIndex].id);
+    await fetchImpedimentsByClientId(guests.value[guestIndex].client.id);
     guests.value[guestIndex].impediment = clientImpediments.value;
-
-    //console.log('onClientSelect guests:', guests.value);
 };
 const onClientChange = (rowData) => {
     // Find the guest in the guests array that was just selected
     const guestIndex = guests.value.findIndex(guest => guest.guest_no === rowData.guest_no);
 
     if (guestIndex > -1) {
-        guests.value[guestIndex].id = '';
+        guests.value[guestIndex].client = null; // Clear the client object
         guests.value[guestIndex].isClientSelected = false;
     }
-
-    // console.log('onClientChange guests:', guests.value);
 };
 const applyGuestChanges = async () => {
     // Check for blocking impediments
@@ -1077,12 +1070,12 @@ const applyGuestChanges = async () => {
         return;
     }
 
-    const guestsWithId = guests.value.filter(guest => guest.id !== null);
+    const guestsWithId = guests.value.filter(guest => guest.client?.id !== null);
     const idSet = new Set();
     const duplicatedGuest = [];
     let hasDuplicates = false;
     const number_of_people = selectedGroup.value.details[0]?.number_of_people;
-    const guestCount = guests.value.filter(guest => guest.name).length;
+    const guestCount = guests.value.filter(guest => guest.client?.name).length;
 
     // Check if guest count exceeds number_of_people
     if (guestCount > number_of_people) {
@@ -1096,36 +1089,36 @@ const applyGuestChanges = async () => {
     }
     // Validate if the same person was selected more than once
     for (const guest of guestsWithId) {
-        if (idSet.has(guest.id)) {
+        if (idSet.has(guest.client.id)) {
             hasDuplicates = true;
-            duplicatedGuest.value = guest;
+            duplicatedGuest.value = guest.client;
             break;
         }
-        idSet.add(guest.id);
+        idSet.add(guest.client.id);
     }
 
     if (hasDuplicates) {
-        toast.add({ severity: 'warn', summary: '警告', detail: `重複宿泊者:${duplicatedGuest.value.name}が選択されました。`, life: 3000 });
+        toast.add({ severity: 'warn', summary: '警告', detail: `重複宿泊者:${duplicatedGuest.value.display_name}が選択されました。`, life: 3000 });
         return;
     } else {
         // console.log('No duplicates found, checking fields...');
         for (const guest of guests.value) {
-            if (guest.name) {
-                if (!guest.email && !guest.phone) {
-                    toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
+            if (guest.client?.name) {
+                if (!guest.client.email && !guest.client.phone) {
+                    toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.client.display_name}にメールアドレスまたは電話番号を記入してください。`, life: 3000 });
                     return;
                 }
-                if (guest.email) {
-                    const emailValid = validateEmail(guest.email);
+                if (guest.client.email) {
+                    const emailValid = validateEmail(guest.client.email);
                     if (!emailValid) {
-                        toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}にメールアドレスの書式誤差がありました。`, life: 3000 });
+                        toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.client.display_name}にメールアドレスの書式誤差がありました。`, life: 3000 });
                         return;
                     }
                 }
-                if (guest.phone) {
-                    const phoneValid = validatePhone(guest.phone);
+                if (guest.client.phone) {
+                    const phoneValid = validatePhone(guest.client.phone);
                     if (!phoneValid) {
-                        toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.name}に電話番号の書式誤差がありました。`, life: 3000 });
+                        toast.add({ severity: 'warn', summary: '警告', detail: `宿泊者: ${guest.client.display_name}に電話番号の書式誤差がありました。`, life: 3000 });
                         return;
                     }
                 }
@@ -1141,7 +1134,7 @@ const applyGuestChanges = async () => {
                 hotel_id: group.hotel_id,
                 room_id: group.room_id,
                 number_of_people: group.number_of_people,
-                guestsToAdd: guests.value.filter(guest => guest.name)
+                guestsToAdd: guests.value.filter(guest => guest.client?.id).map(guest => guest.client)
             };
         });
 
