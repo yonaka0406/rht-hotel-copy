@@ -771,8 +771,8 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
     SELECT 
       hotels.name as hotel_name
       ,CASE 
-        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' 
-        THEN reservation_details.date + INTERVAL '1 day'
+        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN('breakfast','lunch')
+        THEN reservation_details.date + INTERVAL '1 day'        
         ELSE reservation_details.date
       END AS meal_date,
       SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' THEN reservation_addons.quantity ELSE 0 END) AS breakfast,
@@ -812,7 +812,7 @@ const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => 
       COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name,
       rooms.room_number,
       CASE 
-        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' 
+        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN('breakfast','lunch')
         THEN reservation_details.date + INTERVAL '1 day'
         ELSE reservation_details.date
       END AS meal_date,
