@@ -274,7 +274,7 @@
     });
     
     const currentHotelName = computed(() => {
-        console.log('currentHotelRevenueEntry', currentHotelRevenueEntry.value);
+        //console.log('currentHotelRevenueEntry', currentHotelRevenueEntry.value);
         return currentHotelRevenueEntry.value?.hotel_name || '選択ホテル';
     });
         
