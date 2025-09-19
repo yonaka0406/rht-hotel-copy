@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 ## Unreleased
 
+- Bugfix: Resolved data persistence and duplicate key issues by ensuring `reservedRoomsDayView` is correctly updated and cleared.
+- Feature: Implemented date persistence via URL parameter (`/reservations/day/:date`), allowing page refreshes to maintain the selected date.
+- Feature: Added Channel reports to the Reporting module.
 
 ---
 ## Future Releases
