@@ -317,9 +317,9 @@
 
     // --- KPI Calculations (ADR, RevPAR) ---
     const aggregatedAllHotelsRevenue = computed(() => {
-        console.log('aggregatedAllHotelsRevenue before', props.revenueData);
+        //console.log('aggregatedAllHotelsRevenue before', props.revenueData);
         const revenueEntry = props.revenueData?.filter(item => item.hotel_id === 0);
-        console.log('aggregatedAllHotelsRevenue after', revenueEntry);
+        //console.log('aggregatedAllHotelsRevenue after', revenueEntry);
         if (!revenueEntry) return { total_forecast_revenue: 0, total_period_revenue: 0 };
         
         return revenueEntry.reduce((acc, item) => {
@@ -858,7 +858,7 @@
             });
             csvString = csvRows.join('\n');
         } else {
-            console.log(`RYCAll: No data to export for ${tableType} or invalid table type.`);
+            //console.log(`RYCAll: No data to export for ${tableType} or invalid table type.`);
             return;
         }
         
@@ -877,7 +877,7 @@
     };
 
     onMounted(async () => {
-        console.log('RYCAll: onMounted', props.revenueData, props.occupancyData);
+        //console.log('RYCAll: onMounted', props.revenueData, props.occupancyData);
 
         if (selectedView.value === 'graph') {
             // Use nextTick to ensure containers are rendered before initializing

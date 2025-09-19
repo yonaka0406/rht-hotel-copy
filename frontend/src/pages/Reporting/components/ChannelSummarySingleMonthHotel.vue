@@ -44,27 +44,35 @@
                         <h4 class="text-lg font-semibold mb-3">予約チャンネル内訳 (泊数ベース)</h4>
                     </template>
                     <template #content>
-                        <DataTable :value="bookingSourceData" responsiveLayout="scroll">
-                            <Column field="type" header="タイプ"></Column>
-                            <Column field="agent" header="エージェント"></Column>
-                            <Column field="room_nights" header="泊数"></Column>
-                        </DataTable>
-                    </template>
+                                                    <DataTable :value="bookingSourceData" responsiveLayout="scroll">
+                                                                                        <Column field="type" header="タイプ" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                                                                            <template #body="slotProps">
+                                                                                                {{ translateBookingSourceType(slotProps.data.type) }}
+                                                                                            </template>
+                                                                                        </Column>
+                                                                                        <Column field="agent" header="エージェント" bodyStyle="text-align:center" headerStyle="text-align:center"></Column>
+                                                                                        <Column field="room_nights" header="泊数" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                                                                            <template #body="slotProps">
+                                                                                                {{ slotProps.data.room_nights.toLocaleString('ja-JP') }}
+                                                                                            </template>
+                                                                                        </Column>                                                    </DataTable>                    </template>
                 </Card>
                 <Card class="col-span-12 md:col-span-6">
                     <template #header>
                         <h4 class="text-lg font-semibold mb-3">支払タイミング内訳 (泊数ベース)</h4>
                     </template>
                     <template #content>
-                        <DataTable :value="paymentTimingData" responsiveLayout="scroll">
-                            <Column field="paymentTiming" header="支払タイミング">
-                                <template #body="slotProps">
-                                    {{ translatePaymentTiming(slotProps.data.paymentTiming) }}
-                                </template>
-                            </Column>
-                            <Column field="count" header="泊数"></Column>
-                        </DataTable>
-                    </template>
+                                                    <DataTable :value="paymentTimingData" responsiveLayout="scroll">
+                                                                                        <Column field="paymentTiming" header="支払タイミング" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                                                                            <template #body="slotProps">
+                                                                                                {{ translatePaymentTiming(slotProps.data.paymentTiming) }}
+                                                                                            </template>
+                                                                                        </Column>
+                                                                                        <Column field="count" header="泊数" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                                                                            <template #body="slotProps">
+                                                                                                {{ slotProps.data.count.toLocaleString('ja-JP') }}
+                                                                                            </template>
+                                                                                        </Column>                                                    </DataTable>                    </template>
                 </Card>
             </div>
         </div>
@@ -148,6 +156,15 @@ const translatePaymentTiming = (timing) => {
         'postpaid': '後払い'
     };
     return map[timing] || timing;
+};
+
+const translateBookingSourceType = (type) => {
+    const map = {
+        'default': '通常',
+        'ota': 'OTA',
+        'web': 'WEB'
+    };
+    return map[type] || type;
 };
 
 const fetchReportData = async () => {
