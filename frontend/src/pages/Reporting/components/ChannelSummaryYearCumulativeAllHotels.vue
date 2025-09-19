@@ -183,10 +183,10 @@ const paymentTimingChartData = computed(() => {
             total += hotel.payment_timing[timing];
         }
         hotelTotals[hotel.hotel_name] = total;
-        console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
-        console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
+        //console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
+        //console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
     });
-    console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
+    //console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
 
     const series = paymentTimings.map(timing => {
         return {

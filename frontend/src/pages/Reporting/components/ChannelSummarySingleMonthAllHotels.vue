@@ -190,10 +190,10 @@ const paymentTimingChartData = computed(() => {
             total += hotel.payment_timing[timing];
         }
         hotelTotals[hotel.hotel_name] = total;
-        console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
-        console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
+        //console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
+        //console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
     });
-    console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
+    //console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
 
     const series = paymentTimings.map(timing => {
         return {
@@ -299,7 +299,7 @@ const fetchReportData = async () => {
         const data = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
 
         chartData.value = data;
-        console.log('DEBUG: chartData after fetch:', chartData.value); // Debug log
+        //console.log('DEBUG: chartData after fetch:', chartData.value); // Debug log
     } catch (err) {
         console.error('Error fetching data:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
