@@ -23,13 +23,22 @@
                         <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
                     </template>
                 </Card>
+
+                <Card class="mt-4">
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別支払タイミング分布</div></template>
+                    <template #content>
+                        <div ref="paymentTimingChartContainer" style="width: 100%; height: 500px;"></div>
+                    </template>
+                </Card>
             </div>
             <div v-else-if="selectedView === 'table'">
                 <Card>
                     <template #header><div class="flex-1 text-center font-bold">チャネルサマリーデータ</div></template>
                     <template #content>
                         <DataTable :value="chartData" responsiveLayout="scroll">
-                            <Column field="hotel_name" header="ホテル名" sortable align="left"></Column>
+                            <Column field="hotel_name" sortable align="center">
+                                <template #header><div class="flex-1 text-center font-bold">ホテル名</div></template>
+                            </Column>
                             <Column field="reserved_dates" sortable align="center">
                                 <template #header><div class="flex-1 text-center font-bold">宿泊数</div></template>
                                 <template #body="slotProps">
@@ -54,6 +63,19 @@
                                     </div>
                                 </template>
                             </Column>
+                            <Column field="payment_timing" sortable align="center">
+                                <template #header><div class="flex-1 text-center font-bold">支払タイミング</div></template>
+                                <template #body="slotProps">
+                                    <div class="text-right">
+                                        <div v-for="(value, key) in slotProps.data.payment_timing" :key="key">
+                                            {{ translatePaymentTiming(key) }}: {{ Math.round(value).toLocaleString('ja-JP') }} 泊
+                                            <Tag v-if="paymentTimingChartData.hotelTotals[slotProps.data.hotel_name] > 0"
+                                                :value="`${(value / paymentTimingChartData.hotelTotals[slotProps.data.hotel_name] * 100).toFixed(1)}%`"
+                                                severity="info" class="ml-2" />
+                                        </div>
+                                    </div>
+                                </template>
+                            </Column>
                         </DataTable>
                     </template>
                 </Card>
@@ -73,8 +95,9 @@ import Card from 'primevue/card';
 import SelectButton from 'primevue/selectbutton';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
+import Tag from 'primevue/tag'; // Added for percentage tag
 import * as echarts from 'echarts/core';
-import { ScatterChart } from 'echarts/charts';
+import { ScatterChart, BarChart } from 'echarts/charts';
 import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { formatDate } from '@/utils/dateUtils';
@@ -86,6 +109,7 @@ echarts.use([
     LegendComponent,
     VisualMapComponent,
     ScatterChart,
+    BarChart, // Added BarChart
     CanvasRenderer
 ]);
 
@@ -123,6 +147,139 @@ const loading = ref(false);
 const error = ref(null);
 const scatterPlotContainer = ref(null);
 const scatterPlotInstance = shallowRef(null);
+const paymentTimingChartContainer = ref(null);
+const paymentTimingChartInstance = shallowRef(null);
+
+const translatePaymentTiming = (timing) => {
+    const map = {
+        'not_set': '未設定',
+        'prepaid': '事前決済',
+        'on-site': '現地決済',
+        'postpaid': '後払い'
+    };
+    return map[timing] || timing;
+};
+
+const reverseTranslatePaymentTiming = (translatedTiming) => {
+    const map = {
+        '未設定': 'not_set',
+        '事前決済': 'prepaid',
+        '現地決済': 'on-site',
+        '後払い': 'postpaid'
+    };
+    return map[translatedTiming] || translatedTiming;
+};
+
+const paymentTimingChartData = computed(() => {
+    if (!chartData.value || chartData.value.length === 0) {
+        return {
+            hotels: [],
+            paymentTimings: [],
+            series: []
+        };
+    }
+
+    const hotels = [...new Set(chartData.value.map(item => item.hotel_name))];
+    const paymentTimings = [...new Set(chartData.value.flatMap(item => Object.keys(item.payment_timing || {})))];
+
+    // Calculate total reserved nights per hotel for percentage calculation
+    const hotelTotals = {};
+    chartData.value.forEach(hotel => {
+        let total = 0;
+        for (const timing in hotel.payment_timing) {
+            total += hotel.payment_timing[timing];
+        }
+        hotelTotals[hotel.hotel_name] = total;
+        console.log(`DEBUG: Hotel ${hotel.hotel_name} total reserved dates (from payment_timing sum):`, total); // Debug log
+        console.log(`DEBUG: Hotel ${hotel.hotel_name} reserved_dates field:`, hotel.reserved_dates); // Debug log
+    });
+    console.log('DEBUG: Calculated hotelTotals:', hotelTotals); // Debug log
+
+    const series = paymentTimings.map(timing => {
+        return {
+            name: translatePaymentTiming(timing),
+            type: 'bar',
+            stack: 'total', // Re-added stack: 'total' for stacking
+            label: {
+                show: true,
+                formatter: (params) => {
+                    // params.value is already a percentage here
+                    const percentage = parseFloat(params.value.toFixed(1));
+                    return percentage >= 5 ? `${percentage}%` : ''; // Hide if less than 5%
+                },
+                position: 'inside' // Center label inside the bar
+            },
+            emphasis: {
+                focus: 'series'
+            },
+            data: hotels.map(hotelName => {
+                const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
+                const rawValue = hotelData?.payment_timing?.[timing] || 0;
+                const total = hotelTotals[hotelName];
+                return total > 0 ? parseFloat((rawValue / total * 100).toFixed(1)) : 0; // Convert to percentage
+            })
+        };
+    });
+
+    return {
+        hotels,
+        paymentTimings,
+        series,
+        hotelTotals // Expose hotelTotals for tooltip formatter
+    };
+});
+
+const paymentTimingChartOptions = computed(() => ({
+    color: ["#3fb1e3", "#6be6c1", "#626c91", "#a0a7e6", "#c4ebad", "#96dee8"], // Added color palette
+    tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+            type: 'shadow'
+        },
+                formatter: function (params) {
+                    let tooltipContent = params[0].name + '<br/>'; // Hotel Name
+                    const hotelName = params[0].name;
+                    const hotelData = chartData.value.find(item => item.hotel_name === hotelName);
+
+                    params.forEach(function (item) {
+                        const translatedTiming = item.seriesName; // e.g., "現地決済"
+                        const timingKey = reverseTranslatePaymentTiming(translatedTiming); // e.g., "on-site"
+                        const rawValue = hotelData?.payment_timing?.[timingKey] || 0;
+                        const percentage = item.value; // This is the percentage
+
+                        tooltipContent += item.marker + translatedTiming + ': ' + Math.round(rawValue) + ' 泊 (' + percentage.toFixed(1) + '%)<br/>';
+                    });
+                    return tooltipContent;
+                }
+    },
+    legend: {
+        data: paymentTimingChartData.value.paymentTimings.map(translatePaymentTiming),
+        bottom: 0
+    },
+    grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '10%',
+        containLabel: true
+    },
+    xAxis: {
+        type: 'value',
+        name: '割合 (%)',
+        axisLabel: {
+            formatter: '{value}%'
+        },
+        max: 100 // Ensures 100% stacked bar
+    },
+    yAxis: {
+        type: 'category',
+        data: paymentTimingChartData.value.hotels,
+        axisLabel: {
+            interval: 0,
+            rotate: 0
+        }
+    },
+    series: paymentTimingChartData.value.series
+}));
 
 const fetchReportData = async () => {
 
@@ -142,6 +299,7 @@ const fetchReportData = async () => {
         const data = await fetchChannelSummary(props.selectedHotels, startDate, endDate);
 
         chartData.value = data;
+        console.log('DEBUG: chartData after fetch:', chartData.value); // Debug log
     } catch (err) {
         console.error('Error fetching data:', err);
         error.value = err.message || 'データの取得中にエラーが発生しました。';
@@ -240,20 +398,29 @@ const refreshAllCharts = () => {
         // Dispose and re-initialize for a full re-render
         scatterPlotInstance.value?.dispose();
         scatterPlotInstance.value = null;
+        paymentTimingChartInstance.value?.dispose();
+        paymentTimingChartInstance.value = null;
+
         initOrUpdateChart(scatterPlotInstance, scatterPlotContainer, chartOptions.value);
+        initOrUpdateChart(paymentTimingChartInstance, paymentTimingChartContainer, paymentTimingChartOptions.value);
     } else {
         scatterPlotInstance.value?.dispose();
         scatterPlotInstance.value = null;
+        paymentTimingChartInstance.value?.dispose();
+        paymentTimingChartInstance.value = null;
     }
 };
 
 const disposeAllCharts = () => {
     scatterPlotInstance.value?.dispose();
     scatterPlotInstance.value = null;
+    paymentTimingChartInstance.value?.dispose();
+    paymentTimingChartInstance.value = null;
 };
 
 const resizeChart = () => {
     scatterPlotInstance.value?.resize();
+    paymentTimingChartInstance.value?.resize();
 };
 
 onMounted(() => {

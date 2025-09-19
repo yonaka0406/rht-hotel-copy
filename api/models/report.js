@@ -433,8 +433,8 @@ const selectReservationListView = async (requestId, hotelId, dateStart, dateEnd,
       case 'stay_period':
       default:
         dateFilterClause = `
-          AND reservations.check_out > $2::date
-          AND reservations.check_in <= $3::date
+          AND reservations.check_out > $2
+          AND reservations.check_in <= $3
         `;
     }
 
@@ -1397,31 +1397,66 @@ const selectOccupationBreakdown = async (requestId, hotelId, startDate, endDate)
 
 const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => {
   const pool = getPool(requestId);
-  let query = `
-    SELECT
-      h.id AS hotel_id,
-      h.name AS hotel_name,
-      COUNT(rd.id) AS reserved_dates,
-      (COUNT(CASE WHEN r.type IN ('web', 'ota') THEN 1 END) * 100.0 / COUNT(rd.id)) AS web_percentage,
-      (COUNT(CASE WHEN r.type = 'default' THEN 1 END) * 100.0 / COUNT(rd.id)) AS direct_percentage
-    FROM reservations r
-    JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
-    JOIN hotels h ON r.hotel_id = h.id
-    WHERE r.hotel_id = ANY($1::int[])
-    AND r.type <> 'employee' AND r.status NOT IN('hold','block') AND rd.cancelled IS NULL 
-  `;
   const values = [hotelIds];
+  let dateFilterClause = '';
+  let dateFilterClauseSubquery = '';
+  let dateParamIndex = 2;
 
-  // Add date filtering
   if (startDate && endDate) {
-    query += ` AND rd.date BETWEEN $2::date AND $3::date`;
+    dateFilterClause = ` AND rd.date BETWEEN $${dateParamIndex}::date AND $${dateParamIndex + 1}::date`;
+    dateFilterClauseSubquery = ` AND rd_pt.date BETWEEN $${dateParamIndex}::date AND $${dateParamIndex + 1}::date`;
     values.push(startDate, endDate);
-  } else if (startDate) { // If only startDate is provided, assume it's a year
-    query += ` AND TO_CHAR(r.created_at, 'YYYY') = $2`;
+  } else if (startDate) {
+    // Explicitly cast to TEXT to avoid type casting issues when startDate is a year
+    dateFilterClause = ` AND TO_CHAR(rd.date, 'YYYY') = $${dateParamIndex}::text`;
+    dateFilterClauseSubquery = ` AND TO_CHAR(rd_pt.date, 'YYYY') = $${dateParamIndex}::text`;
     values.push(startDate);
   }
 
-  query += ` GROUP BY h.id, h.name;`;
+  const query = `
+    WITH hotel_reserved_dates AS (
+      SELECT
+        r.hotel_id,
+        COUNT(rd.id) AS total_reserved_dates,
+        COUNT(CASE WHEN r.type IN ('web', 'ota') THEN 1 END) AS web_count,
+        COUNT(CASE WHEN r.type = 'default' THEN 1 END) AS direct_count
+      FROM reservations r
+      JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+      WHERE r.hotel_id = ANY($1::int[])
+      AND r.type <> 'employee' AND r.status NOT IN('hold','block') AND rd.cancelled IS NULL
+      ${dateFilterClause}
+      GROUP BY r.hotel_id
+    )
+    SELECT
+      h.id AS hotel_id,
+      h.name AS hotel_name,
+      hrd.total_reserved_dates AS reserved_dates,
+      (hrd.web_count * 100.0 / hrd.total_reserved_dates) AS web_percentage,
+      (hrd.direct_count * 100.0 / hrd.total_reserved_dates) AS direct_percentage,
+      COALESCE(
+        json_object_agg(
+          pt.payment_timing,
+          pt.payment_timing_reserved_dates
+        ) FILTER (WHERE pt.payment_timing IS NOT NULL),
+        '{}'::json
+      ) AS payment_timing
+    FROM hotels h
+    JOIN hotel_reserved_dates hrd ON h.id = hrd.hotel_id
+    LEFT JOIN (
+      SELECT
+        r_pt.hotel_id,
+        COALESCE(r_pt.payment_timing, 'not_set') AS payment_timing,
+        COUNT(rd_pt.id) AS payment_timing_reserved_dates
+      FROM reservations r_pt
+      JOIN reservation_details rd_pt ON r_pt.hotel_id = rd_pt.hotel_id AND r_pt.id = rd_pt.reservation_id
+      WHERE r_pt.hotel_id = ANY($1::int[])
+      AND r_pt.type <> 'employee' AND r_pt.status NOT IN('hold','block') AND rd_pt.cancelled IS NULL
+      ${dateFilterClauseSubquery}
+      GROUP BY r_pt.hotel_id, COALESCE(r_pt.payment_timing, 'not_set')
+    ) AS pt ON h.id = pt.hotel_id
+    WHERE h.id = ANY($1::int[]) -- Ensure hotels are filtered by selected hotelIds
+    GROUP BY h.id, h.name, hrd.total_reserved_dates, hrd.web_count, hrd.direct_count;
+  `;
 
   try {
     const result = await pool.query(query, values);
@@ -1431,7 +1466,6 @@ const selectChannelSummary = async (requestId, hotelIds, startDate, endDate) => 
     throw new Error('Database error');
   }
 };
-
 module.exports = {
   selectCountReservation,
   selectCountReservationDetailsPlans,
