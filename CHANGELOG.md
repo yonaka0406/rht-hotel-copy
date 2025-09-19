@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 - Bugfix: Resolved data persistence and duplicate key issues by ensuring `reservedRoomsDayView` is correctly updated and cleared.
+- Feature: Added a button to the reservation list drawer to navigate to the reservation edit page.
 - Feature: Implemented date persistence via URL parameter (`/reservations/day/:date`), allowing page refreshes to maintain the selected date.
 - Feature: Added Channel reports to the Reporting module.
+- Feature: Added Payment Timing reports to the Reporting module.
+- Bugfix: Fixed the meal count report summary date and the lunch serve date.
 
 ---
 ## Future Releases

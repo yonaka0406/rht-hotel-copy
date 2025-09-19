@@ -5,6 +5,31 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ## Bug and Requests
 
+### September 19, 2025
+
+#### Bug #66: Unable to Add 宿泊者 (Guests) to Reservation
+- **Status**: [x] Open [ ] In Progress [ ] Fixed [ ] Closed
+- **Description**:
+  - Users are unable to add 宿泊者 (guests) to an existing reservation
+  - The "Add Guest" button/functionality is either not working or not visible
+  - This prevents proper guest management for reservations
+- **Steps to Reproduce**:
+  1. Open an existing reservation
+  2. Attempt to add a new guest
+  3. Observe the issue
+- **Expected Behavior**:
+  - Users should be able to add multiple guests to a reservation
+  - Guest information should be saved and associated with the reservation
+- **Affected Components**:
+  - Reservation management interface
+  - Guest information form
+  - Backend API endpoints for guest management
+- **Priority**: [ ] Low [ ] Medium [x] High [ ] Critical
+- **Additional Notes**:
+  - Check if this affects all reservation types or specific ones
+  - Verify if there are any error messages in the console
+  - Check if this is a frontend or backend issue
+
 ### September 18, 2025
 
 #### Feature Request #65: 耐用人数 (Capacity-based) Occupancy Indicator
@@ -548,6 +573,6 @@ This document tracks all reported bugs and issues in the RHT Hotel system that a
 
 ---
 
-*Last Updated: September 17, 2025*
-*Total Bugs: 1* (last one #59)
+*Last Updated: September 19, 2025*
+*Total Bugs: 2* (last one #66)
 *Total Feature Requests: 26* (last one #65)
