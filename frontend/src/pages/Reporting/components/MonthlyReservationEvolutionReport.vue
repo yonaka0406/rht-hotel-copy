@@ -324,7 +324,7 @@ const echartsOptions = computed(() => {
                 height: 20,
                 start: 0,
                 end: 100,
-                handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-9.1,0.7-9.1,0.7v2.8c0,0-3.6,0.4-3.6,4.7v1.3H10.7z',
+                handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-9.1,0.7-9.1,0.7v2.8c0,0-3.6,0.4-3.6,4.7v1.3H10.7z',
                 handleSize: '80%',
                 handleStyle: {
                     color: '#fff',
