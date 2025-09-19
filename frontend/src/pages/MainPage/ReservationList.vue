@@ -197,6 +197,11 @@
 
         <Drawer v-model:visible="drawerVisible" :modal="true" :position="'bottom'" :style="{ height: '75vh' }"
             :closable="true">
+            <div class="flex justify-end" v-if="selectedReservation">
+                <Button @click="goToReservation" severity="info">
+                    <i class="pi pi-arrow-right"></i><span>編集ページへ</span>
+                </Button>
+            </div>
             <ReservationEdit v-if="selectedReservation" :reservation_id="selectedReservation.id" />
         </Drawer>
         <Drawer v-if="selectedReservations" v-model:visible="drawerSelectVisible" :modal="false" :position="'right'"
@@ -262,8 +267,14 @@
 <script setup>
 // Vue
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 import ReservationEdit from './ReservationEdit.vue';
+
+const goToReservation = () => {
+    router.push({ name: 'ReservationEdit', params: { reservation_id: selectedReservation.value.id } });
+};
 
 // Primevue
 import { useToast } from "primevue/usetoast";
