@@ -649,10 +649,10 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
     let releaseClient = false;
 
     if (!localClient) {
-        localClient = await pool.connect(requestId);
-        releaseClient = true;
+        localClient = await pool.connect();
         //console.log('Starting database transaction...');
         await localClient.query('BEGIN');
+        releaseClient = true; // Set to true only after successful connection and transaction start
     }
 
     try {
@@ -700,7 +700,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 values: query.values
             });
 
-            const detailsRes = await client.query(query);
+            const detailsRes = await localClient.query(query);
             const reservationDetails = detailsRes.rows;
             if (!reservationDetails.length) {
                 console.warn(`No reservation details found for reservation ${reservation_id} with params:`, {
@@ -715,7 +715,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             }
 
             // 2. Load vehicle category requirement
-            const catRes = await client.query(
+            const catRes = await localClient.query(
                 `SELECT capacity_units_required 
                  FROM vehicle_categories 
                  WHERE id = $1`,
@@ -725,7 +725,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             if (!requiredUnits) throw new Error(`Vehicle category ${vehicle_category_id} not found`);
 
             // 3. Get candidate spots
-            const spotsRes = await client.query(
+            const spotsRes = await localClient.query(
                 `SELECT ps.id 
                  FROM parking_spots ps
                  JOIN parking_lots pl ON ps.parking_lot_id = pl.id
@@ -754,7 +754,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
 
                 //console.log(`Assigning for date: ${date}`);
 
-                const reservedRes = await client.query(
+                const reservedRes = await localClient.query(
                     `SELECT parking_spot_id
                      FROM reservation_parking
                      WHERE hotel_id = $1
@@ -841,7 +841,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                 ).join(',');
 
                 const flatValues = batch.flat();
-                const res = await client.query(
+                const res = await localClient.query(
                     `INSERT INTO reservation_addons 
                         (hotel_id,reservation_detail_id,addons_global_id,addon_type,addon_name,price,quantity,tax_type_id,tax_rate,created_by)
                      VALUES ${placeholders} RETURNING id`
@@ -874,7 +874,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
                     p.created_by
                 ]);
 
-                await client.query(
+                await localClient.query(
                     `INSERT INTO reservation_parking 
                         (hotel_id,reservation_details_id,reservation_addon_id,vehicle_category_id,parking_spot_id,date,status,created_by)
                     VALUES ${placeholders}`
@@ -886,7 +886,7 @@ const saveParkingAssignments = async (requestId, assignments, userId, client = n
             //console.log(`Successfully created all parking assignments for assignment ${index + 1}`);
         }
 
-        await client.query('COMMIT');
+        await localClient.query('COMMIT');
         //console.log('Transaction committed successfully');
         return { success: true, message: 'Parking assignments saved successfully' };
     } catch (error) {
