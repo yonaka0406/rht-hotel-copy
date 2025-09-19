@@ -154,7 +154,7 @@ const fetchAllReservationData = async () => {
 
             const parkData = await fetchParkingReservations(details.hotel_id, details.reservation_id);
             parking_reservations.value = parkData || [];
-            console.log('[ReservationEdit] Fetched parking_reservations:', parking_reservations.value); // Debug log
+            //console.log('[ReservationEdit] Fetched parking_reservations:', parking_reservations.value); // Debug log
         } else {
             //console.warn(`[ReservationEdit] No reservation details found for ID: ${reservationId.value}. Resetting state.`);
             // Reset state if no reservation data is found
