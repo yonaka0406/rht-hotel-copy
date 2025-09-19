@@ -462,7 +462,7 @@ const getExportMealCount = async (req, res) => {
       // Add data rows
       summary.forEach((row, index) => {
         const dataRow = summarySheet.addRow({
-          meal_date: new Date(formatDate(row.meal_date)),
+          meal_date: new Date(row.meal_date),
           breakfast: row.breakfast * 1,
           lunch: row.lunch * 1,
           dinner: row.dinner * 1,
