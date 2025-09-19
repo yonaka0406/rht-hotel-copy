@@ -919,7 +919,7 @@ const getChannelSummary = async (req, res) => {
   try {
     const data = await selectChannelSummary(req.requestId, hotelIds, startDate, endDate);
     if (!data || data.length === 0) {
-      return res.status(404).json({ error: 'No data found' });
+      return res.status(200).json([]);
     }
     res.json(data);
   } catch (err) {

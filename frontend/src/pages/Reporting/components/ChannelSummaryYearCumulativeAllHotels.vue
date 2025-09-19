@@ -18,9 +18,7 @@
         <div v-else-if="chartData && chartData.length > 0">
             <div v-if="selectedView === 'graph'">
                 <Card>
-                    <template #header>
-                        <h4 class="text-lg font-semibold mb-3">ホテル別チャネル分布</h4>
-                    </template>
+                    <template #header><div class="flex-1 text-center font-bold">ホテル別チャネル分布</div></template>
                     <template #content>
                         <div ref="scatterPlotContainer" style="width: 100%; height: 500px;"></div>
                     </template>
@@ -28,25 +26,28 @@
             </div>
             <div v-else-if="selectedView === 'table'">
                 <Card>
-                    <template #header>
-                        <h4 class="text-lg font-semibold mb-3">チャネルサマリーデータ</h4>
-                    </template>
+                    <template #header><div class="flex-1 text-center font-bold">チャネルサマリーデータ</div></template>
                     <template #content>
                         <DataTable :value="chartData" responsiveLayout="scroll">
-                            <Column field="hotel_name" header="ホテル名" sortable align="center"></Column>
-                            <Column field="reserved_dates" header="宿泊数" sortable align="center">
+                            <Column field="hotel_name" header="ホテル名" sortable align="left"></Column>
+                            <Column field="reserved_dates" sortable align="center">
+                                <template #header><div class="flex-1 text-center font-bold">宿泊数</div></template>
                                 <template #body="slotProps">
-                                    {{ parseInt(slotProps.data.reserved_dates).toLocaleString('ja-JP') }}
+                                    <div class="flex justify-center">
+                                        {{ parseInt(slotProps.data.reserved_dates).toLocaleString('ja-JP') }}
+                                    </div>
                                 </template>
                             </Column>
-                            <Column field="web_percentage" header="WEB/OTA予約率 (%)" sortable align="center">
+                            <Column field="web_percentage" sortable align="center">
+                                <template #header><div class="flex-1 text-center font-bold">WEB/OTA予約率 (%)</div></template>
                                 <template #body="slotProps">
                                     <div class="flex justify-center">
                                         {{ parseFloat(slotProps.data.web_percentage).toFixed(1) }}%
                                     </div>
                                 </template>
                             </Column>
-                            <Column field="direct_percentage" header="直予約率 (%)" sortable align="center">
+                            <Column field="direct_percentage" sortable align="center">
+                                <template #header><div class="flex-1 text-center font-bold">直予約率 (%)</div></template>
                                 <template #body="slotProps">
                                     <div class="flex justify-center">
                                         {{ parseFloat(slotProps.data.direct_percentage).toFixed(1) }}%

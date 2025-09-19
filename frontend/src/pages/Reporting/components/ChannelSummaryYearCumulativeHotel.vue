@@ -39,47 +39,67 @@
                 </Panel>
             </div>
             <div v-else-if="selectedView === 'table'">
-                <div class="grid grid-cols-12 gap-4">
-                    <Card class="col-span-12 md:col-span-12">
-                        <template #header>
-                            <h4 class="text-lg font-semibold mb-3">予約チャンネル内訳 (泊数ベース)</h4>
-                        </template>
-                        <template #content>
-                            <DataTable :value="bookingSourceData" responsiveLayout="scroll">
-                                <Column field="type" header="タイプ" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                    <template #body="slotProps">
-                                        {{ translateBookingSourceType(slotProps.data.type) }}
+                <Panel header="テーブル表示" toggleable :collapsed="false" class="col-span-12">
+                    <div class="grid grid-cols-12 gap-4">
+                        <Card class="col-span-12 md:col-span-6">
+                            <template #header><div class="flex-1 text-center font-bold">予約チャンネル内訳 (泊数ベース)</div></template>
+                            <template #content>
+                                <DataTable :value="bookingSourceData" responsiveLayout="scroll">
+                                    <template #footer>
+                                        <div class="flex justify-end font-bold">
+                                            合計: {{ totalBookingSourceRoomNights.toLocaleString('ja-JP') }} 泊
+                                        </div>
                                     </template>
-                                </Column>
-                                <Column field="agent" header="エージェント" bodyStyle="text-align:center" headerStyle="text-align:center"></Column>
-                                <Column field="room_nights" header="泊数" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                    <template #body="slotProps">
-                                        {{ slotProps.data.room_nights.toLocaleString('ja-JP') }}
+                                    <Column field="type" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                        <template #header><div class="flex-1 text-center font-bold">タイプ</div></template>
+                                        <template #body="slotProps">
+                                            {{ translateBookingSourceType(slotProps.data.type) }}
+                                        </template>
+                                    </Column>
+                                    <Column field="agent" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                        <template #header><div class="flex-1 text-center font-bold">エージェント</div></template>
+                                    </Column>
+                                    <Column field="room_nights" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                        <template #header><div class="flex-1 text-center font-bold">泊数</div></template>
+                                        <template #body="slotProps">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <span>{{ slotProps.data.room_nights.toLocaleString('ja-JP') }}</span>
+                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`" severity="info" />
+                                            </div>
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </template>
+                        </Card>
+                        <Card class="col-span-12 md:col-span-6">
+                            <template #header><div class="flex-1 text-center font-bold">支払タイミング内訳 (泊数ベース)</div></template>
+                            <template #content>
+                                <DataTable :value="paymentTimingData" responsiveLayout="scroll">
+                                    <template #footer>
+                                        <div class="flex justify-end font-bold">
+                                            合計: {{ totalPaymentTimingCount.toLocaleString('ja-JP') }} 泊
+                                        </div>
                                     </template>
-                                </Column>
-                            </DataTable>
-                        </template>
-                    </Card>
-                    <Card class="col-span-12 md:col-span-12">
-                        <template #header>
-                            <h4 class="text-lg font-semibold mb-3">支払タイミング内訳 (泊数ベース)</h4>
-                        </template>
-                        <template #content>
-                            <DataTable :value="paymentTimingData" responsiveLayout="scroll">
-                                <Column field="paymentTiming" header="支払タイミング" bodyStyle="text-align:center" headerStyle="text-align:center">
-                                    <template #body="slotProps">
-                                        {{ translatePaymentTiming(slotProps.data.paymentTiming) }}
-                                    </template>
-                                </Column>
-                                <Column field="count" header="泊数" style="text-align:center">
-                                    <template #body="slotProps">
-                                        {{ slotProps.data.count.toLocaleString('ja-JP') }}
-                                    </template>
-                                </Column>
-                            </DataTable>
-                        </template>
-                    </Card>
-                </div>
+                                    <Column field="paymentTiming" bodyStyle="text-align:center" headerStyle="text-align:center">
+                                        <template #header><div class="flex-1 text-center font-bold">支払タイミング</div></template>
+                                        <template #body="slotProps">
+                                            {{ translatePaymentTiming(slotProps.data.paymentTiming) }}
+                                        </template>
+                                    </Column>
+                                    <Column field="count" style="text-align:center">
+                                        <template #header><div class="flex-1 text-center font-bold">泊数</div></template>
+                                        <template #body="slotProps">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <span>{{ slotProps.data.count.toLocaleString('ja-JP') }}</span>
+                                                <Tag :value="`${slotProps.data.percentage.toFixed(1)}%`" severity="info" />
+                                            </div>
+                                        </template>
+                                    </Column>
+                                </DataTable>
+                            </template>
+                        </Card>
+                    </div>
+                </Panel>
             </div>
         </div>
         <div v-else class="text-gray-500">
@@ -98,6 +118,7 @@ import SelectButton from 'primevue/selectbutton';
 import DataTable from 'primevue/datatable';
 import Column from 'primevue/column';
 import Panel from 'primevue/panel';
+import Tag from 'primevue/tag';
 import * as echarts from 'echarts/core';
 import { TreemapChart, PieChart } from 'echarts/charts';
 import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, VisualMapComponent } from 'echarts/components';
@@ -167,6 +188,14 @@ const translateBookingSourceType = (type) => {
     return map[type] || type;
 };
 
+const totalBookingSourceRoomNights = computed(() => {
+    return bookingSourceData.value.reduce((sum, item) => sum + item.room_nights, 0);
+});
+
+const totalPaymentTimingCount = computed(() => {
+    return paymentTimingData.value.reduce((sum, item) => sum + item.count, 0);
+});
+
 const fetchReportData = async () => {
     if (!props.hotelId) {
         chartData.value = [];
@@ -177,15 +206,25 @@ const fetchReportData = async () => {
     error.value = null;
     try {
         const year = props.selectedDate.getFullYear();
+        const month = props.selectedDate.getMonth(); // Get the month from selectedDate
         const startDate = formatDate(new Date(year, 0, 1)); // January 1st of the selected year
-        const endDate = formatDate(props.selectedDate); // The selected date
+        const endDate = formatDate(new Date(year, month + 1, 0)); // Last day of the selected month
         const data = await fetchChannelSummary([props.hotelId], startDate, endDate);
         const bookingSourceResult = await fetchBookingSourceBreakdown(props.hotelId, startDate, endDate);
         const paymentResult = await fetchPaymentTimingBreakdown(props.hotelId, startDate, endDate);
 
+        const currentTotalBookingSourceRoomNights = bookingSourceResult.reduce((sum, item) => sum + item.room_nights, 0);
+        const currentTotalPaymentTimingCount = paymentResult.reduce((sum, item) => sum + item.count, 0);
+
         chartData.value = data;
-        bookingSourceData.value = bookingSourceResult;
-        paymentTimingData.value = paymentResult;
+        bookingSourceData.value = bookingSourceResult.map(item => ({
+            ...item,
+            percentage: currentTotalBookingSourceRoomNights > 0 ? (item.room_nights / currentTotalBookingSourceRoomNights) * 100 : 0
+        }));
+        paymentTimingData.value = paymentResult.map(item => ({
+            ...item,
+            percentage: currentTotalPaymentTimingCount > 0 ? (item.count / currentTotalPaymentTimingCount) * 100 : 0
+        }));
 
     } catch (err) {
         error.value = err.message || 'データの取得中にエラーが発生しました。';
