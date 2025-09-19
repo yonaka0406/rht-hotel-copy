@@ -498,7 +498,7 @@
       group.rooms.forEach(room => {
         const key = `${room.room_id}-${room.id || 'no-reservation'}`;
         if (seenKeys.has(key)) {
-          console.warn(`[RoomIndicator] Duplicate key detected in group "${group.title}": ${key}`, room);
+          // console.warn(`[RoomIndicator] Duplicate key detected in group "${group.title}": ${key}`, room);
         }
         seenKeys.add(key);
       });
@@ -690,7 +690,7 @@
       
       const roomNumber = reservation.room_number;
       if (!roomNumber) {
-        console.error('[RoomIndicator] Missing room number for reservation:', reservation);
+        // console.error('[RoomIndicator] Missing room number for reservation:', reservation);
         return;
       }
       
@@ -808,21 +808,21 @@
   onMounted(async () => {
     
     isLoading.value = true;
-    console.log('[RoomIndicator] onMounted: Initializing component.');
+    // console.log('[RoomIndicator] onMounted: Initializing component.');
 
     // Initialize selectedDate from URL parameter or default to today
     const routeDate = router.currentRoute.value.params.date;
     if (routeDate) {
       selectedDate.value = new Date(routeDate);
-      console.log('[RoomIndicator] onMounted: Initial selectedDate from URL:', formatDate(selectedDate.value));
+      // console.log('[RoomIndicator] onMounted: Initial selectedDate from URL:', formatDate(selectedDate.value));
     } else {
       selectedDate.value = new Date();
       // If no date in URL, update URL to today's date
       router.replace({ params: { date: formatDate(selectedDate.value) } });
-      console.log('[RoomIndicator] onMounted: Initial selectedDate defaulted to today:', formatDate(selectedDate.value));
+      // console.log('[RoomIndicator] onMounted: Initial selectedDate defaulted to today:', formatDate(selectedDate.value));
     }
 
-    console.log('[RoomIndicator] onMounted: Initial selectedHotelId:', selectedHotelId.value);
+    // console.log('[RoomIndicator] onMounted: Initial selectedHotelId:', selectedHotelId.value);
 
     // Establish Socket.IO connection
     socket.value = io(import.meta.env.VITE_BACKEND_URL);
@@ -843,24 +843,24 @@
     // Add debounced fetch function
     const debouncedFetchReservations = debounce(async () => {
       if (!isUpdating.value) {
-        console.log('[RoomIndicator] debouncedFetchReservations: Fetching reservations due to socket update.');
+        // console.log('[RoomIndicator] debouncedFetchReservations: Fetching reservations due to socket update.');
         await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-        console.log('[RoomIndicator] debouncedFetchReservations: reservedRoomsDayView after socket update:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+        // console.log('[RoomIndicator] debouncedFetchReservations: reservedRoomsDayView after socket update:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       }
     }, 1000); // 1s debounce time
 
     socket.value.on('connect', () => {
-      console.log('Connected to server');
+      // console.log('Connected to server');
     });
     socket.value.on('connect_error', (err) => {
-      console.error('Socket connection error:', err);
+      // console.error('Socket connection error:', err);
     });
     socket.value.on('connect_timeout', () => {
-      console.error('Socket connection timeout');
+      // console.error('Socket connection timeout');
     });
     
     socket.value.on('tableUpdate', async (data) => {
-      console.log('[RoomIndicator] Socket tableUpdate received:', data);
+      // console.log('[RoomIndicator] Socket tableUpdate received:', data);
       // Use the debounced function instead of direct fetch
       debouncedFetchReservations();
     });
@@ -868,7 +868,7 @@
     await fetchHotels();
     await fetchHotel();
     await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-    console.log('[RoomIndicator] onMounted: reservedRoomsDayView after initial fetch:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+    // console.log('[RoomIndicator] onMounted: reservedRoomsDayView after initial fetch:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
     
     isLoading.value = false;        
     
@@ -885,14 +885,14 @@
   // Watch      
   watch(selectedHotelId, async (newValue, oldValue) => {            
     try {
-      console.log('[RoomIndicator] Watcher: selectedHotelId changed:', { oldValue, newValue });
+      // console.log('[RoomIndicator] Watcher: selectedHotelId changed:', { oldValue, newValue });
       if (newValue !== oldValue) {
         selectedDate.value = today;
-        console.log('[RoomIndicator] Watcher: Resetting selectedDate to today:', formatDate(selectedDate.value));
+        // console.log('[RoomIndicator] Watcher: Resetting selectedDate to today:', formatDate(selectedDate.value));
         await fetchHotel();
-        console.log('[RoomIndicator] Watcher: Fetching reservations for new hotelId and today\'s date.');
+        // console.log('[RoomIndicator] Watcher: Fetching reservations for new hotelId and today\'s date.');
         await fetchReservationsToday(selectedHotelId.value, formatDate(today));
-        console.log('[RoomIndicator] Watcher: reservedRoomsDayView after hotelId change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+        // console.log('[RoomIndicator] Watcher: reservedRoomsDayView after hotelId change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       }
     } catch (error) {
       console.error('[RoomIndicator] Error in selectedHotelId watcher:', error);
@@ -900,19 +900,19 @@
   });
   
   watch(selectedDate, async (newValue, oldValue) => {
-    console.log('[RoomIndicator] Watcher: selectedDate changed:', {
-      oldValue: oldValue ? formatDate(oldValue) : 'undefined',
-      newValue: newValue ? formatDate(newValue) : 'undefined'
-    });
+    // console.log('[RoomIndicator] Watcher: selectedDate changed:', {
+    //   oldValue: oldValue ? formatDate(oldValue) : 'undefined',
+    //   newValue: newValue ? formatDate(newValue) : 'undefined'
+    // });
     if (newValue && oldValue && formatDate(newValue) !== formatDate(oldValue)) { // Compare formatted dates to avoid unnecessary fetches for same date object but different instances
-      console.log('[RoomIndicator] Watcher: selectedDate is different. Fetching reservations for date:', formatDate(selectedDate.value));
+      // console.log('[RoomIndicator] Watcher: selectedDate is different. Fetching reservations for date:', formatDate(selectedDate.value));
       await fetchReservationsToday(selectedHotelId.value, formatDate(selectedDate.value));
-      console.log('[RoomIndicator] Watcher: reservedRoomsDayView after selectedDate change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
+      // console.log('[RoomIndicator] Watcher: reservedRoomsDayView after selectedDate change:', JSON.parse(JSON.stringify(reservedRoomsDayView.value)));
       
       // Update URL parameter
       router.push({ params: { date: formatDate(selectedDate.value) } });
     } else {
-      console.log('[RoomIndicator] Watcher: selectedDate changed but formatted date is the same or invalid. No fetch triggered.');
+      // console.log('[RoomIndicator] Watcher: selectedDate changed but formatted date is the same or invalid. No fetch triggered.');
     }
   }, { deep: true });
 
