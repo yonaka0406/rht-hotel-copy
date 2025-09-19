@@ -468,6 +468,11 @@ const initPaymentTimingChart = () => {
 
 const refreshAllCharts = () => {
     if (chartData.value && chartData.value.length > 0) {
+        // Dispose and re-initialize for a full re-render
+        myBookingSourceChart?.dispose();
+        myBookingSourceChart = null;
+        myPaymentTimingChart?.dispose();
+        myPaymentTimingChart = null;
         initBookingSourceChart();
         initPaymentTimingChart();
     } else {
@@ -501,7 +506,18 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', resizeChart);
 });
 
-watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], fetchReportData, { deep: true });
+watch(() => [props.hotelId, props.triggerFetch, props.selectedDate], async ([newHotelId, newTrigger, newDate], [oldHotelId, oldTrigger, oldDate]) => {    
+    await fetchReportData();
+    if (selectedView.value === 'graph') {
+        refreshAllCharts();
+    }
+}, { deep: true });
+
+watch(chartData, (newData) => {
+    if (selectedView.value === 'graph') {
+        refreshAllCharts();
+    }
+}, { deep: true });
 
 watch(selectedView, async (newView) => {
     if (newView === 'graph') {
