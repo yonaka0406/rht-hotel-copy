@@ -766,90 +766,83 @@ const selectExportReservationDetails = async (requestId, hotelId, dateStart, dat
 const selectExportMealCount = async (requestId, hotelId, dateStart, dateEnd) => {
   const pool = getPool(requestId);
   
-  // First query for the summary data (existing functionality)
   const summaryQuery = `
-    SELECT 
-      hotels.name as hotel_name
-      ,CASE 
-        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN('breakfast','lunch')
-        THEN reservation_details.date + INTERVAL '1 day'        
-        ELSE reservation_details.date
-      END AS meal_date,
-      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'breakfast' THEN reservation_addons.quantity ELSE 0 END) AS breakfast,
-      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'lunch' THEN reservation_addons.quantity ELSE 0 END) AS lunch,
-      SUM(CASE WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) = 'dinner' THEN reservation_addons.quantity ELSE 0 END) AS dinner
-    FROM 
-      hotels
-        JOIN
-      reservations
-        ON hotels.id = reservations.hotel_id
-        JOIN
-      reservation_details
-        ON reservations.hotel_id = reservation_details.hotel_id AND reservations.id = reservation_details.reservation_id
-        JOIN reservation_addons
-        ON reservation_details.hotel_id = reservation_addons.hotel_id 
-      AND reservation_details.id = reservation_addons.reservation_detail_id	
-        LEFT JOIN addons_global
-      ON reservation_addons.addons_global_id = addons_global.id
-        LEFT JOIN addons_hotel
-        ON reservation_addons.hotel_id = addons_hotel.hotel_id 
-      AND reservation_addons.addons_hotel_id = addons_hotel.id
-    WHERE
-      COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN ('breakfast', 'lunch', 'dinner')
-      AND reservations.status NOT In ('hold', 'provisory', 'cancelled', 'block')
-      AND reservation_details.cancelled IS NULL
-      AND reservation_details.hotel_id = $1
-      AND reservation_details.date BETWEEN $2 AND $3 
-    GROUP BY 
-      hotels.name    
-      ,meal_date
+    WITH all_meals AS (
+      SELECT
+        h.name AS hotel_name,
+        ra.quantity,
+        CASE
+          WHEN TRIM(COALESCE(ah.addon_type, ag.addon_type)) IN ('breakfast', 'lunch')
+          THEN rd.date + INTERVAL '1 day'
+          ELSE rd.date
+        END AS meal_date,
+        TRIM(COALESCE(ah.addon_type, ag.addon_type)) AS meal_type
+      FROM
+        hotels h
+      JOIN reservations r ON h.id = r.hotel_id
+      JOIN reservation_details rd ON r.hotel_id = rd.hotel_id AND r.id = rd.reservation_id
+      JOIN reservation_addons ra ON rd.hotel_id = ra.hotel_id AND rd.id = ra.reservation_detail_id
+      LEFT JOIN addons_global ag ON ra.addons_global_id = ag.id
+      LEFT JOIN addons_hotel ah ON ra.hotel_id = ah.hotel_id AND ra.addons_hotel_id = ah.id
+      WHERE
+        r.hotel_id = $1
+        AND rd.date BETWEEN ($2::date - INTERVAL '1 day') AND $3::date
+        AND TRIM(COALESCE(ah.addon_type, ag.addon_type)) IN ('breakfast', 'lunch', 'dinner')
+        AND r.status NOT IN ('hold', 'provisory', 'cancelled', 'block')
+        AND rd.cancelled IS NULL
+    )
+    SELECT
+      hotel_name,
+      meal_date,
+      SUM(CASE WHEN meal_type = 'breakfast' THEN quantity ELSE 0 END) AS breakfast,
+      SUM(CASE WHEN meal_type = 'lunch' THEN quantity ELSE 0 END) AS lunch,
+      SUM(CASE WHEN meal_type = 'dinner' THEN quantity ELSE 0 END) AS dinner
+    FROM all_meals
+    WHERE meal_date BETWEEN $2::date AND $3::date
+    GROUP BY hotel_name, meal_date
     ORDER BY meal_date;
   `;
 
-  // New query for detailed meal count data
   const detailQuery = `
-    SELECT 
-      COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name,
-      rooms.room_number,
-      CASE 
-        WHEN COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN('breakfast','lunch')
-        THEN reservation_details.date + INTERVAL '1 day'
-        ELSE reservation_details.date
-      END AS meal_date,
-      COALESCE(addons_hotel.addon_type, addons_global.addon_type) AS meal_type,
-      reservation_addons.quantity      
-    FROM 
-      hotels
-        JOIN
-      reservations
-        ON hotels.id = reservations.hotel_id
-        JOIN
-      clients booker
-        ON reservations.reservation_client_id = booker.id
-        JOIN
-      reservation_details
-        ON reservations.hotel_id = reservation_details.hotel_id 
-        AND reservations.id = reservation_details.reservation_id
-        LEFT JOIN rooms
-        ON reservation_details.room_id = rooms.id
-        JOIN reservation_addons
-        ON reservation_details.hotel_id = reservation_addons.hotel_id 
-        AND reservation_details.id = reservation_addons.reservation_detail_id	
-        LEFT JOIN addons_global
-        ON reservation_addons.addons_global_id = addons_global.id
-        LEFT JOIN addons_hotel
-        ON reservation_addons.hotel_id = addons_hotel.hotel_id 
-        AND reservation_addons.addons_hotel_id = addons_hotel.id
-    WHERE
-      COALESCE(addons_hotel.addon_type, addons_global.addon_type) IN ('breakfast', 'lunch', 'dinner')
-      AND reservations.status NOT IN ('hold', 'provisory', 'cancelled', 'block')
-      AND reservation_details.cancelled IS NULL
-      AND reservation_details.hotel_id = $1
-      AND reservation_details.date BETWEEN $2 AND $3
-    ORDER BY 
+    WITH all_meals AS (
+      SELECT
+        COALESCE(booker.name_kanji, booker.name_kana, booker.name) AS booker_name,
+        rooms.room_number,
+        reservation_addons.quantity,
+        CASE
+          WHEN TRIM(COALESCE(addons_hotel.addon_type, addons_global.addon_type)) IN ('breakfast', 'lunch')
+          THEN reservation_details.date + INTERVAL '1 day'
+          ELSE reservation_details.date
+        END AS meal_date,
+        TRIM(COALESCE(addons_hotel.addon_type, addons_global.addon_type)) AS meal_type
+      FROM
+        hotels
+      JOIN reservations ON hotels.id = reservations.hotel_id
+      JOIN clients booker ON reservations.reservation_client_id = booker.id
+      JOIN reservation_details ON reservations.hotel_id = reservation_details.hotel_id AND reservations.id = reservation_details.reservation_id
+      LEFT JOIN rooms ON reservation_details.room_id = rooms.id
+      JOIN reservation_addons ON reservation_details.hotel_id = reservation_addons.hotel_id AND reservation_details.id = reservation_addons.reservation_detail_id
+      LEFT JOIN addons_global ON reservation_addons.addons_global_id = addons_global.id
+      LEFT JOIN addons_hotel ON reservation_addons.hotel_id = addons_hotel.hotel_id AND reservation_addons.addons_hotel_id = addons_hotel.id
+      WHERE
+        reservations.hotel_id = $1
+        AND reservation_details.date BETWEEN ($2::date - INTERVAL '1 day') AND $3::date
+        AND TRIM(COALESCE(addons_hotel.addon_type, addons_global.addon_type)) IN ('breakfast', 'lunch', 'dinner')
+        AND reservations.status NOT IN ('hold', 'provisory', 'cancelled', 'block')
+        AND reservation_details.cancelled IS NULL
+    )
+    SELECT
+      booker_name,
+      room_number,
+      meal_date,
+      meal_type,
+      quantity
+    FROM all_meals
+    WHERE meal_date BETWEEN $2::date AND $3::date
+    ORDER BY
       meal_date,
       booker_name,
-      rooms.room_number;
+      room_number;
   `;
 
   const values = [hotelId, dateStart, dateEnd];

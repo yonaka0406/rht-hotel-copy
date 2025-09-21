@@ -453,7 +453,14 @@ const getExportMealCount = async (req, res) => {
 
       // Set column widths and formats
       summarySheet.columns = [      
-        { key: "meal_date", width: 15 },
+        { 
+          key: "meal_date", 
+          width: 20,
+          style: { 
+            numFmt: 'yy"年"m"月"d"日("aaa")"',
+            alignment: { horizontal: 'center', vertical: 'middle' }
+          } 
+        },
         { key: "breakfast", width: 15, style: { numFmt: "0" } },
         { key: "lunch", width: 15, style: { numFmt: "0" } },
         { key: "dinner", width: 15, style: { numFmt: "0" } },
@@ -461,8 +468,12 @@ const getExportMealCount = async (req, res) => {
 
       // Add data rows
       summary.forEach((row, index) => {
+        // Fix: Create a new date object as UTC to avoid timezone issues
+        const d = new Date(row.meal_date);
+        const mealDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        
         const dataRow = summarySheet.addRow({
-          meal_date: new Date(row.meal_date),
+          meal_date: mealDate,
           breakfast: row.breakfast * 1,
           lunch: row.lunch * 1,
           dinner: row.dinner * 1,
@@ -501,21 +512,44 @@ const getExportMealCount = async (req, res) => {
         };
       });
 
+      // Set column widths and formats
+      detailSheet.columns = [
+        { key: "booker_name", width: 30 },
+        { key: "room_number", width: 15 },
+        { 
+          key: "meal_date", 
+          width: 20,
+          style: { 
+            numFmt: 'yy"年"m"月"d"日("aaa")"',
+            alignment: { horizontal: 'center', vertical: 'middle' }
+          } 
+        },
+        { key: "breakfast", width: 15, style: { numFmt: "0" } },
+        { key: "lunch", width: 15, style: { numFmt: "0" } },
+        { key: "dinner", width: 15, style: { numFmt: "0" } },
+      ];
+
       // Group details by booker, room, and date
       const groupedDetails = details.reduce((acc, row) => {
         const key = `${row.booker_name}|${row.room_number}|${row.meal_date}`;
         if (!acc[key]) {
+          // Fix: Create a new date object as UTC to avoid timezone issues
+          const d = new Date(row.meal_date);
+          const mealDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+          
           acc[key] = {
             booker_name: row.booker_name,
             room_number: row.room_number || 'N/A',
-            meal_date: new Date(row.meal_date),
+            meal_date: mealDate,
             breakfast: 0,
             lunch: 0,
             dinner: 0
           };
         }
         // Add quantity to the corresponding meal type
-        acc[key][row.meal_type] = row.quantity * 1;
+        if (row.meal_type) {
+            acc[key][row.meal_type] = (acc[key][row.meal_type] || 0) + (row.quantity * 1);
+        }
         return acc;
       }, {});
 
@@ -529,16 +563,6 @@ const getExportMealCount = async (req, res) => {
         }
         return (a.room_number || '').localeCompare(b.room_number || '');
       });
-
-      // Set column widths and formats
-      detailSheet.columns = [
-        { key: "booker_name", width: 30 },
-        { key: "room_number", width: 15 },
-        { key: "meal_date", width: 15 },
-        { key: "breakfast", width: 15, style: { numFmt: "0" } },
-        { key: "lunch", width: 15, style: { numFmt: "0" } },
-        { key: "dinner", width: 15, style: { numFmt: "0" } },
-      ];
 
       // Add data rows
       sortedDetails.forEach((row, index) => {
