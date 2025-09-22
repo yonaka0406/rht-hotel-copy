@@ -245,10 +245,10 @@
   
       const newDates = generateDateRange(newMinDate, newMaxDate);
       dateRange.value = [...newDates, ...dateRange.value];
-  
-      const fetchStartDate = minDate.value;
-      const fetchEndDate = formatDate(newMaxDate);
-      await fetchParkingReservationsLocal(fetchStartDate, fetchEndDate);
+
+      // Fetch reservations for the entire new dateRange
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      debugLog('Available spots for 2025-09-12 after appending UP:', availableSpotsByDate.value['2025-09-12']);
   
     } else if (direction === "down") {
       const oldMaxDateValue = maxDate.value;
@@ -262,9 +262,9 @@
       const newDates = generateDateRange(newMinDate, newMaxDate);
       dateRange.value = [...dateRange.value, ...newDates];
   
-      const fetchStartDate = formatDate(newMinDate);
-      const fetchEndDate = maxDate.value;
-      await fetchParkingReservationsLocal(fetchStartDate, fetchEndDate);
+      // Fetch reservations for the entire new dateRange
+      await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      debugLog('Available spots for 2025-09-12 after appending DOWN:', availableSpotsByDate.value['2025-09-12']);
     }
   };
   
@@ -282,33 +282,30 @@
         endDate
       );
       
+      // Create a map of existing reservations for faster lookup
+      const existingReservationsMap = new Map();
+      if (tempParkingReservations.value) {
+        tempParkingReservations.value.forEach(res => {
+          const key = `${res.parking_spot_id}_${formatDate(new Date(res.date))}`;
+          existingReservationsMap.set(key, res);
+        });
+      }
+      
+      // Start with existing reservations
+      const mergedReservations = [...(tempParkingReservations.value || [])];
+      
+      // Add new reservations from reservedParkingSpots (from store) if they don't already exist
       if (Array.isArray(reservedParkingSpots.value)) {
-        // Create a map of existing reservations for faster lookup
-        const existingReservationsMap = new Map();
-        if (tempParkingReservations.value) {
-          tempParkingReservations.value.forEach(res => {
-            const key = `${res.parking_spot_id}_${formatDate(new Date(res.date))}`;
-            existingReservationsMap.set(key, res);
-          });
-        }
-        
-        // Merge new reservations with existing ones
-        const mergedReservations = [...(tempParkingReservations.value || [])];
-        let newReservationsCount = 0;
-        
         reservedParkingSpots.value.forEach(newRes => {
           const key = `${newRes.parking_spot_id}_${formatDate(new Date(newRes.date))}`;
           if (!existingReservationsMap.has(key)) {
             mergedReservations.push(newRes);
-            newReservationsCount++;
           }
         });
-        
-        tempParkingReservations.value = mergedReservations;
-        
-      } else {
-        tempParkingReservations.value = [];
       }
+      
+      // Update tempParkingReservations with the merged data
+      tempParkingReservations.value = mergedReservations;
   };
   
   // Hash map for faster lookups
@@ -831,6 +828,7 @@
       if (dateRange.value && dateRange.value.length > 0) {
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
+      debugLog('Available spots for 2025-09-12 after initial load:', availableSpotsByDate.value['2025-09-12']);
 
       nextTick(() => {
           const tableContainer = document.querySelector(".table-container");
@@ -882,6 +880,7 @@
       if (dateRange.value && dateRange.value.length > 0) {
         await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
       }
+      debugLog('Available spots for 2025-09-12 after hotel change:', availableSpotsByDate.value['2025-09-12']);
       isLoading.value = false;
     }
   }, { immediate: true });
@@ -902,6 +901,7 @@
     if (dateRange.value && dateRange.value.length > 0) {
       await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
     }
+    debugLog('Available spots for 2025-09-12 after center date change:', availableSpotsByDate.value['2025-09-12']);
 
     isLoading.value = false;
     // Scroll to the row for the selected date after table is rendered
@@ -950,6 +950,7 @@
     if (newVal === false) {
       // Refresh data when drawer is closed
       await fetchParkingReservationsLocal(dateRange.value[0], dateRange.value[dateRange.value.length - 1]);
+      debugLog('Available spots for 2025-09-12 after drawer closes:', availableSpotsByDate.value['2025-09-12']);
     }
   });
 
